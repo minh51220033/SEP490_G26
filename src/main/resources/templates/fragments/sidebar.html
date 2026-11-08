@@ -341,28 +341,6 @@
         </div>
 
 
-        <!-- CẬN LÂM SÀNG -->
-        <div class="side-group" data-accordion
-             th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CLINICAL_XRAY') or #lists.contains(permissionCodes, 'CLINICAL_EXAM_WRITE') or #lists.contains(permissionCodes, 'TREATMENT_PLAN_MANAGE') or #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW')))}"
-             th:classappend="${activeMenu == 'xray'} ? 'is-open' : ''">
-            <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
-                    aria-controls="sgLab">
-                <i class="bi bi-bounding-box" aria-hidden="true"></i>
-                <span class="side-group__label">Cận lâm sàng</span>
-                <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
-            </button>
-            <div class="side-group__panel" id="sgLab">
-                <div class="side-group__inner">
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_XRAY'))}"
-                       th:href="@{/xray}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'xray'} ? 'is-active' : ''"
-                       title="Trình xem ảnh X-quang tích hợp NanoPix">
-                        <i class="bi bi-radioactive" aria-hidden="true"></i><span class="side-link__label">Phim X-quang NanoPix</span>
-                    </a>
-                </div>
-            </div>
-        </div>
-
         <!-- QUẢN LÝ LABO -->
         <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_LABO'))}"
            th:href="@{/doctor/labo}" class="side-link"

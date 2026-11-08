@@ -20,6 +20,8 @@ public class PerformedServiceRequestDTO {
     @NotNull(message = "Dịch vụ / Thủ thuật không được để trống")
     private Long serviceId;
 
+    private String stepName;
+
     private String toothNumbers;
 
     private BigDecimal quantity;

@@ -17,12 +17,25 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/api/doctor")
-@RequiredArgsConstructor
 public class DoctorParaclinicalRestController {
 
     private final ParaclinicalOrderService paraclinicalOrderService;
     private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
     private final com.cvdcms.service.NanoPixIntegrationService nanoPixIntegrationService;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public DoctorParaclinicalRestController(ParaclinicalOrderService paraclinicalOrderService,
+                                           com.cvdcms.security.DoctorVisitAccess doctorVisitAccess,
+                                           com.cvdcms.service.NanoPixIntegrationService nanoPixIntegrationService) {
+        this.paraclinicalOrderService = paraclinicalOrderService;
+        this.doctorVisitAccess = doctorVisitAccess;
+        this.nanoPixIntegrationService = nanoPixIntegrationService;
+    }
+
+    public DoctorParaclinicalRestController(ParaclinicalOrderService paraclinicalOrderService,
+                                           com.cvdcms.security.DoctorVisitAccess doctorVisitAccess) {
+        this(paraclinicalOrderService, doctorVisitAccess, null);
+    }
 
     /**
      * Tải file ảnh kết quả cận lâm sàng (Panorama, CT, X-quang, Xét nghiệm, Ảnh chụp thường)

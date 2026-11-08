@@ -7,566 +7,530 @@
 <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 <div class="app-main">
 <header th:replace="~{fragments/header :: appTopbar('Điều phối lượt khám')}"></header>
-<main id="reception-content-area" class="app-content dispatch-page p-3">
-<th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
-<link rel="stylesheet" th:href="@{/css/patients.css}">
-<link rel="stylesheet" th:href="@{/css/check-in.css}">
+<main id="reception-content-area" class="app-content dispatch-page">
 <link rel="stylesheet" th:href="@{/css/reception-dispatch.css}">
-<link rel="stylesheet" th:href="@{/css/reception-workflow-navigation.css}">
 
-<!-- 1. THANH DẪN HƯỚNG QUY TRÌNH TIẾP ĐÓN THỐNG NHẤT -->
-<nav class="card border-0 shadow-sm rounded-4 mb-2.5 p-2 bg-white" data-reception-stepper aria-label="Quy trình tiếp đón">
+<!-- Thanh dẫn hướng quy trình tiếp đón thống nhất -->
+<nav class="dispatch-flow-nav card border-0 shadow-sm rounded-4 mb-3 p-2 bg-white" data-reception-stepper aria-label="Quy trình tiếp đón">
   <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-2 py-1">
     <div class="d-flex align-items-center gap-2 small">
       <span class="badge bg-primary-subtle text-primary fw-bold px-2.5 py-1.5"><i class="bi bi-diagram-3 me-1"></i>QUY TRÌNH TIẾP ĐÓN</span>
       <span class="text-muted d-none d-lg-inline">Chuỗi nghiệp vụ lễ tân &amp; điều phối khám:</span>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-2 small">
-      <a th:href="@{/reception/appointments}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 1: Quản lý lịch hẹn">
-        <span class="badge rounded-circle">1</span><span>Lịch hẹn</span>
+      <a th:href="@{/reception/appointments}" class="dispatch-step-pill" title="Bước 1: Quản lý lịch hẹn">
+        <span class="step-badge">1</span> Lịch hẹn
       </a>
       <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
-      <a th:href="@{/reception/check-in(branchId=${board.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 2: Tiếp đón &amp; Check-in">
-        <span class="badge rounded-circle">2</span><span>Tiếp đón &amp; Check-in</span>
+      <a th:href="@{/reception/check-in}" class="dispatch-step-pill" title="Bước 2: Tiếp đón &amp; Check-in">
+        <span class="step-badge bg-success-subtle text-success">2</span> Tiếp đón &amp; Check-in
       </a>
       <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
-      <span class="btn btn-sm reception-step-pill is-active rounded-pill" title="Bước 3: Đang ở màn hình Điều phối ghế nha">
-        <span class="badge rounded-circle">3</span><span>Điều phối ghế nha</span>
+      <span class="dispatch-step-pill active" title="Bước 3: Đang ở màn hình Điều phối ghế nha">
+        <span class="step-badge bg-white text-primary">3</span> Điều phối ghế nha
       </span>
       <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
-      <a th:href="@{/reception/queue(branchId=${board.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 4: Hàng chờ gọi số">
-        <span class="badge rounded-circle">4</span><span>Hàng chờ gọi số</span>
+      <a th:href="@{/reception/queue(branchId=${board.branchId})}" class="dispatch-step-pill" title="Bước 4: Hàng chờ gọi số">
+        <span class="step-badge">4</span> Hàng chờ gọi số
       </a>
+    </div>
+    <div>
+      <div th:replace="~{fragments/header :: branchSelectInline}"></div>
     </div>
   </div>
 </nav>
 
-<!-- 2. FLASH NOTIFICATIONS (HIỂN THỊ RÕ CẤP SỐ BAO NHIÊU, CHO AI, MÃ BN, LINK SANG HÀNG CHỜ & NÚT MỞ MODAL IN PHIẾU K80) -->
-<div class="alert alert-success d-flex flex-wrap align-items-center justify-content-between gap-3 shadow-sm rounded-4 p-3 mb-3 border-0 bg-success-subtle text-success-emphasis" role="status" th:if="${notice}">
-  <div class="d-flex align-items-center gap-3">
-    <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px; font-size: 18px;">
-      <i class="bi bi-ticket-perforated-fill"></i>
+<!-- Alert Notices -->
+<div class="alert alert-success d-flex flex-wrap align-items-center justify-content-between gap-2 shadow-sm rounded-3" role="status" th:if="${notice}">
+  <div><i class="bi bi-check-circle-fill me-1"></i><span th:text="${notice}"></span></div>
+  <a th:href="@{/reception/queue(branchId=${board.branchId})}" class="btn btn-sm btn-success fw-bold">
+    <i class="bi bi-list-ol me-1"></i>Chuyển sang Hàng chờ gọi số &rarr;
+  </a>
+</div>
+<div class="alert alert-danger shadow-sm rounded-3" role="alert" th:if="${error}" th:text="${error}"></div>
+
+<!-- Dispatch Toolbar with Branch Selector & Search -->
+<div class="dispatch-toolbar">
+  <div class="d-none">
+    <form th:action="@{/reception/dispatch}" method="get" class="dispatch-branch-form">
+      <input type="hidden" name="branchId" th:value="${board.branchId}">
+    </form>
+  </div>
+
+  <div class="dispatch-toolbar-controls">
+    <div class="dispatch-search" th:unless="${#lists.isEmpty(board.visits)}">
+      <label for="visitSearch">Tìm kiếm lượt khám</label>
+      <div class="input-group">
+        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+        <input id="visitSearch" class="form-control border-start-0" type="search" placeholder="Họ tên, mã BN, mã khám, SĐT...">
+      </div>
     </div>
+    <!-- View Mode Switcher -->
+    <div class="btn-group" role="group" aria-label="Chế độ xem">
+      <button type="button" class="btn btn-primary active" id="btnViewKanban"><i class="bi bi-kanban me-1"></i>Theo bác sĩ</button>
+      <button type="button" class="btn btn-outline-secondary" id="btnViewGrid"><i class="bi bi-grid-3x3-gap me-1"></i>Tất cả lượt khám</button>
+    </div>
+  </div>
+</div>
+
+<!-- KANBAN BOARD ĐIỀU PHỐI THEO BÁC SĨ & GHẾ NHA -->
+<section id="viewKanbanSection" class="dispatch-section border-0 shadow-sm rounded-4 p-3 mb-4">
+  <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
     <div>
-      <div class="d-flex align-items-center gap-2 mb-0.5">
-        <span class="badge bg-success text-white fw-bold rounded-pill px-2.5 py-0.5" style="font-size: 11px;">ĐỒNG BỘ HÀNG CHỜ KHÁM</span>
-        <span th:if="${issuedTicketNumber != null}" class="badge bg-dark text-white font-monospace fw-bold px-2.5 py-0.5" th:text="|Số phiếu: ${issuedTicketNumber}|">Số phiếu: 01</span>
-      </div>
-      <span class="fw-bold d-block text-dark" th:text="${notice}"></span>
+      <h2 class="h5 fw-bold text-dark mb-0"><i class="bi bi-kanban-fill text-primary me-2"></i>Bảng điều phối theo Bác sĩ trực</h2>
+      <p class="text-muted small mb-0">Chọn một lượt khám để phân công bác sĩ, chỉ định ghế nha hoặc cấp số thứ tự.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1" th:text="|${#lists.size(board.visits)} lượt tiếp đón hôm nay|"></span>
+      <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2.5 py-1" th:text="|${#lists.size(board.unassignedVisits)} chưa phân bác sĩ|"></span>
     </div>
   </div>
-  <div class="d-flex flex-wrap align-items-center gap-2">
-    <button th:if="${issuedTicketNumber != null}" type="button"
-            class="btn btn-sm btn-primary fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm btn-print-k80"
-            data-bs-toggle="modal" data-bs-target="#k80TicketModal"
-            th:attr="data-ticket-number=${issuedTicketNumber},
-                     data-patient-name=${issuedPatientName},
-                     data-patient-code=${issuedPatientCode},
-                     data-doctor-name=${issuedDoctorName},
-                     data-room-name=${issuedRoomName},
-                     data-chair-name=${issuedChairName},
-                     data-visit-code=${issuedVisitCode},
-                     data-is-emergency=${issuedIsEmergency},
-                     data-is-priority=${issuedIsPriority}">
-      <i class="bi bi-printer-fill"></i><span>In phiếu K80 ngay</span>
-    </button>
-  </div>
-</div>
-<div class="alert alert-danger shadow-sm rounded-4 p-3 mb-3 border-0" role="alert" th:if="${error}" th:text="${error}"></div>
 
-<!-- =========================================================================
-     3. CÁC BẢNG RIÊNG BIỆT THEO TỪNG BÁC SĨ PHỤ TRÁCH (HIỂN THỊ THỨ TỰ VÀO KHÁM CỤ THỂ)
-     ========================================================================= -->
-<div id="doctorDispatchTablesWrapper">
-  <section th:each="doc : ${board.doctors}"
-           class="dispatch-card-container doctor-dispatch-card mb-3"
-           th:id="|doctorCard-${doc.id}|"
-           th:attr="data-doctor-card-id=${doc.id}">
-    <div class="dispatch-card-header bg-light-subtle">
-      <div class="d-flex align-items-center gap-2.5 flex-wrap">
-        <div>
-          <h3 class="h6 fw-bold text-dark mb-0 d-inline-flex align-items-center gap-2">
-            <span th:text="|Bác sĩ phụ trách: ${doc.name}|">Bác sĩ phụ trách: BS. CK1 Lê Hoàng Nam</span>
-            <span class="badge rounded-pill bg-light text-secondary border fw-normal" style="font-size: 11px;"
-                  th:text="|Vào ca: ${doc.shiftStart}|">Vào ca: 08:00</span>
-          </h3>
+  <div class="kanban-board-wrapper">
+    <div class="kanban-board">
+
+      <!-- CỘT 1: CHỜ PHÂN CÔNG / TIẾP NHẬN MỚI -->
+      <div class="kanban-column kanban-unassigned">
+        <div class="kanban-col-head bg-light">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-warning text-dark rounded-circle px-2 py-1"><i class="bi bi-inbox-fill"></i></span>
+            <div>
+              <strong class="text-dark d-block" style="font-size: 13.5px;">Chờ phân công Bác sĩ &amp; Ghế nha</strong>
+              <small class="text-muted" th:text="|${#lists.size(board.unassignedVisits)} lượt chờ|"></small>
+            </div>
+          </div>
+          <span class="badge rounded-pill bg-warning text-dark fw-bold" th:text="${#lists.size(board.unassignedVisits)}">0</span>
         </div>
-        <span class="badge rounded-pill px-2.5 py-1 fw-bold"
-              th:classappend="${doc.isFull} ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle'"
-              th:text="|${doctorVisitMap[doc.id] != null ? #lists.size(doctorVisitMap[doc.id]) : 0} / 8 bệnh nhân đang chờ|">
-          3 / 8 bệnh nhân đang chờ
-        </span>
+
+        <div class="kanban-col-body">
+          <div th:if="${#lists.isEmpty(board.unassignedVisits)}" class="text-center py-4 text-muted small">
+            <i class="bi bi-check-circle fs-3 text-success d-block mb-1 opacity-75"></i>
+            Tất cả lượt khám đã được phân công vào hàng chờ bác sĩ.
+          </div>
+
+          <article class="kanban-card kanban-card-item" th:each="v : ${board.unassignedVisits}"
+                   th:attr="data-search=|${v.visitCode} ${v.patientProfile.fullName} ${v.patientProfile.patientCode} ${v.patientProfile.phoneNumber}|"
+                   th:classappend="${v.visitType.name() == 'EMERGENCY' ? ' is-emergency' : (v.status.name() == 'WAITING_RESULT' ? ' is-returning' : '')}">
+            <div class="d-flex align-items-center justify-content-between mb-1.5">
+              <span class="font-monospace small fw-bold text-primary" th:text="${v.visitCode}">V12345</span>
+              <div class="d-flex gap-1">
+                <span class="badge bg-danger text-white animate-pulse" th:if="${v.visitType.name() == 'EMERGENCY'}" style="font-size: 10px;">CẤP CỨU</span>
+                <span class="badge text-white" style="background:#7c3aed;font-size: 10px;" th:if="${v.status.name() == 'WAITING_RESULT'}">Ưu tiên CLS</span>
+                <span class="badge bg-light text-secondary border" style="font-size: 10.5px;" th:text="${v.visitType.name() == 'WALK_IN' ? 'Vãng lai' : 'Hẹn trước'}"></span>
+              </div>
+            </div>
+
+            <h6 class="fw-bold text-dark mb-1" th:text="${v.patientProfile.fullName}">Nguyễn Văn A</h6>
+            <div class="small text-muted mb-2">
+              <span th:text="${v.patientProfile.patientCode}">BN123</span> &middot;
+              <i class="bi bi-clock me-0.5"></i><span th:text="${#temporals.format(v.checkInAt, 'HH:mm')}">09:15</span>
+            </div>
+
+            <div class="small p-2 rounded-2 mb-2 bg-light text-secondary border border-light-subtle" th:text="${v.initialSymptoms}">Khám răng tổng quát</div>
+
+            <!-- Bác sĩ yêu cầu hoặc Gợi ý -->
+            <div th:if="${v.appointmentId != null and board.requests[v.appointmentId] != null}" class="p-1.5 rounded-2 small mb-2 bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 11.5px;">
+              <i class="bi bi-person-heart me-1"></i>Yêu cầu đích danh: <strong th:text="${board.requests[v.appointmentId].name}"></strong>
+            </div>
+            <div th:unless="${v.appointmentId != null and board.requests[v.appointmentId] != null}" class="p-1.5 rounded-2 small mb-2 bg-success-subtle text-success border border-success-subtle" style="font-size: 11px;">
+              <i class="bi bi-shuffle me-1"></i>Tự phân bác sĩ đang ít người chờ nhất
+            </div>
+
+            <button type="button" class="btn btn-sm btn-primary w-100 fw-semibold btn-open-assign"
+                    th:attr="data-visit-id=${v.visitId},
+                             data-visit-code=${v.visitCode},
+                             data-patient-name=${v.patientProfile.fullName},
+                             data-patient-code=${v.patientProfile.patientCode},
+                             data-symptoms=${v.initialSymptoms},
+                             data-requested-doctor=${v.appointmentId != null and board.requests[v.appointmentId] != null ? board.requests[v.appointmentId].id : ''},
+                             data-requested-doctor-name=${v.appointmentId != null and board.requests[v.appointmentId] != null ? board.requests[v.appointmentId].name : ''},
+                             data-current-doctor='',
+                             data-current-room='',
+                             data-current-chair=''">
+              <i class="bi bi-person-check-fill me-1"></i> Phân công Bác sĩ &amp; Ghế
+            </button>
+          </article>
+        </div>
       </div>
-    </div>
 
-    <div class="dispatch-card-body pt-2 pb-3">
-      <div class="dv-table-scroll-container rounded-3 border">
-        <table class="dv-amis-table align-middle mb-0">
-          <thead>
-            <tr>
-              <th data-col="queueOrder" class="text-center" style="width: 155px; min-width: 155px;">
-                <div class="dv-th-inner justify-content-center text-center"><span>Thứ tự vào khám</span></div>
-              </th>
-              <th data-col="patientCode" class="text-center" style="width: 125px; min-width: 125px;">
-                <div class="dv-th-inner justify-content-center text-center"><span>Mã bệnh nhân</span></div>
-              </th>
-              <th data-col="checkInTime" class="text-center" style="width: 95px; min-width: 95px;">
-                <div class="dv-th-inner justify-content-center text-center"><span>Giờ đến</span></div>
-              </th>
-              <th data-col="patientName" class="text-center" style="width: 195px; min-width: 195px;">
-                <div class="dv-th-inner justify-content-center text-center"><span>Bệnh nhân</span></div>
-              </th>
-              <th data-col="phone" class="text-center" style="width: 125px; min-width: 125px;">
-                <div class="dv-th-inner justify-content-center text-center"><span>Số điện thoại</span></div>
-              </th>
-              <th data-col="type" class="text-center" style="width: 115px; min-width: 115px;">
-                <div class="dv-th-inner justify-content-center text-center"><span>Phân loại</span></div>
-              </th>
-              <th data-col="roomChair" class="text-center" style="width: 175px; min-width: 175px;">
-                <div class="dv-th-inner justify-content-center text-center"><span>Phòng &amp; Ghế nha</span></div>
-              </th>
-              <th data-col="symptoms" class="text-center" style="width: 200px; min-width: 200px;">
-                <div class="dv-th-inner justify-content-center text-center"><span>Nội dung khám</span></div>
-              </th>
-              <th data-col="ticket" class="text-center" style="width: 120px; min-width: 120px;">
-                <div class="dv-th-inner justify-content-center text-center"><span>Số phiếu</span></div>
-              </th>
-              <th data-col="status" class="text-center" style="width: 130px; min-width: 130px;">
-                <div class="dv-th-inner justify-content-center text-center"><span>Trạng thái</span></div>
-              </th>
-              <th data-col="actions" class="text-center" style="width: 245px; min-width: 245px;">
-                <div class="dv-th-inner justify-content-center text-center"><span>Thao tác</span></div>
-              </th>
-              <th class="dv-floating-actions-track"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr th:each="v, vStat : ${doctorVisitMap[doc.id]}"
-                class="dv-data-row dispatch-table-row"
-                th:attr="data-visit-id=${v.visitId},
-                         data-visit-code=${v.visitCode},
-                         data-patient-name=${v.patientProfile.fullName},
-                         data-patient-code=${v.patientProfile.patientCode},
-                         data-phone=${v.patientProfile.phoneNumber},
-                         data-doctor-name=${doc.name},
-                         data-room-name=${board.roomNames[v.visitId]},
-                         data-chair-name=${board.chairNames[v.visitId]},
-                         data-ticket-number=${board.issued[v.visitId] != null ? board.issued[v.visitId] : 'Chưa cấp'},
-                         data-symptoms=${v.initialSymptoms},
-                         data-checkin-time=${#temporals.format(v.checkInAt, 'HH:mm dd/MM/yyyy')},
-                         data-search=|${v.visitCode} ${v.patientProfile.fullName} ${v.patientProfile.patientCode} ${v.patientProfile.phoneNumber} ${doc.name} ${v.initialSymptoms} ${board.issued[v.visitId] != null ? board.issued[v.visitId] : ''}|,
-                         data-doctor-id=${doc.id}">
+      <!-- CỘT: CẦN BÀN GIAO (BÁC SĨ HẾT CA HOẶC KHÔNG CÒN TRỰC) -->
+      <div th:if="${not #lists.isEmpty(board.handedOverVisits)}" class="kanban-column kanban-unassigned border-danger">
+        <div class="kanban-col-head bg-danger-subtle text-danger">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-danger text-white rounded-circle px-2 py-1"><i class="bi bi-clock-history"></i></span>
+            <div>
+              <strong class="text-danger d-block" style="font-size: 13.5px;">Cần bàn giao (BS hết ca)</strong>
+              <small class="text-danger-emphasis" th:text="|${#lists.size(board.handedOverVisits)} ca cần gán lại|"></small>
+            </div>
+          </div>
+          <span class="badge rounded-pill bg-danger text-white fw-bold" th:text="${#lists.size(board.handedOverVisits)}">0</span>
+        </div>
 
-              <!-- 1. Thứ tự vào khám cụ thể theo Bác sĩ -->
-              <td data-col="queueOrder" class="text-center">
-                <div th:if="${board.queueInfo != null and board.queueInfo[v.visitId] != null}">
-                  <span th:class="${board.queueInfo[v.visitId].badgeClass}"
-                        style="font-size: 11.5px; padding: 4px 10px;"
-                        th:text="${board.queueInfo[v.visitId].label}">Chờ #1 (Tiếp theo)</span>
-                </div>
-                <div th:if="${board.queueInfo == null or board.queueInfo[v.visitId] == null}">
-                  <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" style="font-size: 11.5px; padding: 4px 10px;"
-                        th:text="|Chờ #${vStat.count}|">Chờ #1</span>
-                </div>
-              </td>
+        <div class="kanban-col-body">
+          <article class="kanban-card kanban-card-item border-danger" th:each="v : ${board.handedOverVisits}"
+                   th:attr="data-search=|${v.visitCode} ${v.patientProfile.fullName} ${v.patientProfile.patientCode} ${v.patientProfile.phoneNumber}|">
+            <div class="d-flex align-items-center justify-content-between mb-1.5">
+              <span class="font-monospace small fw-bold text-danger" th:text="${v.visitCode}">V12345</span>
+              <span class="badge bg-danger text-white" style="font-size: 10px;">BS HẾT CA</span>
+            </div>
 
-              <!-- 2. Mã bệnh nhân -->
-              <td data-col="patientCode" class="text-center">
-                <span class="badge bg-light text-dark border font-monospace fw-bold" th:text="${v.patientProfile.patientCode}">BN_APT26_01</span>
-              </td>
+            <h6 class="fw-bold text-dark mb-1" th:text="${v.patientProfile.fullName}">Nguyễn Văn A</h6>
+            <div class="small text-muted mb-2">
+              <span th:text="${v.patientProfile.patientCode}">BN123</span> &middot;
+              <i class="bi bi-clock me-0.5"></i><span th:text="${#temporals.format(v.checkInAt, 'HH:mm')}">09:15</span>
+            </div>
 
-              <!-- 3. Giờ đến -->
-              <td data-col="checkInTime" class="text-center">
-                <span class="fw-semibold text-dark">
-                  <i class="bi bi-clock text-primary me-1.5"></i><span th:text="${#temporals.format(v.checkInAt, 'HH:mm')}">08:00</span>
-                </span>
-              </td>
+            <div class="p-1.5 rounded-2 small mb-2 bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 11px;">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>BS phân công (<strong th:text="${v.primaryDoctor != null ? v.primaryDoctor.fullName : 'Chưa rõ'}"></strong>) đã kết thúc ca trực.
+            </div>
 
-              <!-- 4. Bệnh nhân -->
-              <td data-col="patientName">
-                <div class="d-flex align-items-center gap-2.5">
-                  <div class="patient-card-avatar flex-shrink-0" style="width: 34px; height: 34px; font-size: 13px;"
-                       th:text="${#strings.substring(v.patientProfile.fullName, 0, 1)}">N</div>
-                  <strong class="text-dark text-truncate" th:text="${v.patientProfile.fullName}" th:title="${v.patientProfile.fullName}">Nguyễn Minh An</strong>
-                </div>
-              </td>
-
-              <!-- 5. Số điện thoại -->
-              <td data-col="phone" class="text-center">
-                <span class="text-dark fw-medium small" th:text="${v.patientProfile.phoneNumber}">0901100001</span>
-              </td>
-
-              <!-- 6. Phân loại -->
-              <td data-col="type" class="text-center">
-                <span class="badge rounded-pill bg-danger text-white" th:if="${v.visitType.name() == 'EMERGENCY'}" style="font-size: 11.5px; padding: 4px 10px;">
-                  Cấp cứu
-                </span>
-                <span class="badge rounded-pill text-white" style="background:#7c3aed; font-size: 11.5px; padding: 4px 10px;" th:if="${v.status.name() == 'WAITING_RESULT'}">
-                  Ưu tiên CLS
-                </span>
-                <span class="badge rounded-pill bg-warning text-dark fw-bold" th:if="${board.issued[v.visitId] != null and board.issued[v.visitId].startsWith('P-') and v.visitType.name() != 'EMERGENCY' and v.status.name() != 'WAITING_RESULT'}" style="font-size: 11.5px; padding: 4px 10px;">
-                  Ưu tiên
-                </span>
-                <span class="badge rounded-pill bg-light text-secondary border" style="font-size: 11.5px; padding: 4px 10px;"
-                      th:if="${v.visitType.name() != 'EMERGENCY' and v.status.name() != 'WAITING_RESULT' and (board.issued[v.visitId] == null or !board.issued[v.visitId].startsWith('P-'))}"
-                      th:text="${v.visitType.name() == 'WALK_IN' ? 'Vãng lai' : 'Hẹn trước'}">Hẹn trước</span>
-              </td>
-
-              <!-- 7. Phòng & Ghế nha -->
-              <td data-col="roomChair" class="text-center">
-                <div class="small fw-semibold text-dark">
-                  <i class="bi bi-door-open text-primary me-1"></i><span th:text="${board.roomNames[v.visitId] != null ? board.roomNames[v.visitId] : 'Phòng khám Nha khoa'}">Phòng 101</span>
-                </div>
-                <div class="text-muted" style="font-size: 11.5px;" th:text="${board.chairNames[v.visitId] != null ? board.chairNames[v.visitId] : 'Ghế tiêu chuẩn'}">Ghế 01</div>
-              </td>
-
-              <!-- 8. Nội dung khám -->
-              <td data-col="symptoms">
-                <div class="small text-secondary text-truncate" style="max-width: 200px;"
-                     th:text="${v.initialSymptoms != null and !v.initialSymptoms.isBlank() ? v.initialSymptoms : '—'}"
-                     th:title="${v.initialSymptoms}">Khám tổng quát và tư vấn</div>
-                <div th:if="${v.notes != null and !v.notes.isBlank() and v.notes != '[ƯU TIÊN]'}"
-                     class="doctor-note-inline" th:title="${v.notes}" th:text="${v.notes}"></div>
-              </td>
-
-              <!-- 9. Số phiếu (Click mở sang Hàng chờ hoặc xem phiếu) -->
-              <td data-col="ticket" class="text-center">
-                <div class="ticket-token-wrapper">
-                  <a th:if="${board.issued[v.visitId] != null}"
-                     th:href="@{/reception/queue(branchId=${board.branchId})}"
-                     class="text-decoration-none"
-                     th:title="|Đã đồng bộ sang Hàng chờ gọi số (${board.issued[v.visitId]}) - Bấm để mở Hàng chờ|">
-                    <span th:if="${v.visitType.name() == 'EMERGENCY'}" class="ticket-badge-pill is-emergency">
-                      <span class="ticket-num" th:text="${board.issued[v.visitId]}">P-01</span>
-                      <span class="ticket-tag">Cấp cứu</span>
-                    </span>
-                    <span th:if="${v.visitType.name() != 'EMERGENCY' and (board.issued[v.visitId].startsWith('P-') or v.status.name() == 'WAITING_RESULT')}" class="ticket-badge-pill is-priority">
-                      <span class="ticket-num" th:text="${board.issued[v.visitId]}">P-01</span>
-                      <span class="ticket-tag">Ưu tiên</span>
-                    </span>
-                    <span th:if="${v.visitType.name() != 'EMERGENCY' and v.status.name() != 'WAITING_RESULT' and !board.issued[v.visitId].startsWith('P-')}" class="ticket-badge-pill is-normal">
-                      <span class="ticket-num" th:text="${board.issued[v.visitId]}">01</span>
-                    </span>
-                  </a>
-                  <span th:if="${board.issued[v.visitId] == null}" class="ticket-badge-pill is-unassigned">
-                    <span>Chưa cấp số</span>
-                  </span>
-                </div>
-              </td>
-
-              <!-- 10. Trạng thái -->
-              <td data-col="status" class="text-center">
-                <span th:if="${v.status.name() == 'WAITING_RESULT'}"
-                      class="badge rounded-pill text-white" style="background:#7c3aed; font-size: 11.5px; padding: 4px 10px;">
-                  Chờ kết quả CLS
-                </span>
-                <span th:if="${v.status.name() != 'WAITING_RESULT'}"
-                      class="badge rounded-pill bg-warning text-dark" style="font-size: 11.5px; padding: 4px 10px;">
-                  Đang chờ khám
-                </span>
-              </td>
-
-              <!-- 11. Cột Thao tác tĩnh (KHÔNG dùng onclick="event.stopPropagation()") -->
-              <td data-col="actions" class="text-center">
-                <div class="dv-actions-cell-always">
-                  <!-- Nút Đổi Bác sĩ -->
-                  <button type="button" class="dv-equal-btn-secondary btn-open-transfer"
-                          data-bs-toggle="modal" data-bs-target="#dispatchTransferModal"
-                          th:attr="data-visit-id=${v.visitId},
-                                   data-visit-code=${v.visitCode},
-                                   data-patient-name=${v.patientProfile.fullName},
-                                   data-patient-code=${v.patientProfile.patientCode},
-                                   data-symptoms=${v.initialSymptoms},
-                                   data-current-doctor=${doc.id},
-                                   data-current-doctor-name=${doc.name},
-                                   data-current-chair=${v.chairId != null ? v.chairId : ''}">
-                    <i class="bi bi-arrow-left-right text-primary"></i>
-                    <span>Đổi BS</span>
-                  </button>
-
-                  <!-- Nút In phiếu K80 (nếu đã có số) -->
-                  <button th:if="${board.issued[v.visitId] != null}"
-                          type="button"
-                          class="dv-equal-btn-primary btn-print-k80"
-                          data-bs-toggle="modal" data-bs-target="#k80TicketModal"
-                          th:attr="data-ticket-id=${board.ticketIds[v.visitId]},
-                                   data-ticket-number=${board.issued[v.visitId]},
-                                   data-patient-name=${v.patientProfile.fullName},
-                                   data-patient-code=${v.patientProfile.patientCode},
-                                   data-doctor-name=${doc.name},
-                                   data-room-name=${board.roomNames[v.visitId]},
-                                   data-chair-name=${board.chairNames[v.visitId]},
-                                   data-visit-code=${v.visitCode},
-                                   data-issued-time=${#temporals.format(v.checkInAt, 'HH:mm dd/MM/yyyy')},
-                                   data-is-emergency=${v.visitType.name() == 'EMERGENCY'},
-                                   data-is-priority=${board.issued[v.visitId].startsWith('P-')}">
-                    <i class="bi bi-printer-fill"></i>
-                    <span>In phiếu</span>
-                  </button>
-
-                  <!-- Nút Cấp số (dự phòng nếu chưa có số) -->
-                  <form th:if="${board.issued[v.visitId] == null}"
-                        th:action="@{/reception/dispatch/{id}/ticket(id=${v.visitId})}" method="post" class="d-inline mb-0">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                    <input type="hidden" name="branchId" th:value="${board.branchId}">
-                    <input type="hidden" name="priority" th:value="${v.visitType.name() == 'EMERGENCY' or v.status.name() == 'WAITING_RESULT'}">
-                    <input type="hidden" name="reason" th:value="${v.status.name() == 'WAITING_RESULT' ? 'Bệnh nhân quay lại sau cận lâm sàng chờ đọc kết quả' : 'Cấp số khám tại bàn điều phối'}">
-                    <button type="submit" class="dv-equal-btn-primary">
-                      <i class="bi bi-ticket-perforated"></i>
-                      <span>Cấp số</span>
-                    </button>
-                  </form>
-                </div>
-              </td>
-
-              <!-- 12. Thanh Thao tác nổi khi Hover (KHÔNG dùng onclick="event.stopPropagation()") -->
-              <td class="dv-floating-actions-track">
-                <div class="dv-floating-actions-bar">
-                  <button type="button" class="dv-equal-btn-secondary btn-open-transfer"
-                          data-bs-toggle="modal" data-bs-target="#dispatchTransferModal"
-                          th:attr="data-visit-id=${v.visitId},
-                                   data-visit-code=${v.visitCode},
-                                   data-patient-name=${v.patientProfile.fullName},
-                                   data-patient-code=${v.patientProfile.patientCode},
-                                   data-symptoms=${v.initialSymptoms},
-                                   data-current-doctor=${doc.id},
-                                   data-current-doctor-name=${doc.name},
-                                   data-current-chair=${v.chairId != null ? v.chairId : ''}">
-                    <i class="bi bi-arrow-left-right text-primary"></i>
-                    <span>Đổi BS</span>
-                  </button>
-
-                  <button th:if="${board.issued[v.visitId] != null}"
-                          type="button"
-                          class="dv-equal-btn-primary btn-print-k80"
-                          data-bs-toggle="modal" data-bs-target="#k80TicketModal"
-                          th:attr="data-ticket-id=${board.ticketIds[v.visitId]},
-                                   data-ticket-number=${board.issued[v.visitId]},
-                                   data-patient-name=${v.patientProfile.fullName},
-                                   data-patient-code=${v.patientProfile.patientCode},
-                                   data-doctor-name=${doc.name},
-                                   data-room-name=${board.roomNames[v.visitId]},
-                                   data-chair-name=${board.chairNames[v.visitId]},
-                                   data-visit-code=${v.visitCode},
-                                   data-issued-time=${#temporals.format(v.checkInAt, 'HH:mm dd/MM/yyyy')},
-                                   data-is-emergency=${v.visitType.name() == 'EMERGENCY'},
-                                   data-is-priority=${board.issued[v.visitId].startsWith('P-')}">
-                    <i class="bi bi-printer-fill"></i>
-                    <span>In phiếu</span>
-                  </button>
-                </div>
-              </td>
-            </tr>
-
-            <!-- Empty state cho từng bác sĩ -->
-            <tr th:if="${#lists.isEmpty(doctorVisitMap[doc.id])}">
-              <td colspan="12" class="text-center py-4 text-muted small">
-                <i class="bi bi-check2-circle text-success fs-5 d-block mb-1"></i>
-                Hiện không có bệnh nhân nào đang chờ trong hàng đợi của <strong th:text="${doc.name}"></strong>.
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            <button type="button" class="btn btn-sm btn-outline-danger w-100 fw-semibold btn-open-assign"
+                    th:attr="data-visit-id=${v.visitId},
+                             data-visit-code=${v.visitCode},
+                             data-patient-name=${v.patientProfile.fullName},
+                             data-patient-code=${v.patientProfile.patientCode},
+                             data-symptoms=${v.initialSymptoms},
+                             data-requested-doctor='',
+                             data-requested-doctor-name='',
+                             data-current-doctor='',
+                             data-current-room='',
+                             data-current-chair=''">
+              <i class="bi bi-arrow-left-right me-1"></i> Bàn giao sang BS trực khác
+            </button>
+          </article>
+        </div>
       </div>
-    </div>
-  </section>
-</div>
 
-<!-- =========================================================================
-     5. BẢNG CUỐI DANH SÁCH: BỆNH NHÂN VÃNG LAI / CHƯA XẾP HÀNG CHỜ PHÂN CÔNG BÁC SĨ
-     ========================================================================= -->
-<section class="dispatch-card-container mb-3" id="unassignedDispatchCard">
-  <div class="dispatch-card-header" style="background: #fffbeb;">
-    <div class="d-flex align-items-center gap-2.5 flex-wrap">
-      <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold"
-           style="width: 32px; height: 32px; font-size: 14px;">
-        <i class="bi bi-person-plus-fill"></i>
+      <!-- THÔNG BÁO KHI CHƯA CÓ BÁC SĨ TRỰC CA -->
+      <div th:if="${#lists.isEmpty(board.doctors)}" class="kanban-column flex-grow-1 border-warning bg-warning-subtle p-3 rounded-4" style="min-width: 320px;">
+        <div class="text-center py-4">
+          <i class="bi bi-person-x fs-1 text-warning d-block mb-2"></i>
+          <h6 class="fw-bold text-dark mb-1">Chưa có bác sĩ nào trong ca trực</h6>
+          <p class="text-secondary small mb-3">Hiện tại chưa đến ca làm việc hoặc không có bác sĩ nào được phân ca trực tại chi nhánh. Các lượt khám vẫn được lưu giữ an toàn trong danh sách chờ tiếp nhận.</p>
+          <a th:href="@{/reception/queue(branchId=${board.branchId})}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+            <i class="bi bi-clock-history me-1"></i> Xem hàng chờ sảnh
+          </a>
+        </div>
       </div>
-      <div>
-        <h3 class="h6 fw-bold text-dark mb-0">
-          Danh Sách Bệnh Nhân Chờ
-        </h3>
-        <small class="text-muted">Các lượt khám chưa chỉ định bác sĩ được xếp ở cuối trang để lễ tân phân bổ vào hàng chờ bác sĩ khả dụng.</small>
-      </div>
-      <span class="badge rounded-pill bg-warning text-dark px-2.5 py-1 fw-bold"
-            th:text="|${#lists.size(unassignedItems)} chờ phân BS|">0 chờ phân BS</span>
-    </div>
-  </div>
 
-  <div class="dispatch-card-body pt-2 pb-3">
-    <div class="dv-table-scroll-container rounded-3 border">
-      <table class="dv-amis-table align-middle mb-0" id="unassignedDispatchTable">
-        <thead>
-          <tr>
-            <th data-col="stt" class="text-center" style="width: 55px; min-width: 55px;">
-              <div class="dv-th-inner justify-content-center text-center"><span>#</span></div>
-            </th>
-            <th data-col="patientCode" class="text-center" style="width: 130px; min-width: 130px;">
-              <div class="dv-th-inner justify-content-center text-center"><span>Mã bệnh nhân</span></div>
-            </th>
-            <th data-col="checkInTime" class="text-center" style="width: 100px; min-width: 100px;">
-              <div class="dv-th-inner justify-content-center text-center"><span>Giờ đến</span></div>
-            </th>
-            <th data-col="patientName" class="text-center" style="width: 205px; min-width: 205px;">
-              <div class="dv-th-inner justify-content-center text-center"><span>Bệnh nhân</span></div>
-            </th>
-            <th data-col="phone" class="text-center" style="width: 130px; min-width: 130px;">
-              <div class="dv-th-inner justify-content-center text-center"><span>Số điện thoại</span></div>
-            </th>
-            <th data-col="type" class="text-center" style="width: 120px; min-width: 120px;">
-              <div class="dv-th-inner justify-content-center text-center"><span>Phân loại</span></div>
-            </th>
-            <th data-col="requestedDoc" class="text-center" style="width: 190px; min-width: 190px;">
-              <div class="dv-th-inner justify-content-center text-center"><span>Bác sĩ yêu cầu</span></div>
-            </th>
-            <th data-col="symptoms" class="text-center" style="width: 230px; min-width: 230px;">
-              <div class="dv-th-inner justify-content-center text-center"><span>Nội dung khám</span></div>
-            </th>
-            <th data-col="status" class="text-center" style="width: 140px; min-width: 140px;">
-              <div class="dv-th-inner justify-content-center text-center"><span>Trạng thái</span></div>
-            </th>
-            <th data-col="actions" class="text-center" style="width: 180px; min-width: 180px;">
-              <div class="dv-th-inner justify-content-center text-center"><span>Thao tác</span></div>
-            </th>
-            <th class="dv-floating-actions-track"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr th:each="v, vStat : ${unassignedItems}"
-              class="dv-data-row dispatch-table-row"
-              th:attr="data-visit-id=${v.visitId},
-                       data-visit-code=${v.visitCode},
-                       data-patient-name=${v.patientProfile.fullName},
-                       data-patient-code=${v.patientProfile.patientCode},
-                       data-phone=${v.patientProfile.phoneNumber},
-                       data-doctor-name='Chưa phân công',
-                       data-room-name='Chưa gán phòng',
-                       data-chair-name='Chưa gán ghế',
-                       data-ticket-number='Chưa cấp số',
-                       data-symptoms=${v.initialSymptoms},
-                       data-checkin-time=${#temporals.format(v.checkInAt, 'HH:mm dd/MM/yyyy')},
-                       data-search=|${v.visitCode} ${v.patientProfile.fullName} ${v.patientProfile.patientCode} ${v.patientProfile.phoneNumber} ${v.initialSymptoms}|">
-            <td class="text-center text-muted fw-semibold" th:text="${vStat.count}">1</td>
-            <td class="text-center">
-              <span class="badge bg-light text-dark border font-monospace fw-bold" th:text="${v.patientProfile.patientCode}">BN001</span>
-            </td>
-            <td class="text-center">
-              <span class="fw-semibold text-dark">
-                <i class="bi bi-clock text-primary me-1.5"></i><span th:text="${#temporals.format(v.checkInAt, 'HH:mm')}">08:15</span>
+      <!-- CÁC CỘT HÀNG CHỜ CỦA TỪNG BÁC SĨ TRỰC THỰC TẾ -->
+      <div class="kanban-column kanban-doctor-col" th:each="doc : ${board.doctors}">
+        <div class="kanban-col-head">
+          <div class="d-flex align-items-center gap-2">
+            <div class="doctor-avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 13px;">
+              <i class="bi bi-person-badge"></i>
+            </div>
+            <div>
+              <strong class="text-dark d-block" style="font-size: 13.5px;" th:text="${doc.name}">BS. Lê Hoàng Nam</strong>
+              <small class="text-muted" th:text="|${doc.waiting} bệnh nhân chờ|">0 bệnh nhân chờ</small>
+            </div>
+          </div>
+          <span class="badge rounded-pill" th:classappend="${doc.waiting == 0 ? 'bg-success text-white' : (doc.waiting >= 4 ? 'bg-danger text-white' : 'bg-primary text-white')}" th:text="${doc.waiting}">0</span>
+        </div>
+
+        <div class="kanban-col-body">
+          <div th:if="${#lists.isEmpty(board.doctorVisits[doc.id])}" class="text-center py-4 text-muted small">
+            <i class="bi bi-inbox fs-3 text-secondary d-block mb-1 opacity-50"></i>
+            Bác sĩ hiện không có bệnh nhân nào trong hàng chờ.
+          </div>
+
+          <article class="kanban-card kanban-card-item" th:each="v : ${board.doctorVisits[doc.id]}"
+                   th:attr="data-search=|${v.visitCode} ${v.patientProfile.fullName} ${v.patientProfile.patientCode} ${v.patientProfile.phoneNumber}|"
+                   th:classappend="${v.visitType.name() == 'EMERGENCY' ? ' is-emergency' : (v.status.name() == 'WAITING_RESULT' ? ' is-returning' : '')}">
+
+            <!-- STT Badge & Emergency/Priority Badge -->
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div>
+                <span class="badge bg-primary text-white font-monospace fs-6 px-2 py-0.5" th:if="${board.issued[v.visitId] != null}">
+                  <span th:text="${board.issued[v.visitId]}">01</span>
+                </span>
+                <span class="badge bg-light text-secondary border font-monospace" th:if="${board.issued[v.visitId] == null}">Chưa cấp số</span>
+              </div>
+              <div class="d-flex gap-1">
+                <span class="badge bg-danger text-white animate-pulse" th:if="${v.visitType.name() == 'EMERGENCY'}" style="font-size: 10px;">CẤP CỨU</span>
+                <span class="badge text-white" style="background:#7c3aed;font-size: 10px;" th:if="${v.status.name() == 'WAITING_RESULT'}">Ưu tiên CLS</span>
+                <span class="badge bg-warning text-dark fw-bold" th:if="${board.issued[v.visitId] != null and board.issued[v.visitId].startsWith('P-')}" style="font-size: 10px;">P-xx</span>
+              </div>
+            </div>
+
+            <h6 class="fw-bold text-dark mb-0.5" th:text="${v.patientProfile.fullName}">Nguyễn Minh An</h6>
+            <div class="small text-muted mb-2">
+              <span th:text="${v.patientProfile.patientCode}">BN10001</span> &middot;
+              <i class="bi bi-clock me-0.5"></i><span th:text="${#temporals.format(v.checkInAt, 'HH:mm')}">09:30</span>
+            </div>
+
+            <!-- Vị trí Phòng & Ghế -->
+            <div class="small text-muted mb-2 ps-1">
+              <i class="bi bi-geo-alt text-primary me-1"></i>
+              <span th:text="${v.roomId != null ? ('Phòng ' + v.roomId) : 'Chưa chọn phòng'}"></span>
+              <span th:if="${v.chairId != null}" th:text="| · Ghế ${v.chairId}|"></span>
+            </div>
+
+            <!-- Triệu chứng ban đầu -->
+            <div class="small p-2 rounded-2 mb-2 bg-light text-secondary border border-light-subtle" th:text="${v.initialSymptoms}">Đau răng hàm dưới</div>
+
+            <!-- Yêu cầu đích danh badge -->
+            <div th:if="${v.appointmentId != null and board.requests[v.appointmentId] != null and board.requests[v.appointmentId].id == doc.id}" class="small text-primary fw-semibold mb-2" style="font-size: 11.5px;">
+              <i class="bi bi-star-fill text-warning me-1"></i>Khách yêu cầu đích danh
+            </div>
+
+            <!-- Action Buttons for this queued patient -->
+            <div class="d-flex flex-wrap gap-1.5 mt-2 pt-2 border-top">
+              <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2 fw-semibold btn-open-assign" style="font-size: 11.5px;"
+                       th:if="${v.status.name() == 'WAITING' or v.status.name() == 'WAITING_RESULT'}"
+                      th:attr="data-visit-id=${v.visitId},
+                               data-visit-code=${v.visitCode},
+                               data-patient-name=${v.patientProfile.fullName},
+                               data-patient-code=${v.patientProfile.patientCode},
+                               data-symptoms=${v.initialSymptoms},
+                               data-requested-doctor=${v.appointmentId != null and board.requests[v.appointmentId] != null ? board.requests[v.appointmentId].id : ''},
+                               data-requested-doctor-name=${v.appointmentId != null and board.requests[v.appointmentId] != null ? board.requests[v.appointmentId].name : ''},
+                               data-current-doctor=${doc.id},
+                               data-current-room=${v.roomId != null ? v.roomId : ''},
+                               data-current-chair=${v.chairId != null ? v.chairId : ''}">
+                <i class="bi bi-arrow-left-right me-0.5"></i>Đổi BS &amp; Ghế
+              </button>
+              <span th:if="${v.status.name() == 'IN_EXAM' or v.status.name() == 'IN_TREATMENT'}" class="badge bg-secondary-subtle text-secondary">Đang khám · Khóa điều phối</span>
+
+              <span th:if="${v.status.name() == 'COMPLETED'}" class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2" style="font-size: 11px;">
+                <i class="bi bi-check-circle me-1"></i>Đã khám xong
               </span>
-            </td>
-            <td>
-              <div class="d-flex align-items-center gap-2.5">
-                <div class="patient-card-avatar flex-shrink-0" style="width: 34px; height: 34px; font-size: 13px;"
-                     th:text="${#strings.substring(v.patientProfile.fullName, 0, 1)}">V</div>
-                <strong class="text-dark text-truncate" th:text="${v.patientProfile.fullName}">Nguyễn Văn B</strong>
-              </div>
-            </td>
-            <td class="text-center">
-              <span class="text-dark fw-medium small" th:text="${v.patientProfile.phoneNumber}">0905123456</span>
-            </td>
-            <td class="text-center">
-              <span class="badge rounded-pill bg-danger text-white" th:if="${v.visitType.name() == 'EMERGENCY'}" style="font-size: 11.5px; padding: 4px 10px;">Cấp cứu</span>
-              <span class="badge rounded-pill bg-light text-secondary border" th:if="${v.visitType.name() != 'EMERGENCY'}" style="font-size: 11.5px; padding: 4px 10px;"
-                    th:text="${v.visitType.name() == 'WALK_IN' ? 'Vãng lai' : 'Hẹn trước'}">Vãng lai</span>
-            </td>
-            <td class="text-center">
-              <span th:if="${v.appointmentId != null and board.requests[v.appointmentId] != null}"
-                    class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"
-                    th:text="${board.requests[v.appointmentId].name}">BS. Lê Hoàng Nam</span>
-              <span th:if="${v.appointmentId == null or board.requests[v.appointmentId] == null}"
-                    class="text-muted small">Tự động phân bổ</span>
-            </td>
-            <td>
-              <div class="small text-secondary text-truncate" style="max-width: 220px;"
-                   th:text="${v.initialSymptoms != null and !v.initialSymptoms.isBlank() ? v.initialSymptoms : '—'}"
-                   th:title="${v.initialSymptoms}">Đau răng hàm dưới</div>
-            </td>
-            <td class="text-center">
-              <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 11.5px; padding: 4px 10px;">
-                Chưa xếp hàng
+              <span th:if="${v.status.name() == 'WAITING_PAYMENT'}" class="badge bg-info-subtle text-info border border-info-subtle py-1 px-2" style="font-size: 11px;">
+                <i class="bi bi-credit-card me-1"></i>Chờ thanh toán
               </span>
-            </td>
-            <td class="text-center">
-              <div class="dv-actions-cell-always">
-                <button type="button" class="dv-equal-btn-primary btn-open-assign"
-                        data-bs-toggle="modal" data-bs-target="#dispatchAssignModal"
-                        th:attr="data-visit-id=${v.visitId},
-                                 data-visit-code=${v.visitCode},
-                                 data-patient-name=${v.patientProfile.fullName},
-                                 data-patient-code=${v.patientProfile.patientCode},
-                                 data-symptoms=${v.initialSymptoms},
-                                 data-is-emergency=${v.visitType.name() == 'EMERGENCY'},
-                                 data-requested-doctor=${v.appointmentId != null and board.requests[v.appointmentId] != null ? board.requests[v.appointmentId].id : ''},
-                                 data-requested-doctor-name=${v.appointmentId != null and board.requests[v.appointmentId] != null ? board.requests[v.appointmentId].name : ''},
-                                 data-current-doctor='',
-                                 data-current-chair=''">
-                  <i class="bi bi-person-plus-fill"></i>
-                  <span>Phân BS &amp; Số</span>
-                </button>
-              </div>
-            </td>
-            <td class="dv-floating-actions-track">
-              <div class="dv-floating-actions-bar">
-                <button type="button" class="dv-equal-btn-primary btn-open-assign"
-                        data-bs-toggle="modal" data-bs-target="#dispatchAssignModal"
-                        th:attr="data-visit-id=${v.visitId},
-                                 data-visit-code=${v.visitCode},
-                                 data-patient-name=${v.patientProfile.fullName},
-                                 data-patient-code=${v.patientProfile.patientCode},
-                                 data-symptoms=${v.initialSymptoms},
-                                 data-is-emergency=${v.visitType.name() == 'EMERGENCY'},
-                                 data-requested-doctor=${v.appointmentId != null and board.requests[v.appointmentId] != null ? board.requests[v.appointmentId].id : ''},
-                                 data-requested-doctor-name=${v.appointmentId != null and board.requests[v.appointmentId] != null ? board.requests[v.appointmentId].name : ''},
-                                 data-current-doctor='',
-                                 data-current-chair=''">
-                  <i class="bi bi-person-plus-fill"></i>
-                  <span>Phân BS &amp; Số</span>
-                </button>
-              </div>
-            </td>
-          </tr>
 
-          <tr th:if="${#lists.isEmpty(unassignedItems)}">
-            <td colspan="11" class="text-center py-4 text-muted small">
-              <i class="bi bi-check-all text-success fs-5 d-block mb-1"></i>
-              Tất cả bệnh nhân vãng lai và tiếp đón trong ngày đều đã được phân bác sĩ và cấp số thứ tự.
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              <!-- In phiếu chờ / Cấp số -->
+              <form th:if="${(v.status.name() == 'WAITING' or v.status.name() == 'WAITING_RESULT')}" th:action="@{/reception/dispatch/{id}/ticket(id=${v.visitId})}" method="post" class="d-inline mb-0">
+                <input type="hidden" name="branchId" th:value="${board.branchId}">
+                <input type="hidden" name="priority" th:value="${v.visitType.name() == 'EMERGENCY' or v.status.name() == 'WAITING_RESULT'}">
+                <input type="hidden" name="reason" th:value="${v.status.name() == 'WAITING_RESULT' ? 'Bệnh nhân quay lại sau cận lâm sàng chờ đọc kết quả' : ''}">
+                <button type="submit" class="btn btn-xs btn-outline-primary py-1 px-2 fw-semibold" style="font-size: 11.5px;">
+                  <i class="bi bi-printer me-0.5"></i><span th:text="${board.issued[v.visitId] == null ? 'Cấp số & In' : 'In lại'}">In</span>
+                </button>
+              </form>
+
+              <!-- Cấp lại số ưu tiên P-xx sau CLS nếu chưa có số P -->
+              <form th:if="${v.status.name() == 'WAITING_RESULT' and (board.issued[v.visitId] == null or !board.issued[v.visitId].startsWith('P-'))}"
+                    th:action="@{/reception/dispatch/{id}/ticket(id=${v.visitId})}" method="post" class="d-inline mb-0">
+                <input type="hidden" name="branchId" th:value="${board.branchId}">
+                <input type="hidden" name="priority" value="true">
+                <input type="hidden" name="reason" value="Bệnh nhân quay lại sau cận lâm sàng chờ đọc kết quả">
+                <button type="submit" class="btn btn-xs btn-warning text-dark py-1 px-2 fw-bold" style="font-size: 11px;" title="Cấp lại số ưu tiên P-xx cho bệnh nhân trở về từ phòng chụp X-quang/xét nghiệm">
+                  <i class="bi bi-star-fill me-0.5"></i>Cấp số P-xx
+                </button>
+              </form>
+            </div>
+          </article>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- FORM LỌC ẨN HỖ TRỢ LIVE SEARCH & SWITCH CHI NHÁNH -->
-<form id="filterForm" method="get" th:action="@{/reception/dispatch}" class="d-none">
-  <input type="hidden" name="branchId" th:value="${board.branchId}">
-  <input type="hidden" id="filterKeywordInput" name="keyword" th:value="${keyword}">
-</form>
+<!-- GRID VIEW SECTION (FOR SEARCH & DETAILED INLINE OPERATIONS) -->
+<section id="viewGridSection" class="dispatch-section border-0 shadow-sm rounded-4 p-3 mb-4" style="display: none;" aria-labelledby="visitsHeading">
+  <div class="dispatch-section-head">
+    <div>
+      <h2 id="visitsHeading" class="h5 fw-bold text-dark mb-1"><i class="bi bi-grid-3x3-gap text-primary me-2"></i>Tất cả lượt khám tiếp đón hôm nay</h2>
+      <p class="text-muted small mb-0">Danh sách chi tiết toàn bộ lượt khám. Hỗ trợ thao tác gán nhanh và đổi bác sĩ.</p>
+    </div>
+    <span class="dispatch-count" th:text="|${#lists.size(board.visits)} lượt|">0 lượt</span>
+  </div>
+  <div class="dispatch-empty text-center py-4 bg-light rounded-3 border" th:if="${#lists.isEmpty(board.visits)}">
+    <i class="bi bi-inbox fs-2 mb-2 text-primary opacity-50 d-block"></i>
+    <strong class="d-block mb-1 text-dark">Chưa có lượt khám</strong>
+    <span class="text-muted small">Bệnh nhân sau khi tiếp đón sẽ xuất hiện tại đây.</span>
+  </div>
+  <div class="dispatch-visit-grid" th:unless="${#lists.isEmpty(board.visits)}">
+    <article class="dispatch-visit-card" th:each="v : ${board.visits}"
+             th:attr="data-search=|${v.visitCode} ${v.patientProfile.fullName} ${v.patientProfile.patientCode} ${v.patientProfile.phoneNumber}|"
+             th:classappend="${v.visitType.name() == 'EMERGENCY' ? ' border-danger border-2' : (v.status.name() == 'WAITING_RESULT' ? ' border-primary border-2' : '')}">
+      <div class="dispatch-visit-head">
+        <div>
+          <div class="d-flex align-items-center gap-1.5 mb-1">
+            <span class="dispatch-code" th:text="${v.visitCode}"></span>
+            <span class="badge bg-danger text-white animate-pulse" th:if="${v.visitType.name() == 'EMERGENCY'}"><i class="bi bi-lightning-fill me-0.5"></i>CẤP CỨU</span>
+            <span class="badge text-white" style="background:#7c3aed;" th:if="${v.status.name() == 'WAITING_RESULT'}"><i class="bi bi-arrow-repeat me-0.5"></i>Ưu tiên CLS quay lại</span>
+            <span class="badge bg-warning text-dark fw-bold" th:if="${board.issued[v.visitId] != null and board.issued[v.visitId].startsWith('P-')}"><i class="bi bi-star-fill me-0.5"></i>Ưu tiên: <span th:text="${board.issued[v.visitId]}"></span></span>
+          </div>
+          <h3 th:text="${v.patientProfile.fullName}"></h3>
+          <span class="dispatch-meta" th:text="${v.visitType.name() == 'EMERGENCY' ? 'Ca cấp cứu' : (v.status.name() == 'WAITING_RESULT' ? 'Cận lâm sàng quay lại' : (v.appointmentId != null ? 'Có lịch hẹn' : 'Khách vãng lai'))}"></span>
+        </div>
+        <span class="dispatch-status" th:classappend="${v.status.name() == 'WAITING' or v.status.name() == 'WAITING_RESULT' ? ' is-waiting' : ''}" th:switch="${v.status.name()}">
+          <span th:case="'WAITING'">Đang chờ</span>
+          <span th:case="'WAITING_RESULT'">Chờ kết quả CLS</span>
+          <span th:case="'WAITING_PARACLINICAL'">Đang làm CLS</span>
+          <span th:case="'IN_EXAM'">Đang khám</span>
+          <span th:case="'IN_TREATMENT'">Đang điều trị</span>
+          <span th:case="'WAITING_PAYMENT'">Chờ thanh toán</span>
+          <span th:case="'COMPLETED'">Hoàn tất</span>
+          <span th:case="'CANCELLED'">Đã hủy</span>
+          <span th:case="*">Đang xử lý</span>
+        </span>
+      </div>
 
-<!-- =========================================================================
-     MODAL 1: PHÂN CÔNG BÁC SĨ & TỰ ĐỘNG CẤP SỐ THỨ TỰ
-     ========================================================================= -->
+      <div class="dispatch-request" th:if="${v.appointmentId != null and board.requests[v.appointmentId] != null}">
+        <i class="bi bi-person-heart"></i><span>Yêu cầu đích danh: <strong th:text="${board.requests[v.appointmentId].name}"></strong></span>
+      </div>
+      <div class="dispatch-warning" th:if="${v.appointmentId != null and board.requests[v.appointmentId] != null and !board.requests[v.appointmentId].available}">
+        Bác sĩ yêu cầu hiện không trực. Chọn bác sĩ khác và ghi lý do đổi, hoặc chờ bác sĩ này khả dụng.
+      </div>
+      <div class="dispatch-request is-flexible" th:unless="${v.appointmentId != null and board.requests[v.appointmentId] != null}">
+        <i class="bi bi-shuffle"></i><span>Không yêu cầu bác sĩ đích danh (Tự phân bác sĩ ít người chờ nhất)</span>
+      </div>
+
+      <div class="dispatch-current">
+        <span>Bác sĩ đang phân</span>
+        <strong th:text="${v.primaryDoctor == null ? 'Chưa phân công' : v.primaryDoctor.fullName}"></strong>
+        <small th:if="${board.issued[v.visitId] != null}" th:text="|Số khám ${board.issued[v.visitId]} · đổi bác sĩ vẫn giữ số này|"></small>
+      </div>
+
+      <form class="dispatch-assign-form" th:if="${v.status.name() == 'WAITING' or v.status.name() == 'WAITING_RESULT'}" th:action="@{/reception/dispatch/{id}/assign(id=${v.visitId})}" method="post">
+        <input type="hidden" name="branchId" th:value="${board.branchId}">
+        <div class="dispatch-fields">
+          <div class="dispatch-field">
+            <label th:for="|doctor-${v.visitId}|">Bác sĩ tiếp nhận</label>
+            <select name="doctorId" class="form-select" th:id="|doctor-${v.visitId}|">
+              <option value="" th:selected="${v.primaryDoctor == null}" th:text="${v.appointmentId != null and board.requests[v.appointmentId] != null ? 'Giữ bác sĩ yêu cầu' : 'Tự chọn bác sĩ ít người chờ nhất'}"></option>
+              <option th:each="d : ${board.doctors}" th:value="${d.id}" th:selected="${v.primaryDoctor != null and v.primaryDoctor.staffId == d.id}" th:text="|${d.name} · ${d.waiting} đang chờ|"></option>
+            </select>
+          </div>
+          <div class="dispatch-field">
+            <label th:for="|room-${v.visitId}|">Phòng <span>tùy chọn</span></label>
+            <select name="roomId" class="form-select" th:id="|room-${v.visitId}|">
+              <option value="">Chưa chỉ định</option>
+              <option th:each="r : ${board.rooms}" th:value="${r.roomId}" th:selected="${v.roomId == r.roomId}" th:text="${r.roomName}"></option>
+            </select>
+          </div>
+          <div class="dispatch-field">
+            <label th:for="|chair-${v.visitId}|">Ghế <span>tùy chọn</span></label>
+            <select name="chairId" class="form-select" th:id="|chair-${v.visitId}|">
+              <option value="">Chưa chỉ định</option>
+              <option th:each="c : ${board.chairs}" th:if="${c.status.name() == 'AVAILABLE' and c.room != null}" th:value="${c.chairId}" th:selected="${v.chairId == c.chairId}" th:text="|${c.chairName} · ${c.room.roomName}|"></option>
+            </select>
+          </div>
+        </div>
+        <label class="dispatch-reason-label" th:for="|reason-${v.visitId}|">Lý do đổi bác sĩ <span>chỉ cần khi khác yêu cầu hoặc chuyển hàng</span></label>
+        <input class="form-control" th:id="|reason-${v.visitId}|" name="reason" minlength="10" maxlength="255" placeholder="Ví dụ: Bác sĩ được yêu cầu bận ca cấp cứu, bệnh nhân đồng ý đổi">
+        <div class="dispatch-form-bottom">
+          <small>Ghế chỉ được sử dụng khi bắt đầu khám.</small>
+          <button class="btn btn-primary" type="submit"><i class="bi bi-check2 me-1"></i>Lưu phân công</button>
+        </div>
+      </form>
+
+      <form class="dispatch-ticket-form" th:if="${(v.status.name() == 'WAITING' or v.status.name() == 'WAITING_RESULT') and v.primaryDoctor != null}" th:action="@{/reception/dispatch/{id}/ticket(id=${v.visitId})}" method="post">
+        <input type="hidden" name="branchId" th:value="${board.branchId}">
+        <div th:if="${board.issued[v.visitId] == null}" class="dispatch-ticket-controls">
+          <label><input type="checkbox" name="priority" value="true" th:checked="${v.visitType.name() == 'EMERGENCY' or v.status.name() == 'WAITING_RESULT'}"> Ưu tiên (P-xx)</label>
+          <input type="text" name="reason" maxlength="255" class="form-control"
+                 th:value="${v.status.name() == 'WAITING_RESULT' ? 'Bệnh nhân quay lại sau cận lâm sàng chờ đọc kết quả' : ''}"
+                 placeholder="Lý do ưu tiên (bỏ trống tự điền chuẩn)">
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-1">
+          <button class="btn btn-outline-primary" type="submit" th:text="${board.issued[v.visitId] == null ? 'Cấp số khám' : 'In lại số khám'}"></button>
+          <button th:if="${board.issued[v.visitId] == null and v.status.name() == 'WAITING_RESULT'}" class="btn btn-sm btn-warning text-dark fw-bold" type="submit" onclick="this.form.querySelector('input[name=priority]').checked=true; this.form.querySelector('input[name=reason]').value='Bệnh nhân quay lại sau cận lâm sàng chờ đọc kết quả';">
+            <i class="bi bi-star-fill me-1"></i>Cấp số ưu tiên P-xx
+          </button>
+        </div>
+      </form>
+    </article>
+  </div>
+</section>
+
+<!-- SỐ KHÁM ĐÃ CẤP & IN PHIẾU CHỜ -->
+<section class="dispatch-section border-0 shadow-sm rounded-4 p-3 mb-4" aria-labelledby="ticketsHeading">
+  <div class="dispatch-section-head">
+    <div>
+      <h2 id="ticketsHeading" class="h5 fw-bold text-dark mb-1"><i class="bi bi-ticket-perforated text-primary me-2"></i>Số khám đã cấp &amp; Phiếu chờ</h2>
+      <p class="text-muted small mb-0">Lọc theo bác sĩ để theo dõi từng hàng chờ. Số ưu tiên (P-xx) luôn được ưu tiên gọi khám trước.</p>
+    </div>
+    <span class="dispatch-count" th:text="|${#lists.size(board.queue)} số|">0 số</span>
+  </div>
+  <div class="dispatch-queue-filter mb-3" th:unless="${#lists.isEmpty(board.queue)}">
+    <label for="queueDoctor" class="small fw-semibold text-secondary me-2">Bác sĩ phụ trách:</label>
+    <select id="queueDoctor" class="form-select form-select-sm d-inline-block w-auto">
+      <option value="">Tất cả bác sĩ</option>
+    </select>
+  </div>
+  <div class="dispatch-empty text-center py-4 bg-light rounded-3 border" th:if="${#lists.isEmpty(board.queue)}">
+    <i class="bi bi-ticket-perforated fs-2 mb-2 text-primary opacity-50 d-block"></i>
+    <strong class="d-block mb-1 text-dark">Chưa có lượt khám nào được cấp số</strong>
+    <span class="text-muted small">Bấm nút "Cấp số &amp; In" trên thẻ bệnh nhân ở trên để sinh số thứ tự và in phiếu chờ.</span>
+  </div>
+  <div class="table-responsive rounded-3 border" th:unless="${#lists.isEmpty(board.queue)}">
+    <table class="table dispatch-table table-hover align-middle mb-0">
+      <thead class="table-light">
+      <tr>
+        <th style="width: 130px;">Số thứ tự</th>
+        <th>Bệnh nhân</th>
+        <th>Bác sĩ phụ trách</th>
+        <th style="width: 140px;">Trạng thái</th>
+        <th class="dispatch-actions-column text-center pe-3" style="width: 240px; min-width: 240px;">Thao tác</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="t : ${board.queue}" th:attr="data-doctor=${t.doctorId},data-doctor-name=${t.doctorName},data-search=|${t.number} ${t.patient} ${t.patientCode} ${t.doctorName}|">
+        <td>
+          <strong class="dispatch-ticket-no font-monospace" th:classappend="${t.priority ? ' text-primary fw-bold' : ''}" th:text="${t.number}">01</strong>
+          <span class="badge bg-danger text-white ms-1" th:if="${t.emergency}"><i class="bi bi-lightning-fill"></i> Cấp cứu</span>
+          <span class="badge bg-warning text-dark ms-1" th:if="${t.priority and !t.emergency}"><i class="bi bi-star-fill"></i> Ưu tiên</span>
+        </td>
+        <td>
+          <strong class="text-dark d-block" th:text="${t.patient}"></strong>
+          <small class="text-muted font-monospace" th:text="${t.patientCode}"></small>
+        </td>
+        <td>
+          <span th:text="${t.doctorName != null ? t.doctorName : 'Chưa phân bác sĩ'}"></span>
+        </td>
+        <td th:switch="${t.status.name()}">
+          <span th:case="'WAITING'" class="badge bg-warning-subtle text-warning-emphasis">Đang chờ</span>
+          <span th:case="'CALLED'" class="badge bg-primary-subtle text-primary">Đã gọi</span>
+          <span th:case="'IN_SERVICE'" class="badge bg-success-subtle text-success">Đang khám</span>
+          <span th:case="'PAUSED'" class="badge bg-secondary-subtle text-secondary">Tạm dừng</span>
+          <span th:case="'DONE'" class="badge bg-light text-muted border">Hoàn tất</span>
+          <span th:case="'CANCELLED'" class="badge bg-danger-subtle text-danger">Đã hủy</span>
+        </td>
+        <td class="dispatch-actions-column text-center pe-3">
+          <div class="dispatch-action-group">
+            <a class="btn btn-sm btn-outline-primary fw-semibold px-2.5 py-1" th:href="@{/reception/dispatch/tickets/{id}(id=${t.ticketId}, autoPrint=true)}" target="_blank" title="In phiếu chờ POS 80mm">
+              <i class="bi bi-printer me-1"></i>In phiếu
+            </a>
+            <a class="btn btn-sm btn-outline-success fw-semibold px-2.5 py-1" th:href="@{/reception/queue(branchId=${board.branchId})}" title="Đến màn hình gọi số">
+              <i class="bi bi-megaphone me-1"></i>Gọi số
+            </a>
+          </div>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</main>
+</div>
+</div>
+
+<!-- POPUP PHÂN CÔNG / ĐỔI BÁC SĨ & GHẾ KHÁM -->
+<!-- Must be a direct child of body: Bootstrap appends its backdrop to body. -->
 <div class="modal fade" id="dispatchAssignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg rounded-4">
+    <div class="modal-content border-0 shadow rounded-4">
       <form id="modalAssignForm" method="post" action="">
         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
         <input type="hidden" name="branchId" th:value="${board.branchId}">
-        <input type="hidden" name="issueTicket" value="true">
 
         <div class="modal-header bg-light border-0 py-3 px-4 rounded-top-4">
           <div>
-            <h5 class="modal-title fw-bold text-dark mb-0" id="assignModalLabel">
-              <i class="bi bi-person-plus-fill text-primary me-1.5"></i> Phân công Bác sĩ &amp; Cấp số tự động
+            <h5 class="modal-title fw-bold text-dark" id="assignModalLabel">
+              <i class="bi bi-person-gear text-primary me-1.5"></i> Phân công Bác sĩ &amp; Ghế nha
             </h5>
-            <small class="text-muted">Hệ thống tự động gán bác sĩ, đồng bộ hàng chờ và cấp phiếu số thứ tự.</small>
+            <small class="text-muted">Chọn bác sĩ trực và vị trí ghế nha phù hợp cho lượt khám.</small>
           </div>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
 
         <div class="modal-body p-4">
+          <!-- Patient Summary Card -->
           <div class="p-3 bg-light rounded-3 mb-3 border">
             <div class="d-flex align-items-center justify-content-between mb-1">
               <strong id="modalPatientName" class="fs-6 text-dark">Nguyễn Văn A</strong>
@@ -576,259 +540,62 @@
             <div class="small text-secondary" id="modalSymptoms">Triệu chứng: ...</div>
           </div>
 
+          <!-- Requested Doctor or Least-Loaded Recommendation Banner -->
           <div id="modalDoctorAdvice" class="p-2.5 rounded-3 small mb-3 border"></div>
 
+          <!-- Doctor Select -->
           <div class="mb-3">
             <label for="modalDoctorSelect" class="form-label small fw-bold text-dark mb-1">
-              Bác sĩ khám phụ trách *
+              Bác sĩ tiếp nhận *
             </label>
-            <select name="doctorId" id="modalDoctorSelect" class="form-select rounded-3">
-              <option value="">Tự động chọn bác sĩ phù hợp nhất</option>
-              <option th:each="d : ${board.doctors}" th:value="${d.id}"
-                      th:disabled="${d.isFull}"
-                      th:attr="data-waiting=${d.waiting}, data-shift-start=${d.shiftStart}"
-                      th:text="|${d.name} (${d.waiting} đang chờ${d.isFull ? ' - ⚠️ Quá tải ca' : ''})|">
+            <select name="doctorId" id="modalDoctorSelect" class="form-select">
+              <option value="">Tự động chọn bác sĩ ít người chờ nhất</option>
+              <option th:each="d, dStat : ${board.doctors}" th:value="${d.id}"
+                      th:text="|${d.name} (${d.waiting} đang chờ)${dStat.first ? ' ⭐ Gợi ý' : ''}|">
               </option>
             </select>
           </div>
 
-          <div class="mb-3">
-            <label for="modalChairSelect" class="form-label small fw-bold text-dark mb-1">
-              Phòng &amp; Ghế nha khám (Tùy chọn)
-            </label>
-            <select name="chairId" id="modalChairSelect" class="form-select rounded-3">
-              <option value="">Chưa cố định ghế (Tự động theo phòng khám của Bác sĩ)</option>
-              <option th:each="c : ${board.chairs}" th:if="${c.status.name() == 'AVAILABLE'}"
-                      th:value="${c.chairId}"
-                      th:text="|${c.room != null ? c.room.roomName + ' - ' : ''}${c.chairName} (Sẵn sàng)|"></option>
-            </select>
-          </div>
-
-          <div class="mb-2">
-            <label for="modalNoteInput" class="form-label small fw-bold text-dark mb-1">
-              Ghi chú bổ sung cho Bác sĩ điều trị
-            </label>
-            <textarea id="modalNoteInput" name="note" class="form-control rounded-3" rows="2" maxlength="255"
-                      placeholder="VD: Bệnh nhân sợ đau đề nghị BS làm êm; Bệnh nhân vội việc xin khám sớm..."></textarea>
-          </div>
-        </div>
-
-        <div class="modal-footer bg-light border-0 py-2.5 px-4 rounded-bottom-4">
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
-          <button type="submit" class="btn btn-primary btn-sm fw-bold px-3.5 d-inline-flex align-items-center gap-1.5 shadow-sm">
-            <i class="bi bi-check2-circle"></i><span>Xác nhận phân công &amp; Cấp số</span>
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- =========================================================================
-     MODAL 2: ĐỔI BÁC SĨ & CHUYỂN HÀNG CHỜ
-     ========================================================================= -->
-<div class="modal fade" id="dispatchTransferModal" tabindex="-1" aria-labelledby="transferModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg rounded-4">
-      <form id="modalTransferForm" method="post" action="">
-        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-        <input type="hidden" name="branchId" th:value="${board.branchId}">
-        <input type="hidden" name="issueTicket" value="true">
-
-        <div class="modal-header bg-light border-0 py-3 px-4 rounded-top-4">
-          <div>
-            <h5 class="modal-title fw-bold text-dark mb-0" id="transferModalLabel">
-              <i class="bi bi-arrow-left-right text-primary me-1.5"></i> Đổi Bác sĩ &amp; Chuyển hàng chờ
-            </h5>
-            <small class="text-muted">Chuyển bệnh nhân đang chờ sang hàng chờ của bác sĩ khác.</small>
-          </div>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-
-        <div class="modal-body p-4">
-          <div class="p-3 bg-light rounded-3 mb-3 border">
-            <div class="d-flex align-items-center justify-content-between mb-1">
-              <strong id="modalTransferPatientName" class="fs-6 text-dark">Nguyễn Văn A</strong>
-              <span id="modalTransferVisitCode" class="badge bg-white text-primary border font-monospace">V12345</span>
+          <!-- Room & Chair Select -->
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label for="modalRoomSelect" class="form-label small fw-bold text-dark mb-1">Phòng khám</label>
+              <select name="roomId" id="modalRoomSelect" class="form-select">
+                <option value="">Chưa chỉ định</option>
+                <option th:each="r : ${board.rooms}" th:value="${r.roomId}" th:text="${r.roomName}"></option>
+              </select>
             </div>
-            <div class="small text-muted" id="modalTransferCurrentDoctor">Bác sĩ hiện tại: <strong>BS. Lê Hoàng Nam</strong></div>
+            <div class="col-6">
+              <label for="modalChairSelect" class="form-label small fw-bold text-dark mb-1">Ghế nha</label>
+              <select name="chairId" id="modalChairSelect" class="form-select">
+                <option value="">Chưa chỉ định</option>
+                <option th:each="c : ${board.chairs}" th:if="${c.status.name() == 'AVAILABLE' and c.room != null}"
+                        th:value="${c.chairId}" th:attr="data-room=${c.room.roomId}"
+                        th:text="|${c.chairName} (${c.room.roomName})|"></option>
+              </select>
+            </div>
           </div>
 
-          <div class="mb-3">
-            <label for="modalTransferDoctorSelect" class="form-label small fw-bold text-dark mb-1">
-              Chuyển sang Bác sĩ mới *
-            </label>
-            <select name="doctorId" id="modalTransferDoctorSelect" class="form-select rounded-3" required>
-              <option value="">-- Chọn bác sĩ tiếp nhận mới --</option>
-              <option th:each="d : ${board.doctors}" th:value="${d.id}"
-                      th:disabled="${d.isFull}"
-                      th:attr="data-waiting=${d.waiting}"
-                      th:text="|${d.name} (${d.waiting} đang chờ${d.isFull ? ' - ⚠️ Quá tải ca' : ''})|">
-              </option>
-            </select>
-          </div>
-
+          <!-- Reason Input -->
           <div class="mb-2">
-            <label for="modalTransferReasonInput" class="form-label small fw-bold text-danger mb-1">
-              Lý do đổi bác sĩ / chuyển hàng chờ *
+            <label for="modalReasonInput" class="form-label small fw-bold text-dark mb-1">
+              Lý do đổi bác sĩ / chuyển hàng chờ
             </label>
-            <textarea id="modalTransferReasonInput" name="reason" class="form-control rounded-3" rows="3" maxlength="255" required minlength="10"
-                      placeholder="Bắt buộc ghi rõ lý do chuyển bác sĩ (tối thiểu 10 ký tự)..."></textarea>
-            <small class="text-muted d-block mt-1" style="font-size: 11px;">
-              Lý do này được lưu vào nhật ký hệ thống (Audit Log) để phục vụ kiểm toán và tránh quá tải bác sĩ.
-            </small>
+            <textarea id="modalReasonInput" name="reason" class="form-control" rows="2" maxlength="255"
+                      placeholder="Chỉ cần khi đổi khác bác sĩ yêu cầu hoặc chuyển hàng chờ giữa các bác sĩ (10 - 255 ký tự)..."></textarea>
+            <small class="text-muted" style="font-size: 11px;">Nếu giữ nguyên bác sĩ yêu cầu hoặc phân lần đầu thì không cần nhập lý do.</small>
           </div>
         </div>
 
         <div class="modal-footer bg-light border-0 py-2.5 px-4 rounded-bottom-4">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
-          <button type="submit" class="btn btn-primary btn-sm fw-bold px-3.5 d-inline-flex align-items-center gap-1.5 shadow-sm" id="btnConfirmTransfer">
-            <i class="bi bi-check2-circle"></i><span>Xác nhận chuyển Bác sĩ</span>
+          <button type="submit" class="btn btn-primary btn-sm fw-bold px-3">
+            <i class="bi bi-check2-circle me-1"></i> Xác nhận &amp; Lưu phân công
           </button>
         </div>
       </form>
     </div>
   </div>
-</div>
-
-<!-- =========================================================================
-     MODAL 3: BẢN IN PHIẾU NHIỆT K80 TRỰC TIẾP (THAY "CỬA SỐ" BẰNG "PHÒNG KHÁM: [TÊN PHÒNG]")
-     ========================================================================= -->
-<div class="modal fade" id="k80TicketModal" tabindex="-1" aria-labelledby="k80TicketModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
-    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-      <div class="modal-header bg-light border-bottom py-2.5 px-3.5 no-print">
-        <h6 class="modal-title fw-bold text-dark mb-0" id="k80TicketModalLabel">
-          <i class="bi bi-receipt-cutoff text-primary me-1.5"></i>Bản in Phiếu nhiệt K80
-        </h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-
-      <div class="modal-body p-3 bg-secondary-subtle d-flex justify-content-center">
-        <!-- KHỐI BẢN IN K80 CHUẨN MÁY IN NHIỆT 80MM -->
-        <div id="k80PrintableArea" class="bg-white p-3.5 rounded-3 shadow-sm border text-center w-100" style="max-width: 310px; font-family: 'Be Vietnam Pro', 'Inter', sans-serif; color: #0f172a;">
-          <div class="fw-bold text-uppercase" style="font-size: 13px; letter-spacing: 0.4px;">PHÒNG KHÁM NHA KHOA CƯỜNG VIỆT</div>
-          <div class="text-muted mb-2 pb-2" style="font-size: 11px; border-bottom: 1.5px dashed #94a3b8;">
-            Hệ thống Nha khoa Kỹ thuật cao CV-DCMS
-          </div>
-
-          <div class="text-uppercase fw-bold text-secondary mt-1" style="font-size: 11px; letter-spacing: 1px;">SỐ THỨ TỰ KHÁM</div>
-
-          <!-- Số phiếu khổ lớn (01, 02 hoặc P-01) -->
-          <div id="k80TicketNumber" class="fw-black my-1" style="font-size: 54px; font-weight: 900; line-height: 1.05; color: #0284c7; letter-spacing: 1px;">
-            01
-          </div>
-
-          <div id="k80PriorityBadge" class="badge bg-warning text-dark fw-bold mb-2 d-none" style="font-size: 11px;">
-            ƯU TIÊN PHỤC VỤ
-          </div>
-
-          <!-- Vị trí hiển thị chuẩn: "Phòng khám: [Tên phòng]" (Thay cho "Cửa số") -->
-          <div class="py-1.5 px-2.5 my-2 rounded-2 fw-bold" style="background: #f1f5f9; border: 1px solid #cbd5e1; font-size: 14px; color: #0f172a;">
-            <span id="k80RoomDisplay">Phòng khám: Phòng 101</span>
-          </div>
-
-          <!-- Thông tin chi tiết: Mã BN, Tên BN, Bác sĩ, Ghế -->
-          <table class="w-100 text-start mt-2 mb-2" style="font-size: 12.5px; border-collapse: collapse;">
-            <tbody>
-              <tr style="border-bottom: 1px dashed #e2e8f0;">
-                <td class="py-1 text-secondary">Mã BN:</td>
-                <td class="py-1 text-end fw-bold font-monospace" id="k80PatientCode">BN_APT26_01</td>
-              </tr>
-              <tr style="border-bottom: 1px dashed #e2e8f0;">
-                <td class="py-1 text-secondary">Tên BN:</td>
-                <td class="py-1 text-end fw-bold" id="k80PatientName">Nguyễn Minh An</td>
-              </tr>
-              <tr style="border-bottom: 1px dashed #e2e8f0;">
-                <td class="py-1 text-secondary">Bác sĩ:</td>
-                <td class="py-1 text-end fw-bold text-primary" id="k80DoctorName">BS. CK1 Lê Hoàng Nam</td>
-              </tr>
-              <tr style="border-bottom: 1px dashed #e2e8f0;">
-                <td class="py-1 text-secondary">Ghế:</td>
-                <td class="py-1 text-end fw-semibold" id="k80ChairName">Ghế 01</td>
-              </tr>
-              <tr>
-                <td class="py-1 text-secondary">Giờ cấp:</td>
-                <td class="py-1 text-end text-muted small" id="k80IssuedTime">08:00</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="pt-2 mt-1 text-muted" style="border-top: 1.5px dashed #94a3b8; font-size: 11px;">
-            <div>Vui lòng chờ gọi số tại <strong id="k80FooterRoom">Phòng khám</strong>.</div>
-            <div>Phiếu chỉ có giá trị trong ngày.</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-footer bg-light border-top py-2.5 px-3.5 d-flex justify-content-end gap-2 no-print">
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
-        <button type="button" id="btnPrintK80Now" class="btn btn-primary btn-sm fw-bold px-3 d-inline-flex align-items-center gap-2 shadow-sm">
-          <i class="bi bi-printer-fill"></i><span>In phiếu ngay</span>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- =========================================================================
-     MODAL CHI TIẾT TIẾP ĐÓN Ở GIỮA MÀN HÌNH (MỞ KHI CLICK VÀO HÀNG TRONG BẢNG)
-     ========================================================================= -->
-<div class="modal fade" tabindex="-1" id="receptionDetailDrawer" aria-labelledby="receptionDetailDrawerLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg rounded-4">
-      <div class="modal-header bg-light border-bottom py-3 px-4 rounded-top-4">
-        <div>
-          <h5 class="modal-title fw-bold text-dark mb-0 d-flex align-items-center gap-2" id="receptionDetailDrawerLabel">
-            <i class="bi bi-person-vcard text-primary"></i><span>Chi tiết lượt tiếp đón</span>
-          </h5>
-          <small class="text-muted font-monospace" id="drawerVisitCode">V123456</small>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body p-4">
-        <div class="p-3 rounded-3 bg-light border mb-3">
-          <div class="d-flex align-items-center justify-content-between mb-1">
-            <strong class="fs-6 text-dark" id="drawerPatientName">Nguyễn Minh An</strong>
-            <span class="badge bg-white text-dark border font-monospace" id="drawerPatientCode">BN001</span>
-          </div>
-          <div class="small text-muted d-flex align-items-center gap-1.5">
-            <i class="bi bi-telephone text-primary"></i><span>SĐT: <span id="drawerPhone">0901100001</span></span>
-          </div>
-        </div>
-
-        <div class="reception-detail-modal-list">
-          <div class="reception-detail-row">
-            <span class="detail-label">Số phiếu thứ tự</span>
-            <span class="detail-value fw-bold fs-5 text-primary" id="drawerTicketNumber">01</span>
-          </div>
-          <div class="reception-detail-row">
-            <span class="detail-label">Bác sĩ phụ trách</span>
-            <span class="detail-value" id="drawerDoctorName">BS. CK1 Lê Hoàng Nam</span>
-          </div>
-          <div class="reception-detail-row">
-            <span class="detail-label">Vị trí khám</span>
-            <span class="detail-value" id="drawerRoomChair">Phòng khám: Phòng 101 - Ghế 01</span>
-          </div>
-          <div class="reception-detail-row">
-            <span class="detail-label">Thời điểm tiếp đón (Check-in)</span>
-            <span class="detail-value" id="drawerCheckInTime">08:00</span>
-          </div>
-          <div class="reception-detail-row flex-column align-items-start gap-2">
-            <span class="detail-label">Nội dung hẹn / Triệu chứng ban đầu</span>
-            <div class="p-2.5 rounded-3 bg-light border small text-dark w-100 text-start" id="drawerSymptoms">—</div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer bg-light border-0 py-2.5 px-4 rounded-bottom-4 d-flex justify-content-end">
-        <button type="button" class="btn btn-outline-secondary btn-sm px-4 fw-semibold" data-bs-dismiss="modal">Thoát</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-</main>
-</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
