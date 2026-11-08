@@ -26,8 +26,10 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 /**
- * Unit Test tầng Controller cho FT11 - Khám lâm sàng & Chỉ định Cận lâm sàng (Role Bác sĩ)
- * Controllers: DoctorExaminationRestController, DoctorParaclinicalRestController
+ * Unit Test tầng Controller cho FT11 - Khám lâm sàng & Chỉ định Cận lâm sàng
+ * (Role Bác sĩ)
+ * Controllers: DoctorExaminationRestController,
+ * DoctorParaclinicalRestController
  */
 @ExtendWith(MockitoExtension.class)
 class DoctorExaminationControllerTest {
@@ -39,6 +41,8 @@ class DoctorExaminationControllerTest {
 
     @Mock
     private ParaclinicalOrderService paraclinicalOrderService;
+    @Mock
+    private com.cvdcms.service.NanoPixIntegrationService nanoPixIntegrationService;
 
     private DoctorExaminationRestController doctorExaminationRestController;
     private DoctorParaclinicalRestController doctorParaclinicalRestController;
@@ -48,7 +52,8 @@ class DoctorExaminationControllerTest {
     @BeforeEach
     void setUp() {
         doctorExaminationRestController = new DoctorExaminationRestController(diagnosisService, doctorVisitAccess);
-        doctorParaclinicalRestController = new DoctorParaclinicalRestController(paraclinicalOrderService, doctorVisitAccess);
+        doctorParaclinicalRestController = new DoctorParaclinicalRestController(paraclinicalOrderService,
+                doctorVisitAccess, nanoPixIntegrationService);
 
         mockVisit = new Visit();
         mockVisit.setVisitId(100L);
@@ -72,7 +77,8 @@ class DoctorExaminationControllerTest {
 
             when(diagnosisService.checkClinicalCompletionReadiness(100L)).thenReturn(checkDTO);
 
-            ResponseEntity<ClinicalCompletionCheckDTO> response = doctorExaminationRestController.checkCompletionReadiness(100L, null);
+            ResponseEntity<ClinicalCompletionCheckDTO> response = doctorExaminationRestController
+                    .checkCompletionReadiness(100L, null);
 
             assertNotNull(response);
             assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -89,7 +95,8 @@ class DoctorExaminationControllerTest {
             ClinicalCompletionRequestDTO request = new ClinicalCompletionRequestDTO();
             request.setDoctorNotes("Bệnh nhân ổn định, hẹn tái khám sau 7 ngày");
 
-            ResponseEntity<Map<String, Object>> response = doctorExaminationRestController.completeClinicalExamination(100L, request, null);
+            ResponseEntity<Map<String, Object>> response = doctorExaminationRestController
+                    .completeClinicalExamination(100L, request, null);
 
             assertNotNull(response);
             assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -105,7 +112,8 @@ class DoctorExaminationControllerTest {
             when(diagnosisService.completeClinicalExamination(eq(100L), any()))
                     .thenThrow(new IllegalStateException("Chưa chọn chẩn đoán bệnh chính (ICD-10)"));
 
-            ResponseEntity<Map<String, Object>> response = doctorExaminationRestController.completeClinicalExamination(100L, null, null);
+            ResponseEntity<Map<String, Object>> response = doctorExaminationRestController
+                    .completeClinicalExamination(100L, null, null);
 
             assertNotNull(response);
             assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -119,7 +127,8 @@ class DoctorExaminationControllerTest {
             when(diagnosisService.reopenClinicalExamination(eq(100L), any())).thenReturn(mockVisit);
 
             Map<String, String> body = Map.of("reason", "Cần bổ sung chỉ định");
-            ResponseEntity<Map<String, Object>> response = doctorExaminationRestController.reopenClinicalExamination(100L, body, null);
+            ResponseEntity<Map<String, Object>> response = doctorExaminationRestController
+                    .reopenClinicalExamination(100L, body, null);
 
             assertNotNull(response);
             assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -137,7 +146,8 @@ class DoctorExaminationControllerTest {
 
             when(diagnosisService.getGeneralExamination(100L)).thenReturn(examDTO);
 
-            ResponseEntity<GeneralExaminationRequestDTO> response = doctorExaminationRestController.getGeneralExamination(100L, null);
+            ResponseEntity<GeneralExaminationRequestDTO> response = doctorExaminationRestController
+                    .getGeneralExamination(100L, null);
 
             assertNotNull(response);
             assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -149,7 +159,8 @@ class DoctorExaminationControllerTest {
         void saveGeneralExamination_Success() {
             doNothing().when(diagnosisService).saveGeneralExamination(any());
 
-            ResponseEntity<Map<String, Object>> response = doctorExaminationRestController.saveGeneralExamination(100L, new GeneralExaminationRequestDTO(), null);
+            ResponseEntity<Map<String, Object>> response = doctorExaminationRestController.saveGeneralExamination(100L,
+                    new GeneralExaminationRequestDTO(), null);
 
             assertNotNull(response);
             assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -162,7 +173,8 @@ class DoctorExaminationControllerTest {
             doNothing().when(diagnosisService).saveDoctorInstructions(100L, "Kiêng đồ cay nóng");
 
             Map<String, String> body = Map.of("adviceNotes", "Kiêng đồ cay nóng");
-            ResponseEntity<Map<String, Object>> response = doctorExaminationRestController.saveDoctorInstructions(100L, body, null);
+            ResponseEntity<Map<String, Object>> response = doctorExaminationRestController.saveDoctorInstructions(100L,
+                    body, null);
 
             assertNotNull(response);
             assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -186,7 +198,8 @@ class DoctorExaminationControllerTest {
 
             when(paraclinicalOrderService.getOrdersByVisit(100L)).thenReturn(List.of(itemDTO));
 
-            ResponseEntity<List<ParaclinicalOrderItemResponseDTO>> response = doctorParaclinicalRestController.getOrdersByVisit(100L, null);
+            ResponseEntity<List<ParaclinicalOrderItemResponseDTO>> response = doctorParaclinicalRestController
+                    .getOrdersByVisit(100L, null);
 
             assertNotNull(response);
             assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -222,7 +235,8 @@ class DoctorExaminationControllerTest {
             when(paraclinicalOrderService.createOrder(eq(100L), any(), isNull()))
                     .thenThrow(new IllegalStateException("Hồ sơ bệnh án đã khóa (BR-EMR-02)."));
 
-            ResponseEntity<?> response = doctorParaclinicalRestController.createOrder(100L, new ParaclinicalOrderCreateDTO(), null);
+            ResponseEntity<?> response = doctorParaclinicalRestController.createOrder(100L,
+                    new ParaclinicalOrderCreateDTO(), null);
 
             assertNotNull(response);
             assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -259,4 +273,3 @@ class DoctorExaminationControllerTest {
         }
     }
 }
-
