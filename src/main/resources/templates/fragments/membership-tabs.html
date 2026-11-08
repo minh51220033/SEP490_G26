@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Reuse the existing endpoints so filters, validation and POST redirects stay in their tab. -->
+<section th:fragment="membershipTabs(activeTab)" class="membership-tabs-wrapper">
+    <div class="membership-header">
+        <h1><i class="bi bi-person-vcard" aria-hidden="true"></i> Thành viên &amp; Ưu đãi</h1>
+        <p>Tra cứu thẻ bệnh nhân, quản lý hạng thành viên, tích điểm và chương trình ưu đãi.</p>
+    </div>
+    <nav class="membership-tabs-nav" aria-label="Thành viên và ưu đãi">
+        <ul class="membership-tabs-list">
+            <li th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_MEMBERSHIPS'))}">
+                <a th:href="@{/reception/memberships}" class="membership-tab-btn"
+                   th:classappend="${activeTab == 'cards'} ? 'active' : ''"
+                   th:attr="aria-current=${activeTab == 'cards' ? 'page' : null}">
+                    <i class="bi bi-credit-card-2-front" aria-hidden="true"></i><span>Thẻ bệnh nhân</span>
+                </a>
+            </li>
+            <li th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS'))}">
+                <a th:href="@{/admin/membership-tiers}" class="membership-tab-btn"
+                   th:classappend="${activeTab == 'tiers'} ? 'active' : ''"
+                   th:attr="aria-current=${activeTab == 'tiers' ? 'page' : null}">
+                    <i class="bi bi-award" aria-hidden="true"></i><span>Hạng thẻ &amp; Tích điểm</span>
+                </a>
+            </li>
+            <li th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_PROMOTIONS'))}">
+                <a th:href="@{/admin/promotions}" class="membership-tab-btn"
+                   th:classappend="${activeTab == 'promotions'} ? 'active' : ''"
+                   th:attr="aria-current=${activeTab == 'promotions' ? 'page' : null}">
+                    <i class="bi bi-ticket-perforated" aria-hidden="true"></i><span>Khuyến mãi &amp; Voucher</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</section>
+
+<a th:fragment="membershipMenu(activeMenu)" class="side-link side-sublink"
+   th:href="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_MEMBERSHIPS'))} ? @{/reception/memberships} : (${permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS')} ? @{/admin/membership-tiers} : @{/admin/promotions})"
+   th:classappend="${activeMenu == 'reception-memberships' or activeMenu == 'membership-tiers' or activeMenu == 'admin-promotions'} ? 'is-active' : ''"
+   title="Tra cứu thẻ bệnh nhân, hạng thẻ, tích điểm, khuyến mãi và voucher">
+    <i class="bi bi-person-vcard" aria-hidden="true"></i><span class="side-link__label">Thành viên &amp; Ưu đãi</span>
+</a>
+</body>
+</html>
