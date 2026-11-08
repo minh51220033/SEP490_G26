@@ -101,7 +101,8 @@ class QueueAndDispatchEndpointAcceptanceTest {
                         .param("branchId", "1")
                         .param("priority", "false"))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/reception/dispatch/tickets/10"));
+                .andExpect(redirectedUrl("/reception/dispatch?branchId=1"))
+                .andExpect(flash().attributeExists("notice", "issuedTicketNumber"));
     }
 
     @Test
@@ -200,5 +201,181 @@ class QueueAndDispatchEndpointAcceptanceTest {
                 .andExpect(jsonPath("$.patient").doesNotExist())
                 .andExpect(jsonPath("$.phone").doesNotExist())
                 .andExpect(jsonPath("$.cccd").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("UI/DOM Verification 1: Kiểm tra nút Đổi Bác sĩ đã gỡ bỏ onclick stopPropagation và mở dispatchTransferModal")
+    void testTransferDoctorButtonAndModalDomStructure() throws Exception {
+        String dispatchHtml = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/templates/reception/dispatch.html"));
+        String dispatchJs = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/static/js/reception-dispatch.js"));
+
+        org.junit.jupiter.api.Assertions.assertFalse(
+                dispatchHtml.contains("class=\"dv-actions-cell-always\" onclick=\"event.stopPropagation()\""),
+                "Đã gỡ bỏ hoàn toàn onclick=\"event.stopPropagation()\" tại .dv-actions-cell-always");
+        org.junit.jupiter.api.Assertions.assertFalse(
+                dispatchHtml.contains("onclick=\"event.stopPropagation()\""),
+                "Không còn onclick=\"event.stopPropagation()\" gây chặn event delegation");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                dispatchHtml.contains("btn-open-transfer") && dispatchHtml.contains("data-bs-target=\"#dispatchTransferModal\""),
+                "Nút .btn-open-transfer phải có data-bs-toggle=\"modal\" và data-bs-target=\"#dispatchTransferModal\"");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                dispatchJs.contains("e.target.closest('.btn-open-transfer')") && dispatchJs.contains("handleOpenTransfer"),
+                "JS event delegation bắt đúng .btn-open-transfer để mở modal #dispatchTransferModal");
+    }
+
+    @Test
+    @DisplayName("UI/DOM Verification 2: Kiểm tra Modal In phiếu nhiệt K80 hiển thị Phòng khám: [Tên phòng] và không reload trang")
+    void testK80ThermalPrintModalStructureAndNoReload() throws Exception {
+        String dispatchHtml = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/templates/reception/dispatch.html"));
+        String examTicketHtml = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/templates/reception/exam-ticket.html"));
+        String dispatchJs = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/static/js/reception-dispatch.js"));
+
+        org.junit.jupiter.api.Assertions.assertTrue(
+                dispatchHtml.contains("id=\"k80TicketModal\"") && dispatchHtml.contains("Phòng khám:"),
+                "Modal K80 phải hiển thị vị trí 'Phòng khám: [Tên phòng]' thay vì 'Cửa số'");
+        org.junit.jupiter.api.Assertions.assertFalse(
+                dispatchHtml.contains("Cửa số"),
+                "Bản in K80 không dùng 'Cửa số'");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                dispatchHtml.contains("id=\"k80PatientCode\"")
+                        && dispatchHtml.contains("id=\"k80PatientName\"")
+                        && dispatchHtml.contains("id=\"k80DoctorName\"")
+                        && dispatchHtml.contains("id=\"k80ChairName\"")
+                        && dispatchHtml.contains("id=\"k80TicketNumber\""),
+                "Modal K80 phải có đầy đủ Mã BN, Tên BN, Bác sĩ, Ghế và Số phiếu (0x hoặc P-xx)");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                examTicketHtml.contains("Phòng khám:"),
+                "Trang exam-ticket.html cũng hiển thị chuẩn 'Phòng khám:'");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                dispatchJs.contains("printK80ReceiptInPlace") && dispatchJs.contains("k80HiddenPrintFrame"),
+                "Thao tác in K80 thực hiện qua hidden iframe tại chỗ, không gây reload hay redirect làm mất trạng thái trang");
+    }
+
+    @Test
+    @DisplayName("UI/DOM Verification 3: Kiểm tra bảng Lịch sử tiếp đón mở Drawer chi tiết và filter chip 2 chiều")
+    void testReceptionHistoryDrawerAndTwoWayFilterChips() throws Exception {
+        String checkInHtml = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/templates/reception/check-in.html"));
+        String dispatchJs = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/static/js/reception-dispatch.js"));
+
+        org.junit.jupiter.api.Assertions.assertTrue(
+                checkInHtml.contains("id=\"receptionHistoryTable\"")
+                        && checkInHtml.contains("reception-history-row")
+                        && checkInHtml.contains("id=\"receptionDetailDrawer\""),
+                "Bảng lịch sử tiếp đón có hàng .reception-history-row và Drawer #receptionDetailDrawer");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                checkInHtml.contains("e.target.closest('button, a, input, select, textarea, label, form, .no-row-click')"),
+                "Click vào hàng (trừ checkbox/action cụ thể) mở đúng Drawer chi tiết tiếp đón");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                checkInHtml.contains("btn-remove-chip") && checkInHtml.contains("filter-chip")
+                        && dispatchJs.contains("btn-remove-chip"),
+                "Filter tag / badge hoạt động hai chiều: bấm xóa chip x làm reset đúng trường lọc tương ứng");
+    }
+
+    @Test
+    @DisplayName("UI/DOM Verification 4: Kiểm tra toàn bộ nâng cấp UI Tiếp đón, Điều phối, Kanban Hàng chờ và Màn hình gọi số Basic White")
+    void testRefinedUiAcrossCheckInDispatchQueueAndTvScreens() throws Exception {
+        String dispatchHtml = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/templates/reception/dispatch.html"));
+        String checkInHtml = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/templates/reception/check-in.html"));
+        String queueHtml = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/templates/reception/queue.html"));
+        String queueRowsHtml = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/templates/reception/queue-rows.html"));
+        String queueTvHtml = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/templates/reception/queue-tv.html"));
+
+        // 1. Điều phối: Bỏ thanh search (#dispatchToolbarCard), bỏ nút Hàng chờ lặp lại ở card bác sĩ, bỏ icon tròn trước tên bác sĩ
+        org.junit.jupiter.api.Assertions.assertFalse(
+                dispatchHtml.contains("id=\"dispatchToolbarCard\""),
+                "Đã bỏ thanh search (#dispatchToolbarCard) trên màn Điều phối ghế nha");
+        org.junit.jupiter.api.Assertions.assertFalse(
+                dispatchHtml.contains("Xem Hàng chờ gọi số"),
+                "Đã bỏ nút lặp Hàng chờ gọi số trên màn Điều phối");
+
+        // 2. Tiếp đón & Check-in: 2 bảng có chỉnh kích cỡ cột + nút thao tác động, Modal chi tiết ở giữa chỉ có nút Thoát, Live Search vãng lai
+        org.junit.jupiter.api.Assertions.assertTrue(
+                checkInHtml.contains("setupUniversalEnterpriseTable")
+                        && checkInHtml.contains("dv-floating-actions-bar")
+                        && checkInHtml.contains("dv-th-inner"),
+                "Hai bảng ở Tiếp đón & Check-in có chỉnh kích cỡ cột và nút thao tác động giống bên Điều phối");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                checkInHtml.contains("modal-dialog-centered") && checkInHtml.contains("Thoát"),
+                "Chi tiết lượt tiếp đón hiển thị Modal ở giữa màn hình với nút Thoát");
+        org.junit.jupiter.api.Assertions.assertFalse(
+                checkInHtml.contains("Tìm hồ sơ") || checkInHtml.contains("id=\"emergencySwitch\"") || checkInHtml.contains("id=\"prioritySwitch\""),
+                "Khối vãng lai dùng Live Search, đã bỏ nút Tìm hồ sơ và bỏ nút ưu tiên / cấp cứu");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                checkInHtml.contains("/reception/check-in/patients/search?query="),
+                "Khối vãng lai tích hợp Live Search tự động gợi ý hồ sơ");
+
+        // 3. Hàng chờ gọi số: Xóa bảng hàng chờ và toolbar lọc, giữ Kanban với tiêu đề 'Kanban hàng chờ gọi số' & nút 'Màn hình gọi số' bên phải
+        org.junit.jupiter.api.Assertions.assertFalse(
+                queueRowsHtml.contains("id=\"viewQueueTableSection\""),
+                "Đã xóa phần Bảng hàng chờ, chỉ giữ Kanban");
+        org.junit.jupiter.api.Assertions.assertTrue(
+                queueHtml.contains("Kanban hàng chờ gọi số") && queueHtml.contains("Màn hình gọi số"),
+                "Đặt tiêu đề 'Kanban hàng chờ gọi số' và sát góc phải là nút 'Màn hình gọi số'");
+        org.junit.jupiter.api.Assertions.assertFalse(
+                queueRowsHtml.contains("name=\"chairId\""),
+                "Đã bỏ dropdown chỉnh sửa ghế điều trị ở cột Đang gọi để nút Bắt đầu khám không tràn khỏi block");
+        org.junit.jupiter.api.Assertions.assertFalse(
+                queueRowsHtml.contains("${t.visit.visitCode}"),
+                "Card hàng chờ chỉ giữ tên bệnh nhân và mã bệnh nhân, đã bỏ mã code visitCode hiển thị");
+
+        // 4. Màn hình gọi số: Màu trắng basic, bản list đơn giản với Số thứ tự, Số phiếu, Mã bệnh nhân, Tên bệnh nhân, Số điện thoại
+        org.junit.jupiter.api.Assertions.assertTrue(
+                queueTvHtml.contains("background: #ffffff")
+                        && queueTvHtml.contains("Số thứ tự")
+                        && queueTvHtml.contains("Số phiếu")
+                        && queueTvHtml.contains("Mã bệnh nhân")
+                        && queueTvHtml.contains("Tên bệnh nhân")
+                        && queueTvHtml.contains("Số điện thoại"),
+                "Màn hình gọi số thiết kế màu trắng basic, trình bày dạng bảng list với đủ 5 cột yêu cầu");
+    }
+
+    @Test
+    @DisplayName("UI/DOM Verification 5: Kiểm tra đồng nhất Stepper 4 tab, Padding vãng lai, Modal Thêm hồ sơ bệnh nhân mới & khóa Hoàn tác")
+    void testStepperUniformityWalkInPaddingQuickAddPatientModalAndRevertLock() throws Exception {
+        String aptHtml = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/templates/reception/appointments/dashboard.html"));
+        String checkInHtml = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/templates/reception/check-in.html"));
+        String dispatchHtml = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/templates/reception/dispatch.html"));
+        String queueHtml = java.nio.file.Files.readString(
+                java.nio.file.Path.of("src/main/resources/templates/reception/queue.html"));
+
+        // 1. Tất cả 4 màn hình đều dùng chung class .reception-step-pill và nạp reception-workflow-navigation.css
+        for (String html : List.of(aptHtml, checkInHtml, dispatchHtml, queueHtml)) {
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    html.contains("reception-step-pill") && html.contains("reception-workflow-navigation.css"),
+                    "Tất cả 4 màn hình quy trình tiếp đón đều đồng nhất class .reception-step-pill và stylesheet");
+        }
+
+        // 2. Khối vãng lai có padding p-4 thoáng đều hai bên lề
+        org.junit.jupiter.api.Assertions.assertTrue(
+                checkInHtml.contains("id=\"bodyWalkInCard\"") && checkInHtml.contains("walkin-form-spacious p-4"),
+                "Khối Khách vãng lai (#bodyWalkInCard) có padding thoáng đều hai bên lề");
+
+        // 3. Modal Thêm Hồ Sơ Bệnh Nhân Mới (#addPatientModal) tích hợp trực tiếp tại Tiếp đón & gọi POST /patients/quick-create
+        org.junit.jupiter.api.Assertions.assertTrue(
+                checkInHtml.contains("id=\"addPatientModal\"")
+                        && checkInHtml.contains("Thêm Hồ Sơ Bệnh Nhân Mới")
+                        && checkInHtml.contains("Lưu hồ sơ bệnh nhân")
+                        && checkInHtml.contains("/patients/quick-create"),
+                "Modal Thêm Hồ Sơ Bệnh Nhân Mới tại chỗ cho phép tạo mới bệnh nhân và chọn ngay để nhập triệu chứng tiếp đón");
+
+        // 4. Hoàn tác check-in kiểm tra a.canRevert và hiển thị trạng thái Đã điều phối khi khóa
+        org.junit.jupiter.api.Assertions.assertTrue(
+                checkInHtml.contains("th:if=\"${a.canRevert}\"") && checkInHtml.contains("Đã điều phối"),
+                "Chỉ cho phép bấm Hoàn tác khi a.canRevert == true, khóa hoàn tác khi đã chuyển sang điều phối / gọi số");
     }
 }
