@@ -24,11 +24,21 @@ public class EmrAccess {
 
     public Scope require(HttpSession session) {
         Object value = session == null ? null : session.getAttribute("loggedInUser");
-        if (!(value instanceof User sessionUser) || sessionUser.getUserId() == null) {
+        Long userId = null;
+        if (value instanceof User sessionUser) {
+            userId = sessionUser.getUserId();
+        } else if (value != null && "com.cvdcms.entity.User".equals(value.getClass().getName())) {
+            try {
+                Object idVal = value.getClass().getMethod("getUserId").invoke(value);
+                if (idVal instanceof Long uid) userId = uid;
+            } catch (Exception ignored) {}
+        }
+        if (userId == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
         }
-        User user = users.findById(sessionUser.getUserId())
+        User user = users.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        session.setAttribute("loggedInUser", user);
         if (!Boolean.TRUE.equals(user.getIsActive()) || !"ACTIVE".equalsIgnoreCase(user.getStatus())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản đã bị khóa.");
         }

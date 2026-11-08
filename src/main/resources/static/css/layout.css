@@ -743,7 +743,7 @@ a {
     background: var(--surface);
     border-right: 1px solid var(--line);
     z-index: 1045;
-    overflow: hidden;
+    overflow: visible;
     transition: width var(--dur) var(--ease-in-out), transform var(--dur-slow) var(--ease), box-shadow var(--dur) var(--ease);
 }
 
@@ -998,6 +998,13 @@ a {
     flex-shrink: 0;
     padding: 8px 10px 10px;
     border-top: 1px solid var(--line-soft);
+    position: relative;
+    overflow: visible;
+}
+
+.sidebar-user-dropdown {
+    position: relative;
+    width: 100%;
 }
 
 .app-sidebar__user {
@@ -1008,6 +1015,137 @@ a {
     margin-bottom: 4px;
     border-radius: var(--radius);
     background: var(--surface-2);
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid transparent;
+    transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+
+.app-sidebar__user:hover,
+.sidebar-user-dropdown.is-open .app-sidebar__user {
+    background: var(--bg);
+    border-color: var(--line-soft);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.app-sidebar__user:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+}
+
+/* User dropup panel (Mở ngược lên trên chân sidebar) */
+.user-dropup-panel,
+.sidebar-user-dropdown .user-dropup-panel {
+    position: absolute;
+    top: auto;
+    bottom: calc(100% + 8px);
+    left: 0;
+    right: auto;
+    width: 250px;
+    max-width: calc(100vw - 20px);
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    z-index: 1060;
+    padding: 8px;
+    background: #ffffff;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.18), 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(8px) scale(.97);
+    transform-origin: bottom left;
+    transition: opacity var(--dur-fast) var(--ease), transform var(--dur) var(--ease), visibility 0s linear var(--dur);
+}
+
+.sidebar-user-dropdown.is-open > .user-dropup-panel {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+    transition: opacity var(--dur-fast) var(--ease), transform var(--dur) var(--ease), visibility 0s;
+}
+
+.user-dropup-panel .user-dropdown__header {
+    padding: 8px 10px 10px;
+    border-bottom: 1px solid var(--line-soft);
+    margin-bottom: 6px;
+}
+
+.user-dropup-panel .user-dropdown__name {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.user-dropup-panel .user-dropdown__role {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+
+.user-dropup-panel .dropdown-item-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--ink-2);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.user-dropup-panel .dropdown-item-link > .bi {
+    width: 18px;
+    font-size: 15px;
+    color: var(--muted);
+    transition: color var(--dur-fast) var(--ease);
+}
+
+.user-dropup-panel .dropdown-item-link:hover {
+    background: var(--bg);
+    color: var(--primary);
+}
+
+.user-dropup-panel .dropdown-item-link:hover > .bi {
+    color: var(--primary);
+}
+
+.user-dropup-panel .dropdown-item-link--danger:hover {
+    background: #fff1f2;
+    color: #e11d48;
+}
+
+.user-dropup-panel .dropdown-item-link--danger:hover > .bi {
+    color: #e11d48;
+}
+
+.user-card__gear {
+    color: var(--muted);
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-sidebar__user:hover .user-card__gear,
+.user-card__gear:hover {
+    color: var(--primary);
 }
 
 .user-card__avatar {
@@ -1140,9 +1278,42 @@ a {
         opacity: 0;
     }
 
+    .is-sidebar-collapsed .app-sidebar {
+        overflow: visible;
+    }
+
+    .is-sidebar-collapsed .app-sidebar__foot {
+        overflow: visible;
+    }
+
     .is-sidebar-collapsed .app-sidebar__user {
         padding: 8px 6px;
         background: transparent;
+        justify-content: center;
+    }
+
+    .is-sidebar-collapsed .user-card__gear,
+    .is-sidebar-collapsed .user-card__action {
+        display: none !important;
+    }
+
+    .is-sidebar-collapsed .sidebar-user-dropdown {
+        position: relative;
+    }
+
+    .is-sidebar-collapsed .sidebar-user-dropdown .user-dropup-panel {
+        top: auto;
+        bottom: 0;
+        left: calc(100% + 10px);
+        right: auto;
+        width: 250px;
+        max-height: calc(100vh - 40px);
+        transform-origin: bottom left;
+        transform: translateX(-8px) scale(.97);
+    }
+
+    .is-sidebar-collapsed .sidebar-user-dropdown.is-open > .user-dropup-panel {
+        transform: none;
     }
 
     .is-sidebar-collapsed .app-sidebar__collapse {
@@ -1156,15 +1327,50 @@ a {
 
 
 /* =====================================================================
-   09. TOPBAR
+   09. TOPBAR (Đã ẩn toàn hệ thống theo chuẩn giao diện DentalSoft)
    ===================================================================== */
-/* flex-column + order: thông báo luôn nằm DƯỚI thanh xanh để thẳng hàng với đầu sidebar */
 .app-topbar {
-    position: sticky;
-    top: 0;
-    z-index: 1030;
-    display: flex;
-    flex-direction: column;
+    display: none !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    visibility: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+}
+
+.mobile-sidebar-toggle {
+    display: none;
+}
+
+@media (max-width: 991.98px) {
+    .mobile-sidebar-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background-color: var(--primary, #0284c7);
+        color: #ffffff;
+        border: none;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        z-index: 1040;
+        cursor: pointer;
+        font-size: 1.5rem;
+        transition: transform 0.2s ease, background-color 0.2s ease;
+    }
+    .mobile-sidebar-toggle:hover {
+        background-color: var(--primary-dark, #0369a1);
+        transform: scale(1.06);
+    }
+    .mobile-sidebar-toggle:active {
+        transform: scale(0.96);
+    }
 }
 
 .app-notice {
@@ -2895,4 +3101,81 @@ a.feature-card:hover {
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
     overflow: hidden;
     margin-bottom: 24px;
+}
+
+/* =========================================================================
+   FOOTER PHÂN TRANG CHUẨN MISA AMIS (Áp dụng toàn hệ thống CV-DCMS)
+   ========================================================================= */
+.misa-pagination-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    font-size: 0.85rem;
+    color: #334155;
+    font-family: 'Be Vietnam Pro', 'Inter', sans-serif !important;
+}
+.misa-pagination-left {
+    font-size: 0.85rem;
+    color: #475569;
+}
+.misa-pagination-left strong {
+    color: #0f172a;
+    font-weight: 700;
+}
+.misa-pagination-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.misa-page-size-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #475569;
+    white-space: nowrap;
+}
+.misa-page-size-select {
+    height: 30px;
+    width: 68px !important;
+    padding: 2px 20px 2px 8px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    cursor: pointer;
+    font-weight: 600;
+}
+.misa-page-range {
+    font-size: 0.85rem;
+    color: #334155;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.misa-nav-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #475569;
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+.misa-nav-btn:hover:not(.disabled) {
+    background: #f1f5f9;
+    color: #0284c7;
+    border-color: #cbd5e1;
+}
+.misa-nav-btn.disabled {
+    color: #cbd5e1 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
 }

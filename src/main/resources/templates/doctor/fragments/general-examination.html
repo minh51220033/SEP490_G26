@@ -37,7 +37,7 @@
                             </div>
 
                             <!-- Triệu chứng gợi ý nhanh + Nút Thêm triệu chứng -->
-                            <div class="mb-2">
+                            <div class="mb-2" th:unless="${isReadOnlyView == true}">
                                 <div class="d-flex align-items-center justify-content-between mb-1">
                                     <small class="text-muted fw-semibold">Gợi ý nhanh:</small>
                                     <button type="button" class="btn btn-xs btn-outline-primary rounded-pill py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1"
@@ -220,7 +220,7 @@
                 <!-- ========================================================= -->
                 <!-- FOOTER ACTION BAR                                         -->
                 <!-- ========================================================= -->
-                <div class="col-12">
+                <div class="col-12" th:unless="${isReadOnlyView == true}">
                     <div class="d-flex flex-wrap align-items-center justify-content-between p-2 rounded-3 border bg-white gap-2">
                         <div class="d-flex align-items-center text-muted small">
                             <i class="bi bi-info-circle-fill text-primary me-2 fs-6"></i>

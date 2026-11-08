@@ -123,9 +123,6 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/reception/queue") || uri.startsWith("/api/reception/queue")) {
             return List.of("APPOINTMENT_VIEW");
         }
-        if (uri.startsWith("/reception/workflow-progress") || uri.startsWith("/api/reception/workflow-progress")) {
-            return List.of("APPOINTMENT_VIEW");
-        }
         if (uri.startsWith("/reception/dispatch") || uri.startsWith("/api/reception/dispatch")) {
             return List.of("RECEPTION_DISPATCH", "CLINICAL_DISPATCH");
         }
@@ -143,22 +140,37 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/doctor/daily-visits")
                 || uri.startsWith("/doctor/visits")
                 || uri.startsWith("/api/doctor/patients/daily-visits")) {
+            if (!isWriteMethod && uri.startsWith("/api/doctor/patients/daily-visits")) {
+                return List.of("CLINICAL_DAILY_VISITS", "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+            }
             return List.of("CLINICAL_DAILY_VISITS");
         }
         // FT43: thực hiện quy trình ngay trong màn khám nên bác sĩ khám trong ngày cũng được dùng
         if (uri.startsWith("/api/doctor/workflows/execution")) {
+            if (!isWriteMethod) {
+                return List.of("CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS", "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+            }
             return List.of("CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS");
         }
         if (uri.startsWith("/doctor/workflows") || uri.startsWith("/api/doctor/workflows")) {
             return List.of("CLINICAL_WORKFLOWS");
         }
         if (uri.startsWith("/api/doctor/prescriptions")) {
+            if (!isWriteMethod) {
+                return List.of("PRESCRIPTION_WRITE", "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+            }
             return List.of("PRESCRIPTION_WRITE");
         }
         if (uri.startsWith("/doctor/labo") || uri.startsWith("/api/doctor/labo-orders")) {
+            if (!isWriteMethod) {
+                return List.of("CLINICAL_LABO", "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+            }
             return List.of("CLINICAL_LABO");
         }
         if (uri.startsWith("/api/doctor/treatment-plans")) {
+            if (!isWriteMethod) {
+                return List.of("TREATMENT_PLAN_MANAGE", "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+            }
             return List.of("TREATMENT_PLAN_MANAGE");
         }
         if (uri.startsWith("/doctor/patient-records") || uri.startsWith("/api/doctor/patients")) {
@@ -171,6 +183,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             return List.of("CLINICAL_XRAY");
         }
         if (uri.startsWith("/api/doctor/clinical-photos") || uri.startsWith("/doctor/clinical-photos")) {
+            if (!isWriteMethod) {
+                return List.of("CLINICAL_PHOTOS", "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+            }
             return List.of("CLINICAL_PHOTOS");
         }
         if (uri.startsWith("/doctor/examination")
@@ -181,6 +196,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
                 || uri.startsWith("/api/v1/diagnoses")
                 || uri.startsWith("/api/doctor/performed-services")
                 || uri.startsWith("/api/doctor/paraclinical")) {
+            if (!isWriteMethod) {
+                return List.of("CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS", "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+            }
             return List.of("CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS");
         }
 

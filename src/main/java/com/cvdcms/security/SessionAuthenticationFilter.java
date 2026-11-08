@@ -31,7 +31,16 @@ public class SessionAuthenticationFilter extends OncePerRequestFilter {
         HttpSession session = request.getSession(false);
         if (session != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             Object userObj = session.getAttribute("loggedInUser");
+            String username = null;
             if (userObj instanceof User user) {
+                username = user.getUsername();
+            } else if (userObj != null && "com.cvdcms.entity.User".equals(userObj.getClass().getName())) {
+                try {
+                    Object val = userObj.getClass().getMethod("getUsername").invoke(userObj);
+                    if (val != null) username = val.toString();
+                } catch (Exception ignored) {}
+            }
+            if (username != null) {
                 List<SimpleGrantedAuthority> authorities = new ArrayList<>();
                 Object roleNamesObj = session.getAttribute("roleNames");
                 if (roleNamesObj instanceof Collection<?> roleList) {
@@ -47,7 +56,7 @@ public class SessionAuthenticationFilter extends OncePerRequestFilter {
                     authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
                 }
                 UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(user.getUsername(), null, authorities);
+                        new UsernamePasswordAuthenticationToken(username, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }

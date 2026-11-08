@@ -146,6 +146,13 @@
                     </button>
                 </li>
                 <li class="nav-item">
+                    <button class="nav-link" id="tab-emr-btn" data-bs-toggle="tab" data-bs-target="#emr" type="button" role="tab">
+                        Hồ sơ bệnh án (BAĐT)
+                        <span class="patient-tab-badge" th:if="${emrRecords != null and !#lists.isEmpty(emrRecords)}"
+                              th:text="${emrRecords.size()}">0</span>
+                    </button>
+                </li>
+                <li class="nav-item">
                     <button class="nav-link" id="tab-appointments-btn" data-bs-toggle="tab" data-bs-target="#appointments" type="button" role="tab">
                         Lịch hẹn
                         <span class="patient-tab-badge" th:if="${appointments != null and !#lists.isEmpty(appointments)}"
@@ -219,8 +226,8 @@
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item" th:href="@{/emr/records(query=${patient.code})}">
-                                <i class="bi bi-hospital text-info me-2"></i>Tạo BAĐT
+                            <a class="dropdown-item" th:href="@{'/doctor/patient-records/' + ${patient.id} + '#medical'}">
+                                <i class="bi bi-hospital text-info me-2"></i>Quản lý BAĐT (Bác sĩ/Admin)
                             </a>
                         </li>
                         <li>
@@ -498,6 +505,80 @@
                                     <td data-column-key="doctor" class="small" th:text="${ps.doctor != null ? ps.doctor.fullName : '—'}">BS. Hoàng Huy</td>
                                     <td data-column-key="status" class="text-center">
                                         <span class="badge bg-success-subtle text-success border border-success-subtle" th:text="${ps.status}">COMPLETED</span>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2B: HỒ SƠ BỆNH ÁN ĐIỆN TỬ (BAĐT) -->
+                <div class="tab-pane fade" id="emr" role="tabpanel" aria-labelledby="tab-emr-btn">
+                    <div class="patient-tab-panel">
+                        <div class="dental-toolbar">
+                            <div>
+                                <h5 class="h6 fw-bold mb-0 text-dark"><i class="bi bi-file-earmark-medical-fill text-primary me-2"></i>Danh sách Hồ sơ Bệnh án điện tử (BAĐT - MS: BA-18)</h5>
+                                <span class="text-secondary small">Mỗi hồ sơ bệnh nhân có thể có nhiều bệnh án điện tử gắn với các đợt khám và điều trị. Admin có quyền xem toàn bộ bệnh án trên hệ thống.</span>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a th:href="@{'/doctor/patient-records/' + ${patient.id} + '#medical'}" class="fin-btn fin-btn-sm fin-btn-primary">
+                                    <i class="bi bi-folder2-open"></i> Mở giao diện Quản lý BAĐT đầy đủ
+                                </a>
+                            </div>
+                        </div>
+
+                        <div th:if="${#lists.isEmpty(emrRecords)}" class="text-center py-5 border rounded bg-light">
+                            <i class="bi bi-journal-medical text-secondary fs-1 d-block mb-2"></i>
+                            <h6 class="text-secondary">Chưa có bệnh án điện tử nào</h6>
+                            <p class="text-muted small mb-3">Bệnh nhân chưa có bệnh án điện tử (MS: BA-18) nào được khởi tạo.</p>
+                            <a th:href="@{'/doctor/patient-records/' + ${patient.id} + '#medical'}" class="fin-btn fin-btn-sm fin-btn-outline">
+                                <i class="bi bi-plus-circle"></i> Chuyển sang trang Khởi tạo BAĐT từ ca khám
+                            </a>
+                        </div>
+
+                        <div class="fin-card p-0" th:unless="${#lists.isEmpty(emrRecords)}">
+                            <table class="fin-table" data-enhanced-table="patient-emr">
+                                <thead>
+                                <tr>
+                                    <th data-column-key="code" data-pinned="true" style="min-width: 140px;">Mã BAĐT</th>
+                                    <th data-column-key="visit" style="min-width: 120px;">Ca khám gốc</th>
+                                    <th data-column-key="branch" style="min-width: 150px;">Chi nhánh</th>
+                                    <th data-column-key="doctor" style="min-width: 150px;">Bác sĩ phụ trách</th>
+                                    <th data-column-key="version" class="text-center" style="min-width: 100px;">Phiên bản</th>
+                                    <th data-column-key="status" class="text-center" style="min-width: 140px;">Trạng thái</th>
+                                    <th data-column-key="updated" style="min-width: 140px;">Cập nhật lúc</th>
+                                    <th data-column-key="actions" class="text-end" style="min-width: 150px;">Thao tác</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="emr : ${emrRecords}">
+                                    <td data-column-key="code">
+                                        <a th:href="@{/emr/records/{id}(id=${emr.recordId != null ? emr.recordId : emr.id})}" class="fw-bold text-primary text-decoration-none font-monospace" th:text="${emr.recordCode != null ? emr.recordCode : emr.code}">EMR-0001</a>
+                                    </td>
+                                    <td data-column-key="visit">
+                                        <span class="badge bg-light text-dark border font-monospace" th:text="${emr.visit != null ? emr.visit.visitCode : (emr.visitCode ?: '—')}">VIS001</span>
+                                    </td>
+                                    <td data-column-key="branch" class="small text-secondary" th:text="${emr.branch != null ? emr.branch.branchName : '—'}">—</td>
+                                    <td data-column-key="doctor" class="small fw-semibold text-dark" th:text="${emr.doctorName ?: (emr.createdBy != null ? (emr.createdBy.fullName ?: emr.createdBy.username) : '—')}">BS. Nguyễn Văn A</td>
+                                    <td data-column-key="version" class="text-center">
+                                        <span class="badge bg-secondary-subtle text-secondary border" th:text="'v' + ${emr.versionNumber != null ? emr.versionNumber : emr.currentVersionNumber}">v1</span>
+                                    </td>
+                                    <td data-column-key="status" class="text-center">
+                                        <span class="badge"
+                                              th:classappend="${emr.status != null and emr.status.name() == 'SIGNED' ? 'bg-success-subtle text-success border border-success-subtle' : (emr.status != null and (emr.status.name() == 'READY_TO_LOCK' or emr.status.name() == 'DOCTOR_SIGNATURE_PENDING') ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-secondary-subtle text-secondary border')}"
+                                              th:text="${emr.status != null ? emr.status.displayName : 'Bản nháp'}">Bản nháp</span>
+                                    </td>
+                                    <td data-column-key="updated" class="small text-secondary" th:text="${emr.updatedAt != null ? #temporals.format(emr.updatedAt, 'dd/MM/yyyy HH:mm') : '—'}">01/01/2026</td>
+                                    <td data-column-key="actions" class="text-end">
+                                        <div class="d-inline-flex gap-1">
+                                            <a th:href="@{/emr/records/{id}(id=${emr.recordId != null ? emr.recordId : emr.id})}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Xem chi tiết bệnh án điện tử MS: BA-18">
+                                                <i class="bi bi-eye me-1"></i>Xem BAĐT
+                                            </a>
+                                            <a th:href="@{/emr/records/{id}(id=${emr.recordId != null ? emr.recordId : emr.id}, print='true')}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" title="In bệnh án BA-18">
+                                                <i class="bi bi-printer"></i>
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                                 </tbody>

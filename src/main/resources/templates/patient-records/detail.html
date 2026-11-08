@@ -1,129 +1,1582 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: head('Chi tiết hồ sơ bệnh nhân')}"></head>
-<body class="app-body"><div class="app-shell">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/head :: head('Chi tiết hồ sơ bệnh nhân - DentalFlow')}"></head>
+<body class="app-body">
+<div class="app-shell">
     <aside th:replace="~{fragments/sidebar :: sidebar(${sidebarMenu})}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
-    <div class="app-main"><header th:replace="~{fragments/header :: appTopbar(${sidebarMenu == 'doctor-records' ? 'Quản Lý Hồ Sơ Bệnh Nhân' : 'Hồ sơ bệnh nhân'})}"></header>
-        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/patient-emr.css}">
-            <div class="alert alert-success" th:if="${param.saved != null}">Đã lưu hồ sơ bệnh nhân.</div>
-            <div class="alert alert-success" th:if="${documentSuccess != null}" th:text="${documentSuccess}"></div>
-            <div class="alert alert-danger" th:if="${documentError != null}" th:text="${documentError}"></div>
+    <div class="app-main">
+        <main class="app-content px-3 px-md-4 pt-2 pb-4" style="background: #f1f5f9 !important; min-height: 100vh;">
+            <link rel="stylesheet" th:href="@{/css/patients.css}">
+            <link rel="stylesheet" th:href="@{/css/patient-emr.css}">
+            <style>
+                /* Đồng bộ hệ thống điều phối chuẩn /doctor/daily-visits */
+                .ds-header-card {
+                    background: #ffffff;
+                    border: 1.5px solid #e2e8f0;
+                    border-radius: 14px;
+                    padding: 0;
+                    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+                    margin-bottom: 12px;
+                    overflow: hidden;
+                }
+                .ds-header-topbar {
+                    background: #f8fafc;
+                    border-bottom: 1px solid #e2e8f0;
+                    padding: 8px 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                }
+                .ds-header-body {
+                    padding: 16px 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 20px;
+                    flex-wrap: wrap;
+                }
+                .ds-header-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    flex: 1 1 460px;
+                    min-width: 0;
+                }
+                .ds-header-right {
+                    border-left: 1.5px solid #e2e8f0;
+                    padding-left: 20px;
+                    flex: 0 0 auto;
+                }
+                @media (max-width: 991.98px) {
+                    .ds-header-right {
+                        border-left: none;
+                        border-top: 1px solid #e2e8f0;
+                        padding-left: 0;
+                        padding-top: 14px;
+                        width: 100%;
+                    }
+                }
+                .ds-avatar-circle {
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    font-size: 23px;
+                }
+                .ds-patient-name {
+                    font-size: 20px;
+                    font-weight: 800;
+                    color: #0f172a;
+                    letter-spacing: -0.3px;
+                    margin: 0;
+                    line-height: 1.25;
+                }
+                .ds-patient-meta {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    gap: 10px;
+                    font-size: 13px;
+                    color: #475569;
+                    font-weight: 500;
+                    margin-top: 4px;
+                }
+                .ds-alert-banner {
+                    background: #fffbeb;
+                    border: 1px solid #fde68a;
+                    border-radius: 8px;
+                    padding: 3px 10px;
+                    margin-top: 6px;
+                    display: inline-flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    justify-content: flex-start;
+                    gap: 6px;
+                    color: #92400e;
+                    font-size: 12px;
+                    width: auto;
+                    max-width: 100%;
+                    line-height: 1.35;
+                }
+                .ds-alert-banner.has-critical {
+                    background: #fff1f2;
+                    border-color: #fecdd3;
+                    color: #9f1239;
+                }
+                .ds-pill-tabs {
+                    margin-bottom: 14px !important;
+                }
+                .dv-kpi-card {
+                    background: #ffffff;
+                    border-radius: 14px;
+                    padding: 16px 20px;
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                    cursor: pointer;
+                    position: relative;
+                    overflow: hidden;
+                    height: 100%;
+                }
+                .dv-kpi-card::before {
+                    content: '';
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    bottom: 0;
+                    width: 4px;
+                    background: var(--kpi-accent, #0284c7);
+                    opacity: 0.85;
+                }
+                .dv-kpi-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 16px -4px rgba(15, 23, 42, 0.08);
+                    border-color: #cbd5e1;
+                }
+                .dv-kpi-card.active-filter {
+                    border-color: var(--kpi-accent, #0284c7);
+                    background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+                    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.14);
+                }
+                .dv-kpi-num {
+                    font-size: 26px;
+                    font-weight: 800;
+                    line-height: 1.1;
+                    color: #0f172a;
+                    margin-bottom: 4px;
+                    letter-spacing: -0.5px;
+                }
+                .dv-kpi-label {
+                    font-size: 12px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.4px;
+                    color: #64748b;
+                }
+                .dv-kpi-sub {
+                    font-size: 11.5px;
+                    color: #94a3b8;
+                    margin-top: 2px;
+                }
+                .dv-kpi-icon {
+                    width: 46px;
+                    height: 46px;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 21px;
+                    flex-shrink: 0;
+                }
+                .dv-toolbar-card {
+                    background: #ffffff;
+                    border-radius: 14px;
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+                    padding: 14px 18px;
+                }
+                .dv-search-box {
+                    position: relative;
+                    flex: 1 1 280px;
+                    max-width: 440px;
+                }
+                .dv-search-box .search-lead-icon {
+                    position: absolute;
+                    left: 14px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    color: #64748b;
+                    font-size: 15px;
+                    pointer-events: none;
+                }
+                .dv-search-box input {
+                    width: 100%;
+                    height: 40px;
+                    padding: 8px 36px 8px 40px;
+                    font-size: 13.5px;
+                    border-radius: 10px;
+                    border: 1.5px solid #cbd5e1;
+                    background-color: #f8fafc;
+                    color: #0f172a;
+                    transition: all 0.18s ease;
+                }
+                .dv-search-box input:focus {
+                    background-color: #ffffff;
+                    border-color: #0284c7;
+                    outline: none;
+                    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
+                }
+                .dv-search-box .search-clear-btn {
+                    position: absolute;
+                    right: 10px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    border: none;
+                    background: transparent;
+                    color: #94a3b8;
+                    padding: 2px 6px;
+                    border-radius: 50%;
+                    font-size: 14px;
+                    line-height: 1;
+                    cursor: pointer;
+                }
+                .dv-search-box .search-clear-btn:hover {
+                    color: #dc2626;
+                    background: #fee2e2;
+                }
+                .dv-quick-segment {
+                    display: inline-flex;
+                    flex-wrap: wrap;
+                    background: #f1f5f9;
+                    padding: 4px;
+                    border-radius: 10px;
+                    gap: 4px;
+                    border: 1px solid #e2e8f0;
+                }
+                .dv-seg-btn {
+                    border: none;
+                    background: transparent;
+                    color: #475569;
+                    font-size: 12.5px;
+                    font-weight: 600;
+                    padding: 6px 12px;
+                    border-radius: 7px;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    white-space: nowrap;
+                }
+                .dv-seg-btn:hover {
+                    color: #0f172a;
+                    background: rgba(255, 255, 255, 0.6);
+                }
+                .dv-seg-btn.active {
+                    background: #ffffff;
+                    color: #0284c7;
+                    font-weight: 700;
+                    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+                }
+                .dv-seg-count {
+                    font-size: 11px;
+                    padding: 1px 6px;
+                    border-radius: 999px;
+                    background: #e2e8f0;
+                    color: #334155;
+                    font-weight: 700;
+                }
+                .dv-seg-btn.active .dv-seg-count {
+                    background: #e0f2fe;
+                    color: #0369a1;
+                }
+                .dv-adv-control {
+                    height: 38px;
+                    font-size: 13px;
+                    border-radius: 9px;
+                    border: 1px solid #cbd5e1;
+                    background-color: #ffffff;
+                    color: #1e293b;
+                }
+                /* Bộ lọc thời gian nhanh & Khoảng ngày (Date Filter Group) */
+                .dv-date-filter-group {
+                    height: 38px;
+                    background: #ffffff;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 9px;
+                    padding: 3px 8px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    transition: all 0.18s ease;
+                }
+                .dv-date-filter-group:focus-within {
+                    border-color: #0284c7;
+                    box-shadow: 0 0 0 2.5px rgba(2, 132, 199, 0.12);
+                }
+                .dv-date-filter-group .dv-preset-select {
+                    border: none;
+                    background-color: transparent;
+                    font-size: 12.5px;
+                    font-weight: 600;
+                    color: #334155;
+                    padding: 2px 28px 2px 4px;
+                    background-position: right 6px center;
+                    background-size: 12px 10px;
+                    width: auto;
+                    min-width: 136px;
+                    flex-shrink: 0;
+                    cursor: pointer;
+                    outline: none;
+                    box-shadow: none;
+                }
+                .dv-date-filter-group .dv-date-input {
+                    border: 1px solid #cbd5e1;
+                    border-radius: 6px;
+                    background: #f8fafc;
+                    color: #0f172a;
+                    font-size: 12px;
+                    font-weight: 500;
+                    padding: 2px 6px;
+                    height: 28px;
+                    width: 124px;
+                    outline: none;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                }
+                .dv-date-filter-group .dv-date-input:focus {
+                    background: #ffffff;
+                    border-color: #0284c7;
+                }
+                .dv-date-filter-group .dv-date-clear-btn {
+                    border: none;
+                    background: transparent;
+                    color: #94a3b8;
+                    padding: 2px;
+                    cursor: pointer;
+                    line-height: 1;
+                    display: none;
+                    align-items: center;
+                    font-size: 14px;
+                    transition: color 0.15s ease;
+                }
+                .dv-date-filter-group .dv-date-clear-btn:hover {
+                    color: #dc2626;
+                }
+                .dv-grid-card {
+                    background: #ffffff;
+                    border-radius: 14px;
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+                    overflow: hidden;
+                }
+                .dv-grid-topbar {
+                    padding: 10px 18px;
+                    background: #f8fafc;
+                    border-bottom: 1px solid #e2e8f0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                }
+                .dv-table-scroll-container {
+                    width: 100%;
+                    overflow-x: auto;
+                }
+                .dv-amis-table {
+                    width: 100%;
+                    border-collapse: separate;
+                    border-spacing: 0;
+                    margin-bottom: 0;
+                }
+                .dv-amis-table thead th {
+                    background: #f1f5f9 !important;
+                    color: #334155 !important;
+                    font-weight: 700 !important;
+                    font-size: 12px !important;
+                    text-transform: uppercase !important;
+                    letter-spacing: 0.45px !important;
+                    padding: 12px 14px !important;
+                    border-bottom: 2px solid #cbd5e1 !important;
+                    border-right: 1px solid #e2e8f0;
+                    white-space: nowrap;
+                    vertical-align: middle;
+                }
+                .dv-amis-table thead th:last-child {
+                    border-right: none;
+                }
+                .dv-amis-table tbody td {
+                    padding: 12px 14px !important;
+                    vertical-align: middle;
+                    border-bottom: 1px solid #e2e8f0;
+                    border-right: 1px solid #f1f5f9;
+                    font-size: 13.5px;
+                    color: #1e293b;
+                }
+                .dv-amis-table tbody td:last-child {
+                    border-right: none;
+                }
+                .dv-amis-table tbody tr:nth-child(even) td {
+                    background-color: #fafbfc;
+                }
+                .dv-amis-table tbody tr:hover td {
+                    background-color: #f0f9ff !important;
+                }
+                .dv-code-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 4px;
+                    font-family: 'JetBrains Mono', Consolas, monospace;
+                    font-size: 12px;
+                    font-weight: 700;
+                    color: #0369a1;
+                    background: #f0f9ff;
+                    border: 1px solid #bae6fd;
+                    padding: 2px 8px;
+                    border-radius: 6px;
+                    text-decoration: none;
+                }
+                .dv-code-pill:hover {
+                    background: #e0f2fe;
+                    color: #0284c7;
+                }
+            </style>
 
-            <!-- BREADCRUMB: DANH SÁCH KHÁM TRONG NGÀY > HỒ SƠ BỆNH NHÂN -->
-            <nav aria-label="breadcrumb" class="mb-3" th:if="${param.from != null and param.from[0] == 'daily-visits'}">
-                <ol class="breadcrumb mb-0 py-2 px-3 bg-light rounded-3 border" style="font-size: 13.5px;">
-                    <li class="breadcrumb-item">
-                        <a href="/doctor/daily-visits" class="text-decoration-none fw-bold text-primary">
-                            <i class="bi bi-calendar2-check-fill me-1"></i>Danh sách ca khám trong ngày
-                        </a>
-                    </li>
-                    <li class="breadcrumb-item active text-dark fw-bold" aria-current="page">
-                        <i class="bi bi-person-vcard-fill me-1 text-secondary"></i>Hồ sơ bệnh nhân: <span th:text="${patient.fullName}">Bệnh nhân</span>
-                    </li>
-                </ol>
-            </nav>
+            <!-- ALERT NOTIFICATIONS -->
+            <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm border-0 mb-3" th:if="${param.saved != null}">
+                <i class="bi bi-check-circle-fill me-2"></i>Đã lưu thông tin hồ sơ bệnh nhân thành công.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm border-0 mb-3" th:if="${documentSuccess != null}">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${documentSuccess}">Thành công</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm border-0 mb-3" th:if="${documentError != null}">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${documentError}">Lỗi</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
 
-            <div class="patient-page-heading">
-                <div>
-                    <a th:if="${param.from != null and param.from[0] == 'daily-visits'}" href="/doctor/daily-visits" class="btn btn-sm btn-outline-secondary mb-2 d-inline-flex align-items-center gap-1.5 fw-bold" style="border-radius: 8px;">
-                        <i class="bi bi-arrow-left"></i> Quay lại danh sách khám trong ngày
-                    </a>
-                    <a th:unless="${param.from != null and param.from[0] == 'daily-visits'}" th:href="${recordBasePath}">← Danh sách hồ sơ</a>
-                    <h1 th:text="${patient.fullName}">Bệnh nhân</h1><p><span th:text="${patient.code}">BN001</span> · <span th:text="${patient.gender}">Nam</span> · <span th:text="${patient.dob != null ? #temporals.format(patient.dob, 'dd/MM/yyyy') : 'Chưa có ngày sinh'}">Ngày sinh</span> · <span th:text="${patient.phoneNumber}">SĐT</span></p></div>
-                <div class="d-flex gap-2">
-                    <a th:if="${canManageAdministrative and patient.status == 'ACTIVE'}"
-                       class="btn btn-primary"
-                       th:href="@{/reception/check-in(branchId=${patient.branchId},query=${patient.code})}">
-                        <i class="bi bi-person-check me-1"></i> Tiếp đón bệnh nhân
-                    </a>
-                    <a th:href="@{/payments/dashboard(patientId=${patient.id})}" class="btn btn-outline-success">
-                        <i class="bi bi-wallet2 me-1"></i> Dashboard tài chính
-                    </a>
-                    <a th:if="${canManageAdministrative}" class="btn btn-outline-primary" th:href="${recordBasePath + '/' + patient.id + '/edit'}"><i class="bi bi-pencil"></i> Chỉnh sửa</a>
-                </div>
-            </div>
-            <div class="alert alert-warning" th:if="${canViewClinical and ((patient.allergyDetails != null and !patient.allergyDetails.isBlank()) or (patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()))}">
-                <strong><i class="bi bi-exclamation-triangle-fill me-1"></i>Thông tin sức khỏe cần lưu ý</strong>
-                <span th:if="${patient.allergyDetails != null and !patient.allergyDetails.isBlank()}" th:text="| · Dị ứng: ${patient.allergyDetails}|"></span>
-                <span th:if="${patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()}" th:text="| · Bệnh nền: ${patient.underlyingDiseaseDetails}|"></span>
-            </div>
-            <div class="d-flex flex-wrap gap-2 mb-3" th:if="${canViewClinical}">
-                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="tab" data-bs-target="#medical">Bệnh án điện tử</button>
-                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="tab" data-bs-target="#history">Lịch sử lượt khám</button>
-                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="tab" data-bs-target="#photos">Ảnh lâm sàng</button>
-            </div>
-            <section class="panel patient-detail">
-                <ul class="nav nav-tabs" role="tablist">
-                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#personal" type="button">Thông tin cá nhân</button></li>
-                    <li class="nav-item">
-                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#invoices" type="button">
-                            <i class="bi bi-receipt me-1"></i>Hóa đơn &amp; Viện phí
-                            <span class="badge bg-secondary ms-1" th:if="${invoices != null and !#lists.isEmpty(invoices)}" th:text="${invoices.size()}">0</span>
+            <!-- =========================================================================
+                 1. DENTALSOFT PATIENT HEADER (Gộp Breadcrumb sát phía trên + Tách 2 phân vùng cân đối)
+                 ========================================================================= -->
+            <div class="ds-header-card">
+                <!-- Thanh Breadcrumb gắn liền trên đỉnh Card (Xóa khoảng trống thừa) -->
+                <div class="ds-header-topbar">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <!-- Nút mở menu sidebar trên thiết bị di động / màn hình nhỏ -->
+                        <button type="button" class="btn btn-sm btn-light border d-lg-none py-1 px-2 text-primary fw-bold"
+                                data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
+                            <i class="bi bi-list fs-6"></i>
                         </button>
-                    </li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#photos" type="button">Ảnh tổng hợp</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#medical" type="button">Bệnh án</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#history" type="button">Quá trình điều trị</button></li>
-                </ul>
-                <div class="tab-content">
-                    <div class="tab-pane fade show active" id="personal">
-                        <div class="patient-facts">
-                            <div><span>Mã hồ sơ</span><strong th:text="${patient.code}">—</strong></div><div><span>Chi nhánh</span><strong th:text="${patient.branchName}">—</strong></div>
-                            <div><span>Địa chỉ</span><strong th:text="${patient.address != null and !patient.address.isBlank() ? patient.address : 'Chưa cập nhật'}">—</strong></div>
-                            <div><span>CCCD</span><strong th:text="${patient.idCardNumber != null ? patient.idCardNumber : 'Chưa cập nhật'}">—</strong></div>
-                            <div><span>Bảo hiểm y tế</span><strong th:text="${patient.healthInsuranceNumber != null ? patient.healthInsuranceNumber : 'Chưa cập nhật'}">—</strong></div>
-                            <div><span>Người giám hộ</span><strong th:text="${patient.guardianName != null ? patient.guardianName : 'Không có'}">—</strong></div>
-                            <div><span>Quan hệ giám hộ</span><strong th:text="${patient.guardianRelationship != null ? patient.guardianRelationship : '—'}">—</strong></div>
-                            <div><span>Liên hệ giám hộ</span><strong th:text="${patient.guardianPhone != null ? patient.guardianPhone : '—'}">—</strong></div>
-                            <div><span>Trạng thái</span><strong th:text="${@emrViewText.label(patient.status)}">—</strong></div>
-                        </div>
-                        <h3 class="h5 mt-4">Bản scan giấy tờ</h3>
-                        <div th:if="${#lists.isEmpty(documents)}" class="text-muted">Chưa tải lên bản scan CCCD hoặc BHYT.</div>
-                        <div class="table-responsive" th:unless="${#lists.isEmpty(documents)}"><table class="table align-middle"><thead><tr><th>Loại</th><th>Tên file</th><th>Ngày tải</th><th></th></tr></thead><tbody>
-                            <tr th:each="document : ${documents}"><td th:text="${document.type.name() == 'ID_CARD' ? 'CCCD' : (document.type.name() == 'INSURANCE_CARD' ? 'BHYT' : document.type.name())}">Loại</td><td th:text="${document.name}">File</td><td th:text="${document.uploadedAt != null ? #temporals.format(document.uploadedAt, 'dd/MM/yyyy HH:mm') : '—'}">—</td><td><a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener" th:href="${recordBasePath + '/' + patient.id + '/documents/' + document.id}">Xem file</a></td></tr>
-                        </tbody></table></div>
-                        <form th:if="${canManageAdministrative}" method="post" enctype="multipart/form-data" class="patient-form mt-3" th:action="${recordBasePath + '/' + patient.id + '/documents'}">
-                            <div class="patient-form-grid"><div><label for="documentType">Loại giấy tờ</label><select id="documentType" name="documentType" class="form-select" required><option value="ID_CARD">CCCD</option><option value="INSURANCE_CARD">Bảo hiểm y tế</option></select></div>
-                            <div><label for="documentFile">File scan</label><input id="documentFile" name="file" type="file" class="form-control" accept="application/pdf,image/jpeg,image/png,image/webp" required><small>PDF, JPG, PNG hoặc WebP; tối đa 5 MB.</small></div></div>
-                            <button class="btn btn-primary mt-2" type="submit">Tải lên giấy tờ</button>
-                        </form>
+                        <ol class="breadcrumb mb-0 p-0 bg-transparent" style="font-size: 13px;">
+                            <li class="breadcrumb-item">
+                                <a th:if="${param.from != null and param.from[0] == 'daily-visits'}" href="/doctor/daily-visits" class="text-decoration-none fw-bold text-primary">
+                                    <i class="bi bi-arrow-left me-1"></i>Danh sách ca khám trong ngày
+                                </a>
+                                <a th:unless="${param.from != null and param.from[0] == 'daily-visits'}" th:href="${recordBasePath}" class="text-decoration-none fw-bold text-primary">
+                                    <i class="bi bi-arrow-left me-1"></i>Danh sách hồ sơ bệnh nhân
+                                </a>
+                            </li>
+                            <li class="breadcrumb-item active text-secondary fw-semibold" aria-current="page">
+                                Chi tiết hồ sơ: <strong class="text-dark" th:text="${patient.fullName}">Bệnh nhân</strong>
+                            </li>
+                        </ol>
                     </div>
 
-                    <!-- Tab Hóa đơn & Viện phí -->
-                    <div class="tab-pane fade" id="invoices">
-                        <div class="d-flex justify-content-between align-items-center mt-2 mb-3">
-                            <div>
-                                <h3 class="h5 mb-1"><i class="bi bi-receipt text-primary me-2"></i>Lịch sử hóa đơn &amp; Viện phí</h3>
-                                <p class="text-muted small mb-0">Toàn bộ hóa đơn dịch vụ, đơn thuốc và trạng thái thanh toán của bệnh nhân.</p>
+                    <!-- Cụm nút hành động nhanh trên thanh頂 (nếu có quyền hành chính) -->
+                    <div class="d-flex align-items-center gap-2" th:if="${canManageAdministrative}">
+                        <a th:if="${patient.status == 'ACTIVE'}"
+                           class="btn btn-sm btn-outline-primary py-0 px-2 d-inline-flex align-items-center gap-1 fw-semibold"
+                           style="font-size: 12px; height: 26px; border-radius: 6px;"
+                           th:href="@{/reception/check-in(branchId=${patient.branchId},query=${patient.code})}">
+                            <i class="bi bi-person-check-fill"></i> Tiếp đón
+                        </a>
+                        <a class="btn btn-sm btn-outline-secondary py-0 px-2 d-inline-flex align-items-center gap-1 fw-semibold"
+                           style="font-size: 12px; height: 26px; border-radius: 6px;"
+                           th:href="${recordBasePath + '/' + patient.id + '/edit'}">
+                            <i class="bi bi-pencil"></i> Sửa hồ sơ
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Phần thân Header tách rõ 2 bên Trái (Thông tin BN) & Phải (3 thẻ Tài chính) -->
+                <div class="ds-header-body">
+                    <!-- PHẦN 1 (BÊN TRÁI): Avatar + Tên & Badges cùng hàng + SĐT/Tuổi + Cảnh báo y tế gọn -->
+                    <div class="ds-header-left">
+                        <div class="ds-avatar-circle" th:text="${#strings.substring(patient.fullName, 0, 1).toUpperCase()}">
+                            BN
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <!-- Hàng 1: Tên bệnh nhân + Mã BN + Trạng thái + Chi nhánh trên cùng 1 dòng -->
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h1 class="ds-patient-name me-1" th:text="${patient.fullName}">Nguyễn Văn An</h1>
+                                <span class="badge bg-light text-primary border fw-bold" style="font-size: 12px; border-color: #bae6fd !important; background-color: #f0f9ff !important;" th:text="${patient.code}">BN001</span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size: 11.5px;" th:text="${patient.status == 'ACTIVE' ? 'Đang hoạt động' : patient.status}">Hoạt động</span>
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1" style="font-size: 11.5px;">
+                                    <i class="bi bi-geo-alt-fill me-1 text-danger"></i><span th:text="${patient.branchName}">Chi nhánh chính</span>
+                                </span>
                             </div>
-                            <div class="d-flex gap-2">
-                                <a th:href="@{/payments/dashboard(patientId=${patient.id})}" class="btn btn-sm btn-outline-success">
-                                    <i class="bi bi-wallet2 me-1"></i> Dashboard tài chính
-                                </a>
-                                <a th:href="@{/invoices/create(profileId=${patient.id})}" class="btn btn-sm btn-primary">
-                                    <i class="bi bi-plus-lg me-1"></i> Lập hóa đơn mới
-                                </a>
+
+                            <!-- Hàng 2: SĐT · Giới tính · Tuổi/Ngày sinh -->
+                            <div class="ds-patient-meta">
+                                <span><i class="bi bi-telephone-fill text-primary me-1"></i><strong class="text-dark" th:text="${patient.phoneNumber}">0901234567</strong></span>
+                                <span class="text-muted">•</span>
+                                <span>
+                                    <span class="gender-pill me-1" th:classappend="${patient.genderShort == 'N' ? 'female' : 'male'}" th:text="${patient.genderShort}">M</span>
+                                    <span th:text="${patient.gender}">Nam</span>
+                                </span>
+                                <span class="text-muted">•</span>
+                                <span>
+                                    <i class="bi bi-calendar3 text-secondary me-1"></i>
+                                    <span th:text="${patient.birthYear != null ? (T(java.time.LocalDate).now().year - patient.birthYear) + ' tuổi (' + #temporals.format(patient.dob, 'dd/MM/yyyy') + ')' : (patient.dob != null ? #temporals.format(patient.dob, 'dd/MM/yyyy') : 'Chưa có NS')}">28 tuổi (01/01/1996)</span>
+                                </span>
+                            </div>
+
+                            <!-- Hàng 3: Cảnh báo Dị ứng / Bệnh nền компакт gọn sát dòng thông tin -->
+                            <div>
+                                <div class="ds-alert-banner" th:classappend="${(patient.allergyDetails != null and !patient.allergyDetails.isBlank()) ? 'has-critical' : ''}">
+                                    <i th:if="${(patient.allergyDetails != null and !patient.allergyDetails.isBlank()) or (patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank())}" class="bi bi-shield-exclamation-fill text-danger"></i>
+                                    <i th:unless="${(patient.allergyDetails != null and !patient.allergyDetails.isBlank()) or (patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank())}" class="bi bi-shield-check text-success"></i>
+                                    <span class="fw-bold">Cảnh báo y tế:</span>
+                                    <span th:if="${patient.allergyDetails != null and !patient.allergyDetails.isBlank()}" class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0.5 fw-semibold">
+                                        Dị ứng: <span th:text="${patient.allergyDetails}">Penicillin</span>
+                                    </span>
+                                    <span th:if="${patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()}" class="badge bg-warning-subtle text-dark border border-warning-subtle px-2 py-0.5 fw-semibold">
+                                        Bệnh nền: <span th:text="${patient.underlyingDiseaseDetails}">Tăng huyết áp</span>
+                                    </span>
+                                    <span th:if="${(patient.allergyDetails == null or patient.allergyDetails.isBlank()) and (patient.underlyingDiseaseDetails == null or patient.underlyingDiseaseDetails.isBlank())}" class="text-muted">
+                                        Không ghi nhận dị ứng / bệnh nền
+                                    </span>
+                                    <button type="button" class="btn btn-sm py-0 px-1.5 btn-light border text-secondary ms-1" style="font-size: 11px; line-height: 1.3; border-radius: 5px;" data-bs-toggle="modal" data-bs-target="#healthNotesModal" title="Sửa nhanh dị ứng &amp; bệnh nền">
+                                        <i class="bi bi-pencil-square text-primary"></i> Sửa
+                                    </button>
+                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div th:if="${#lists.isEmpty(invoices)}" class="text-center py-5 border rounded bg-light mt-3">
-                            <i class="bi bi-receipt text-secondary" style="font-size: 2.5rem;"></i>
-                            <h5 class="mt-3 text-secondary">Bệnh nhân chưa có hóa đơn nào</h5>
-                            <p class="text-muted small mb-3">Chưa có giao dịch hóa đơn dịch vụ hoặc đơn thuốc phát sinh cho bệnh nhân này.</p>
-                            <a th:href="@{/invoices/create(profileId=${patient.id})}" class="btn btn-sm btn-primary">
-                                <i class="bi bi-plus-lg me-1"></i> Lập hóa đơn ngay
+                    <!-- PHẦN 2 (BÊN PHẢI - NGĂN CÁCH RÕ RÀNG): 3 THẺ CHỈ SỐ TÀI CHÍNH -->
+                    <div class="ds-header-right">
+                        <div class="ds-finance-grid" style="min-width: 390px;">
+                            <!-- Thẻ 1: Phát sinh -->
+                            <a th:href="@{/payments/dashboard(patientId=${patient.id})}" class="ds-finance-card incurred" title="Bấm để mở Dashboard tài chính">
+                                <div>
+                                    <span class="ds-finance-label"><i class="bi bi-receipt-cutoff me-1"></i>Phát sinh</span>
+                                    <div class="ds-finance-num" th:text="${#numbers.formatDecimal(totalIncurred != null ? totalIncurred : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                </div>
+                                <small class="text-muted" style="font-size: 11px;">Tổng chi phí dịch vụ</small>
+                            </a>
+
+                            <!-- Thẻ 2: Đã thanh toán -->
+                            <a th:href="@{/payments/dashboard(patientId=${patient.id})}" class="ds-finance-card paid" title="Bấm để mở Dashboard tài chính">
+                                <div>
+                                    <span class="ds-finance-label"><i class="bi bi-check2-circle me-1"></i>Đã thanh toán</span>
+                                    <div class="ds-finance-num" th:text="${#numbers.formatDecimal(totalPaid != null ? totalPaid : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                </div>
+                                <small class="text-success fw-semibold" style="font-size: 11px;">Đã thu thực tế</small>
+                            </a>
+
+                            <!-- Thẻ 3: Công nợ -->
+                            <a th:href="@{/payments/dashboard(patientId=${patient.id})}" class="ds-finance-card debt" title="Bấm để mở Dashboard tài chính">
+                                <div>
+                                    <span class="ds-finance-label"><i class="bi bi-exclamation-circle me-1"></i>Công nợ</span>
+                                    <div class="ds-finance-num" th:text="${#numbers.formatDecimal(totalDebt != null ? totalDebt : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                </div>
+                                <small class="text-danger fw-semibold" style="font-size: 11px;">Chưa thanh toán</small>
                             </a>
                         </div>
+                    </div>
+                </div>
+            </div>
 
-                        <div class="table-responsive mt-3" th:unless="${#lists.isEmpty(invoices)}">
-                            <table class="table table-hover align-middle border">
-                                <thead class="table-light">
+            <!-- =========================================================================
+                 2. GOM CÁC NÚT VÀO MỘT THANH TAB PILL DUY NHẤT
+                 ========================================================================= -->
+            <ul class="nav ds-pill-tabs" id="patientDetailTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tab-info-btn" data-bs-toggle="tab" data-bs-target="#tab-info" type="button" role="tab" aria-controls="tab-info" aria-selected="true">
+                        <i class="bi bi-person-vcard-fill"></i> Thông tin bệnh nhân
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-treatment-btn" data-bs-toggle="tab" data-bs-target="#tab-treatment" type="button" role="tab" aria-controls="tab-treatment" aria-selected="false">
+                        <i class="bi bi-clock-history"></i> Quá trình điều trị
+                        <span class="badge bg-secondary ms-1" th:if="${visits != null and !#lists.isEmpty(visits)}" th:text="${visits.size()}">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-emr-btn" data-bs-toggle="tab" data-bs-target="#tab-emr" type="button" role="tab" aria-controls="tab-emr" aria-selected="false">
+                        <i class="bi bi-file-earmark-medical-fill"></i> Hồ sơ bệnh án
+                        <span class="badge bg-secondary ms-1" th:if="${emrRecords != null and !#lists.isEmpty(emrRecords)}" th:text="${emrRecords.size()}">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-photos-btn" data-bs-toggle="tab" data-bs-target="#tab-photos" type="button" role="tab" aria-controls="tab-photos" aria-selected="false">
+                        <i class="bi bi-images"></i> Ảnh tổng hợp
+                        <span class="badge bg-secondary ms-1" th:if="${photos != null and !#lists.isEmpty(photos)}" th:text="${photos.size()}">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-invoices-btn" data-bs-toggle="tab" data-bs-target="#tab-invoices" type="button" role="tab" aria-controls="tab-invoices" aria-selected="false">
+                        <i class="bi bi-receipt"></i> Hóa đơn &amp; Viện phí
+                        <span class="badge bg-secondary ms-1" th:if="${invoices != null and !#lists.isEmpty(invoices)}" th:text="${invoices.size()}">0</span>
+                    </button>
+                </li>
+            </ul>
+
+            <!-- =========================================================================
+                 3. NỘI DUNG CHI TIẾT CÁC TAB
+                 ========================================================================= -->
+            <div class="tab-content" id="patientDetailTabsContent">
+
+                <!-- -----------------------------------------------------------------
+                     TAB 1: THÔNG TIN BỆNH NHÂN (LƯỚI 4 CARD 2x2 BO GÓC 16px)
+                     ----------------------------------------------------------------- -->
+                <div class="tab-pane fade show active" id="tab-info" role="tabpanel" aria-labelledby="tab-info-btn">
+                    <div class="ds-card-grid-2x2">
+                        <!-- Card 1 (Định danh): Mã BN, CCCD, Ngày cấp, Nơi cấp, cụm nút [Đổi mã], [Gộp hồ sơ], [Sửa thông tin] -->
+                        <div class="ds-detail-card">
+                            <div class="ds-card-head">
+                                <h3 class="ds-card-title"><i class="bi bi-person-badge-fill"></i>Định danh khách hàng</h3>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#changeCodeModal" title="Đổi mã hồ sơ">
+                                        <i class="bi bi-arrow-left-right me-1"></i>Đổi mã
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#mergePatientModal" title="Gộp hồ sơ trùng">
+                                        <i class="bi bi-folder-symlink me-1"></i>Gộp HS
+                                    </button>
+                                    <a th:if="${canManageAdministrative}" th:href="${recordBasePath + '/' + patient.id + '/edit'}" class="btn btn-primary btn-sm text-white" title="Chỉnh sửa hồ sơ">
+                                        <i class="bi bi-pencil me-1"></i>Sửa
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="ds-field-list">
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Mã bệnh nhân</span>
+                                    <span class="ds-info-val text-primary fw-bold" th:text="${patient.code}">BN001</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Họ và tên</span>
+                                    <span class="ds-info-val" th:text="${patient.fullName}">Nguyễn Văn An</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Giới tính</span>
+                                    <span class="ds-info-val">
+                                        <span class="gender-pill me-1" th:classappend="${patient.genderShort == 'N' ? 'female' : 'male'}" th:text="${patient.genderShort}">M</span>
+                                        <span th:text="${patient.gender}">Nam</span>
+                                    </span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Ngày sinh / Tuổi</span>
+                                    <span class="ds-info-val" th:text="${patient.dob != null ? #temporals.format(patient.dob, 'dd/MM/yyyy') + ' (' + (patient.birthYear != null ? (T(java.time.LocalDate).now().year - patient.birthYear) : '') + ' tuổi)' : 'Chưa cập nhật'}">01/01/1996</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Số CCCD / CMND</span>
+                                    <span class="ds-info-val" th:text="${patient.idCardNumber != null and !patient.idCardNumber.isBlank() ? patient.idCardNumber : 'Chưa cập nhật'}">001200000000</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Quốc tịch</span>
+                                    <span class="ds-info-val">Việt Nam</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Người giám hộ</span>
+                                    <span class="ds-info-val" th:text="${patient.guardianName != null and !patient.guardianName.isBlank() ? patient.guardianName : 'Không có'}">—</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Quan hệ giám hộ</span>
+                                    <span class="ds-info-val" th:text="${patient.guardianRelationship != null and !patient.guardianRelationship.isBlank() ? patient.guardianRelationship : '—'}">—</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Trạng thái hồ sơ</span>
+                                    <span class="ds-info-val">
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" th:text="${@emrViewText.label(patient.status)}">Đang hoạt động</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 2 (Liên hệ): SĐT, Email, Địa chỉ, Người liên hệ khẩn cấp -->
+                        <div class="ds-detail-card">
+                            <div class="ds-card-head">
+                                <h3 class="ds-card-title"><i class="bi bi-telephone-fill"></i>Thông tin liên hệ</h3>
+                            </div>
+                            <div class="ds-field-list">
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Số điện thoại chính</span>
+                                    <span class="ds-info-val text-primary fw-bold">
+                                        <i class="bi bi-telephone me-1"></i><span th:text="${patient.phoneNumber}">0901234567</span>
+                                    </span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">SĐT người thân / Zalo</span>
+                                    <span class="ds-info-val" th:text="${patient.guardianPhone != null and !patient.guardianPhone.isBlank() ? patient.guardianPhone : 'Chưa cập nhật'}">—</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Địa chỉ liên hệ</span>
+                                    <span class="ds-info-val" th:text="${patient.address != null and !patient.address.isBlank() ? patient.address : 'Chưa cập nhật'}">Hà Nội</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Người liên hệ khẩn cấp</span>
+                                    <span class="ds-info-val" th:text="${patient.guardianName != null and !patient.guardianName.isBlank() ? patient.guardianName + ' (' + (patient.guardianRelationship != null ? patient.guardianRelationship : 'Người thân') + ' - ' + (patient.guardianPhone != null ? patient.guardianPhone : '') + ')' : 'Chưa có thông tin'}">—</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Chi nhánh phụ trách</span>
+                                    <span class="ds-info-val" th:text="${patient.branchName}">Chi nhánh chính</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 3 (Nguồn & Tiếp nhận): Nguồn tiếp cận, Ngày đăng ký đầu tiên, Nhân viên phụ trách -->
+                        <div class="ds-detail-card">
+                            <div class="ds-card-head">
+                                <h3 class="ds-card-title"><i class="bi bi-box-arrow-in-right"></i>Nguồn khách &amp; Tiếp nhận</h3>
+                            </div>
+                            <div class="ds-field-list">
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Nguồn tiếp cận</span>
+                                    <span class="ds-info-val">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1" th:text="${patient.customerSourceDisplay}">Google</span>
+                                    </span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Ngày đăng ký đầu tiên</span>
+                                    <span class="ds-info-val" th:text="${patient.createdAt != null ? #temporals.format(patient.createdAt, 'dd/MM/yyyy HH:mm') : '—'}">01/01/2026 09:00</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Lần cập nhật gần nhất</span>
+                                    <span class="ds-info-val text-muted" th:text="${patient.updatedAt != null ? #temporals.format(patient.updatedAt, 'dd/MM/yyyy HH:mm') : '—'}">—</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Nhân viên tiếp đón</span>
+                                    <span class="ds-info-val">Bộ phận Lễ tân / CSKH</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Nhóm khách hàng</span>
+                                    <span class="ds-info-val"><span class="badge bg-light text-dark border">Khách hàng tiêu chuẩn</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 4 (Y tế & Ghi chú): Tiền sử bệnh, Dị ứng, Ghi chú + Quản lý scan CCCD/BHYT -->
+                        <div class="ds-detail-card">
+                            <div class="ds-card-head">
+                                <h3 class="ds-card-title"><i class="bi bi-file-earmark-medical-fill"></i>Y tế &amp; Giấy tờ tùy thân</h3>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#uploadDocumentModal">
+                                    <i class="bi bi-cloud-arrow-up-fill me-1"></i>Tải scan
+                                </button>
+                            </div>
+                            <div class="ds-field-list">
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Tiền sử bệnh nền</span>
+                                    <span class="ds-info-val text-danger fw-bold" th:text="${patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank() ? patient.underlyingDiseaseDetails : 'Không ghi nhận'}">Không</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Dị ứng thuốc / Thức ăn</span>
+                                    <span class="ds-info-val text-danger fw-bold" th:text="${patient.allergyDetails != null and !patient.allergyDetails.isBlank() ? patient.allergyDetails : 'Không ghi nhận'}">Không</span>
+                                </div>
+                                <div class="ds-info-row">
+                                    <span class="ds-info-label">Số thẻ BHYT</span>
+                                    <span class="ds-info-val" th:text="${patient.healthInsuranceNumber != null and !patient.healthInsuranceNumber.isBlank() ? patient.healthInsuranceNumber : 'Chưa cập nhật'}">—</span>
+                                </div>
+                            </div>
+
+                            <!-- QUẢN LÝ BẢN SCAN GIẤY TỜ CCCD / BHYT -->
+                            <div class="mt-3 pt-3 border-top">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h4 class="h6 fw-bold mb-0 text-dark"><i class="bi bi-paperclip me-1 text-primary"></i>Bản scan giấy tờ đã lưu</h4>
+                                    <small class="text-muted" th:text="|${documents != null ? documents.size() : 0} file|">0 file</small>
+                                </div>
+
+                                <div th:if="${documents == null or #lists.isEmpty(documents)}" class="text-center py-3 bg-light rounded-3 text-muted small">
+                                    <i class="bi bi-file-earmark-x fs-4 d-block mb-1"></i>Chưa tải lên bản scan CCCD hoặc BHYT nào.
+                                </div>
+
+                                <div class="table-responsive" th:if="${documents != null and !#lists.isEmpty(documents)}">
+                                    <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Loại</th>
+                                                <th>Tên file</th>
+                                                <th>Ngày tải</th>
+                                                <th class="text-end">Thao tác</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="doc : ${documents}">
+                                                <td>
+                                                    <span class="badge" th:classappend="${doc.type.name() == 'ID_CARD' ? 'bg-primary' : 'bg-success'}" th:text="${doc.type.name() == 'ID_CARD' ? 'CCCD' : 'BHYT'}">CCCD</span>
+                                                </td>
+                                                <td>
+                                                    <span class="fw-semibold text-dark text-truncate d-inline-block" style="max-width: 130px;" th:text="${doc.name}" th:title="${doc.name}">scan.pdf</span>
+                                                </td>
+                                                <td class="text-muted small" th:text="${doc.uploadedAt != null ? #temporals.format(doc.uploadedAt, 'dd/MM/yyyy') : '—'}">01/01/2026</td>
+                                                <td class="text-end">
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a class="btn btn-outline-primary btn-sm py-0 px-2" target="_blank" rel="noopener" th:href="${recordBasePath + '/' + patient.id + '/documents/' + doc.id}" title="Xem file">
+                                                            <i class="bi bi-eye"></i>
+                                                        </a>
+                                                        <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2"
+                                                                th:data-doc-id="${doc.id}"
+                                                                th:data-doc-type="${doc.type.name()}"
+                                                                onclick="openChangeDocTypeModal(this.getAttribute('data-doc-id'), this.getAttribute('data-doc-type'))"
+                                                                title="Đổi loại giấy tờ">
+                                                            <i class="bi bi-arrow-left-right"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2"
+                                                                th:data-doc-id="${doc.id}"
+                                                                onclick="openDeleteDocModal(this.getAttribute('data-doc-id'))"
+                                                                title="Xóa bản scan">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- -----------------------------------------------------------------
+                     TAB 2: QUÁ TRÌNH ĐIỀU TRỊ (2 CHẾ ĐỘ ĐỒNG BỘ KIỂU DÁNG: THEO ĐỢT KHÁM & AUDIT LOG)
+                     ----------------------------------------------------------------- -->
+                <div class="tab-pane fade" id="tab-treatment" role="tabpanel" aria-labelledby="tab-treatment-btn">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <h3 class="h5 fw-bold mb-1 text-dark"><i class="bi bi-clock-history text-primary me-2"></i>Quá trình điều trị &amp; Lịch sử khám</h3>
+                            <p class="text-muted small mb-0">Theo dõi toàn diện quá trình khám chữa bệnh, chỉ định và nhật ký can thiệp y khoa.</p>
+                        </div>
+
+                        <!-- Chuyển đổi 2 chế độ hiển thị chuẩn Segmented Button của /doctor/daily-visits -->
+                        <div class="dv-quick-segment bg-white shadow-sm" role="group">
+                            <button type="button" class="dv-seg-btn active" id="btnTreatmentTimeline" onclick="switchTreatmentMode('timeline')">
+                                <i class="bi bi-calendar-event"></i> Theo Đợt khám
+                                <span class="dv-seg-count" th:text="${treatmentTimeline != null ? treatmentTimeline.size() : 0}">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn" id="btnTreatmentAudit" onclick="switchTreatmentMode('audit')">
+                                <i class="bi bi-journal-text"></i> Nhật ký thao tác (Audit Log)
+                                <span class="dv-seg-count" th:text="${auditLogs != null ? auditLogs.size() : 0}">0</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CHẾ ĐỘ 1: BẢNG DANH SÁCH ĐỢT KHÁM & ĐIỀU TRỊ (ĐỒNG BỘ KIỂU DÁNG BẢNG AMIS VỚI AUDIT LOG) -->
+                    <div id="treatmentTimelineView">
+                        <!-- Thanh điều phối tìm kiếm & phân loại Đợt khám -->
+                        <div class="dv-toolbar-card mb-3">
+                            <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-2 pb-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                <div class="dv-search-box">
+                                    <i class="bi bi-search search-lead-icon"></i>
+                                    <input type="text" id="treatmentSearchInput" placeholder="Tìm theo Mã ca khám, bác sĩ, chẩn đoán, dịch vụ thủ thuật..." oninput="filterTreatmentTable()">
+                                    <button type="button" class="search-clear-btn" onclick="document.getElementById('treatmentSearchInput').value=''; filterTreatmentTable();" title="Xóa tìm kiếm">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <!-- Lọc theo thời gian -->
+                                    <div class="dv-date-filter-group" title="Lọc theo khoảng thời gian đợt khám">
+                                        <i class="bi bi-calendar3 text-primary" style="font-size: 13px;"></i>
+                                        <select class="form-select form-select-sm dv-preset-select" id="treatmentDatePreset" onchange="applyDatePreset('treatment', filterTreatmentTable)">
+                                            <option value="ALL">Tất cả thời gian</option>
+                                            <option value="TODAY">Hôm nay</option>
+                                            <option value="LAST_7_DAYS">7 ngày qua</option>
+                                            <option value="THIS_MONTH">Tháng này</option>
+                                            <option value="THIS_YEAR">Năm nay</option>
+                                            <option value="CUSTOM">Tùy chọn...</option>
+                                        </select>
+                                        <input type="date" class="dv-date-input" id="treatmentFromDate" onchange="onCustomDateChange('treatment', filterTreatmentTable)" title="Từ ngày">
+                                        <span class="text-muted small">→</span>
+                                        <input type="date" class="dv-date-input" id="treatmentToDate" onchange="onCustomDateChange('treatment', filterTreatmentTable)" title="Đến ngày">
+                                        <button type="button" class="dv-date-clear-btn" id="treatmentDateClearBtn" onclick="clearDateFilter('treatment', filterTreatmentTable)" title="Xóa lọc thời gian">
+                                            <i class="bi bi-x-circle-fill"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                                <div class="dv-quick-segment" id="treatmentStatusSegment">
+                                    <button type="button" class="dv-seg-btn active" data-filter="ALL" onclick="setTreatmentStatusFilter('ALL', this)">
+                                        Tất cả <span class="dv-seg-count" th:text="${treatmentTimeline != null ? treatmentTimeline.size() : 0}">0</span>
+                                    </button>
+                                    <button type="button" class="dv-seg-btn" data-filter="COMPLETED" onclick="setTreatmentStatusFilter('COMPLETED', this)">
+                                        <i class="bi bi-check-circle-fill text-success"></i> Hoàn thành
+                                    </button>
+                                    <button type="button" class="dv-seg-btn" data-filter="IN_PROGRESS" onclick="setTreatmentStatusFilter('IN_PROGRESS', this)">
+                                        <i class="bi bi-play-circle-fill text-primary"></i> Đang khám / ĐT
+                                    </button>
+                                    <button type="button" class="dv-seg-btn" data-filter="WAITING_PAYMENT" onclick="setTreatmentStatusFilter('WAITING_PAYMENT', this)">
+                                        <i class="bi bi-credit-card-fill text-warning"></i> Chờ thanh toán
+                                    </button>
+                                    <button type="button" class="dv-seg-btn" data-filter="HAS_EMR" onclick="setTreatmentStatusFilter('HAS_EMR', this)">
+                                        <i class="bi bi-file-earmark-medical-fill text-info"></i> Đã có Bệnh án
+                                    </button>
+                                </div>
+                                <div class="text-muted small">
+                                    Hiển thị: <strong class="text-primary" id="treatmentVisibleCount" th:text="${treatmentTimeline != null ? treatmentTimeline.size() : 0}">0</strong> đợt khám
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dv-grid-card">
+                            <div class="dv-grid-topbar">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-bold">
+                                        <i class="bi bi-table me-1"></i>Danh sách đợt khám &amp; điều trị lâm sàng
+                                    </span>
+                                </div>
+                                <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Bấm "Chi tiết lượt khám" để xem toàn bộ hồ sơ khám lâm sàng ở chế độ Chỉ xem</small>
+                            </div>
+                            <div class="dv-table-scroll-container">
+                                <table class="dv-amis-table" id="treatmentTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px;" class="text-center">STT</th>
+                                            <th style="width: 165px;">Mã ca &amp; Ngày khám</th>
+                                            <th style="width: 170px;">Bác sĩ &amp; Chi nhánh</th>
+                                            <th style="width: 220px;">Chẩn đoán lâm sàng</th>
+                                            <th>Dịch vụ / Thủ thuật thực hiện</th>
+                                            <th class="text-center" style="width: 135px;">Trạng thái</th>
+                                            <th class="text-center" style="width: 150px;">Hồ sơ Bệnh án</th>
+                                            <th class="text-center" style="width: 165px;">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:if="${treatmentTimeline == null or #lists.isEmpty(treatmentTimeline)}" class="empty-row">
+                                            <td colspan="8" class="text-center text-muted py-5">
+                                                <i class="bi bi-calendar-x fs-2 d-block mb-2 text-secondary"></i>
+                                                Bệnh nhân chưa phát sinh lượt khám hoặc thủ thuật điều trị nào.
+                                            </td>
+                                        </tr>
+                                        <tr th:each="item, stat : ${treatmentTimeline}"
+                                            class="treatment-row"
+                                            th:data-status="${item.status != null ? item.status : ''}"
+                                            th:data-has-emr="${item.emrRecordId != null ? 'true' : 'false'}"
+                                            th:data-date="${item.checkInAt != null ? #temporals.format(item.checkInAt, 'yyyy-MM-dd') : ''}">
+                                            <td class="text-center text-muted fw-semibold" th:text="${stat.count}">1</td>
+                                            <td>
+                                                <a th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${item.visitId}, readOnly=true, fromPatientId=${patient.id})}"
+                                                   class="dv-code-pill mb-1" th:text="${item.visitCode}">VIS-001</a>
+                                                <div class="text-muted small fw-semibold">
+                                                    <i class="bi bi-calendar2-check me-1 text-primary"></i><span th:text="${item.checkInAt != null ? #temporals.format(item.checkInAt, 'dd/MM/yyyy HH:mm') : '—'}">01/01/2026 09:00</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold text-dark">
+                                                    <i class="bi bi-person-badge text-primary me-1"></i><span th:text="${item.doctorName != null ? item.doctorName : 'Chưa phân công'}">Bác sĩ</span>
+                                                </div>
+                                                <small class="text-muted"><i class="bi bi-geo-alt me-1"></i><span th:text="${item.branchName != null ? item.branchName : 'Chi nhánh chính'}">Chi nhánh</span></small>
+                                            </td>
+                                            <td>
+                                                <div th:if="${item.diagnoses != null and !#lists.isEmpty(item.diagnoses)}" class="d-flex flex-wrap gap-1">
+                                                    <span th:each="d : ${item.diagnoses}" class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 text-wrap text-start" style="font-size: 11.5px;" th:text="${d}">Sâu ngà răng</span>
+                                                </div>
+                                                <span th:if="${item.diagnoses == null or #lists.isEmpty(item.diagnoses)}" class="text-muted small fst-italic">Chưa ghi nhận chẩn đoán</span>
+                                            </td>
+                                            <td>
+                                                <div th:if="${item.services != null and !#lists.isEmpty(item.services)}">
+                                                    <div th:each="s : ${item.services}" class="d-flex justify-content-between align-items-center gap-2 py-1 border-bottom" style="border-color: #f1f5f9 !important; font-size: 12.5px;">
+                                                        <div>
+                                                            <span class="fw-semibold text-dark" th:text="${s.serviceName}">Trám răng composite</span>
+                                                            <span th:if="${s.toothNumber != null and !s.toothNumber.isBlank()}" class="badge bg-secondary ms-1" style="font-size: 10.5px;" th:text="|Răng ${s.toothNumber}|">R16</span>
+                                                            <span class="text-muted ms-1" th:text="|x${s.quantity}|">x1</span>
+                                                        </div>
+                                                        <span class="fw-bold text-primary text-nowrap" th:text="${#numbers.formatDecimal(s.totalAmount != null ? s.totalAmount : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</span>
+                                                    </div>
+                                                </div>
+                                                <span th:if="${item.services == null or #lists.isEmpty(item.services)}" class="text-muted small fst-italic">Chưa ghi nhận dịch vụ / thủ thuật</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1" th:text="${@emrViewText.label(item.status)}">Hoàn thành</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <a th:if="${item.emrRecordId != null}" th:href="@{/emr/records/{id}(id=${item.emrRecordId})}" class="btn btn-sm btn-outline-success fw-semibold py-1 px-2" style="font-size: 12px;">
+                                                    <i class="bi bi-file-earmark-medical me-1"></i><span th:text="${item.emrRecordCode}">EMR-001</span>
+                                                </a>
+                                                <form th:if="${item.emrRecordId == null}" th:action="@{/emr/records}" method="post" class="d-inline">
+                                                    <input type="hidden" name="visitId" th:value="${item.visitId}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary fw-semibold py-1 px-2" style="font-size: 12px;" title="Khởi tạo Bệnh án cho đợt khám này">
+                                                        <i class="bi bi-plus-circle me-1"></i>Tạo Bệnh án
+                                                    </button>
+                                                </form>
+                                            </td>
+                                            <td class="text-center">
+                                                <a th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${item.visitId}, readOnly=true, fromPatientId=${patient.id})}"
+                                                   class="btn btn-sm btn-primary fw-bold d-inline-flex align-items-center gap-1 shadow-sm"
+                                                   style="font-size: 12px; border-radius: 8px; background: #0284c7; border-color: #0284c7;"
+                                                   title="Xem chi tiết lượt khám (Chế độ Chỉ xem)">
+                                                    <i class="bi bi-eye-fill"></i> Chi tiết lượt khám
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CHẾ ĐỘ 2: BẢNG NHẬT KÝ THAO TÁC CHI TIẾT (AUDIT LOG TABLE ĐỒNG BỘ KIỂU DÁNG) -->
+                    <div id="treatmentAuditView" style="display: none;">
+                        <div class="dv-toolbar-card mb-3">
+                            <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-2 pb-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                <div class="dv-search-box">
+                                    <i class="bi bi-search search-lead-icon"></i>
+                                    <input type="text" id="auditSearchInput" placeholder="Tìm kiếm theo người thực hiện, phân hệ, nội dung chi tiết..." oninput="filterAuditTable()">
+                                    <button type="button" class="search-clear-btn" onclick="document.getElementById('auditSearchInput').value=''; filterAuditTable();" title="Xóa tìm kiếm">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <!-- Lọc theo thời gian -->
+                                    <div class="dv-date-filter-group" title="Lọc theo khoảng thời gian nhật ký thao tác">
+                                        <i class="bi bi-calendar3 text-primary" style="font-size: 13px;"></i>
+                                        <select class="form-select form-select-sm dv-preset-select" id="auditDatePreset" onchange="applyDatePreset('audit', filterAuditTable)">
+                                            <option value="ALL">Tất cả thời gian</option>
+                                            <option value="TODAY">Hôm nay</option>
+                                            <option value="LAST_7_DAYS">7 ngày qua</option>
+                                            <option value="THIS_MONTH">Tháng này</option>
+                                            <option value="THIS_YEAR">Năm nay</option>
+                                            <option value="CUSTOM">Tùy chọn...</option>
+                                        </select>
+                                        <input type="date" class="dv-date-input" id="auditFromDate" onchange="onCustomDateChange('audit', filterAuditTable)" title="Từ ngày">
+                                        <span class="text-muted small">→</span>
+                                        <input type="date" class="dv-date-input" id="auditToDate" onchange="onCustomDateChange('audit', filterAuditTable)" title="Đến ngày">
+                                        <button type="button" class="dv-date-clear-btn" id="auditDateClearBtn" onclick="clearDateFilter('audit', filterAuditTable)" title="Xóa lọc thời gian">
+                                            <i class="bi bi-x-circle-fill"></i>
+                                        </button>
+                                    </div>
+
+                                    <select class="form-select dv-adv-control" id="auditEntityFilter" style="width: 190px;" onchange="filterAuditTable()">
+                                        <option value="">Tất cả phân hệ</option>
+                                        <option value="Lượt khám">Phân hệ: Lượt khám</option>
+                                        <option value="Hồ sơ bệnh nhân">Phân hệ: Hồ sơ bệnh nhân</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                                <div class="dv-quick-segment" id="auditActionSegment">
+                                    <button type="button" class="dv-seg-btn active" data-action="ALL" onclick="setAuditActionFilter('ALL', this)">
+                                        Tất cả thao tác <span class="dv-seg-count" th:text="${auditLogs != null ? auditLogs.size() : 0}">0</span>
+                                    </button>
+                                    <button type="button" class="dv-seg-btn" data-action="CREATE" onclick="setAuditActionFilter('CREATE', this)">
+                                        <i class="bi bi-plus-circle-fill text-success"></i> Thêm mới / Tiếp nhận
+                                    </button>
+                                    <button type="button" class="dv-seg-btn" data-action="UPDATE" onclick="setAuditActionFilter('UPDATE', this)">
+                                        <i class="bi bi-pencil-square text-primary"></i> Cập nhật / Điều trị
+                                    </button>
+                                    <button type="button" class="dv-seg-btn" data-action="DELETE" onclick="setAuditActionFilter('DELETE', this)">
+                                        <i class="bi bi-trash3-fill text-danger"></i> Xóa / Hủy
+                                    </button>
+                                </div>
+                                <div class="text-muted small">
+                                    Hiển thị: <strong class="text-primary" id="auditTotalCount" th:text="${auditLogs != null ? auditLogs.size() : 0}">0</strong> thao tác
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dv-grid-card">
+                            <div class="dv-grid-topbar">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-bold">
+                                    <i class="bi bi-journal-text me-1"></i>Nhật ký thao tác hệ thống (Audit Log)
+                                </span>
+                                <small class="text-muted">Ghi nhận tự động mọi thao tác trên hồ sơ và lượt khám</small>
+                            </div>
+                            <div class="dv-table-scroll-container">
+                                <table class="dv-amis-table" id="auditTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px;" class="text-center">STT</th>
+                                            <th style="width: 170px;">Thời gian</th>
+                                            <th style="width: 185px;">Người thực hiện</th>
+                                            <th class="text-center" style="width: 130px;">Phân loại thao tác</th>
+                                            <th style="width: 165px;">Phân hệ</th>
+                                            <th>Nội dung chi tiết</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:if="${auditLogs == null or #lists.isEmpty(auditLogs)}" class="empty-row">
+                                            <td colspan="6" class="text-center text-muted py-5">Chưa có nhật ký thao tác nào.</td>
+                                        </tr>
+                                        <tr th:each="log, stat : ${auditLogs}"
+                                            class="audit-row"
+                                            th:data-action="${log.action != null ? log.action : ''}"
+                                            th:data-entity="${log.entityType != null ? log.entityType : ''}"
+                                            th:data-date="${log.timestamp != null ? #temporals.format(log.timestamp, 'yyyy-MM-dd') : ''}">
+                                            <td class="text-center text-muted fw-semibold" th:text="${stat.count}">1</td>
+                                            <td class="text-muted fw-semibold">
+                                                <i class="bi bi-clock me-1 text-primary"></i><span th:text="${log.timestamp != null ? #temporals.format(log.timestamp, 'dd/MM/yyyy HH:mm:ss') : '—'}">01/01/2026 10:00:00</span>
+                                            </td>
+                                            <td class="fw-bold text-dark">
+                                                <i class="bi bi-person-circle text-primary me-1"></i><span th:text="${log.userName}">Bác sĩ</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge px-2 py-1" th:classappend="${log.actionBadgeClass}" th:text="${log.actionLabel}">THÊM</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-secondary border fw-semibold" th:text="${log.entityType}">Hồ sơ</span>
+                                            </td>
+                                            <td class="text-dark" th:text="${log.details}">Nội dung thao tác</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- -----------------------------------------------------------------
+                     TAB 3: HỒ SƠ BỆNH ÁN (BAĐT) (4 THẺ KPI CHUẨN DAILY-VISITS, BỘ LỌC & BẢNG AMIS)
+                     ----------------------------------------------------------------- -->
+                <div class="tab-pane fade" id="tab-emr" role="tabpanel" aria-labelledby="tab-emr-btn">
+                    <!-- 4 Thẻ KPI Hồ sơ bệnh án điện tử (Click để lọc nhanh như /doctor/daily-visits) -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="dv-kpi-card active-filter" style="--kpi-accent: #0284c7;" onclick="setEmrStatusFilter('', this)">
+                                <div>
+                                    <div class="dv-kpi-num" th:text="${emrTotal != null ? emrTotal : 0}">0</div>
+                                    <div class="dv-kpi-label">Tổng số Bệnh án</div>
+                                    <div class="dv-kpi-sub">Hồ sơ pháp lý lưu trữ</div>
+                                </div>
+                                <div class="dv-kpi-icon bg-primary-subtle text-primary">
+                                    <i class="bi bi-folder-fill"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="dv-kpi-card" style="--kpi-accent: #64748b;" onclick="setEmrStatusFilter('DRAFT', this)">
+                                <div>
+                                    <div class="dv-kpi-num" th:text="${emrDraft != null ? emrDraft : 0}">0</div>
+                                    <div class="dv-kpi-label">Đang mở / Nháp</div>
+                                    <div class="dv-kpi-sub">Chờ hoàn thiện hồ sơ</div>
+                                </div>
+                                <div class="dv-kpi-icon bg-secondary-subtle text-secondary">
+                                    <i class="bi bi-file-earmark-text"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;" onclick="setEmrStatusFilter('PENDING', this)">
+                                <div>
+                                    <div class="dv-kpi-num" th:text="${emrPending != null ? emrPending : 0}">0</div>
+                                    <div class="dv-kpi-label">Chờ ký số</div>
+                                    <div class="dv-kpi-sub">Cần bác sĩ ký duyệt</div>
+                                </div>
+                                <div class="dv-kpi-icon bg-warning-subtle text-warning">
+                                    <i class="bi bi-pen"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="dv-kpi-card" style="--kpi-accent: #10b981;" onclick="setEmrStatusFilter('SIGNED', this)">
+                                <div>
+                                    <div class="dv-kpi-num" th:text="${emrSigned != null ? emrSigned : 0}">0</div>
+                                    <div class="dv-kpi-label">Đã ký số &amp; Khóa</div>
+                                    <div class="dv-kpi-sub">Hồ sơ hoàn tất hợp lệ</div>
+                                </div>
+                                <div class="dv-kpi-icon bg-success-subtle text-success">
+                                    <i class="bi bi-shield-fill-check"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Toolbar Lọc & Phân loại Bệnh án chuẩn /doctor/daily-visits -->
+                    <div class="dv-toolbar-card mb-3">
+                        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-2 pb-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                            <div class="dv-search-box">
+                                <i class="bi bi-search search-lead-icon"></i>
+                                <input type="text" id="emrSearchInput" placeholder="Tìm theo Mã Bệnh án, Mã lượt khám, Bác sĩ điều trị..." oninput="filterEmrTable()">
+                                <button type="button" class="search-clear-btn" onclick="document.getElementById('emrSearchInput').value=''; filterEmrTable();" title="Xóa tìm kiếm">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <!-- Lọc theo thời gian -->
+                                <div class="dv-date-filter-group" title="Lọc theo khoảng thời gian lập Bệnh án">
+                                    <i class="bi bi-calendar3 text-primary" style="font-size: 13px;"></i>
+                                    <select class="form-select form-select-sm dv-preset-select" id="emrDatePreset" onchange="applyDatePreset('emr', filterEmrTable)">
+                                        <option value="ALL">Tất cả thời gian</option>
+                                        <option value="TODAY">Hôm nay</option>
+                                        <option value="LAST_7_DAYS">7 ngày qua</option>
+                                        <option value="THIS_MONTH">Tháng này</option>
+                                        <option value="THIS_YEAR">Năm nay</option>
+                                        <option value="CUSTOM">Tùy chọn...</option>
+                                    </select>
+                                    <input type="date" class="dv-date-input" id="emrFromDate" onchange="onCustomDateChange('emr', filterEmrTable)" title="Từ ngày">
+                                    <span class="text-muted small">→</span>
+                                    <input type="date" class="dv-date-input" id="emrToDate" onchange="onCustomDateChange('emr', filterEmrTable)" title="Đến ngày">
+                                    <button type="button" class="dv-date-clear-btn" id="emrDateClearBtn" onclick="clearDateFilter('emr', filterEmrTable)" title="Xóa lọc thời gian">
+                                        <i class="bi bi-x-circle-fill"></i>
+                                    </button>
+                                </div>
+
+                                <select class="form-select dv-adv-control" id="emrStatusFilter" style="width: 175px;" onchange="setEmrStatusFilter(this.value, null)">
+                                    <option value="">Tất cả trạng thái</option>
+                                    <option value="DRAFT">Đang mở / Bản nháp</option>
+                                    <option value="PENDING">Chờ ký số</option>
+                                    <option value="SIGNED">Đã ký số &amp; Khóa</option>
+                                </select>
+                                <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1.5 fw-bold px-3 py-2 shadow-sm" style="border-radius: 9px;" data-bs-toggle="modal" data-bs-target="#createEmrModal">
+                                    <i class="bi bi-plus-lg"></i> Tạo Bệnh án
+                                </button>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                            <div class="dv-quick-segment" id="emrStatusSegment">
+                                <button type="button" class="dv-seg-btn active" data-status="" onclick="setEmrStatusFilter('', null)">
+                                    Tất cả Bệnh án <span class="dv-seg-count" th:text="${emrTotal != null ? emrTotal : 0}">0</span>
+                                </button>
+                                <button type="button" class="dv-seg-btn" data-status="DRAFT" onclick="setEmrStatusFilter('DRAFT', null)">
+                                    <i class="bi bi-file-earmark-text text-secondary"></i> Đang mở / Nháp <span class="dv-seg-count" th:text="${emrDraft != null ? emrDraft : 0}">0</span>
+                                </button>
+                                <button type="button" class="dv-seg-btn" data-status="PENDING" onclick="setEmrStatusFilter('PENDING', null)">
+                                    <i class="bi bi-pen text-warning"></i> Chờ ký số <span class="dv-seg-count" th:text="${emrPending != null ? emrPending : 0}">0</span>
+                                </button>
+                                <button type="button" class="dv-seg-btn" data-status="SIGNED" onclick="setEmrStatusFilter('SIGNED', null)">
+                                    <i class="bi bi-shield-fill-check text-success"></i> Đã ký số &amp; Khóa <span class="dv-seg-count" th:text="${emrSigned != null ? emrSigned : 0}">0</span>
+                                </button>
+                            </div>
+                            <div class="text-muted small">
+                                Hiển thị: <strong class="text-primary" id="emrVisibleCount" th:text="${emrRecords != null ? emrRecords.size() : 0}">0</strong> hồ sơ bệnh án
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bảng danh sách Bệnh án chuẩn .dv-grid-card + .dv-amis-table -->
+                    <div class="dv-grid-card">
+                        <div class="dv-grid-topbar">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-bold">
+                                <i class="bi bi-file-earmark-medical-fill me-1"></i>Danh sách Hồ sơ bệnh án (Chuẩn Bộ Y Tế MS: BA-18)
+                            </span>
+                            <small class="text-muted">Lưu trữ phiên bản, chữ ký số và liên kết trực tiếp với đợt khám</small>
+                        </div>
+                        <div class="dv-table-scroll-container">
+                            <table class="dv-amis-table" id="emrTable">
+                                <thead>
                                     <tr>
+                                        <th style="width: 50px;" class="text-center">STT</th>
+                                        <th style="width: 150px;">Mã Bệnh án</th>
+                                        <th style="width: 145px;">Lượt khám liên kết</th>
+                                        <th style="width: 120px;">Ngày lập</th>
+                                        <th>Biểu mẫu chuyên khoa</th>
+                                        <th style="width: 175px;">Bác sĩ điều trị</th>
+                                        <th class="text-center" style="width: 140px;">Trạng thái</th>
+                                        <th class="text-center" style="width: 170px;">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:if="${emrRecords == null or #lists.isEmpty(emrRecords)}" class="empty-row">
+                                        <td colspan="8" class="text-center text-muted py-5">
+                                            <i class="bi bi-folder-x fs-2 d-block mb-2 text-secondary"></i>
+                                            Bệnh nhân chưa có Bệnh án nào.<br>
+                                            <button type="button" class="btn btn-sm btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#createEmrModal">
+                                                <i class="bi bi-plus-lg me-1"></i>Tạo Bệnh án ngay
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr th:each="emr, stat : ${emrRecords}"
+                                        class="emr-row"
+                                        th:data-status="${emr.status != null ? emr.status.name() : ''}"
+                                        th:data-date="${emr.checkInAt != null ? #temporals.format(emr.checkInAt, 'yyyy-MM-dd') : (emr.updatedAt != null ? #temporals.format(emr.updatedAt, 'yyyy-MM-dd') : '')}">
+                                        <td class="text-center text-muted fw-semibold" th:text="${stat.count}">1</td>
+                                        <td>
+                                            <a th:href="@{/emr/records/{id}(id=${emr.id})}" class="dv-code-pill" th:text="${emr.code}">EMR-001</a>
+                                            <small class="d-block text-muted mt-1" th:text="|Phiên bản v${emr.versionNumber}|">v1</small>
+                                        </td>
+                                        <td>
+                                            <a th:if="${emr.visitId != null}"
+                                               th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${emr.visitId}, readOnly=true, fromPatientId=${patient.id})}"
+                                               class="badge bg-light text-primary border text-decoration-none fw-bold"
+                                               title="Xem chi tiết lượt khám (Chỉ xem)">
+                                                <i class="bi bi-box-arrow-up-right me-1"></i><span th:text="${emr.visitCode}">VIS-001</span>
+                                            </a>
+                                            <span th:if="${emr.visitId == null}" class="badge bg-light text-dark border" th:text="${emr.visitCode}">VIS-001</span>
+                                        </td>
+                                        <td class="text-muted fw-semibold" th:text="${emr.checkInAt != null ? #temporals.format(emr.checkInAt, 'dd/MM/yyyy') : '—'}">01/01/2026</td>
+                                        <td>
+                                            <div class="fw-bold text-dark">
+                                                <i class="bi bi-file-earmark-medical text-primary me-1"></i>MS: BA-18 Ngoại trú RHM
+                                            </div>
+                                            <small class="text-muted">Bệnh án Răng Hàm Mặt chuẩn Bộ Y Tế</small>
+                                        </td>
+                                        <td>
+                                            <i class="bi bi-person-badge text-primary me-1"></i>
+                                            <span class="fw-semibold text-dark" th:text="${emr.doctorName != null ? emr.doctorName : 'Bác sĩ phụ trách'}">Bác sĩ</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="patient-emr-status" th:classappend="| status-${emr.status}|" th:text="${emr.status.displayName}">Bản nháp</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm">
+                                                <a th:href="@{/emr/records/{id}(id=${emr.id})}" class="btn btn-outline-primary" title="Mở hồ sơ BAĐT">
+                                                    <i class="bi bi-folder2-open"></i> Mở
+                                                </a>
+                                                <a th:href="@{/emr/records/{id}/print(id=${emr.id})}" target="_blank" class="btn btn-outline-secondary" title="In BA-18">
+                                                    <i class="bi bi-printer"></i>
+                                                </a>
+                                                <a th:href="@{/emr/records/{id}#sign(id=${emr.id})}" class="btn btn-outline-success" title="Ký số">
+                                                    <i class="bi bi-pen"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- -----------------------------------------------------------------
+                     TAB 4: ẢNH TỔNG HỢP (TÌM KIẾM + PHÂN LOẠI GIAI ĐOẠN & GÓC CHỤP CHUẨN DAILY-VISITS)
+                     ----------------------------------------------------------------- -->
+                <div class="tab-pane fade" id="tab-photos" role="tabpanel" aria-labelledby="tab-photos-btn">
+                    <!-- Thanh Filter Toolbar chuẩn .dv-toolbar-card có Tìm kiếm + Phân loại đa chiều -->
+                    <div class="dv-toolbar-card mb-3">
+                        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-2 pb-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                            <div class="dv-search-box">
+                                <i class="bi bi-search search-lead-icon"></i>
+                                <input type="text" id="photoSearchInput" placeholder="Tìm theo ghi chú ảnh, răng số, mã ca khám, ngày chụp..." oninput="filterPhotos()">
+                                <button type="button" class="search-clear-btn" onclick="document.getElementById('photoSearchInput').value=''; filterPhotos();" title="Xóa tìm kiếm">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <!-- Lọc theo thời gian -->
+                                <div class="dv-date-filter-group" title="Lọc theo khoảng thời gian chụp ảnh">
+                                    <i class="bi bi-calendar3 text-primary" style="font-size: 13px;"></i>
+                                    <select class="form-select form-select-sm dv-preset-select" id="photoDatePreset" onchange="applyDatePreset('photo', filterPhotos)">
+                                        <option value="ALL">Tất cả thời gian</option>
+                                        <option value="TODAY">Hôm nay</option>
+                                        <option value="LAST_7_DAYS">7 ngày qua</option>
+                                        <option value="THIS_MONTH">Tháng này</option>
+                                        <option value="THIS_YEAR">Năm nay</option>
+                                        <option value="CUSTOM">Tùy chọn...</option>
+                                    </select>
+                                    <input type="date" class="dv-date-input" id="photoFromDate" onchange="onCustomDateChange('photo', filterPhotos)" title="Từ ngày">
+                                    <span class="text-muted small">→</span>
+                                    <input type="date" class="dv-date-input" id="photoToDate" onchange="onCustomDateChange('photo', filterPhotos)" title="Đến ngày">
+                                    <button type="button" class="dv-date-clear-btn" id="photoDateClearBtn" onclick="clearDateFilter('photo', filterPhotos)" title="Xóa lọc thời gian">
+                                        <i class="bi bi-x-circle-fill"></i>
+                                    </button>
+                                </div>
+
+                                <select class="form-select dv-adv-control" id="photoCategorySelect" style="width: 200px;" onchange="filterPhotos()">
+                                    <option value="ALL">Tất cả phân loại góc chụp</option>
+                                    <option value="INTRAORAL">Trong miệng (Intraoral)</option>
+                                    <option value="EXTRAORAL">Ngoài mặt (Extraoral)</option>
+                                    <option value="SMILE">Nụ cười (Smile)</option>
+                                    <option value="OCCLUSAL">Mặt nhai (Occlusal)</option>
+                                    <option value="OTHER">Phim X-Quang / CT / Khác</option>
+                                </select>
+                                <select class="form-select dv-adv-control" id="photoVisitFilter" style="width: 185px;" onchange="filterPhotos()">
+                                    <option value="ALL">Tất cả đợt khám</option>
+                                    <option th:each="v : ${visits}"
+                                            th:value="${v.code != null ? v.code : v.visitCode}"
+                                            th:text="|Ca ${v.code != null ? v.code : v.visitCode} (${#temporals.format(v.checkInAt, 'dd/MM/yyyy')})|">VIS-001</option>
+                                </select>
+                                <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1.5 fw-bold px-3 py-2 shadow-sm" style="border-radius: 9px;" data-bs-toggle="modal" data-bs-target="#uploadPhotoModal">
+                                    <i class="bi bi-cloud-arrow-up-fill"></i> Tải ảnh lâm sàng mới
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                            <!-- Quick Filter Segmented Tabs theo Giai đoạn điều trị -->
+                            <div class="dv-quick-segment" id="photoStageSegment">
+                                <button type="button" class="dv-seg-btn active" data-stage="ALL" onclick="filterPhotoCategory('ALL', this)">
+                                    Tất cả ảnh <span class="dv-seg-count" th:text="${photos != null ? photos.size() : 0}">0</span>
+                                </button>
+                                <button type="button" class="dv-seg-btn" data-stage="BEFORE" onclick="filterPhotoCategory('BEFORE', this)">
+                                    <i class="bi bi-camera text-danger"></i> Trước điều trị
+                                </button>
+                                <button type="button" class="dv-seg-btn" data-stage="DURING" onclick="filterPhotoCategory('DURING', this)">
+                                    <i class="bi bi-camera text-warning"></i> Trong điều trị
+                                </button>
+                                <button type="button" class="dv-seg-btn" data-stage="AFTER" onclick="filterPhotoCategory('AFTER', this)">
+                                    <i class="bi bi-camera text-success"></i> Sau điều trị
+                                </button>
+                                <button type="button" class="dv-seg-btn" data-stage="XRAY" onclick="filterPhotoCategory('XRAY', this)">
+                                    <i class="bi bi-x-diamond-fill text-info"></i> X-Quang / CT
+                                </button>
+                            </div>
+                            <div class="text-muted small">
+                                Hiển thị: <strong class="text-primary" id="photoVisibleCount" th:text="${photos != null ? photos.size() : 0}">0</strong> hình ảnh
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Danh sách ảnh dạng Grid Card -->
+                    <div th:if="${photos == null or #lists.isEmpty(photos)}" class="text-center py-5 bg-white border rounded-4 text-muted">
+                        <i class="bi bi-images text-secondary" style="font-size: 2.5rem;"></i>
+                        <h5 class="mt-3 text-secondary">Chưa có ảnh lâm sàng nào</h5>
+                        <p class="small text-muted mb-3">Chưa có ảnh chụp trong miệng, nụ cười hoặc phim X-quang nào của bệnh nhân.</p>
+                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#uploadPhotoModal">
+                            <i class="bi bi-cloud-arrow-up-fill me-1"></i>Tải ảnh lên ngay
+                        </button>
+                    </div>
+
+                    <div id="photoFilterEmptyState" class="text-center py-5 bg-white border rounded-4 text-muted" style="display: none;">
+                        <i class="bi bi-search text-secondary" style="font-size: 2.2rem;"></i>
+                        <h6 class="mt-3 fw-bold text-secondary">Không tìm thấy hình ảnh phù hợp</h6>
+                        <p class="small text-muted mb-0">Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc giai đoạn / phân loại góc chụp.</p>
+                    </div>
+
+                    <div class="ds-photo-grid" th:if="${photos != null and !#lists.isEmpty(photos)}" id="photosContainer">
+                        <div th:each="photo : ${photos}" class="ds-photo-card"
+                             th:data-stage="${photo.stage != null ? photo.stage : ''}"
+                             th:data-category="${photo.category != null ? photo.category : ''}"
+                             th:data-visit="${photo.visitCode != null ? photo.visitCode : ''}"
+                             th:data-date="${photo.capturedAt != null ? #temporals.format(photo.capturedAt, 'yyyy-MM-dd') : ''}">
+                            <div class="ds-photo-thumb"
+                                 th:data-photo-url="${photo.url}"
+                                 th:data-photo-caption="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}"
+                                 onclick="openPhotoLightbox(this.getAttribute('data-photo-url'), this.getAttribute('data-photo-caption'))">
+                                <img th:src="${photo.url}" th:alt="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}">
+                                <span class="ds-photo-badge"
+                                      th:classappend="${photo.stage == 'BEFORE' ? 'stage-before' : (photo.stage == 'DURING' ? 'stage-during' : 'stage-after')}"
+                                      th:text="${photo.stage == 'BEFORE' ? 'Trước ĐT' : (photo.stage == 'DURING' ? 'Trong ĐT' : 'Sau ĐT')}">Trước ĐT</span>
+                            </div>
+                            <div class="ds-photo-info">
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 11px;"
+                                              th:text="${photo.category == 'INTRAORAL' ? 'Trong miệng' : (photo.category == 'EXTRAORAL' ? 'Ngoài mặt' : (photo.category == 'SMILE' ? 'Nụ cười' : (photo.category == 'OCCLUSAL' ? 'Mặt nhai' : 'X-Quang / Khác')))}">Trong miệng</span>
+                                        <small class="text-muted fw-semibold" th:text="${photo.capturedAt != null ? #temporals.format(photo.capturedAt, 'dd/MM/yyyy') : '—'}">01/01/2026</small>
+                                    </div>
+                                    <p class="mb-2 fw-semibold text-dark small text-truncate" th:text="${photo.caption != null and !photo.caption.isBlank() ? photo.caption : 'Ảnh lâm sàng'}" th:title="${photo.caption}">Mô tả ảnh</p>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                    <span class="dv-code-pill" style="font-size: 11px;" th:text="${photo.visitCode != null and !photo.visitCode.isBlank() ? photo.visitCode : 'Chung'}">VIS-001</span>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-light btn-sm border"
+                                                th:data-photo-url="${photo.url}"
+                                                th:data-photo-caption="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}"
+                                                onclick="openPhotoLightbox(this.getAttribute('data-photo-url'), this.getAttribute('data-photo-caption'))"
+                                                title="Xem phóng to">
+                                            <i class="bi bi-zoom-in text-primary"></i>
+                                        </button>
+                                        <button th:if="${photo.id != null}" type="button" class="btn btn-light btn-sm border"
+                                                th:data-photo-id="${photo.id}"
+                                                th:data-photo-caption="${photo.caption}"
+                                                th:data-photo-stage="${photo.stage}"
+                                                th:data-photo-cat="${photo.category}"
+                                                onclick="openEditPhotoModal(this.getAttribute('data-photo-id'), this.getAttribute('data-photo-caption'), this.getAttribute('data-photo-stage'), this.getAttribute('data-photo-cat'))"
+                                                title="Sửa ghi chú/loại">
+                                            <i class="bi bi-pencil text-secondary"></i>
+                                        </button>
+                                        <button th:if="${photo.id != null}" type="button" class="btn btn-light btn-sm border text-danger"
+                                                th:data-photo-id="${photo.id}"
+                                                onclick="openDeletePhotoModal(this.getAttribute('data-photo-id'))"
+                                                title="Xóa ảnh">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- -----------------------------------------------------------------
+                     TAB 5: HÓA ĐƠN & VIỆN PHÍ (TÌM KIẾM, PHÂN LOẠI & BẢNG AMIS CHUẨN DAILY-VISITS)
+                     ----------------------------------------------------------------- -->
+                <div class="tab-pane fade" id="tab-invoices" role="tabpanel" aria-labelledby="tab-invoices-btn">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <h3 class="h5 fw-bold mb-1 text-dark"><i class="bi bi-receipt text-primary me-2"></i>Lịch sử hóa đơn &amp; Viện phí</h3>
+                            <p class="text-muted small mb-0">Toàn bộ hóa đơn dịch vụ, đơn thuốc và trạng thái thanh toán của bệnh nhân.</p>
+                        </div>
+
+                        <div class="d-flex gap-2" th:if="${canManageBilling}">
+                            <a th:href="@{/invoices/create(profileId=${patient.id})}" class="btn btn-primary btn-sm fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm px-3 py-2" style="border-radius: 9px;">
+                                <i class="bi bi-plus-lg"></i> Lập hóa đơn mới
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Toolbar Tìm kiếm & Phân loại Hóa đơn chuẩn /doctor/daily-visits -->
+                    <div class="dv-toolbar-card mb-3">
+                        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-2 pb-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                            <div class="dv-search-box">
+                                <i class="bi bi-search search-lead-icon"></i>
+                                <input type="text" id="invoiceSearchInput" placeholder="Tìm theo Mã hóa đơn, chi nhánh, thu ngân, ngày lập..." oninput="filterInvoiceTable()">
+                                <button type="button" class="search-clear-btn" onclick="document.getElementById('invoiceSearchInput').value=''; filterInvoiceTable();" title="Xóa tìm kiếm">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <!-- Lọc theo thời gian -->
+                                <div class="dv-date-filter-group" title="Lọc theo khoảng thời gian phát sinh hóa đơn">
+                                    <i class="bi bi-calendar3 text-primary" style="font-size: 13px;"></i>
+                                    <select class="form-select form-select-sm dv-preset-select" id="invoiceDatePreset" onchange="applyDatePreset('invoice', filterInvoiceTable)">
+                                        <option value="ALL">Tất cả thời gian</option>
+                                        <option value="TODAY">Hôm nay</option>
+                                        <option value="LAST_7_DAYS">7 ngày qua</option>
+                                        <option value="THIS_MONTH">Tháng này</option>
+                                        <option value="THIS_YEAR">Năm nay</option>
+                                        <option value="CUSTOM">Tùy chọn...</option>
+                                    </select>
+                                    <input type="date" class="dv-date-input" id="invoiceFromDate" onchange="onCustomDateChange('invoice', filterInvoiceTable)" title="Từ ngày">
+                                    <span class="text-muted small">→</span>
+                                    <input type="date" class="dv-date-input" id="invoiceToDate" onchange="onCustomDateChange('invoice', filterInvoiceTable)" title="Đến ngày">
+                                    <button type="button" class="dv-date-clear-btn" id="invoiceDateClearBtn" onclick="clearDateFilter('invoice', filterInvoiceTable)" title="Xóa lọc thời gian">
+                                        <i class="bi bi-x-circle-fill"></i>
+                                    </button>
+                                </div>
+
+                                <select class="form-select dv-adv-control" id="invoiceTypeFilter" style="width: 190px;" onchange="filterInvoiceTable()">
+                                    <option value="">Tất cả phân loại HĐ</option>
+                                    <option value="SERVICE">Hóa đơn Dịch vụ</option>
+                                    <option value="MEDICINE">Hóa đơn Thuốc</option>
+                                    <option value="MIXED">Kết hợp DV &amp; Thuốc</option>
+                                </select>
+                                <select class="form-select dv-adv-control" id="invoiceStatusFilter" style="width: 185px;" onchange="setInvoiceStatusSegment(this.value, null)">
+                                    <option value="">Tất cả trạng thái TT</option>
+                                    <option value="PAID">Đã thanh toán</option>
+                                    <option value="PARTIAL">Trả 1 phần</option>
+                                    <option value="UNPAID">Chưa thanh toán / Còn nợ</option>
+                                    <option value="CANCELLED">Đã hủy</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                            <div class="dv-quick-segment" id="invoiceStatusSegment">
+                                <button type="button" class="dv-seg-btn active" data-status="" onclick="setInvoiceStatusSegment('', this)">
+                                    Tất cả <span class="dv-seg-count" th:text="${invoices != null ? invoices.size() : 0}">0</span>
+                                </button>
+                                <button type="button" class="dv-seg-btn" data-status="PAID" onclick="setInvoiceStatusSegment('PAID', this)">
+                                    <i class="bi bi-check-circle-fill text-success"></i> Đã thanh toán
+                                </button>
+                                <button type="button" class="dv-seg-btn" data-status="PARTIAL" onclick="setInvoiceStatusSegment('PARTIAL', this)">
+                                    <i class="bi bi-clock-history text-warning"></i> Trả 1 phần
+                                </button>
+                                <button type="button" class="dv-seg-btn" data-status="UNPAID" onclick="setInvoiceStatusSegment('UNPAID', this)">
+                                    <i class="bi bi-exclamation-circle-fill text-danger"></i> Chưa thanh toán / Còn nợ
+                                </button>
+                                <button type="button" class="dv-seg-btn" data-status="CANCELLED" onclick="setInvoiceStatusSegment('CANCELLED', this)">
+                                    <i class="bi bi-slash-circle text-secondary"></i> Đã hủy
+                                </button>
+                            </div>
+                            <div class="text-muted small">
+                                Hiển thị: <strong class="text-primary" id="invoiceVisibleCount" th:text="${invoices != null ? invoices.size() : 0}">0</strong> hóa đơn
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bảng danh sách hóa đơn chuẩn .dv-grid-card + .dv-amis-table -->
+                    <div th:if="${#lists.isEmpty(invoices)}" class="text-center py-5 bg-white border rounded-4 text-muted">
+                        <i class="bi bi-receipt text-secondary" style="font-size: 2.5rem;"></i>
+                        <h5 class="mt-3 text-secondary">Bệnh nhân chưa có hóa đơn nào</h5>
+                        <p class="text-muted small mb-3">Chưa có giao dịch hóa đơn dịch vụ hoặc đơn thuốc phát sinh cho bệnh nhân này.</p>
+                        <a th:if="${canManageBilling}" th:href="@{/invoices/create(profileId=${patient.id})}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-plus-lg me-1"></i> Lập hóa đơn ngay
+                        </a>
+                    </div>
+
+                    <div class="dv-grid-card" th:unless="${#lists.isEmpty(invoices)}">
+                        <div class="dv-grid-topbar">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-bold">
+                                <i class="bi bi-receipt-cutoff me-1"></i>Danh sách Hóa đơn &amp; Viện phí
+                            </span>
+                            <small class="text-muted">Tổng hợp chi phí dịch vụ, đơn thuốc và công nợ thực tế</small>
+                        </div>
+                        <div class="dv-table-scroll-container">
+                            <table class="dv-amis-table" id="invoiceTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;" class="text-center">STT</th>
                                         <th>Mã HĐ</th>
-                                        <th class="text-center">Loại HĐ</th>
+                                        <th class="text-center">Phân loại HĐ</th>
                                         <th>Ngày lập</th>
-                                        <th>Cơ sở</th>
+                                        <th>Chi nhánh</th>
                                         <th>Thu ngân</th>
                                         <th class="text-end">Tổng tiền</th>
                                         <th class="text-end">Đã thanh toán</th>
@@ -133,9 +1586,14 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr th:each="inv : ${invoices}">
+                                    <tr th:each="inv, stat : ${invoices}"
+                                        class="invoice-row"
+                                        th:data-status="${inv.paymentStatus != null ? inv.paymentStatus.name() : ''}"
+                                        th:data-type="${inv.invoiceType != null ? inv.invoiceType.name() : 'SERVICE'}"
+                                        th:data-date="${inv.issuedAt != null ? #temporals.format(inv.issuedAt, 'yyyy-MM-dd') : ''}">
+                                        <td class="text-center text-muted fw-semibold" th:text="${stat.count}">1</td>
                                         <td>
-                                            <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}" class="fw-bold text-decoration-none text-primary" th:text="${inv.invoiceCode}">HD123456</a>
+                                            <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}" class="dv-code-pill" th:text="${inv.invoiceCode}">HD123456</a>
                                             <div th:if="${inv.status != null and inv.status.name() == 'CANCELLED'}" class="badge bg-danger mt-1">Đã hủy</div>
                                         </td>
                                         <td class="text-center">
@@ -150,7 +1608,7 @@
                                             </span>
                                         </td>
                                         <td>
-                                            <span th:text="${#temporals.format(inv.issuedAt, 'dd/MM/yyyy')}">01/01/2026</span>
+                                            <span class="fw-semibold text-dark" th:text="${#temporals.format(inv.issuedAt, 'dd/MM/yyyy')}">01/01/2026</span>
                                             <small class="text-muted d-block" th:text="${#temporals.format(inv.issuedAt, 'HH:mm')}">10:00</small>
                                         </td>
                                         <td th:text="${inv.branch != null ? inv.branch.branchName : '—'}">Chi nhánh</td>
@@ -174,17 +1632,17 @@
                                             </span>
                                         </td>
                                         <td class="text-center">
-                                            <div class="fin-table-actions">
-                                                <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}" class="fin-table-btn fin-table-btn-view fin-table-btn-icon" title="Xem chi ti&#7871;t">
+                                            <div class="btn-group btn-group-sm">
+                                                <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}" class="btn btn-outline-primary" title="Xem chi tiết">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
-                                                <a th:href="@{/invoices/{id}/print(id=${inv.invoiceId})}" target="_blank" class="fin-table-btn fin-table-btn-print fin-table-btn-icon" title="In h&#243;a &#273;&#417;n">
+                                                <a th:href="@{/invoices/{id}/print(id=${inv.invoiceId})}" target="_blank" class="btn btn-outline-secondary" title="In hóa đơn">
                                                     <i class="bi bi-printer"></i>
                                                 </a>
-                                                <a th:if="${inv.status != null and inv.status.name() != 'CANCELLED' and inv.paymentStatus != null and inv.paymentStatus.name() != 'PAID'}"
+                                                <a th:if="${canManageBilling and inv.status != null and inv.status.name() != 'CANCELLED' and inv.paymentStatus != null and inv.paymentStatus.name() != 'PAID'}"
                                                    th:href="@{/payments/dashboard(patientId=${patient.id})}"
-                                                   class="fin-table-btn fin-table-btn-pay" title="Thu ti&#7873;n tr&#234;n Dashboard">
-                                                    <i class="bi bi-cash-stack"></i> <span>Thu ti&#7873;n</span>
+                                                   class="btn btn-outline-success" title="Thu tiền">
+                                                    <i class="bi bi-cash-stack"></i>
                                                 </a>
                                             </div>
                                         </td>
@@ -193,32 +1651,885 @@
                             </table>
                         </div>
                     </div>
-
-                    <div class="tab-pane fade" id="photos">
-                        <p th:unless="${canViewClinical}" class="text-muted mt-3">Ảnh lâm sàng chỉ hiển thị cho Bác sĩ và Bệnh nhân theo quyền.</p>
-                        <p th:if="${canViewClinical and #lists.isEmpty(photos)}" class="text-muted mt-3">Chưa có ảnh lâm sàng.</p>
-                        <div th:if="${canViewClinical and !#lists.isEmpty(photos)}" class="patient-visit-grid mt-3"><figure th:each="photo : ${photos}" class="panel p-2"><img class="img-fluid rounded" th:src="${photo.url}" th:alt="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}"><figcaption th:text="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}">Ảnh</figcaption></figure></div>
-                    </div>
-                    <div class="tab-pane fade" id="medical">
-                        <p th:unless="${canViewClinical}" class="text-muted mt-3">Nội dung bệnh án thuộc phạm vi chuyên môn của Bác sĩ.</p>
-                        <div th:if="${canViewClinical}">
-                            <div class="patient-facts"><div><span>Dị ứng</span><strong th:text="${patient.allergyDetails != null ? patient.allergyDetails : 'Chưa ghi nhận'}">—</strong></div><div><span>Bệnh nền</span><strong th:text="${patient.underlyingDiseaseDetails != null ? patient.underlyingDiseaseDetails : 'Chưa ghi nhận'}">—</strong></div></div>
-                            <div class="patient-section-heading"><div><h3>Bệnh án điện tử</h3><p>Hồ sơ được tạo từ dữ liệu khám, chẩn đoán, thủ thuật và đơn thuốc.</p></div><a class="btn btn-sm btn-outline-primary" th:href="@{/emr/records(query=${patient.code})}">Mở module EMR</a></div>
-                            <div class="alert alert-info" th:if="${emrRecords == null or #lists.isEmpty(emrRecords)}">Chưa có bệnh án điện tử. <a th:href="@{/emr/records(query=${patient.code})}">Xem lượt khám chờ lập bệnh án và tạo bản nháp</a>.</div>
-                            <p th:if="${emrRecords == null or #lists.isEmpty(emrRecords)}" class="text-muted">Bệnh nhân chưa có bệnh án điện tử.</p>
-                            <div class="patient-emr-list" th:if="${emrRecords != null and !#lists.isEmpty(emrRecords)}">
-                                <article th:each="emr : ${emrRecords}">
-                                    <div><strong th:text="${emr.code}">EMR-001</strong><span class="patient-emr-status" th:classappend="| status-${emr.status}|" th:text="${emr.status.displayName}">Bản nháp</span></div>
-                                    <p><span th:text="|Lượt khám ${emr.visitCode}|">Lượt khám</span> · <span th:text="${#temporals.format(emr.checkInAt, 'dd/MM/yyyy')}">Ngày khám</span> · <span th:text="|Phiên bản v${emr.versionNumber}|">v1</span></p>
-                                    <a th:href="@{/emr/records/{id}(id=${emr.id})}">Xem chi tiết bệnh án →</a>
-                                </article>
-                            </div>
-                            <h3 class="h6 mt-4">Kế hoạch điều trị</h3><p th:if="${#lists.isEmpty(plans)}" class="text-muted">Chưa có kế hoạch.</p><ul th:unless="${#lists.isEmpty(plans)}"><li th:each="plan : ${plans}"><span th:text="${plan.name}">Kế hoạch</span> · <span th:text="${@emrViewText.label(plan.status)}">Trạng thái</span></li></ul>
-                        </div>
-                    </div>
-                    <div class="tab-pane fade" id="history"><div th:if="${#lists.isEmpty(visits)}" class="patient-empty">Chưa có lượt khám.</div><div class="patient-timeline" th:unless="${#lists.isEmpty(visits)}"><article th:each="visit : ${visits}"><div><strong th:text="${#temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm')}">Ngày khám</strong><span th:text="${@emrViewText.label(visit.status)}">Trạng thái</span></div><p><span th:text="${visit.branchName}">Chi nhánh</span> · <span th:text="${visit.doctorName != null ? visit.doctorName : 'Chưa phân bác sĩ'}">Bác sĩ</span></p><a th:href="${recordBasePath + '/' + patient.id + '/visits/' + visit.id}">Xem chi tiết lượt khám →</a></article></div></div>
                 </div>
-            </section>
+
+            </div>
         </main>
     </div>
-</div><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>
+</div>
+
+<!-- =========================================================================
+     4. TẬP HỢP CÁC MODAL NGHIỆP VỤ (CRUD CHUYÊN SÂU)
+     ========================================================================= -->
+
+<!-- Modal 1: Cập nhật dị ứng & bệnh nền nhanh -->
+<div class="modal fade" id="healthNotesModal" tabindex="-1" aria-labelledby="healthNotesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form th:action="${recordBasePath + '/' + patient.id + '/health-notes'}" method="post">
+                <div class="modal-header bg-light border-bottom">
+                    <h5 class="modal-title fw-bold text-dark" id="healthNotesModalLabel">
+                        <i class="bi bi-shield-exclamation text-danger me-2"></i>Cập nhật thông tin Dị ứng &amp; Bệnh nền
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="allergyDetails" class="form-label fw-bold">Thông tin Dị ứng (Thuốc, Thức ăn, Hoạt chất):</label>
+                        <textarea class="form-control" id="allergyDetails" name="allergyDetails" rows="3" placeholder="Ví dụ: Dị ứng Penicillin, Aspirin..." th:text="${patient.allergyDetails}"></textarea>
+                        <small class="text-muted">Cảnh báo sẽ hiển thị màu đỏ trên toàn bộ ca khám và bệnh án.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="underlyingDiseaseDetails" class="form-label fw-bold">Tiền sử Bệnh nền &amp; Bệnh toàn thân:</label>
+                        <textarea class="form-control" id="underlyingDiseaseDetails" name="underlyingDiseaseDetails" rows="3" placeholder="Ví dụ: Tăng huyết áp, Đái tháo đường Type 2, Bệnh tim mạch..." th:text="${patient.underlyingDiseaseDetails}"></textarea>
+                        <small class="text-muted">Giúp bác sĩ lưu ý khi kê đơn và chỉ định thủ thuật gây tê.</small>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Lưu cập nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: Đổi mã bệnh nhân -->
+<div class="modal fade" id="changeCodeModal" tabindex="-1" aria-labelledby="changeCodeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form th:action="${recordBasePath + '/' + patient.id + '/change-code'}" method="post">
+                <div class="modal-header bg-light border-bottom">
+                    <h5 class="modal-title fw-bold text-dark" id="changeCodeModalLabel">
+                        <i class="bi bi-arrow-left-right text-primary me-2"></i>Đổi mã bệnh nhân
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small">Mã bệnh nhân hiện tại: <strong class="text-primary" th:text="${patient.code}">BN001</strong></p>
+                    <div class="mb-3">
+                        <label for="newCode" class="form-label fw-bold">Mã bệnh nhân mới:</label>
+                        <input type="text" class="form-control" id="newCode" name="newCode" required placeholder="Ví dụ: BN123456" th:value="${patient.code}">
+                        <small class="text-muted">Mã không được trùng với các hồ sơ khác trong hệ thống.</small>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Xác nhận đổi mã</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 3: Gộp hồ sơ bệnh nhân -->
+<div class="modal fade" id="mergePatientModal" tabindex="-1" aria-labelledby="mergePatientModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form th:action="${recordBasePath + '/' + patient.id + '/merge'}" method="post">
+                <div class="modal-header bg-light border-bottom">
+                    <h5 class="modal-title fw-bold text-dark" id="mergePatientModalLabel">
+                        <i class="bi bi-folder-symlink text-primary me-2"></i>Gộp hồ sơ bệnh nhân trùng lặp
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-info small mb-3">
+                        Hồ sơ gốc hiện tại: <strong th:text="|${patient.fullName} (${patient.code})|">BN001</strong>. Toàn bộ lượt khám, bệnh án và hóa đơn từ hồ sơ trùng sẽ được hợp nhất vào hồ sơ này.
+                    </div>
+                    <div class="mb-3">
+                        <label for="targetCode" class="form-label fw-bold">Mã hồ sơ trùng cần gộp vào đây:</label>
+                        <input type="text" class="form-control" id="targetCode" name="targetCode" required placeholder="Nhập mã BN phụ cần gộp...">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-warning fw-bold px-4">Gộp hồ sơ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 4: Tải lên bản scan giấy tờ tùy thân -->
+<div class="modal fade" id="uploadDocumentModal" tabindex="-1" aria-labelledby="uploadDocumentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form method="post" enctype="multipart/form-data" th:action="${recordBasePath + '/' + patient.id + '/documents'}">
+                <div class="modal-header bg-light border-bottom">
+                    <h5 class="modal-title fw-bold text-dark" id="uploadDocumentModalLabel">
+                        <i class="bi bi-cloud-arrow-up-fill text-primary me-2"></i>Tải lên bản scan CCCD / BHYT
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="modalDocumentType" class="form-label fw-bold">Loại giấy tờ:</label>
+                        <select id="modalDocumentType" name="documentType" class="form-select" required>
+                            <option value="ID_CARD">Căn cước công dân (CCCD)</option>
+                            <option value="INSURANCE_CARD">Thẻ Bảo hiểm y tế (BHYT)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modalDocumentFile" class="form-label fw-bold">Chọn file scan:</label>
+                        <input id="modalDocumentFile" name="file" type="file" class="form-control" accept="application/pdf,image/jpeg,image/png,image/webp" required>
+                        <small class="text-muted d-block mt-1">Định dạng hỗ trợ: PDF, JPG, PNG hoặc WebP. Kích thước tối đa 5 MB.</small>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Tải lên</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 5: Đổi loại giấy tờ scan -->
+<div class="modal fade" id="changeDocTypeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form id="changeDocTypeForm" method="post">
+                <div class="modal-header bg-light border-bottom py-2">
+                    <h6 class="modal-title fw-bold">Đổi loại giấy tờ</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <label class="form-label fw-semibold">Chọn loại mới:</label>
+                    <select class="form-select" name="newType" id="selectDocType">
+                        <option value="ID_CARD">CCCD</option>
+                        <option value="INSURANCE_CARD">BHYT</option>
+                    </select>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Cập nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 6: Xóa bản scan giấy tờ -->
+<div class="modal fade" id="deleteDocModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form id="deleteDocForm" method="post">
+                <div class="modal-body p-4 text-center">
+                    <i class="bi bi-trash text-danger" style="font-size: 2.5rem;"></i>
+                    <h5 class="mt-2 fw-bold text-dark">Xác nhận xóa?</h5>
+                    <p class="text-muted small mb-0">Bản scan giấy tờ này sẽ bị xóa khỏi hồ sơ bệnh nhân.</p>
+                </div>
+                <div class="modal-footer bg-light justify-content-center border-top py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger btn-sm px-3">Xóa vĩnh viễn</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 7: Tải lên ảnh lâm sàng mới -->
+<div class="modal fade" id="uploadPhotoModal" tabindex="-1" aria-labelledby="uploadPhotoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form method="post" enctype="multipart/form-data" th:action="${recordBasePath + '/' + patient.id + '/photos'}">
+                <div class="modal-header bg-light border-bottom">
+                    <h5 class="modal-title fw-bold text-dark" id="uploadPhotoModalLabel">
+                        <i class="bi bi-camera-fill text-primary me-2"></i>Tải lên ảnh lâm sàng mới
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="photoVisitSelect" class="form-label fw-bold">Gắn với Ca khám (Lượt khám):</label>
+                        <select class="form-select" id="photoVisitSelect" name="visitId">
+                            <option value="">-- Không gắn ca khám cụ thể --</option>
+                            <option th:each="v : ${visits}" th:value="${v.id != null ? v.id : (v.visitId != null ? v.visitId : 0)}" th:text="|Ca khám ${v.code != null ? v.code : v.visitCode} (${#temporals.format(v.checkInAt, 'dd/MM/yyyy')})|">VIS-001</option>
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Giai đoạn điều trị:</label>
+                            <select class="form-select" name="stage">
+                                <option value="BEFORE">Trước điều trị (Before)</option>
+                                <option value="DURING">Trong điều trị</option>
+                                <option value="AFTER">Sau điều trị (After)</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Phân loại ảnh:</label>
+                            <select class="form-select" name="category">
+                                <option value="INTRAORAL">Trong miệng (Intraoral)</option>
+                                <option value="EXTRAORAL">Ngoài mặt (Extraoral)</option>
+                                <option value="SMILE">Nụ cười (Smile)</option>
+                                <option value="OCCLUSAL">Mặt nhai (Occlusal)</option>
+                                <option value="OTHER">Phim X-quang / Khác</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="photoCaption" class="form-label fw-bold">Ghi chú lâm sàng / Tên dịch vụ:</label>
+                        <input type="text" class="form-control" id="photoCaption" name="caption" placeholder="Ví dụ: Răng 16 sâu ngà trước trám...">
+                    </div>
+                    <div class="mb-3">
+                        <label for="photoFileInput" class="form-label fw-bold">Chọn file hình ảnh:</label>
+                        <input type="file" class="form-control" id="photoFileInput" name="file" accept="image/jpeg,image/png,image/webp" required>
+                        <small class="text-muted">Định dạng JPG, PNG, WebP (Tối đa 10 MB).</small>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Tải ảnh lên</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 8: Sửa thông tin ảnh lâm sàng -->
+<div class="modal fade" id="editPhotoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form id="editPhotoForm" method="post">
+                <div class="modal-header bg-light border-bottom">
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="bi bi-pencil-square text-primary me-2"></i>Cập nhật thông tin ảnh lâm sàng
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Ghi chú lâm sàng:</label>
+                        <input type="text" class="form-control" id="editPhotoCaption" name="caption">
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Giai đoạn:</label>
+                            <select class="form-select" id="editPhotoStage" name="stage">
+                                <option value="BEFORE">Trước điều trị</option>
+                                <option value="DURING">Trong điều trị</option>
+                                <option value="AFTER">Sau điều trị</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">Phân loại:</label>
+                            <select class="form-select" id="editPhotoCategory" name="category">
+                                <option value="INTRAORAL">Trong miệng</option>
+                                <option value="EXTRAORAL">Ngoài mặt</option>
+                                <option value="SMILE">Nụ cười</option>
+                                <option value="OCCLUSAL">Mặt nhai</option>
+                                <option value="OTHER">Phim X-quang / Khác</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 9: Xóa ảnh lâm sàng -->
+<div class="modal fade" id="deletePhotoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form id="deletePhotoForm" method="post">
+                <div class="modal-body p-4 text-center">
+                    <i class="bi bi-trash text-danger" style="font-size: 2.5rem;"></i>
+                    <h5 class="mt-2 fw-bold text-dark">Xác nhận xóa ảnh?</h5>
+                    <p class="text-muted small mb-0">Ảnh lâm sàng này sẽ bị xóa vĩnh viễn.</p>
+                </div>
+                <div class="modal-footer bg-light justify-content-center border-top py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger btn-sm px-3">Xóa ảnh</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 10: Tạo Bệnh án tại chỗ theo lượt khám -->
+<div class="modal fade" id="createEmrModal" tabindex="-1" aria-labelledby="createEmrModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form th:action="@{/emr/records}" method="post">
+                <div class="modal-header bg-light border-bottom">
+                    <h5 class="modal-title fw-bold text-dark" id="createEmrModalLabel">
+                        <i class="bi bi-plus-circle-fill text-primary me-2"></i>Tạo Bệnh án mới
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-info small mb-3">
+                        Bệnh án (MS: BA-18) được lập cho từng đợt khám và sẽ tự động kế thừa chẩn đoán, thủ thuật và đơn thuốc từ ca khám nguồn.
+                    </div>
+                    <div class="mb-3">
+                        <label for="emrVisitSelect" class="form-label fw-bold">Chọn Lượt khám cần lập Bệnh án:</label>
+                        <select class="form-select" id="emrVisitSelect" name="visitId" required>
+                            <option value="">-- Chọn ca khám --</option>
+                            <option th:each="v : ${visits}" th:value="${v.id != null ? v.id : (v.visitId != null ? v.visitId : 0)}" th:text="|Ca khám ${v.code != null ? v.code : v.visitCode} (${#temporals.format(v.checkInAt, 'dd/MM/yyyy HH:mm')}) - ${v.doctorName != null ? v.doctorName : 'Bác sĩ'}|">VIS-001</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Mẫu biểu bệnh án Bộ Y Tế:</label>
+                        <input type="text" class="form-control bg-light" readonly value="MS: BA-18 - Bệnh án ngoại trú Răng Hàm Mặt">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Khởi tạo Bệnh án ngay</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 11: Lightbox Phóng to Ảnh lâm sàng -->
+<div class="modal fade" id="photoLightboxModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-2xl bg-dark text-white rounded-4 overflow-hidden">
+            <div class="modal-header border-0 pb-0 justify-content-between">
+                <h6 class="modal-title fw-bold text-white text-truncate" id="lightboxTitle">Ảnh lâm sàng</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-3">
+                <img id="lightboxImage" src="" alt="Ảnh phóng to" class="img-fluid rounded-3" style="max-height: 75vh; object-fit: contain;">
+            </div>
+            <div class="modal-footer border-0 pt-0 justify-content-center">
+                <a id="lightboxDownloadBtn" href="" target="_blank" download class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-download me-1"></i>Tải ảnh gốc
+                </a>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================
+     JAVASCRIPT HỖ TRỢ CHUYỂN TAB & BỘ LỌC CLIENT-SIDE
+     ========================================================================= -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const recordBasePath = /*[[${recordBasePath}]]*/ '/reception/patients';
+    const patientId = /*[[${patient.id}]]*/ 0;
+
+    // 1. URL Hash Tab activation
+    document.addEventListener("DOMContentLoaded", function () {
+        const hash = window.location.hash;
+        if (hash) {
+            const targetTab = document.querySelector(`.ds-pill-tabs button[data-bs-target="${hash}"]`) ||
+                              document.querySelector(`.ds-pill-tabs button[data-bs-target="#tab-${hash.replace('#', '')}"]`);
+            if (targetTab) {
+                const tabInstance = new bootstrap.Tab(targetTab);
+                tabInstance.show();
+            }
+        }
+
+        // Cập nhật URL hash khi người dùng click tab
+        document.querySelectorAll('.ds-pill-tabs button[data-bs-toggle="tab"]').forEach(btn => {
+            btn.addEventListener('shown.bs.tab', function (e) {
+                const target = e.target.getAttribute('data-bs-target');
+                if (target) {
+                    history.replaceState(null, null, target);
+                }
+            });
+        });
+
+        // Tự động gắn .dv-seg-count cho mọi nút phân loại & dòng thông báo lọc rỗng
+        initSegmentCountsAndEmptyFilterRows();
+    });
+
+    function toggleTableFilterEmptyRow(tableSelector, dataRowSelector, visibleCount) {
+        const tbody = document.querySelector(`${tableSelector} tbody`);
+        if (!tbody) return;
+        const totalDataRows = tbody.querySelectorAll(dataRowSelector).length;
+        if (totalDataRows === 0) return; // Đã có empty-state gốc khi bảng chưa có dữ liệu
+        let emptyRow = tbody.querySelector('tr.js-filter-empty-row');
+        if (!emptyRow) {
+            const colCount = document.querySelectorAll(`${tableSelector} thead th`).length || 6;
+            emptyRow = document.createElement('tr');
+            emptyRow.className = 'js-filter-empty-row';
+            emptyRow.style.display = 'none';
+            emptyRow.innerHTML = `<td colspan="${colCount}" class="text-center py-4 text-muted">
+                <i class="bi bi-funnel d-block mb-1" style="font-size: 1.5rem; color: #94a3b8;"></i>
+                <div class="fw-semibold text-dark" style="font-size: 13px;">Không tìm thấy bản ghi phù hợp với bộ lọc hiện tại</div>
+                <div class="small text-muted">Hãy thử từ khóa tìm kiếm hoặc tiêu chí phân loại khác.</div>
+            </td>`;
+            tbody.appendChild(emptyRow);
+        }
+        emptyRow.style.display = (visibleCount === 0) ? '' : 'none';
+    }
+
+    function ensureSegCountBadge(btn, count) {
+        if (!btn) return;
+        let badge = btn.querySelector('.dv-seg-count');
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'dv-seg-count';
+            btn.appendChild(badge);
+        }
+        badge.innerText = count;
+    }
+
+    function initSegmentCountsAndEmptyFilterRows() {
+        // 1. Treatment status segment counts
+        const treatmentRows = Array.from(document.querySelectorAll("#treatmentTable tbody tr.treatment-row"));
+        document.querySelectorAll("#treatmentStatusSegment .dv-seg-btn").forEach(btn => {
+            const status = btn.getAttribute("data-status") || 'ALL';
+            let count = treatmentRows.length;
+            if (status === 'COMPLETED') {
+                count = treatmentRows.filter(r => (r.getAttribute("data-status") || '').toUpperCase() === 'COMPLETED').length;
+            } else if (status === 'IN_PROGRESS') {
+                count = treatmentRows.filter(r => ['IN_PROGRESS', 'WAITING', 'EXAMINING', 'CHECKED_IN'].includes((r.getAttribute("data-status") || '').toUpperCase())).length;
+            } else if (status === 'WAITING_PAYMENT') {
+                count = treatmentRows.filter(r => (r.getAttribute("data-status") || '').toUpperCase() === 'WAITING_PAYMENT').length;
+            } else if (status === 'HAS_EMR') {
+                count = treatmentRows.filter(r => r.getAttribute("data-has-emr") === 'true').length;
+            }
+            ensureSegCountBadge(btn, count);
+        });
+
+        // 2. Audit action segment counts
+        const auditRows = Array.from(document.querySelectorAll("#auditTable tbody tr.audit-row"));
+        document.querySelectorAll("#auditActionSegment .dv-seg-btn").forEach(btn => {
+            const action = (btn.getAttribute("data-action") || 'ALL').toUpperCase();
+            const count = (action === 'ALL')
+                ? auditRows.length
+                : auditRows.filter(r => (r.getAttribute("data-action") || '').toUpperCase() === action).length;
+            ensureSegCountBadge(btn, count);
+        });
+
+        // 3. Photo stage segment counts
+        const photoCards = Array.from(document.querySelectorAll("#photosContainer .ds-photo-card"));
+        document.querySelectorAll("#photoStageSegment .dv-seg-btn").forEach(btn => {
+            const stage = (btn.getAttribute("data-stage") || 'ALL').toUpperCase();
+            let count = photoCards.length;
+            if (stage === 'XRAY') {
+                count = photoCards.filter(c => ['OTHER', 'OCCLUSAL'].includes((c.getAttribute("data-category") || '').toUpperCase())).length;
+            } else if (stage !== 'ALL') {
+                count = photoCards.filter(c => (c.getAttribute("data-stage") || '').toUpperCase() === stage).length;
+            }
+            ensureSegCountBadge(btn, count);
+        });
+
+        // 4. Invoice status segment counts
+        const invoiceRows = Array.from(document.querySelectorAll("#invoiceTable tbody tr.invoice-row"));
+        document.querySelectorAll("#invoiceStatusSegment .dv-seg-btn").forEach(btn => {
+            const st = (btn.getAttribute("data-status") || '').toUpperCase();
+            const count = !st
+                ? invoiceRows.length
+                : invoiceRows.filter(r => (r.getAttribute("data-status") || '').toUpperCase() === st).length;
+            ensureSegCountBadge(btn, count);
+        });
+    }
+
+    // =========================================================================
+    // TIỆN ÍCH LỌC THEO THỜI GIAN DÙNG CHUNG (DATE FILTER UTILITIES)
+    // =========================================================================
+    function getIsoDateString(d) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function applyDatePreset(prefix, filterCallback) {
+        const presetEl = document.getElementById(`${prefix}DatePreset`);
+        const fromEl = document.getElementById(`${prefix}FromDate`);
+        const toEl = document.getElementById(`${prefix}ToDate`);
+        const clearBtn = document.getElementById(`${prefix}DateClearBtn`);
+        if (!presetEl || !fromEl || !toEl) return;
+
+        const val = presetEl.value;
+        const now = new Date();
+
+        if (val === 'TODAY') {
+            const today = getIsoDateString(now);
+            fromEl.value = today;
+            toEl.value = today;
+        } else if (val === 'LAST_7_DAYS') {
+            const past = new Date(now);
+            past.setDate(past.getDate() - 6);
+            fromEl.value = getIsoDateString(past);
+            toEl.value = getIsoDateString(now);
+        } else if (val === 'THIS_MONTH') {
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            fromEl.value = getIsoDateString(firstDay);
+            toEl.value = getIsoDateString(lastDay);
+        } else if (val === 'THIS_YEAR') {
+            const firstDay = new Date(now.getFullYear(), 0, 1);
+            const lastDay = new Date(now.getFullYear(), 11, 31);
+            fromEl.value = getIsoDateString(firstDay);
+            toEl.value = getIsoDateString(lastDay);
+        } else if (val === 'ALL') {
+            fromEl.value = '';
+            toEl.value = '';
+        }
+
+        if (clearBtn) {
+            clearBtn.style.display = (fromEl.value || toEl.value) ? 'inline-flex' : 'none';
+        }
+
+        if (typeof filterCallback === 'function') {
+            filterCallback();
+        }
+    }
+
+    function onCustomDateChange(prefix, filterCallback) {
+        const presetEl = document.getElementById(`${prefix}DatePreset`);
+        const fromEl = document.getElementById(`${prefix}FromDate`);
+        const toEl = document.getElementById(`${prefix}ToDate`);
+        const clearBtn = document.getElementById(`${prefix}DateClearBtn`);
+
+        if (presetEl) {
+            presetEl.value = (fromEl && fromEl.value || toEl && toEl.value) ? 'CUSTOM' : 'ALL';
+        }
+        if (clearBtn) {
+            clearBtn.style.display = (fromEl && fromEl.value || toEl && toEl.value) ? 'inline-flex' : 'none';
+        }
+        if (typeof filterCallback === 'function') {
+            filterCallback();
+        }
+    }
+
+    function clearDateFilter(prefix, filterCallback) {
+        const presetEl = document.getElementById(`${prefix}DatePreset`);
+        const fromEl = document.getElementById(`${prefix}FromDate`);
+        const toEl = document.getElementById(`${prefix}ToDate`);
+        const clearBtn = document.getElementById(`${prefix}DateClearBtn`);
+
+        if (presetEl) presetEl.value = 'ALL';
+        if (fromEl) fromEl.value = '';
+        if (toEl) toEl.value = '';
+        if (clearBtn) clearBtn.style.display = 'none';
+
+        if (typeof filterCallback === 'function') {
+            filterCallback();
+        }
+    }
+
+    function matchesDateRange(rowDate, fromDate, toDate) {
+        if (!fromDate && !toDate) return true;
+        if (!rowDate) return false;
+        if (fromDate && rowDate < fromDate) return false;
+        if (toDate && rowDate > toDate) return false;
+        return true;
+    }
+
+    // 2. Chuyển đổi 2 chế độ hiển thị ở Tab Quá trình điều trị
+    let currentTreatmentStatusFilter = 'ALL';
+    let currentAuditActionFilter = 'ALL';
+    let currentPhotoStageFilter = 'ALL';
+
+    function switchTreatmentMode(mode) {
+        const timelineView = document.getElementById("treatmentTimelineView");
+        const auditView = document.getElementById("treatmentAuditView");
+        const btnTimeline = document.getElementById("btnTreatmentTimeline");
+        const btnAudit = document.getElementById("btnTreatmentAudit");
+
+        if (mode === 'timeline') {
+            timelineView.style.display = "block";
+            auditView.style.display = "none";
+            btnTimeline.classList.add("active");
+            btnAudit.classList.remove("active");
+        } else {
+            timelineView.style.display = "none";
+            auditView.style.display = "block";
+            btnTimeline.classList.remove("active");
+            btnAudit.classList.add("active");
+        }
+    }
+
+    // 2b. Bộ lọc bảng Đợt khám & Điều trị (Theo Đợt khám)
+    function setTreatmentStatusFilter(filterVal, btn) {
+        currentTreatmentStatusFilter = filterVal || 'ALL';
+        document.querySelectorAll("#treatmentStatusSegment .dv-seg-btn").forEach(b => b.classList.remove("active"));
+        if (btn) btn.classList.add("active");
+        filterTreatmentTable();
+    }
+
+    function filterTreatmentTable() {
+        const inputEl = document.getElementById("treatmentSearchInput");
+        const query = inputEl ? inputEl.value.trim().toLowerCase() : '';
+        const fromDate = document.getElementById("treatmentFromDate")?.value || '';
+        const toDate = document.getElementById("treatmentToDate")?.value || '';
+        const rows = document.querySelectorAll("#treatmentTable tbody tr.treatment-row");
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            const status = (row.getAttribute("data-status") || '').toUpperCase();
+            const hasEmr = row.getAttribute("data-has-emr") === 'true';
+            const rowDate = row.getAttribute("data-date") || '';
+
+            const matchesQuery = !query || text.includes(query);
+            const matchesDate = matchesDateRange(rowDate, fromDate, toDate);
+            let matchesStatus = true;
+
+            if (currentTreatmentStatusFilter === 'COMPLETED') {
+                matchesStatus = status === 'COMPLETED';
+            } else if (currentTreatmentStatusFilter === 'IN_PROGRESS') {
+                matchesStatus = (status === 'IN_PROGRESS' || status === 'WAITING' || status === 'EXAMINING' || status === 'CHECKED_IN');
+            } else if (currentTreatmentStatusFilter === 'WAITING_PAYMENT') {
+                matchesStatus = status === 'WAITING_PAYMENT';
+            } else if (currentTreatmentStatusFilter === 'HAS_EMR') {
+                matchesStatus = hasEmr;
+            }
+
+            if (matchesQuery && matchesStatus && matchesDate) {
+                row.style.display = "";
+                visibleCount++;
+            } else {
+                row.style.display = "none";
+            }
+        });
+
+        const countEl = document.getElementById("treatmentVisibleCount");
+        if (countEl) countEl.innerText = visibleCount;
+        toggleTableFilterEmptyRow("#treatmentTable", "tr.treatment-row", visibleCount);
+    }
+
+    // 3. Bộ lọc bảng Nhật ký thao tác (Audit Log)
+    function setAuditActionFilter(actionVal, btn) {
+        currentAuditActionFilter = actionVal || 'ALL';
+        document.querySelectorAll("#auditActionSegment .dv-seg-btn").forEach(b => b.classList.remove("active"));
+        if (btn) btn.classList.add("active");
+        filterAuditTable();
+    }
+
+    function filterAuditTable() {
+        const inputEl = document.getElementById("auditSearchInput");
+        const query = inputEl ? inputEl.value.trim().toLowerCase() : '';
+        const entitySelect = document.getElementById("auditEntityFilter");
+        const entityFilter = entitySelect ? entitySelect.value.trim().toLowerCase() : '';
+        const fromDate = document.getElementById("auditFromDate")?.value || '';
+        const toDate = document.getElementById("auditToDate")?.value || '';
+        const rows = document.querySelectorAll("#auditTable tbody tr.audit-row");
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            const rowAction = (row.getAttribute("data-action") || '').toUpperCase();
+            const rowEntity = (row.getAttribute("data-entity") || '').toLowerCase();
+            const rowDate = row.getAttribute("data-date") || '';
+
+            const matchesQuery = !query || text.includes(query);
+            const matchesEntity = !entityFilter || rowEntity.includes(entityFilter);
+            const matchesAction = (currentAuditActionFilter === 'ALL') || (rowAction === currentAuditActionFilter);
+            const matchesDate = matchesDateRange(rowDate, fromDate, toDate);
+
+            if (matchesQuery && matchesEntity && matchesAction && matchesDate) {
+                row.style.display = "";
+                visibleCount++;
+            } else {
+                row.style.display = "none";
+            }
+        });
+        const countBadge = document.getElementById("auditTotalCount");
+        if (countBadge) countBadge.innerText = visibleCount;
+        toggleTableFilterEmptyRow("#auditTable", "tr.audit-row", visibleCount);
+    }
+
+    // 4. Bộ lọc bảng Bệnh án điện tử (EMR)
+    function setEmrStatusFilter(statusVal, kpiCardEl) {
+        const statusSelect = document.getElementById("emrStatusFilter");
+        if (statusSelect) statusSelect.value = statusVal || '';
+
+        document.querySelectorAll("#emrStatusSegment .dv-seg-btn").forEach(btn => {
+            btn.classList.toggle("active", (btn.getAttribute("data-status") || '') === (statusVal || ''));
+        });
+
+        document.querySelectorAll("#tab-emr .dv-kpi-card").forEach(card => card.classList.remove("active-filter"));
+        if (kpiCardEl) {
+            kpiCardEl.classList.add("active-filter");
+        }
+        filterEmrTable();
+    }
+
+    function filterEmrTable() {
+        const inputEl = document.getElementById("emrSearchInput");
+        const query = inputEl ? inputEl.value.trim().toLowerCase() : '';
+        const statusSelect = document.getElementById("emrStatusFilter");
+        const status = statusSelect ? statusSelect.value.toUpperCase() : '';
+        const fromDate = document.getElementById("emrFromDate")?.value || '';
+        const toDate = document.getElementById("emrToDate")?.value || '';
+        const rows = document.querySelectorAll("#emrTable tbody tr.emr-row");
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            const rowStatus = (row.getAttribute("data-status") || '').toUpperCase();
+            const rowDate = row.getAttribute("data-date") || '';
+
+            const matchesQuery = !query || text.includes(query);
+            const matchesStatus = !status || rowStatus === status || text.includes(status.toLowerCase());
+            const matchesDate = matchesDateRange(rowDate, fromDate, toDate);
+
+            if (matchesQuery && matchesStatus && matchesDate) {
+                row.style.display = "";
+                visibleCount++;
+            } else {
+                row.style.display = "none";
+            }
+        });
+
+        const countEl = document.getElementById("emrVisibleCount");
+        if (countEl) countEl.innerText = visibleCount;
+        toggleTableFilterEmptyRow("#emrTable", "tr.emr-row", visibleCount);
+    }
+
+    // 5. Bộ lọc Ảnh lâm sàng theo Tìm kiếm + Giai đoạn + Phân loại góc chụp + Đợt khám
+    function filterPhotoCategory(stageVal, btn) {
+        currentPhotoStageFilter = stageVal || 'ALL';
+        document.querySelectorAll("#photoStageSegment .dv-seg-btn").forEach(b => b.classList.remove("active"));
+        if (btn) btn.classList.add("active");
+        filterPhotos();
+    }
+
+    function filterPhotos() {
+        const searchEl = document.getElementById("photoSearchInput");
+        const query = searchEl ? searchEl.value.trim().toLowerCase() : '';
+        const catEl = document.getElementById("photoCategorySelect");
+        const catFilter = catEl ? catEl.value : 'ALL';
+        const visitEl = document.getElementById("photoVisitFilter");
+        const visitFilter = visitEl ? visitEl.value : 'ALL';
+        const fromDate = document.getElementById("photoFromDate")?.value || '';
+        const toDate = document.getElementById("photoToDate")?.value || '';
+
+        const cards = document.querySelectorAll("#photosContainer .ds-photo-card");
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const stage = card.getAttribute("data-stage") || '';
+            const category = card.getAttribute("data-category") || '';
+            const visit = card.getAttribute("data-visit") || '';
+            const rowDate = card.getAttribute("data-date") || '';
+            const text = card.innerText.toLowerCase();
+
+            const matchesQuery = !query || text.includes(query);
+            const matchesCat = (catFilter === 'ALL') || (category === catFilter);
+            const matchesVisit = (visitFilter === 'ALL') || (visit === visitFilter);
+            const matchesDate = matchesDateRange(rowDate, fromDate, toDate);
+
+            let matchesStage = true;
+            if (currentPhotoStageFilter === 'XRAY') {
+                matchesStage = (category === 'OTHER' || category === 'OCCLUSAL');
+            } else if (currentPhotoStageFilter !== 'ALL') {
+                matchesStage = (stage === currentPhotoStageFilter);
+            }
+
+            if (matchesQuery && matchesCat && matchesVisit && matchesStage && matchesDate) {
+                card.style.display = "flex";
+                visibleCount++;
+            } else {
+                card.style.display = "none";
+            }
+        });
+
+        const countEl = document.getElementById("photoVisibleCount");
+        if (countEl) countEl.innerText = visibleCount;
+
+        const emptyState = document.getElementById("photoFilterEmptyState");
+        if (emptyState && cards.length > 0) {
+            emptyState.style.display = (visibleCount === 0) ? "block" : "none";
+        }
+    }
+
+    // 6. Bộ lọc Hóa đơn & Viện phí
+    function setInvoiceStatusSegment(statusVal, btn) {
+        const statusSelect = document.getElementById("invoiceStatusFilter");
+        if (statusSelect) statusSelect.value = statusVal || '';
+
+        document.querySelectorAll("#invoiceStatusSegment .dv-seg-btn").forEach(b => {
+            b.classList.toggle("active", (b.getAttribute("data-status") || '') === (statusVal || ''));
+        });
+        filterInvoiceTable();
+    }
+
+    function filterInvoiceTable() {
+        const searchEl = document.getElementById("invoiceSearchInput");
+        const query = searchEl ? searchEl.value.trim().toLowerCase() : '';
+        const statusEl = document.getElementById("invoiceStatusFilter");
+        const status = statusEl ? statusEl.value.toUpperCase() : '';
+        const typeEl = document.getElementById("invoiceTypeFilter");
+        const type = typeEl ? typeEl.value.toUpperCase() : '';
+        const fromDate = document.getElementById("invoiceFromDate")?.value || '';
+        const toDate = document.getElementById("invoiceToDate")?.value || '';
+
+        const rows = document.querySelectorAll("#invoiceTable tbody tr.invoice-row");
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            const rowStatus = (row.getAttribute("data-status") || '').toUpperCase();
+            const rowType = (row.getAttribute("data-type") || '').toUpperCase();
+            const rowDate = row.getAttribute("data-date") || '';
+
+            const matchesQuery = !query || text.includes(query);
+            const matchesStatus = !status || rowStatus === status;
+            const matchesType = !type || rowType === type;
+            const matchesDate = matchesDateRange(rowDate, fromDate, toDate);
+
+            if (matchesQuery && matchesStatus && matchesType && matchesDate) {
+                row.style.display = "";
+                visibleCount++;
+            } else {
+                row.style.display = "none";
+            }
+        });
+
+        const countEl = document.getElementById("invoiceVisibleCount");
+        if (countEl) countEl.innerText = visibleCount;
+        toggleTableFilterEmptyRow("#invoiceTable", "tr.invoice-row", visibleCount);
+    }
+
+    // 7. Lightbox phóng to ảnh
+    function openPhotoLightbox(url, caption) {
+        document.getElementById("lightboxImage").src = url;
+        document.getElementById("lightboxTitle").innerText = caption || "Ảnh lâm sàng";
+        document.getElementById("lightboxDownloadBtn").href = url;
+        const modal = new bootstrap.Modal(document.getElementById("photoLightboxModal"));
+        modal.show();
+    }
+
+    // 8. Modal Sửa ảnh
+    function openEditPhotoModal(photoId, caption, stage, category) {
+        const form = document.getElementById("editPhotoForm");
+        form.action = `${recordBasePath}/${patientId}/photos/${photoId}/edit`;
+        document.getElementById("editPhotoCaption").value = caption || '';
+        document.getElementById("editPhotoStage").value = stage || 'BEFORE';
+        document.getElementById("editPhotoCategory").value = category || 'INTRAORAL';
+        new bootstrap.Modal(document.getElementById("editPhotoModal")).show();
+    }
+
+    // 9. Modal Xóa ảnh
+    function openDeletePhotoModal(photoId) {
+        const form = document.getElementById("deletePhotoForm");
+        form.action = `${recordBasePath}/${patientId}/photos/${photoId}/delete`;
+        new bootstrap.Modal(document.getElementById("deletePhotoModal")).show();
+    }
+
+    // 10. Modal Đổi loại giấy tờ scan
+    function openChangeDocTypeModal(docId, currentType) {
+        const form = document.getElementById("changeDocTypeForm");
+        form.action = `${recordBasePath}/${patientId}/documents/${docId}/type`;
+        document.getElementById("selectDocType").value = currentType || 'ID_CARD';
+        new bootstrap.Modal(document.getElementById("changeDocTypeModal")).show();
+    }
+
+    // 11. Modal Xóa giấy tờ scan
+    function openDeleteDocModal(docId) {
+        const form = document.getElementById("deleteDocForm");
+        form.action = `${recordBasePath}/${patientId}/documents/${docId}/delete`;
+        new bootstrap.Modal(document.getElementById("deleteDocModal")).show();
+    }
+    /*]]>*/
+</script>
+</body>
+</html>

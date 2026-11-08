@@ -1,14 +1,1029 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: head('Chi tiết lượt khám')}"></head>
-<body class="app-body"><div class="app-shell">
-    <aside th:replace="~{fragments/sidebar :: sidebar(${sidebarMenu})}"></aside><div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
-    <div class="app-main"><header th:replace="~{fragments/header :: appTopbar('Lịch sử khám')}"></header>
-        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/patient-emr.css}">
-            <div class="patient-page-heading"><div><a th:href="${recordBasePath + '/' + patient.id}">← Hồ sơ bệnh nhân</a><h1 th:text="'Lượt khám ' + ${detail.visit.code}">Lượt khám</h1><p th:text="${patient.fullName} + ' · ' + ${#temporals.format(detail.visit.checkInAt, 'dd/MM/yyyy HH:mm')}">Bệnh nhân</p></div></div>
-            <section class="panel patient-detail"><h2>Thông tin lượt khám</h2><div class="patient-facts"><div><span>Chi nhánh</span><strong th:text="${detail.visit.branchName}">—</strong></div><div><span>Bác sĩ</span><strong th:text="${detail.visit.doctorName != null ? detail.visit.doctorName : 'Chưa phân'}">—</strong></div><div><span>Trạng thái</span><strong th:text="${@emrViewText.label(detail.visit.status)}">—</strong></div><div th:if="${canViewClinical}"><span>Nhận định</span><strong th:text="${detail.assessment != null ? detail.assessment : 'Chưa ghi nhận'}">—</strong></div></div></section>
-            <div th:if="${canViewClinical}" class="patient-visit-grid"><section class="panel patient-detail"><h2>Chẩn đoán</h2><p th:if="${#lists.isEmpty(detail.diagnoses)}" class="text-muted">Chưa ghi nhận</p><ul th:unless="${#lists.isEmpty(detail.diagnoses)}"><li th:each="item : ${detail.diagnoses}" th:text="${item}">Chẩn đoán</li></ul></section><section class="panel patient-detail"><h2>Dịch vụ đã thực hiện</h2><p th:if="${#lists.isEmpty(detail.services)}" class="text-muted">Chưa ghi nhận</p><ul th:unless="${#lists.isEmpty(detail.services)}"><li th:each="item : ${detail.services}" th:text="${item}">Dịch vụ</li></ul></section><section class="panel patient-detail"><h2>Đơn thuốc</h2><p th:if="${#lists.isEmpty(detail.prescriptions)}" class="text-muted">Chưa ghi nhận</p><ul th:unless="${#lists.isEmpty(detail.prescriptions)}"><li th:each="item : ${detail.prescriptions}" th:text="${item}">Đơn thuốc</li></ul></section><section class="panel patient-detail patient-emr-visit"><h2>Bệnh án điện tử</h2><div th:if="${detail.emr != null}"><div class="patient-emr-visit__head"><strong th:text="${detail.emr.code}">EMR-001</strong><span class="patient-emr-status" th:classappend="| status-${detail.emr.status}|" th:text="${detail.emr.status.displayName}">Bản nháp</span></div><p th:text="|Phiên bản v${detail.emr.versionNumber} · Cập nhật ${#temporals.format(detail.emr.updatedAt, 'dd/MM/yyyy HH:mm')}|">Phiên bản</p><a class="btn btn-primary" th:href="@{/emr/records/{id}(id=${detail.emr.id})}">Xem chi tiết bệnh án</a></div><div th:if="${detail.emr == null}"><p class="text-muted">Lượt khám này chưa tạo bệnh án điện tử.</p></div></section></div>
-            <div th:unless="${canViewClinical}" class="patient-visit-grid"><section class="panel patient-detail"><h2>Dịch vụ đã thực hiện</h2><p th:if="${#lists.isEmpty(detail.services)}" class="text-muted">Chưa ghi nhận</p><ul th:unless="${#lists.isEmpty(detail.services)}"><li th:each="item : ${detail.services}" th:text="${item}">Dịch vụ</li></ul></section><section class="panel patient-detail"><h2>Lịch hẹn tái khám</h2><p th:if="${#lists.isEmpty(detail.followUps)}" class="text-muted">Chưa có lịch hẹn tiếp theo</p><ul th:unless="${#lists.isEmpty(detail.followUps)}"><li th:each="item : ${detail.followUps}"><strong th:text="${#temporals.format(item.date, 'dd/MM/yyyy')}">Ngày hẹn</strong> · <span th:text="${item.expectedTime != null ? item.expectedTime : 'Chưa xếp giờ'}">Giờ</span> · <span th:text="${@emrViewText.label(item.status)}">Trạng thái</span><br><span th:text="${item.doctorName != null ? item.doctorName : 'Chưa phân bác sĩ'}">Bác sĩ</span> · <span th:text="${item.serviceName != null ? item.serviceName : 'Chưa chọn dịch vụ'}">Dịch vụ</span></li></ul></section></div>
-        </main>
+
+<head th:replace="~{fragments/head :: head('Chi tiết lượt khám - DentalFlow')}"></head>
+
+<body class="app-body">
+    <div class="app-shell" th:with="snap=${@emrModuleService.getVisitSnapshot(detail.visit.id)}, emrRecord=${@emrModuleService.getEmrRecordViewForVisit(detail.visit.id)}">
+
+        <!-- SIDEBAR DÙNG CHUNG -->
+        <aside th:replace="~{fragments/sidebar :: sidebar(${sidebarMenu != null ? sidebarMenu : 'daily-visits'})}"></aside>
+        <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+        <div class="app-main">
+            <main class="app-content p-3 p-md-4" style="background: #f8fafc !important; min-height: 100vh;">
+                <style>
+                    :root {
+                        --dv-primary: #0284c7;
+                        --dv-primary-dark: #0369a1;
+                        --dv-primary-light: #e0f2fe;
+                        --dv-indigo: #2563eb;
+                        --dv-border: #cbd5e1;
+                        --dv-border-soft: #e2e8f0;
+                        --dv-text-dark: #0f172a;
+                        --dv-text-secondary: #334155;
+                        --dv-text-muted: #64748b;
+                        --dv-surface: #ffffff;
+                    }
+
+                    .dv-card {
+                        background: #ffffff;
+                        border: 1.5px solid var(--dv-border-soft);
+                        border-radius: 16px;
+                        padding: 22px 24px;
+                        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+                        margin-bottom: 22px;
+                        position: relative;
+                    }
+
+                    .dv-card-title {
+                        font-size: 17px;
+                        font-weight: 700;
+                        color: #0f172a;
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                        margin-bottom: 18px;
+                        padding-bottom: 12px;
+                        border-bottom: 1px solid #f1f5f9;
+                    }
+
+                    .dv-card-title i {
+                        font-size: 20px;
+                        color: var(--dv-primary);
+                    }
+
+                    .dv-hero-banner {
+                        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+                        border-radius: 20px;
+                        padding: 26px 30px;
+                        color: #ffffff;
+                        box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.25);
+                        margin-bottom: 22px;
+                    }
+
+                    .dv-avatar {
+                        width: 58px;
+                        height: 58px;
+                        border-radius: 16px;
+                        background: #ffffff;
+                        color: #0284c7;
+                        font-weight: 800;
+                        font-size: 24px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                        flex-shrink: 0;
+                    }
+
+                    .dv-btn-action {
+                        border-radius: 12px;
+                        font-weight: 700;
+                        padding: 10px 18px;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 8px;
+                        transition: all 0.2s;
+                        font-size: 14px;
+                        text-decoration: none;
+                    }
+
+                    .dv-btn-action:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+                    }
+
+                    .dv-btn-white {
+                        background: #ffffff;
+                        color: #0369a1;
+                        border: none;
+                    }
+
+                    .dv-btn-white:hover {
+                        background: #f8fafc;
+                        color: #0284c7;
+                    }
+
+                    .dv-btn-emerald {
+                        background: #10b981;
+                        color: #ffffff;
+                        border: none;
+                    }
+
+                    .dv-btn-emerald:hover {
+                        background: #059669;
+                        color: #ffffff;
+                    }
+
+                    .dv-btn-outline-white {
+                        background: rgba(255, 255, 255, 0.15);
+                        color: #ffffff;
+                        border: 1px solid rgba(255, 255, 255, 0.4);
+                        backdrop-filter: blur(4px);
+                    }
+
+                    .dv-btn-outline-white:hover {
+                        background: rgba(255, 255, 255, 0.25);
+                        color: #ffffff;
+                    }
+
+                    /* KPI Vitals */
+                    .dv-vital-card {
+                        background: #ffffff;
+                        border: 1.5px solid var(--dv-border-soft);
+                        border-radius: 16px;
+                        padding: 16px 18px;
+                        display: flex;
+                        align-items: center;
+                        gap: 14px;
+                        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+                        transition: all 0.2s;
+                    }
+
+                    .dv-vital-card:hover {
+                        transform: translateY(-2px);
+                        border-color: #cbd5e1;
+                        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+                    }
+
+                    .dv-vital-icon {
+                        width: 48px;
+                        height: 48px;
+                        border-radius: 14px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 22px;
+                        flex-shrink: 0;
+                    }
+
+                    .dv-vital-num {
+                        font-size: 22px;
+                        font-weight: 800;
+                        color: #0f172a;
+                        line-height: 1.1;
+                    }
+
+                    .dv-vital-label {
+                        font-size: 12px;
+                        font-weight: 600;
+                        color: #64748b;
+                        margin-top: 2px;
+                    }
+
+                    /* Odontogram Chart Styling */
+                    .dv-tooth-chart-wrapper {
+                        background: #f8fafc;
+                        border: 1.5px solid #e2e8f0;
+                        border-radius: 14px;
+                        padding: 20px;
+                        overflow-x: auto;
+                    }
+
+                    .dv-jaw-divider {
+                        height: 2px;
+                        background: linear-gradient(90deg, transparent, #cbd5e1, #0284c7, #cbd5e1, transparent);
+                        margin: 16px 0;
+                        position: relative;
+                    }
+
+                    .dv-jaw-divider::after {
+                        content: 'TRỤC PHÂN CUNG RĂNG';
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        background: #f8fafc;
+                        padding: 0 10px;
+                        font-size: 10.5px;
+                        font-weight: 700;
+                        color: #94a3b8;
+                        letter-spacing: 0.5px;
+                    }
+
+                    .dv-teeth-row {
+                        display: flex;
+                        justify-content: center;
+                        gap: 6px;
+                        flex-wrap: nowrap;
+                    }
+
+                    .dv-quadrant-group {
+                        display: flex;
+                        gap: 6px;
+                    }
+
+                    .dv-quadrant-sep {
+                        width: 2px;
+                        background: #0284c7;
+                        margin: 0 8px;
+                        border-radius: 2px;
+                    }
+
+                    .dv-tooth-cell {
+                        width: 42px;
+                        height: 52px;
+                        border-radius: 10px;
+                        border: 1.5px solid #e2e8f0;
+                        background: #ffffff;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: 700;
+                        font-size: 14px;
+                        color: #334155;
+                        cursor: pointer;
+                        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                        position: relative;
+                        user-select: none;
+                    }
+
+                    .dv-tooth-cell:hover {
+                        border-color: #0284c7;
+                        transform: translateY(-3px);
+                        box-shadow: 0 4px 10px rgba(2, 132, 199, 0.15);
+                    }
+
+                    .dv-tooth-cell.intervened {
+                        background: #fef3c7 !important;
+                        border-color: #f59e0b !important;
+                        color: #92400e !important;
+                        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+                    }
+
+                    .dv-tooth-cell.intervened::after {
+                        content: '';
+                        width: 6px;
+                        height: 6px;
+                        border-radius: 50%;
+                        background: #d97706;
+                        position: absolute;
+                        bottom: 4px;
+                    }
+
+                    /* Tables */
+                    .dv-table-modern {
+                        width: 100%;
+                        border-collapse: separate;
+                        border-spacing: 0;
+                    }
+
+                    .dv-table-modern th {
+                        background: #f8fafc;
+                        font-size: 12.5px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: 0.4px;
+                        color: #475569;
+                        padding: 12px 14px;
+                        border-bottom: 1.5px solid #e2e8f0;
+                    }
+
+                    .dv-table-modern td {
+                        padding: 12px 14px;
+                        font-size: 13.5px;
+                        color: #1e293b;
+                        border-bottom: 1px solid #f1f5f9;
+                        vertical-align: middle;
+                    }
+
+                    .dv-table-modern tr:hover td {
+                        background: #f8fafc;
+                    }
+
+                    /* Badges */
+                    .dv-badge {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 5px;
+                        padding: 4px 10px;
+                        border-radius: 8px;
+                        font-size: 12px;
+                        font-weight: 700;
+                        line-height: 1.3;
+                    }
+
+                    .dv-badge-emerald { background: #dcfce7; color: #166534; }
+                    .dv-badge-sky { background: #e0f2fe; color: #0369a1; }
+                    .dv-badge-amber { background: #fef3c7; color: #92400e; }
+                    .dv-badge-rose { background: #ffe4e6; color: #9f1239; }
+                    .dv-badge-slate { background: #f1f5f9; color: #475569; }
+
+                    /* Gallery Lightbox */
+                    .dv-photo-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                        gap: 14px;
+                    }
+
+                    .dv-photo-card {
+                        border: 1px solid #e2e8f0;
+                        border-radius: 12px;
+                        overflow: hidden;
+                        background: #ffffff;
+                        transition: all 0.2s;
+                        cursor: pointer;
+                        position: relative;
+                    }
+
+                    .dv-photo-card:hover {
+                        transform: translateY(-3px);
+                        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+                        border-color: #0284c7;
+                    }
+
+                    .dv-photo-img {
+                        width: 100%;
+                        height: 130px;
+                        object-fit: cover;
+                        background: #f1f5f9;
+                    }
+
+                    .dv-photo-meta {
+                        padding: 8px 10px;
+                        font-size: 12px;
+                        font-weight: 600;
+                        color: #475569;
+                    }
+
+                    /* Safety alert box */
+                    .dv-alert-box {
+                        border-radius: 12px;
+                        padding: 14px 18px;
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 12px;
+                        font-size: 13px;
+                    }
+
+                    .dv-alert-danger {
+                        background: #fff1f2;
+                        border: 1px solid #fecdd3;
+                        color: #9f1239;
+                    }
+
+                    .dv-alert-warning {
+                        background: #fffbeb;
+                        border: 1px solid #fef3c7;
+                        color: #92400e;
+                    }
+
+                    .dv-alert-success {
+                        background: #f0fdf4;
+                        border: 1px solid #bbf7d0;
+                        color: #166534;
+                    }
+                </style>
+
+                <!-- BREADCRUMB -->
+                <nav class="mb-3 d-flex align-items-center gap-2" aria-label="breadcrumb">
+                    <!-- Nút mở menu sidebar trên thiết bị di động / màn hình nhỏ -->
+                    <button type="button" class="btn btn-sm btn-light border d-lg-none py-1 px-2 text-primary fw-bold"
+                            data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
+                        <i class="bi bi-list fs-6"></i>
+                    </button>
+                    <ol class="breadcrumb mb-0" style="font-size: 13.5px; font-weight: 500;">
+                        <li class="breadcrumb-item"><a th:href="@{/dashboard}" style="color: #64748b; text-decoration: none;">Trang chủ</a></li>
+                        <li class="breadcrumb-item"><a th:href="@{/daily-visits}" style="color: #64748b; text-decoration: none;">Ca khám trong ngày</a></li>
+                        <li class="breadcrumb-item">
+                            <a th:href="${recordBasePath + '/' + patient.id}" style="color: #0284c7; text-decoration: none; font-weight: 600;" th:text="${patient.fullName}">Hồ sơ bệnh nhân</a>
+                        </li>
+                        <li class="breadcrumb-item active" style="color: #0f172a; font-weight: 700;" th:text="'Lượt khám ' + ${detail.visit.code}">Lượt khám</li>
+                    </ol>
+                </nav>
+
+                <!-- HERO BANNER LƯỢT KHÁM & CỤM NÚT HÀNH ĐỘNG CHÍNH -->
+                <div class="dv-hero-banner">
+                    <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-4">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="dv-avatar" th:text="${#strings.substring(patient.fullName, 0, 1)}">A</div>
+                            <div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                    <h1 class="h3 fw-bold mb-0 text-white" th:text="${patient.fullName}">Nguyễn Văn A</h1>
+                                    <span class="badge bg-white text-dark fw-bold px-2 py-1" style="border-radius: 6px; font-size: 13px;" th:text="${snap['patient']['patientCode']}">BN001</span>
+                                    <span class="badge px-2 py-1 fw-bold" style="background: rgba(255,255,255,0.25); color: #ffffff; border-radius: 6px; font-size: 13px;" th:text="${snap['patient']['gender'] != null ? snap['patient']['gender'] : '—'}">Nam</span>
+                                    <span class="badge px-2 py-1 fw-bold" style="background: rgba(255,255,255,0.25); color: #ffffff; border-radius: 6px; font-size: 13px;" th:text="${snap['patient']['age'] + ' tuổi'}">30 tuổi</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-3 flex-wrap" style="font-size: 13.5px; opacity: 0.95;">
+                                    <span><i class="bi bi-calendar-event me-1"></i> <strong th:text="${#temporals.format(detail.visit.checkInAt, 'dd/MM/yyyy HH:mm')}">01/01/2026 08:30</strong></span>
+                                    <span>•</span>
+                                    <span><i class="bi bi-geo-alt me-1"></i> <span th:text="${detail.visit.branchName}">Chi nhánh Hà Nội</span></span>
+                                    <span>•</span>
+                                    <span><i class="bi bi-person-badge me-1"></i> Bác sĩ: <strong th:text="${detail.visit.doctorName != null ? detail.visit.doctorName : 'Chưa phân công'}">BS. Nguyễn Văn B</strong></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CỤM NÚT HÀNH ĐỘNG CHÍNH (R3 YÊU CẦU ĐẶC BIỆT) -->
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <!-- NÚT 1: Mở màn hình Khám & Điều trị -->
+                            <a th:href="@{/doctor/examination/{id}/diagnoses(id=${detail.visit.id})}" class="dv-btn-action dv-btn-white" title="Chuyển sang màn hình Khám lâm sàng & Điều trị">
+                                <i class="bi bi-clipboard2-pulse fs-5 text-primary"></i>
+                                <span>Khám & Điều trị</span>
+                            </a>
+
+                            <!-- NÚT 2: Mở / Tạo Bệnh án điện tử -->
+                            <a th:if="${emrRecord != null}" th:href="@{/emr/records/{id}(id=${emrRecord.recordId})}" class="dv-btn-action dv-btn-emerald" title="Mở Bệnh án điện tử của lượt khám">
+                                <i class="bi bi-journal-medical fs-5"></i>
+                                <span>Mở Bệnh án điện tử</span>
+                            </a>
+                            <a th:unless="${emrRecord != null}" th:href="@{/emr/records/from-visit/{id}(id=${detail.visit.id})}" class="dv-btn-action dv-btn-emerald" title="Tạo mới Bệnh án điện tử cho lượt khám">
+                                <i class="bi bi-plus-circle fs-5"></i>
+                                <span>Tạo Bệnh án điện tử</span>
+                            </a>
+
+                            <!-- NÚT 3: Quay về Hồ sơ bệnh nhân -->
+                            <a th:href="${recordBasePath + '/' + patient.id}" class="dv-btn-action dv-btn-outline-white" title="Quay lại Hồ sơ bệnh nhân">
+                                <i class="bi bi-arrow-left"></i>
+                                <span>Hồ sơ BN</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 2: DẤU HIỆU SINH TỒN (VITAL SIGNS CARDS) -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-4 col-lg">
+                        <div class="dv-vital-card">
+                            <div class="dv-vital-icon" style="background: #ffe4e6; color: #e11d48;">
+                                <i class="bi bi-heart-pulse-fill"></i>
+                            </div>
+                            <div>
+                                <div class="dv-vital-num" th:text="${snap['vitalSigns']['pulse'] != null && !#strings.isEmpty(snap['vitalSigns']['pulse']) ? snap['vitalSigns']['pulse'] : '—'}">78</div>
+                                <div class="dv-vital-label">Mạch (bpm)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-4 col-lg">
+                        <div class="dv-vital-card">
+                            <div class="dv-vital-icon" style="background: #e0f2fe; color: #0284c7;">
+                                <i class="bi bi-activity"></i>
+                            </div>
+                            <div>
+                                <div class="dv-vital-num" th:text="${snap['vitalSigns']['bloodPressure'] != null && !#strings.isEmpty(snap['vitalSigns']['bloodPressure']) ? snap['vitalSigns']['bloodPressure'] : '—'}">120/80</div>
+                                <div class="dv-vital-label">Huyết áp (mmHg)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-4 col-lg">
+                        <div class="dv-vital-card">
+                            <div class="dv-vital-icon" style="background: #fef3c7; color: #d97706;">
+                                <i class="bi bi-thermometer-half"></i>
+                            </div>
+                            <div>
+                                <div class="dv-vital-num" th:text="${snap['vitalSigns']['temperature'] != null && !#strings.isEmpty(snap['vitalSigns']['temperature']) ? snap['vitalSigns']['temperature'] + '°C' : '—'}">36.8°C</div>
+                                <div class="dv-vital-label">Nhiệt độ</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-4 col-lg">
+                        <div class="dv-vital-card">
+                            <div class="dv-vital-icon" style="background: #d1fae5; color: #059669;">
+                                <i class="bi bi-lungs-fill"></i>
+                            </div>
+                            <div>
+                                <div class="dv-vital-num" th:text="${snap['vitalSigns']['respiratoryRate'] != null && !#strings.isEmpty(snap['vitalSigns']['respiratoryRate']) ? snap['vitalSigns']['respiratoryRate'] : '—'}">18</div>
+                                <div class="dv-vital-label">Nhịp thở (lần/ph)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6 col-md-4 col-lg">
+                        <div class="dv-vital-card">
+                            <div class="dv-vital-icon" style="background: #ede9fe; color: #7c3aed;">
+                                <i class="bi bi-speedometer2"></i>
+                            </div>
+                            <div>
+                                <div class="dv-vital-num" th:text="${snap['vitalSigns']['weight'] != null && !#strings.isEmpty(snap['vitalSigns']['weight']) ? snap['vitalSigns']['weight'] + ' kg' : '—'}">62 kg</div>
+                                <div class="dv-vital-label">Cân nặng</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 1: THÔNG TIN LƯỢT KHÁM & TIỀN SỬ / DỊ ỨNG (2 CARDS) -->
+                <div class="row g-4 mb-4">
+                    <!-- CARD TRÁI: HÀNH CHÍNH & LÝ DO KHÁM -->
+                    <div class="col-12 col-lg-7">
+                        <div class="dv-card h-100 mb-0">
+                            <div class="dv-card-title">
+                                <i class="bi bi-info-circle-fill"></i>
+                                <span>Thông tin Lượt khám & Bác sĩ</span>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-sm-6">
+                                    <div class="text-muted small fw-semibold">Mã lượt khám</div>
+                                    <div class="fw-bold text-dark fs-6" th:text="${detail.visit.code}">VIS-20261107-001</div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="text-muted small fw-semibold">Thời gian tiếp đón</div>
+                                    <div class="fw-bold text-dark fs-6" th:text="${#temporals.format(detail.visit.checkInAt, 'dd/MM/yyyy HH:mm')}">07/11/2026 09:00</div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="text-muted small fw-semibold">Bác sĩ phụ trách</div>
+                                    <div class="fw-bold text-dark fs-6" th:text="${detail.visit.doctorName != null ? detail.visit.doctorName : 'Chưa phân công'}">BS. Trần Minh Quân</div>
+                                    <small class="text-muted" th:if="${snap['visit']['doctorLicense'] != null}" th:text="'Số CCHN: ' + ${snap['visit']['doctorLicense']}">CCHN: 012345/BYT-CCHN</small>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="text-muted small fw-semibold">Trạng thái ca khám</div>
+                                    <div class="mt-1">
+                                        <span class="dv-badge" th:classappend="${detail.visit.status == 'COMPLETED' ? 'dv-badge-emerald' : (detail.visit.status == 'WAITING' ? 'dv-badge-amber' : 'dv-badge-sky')}" th:text="${@emrViewText.label(detail.visit.status)}">Đang khám</span>
+                                    </div>
+                                </div>
+
+                                <div class="col-12"><hr class="my-1 border-light"></div>
+
+                                <div class="col-12">
+                                    <div class="text-muted small fw-semibold mb-1"><i class="bi bi-chat-left-dots text-primary me-1"></i> Lý do đến khám (Chief complaint)</div>
+                                    <div class="p-3 bg-light rounded-3 fw-bold text-dark" th:text="${snap['clinical']['chiefComplaint'] != null && !#strings.isEmpty(snap['clinical']['chiefComplaint']) ? snap['clinical']['chiefComplaint'] : (detail.visit.initialSymptoms != null ? detail.visit.initialSymptoms : 'Chưa ghi nhận lý do khám')}">Đau nhức răng hàm dưới bên phải, ê buốt khi ăn đồ lạnh</div>
+                                </div>
+
+                                <div class="col-12" th:if="${snap['clinical']['historyIllness'] != null && !#strings.isEmpty(snap['clinical']['historyIllness'])}">
+                                    <div class="text-muted small fw-semibold mb-1"><i class="bi bi-clock-history text-primary me-1"></i> Diễn biến bệnh sử</div>
+                                    <div class="p-3 bg-light rounded-3 text-secondary" style="font-size: 13.5px;" th:text="${snap['clinical']['historyIllness']}">Cơn đau xuất hiện cách đây 3 ngày, tăng dần về đêm.</div>
+                                </div>
+
+                                <div class="col-12" th:if="${detail.assessment != null || snap['clinical']['summaryAssessment'] != null}">
+                                    <div class="text-muted small fw-semibold mb-1"><i class="bi bi-journal-check text-primary me-1"></i> Nhận định lâm sàng của bác sĩ</div>
+                                    <div class="p-3 bg-light rounded-3 text-secondary" style="font-size: 13.5px;" th:text="${snap['clinical']['summaryAssessment'] != null ? snap['clinical']['summaryAssessment'] : detail.assessment}">Răng 46 sâu ngà sâu, tủy viêm hồi phục, các răng khác ổn định.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD PHẢI: CẢNH BÁO Y TẾ, TIỀN SỬ & LIÊN HỆ -->
+                    <div class="col-12 col-lg-5">
+                        <div class="dv-card h-100 mb-0">
+                            <div class="dv-card-title">
+                                <i class="bi bi-shield-exclamation text-warning"></i>
+                                <span>Tiền sử Y tế & Cảnh báo An toàn</span>
+                            </div>
+
+                            <div class="d-flex flex-column gap-3">
+                                <!-- Banner Dị ứng -->
+                                <div th:if="${snap['patient']['hasAllergies']}" class="dv-alert-box dv-alert-danger">
+                                    <i class="bi bi-exclamation-triangle-fill fs-5 flex-shrink-0"></i>
+                                    <div>
+                                        <div class="fw-bold">CẢNH BÁO DỊ ỨNG</div>
+                                        <div th:text="${snap['patient']['allergyDetails']}">Dị ứng Penicillin, phản ứng nổi mề đay</div>
+                                    </div>
+                                </div>
+                                <div th:unless="${snap['patient']['hasAllergies']}" class="dv-alert-box dv-alert-success">
+                                    <i class="bi bi-check-circle-fill fs-5 flex-shrink-0"></i>
+                                    <div>
+                                        <div class="fw-bold">Không ghi nhận dị ứng</div>
+                                        <div class="small">Chưa phát hiện tiền sử dị ứng thuốc hoặc dị nguyên.</div>
+                                    </div>
+                                </div>
+
+                                <!-- Banner Bệnh nền -->
+                                <div th:if="${snap['patient']['hasUnderlyingDisease'] || snap['patient']['hasCardiovascularDisease']}" class="dv-alert-box dv-alert-warning">
+                                    <i class="bi bi-heart-pulse-fill fs-5 flex-shrink-0"></i>
+                                    <div>
+                                        <div class="fw-bold">TIỀN SỬ BỆNH LÝ NỀN</div>
+                                        <div th:if="${snap['patient']['hasUnderlyingDisease']}" th:text="${snap['patient']['underlyingDiseaseDetails']}">Tiểu đường type 2</div>
+                                        <div th:if="${snap['patient']['hasCardiovascularDisease']}" th:text="${snap['patient']['cardiovascularDetails']}">Tăng huyết áp</div>
+                                    </div>
+                                </div>
+                                <div th:unless="${snap['patient']['hasUnderlyingDisease'] || snap['patient']['hasCardiovascularDisease']}" class="dv-alert-box dv-alert-success">
+                                    <i class="bi bi-shield-check fs-5 flex-shrink-0"></i>
+                                    <div>
+                                        <div class="fw-bold">Sức khỏe toàn thân ổn định</div>
+                                        <div class="small">Không có ghi nhận bệnh lý nền tim mạch / huyết áp đặc biệt.</div>
+                                    </div>
+                                </div>
+
+                                <!-- Thông tin liên hệ & Định danh -->
+                                <div class="p-3 bg-light rounded-3 mt-1" style="font-size: 13.5px;">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted"><i class="bi bi-telephone me-1"></i> Số điện thoại:</span>
+                                        <strong class="text-dark" th:text="${patient.phoneNumber}">0912345678</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted"><i class="bi bi-geo-alt me-1"></i> Địa chỉ:</span>
+                                        <span class="text-dark fw-semibold text-end" style="max-width: 60%;" th:text="${patient.address != null ? patient.address : 'Chưa cập nhật'}">Hà Nội</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted"><i class="bi bi-credit-card me-1"></i> CCCD / CMND:</span>
+                                        <strong class="text-dark" th:text="${patient.idCardNumber != null && !#strings.isEmpty(patient.idCardNumber) ? patient.idCardNumber : '—'}">—</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="text-muted"><i class="bi bi-card-text me-1"></i> Mã BHYT:</span>
+                                        <strong class="text-dark" th:text="${patient.healthInsuranceNumber != null && !#strings.isEmpty(patient.healthInsuranceNumber) ? patient.healthInsuranceNumber : '—'}">—</strong>
+                                    </div>
+                                    <div th:if="${snap['patient']['guardianName'] != null}" class="d-flex justify-content-between mt-2 pt-2 border-top">
+                                        <span class="text-muted"><i class="bi bi-people me-1"></i> Người giám hộ:</span>
+                                        <span class="text-dark fw-bold" th:text="${snap['patient']['guardianName'] + (snap['patient']['guardianPhone'] != null ? ' (' + snap['patient']['guardianPhone'] + ')' : '')}">Người nhà</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 3: SƠ ĐỒ RĂNG TRỰC QUAN (ODONTOGRAM CHART) -->
+                <div class="dv-card">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 pb-2 border-bottom">
+                        <div class="dv-card-title mb-0 border-0 p-0">
+                            <i class="bi bi-diagram-3-fill"></i>
+                            <span>Sơ đồ Răng Ca khám (FDI Chart)</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-3" style="font-size: 13px;">
+                            <span class="d-flex align-items-center gap-1">
+                                <span style="width: 14px; height: 14px; border-radius: 4px; background: #fef3c7; border: 1.5px solid #f59e0b; display: inline-block;"></span>
+                                <span class="fw-semibold text-secondary">Răng can thiệp / thủ thuật</span>
+                            </span>
+                            <span class="d-flex align-items-center gap-1">
+                                <span style="width: 14px; height: 14px; border-radius: 4px; background: #ffffff; border: 1.5px solid #e2e8f0; display: inline-block;"></span>
+                                <span class="text-muted">Răng bình thường</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="dv-tooth-chart-wrapper">
+                        <!-- HÀM TRÊN (18 - 28) -->
+                        <div class="text-center mb-2 small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">CUNG 1 (18 - 11) &nbsp;•&nbsp; HÀM TRÊN &nbsp;•&nbsp; CUNG 2 (21 - 28)</div>
+                        <div class="dv-teeth-row mb-1">
+                            <!-- Cung 1: 18 -> 11 -->
+                            <div class="dv-quadrant-group">
+                                <div th:each="t : ${ {'18','17','16','15','14','13','12','11'} }"
+                                     class="dv-tooth-cell"
+                                     th:classappend="${#lists.contains(snap['intervenedTeeth'], t)} ? 'intervened' : ''"
+                                     th:attr="data-tooth=${t}"
+                                     th:title="${#lists.contains(snap['intervenedTeeth'], t) ? 'Răng ' + t + ': Có thủ thuật/chẩn đoán ghi nhận' : 'Răng ' + t}"
+                                     th:text="${t}">18</div>
+                            </div>
+
+                            <div class="dv-quadrant-sep"></div>
+
+                            <!-- Cung 2: 21 -> 28 -->
+                            <div class="dv-quadrant-group">
+                                <div th:each="t : ${ {'21','22','23','24','25','26','27','28'} }"
+                                     class="dv-tooth-cell"
+                                     th:classappend="${#lists.contains(snap['intervenedTeeth'], t)} ? 'intervened' : ''"
+                                     th:attr="data-tooth=${t}"
+                                     th:title="${#lists.contains(snap['intervenedTeeth'], t) ? 'Răng ' + t + ': Có thủ thuật/chẩn đoán ghi nhận' : 'Răng ' + t}"
+                                     th:text="${t}">21</div>
+                            </div>
+                        </div>
+
+                        <!-- ĐƯỜNG PHÂN CUNG RĂNG -->
+                        <div class="dv-jaw-divider"></div>
+
+                        <!-- HÀM DƯỚI (48 - 38) -->
+                        <div class="dv-teeth-row mt-1">
+                            <!-- Cung 4: 48 -> 41 -->
+                            <div class="dv-quadrant-group">
+                                <div th:each="t : ${ {'48','47','46','45','44','43','42','41'} }"
+                                     class="dv-tooth-cell"
+                                     th:classappend="${#lists.contains(snap['intervenedTeeth'], t)} ? 'intervened' : ''"
+                                     th:attr="data-tooth=${t}"
+                                     th:title="${#lists.contains(snap['intervenedTeeth'], t) ? 'Răng ' + t + ': Có thủ thuật/chẩn đoán ghi nhận' : 'Răng ' + t}"
+                                     th:text="${t}">48</div>
+                            </div>
+
+                            <div class="dv-quadrant-sep"></div>
+
+                            <!-- Cung 3: 31 -> 38 -->
+                            <div class="dv-quadrant-group">
+                                <div th:each="t : ${ {'31','32','33','34','35','36','37','38'} }"
+                                     class="dv-tooth-cell"
+                                     th:classappend="${#lists.contains(snap['intervenedTeeth'], t)} ? 'intervened' : ''"
+                                     th:attr="data-tooth=${t}"
+                                     th:title="${#lists.contains(snap['intervenedTeeth'], t) ? 'Răng ' + t + ': Có thủ thuật/chẩn đoán ghi nhận' : 'Răng ' + t}"
+                                     th:text="${t}">31</div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-2 small fw-bold text-muted text-uppercase" style="letter-spacing: 0.5px;">CUNG 4 (48 - 41) &nbsp;•&nbsp; HÀM DƯỚI &nbsp;•&nbsp; CUNG 3 (31 - 38)</div>
+                    </div>
+
+                    <!-- TỔNG HỢP CÁC RĂNG CÓ CAN THIỆP -->
+                    <div class="mt-3 p-3 rounded-3" style="background: #fdfaf0; border: 1px solid #fef3c7;">
+                        <div class="fw-bold text-dark small mb-2 d-flex align-items-center gap-2">
+                            <i class="bi bi-check2-circle text-warning fs-6"></i>
+                            <span>Tổng hợp can thiệp răng trong ca khám:</span>
+                        </div>
+                        <div th:if="${#lists.isEmpty(snap['toothProcedureSummary'])}" class="text-muted small">
+                            Chưa ghi nhận vị trí răng can thiệp cụ thể (thủ thuật toàn hàm hoặc khám tổng quát).
+                        </div>
+                        <div th:unless="${#lists.isEmpty(snap['toothProcedureSummary'])}" class="d-flex flex-wrap gap-2">
+                            <span th:each="item : ${snap['toothProcedureSummary']}" class="dv-badge dv-badge-amber" style="font-size: 13px; padding: 6px 12px;" th:text="${item}">Răng 16: Trám composite</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 4: CHẨN ĐOÁN ICD-10 & KẾ HOẠCH ĐIỀU TRỊ (2 CARDS) -->
+                <div class="row g-4 mb-4">
+                    <!-- CHẨN ĐOÁN Y KHOA -->
+                    <div class="col-12 col-lg-6">
+                        <div class="dv-card h-100 mb-0">
+                            <div class="dv-card-title">
+                                <i class="bi bi-file-earmark-medical-fill"></i>
+                                <span>Danh sách Chẩn đoán (ICD-10)</span>
+                            </div>
+
+                            <div th:if="${#lists.isEmpty(snap['diagnoses'])}" class="text-muted py-3 text-center">
+                                <i class="bi bi-clipboard-x fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                                Chưa có chẩn đoán y khoa nào được ghi nhận cho ca khám này.
+                            </div>
+
+                            <div th:unless="${#lists.isEmpty(snap['diagnoses'])}" class="d-flex flex-column gap-2">
+                                <div th:each="d : ${snap['diagnoses']}" class="p-3 rounded-3 border" style="background: #ffffff; border-color: #e2e8f0 !important;">
+                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="dv-badge" th:classappend="${d['type'] == 'MAIN' ? 'dv-badge-rose' : 'dv-badge-sky'}" th:text="${d['type'] == 'MAIN' ? 'Chẩn đoán chính' : 'Chẩn đoán kèm theo'}">Chẩn đoán chính</span>
+                                            <strong class="text-primary font-monospace" th:if="${d['icd10Code'] != null}" th:text="'[' + ${d['icd10Code']} + ']'">[K02.1]</strong>
+                                        </div>
+                                        <span th:if="${d['toothNumbers'] != null && !#strings.isEmpty(d['toothNumbers'])}" class="badge bg-light text-dark border fw-bold" th:text="'Răng: ' + ${d['toothNumbers']}">Răng: 46</span>
+                                    </div>
+                                    <div class="fw-bold text-dark mt-1" th:text="${d['diagnosisText']}">Sâu ngà răng không phục hồi</div>
+                                    <div th:if="${d['diseaseNameVi'] != null && d['diseaseNameVi'] != d['diagnosisText']}" class="small text-muted mt-1" th:text="${d['diseaseNameVi']}">Tên chuẩn ICD-10</div>
+                                    <div th:if="${d['notes'] != null && !#strings.isEmpty(d['notes'])}" class="small text-secondary mt-1 bg-light p-2 rounded" th:text="'Ghi chú: ' + ${d['notes']}">Ghi chú bác sĩ</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KHÁM LÂM SÀNG & KẾ HOẠCH ĐIỀU TRỊ -->
+                    <div class="col-12 col-lg-6">
+                        <div class="dv-card h-100 mb-0">
+                            <div class="dv-card-title">
+                                <i class="bi bi-clipboard2-check-fill"></i>
+                                <span>Khám Lâm sàng & Kế hoạch Điều trị</span>
+                            </div>
+
+                            <div class="d-flex flex-column gap-3" style="font-size: 13.5px;">
+                                <div th:if="${snap['clinical']['extraoralExam'] != null && !#strings.isEmpty(snap['clinical']['extraoralExam'])}" class="p-3 bg-light rounded-3">
+                                    <strong class="text-dark d-block mb-1"><i class="bi bi-person me-1 text-primary"></i> Khám ngoài miệng & Khớp TMJ:</strong>
+                                    <span class="text-secondary" th:text="${snap['clinical']['extraoralExam']}">Mặt cân đối, khớp thái dương hàm không kêu, há miệng bình thường.</span>
+                                </div>
+
+                                <div th:if="${snap['clinical']['intraoralExam'] != null && !#strings.isEmpty(snap['clinical']['intraoralExam'])}" class="p-3 bg-light rounded-3">
+                                    <strong class="text-dark d-block mb-1"><i class="bi bi-emoji-smile me-1 text-primary"></i> Khám trong miệng & Niêm mạc:</strong>
+                                    <span class="text-secondary" th:text="${snap['clinical']['intraoralExam']}">Niêm mạc hồng hào, nướu viền răng hàm dưới sưng nhẹ.</span>
+                                </div>
+
+                                <div th:if="${snap['clinical']['periodontalStatus'] != null && !#strings.isEmpty(snap['clinical']['periodontalStatus'])}" class="p-3 bg-light rounded-3">
+                                    <strong class="text-dark d-block mb-1"><i class="bi bi-shield me-1 text-primary"></i> Tình trạng Nha chu:</strong>
+                                    <span class="text-secondary" th:text="${snap['clinical']['periodontalStatus']}">Cao răng độ 1, không có túi mủ nha chu.</span>
+                                </div>
+
+                                <!-- Kế hoạch điều trị tổng thể -->
+                                <div class="p-3 rounded-3" style="background: #f0fdf4; border: 1px solid #bbf7d0;">
+                                    <strong class="text-success d-block mb-1"><i class="bi bi-calendar-check me-1"></i> Tóm tắt Hướng điều trị:</strong>
+                                    <div th:if="${snap['treatmentSummary'] != null && !#strings.isEmpty(snap['treatmentSummary'])}" class="text-dark" th:text="${snap['treatmentSummary']}">Đã hàn răng composite, hẹn tái khám kiểm tra khớp cắn sau 1 tuần.</div>
+                                    <div th:unless="${snap['treatmentSummary'] != null && !#strings.isEmpty(snap['treatmentSummary'])}" class="text-muted">Kế hoạch điều trị theo dõi theo từng giai đoạn ca khám.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 5: BẢNG DANH SÁCH DỊCH VỤ / THỦ THUẬT ĐÃ THỰC HIỆN -->
+                <div class="dv-card">
+                    <div class="dv-card-title">
+                        <i class="bi bi-tools text-primary"></i>
+                        <span>Dịch vụ & Thủ thuật Đã thực hiện</span>
+                    </div>
+
+                    <div th:if="${#lists.isEmpty(snap['performedServices'])}" class="text-muted text-center py-4">
+                        <i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>
+                        Chưa ghi nhận dịch vụ / thủ thuật thực hiện trong ca khám này.
+                    </div>
+
+                    <div th:unless="${#lists.isEmpty(snap['performedServices'])}" class="table-responsive">
+                        <table class="dv-table-modern">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">STT</th>
+                                    <th>Tên Dịch vụ / Thủ thuật</th>
+                                    <th>Vị trí Răng</th>
+                                    <th class="text-center">Số lượng</th>
+                                    <th class="text-end">Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
+                                    <th>Bác sĩ thực hiện</th>
+                                    <th>Thời gian</th>
+                                    <th class="text-center">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="svc, stat : ${snap['performedServices']}">
+                                    <td class="text-muted fw-bold" th:text="${stat.count}">1</td>
+                                    <td>
+                                        <strong class="text-dark" th:text="${svc['serviceName']}">Trám răng thẩm mỹ Composite</strong>
+                                        <div class="small text-muted font-monospace" th:if="${svc['serviceCode'] != null}" th:text="${svc['serviceCode']}">DV001</div>
+                                        <div th:if="${svc['clinicalNotes'] != null && !#strings.isEmpty(svc['clinicalNotes'])}" class="small text-secondary fst-italic mt-1" th:text="'Ghi chú: ' + ${svc['clinicalNotes']}">Ghi chú</div>
+                                    </td>
+                                    <td>
+                                        <span th:if="${svc['toothNumbers'] != null && !#strings.isEmpty(svc['toothNumbers'])}" class="dv-badge dv-badge-amber" th:text="${svc['toothNumbers']}">16</span>
+                                        <span th:unless="${svc['toothNumbers'] != null && !#strings.isEmpty(svc['toothNumbers'])}" class="text-muted">—</span>
+                                    </td>
+                                    <td class="text-center fw-bold" th:text="${svc['quantity']}">1</td>
+                                    <td class="text-end" th:text="${#numbers.formatDecimal(svc['unitPrice'], 0, 'COMMA', 0, 'POINT')} + ' đ'">350.000 đ</td>
+                                    <td class="text-end fw-bold text-primary" th:text="${#numbers.formatDecimal(svc['finalPrice'], 0, 'COMMA', 0, 'POINT')} + ' đ'">350.000 đ</td>
+                                    <td>
+                                        <span class="fw-semibold text-dark" th:text="${svc['doctorName'] != null ? svc['doctorName'] : '—'}">BS. Quân</span>
+                                    </td>
+                                    <td class="text-muted small" th:text="${svc['completedAt'] != null ? #strings.substring(svc['completedAt'], 11, 16) : '—'}">09:30</td>
+                                    <td class="text-center">
+                                        <span class="dv-badge dv-badge-emerald" th:text="${@emrViewText.label(svc['status'])}">Hoàn thành</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- SECTION 6: CẬN LÂM SÀNG & ẢNH LÂM SÀNG / PHIM X-QUANG -->
+                <div class="dv-card">
+                    <div class="dv-card-title">
+                        <i class="bi bi-images text-primary"></i>
+                        <span>Cận lâm sàng & Ảnh Lâm sàng / Phim X-quang</span>
+                    </div>
+
+                    <div th:if="${#lists.isEmpty(snap['photos']) && #lists.isEmpty(snap['xrays'])}" class="text-muted text-center py-4">
+                        <i class="bi bi-camera fs-2 d-block mb-2 opacity-50"></i>
+                        Không có hình ảnh lâm sàng hoặc phim X-quang nào chụp trong ca khám này.
+                    </div>
+
+                    <div th:unless="${#lists.isEmpty(snap['photos']) && #lists.isEmpty(snap['xrays'])}" class="dv-photo-grid">
+                        <!-- Ảnh lâm sàng -->
+                        <div th:each="photo : ${snap['photos']}" class="dv-photo-card"
+                             th:data-photo-url="${photo['imageUrl']}"
+                             th:data-photo-caption="${photo['caption'] != null ? photo['caption'] : 'Ảnh lâm sàng'}"
+                             onclick="openImageModal(this.getAttribute('data-photo-url'), this.getAttribute('data-photo-caption'))">
+                            <img th:src="${photo['imageUrl']}" src="/images/placeholder-tooth.png" class="dv-photo-img" alt="Ảnh lâm sàng">
+                            <div class="dv-photo-meta">
+                                <span class="dv-badge dv-badge-sky mb-1" th:text="${@emrViewText.label(photo['stage'])}">Trước điều trị</span>
+                                <div class="text-truncate" th:text="${photo['caption'] != null ? photo['caption'] : 'Ảnh chụp ca khám'}">Ảnh lâm sàng</div>
+                            </div>
+                        </div>
+
+                        <!-- Phim X-quang -->
+                        <div th:each="xray : ${snap['xrays']}" class="dv-photo-card"
+                             th:data-photo-url="${xray['imageUrl']}"
+                             th:data-photo-caption="'Phim X-quang · ' + ${xray['studyUid']}"
+                             onclick="openImageModal(this.getAttribute('data-photo-url'), this.getAttribute('data-photo-caption'))">
+                            <img th:src="${xray['imageUrl']}" src="/images/placeholder-xray.png" class="dv-photo-img" style="filter: contrast(110%);" alt="Phim X-quang">
+                            <div class="dv-photo-meta">
+                                <span class="dv-badge dv-badge-rose mb-1">Phim X-quang</span>
+                                <div class="text-truncate font-monospace small" th:text="${xray['studyUid']}">UID-001</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECTION 7: ĐƠN THUỐC & LỊCH HẸN TÁI KHÁM (2 CARDS) -->
+                <div class="row g-4 mb-4">
+                    <!-- BẢNG ĐƠN THUỐC CHI TIẾT -->
+                    <div class="col-12 col-lg-7">
+                        <div class="dv-card h-100 mb-0">
+                            <div class="dv-card-title">
+                                <i class="bi bi-capsule-pill text-danger"></i>
+                                <span>Đơn thuốc Ca khám</span>
+                            </div>
+
+                            <div th:if="${#lists.isEmpty(snap['prescriptions'])}" class="text-muted text-center py-4">
+                                <i class="bi bi-prescription2 fs-2 d-block mb-2 opacity-50"></i>
+                                Bác sĩ không kê đơn thuốc cho ca khám này.
+                            </div>
+
+                            <div th:unless="${#lists.isEmpty(snap['prescriptions'])}" th:each="p : ${snap['prescriptions']}" class="mb-3">
+                                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                                    <span class="fw-bold text-dark"><i class="bi bi-receipt me-1"></i> Mã đơn: <span class="font-monospace text-primary" th:text="${p['prescriptionCode']}">TOA001</span></span>
+                                    <span class="dv-badge dv-badge-sky" th:text="${@emrViewText.label(p['status'])}">Đã kê đơn</span>
+                                </div>
+
+                                <div class="table-responsive">
+                                    <table class="dv-table-modern">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 40px;">#</th>
+                                                <th>Tên thuốc & Hoạt chất</th>
+                                                <th>Hàm lượng</th>
+                                                <th class="text-center">Số lượng</th>
+                                                <th>Cách dùng / Liều dùng</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="item, stat : ${p['items']}">
+                                                <td class="text-muted" th:text="${stat.count}">1</td>
+                                                <td>
+                                                    <strong class="text-dark" th:text="${item['drugName']}">Amoxicillin 500mg</strong>
+                                                    <div th:if="${item['activeIngredient'] != null && !#strings.isEmpty(item['activeIngredient'])}" class="small text-muted" th:text="${item['activeIngredient']}">Amoxicillin trihydrate</div>
+                                                </td>
+                                                <td th:text="${item['dosage']}">500mg</td>
+                                                <td class="text-center fw-bold text-primary" th:text="${item['quantity'] + ' ' + item['unit']}">10 Viên</td>
+                                                <td class="text-secondary small" th:text="${item['usageInstruction']}">Uống 1 viên sau ăn, ngày 2 lần (sáng - tối)</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div th:if="${p['adviceNotes'] != null && !#strings.isEmpty(p['adviceNotes'])}" class="p-3 bg-light rounded-3 mt-2" style="font-size: 13.5px;">
+                                    <strong class="text-dark d-block mb-1"><i class="bi bi-chat-quote me-1 text-primary"></i> Lời dặn của bác sĩ:</strong>
+                                    <span class="text-secondary" th:text="${p['adviceNotes']}">Uống nhiều nước, kiêng đồ ăn quá cay nóng và đồ uống có cồn.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LỊCH HẸN TÁI KHÁM & EMR LINK -->
+                    <div class="col-12 col-lg-5">
+                        <div class="dv-card h-100 mb-0">
+                            <div class="dv-card-title">
+                                <i class="bi bi-calendar-event-fill text-primary"></i>
+                                <span>Lịch hẹn Tái khám & Bệnh án EMR</span>
+                            </div>
+
+                            <!-- Lịch hẹn tái khám -->
+                            <div class="mb-4">
+                                <h6 class="fw-bold text-dark small text-uppercase mb-2" style="letter-spacing: 0.5px;">Lịch hẹn tiếp theo</h6>
+                                <div th:if="${#lists.isEmpty(detail.followUps)}" class="p-3 bg-light rounded-3 text-muted text-center small">
+                                    <i class="bi bi-calendar-x d-block fs-4 mb-1 opacity-50"></i>
+                                    Chưa có lịch hẹn tái khám tiếp theo cho bệnh nhân.
+                                </div>
+                                <div th:unless="${#lists.isEmpty(detail.followUps)}" class="d-flex flex-column gap-2">
+                                    <div th:each="fu : ${detail.followUps}" class="p-3 rounded-3 border" style="background: #f8fafc; border-color: #e2e8f0 !important;">
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <strong class="text-primary fs-6" th:text="${#temporals.format(fu.date, 'dd/MM/yyyy')}">14/11/2026</strong>
+                                            <span class="dv-badge dv-badge-sky" th:text="${fu.expectedTime != null ? fu.expectedTime : 'Chưa xếp giờ'}">09:00</span>
+                                        </div>
+                                        <div class="small text-dark fw-semibold" th:text="${fu.serviceName != null ? fu.serviceName : 'Khám kiểm tra định kỳ'}">Tái khám kiểm tra</div>
+                                        <div class="small text-muted" th:text="'Bác sĩ: ' + ${fu.doctorName != null ? fu.doctorName : 'BS phụ trách'}">BS. Quân</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card Bệnh án điện tử liên kết -->
+                            <div class="p-3 rounded-3 border" style="background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%); border-color: #bae6fd !important;">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="fw-bold text-dark d-flex align-items-center gap-2">
+                                        <i class="bi bi-journal-medical text-primary fs-5"></i>
+                                        <span>Bệnh án Điện tử (EMR)</span>
+                                    </div>
+                                    <span th:if="${emrRecord != null}" class="dv-badge dv-badge-emerald" th:text="${@emrViewText.label(emrRecord.status)}">Bản nháp</span>
+                                    <span th:unless="${emrRecord != null}" class="dv-badge dv-badge-slate">Chưa tạo</span>
+                                </div>
+
+                                <div th:if="${emrRecord != null}">
+                                    <div class="small mb-1"><span class="text-muted">Mã hồ sơ:</span> <strong class="text-dark font-monospace" th:text="${emrRecord.recordCode}">EMR-20261107-001</strong></div>
+                                    <div class="small text-muted mb-3" th:text="'Phiên bản v' + ${emrRecord.currentVersionNumber} + ' · Cập nhật ' + ${#temporals.format(emrRecord.updatedAt, 'dd/MM/yyyy HH:mm')}">Cập nhật gần đây</div>
+                                    <div class="d-flex gap-2">
+                                        <a th:href="@{/emr/records/{id}(id=${emrRecord.recordId})}" class="btn btn-primary btn-sm rounded-pill fw-bold px-3">
+                                            <i class="bi bi-eye me-1"></i> Xem & Sửa BAĐT
+                                        </a>
+                                        <form th:action="@{/emr/records/{id}/sync(id=${emrRecord.recordId})}" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-outline-primary btn-sm rounded-pill fw-bold px-3" title="Đồng bộ lại ca khám mới nhất">
+                                                <i class="bi bi-arrow-repeat me-1"></i> Đồng bộ lại
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <div th:unless="${emrRecord != null}">
+                                    <p class="small text-secondary mb-3">Lượt khám này chưa tạo bệnh án điện tử. Bác sĩ có thể tạo nhanh hồ sơ EMR chuẩn MS: BA-18 ngay tại đây.</p>
+                                    <a th:href="@{/emr/records/from-visit/{id}(id=${detail.visit.id})}" class="btn btn-primary btn-sm rounded-pill fw-bold px-3">
+                                        <i class="bi bi-plus-circle me-1"></i> Tạo Bệnh án điện tử ngay
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODAL LIGHTBOX XEM ẢNH PHÓNG TO -->
+                <div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                            <div class="modal-header border-0 pb-0">
+                                <h6 class="modal-title fw-bold text-dark" id="imagePreviewCaption">Xem ảnh phóng to</h6>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body text-center p-3">
+                                <img id="imagePreviewSrc" src="" alt="Preview" class="img-fluid rounded-3" style="max-height: 75vh; object-fit: contain;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    function openImageModal(url, caption) {
+                        document.getElementById('imagePreviewSrc').src = url;
+                        document.getElementById('imagePreviewCaption').innerText = caption || 'Chi tiết hình ảnh';
+                        const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+                        modal.show();
+                    }
+                </script>
+            </main>
+        </div>
     </div>
-</div></body></html>
+</body>
+
+</html>

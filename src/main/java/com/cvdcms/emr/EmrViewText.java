@@ -49,7 +49,10 @@ public class EmrViewText {
     }
 
     public String effective(Map<String, String> fields, String key, Object source) {
-        String manual = fields == null ? null : fields.get(key);
-        return manual != null && !manual.isBlank() ? manual : source == null ? "" : source.toString();
+        if (fields != null && fields.containsKey(key)) {
+            String manual = fields.get(key);
+            return manual == null ? "" : manual;
+        }
+        return source == null ? "" : source.toString();
     }
 }
