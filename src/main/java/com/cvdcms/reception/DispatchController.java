@@ -22,6 +22,7 @@ public class DispatchController {
 
     @GetMapping
     public String board(@RequestParam(required = false) Long branchId,
+                        @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate day,
                         @RequestParam(required = false) String keyword,
                         @RequestParam(required = false) Long doctorId,
                         @RequestParam(required = false) String status,
@@ -37,7 +38,20 @@ public class DispatchController {
             size = 10;
         }
 
-        var board = service.board(session, branchId);
+        if (day != null && session != null) {
+            session.setAttribute("currentWorkflowDay", day);
+        }
+
+        Long effectiveBranchId = branchId;
+        if (effectiveBranchId == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid) effectiveBranchId = sid;
+        }
+
+        var board = service.board(session, effectiveBranchId);
+        if (session != null) {
+            session.setAttribute("currentBranchId", board.branchId());
+        }
         List<Visit> allVisits = board.visits();
 
         // Lọc theo keyword, doctorId, status
@@ -104,6 +118,7 @@ public class DispatchController {
                 .toList();
 
         model.addAttribute("board", board);
+        model.addAttribute("currentBranchId", board.branchId());
         model.addAttribute("items", filtered);
         model.addAttribute("doctorVisitMap", filteredDoctorVisits);
         model.addAttribute("unassignedItems", filteredUnassigned);

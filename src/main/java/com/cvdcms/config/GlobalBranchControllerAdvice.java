@@ -104,6 +104,13 @@ public class GlobalBranchControllerAdvice {
             session.setAttribute("currentBranchId", currentBranchId);
         }
 
+        // Với phân hệ Tiếp đón & Điều phối: bắt buộc phải có cơ sở cụ thể để vận hành
+        String uri = request != null ? request.getRequestURI() : "";
+        if (currentBranchId == null && uri != null && uri.startsWith("/reception") && !allActiveBranches.isEmpty()) {
+            currentBranchId = allActiveBranches.get(0).getBranchId();
+            session.setAttribute("currentBranchId", currentBranchId);
+        }
+
         Branch currentBranch = null;
         if (currentBranchId != null) {
             for (Branch b : allActiveBranches) {
@@ -120,7 +127,7 @@ public class GlobalBranchControllerAdvice {
         String currentBranchName = currentBranch != null ? currentBranch.getBranchName() : "Toàn hệ thống";
         String currentBranchCode = currentBranch != null && currentBranch.getBranchCode() != null && !currentBranch.getBranchCode().isBlank()
                 ? currentBranch.getBranchCode()
-                : (currentBranch != null ? currentBranch.getBranchName() : "DEMO");
+                : (currentBranch != null ? currentBranch.getBranchName() : "Toàn hệ thống");
         session.setAttribute("currentBranchName", currentBranchName);
 
         model.addAttribute("currentBranchId", currentBranchId);

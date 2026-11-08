@@ -7,7 +7,7 @@
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main">
         <header th:replace="~{fragments/header :: appTopbar('Tiếp đón & Check-in')}"></header>
-        <main id="reception-content-area" class="app-content checkin-page-wrapper p-3" th:attr="data-selected-appointment-id=${selectedAppointmentId}">
+        <main id="reception-content-area" class="app-content checkin-page-wrapper p-3" th:attr="data-selected-appointment-id=${selectedAppointmentId},data-current-branch-id=${dashboard.branchId}">
             <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
             <link rel="stylesheet" th:href="@{/css/patients.css}">
             <link rel="stylesheet" th:href="@{/css/check-in.css}">
@@ -22,7 +22,7 @@
                         <span class="text-muted d-none d-lg-inline">Chuỗi nghiệp vụ lễ tân &amp; điều phối khám:</span>
                     </div>
                     <div class="d-flex flex-wrap align-items-center gap-2 small">
-                        <a th:href="@{/reception/appointments}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 1: Quản lý lịch hẹn">
+                        <a th:href="@{/reception/appointments(branchId=${dashboard.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 1: Quản lý lịch hẹn">
                             <span class="badge rounded-circle">1</span><span>Lịch hẹn</span>
                         </a>
                         <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>

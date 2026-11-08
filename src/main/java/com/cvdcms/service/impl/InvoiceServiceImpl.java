@@ -231,7 +231,10 @@ public class InvoiceServiceImpl implements InvoiceService {
                 }
 
                 if (invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId())) {
-                    throw new IllegalStateException("Dịch vụ '" + ps.getService().getServiceName() + "' (ID: " + ps.getPerformedId() + ") đã được lập hóa đơn còn hiệu lực trước đó.");
+                    String displayName = (ps.getStepName() != null && !ps.getStepName().isBlank())
+                            ? ps.getStepName()
+                            : ps.getService().getServiceName();
+                    throw new IllegalStateException("Dịch vụ '" + displayName + "' (ID: " + ps.getPerformedId() + ") đã được lập hóa đơn còn hiệu lực trước đó.");
                 }
 
                 BigDecimal unitPrice = ps.getUnitPrice() != null ? ps.getUnitPrice() : ps.getService().getBasePrice();
@@ -262,7 +265,15 @@ public class InvoiceServiceImpl implements InvoiceService {
                 item.setInvoice(invoice);
                 item.setItemType(InvoiceItemType.SERVICE);
                 item.setService(ps.getService());
-                item.setItemName(ps.getService().getServiceName());
+
+                // Khớp chuẩn theo cập nhật của Bác sĩ: Ưu tiên tên bước thủ thuật (stepName) hoặc itemName từ giao diện kế toán gửi lên
+                String finalItemName = (itemDto.getItemName() != null && !itemDto.getItemName().trim().isEmpty())
+                        ? itemDto.getItemName().trim()
+                        : (ps.getStepName() != null && !ps.getStepName().trim().isEmpty()
+                                ? ps.getStepName().trim()
+                                : ps.getService().getServiceName());
+                item.setItemName(finalItemName);
+
                 item.setQuantity(quantity);
                 item.setUnitPrice(unitPrice);
                 item.setFinalAmount(lineTotal);
