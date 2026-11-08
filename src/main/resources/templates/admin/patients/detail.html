@@ -554,28 +554,28 @@
                                 <tbody>
                                 <tr th:each="emr : ${emrRecords}">
                                     <td data-column-key="code">
-                                        <a th:href="@{/emr/records/{id}(id=${emr.id})}" class="fw-bold text-primary text-decoration-none font-monospace" th:text="${emr.code}">EMR-0001</a>
+                                        <a th:href="@{/emr/records/{id}(id=${emr.recordId != null ? emr.recordId : emr.id})}" class="fw-bold text-primary text-decoration-none font-monospace" th:text="${emr.recordCode != null ? emr.recordCode : emr.code}">EMR-0001</a>
                                     </td>
                                     <td data-column-key="visit">
-                                        <span class="badge bg-light text-dark border font-monospace" th:text="${emr.visitCode ?: '—'}">VIS001</span>
+                                        <span class="badge bg-light text-dark border font-monospace" th:text="${emr.visit != null ? emr.visit.visitCode : (emr.visitCode ?: '—')}">VIS001</span>
                                     </td>
-                                    <td data-column-key="branch" class="small text-secondary">—</td>
-                                    <td data-column-key="doctor" class="small fw-semibold text-dark" th:text="${emr.doctorName ?: '—'}">BS. Nguyễn Văn A</td>
+                                    <td data-column-key="branch" class="small text-secondary" th:text="${emr.branch != null ? emr.branch.branchName : '—'}">—</td>
+                                    <td data-column-key="doctor" class="small fw-semibold text-dark" th:text="${emr.doctorName ?: (emr.createdBy != null ? (emr.createdBy.fullName ?: emr.createdBy.username) : '—')}">BS. Nguyễn Văn A</td>
                                     <td data-column-key="version" class="text-center">
-                                        <span class="badge bg-secondary-subtle text-secondary border" th:text="'v' + ${emr.versionNumber}">v1</span>
+                                        <span class="badge bg-secondary-subtle text-secondary border" th:text="'v' + ${emr.versionNumber != null ? emr.versionNumber : emr.currentVersionNumber}">v1</span>
                                     </td>
                                     <td data-column-key="status" class="text-center">
                                         <span class="badge"
-                                              th:classappend="${emr.status.name() == 'SIGNED' ? 'bg-success-subtle text-success border border-success-subtle' : (emr.status.name() == 'READY_TO_LOCK' or emr.status.name() == 'DOCTOR_SIGNATURE_PENDING' ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-secondary-subtle text-secondary border')}"
-                                              th:text="${emr.status.displayName}">Bản nháp</span>
+                                              th:classappend="${emr.status != null and emr.status.name() == 'SIGNED' ? 'bg-success-subtle text-success border border-success-subtle' : (emr.status != null and (emr.status.name() == 'READY_TO_LOCK' or emr.status.name() == 'DOCTOR_SIGNATURE_PENDING') ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : 'bg-secondary-subtle text-secondary border')}"
+                                              th:text="${emr.status != null ? emr.status.displayName : 'Bản nháp'}">Bản nháp</span>
                                     </td>
                                     <td data-column-key="updated" class="small text-secondary" th:text="${emr.updatedAt != null ? #temporals.format(emr.updatedAt, 'dd/MM/yyyy HH:mm') : '—'}">01/01/2026</td>
                                     <td data-column-key="actions" class="text-end">
                                         <div class="d-inline-flex gap-1">
-                                            <a th:href="@{/emr/records/{id}(id=${emr.id})}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Xem chi tiết bệnh án điện tử MS: BA-18">
+                                            <a th:href="@{/emr/records/{id}(id=${emr.recordId != null ? emr.recordId : emr.id})}" class="btn btn-sm btn-outline-primary py-0 px-2" title="Xem chi tiết bệnh án điện tử MS: BA-18">
                                                 <i class="bi bi-eye me-1"></i>Xem BAĐT
                                             </a>
-                                            <a th:href="@{/emr/records/{id}(id=${emr.id}, print='true')}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" title="In bệnh án BA-18">
+                                            <a th:href="@{/emr/records/{id}(id=${emr.recordId != null ? emr.recordId : emr.id}, print='true')}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" title="In bệnh án BA-18">
                                                 <i class="bi bi-printer"></i>
                                             </a>
                                         </div>
