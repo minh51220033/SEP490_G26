@@ -67,10 +67,11 @@
               </button>
               <a th:href="@{/admin/medications}" class="btn btn-outline-secondary ms-1">Bỏ lọc</a>
             </div>
-            <div class="col-12 col-md-auto ms-md-auto text-end">
+            <div class="col-12 col-md-auto ms-md-auto d-flex align-items-center justify-content-end gap-2">
                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCreate">
                  <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm thuốc mới
-                </button>
+               </button>
+               <div th:replace="~{fragments/header :: branchSelectInline}"></div>
             </div>
           </div>
         </form>

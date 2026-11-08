@@ -177,6 +177,12 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                             throw new IllegalArgumentException("Hệ thống chưa có danh mục dịch vụ điều trị nào để gắn vào kế hoạch.");
                         }
                         item.setService(service);
+                        String stepName = (itemReq.getStepName() != null && !itemReq.getStepName().trim().isEmpty())
+                                ? itemReq.getStepName().trim()
+                                : ((itemReq.getCustomServiceName() != null && !itemReq.getCustomServiceName().trim().isEmpty())
+                                    ? itemReq.getCustomServiceName().trim()
+                                    : (service != null ? service.getServiceName() : "Bước thủ thuật"));
+                        item.setStepName(stepName);
 
                         item.setToothNumbers(itemReq.getToothNumbers());
                         BigDecimal qty = (itemReq.getQuantity() != null && itemReq.getQuantity().compareTo(BigDecimal.ZERO) > 0) 
@@ -215,6 +221,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         plan.setTotalEstimatedCost(overallCost);
         plan.setFinalEstimatedCost(request.getFinalEstimatedCost() != null && request.getFinalEstimatedCost().compareTo(BigDecimal.ZERO) > 0 
                 ? request.getFinalEstimatedCost() : overallCost);
+
+        // Nút Lưu Kế hoạch điều trị tự động kích hoạt logic chuyển kế toán
+        plan.setSentToAccounting(true);
+        plan.setSentToAccountingAt(LocalDateTime.now());
 
         TreatmentPlan saved = treatmentPlanRepository.save(plan);
         log.info("Created TreatmentPlan ID: {}, Code: {}", saved.getPlanId(), saved.getPlanCode());
@@ -475,6 +485,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                                 .serviceId(svc != null ? svc.getServiceId() : null)
                                 .serviceCode(svc != null ? svc.getServiceCode() : null)
                                 .serviceName(svc != null ? svc.getServiceName() : "Dịch vụ nha khoa")
+                                .stepName(it.getStepName() != null && !it.getStepName().isBlank() ? it.getStepName() : (svc != null ? svc.getServiceName() : "Bước thủ thuật"))
                                 .categoryName(svc != null && svc.getCategory() != null ? svc.getCategory().getCategoryName() : null)
                                 .unit(svc != null ? svc.getUnit() : "Lần")
                                 .toothNumbers(it.getToothNumbers())

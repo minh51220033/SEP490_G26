@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head(${isEdit} ? 'Chỉnh sửa Khuyến mãi (FT20)' : 'Tạo mới Khuyến mãi (FT20)')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head(${isEdit} ? 'Chỉnh sửa Khuyến mãi' : 'Tạo mới Khuyến mãi')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
     <link rel="stylesheet" th:href="@{/css/membership.css}">
 </head>
@@ -129,12 +129,12 @@
                             </div>
 
                             <div class="mb-3">
-                                <label for="applicableTierId" class="form-label small fw-bold text-muted">HẠNG THÀNH VIÊN TỐI THIỂU (FT19)</label>
+                                <label for="applicableTierId" class="form-label small fw-bold text-muted">HẠNG THÀNH VIÊN TỐI THIỂU</label>
                                 <select id="applicableTierId" th:field="*{applicableTierId}" class="fin-select w-100">
                                     <option value="">-- Áp dụng cho mọi hạng thành viên --</option>
                                     <option th:each="t : ${tiers}" th:value="${t.tierId}" th:text="'Từ hạng ' + ${t.tierName} + ' trở lên'"></option>
                                 </select>
-                                <div class="form-text" style="font-size: 11px;">Dữ liệu hạng được lấy trực tiếp từ cấu hình FT19 để đảm bảo đồng bộ.</div>
+                                <div class="form-text" style="font-size: 11px;">Dữ liệu hạng được lấy trực tiếp từ cấu hình để đảm bảo đồng bộ.</div>
                             </div>
 
                             <div class="mb-3">

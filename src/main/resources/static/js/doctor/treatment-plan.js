@@ -290,8 +290,8 @@ function renderPlanInlineRoadmapHtml(plan) {
                             <tr id="item-row-${it.planItemId}">
                                 <td class="text-center text-muted">${idx + 1}</td>
                                 <td>
-                                    <strong class="text-dark">${it.serviceName}</strong>
-                                    ${it.categoryName ? `<span class="badge bg-light text-muted border ms-1" style="font-size: 10px;">${it.categoryName}</span>` : ''}
+                                    <strong class="text-dark">${it.stepName || it.serviceName}</strong>
+                                    ${(it.stepName && it.stepName !== it.serviceName) ? `<span class="badge bg-light text-primary border ms-1" style="font-size: 10px;">${it.serviceName}</span>` : (it.categoryName ? `<span class="badge bg-light text-muted border ms-1" style="font-size: 10px;">${it.categoryName}</span>` : '')}
                                 </td>
                                 <td class="text-center">${toothBadge}</td>
                                 <td class="text-center">

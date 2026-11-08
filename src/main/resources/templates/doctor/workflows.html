@@ -523,13 +523,7 @@
             <!-- ========================================================================= -->
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
                 <div>
-                    <div class="dv-breadcrumb mb-1">
-                        <a href="/doctor/daily-visits"><i class="bi bi-house-door me-1"></i>Trang chủ</a>
-                        <span class="mx-1">/</span>
-                        <span>Bác sĩ &amp; Điều phối lâm sàng</span>
-                        <span class="mx-1">/</span>
-                        <span class="text-dark fw-bold">Quy trình Kỹ thuật Lâm sàng</span>
-                    </div>
+
                     <h1 class="dv-page-title">
                         <span class="d-inline-flex align-items-center justify-content-center rounded-3 text-white shadow-sm"
                               style="width: 42px; height: 42px; background: linear-gradient(135deg, #0284c7, #1d4ed8); font-size: 20px;">
@@ -550,6 +544,8 @@
                         <i class="bi bi-arrow-clockwise text-primary fs-6"></i>
                         <span>Làm mới dữ liệu</span>
                     </button>
+
+                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
 
                     <button type="button" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
                             style="font-size: 14.5px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;" onclick="openAddWorkflowModal()">
