@@ -224,9 +224,10 @@
         const urlParams = new URLSearchParams(location.search);
         dateInput.value = urlParams.get('date') || today();
         branches(branch, options, true);
-        const branchParam = urlParams.get('branchId');
-        if (branchParam && options.branches.some(b => String(b.id) === branchParam)) {
-            branch.value = branchParam;
+        const branchParam = urlParams.get('branchId') ||
+            document.getElementById('reception-content-area')?.getAttribute('data-current-branch-id');
+        if (branchParam && options.branches.some(b => String(b.id) === String(branchParam))) {
+            branch.value = String(branchParam);
         }
 
         let currentScope = 'ALL'; // ALL | CURRENT | CHECKED_IN | NO_SHOW | CANCELLED

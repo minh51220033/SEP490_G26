@@ -60,9 +60,27 @@ public class DispatchService {
                 .filter(b -> Boolean.TRUE.equals(b.getIsActive()) && scope.permits(b.getBranchId()))
                 .sorted(Comparator.comparing(Branch::getBranchName)).toList();
         if (options.isEmpty()) throw fail(HttpStatus.FORBIDDEN, "Không có chi nhánh được phân công.");
-        Long branchId = requestedBranch == null ? options.get(0).getBranchId() : requestedBranch;
+        Long bid = requestedBranch;
+        if (bid == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid && options.stream().anyMatch(b -> b.getBranchId().equals(sid))) {
+                bid = sid;
+            }
+        }
+        if (bid == null) {
+            bid = options.get(0).getBranchId();
+        }
+        final Long branchId = bid;
+        if (session != null) {
+            session.setAttribute("currentBranchId", branchId);
+        }
         checkBranch(session, branchId);
-        LocalDate day = LocalDate.now(ZONE);
+        LocalDate resolvedDay = null;
+        if (session != null) {
+            Object sDay = session.getAttribute("currentWorkflowDay");
+            if (sDay instanceof LocalDate sd) resolvedDay = sd;
+        }
+        final LocalDate day = resolvedDay != null ? resolvedDay : LocalDate.now(ZONE);
         List<Visit> dayVisits = visits.today(branchId, day.atStartOfDay(), day.plusDays(1).atStartOfDay());
         List<StaffSchedule> todaySchedules = schedules.findTodaySchedules(branchId, day);
         Map<Long, LocalTime> shiftStarts = new HashMap<>();

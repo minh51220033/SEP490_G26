@@ -43,10 +43,9 @@ public class GlobalModelAttributesAdvice {
     private final ObjectProvider<CustomerPortalService> customerPortalServiceProvider;
     private final ObjectProvider<ServiceCatalogService> serviceCatalogServiceProvider;
     private final ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider;
-    private final ObjectProvider<BranchService> branchServiceProvider;
 
     public GlobalModelAttributesAdvice(UserRepository userRepository) {
-        this(userRepository, null, null, null, null);
+        this(userRepository, null, null, null);
     }
 
     @Autowired
@@ -54,13 +53,13 @@ public class GlobalModelAttributesAdvice {
             UserRepository userRepository,
             ObjectProvider<CustomerPortalService> customerPortalServiceProvider,
             ObjectProvider<ServiceCatalogService> serviceCatalogServiceProvider,
-            ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider,
-            ObjectProvider<BranchService> branchServiceProvider) {
+            ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider) {
         this.userRepository = userRepository;
         this.customerPortalServiceProvider = customerPortalServiceProvider;
         this.serviceCatalogServiceProvider = serviceCatalogServiceProvider;
         this.patientProfileRepositoryProvider = patientProfileRepositoryProvider;
-        this.branchServiceProvider = branchServiceProvider;
+
+        this.branchServiceProvider = branchServiceProvide;
     }
 
     @ModelAttribute("roleNames")
@@ -219,112 +218,6 @@ public class GlobalModelAttributesAdvice {
 
         Object username = session.getAttribute("username");
         return username != null ? username.toString() : "";
-    }
-
-    @ModelAttribute("currentBranchName")
-    public String populateCurrentBranchName(HttpSession session) {
-        if (session == null) {
-            return null;
-        }
-        Object branchName = session.getAttribute("currentBranchName");
-        if (branchName != null && !branchName.toString().isBlank()) {
-            return branchName.toString();
-        }
-        if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
-            User user = userRepository.findById(sessionUser.getUserId()).orElse(sessionUser);
-            if (user.getBranch() != null) {
-                Branch b = user.getBranch();
-                return (b.getBranchCode() != null && !b.getBranchCode().isBlank() ? b.getBranchCode() + " - " : "")
-                        + b.getBranchName();
-            }
-        }
-        return null;
-    }
-
-    @ModelAttribute("accessibleBranches")
-    public List<Branch> populateAccessibleBranches(HttpServletRequest request, HttpSession session) {
-        if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)
-                || user.getUserId() == null) {
-            return Collections.emptyList();
-        }
-        BranchService branchService = branchServiceProvider != null ? branchServiceProvider.getIfAvailable() : null;
-        if (branchService == null) {
-            return Collections.emptyList();
-        }
-        return branchService.getUserAccessibleBranches(user.getUserId());
-    }
-
-    @ModelAttribute("currentBranch")
-    public Branch populateCurrentBranch(HttpServletRequest request, HttpSession session) {
-        if (session == null) {
-            return null;
-        }
-        BranchService branchService = branchServiceProvider != null ? branchServiceProvider.getIfAvailable() : null;
-        if (branchService == null) {
-            return null;
-        }
-        // 1. Đồng bộ từ request param branchId nếu có
-        String reqBranchId = request != null ? request.getParameter("branchId") : null;
-        if (reqBranchId != null && !reqBranchId.isBlank()) {
-            try {
-                Long bId = Long.parseLong(reqBranchId.trim());
-                if (bId > 0) {
-                    Branch found = branchService.getActiveBranches().stream()
-                            .filter(b -> b.getBranchId().equals(bId))
-                            .findFirst()
-                            .orElse(null);
-                    if (found != null) {
-                        session.setAttribute("currentBranchId", bId);
-                        session.setAttribute("currentBranchName", found.getBranchName());
-                        return found;
-                    }
-                }
-            } catch (Exception ignored) {
-            }
-        }
-        // 2. Lấy từ session
-        Object currentBranchIdObj = session.getAttribute("currentBranchId");
-        if (currentBranchIdObj instanceof Long branchId && branchId > 0) {
-            return branchService.getActiveBranches().stream()
-                    .filter(b -> b.getBranchId().equals(branchId))
-                    .findFirst()
-                    .orElse(null);
-        }
-        // 3. Lấy theo chi nhánh trực thuộc của user
-        if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
-            User user = userRepository != null ? userRepository.findById(sessionUser.getUserId()).orElse(sessionUser)
-                    : sessionUser;
-            if (user != null && user.getBranch() != null && Boolean.TRUE.equals(user.getBranch().getIsActive())) {
-                return user.getBranch();
-            }
-        }
-        // 4. Mặc định lấy cơ sở đầu tiên đang hoạt động
-        List<Branch> active = branchService.getActiveBranches();
-        return !active.isEmpty() ? active.get(0) : null;
-    }
-
-    @ModelAttribute("currentBranchId")
-    public Long populateCurrentBranchId(HttpServletRequest request, HttpSession session) {
-        Branch cb = populateCurrentBranch(request, session);
-        return cb != null ? cb.getBranchId() : null;
-    }
-
-    @ModelAttribute("currentBranchCode")
-    public String populateCurrentBranchCode(HttpServletRequest request, HttpSession session) {
-        Branch cb = populateCurrentBranch(request, session);
-        if (cb != null) {
-            if (cb.getBranchCode() != null && !cb.getBranchCode().isBlank()) {
-                return cb.getBranchCode();
-            }
-            if (cb.getBranchName() != null && !cb.getBranchName().isBlank()) {
-                return cb.getBranchName();
-            }
-        }
-        Object currentBranchNameObj = session != null ? session.getAttribute("currentBranchName") : null;
-        if (currentBranchNameObj != null && !currentBranchNameObj.toString().isBlank()) {
-            return currentBranchNameObj.toString();
-        }
-        return "DEMO";
     }
 
     @ModelAttribute("systemNotice")
