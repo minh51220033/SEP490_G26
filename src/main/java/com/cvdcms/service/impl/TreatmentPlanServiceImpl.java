@@ -460,6 +460,8 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
 
         int totalStages = (p.getStages() != null) ? p.getStages().size() : 0;
         int completedStages = 0;
+        int totalItems = 0;
+        int completedItems = 0;
 
         List<TreatmentPlanStageResponseDTO> stageDTOs = new ArrayList<>();
         if (p.getStages() != null) {
@@ -472,6 +474,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 List<TreatmentPlanItemResponseDTO> itemDTOs = new ArrayList<>();
                 if (s.getItems() != null) {
                     for (TreatmentPlanItem it : s.getItems()) {
+                        totalItems++;
+                        if (it.getStatus() == TreatmentPlanItemStatus.COMPLETED) {
+                            completedItems++;
+                        }
                         com.cvdcms.entity.Service svc = it.getService();
                         BigDecimal estPrice = (it.getEstimatedPrice() != null && it.getEstimatedPrice().compareTo(BigDecimal.ZERO) > 0)
                                 ? it.getEstimatedPrice()
@@ -522,10 +528,15 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             }
         }
 
-        int progressPercent = (totalStages > 0) ? (completedStages * 100 / totalStages) : 0;
+        int progressPercent = 0;
+        if (totalItems > 0) {
+            progressPercent = (completedItems * 100) / totalItems;
+        } else if (totalStages > 0) {
+            progressPercent = (completedStages * 100) / totalStages;
+        }
         TreatmentPlanStatus planStatus = p.getStatus() != null ? p.getStatus() : TreatmentPlanStatus.DRAFT;
         if (totalStages > 0 && completedStages < totalStages && planStatus == TreatmentPlanStatus.COMPLETED) {
-            planStatus = (completedStages > 0) ? TreatmentPlanStatus.IN_PROGRESS : TreatmentPlanStatus.ACCEPTED;
+            planStatus = (completedStages > 0 || completedItems > 0) ? TreatmentPlanStatus.IN_PROGRESS : TreatmentPlanStatus.ACCEPTED;
         }
 
         return TreatmentPlanResponseDTO.builder()
@@ -554,6 +565,8 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 .createdAt(p.getCreatedAt() != null ? p.getCreatedAt().format(DATE_TIME_FORMATTER) : null)
                 .totalStages(totalStages)
                 .completedStages(completedStages)
+                .totalItems(totalItems)
+                .completedItems(completedItems)
                 .progressPercent(progressPercent)
                 .stages(stageDTOs)
                 .build();

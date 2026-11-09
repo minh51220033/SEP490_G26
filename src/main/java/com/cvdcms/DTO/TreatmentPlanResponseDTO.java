@@ -39,6 +39,8 @@ public class TreatmentPlanResponseDTO {
     private String createdAt;
     private Integer totalStages;
     private Integer completedStages;
+    private Integer totalItems;
+    private Integer completedItems;
     private Integer progressPercent;
 
     @Builder.Default

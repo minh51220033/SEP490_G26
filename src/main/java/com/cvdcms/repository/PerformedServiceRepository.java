@@ -20,7 +20,7 @@ public interface PerformedServiceRepository extends JpaRepository<PerformedServi
            "LEFT JOIN FETCH ps.planItem pi " +
            "LEFT JOIN FETCH pi.plan p " +
            "LEFT JOIN FETCH pi.stage st " +
-           "WHERE ps.visit.visitId = :visitId " +
+           "WHERE ps.visit.visitId = :visitId AND (ps.status IS NULL OR ps.status <> com.cvdcms.entity.enums.PerformedServiceStatus.CANCELLED) " +
            "ORDER BY ps.completedAt DESC, ps.performedId DESC")
     List<PerformedService> findByVisitIdWithDetails(@Param("visitId") Long visitId);
 
@@ -34,7 +34,7 @@ public interface PerformedServiceRepository extends JpaRepository<PerformedServi
            "JOIN FETCH ps.doctor d " +
            "LEFT JOIN FETCH ps.visit v " +
            "LEFT JOIN FETCH ps.planItem pi " +
-           "WHERE ps.patientProfile.profileId = :profileId " +
+           "WHERE ps.patientProfile.profileId = :profileId AND (ps.status IS NULL OR ps.status <> com.cvdcms.entity.enums.PerformedServiceStatus.CANCELLED) " +
            "ORDER BY ps.completedAt DESC, ps.performedId DESC")
     List<PerformedService> findByProfileIdWithDetails(@Param("profileId") Long profileId);
 

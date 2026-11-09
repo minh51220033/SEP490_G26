@@ -7,17 +7,13 @@
 <!-- Frontend Fragment: doctor/fragments/instructions-tab.html            -->
 <!-- ===================================================================== -->
 <div th:fragment="instructionsTab">
-    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden bg-white">
+    <div class="card border shadow-sm rounded-3 mb-4 overflow-hidden bg-white">
         <!-- Header -->
-        <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
-            <div class="d-flex align-items-center gap-2">
-                <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                    <i class="bi bi-card-checklist fs-5"></i>
-                </div>
-                <div>
-                    <h4 class="mb-0 fw-bold text-dark fs-6">Lời dặn &amp; Hướng dẫn chăm sóc tại nhà của Bác sĩ</h4>
-                    <span class="text-secondary small">Chế độ vệ sinh răng miệng, lưu ý ăn uống và xử trí khi đau nhức khẩn cấp</span>
-                </div>
+        <div class="card-header df-tab-content-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
+            <div class="df-tab-title-standard">
+                <i class="bi bi-card-checklist"></i>
+                <span>LỜI DẶN &amp; HƯỚNG DẪN CHĂM SÓC TẠI NHÀ</span>
+                <span class="df-tab-subtitle-text d-none d-lg-inline">(Vệ sinh răng miệng, chế độ ăn &amp; xử trí đau nhức)</span>
             </div>
 
             <!-- Cụm nút Thao tác: Tạo lời dặn & In phiếu dặn dò -->
