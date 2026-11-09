@@ -2218,72 +2218,45 @@
         }
 
         const tbody = document.getElementById('performedServicesTableBody');
+        if (!tbody) return;
+
         const tr = document.createElement('tr');
         tr.id = `ps-row-${ps.performedId}`;
+        tr.className = 'dv-data-row';
 
-        const toothBadge = ps.toothNumbers ? 
-            `<span class="badge bg-primary text-white px-2 py-1" style="font-size: 11px; border-radius: 6px;">${String(ps.toothNumbers).includes("Toàn hàm") ? ps.toothNumbers : ("R-" + ps.toothNumbers)}</span>` : '';
-        const categoryTag = ps.categoryName ? `<span class="df-service-category-tag">${ps.categoryName}</span>` : '';
-        const planBadge = ps.planName ? `
-            <span class="badge bg-info-subtle text-info border border-info px-2 py-0.5 rounded-pill fw-semibold" style="font-size: 11px;">
-                <i class="bi bi-diagram-3-fill me-1"></i>Từ KHDT: ${ps.planName}${ps.stageName ? ` (${ps.stageName})` : ''}
-            </span>` : '';
-        const notesTag = ps.clinicalNotes ? `
-            <div class="small text-muted fst-italic mt-1">
-                <i class="bi bi-chat-left-dots text-secondary"></i>
-                <span>${ps.clinicalNotes}</span>
-            </div>` : '';
-        const assistantTag = ps.assistantName ? `
-            <div class="df-staff-badge text-muted" style="font-size: 11px;">
-                <i class="bi bi-person-check text-success"></i>
-                <span>Phụ tá: ${ps.assistantName}</span>
-            </div>` : '';
+        const toothDisplay = ps.toothNumbers ? (String(ps.toothNumbers).includes("Toàn hàm") ? ps.toothNumbers : ps.toothNumbers) : 'Toàn hàm';
+        const planText = ps.planName ? `Từ KHDT: ${ps.planName}${ps.stageName ? ` (${ps.stageName})` : ''}` : (ps.serviceName ? `Từ KHDT: ${ps.serviceName}` : '');
 
         tr.innerHTML = `
-            <td><span class="small text-muted fw-semibold">${ps.completedAt}</span></td>
+            <td style="white-space: nowrap;">
+                <span class="badge bg-light text-dark border fw-bold">${ps.serviceCode || 'DV1001'}</span>
+            </td>
             <td>
-                <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                    <span class="fw-bold text-dark">${ps.serviceName}</span>
-                    ${toothBadge}
-                    ${categoryTag}
-                    ${planBadge}
-                </div>
-                <div class="df-staff-badge">
-                    <i class="bi bi-person-fill text-primary"></i>
-                    <span>${ps.doctorName}</span>
-                </div>
-                ${assistantTag}
-                ${notesTag}
-                <div class="mt-2">
-                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1 shadow-sm"
-                            style="font-size: 11px; font-weight: 700; background: #f0f9ff; border: 1px solid #bae6fd; color: #0284c7;"
-                            data-service-id="${ps.serviceId}"
-                            data-service-name="${ps.serviceName}"
-                            data-performed-id="${ps.performedId}"
-                            onclick="openChairsideWorkflowModal(this.getAttribute('data-service-id'), this.getAttribute('data-service-name'), this.getAttribute('data-performed-id'))">
-                        <i class="bi bi-clipboard2-pulse-fill text-primary"></i>
-                        <span>Quy trình kỹ thuật ${ps.workflowStepCount ? `(${ps.workflowStepCount} bước)` : ''}</span>
-                        <i class="bi bi-chevron-right" style="font-size: 10px;"></i>
-                    </button>
-                </div>
+                <div class="fw-bold text-dark">${ps.stepName || ps.serviceName || 'Dịch vụ'}</div>
+                ${planText ? `<div class="d-flex align-items-center gap-1 mt-1 flex-wrap"><span class="badge bg-light text-primary border" style="font-size: 11px; font-weight: 500;">${planText}</span></div>` : ''}
             </td>
-            <td class="text-center">${ps.unit || 'Đơn vị'}</td>
-            <td class="text-end df-price-text">${formatVnd(ps.unitPrice)}</td>
-            <td class="text-center fw-bold">${ps.quantity}</td>
-            <td class="text-end text-muted small">${formatVnd(ps.discountAmount)}</td>
-            <td class="text-end text-muted small">0 đ</td>
-            <td class="text-end df-final-price-text">${formatVnd(ps.finalPrice)}</td>
-            <td class="text-end fw-bold text-success small">0 đ</td>
-            <td class="text-end fw-bold text-danger small">${formatVnd(ps.finalPrice)}</td>
-            <td class="text-center">
-                <span class="df-status-completed-badge">
-                    <i class="bi bi-check-circle-fill"></i> Hoàn thành
-                </span>
+            <td class="text-center" style="white-space: nowrap;">
+                <span class="badge bg-light text-dark border">${toothDisplay}</span>
             </td>
-            <td class="text-center">
-                <span class="text-muted small" title="Dịch vụ đã thực hiện không thể xóa">
-                    <i class="bi bi-shield-check text-success"></i> Đã làm
-                </span>
+            <td class="text-end text-muted small" style="white-space: nowrap;">${formatVnd(ps.unitPrice)}</td>
+            <td class="text-center fw-semibold" style="white-space: nowrap;">${ps.quantity || 1}</td>
+            <td class="text-end fw-bold text-dark" style="white-space: nowrap;">${formatVnd(ps.finalPrice)}</td>
+            <td style="white-space: nowrap;">
+                <div class="small fw-semibold text-dark">${ps.doctorName || ''}</div>
+                ${ps.assistantName ? `<div class="small text-muted">PT: ${ps.assistantName}</div>` : ''}
+            </td>
+            <td class="text-center" style="white-space: nowrap;">
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Đã thực hiện</span>
+            </td>
+            <td class="text-center dv-col-pinned-right" style="white-space: nowrap;">
+                <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1.5 rounded-2 fw-semibold"
+                        data-service-id="${ps.serviceId}"
+                        data-service-name="${ps.serviceName}"
+                        data-performed-id="${ps.performedId}"
+                        onclick="openChairsideWorkflowModal(this.getAttribute('data-service-id'), this.getAttribute('data-service-name'), this.getAttribute('data-performed-id'))"
+                        title="Theo dõi các bước quy trình kỹ thuật tại ghế">
+                    Quy trình kỹ thuật
+                </button>
             </td>
         `;
 
@@ -2338,10 +2311,16 @@
     function recalcPerformedTableTotals() {
         const rows = document.querySelectorAll('#performedServicesTableBody tr:not(#emptyPerformedRow)');
         const count = rows.length;
-        document.getElementById('performedCountBadge').innerText = `${count} dịch vụ`;
+        const countBadge = document.getElementById('performedCountBadge');
+        if (countBadge) countBadge.innerText = `${count} dịch vụ`;
+        const totalCountText = document.getElementById('dvTotalCountText');
+        if (totalCountText) totalCountText.innerText = `${count} dịch vụ`;
 
         if (count === 0) {
-            document.getElementById('totalPerformedText').innerText = "0 đ";
+            const totalText = document.getElementById('totalPerformedText');
+            if (totalText) totalText.innerText = "0 đ";
+            const footerTotal = document.getElementById('footerTotalPerformedText');
+            if (footerTotal) footerTotal.innerText = "0 đ";
             const hp = document.getElementById('headerPhatSinh');
             if (hp) hp.innerText = "0";
             const hc = document.getElementById('headerCongNo');
@@ -2349,9 +2328,17 @@
 
             document.getElementById('performedServicesTableBody').innerHTML = `
                 <tr id="emptyPerformedRow">
-                    <td colspan="12" class="text-center py-4 text-muted">
-                        <i class="bi bi-inbox fs-3 d-block mb-1 text-secondary"></i>
-                        <span>Chưa có dịch vụ nào được thực hiện trong ca khám này. Nhấn <strong>"+ Thêm điều trị"</strong> để ghi nhận.</span>
+                    <td colspan="9" class="text-center py-5 text-muted bg-white">
+                        <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 180px;">
+                            <h6 class="fw-bold text-dark mb-1">Chưa có dịch vụ nào được ghi nhận thực hiện trong ca khám này</h6>
+                            <p class="text-muted mb-3 small" style="max-width: 520px; line-height: 1.6;">
+                                Bác sĩ vui lòng chọn các bước thủ thuật trong <strong>Kế hoạch điều trị</strong> và nhấn <em>"Làm trong ca này"</em> để hệ thống tự động ghi nhận dịch vụ thực hiện tại ghế.
+                            </p>
+                            <button type="button" class="btn btn-outline-primary px-3 py-1.5 rounded-2 fw-semibold"
+                                    onclick="switchMainTab('tab-treatment-plan')">
+                                Mở Kế hoạch điều trị &amp; Chọn bước thực hiện
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -2367,7 +2354,10 @@
                 list.forEach(item => {
                     sum += (item.finalPrice || 0);
                 });
-                document.getElementById('totalPerformedText').innerText = formatVnd(sum);
+                const totalText = document.getElementById('totalPerformedText');
+                if (totalText) totalText.innerText = formatVnd(sum);
+                const footerTotal = document.getElementById('footerTotalPerformedText');
+                if (footerTotal) footerTotal.innerText = formatVnd(sum);
                 const hp = document.getElementById('headerPhatSinh');
                 if (hp) hp.innerText = formatNumber(sum);
                 const hc = document.getElementById('headerCongNo');

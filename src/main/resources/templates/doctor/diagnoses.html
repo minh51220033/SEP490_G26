@@ -209,6 +209,106 @@
                     pointer-events: none !important;
                     background-color: #f8fafc !important;
                 }
+
+                /* BREADCRUMB PHÂN CẤP CHUẨN BOOTSTRAP MÀU XANH ĐEN */
+                .df-exam-breadcrumb-nav .breadcrumb {
+                    font-size: 13.5px;
+                    font-weight: 500;
+                    margin-bottom: 0;
+                    padding: 0;
+                    background: transparent;
+                }
+                .df-exam-breadcrumb-nav .breadcrumb-item a {
+                    color: #1a2f6e !important;
+                    text-decoration: none !important;
+                    font-weight: 600 !important;
+                    transition: color 0.15s ease;
+                }
+                .df-exam-breadcrumb-nav .breadcrumb-item a:hover {
+                    color: #0284c7 !important;
+                    text-decoration: underline !important;
+                }
+                .df-exam-breadcrumb-nav .breadcrumb-item.active {
+                    color: #334155 !important;
+                    font-weight: 700 !important;
+                }
+                .df-exam-breadcrumb-nav .breadcrumb-item + .breadcrumb-item::before {
+                    color: #94a3b8;
+                    padding: 0 6px;
+                }
+
+                /* CHUẨN HÓA TOÀN BỘ KHUNG SECTION & TAB CONTENT ĐỒNG NHẤT (CHỐNG GIẬT / LỆCH) */
+                html {
+                    scrollbar-gutter: stable;
+                }
+                body {
+                    overflow-y: scroll;
+                }
+                .df-tab-content-container {
+                    width: 100% !important;
+                    box-sizing: border-box;
+                }
+                .df-tab-pane {
+                    width: 100% !important;
+                    min-height: calc(100vh - 290px);
+                    box-sizing: border-box;
+                }
+                .df-tab-pane > .card,
+                .df-tab-pane > .df-session-card,
+                .df-tab-pane > .dv-grid-card,
+                .df-tab-pane .df-unified-tab-card {
+                    width: 100% !important;
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0 !important;
+                    border-radius: 12px !important;
+                    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
+                    overflow: hidden;
+                    min-height: calc(100vh - 310px);
+                    margin-bottom: 24px;
+                    box-sizing: border-box;
+                }
+                .df-tab-content-header,
+                .df-tab-pane > .card > .card-header,
+                .df-tab-pane > .dv-grid-card > .dv-grid-topbar,
+                .df-session-bar {
+                    background: #f8fafc !important;
+                    padding: 12px 20px !important;
+                    border-bottom: 1px solid #e2e8f0 !important;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    flex-wrap: wrap;
+                    gap: 12px;
+                    min-height: 52px;
+                    box-sizing: border-box;
+                }
+                .df-tab-title-standard,
+                .df-session-title,
+                .df-foldable-title {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 13.5px;
+                    font-weight: 700;
+                    color: #1a2f6e !important;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    margin: 0;
+                }
+                .df-tab-title-standard i,
+                .df-session-title i,
+                .df-foldable-bar i.df-foldable-chevron {
+                    color: #2b50aa !important;
+                    font-size: 16px;
+                }
+                .df-tab-title-standard .df-tab-subtitle-text {
+                    font-size: 12px;
+                    font-weight: 500;
+                    color: #64748b;
+                    text-transform: none;
+                    letter-spacing: normal;
+                    margin-left: 4px;
+                }
             </style>
 
             <!-- ========================================================= -->
@@ -230,22 +330,31 @@
                                 data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
                             <i class="bi bi-list fs-6"></i>
                         </button>
-                        <div class="df-breadcrumb-nav mb-0 d-flex align-items-center gap-1.5" th:if="${isReadOnlyView == true}">
-                            <a th:href="${patientRecordBackUrl != null ? patientRecordBackUrl : '/doctor/patient-records/' + (fromPatientId != null ? fromPatientId : (patient != null ? patient.profileId : 0)) + '#tab-treatment'}" class="text-decoration-none text-primary fw-bold small">
-                                <i class="bi bi-arrow-left-circle-fill me-1"></i>Hồ sơ bệnh nhân
-                            </a>
-                            <span class="text-muted small">&gt;</span>
-                            <span class="badge bg-primary-subtle text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : '---'}">---</span>
-                            <span class="text-muted small">&gt;</span>
-                            <span class="text-dark fw-bold small">Chi tiết lượt khám (<span th:text="${visit != null ? visit.visitCode : ''}">VIS</span>)</span>
-                        </div>
-                        <div class="df-breadcrumb-nav mb-0 d-flex align-items-center gap-1.5" th:unless="${isReadOnlyView == true}">
-                            <a th:href="@{/doctor/daily-visits}" class="text-decoration-none text-muted fw-semibold small">DS Khám</a>
-                            <span class="text-muted small">&gt;</span>
-                            <span class="badge bg-primary-subtle text-primary fw-bold" th:text="${patient != null and patient.patientCode != null ? patient.patientCode : '---'}">---</span>
-                            <span class="text-muted small">&gt;</span>
-                            <span class="text-dark fw-bold small">Bàn khám bệnh</span>
-                        </div>
+                        <!-- BREADCRUMB PHÂN CẤP CHUẨN BOOTSTRAP (MÀU XANH ĐEN THƯƠNG HIỆU) -->
+                        <nav aria-label="breadcrumb" class="df-exam-breadcrumb-nav mb-0" th:if="${isReadOnlyView == true}">
+                            <ol class="breadcrumb mb-0">
+                                <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+                                <li class="breadcrumb-item">
+                                    <a th:href="${patientRecordBackUrl != null ? patientRecordBackUrl : '/doctor/patient-records/' + (fromPatientId != null ? fromPatientId : (patient != null ? patient.profileId : 0)) + '#tab-treatment'}">Hồ sơ bệnh nhân</a>
+                                </li>
+                                <li class="breadcrumb-item" th:if="${patient != null and patient.patientCode != null}">
+                                    <span th:text="${patient.patientCode}">---</span>
+                                </li>
+                                <li class="breadcrumb-item active" aria-current="page">
+                                    Chi tiết lượt khám (<span th:text="${visit != null ? visit.visitCode : ''}">VIS</span>)
+                                </li>
+                            </ol>
+                        </nav>
+                        <nav aria-label="breadcrumb" class="df-exam-breadcrumb-nav mb-0" th:unless="${isReadOnlyView == true}">
+                            <ol class="breadcrumb mb-0">
+                                <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+                                <li class="breadcrumb-item"><a th:href="@{/doctor/daily-visits}">DS Khám</a></li>
+                                <li class="breadcrumb-item">
+                                    <a th:href="${visit != null ? '/doctor/examination/' + visit.visitId + '/diagnoses' : '/doctor/examination'}">Bàn khám bệnh</a>
+                                </li>
+                                <li class="breadcrumb-item active" aria-current="page" id="breadcrumbActiveTab">Khám &amp; Điều trị</li>
+                            </ol>
+                        </nav>
                     </div>
 
                     <!-- THANH CÔNG CỤ KHI Ở CHẾ ĐỘ CHỈ XEM CHI TIẾT LƯỢT KHÁM -->
@@ -259,59 +368,9 @@
                         </a>
                     </div>
 
-                    <!-- THANH CÔNG CỤ CHUẨN ĐÚNG HÌNH ẢNH MẪU YÊU CẦU:
-                         [Tìm tên, SĐT, mã số...] [16/10/2026] [Bộ lọc] [Hiển thị 12/28] [+ Thêm bệnh nhân] [DEMO v] -->
+                    <!-- THANH CÔNG CỤ -->
                     <div class="df-clinic-toolbar d-flex align-items-center flex-wrap gap-2" th:unless="${isReadOnlyView == true}">
-                        <!-- 1. Ô Tìm kiếm: Tìm tên, SĐT, mã số... -->
-                        <div class="df-tb-search position-relative" style="min-width: 240px; max-width: 320px;">
-                            <i class="bi bi-search df-tb-search-icon"></i>
-                            <input type="text" id="patientSearchInput" class="df-tb-input df-tb-search-input"
-                                   placeholder="Tìm tên, SĐT, mã số..." autocomplete="off"
-                                   onfocus="openPatientSearchDropdown()"
-                                   oninput="handlePatientSearchInput(this.value)">
-                            <button class="df-tb-clear" type="button" id="clearPatientSearchBtn" style="display: none;" onclick="clearPatientSearch()">
-                                <i class="bi bi-x-circle-fill"></i>
-                            </button>
-
-                            <!-- DROPDOWN KẾT QUẢ TÌM KIẾM BỆNH NHÂN -->
-                            <div id="patientSearchDropdown" class="shadow-lg p-0 border"
-                                 style="display: none; position: absolute; top: calc(100% + 6px); right: 0; width: 380px; max-height: 440px; overflow-y: auto; border-radius: 10px; background: #ffffff; z-index: 1070; border-color: #cbd5e1 !important;">
-                                <div class="p-2 bg-light border-bottom d-flex justify-content-between align-items-center">
-                                    <span class="small fw-bold text-secondary text-uppercase" style="font-size: 11px;">
-                                        <i class="bi bi-people-fill text-primary"></i> Danh sách bệnh nhân
-                                    </span>
-                                    <span class="badge bg-primary rounded-pill" id="patientSearchCountBadge">0 kết quả</span>
-                                </div>
-                                <div id="patientSearchResultsList"></div>
-                            </div>
-                        </div>
-
-                        <!-- 2. Ô Ngày: 16/10/2026 -->
-                        <div class="df-tb-date-wrapper position-relative" style="width: 130px;">
-                            <input type="text" id="dfTbDateDisplay" class="df-tb-input text-center fw-semibold"
-                                   placeholder="16/10/2026" readonly onclick="triggerDatePick()" title="Bấm để chọn ngày lọc ca khám">
-                            <input type="date" id="dfTbDateNative" style="position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0;" onchange="onToolbarDateChange(this.value)">
-                        </div>
-
-                        <!-- 3. Nút Bộ lọc -->
-                        <button type="button" class="df-tb-btn df-tb-btn-secondary" onclick="openDailyVisitsDrawer()" title="Mở danh sách & bộ lọc ca khám">
-                            <i class="bi bi-funnel"></i>
-                            <span>Bộ lọc</span>
-                        </button>
-
-                        <!-- 4. Nút Hiển thị 12/28 -->
-                        <button type="button" class="df-tb-btn df-tb-btn-secondary" onclick="openDailyVisitsDrawer()" title="Số ca khám hiển thị / Tổng số ca khám của cơ sở">
-                            <i class="bi bi-eye"></i>
-                            <span>Hiển thị <strong id="topbarDisplayRatio">0/0</strong></span>
-                        </button>
-
-                        <!-- 5. Nút + Thêm bệnh nhân -->
-                        <button type="button" class="df-tb-btn df-tb-btn-primary" onclick="openQuickAddPatientModal()" title="Thêm hồ sơ bệnh nhân mới & bắt đầu khám ngay">
-                            <i class="bi bi-plus-lg"></i>
-                            <span>Thêm bệnh nhân</span>
-                        </button>
-
-                        <!-- 6. Dropdown Cơ sở chuẩn DentalSoft -->
+                        <!-- Dropdown Cơ sở chuẩn DentalSoft -->
                         <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                     </div>
                 </div>
@@ -997,6 +1056,24 @@
                     location.hash = newHash;
                 }
             }
+        }
+
+        // 4. Cập nhật tên tab con trên Breadcrumb phân cấp
+        const tabBreadcrumbTitles = {
+            'tab-patient-info': 'Thông tin bệnh nhân',
+            'tab-examination': 'Khám & Điều trị',
+            'tab-treatment-plan': 'Kế hoạch điều trị',
+            'tab-prescriptions': 'Đơn thuốc',
+            'tab-appointments': 'Lịch hẹn',
+            'tab-customer-care': 'Chăm sóc',
+            'tab-performed-services': 'Dịch vụ thực hiện',
+            'tab-labo': 'Đặt xưởng',
+            'tab-clinical-photos': 'Film ảnh',
+            'tab-instructions': 'Lời dặn'
+        };
+        const bcActiveEl = document.getElementById('breadcrumbActiveTab');
+        if (bcActiveEl && tabBreadcrumbTitles[tabId]) {
+            bcActiveEl.textContent = tabBreadcrumbTitles[tabId];
         }
     }
     window.switchMainTab = switchMainTab;
