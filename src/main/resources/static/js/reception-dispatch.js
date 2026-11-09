@@ -66,6 +66,7 @@
         const searchInput = document.getElementById('visitSearch');
         const btnClearSearch = document.getElementById('btnClearSearch');
         const tableRows = document.querySelectorAll('.dispatch-table-row');
+        const kanbanCards = document.querySelectorAll('.kanban-card-item');
         const raw = (rawKeyword !== undefined ? rawKeyword : (searchInput ? searchInput.value : '')).trim();
         const query = normalize(raw);
 
@@ -79,6 +80,10 @@
             const text = normalize(row.dataset.search || row.textContent);
             row.hidden = Boolean(query) && !text.includes(query);
         });
+        kanbanCards.forEach(card => {
+            const text = normalize(card.dataset.search || card.textContent);
+            card.style.display = (Boolean(query) && !text.includes(query)) ? 'none' : '';
+        });
         renderActiveKeywordChip(raw);
     }
 
@@ -91,8 +96,12 @@
         const modalSymptoms = document.getElementById('modalSymptoms');
         const modalDoctorAdvice = document.getElementById('modalDoctorAdvice');
         const modalDoctorSelect = document.getElementById('modalDoctorSelect');
+        const modalRoomSelect = document.getElementById('modalRoomSelect');
         const modalChairSelect = document.getElementById('modalChairSelect');
+        const modalReasonInput = document.getElementById('modalReasonInput');
         const modalNoteInput = document.getElementById('modalNoteInput');
+        const modalPriorityCheckbox = document.getElementById('modalPriorityCheckbox');
+        const modalIssueTicketCheckbox = document.getElementById('modalIssueTicketCheckbox');
 
         const visitId = btn.dataset.visitId;
         const visitCode = btn.dataset.visitCode;
@@ -102,6 +111,8 @@
         const isEmergency = btn.dataset.isEmergency === 'true';
         const requestedDoctor = btn.dataset.requestedDoctor;
         const requestedDoctorName = btn.dataset.requestedDoctorName;
+        const currentDoctor = btn.dataset.currentDoctor;
+        const currentRoom = btn.dataset.currentRoom;
         const currentChair = btn.dataset.currentChair;
 
         if (modalAssignForm) modalAssignForm.action = `/reception/dispatch/${visitId}/assign`;
@@ -109,11 +120,22 @@
         if (modalPatientCode) modalPatientCode.textContent = `Mã BN: ${patientCode || '—'}`;
         if (modalVisitCode) modalVisitCode.textContent = visitCode || '';
         if (modalSymptoms) modalSymptoms.textContent = `Triệu chứng ban đầu: ${symptoms || '—'}`;
+        if (modalReasonInput) modalReasonInput.value = '';
         if (modalNoteInput) modalNoteInput.value = '';
+        if (modalRoomSelect) modalRoomSelect.value = currentRoom || '';
         if (modalChairSelect) modalChairSelect.value = currentChair || '';
+        if (modalPriorityCheckbox) modalPriorityCheckbox.checked = isEmergency;
+        if (modalIssueTicketCheckbox) modalIssueTicketCheckbox.checked = true;
 
         if (modalDoctorSelect) {
-            if (isEmergency) {
+            if (currentDoctor) {
+                modalDoctorSelect.value = currentDoctor;
+                if (modalDoctorAdvice) {
+                    modalDoctorAdvice.classList.remove('d-none');
+                    modalDoctorAdvice.className = 'dispatch-modal-advice bg-primary-subtle text-primary border-primary-subtle';
+                    modalDoctorAdvice.innerHTML = `<i class="bi bi-info-circle-fill me-1"></i> Bác sĩ hiện tại đang phân công. Có thể chọn lại bác sĩ khác nếu cần điều phối lại.`;
+                }
+            } else if (isEmergency) {
                 let bestDoc = '';
                 let minWait = 9999;
                 Array.from(modalDoctorSelect.options).forEach(opt => {
@@ -126,14 +148,16 @@
                 });
                 modalDoctorSelect.value = bestDoc;
                 if (modalDoctorAdvice) {
-                    modalDoctorAdvice.className = 'p-2.5 rounded-3 small mb-3 border bg-danger-subtle text-danger-emphasis border-danger-subtle';
-                    modalDoctorAdvice.innerHTML = `<i class="bi bi-lightning-charge-fill text-danger me-1"></i> <strong>Ca cấp cứu:</strong> Hệ thống tự động xếp vào đầu hàng chờ của Bác sĩ vào ca sớm nhất để cấp cứu ngay.`;
+                    modalDoctorAdvice.classList.remove('d-none');
+                    modalDoctorAdvice.className = 'dispatch-modal-advice bg-danger-subtle text-danger-emphasis border-danger-subtle';
+                    modalDoctorAdvice.innerHTML = `<i class="bi bi-lightning-charge-fill text-danger me-1"></i> <strong>Ca cấp cứu:</strong> Hệ thống tự động gợi ý Bác sĩ trực khả dụng để ưu tiên cấp cứu ngay.`;
                 }
             } else if (requestedDoctor) {
                 modalDoctorSelect.value = requestedDoctor;
                 if (modalDoctorAdvice) {
-                    modalDoctorAdvice.className = 'p-2.5 rounded-3 small mb-3 border bg-warning-subtle text-warning-emphasis border-warning-subtle';
-                    modalDoctorAdvice.innerHTML = `<i class="bi bi-star-fill text-warning me-1"></i> <strong>Bác sĩ yêu cầu từ lịch hẹn:</strong> ${requestedDoctorName || 'Đích danh'}. Giữ nguyên trong hàng chờ bác sĩ theo nguyện vọng.`;
+                    modalDoctorAdvice.classList.remove('d-none');
+                    modalDoctorAdvice.className = 'dispatch-modal-advice bg-warning-subtle text-warning-emphasis border-warning-subtle';
+                    modalDoctorAdvice.innerHTML = `<i class="bi bi-star-fill text-warning me-1"></i> <strong>Bác sĩ yêu cầu từ lịch hẹn:</strong> ${requestedDoctorName || 'Đích danh'}. Giữ nguyên theo nguyện vọng của bệnh nhân.`;
                 }
             } else {
                 let bestDoc = '';
@@ -150,10 +174,31 @@
                 const selectedOpt = modalDoctorSelect.options[modalDoctorSelect.selectedIndex];
                 const docText = selectedOpt ? selectedOpt.text : '';
                 if (modalDoctorAdvice) {
-                    modalDoctorAdvice.className = 'p-2.5 rounded-3 small mb-3 border bg-success-subtle text-success-emphasis border-success-subtle';
-                    modalDoctorAdvice.innerHTML = `<i class="bi bi-shuffle me-1"></i> <strong>Cân bằng tải:</strong> Tự động gợi ý phân vào Bác sĩ khả dụng đang có ít người chờ nhất (${docText}).`;
+                    modalDoctorAdvice.classList.remove('d-none');
+                    modalDoctorAdvice.className = 'dispatch-modal-advice bg-success-subtle text-success-emphasis border-success-subtle';
+                    modalDoctorAdvice.innerHTML = `<i class="bi bi-shuffle me-1"></i> <strong>Cân bằng tải:</strong> Gợi ý phân vào Bác sĩ đang ít người chờ nhất (${docText}).`;
                 }
             }
+        }
+
+        // Lọc ghế theo phòng nếu có phòng được chọn
+        if (modalRoomSelect && modalChairSelect) {
+            const filterChairs = () => {
+                const selRoom = modalRoomSelect.value;
+                Array.from(modalChairSelect.options).forEach(opt => {
+                    if (!opt.value) return;
+                    const optRoom = opt.dataset.room;
+                    if (!selRoom || !optRoom || optRoom === selRoom) {
+                        opt.hidden = false;
+                        opt.disabled = false;
+                    } else {
+                        opt.hidden = true;
+                        opt.disabled = true;
+                    }
+                });
+            };
+            modalRoomSelect.onchange = filterChairs;
+            filterChairs();
         }
 
         openModalSafe(assignModalEl);
@@ -317,6 +362,30 @@
 
         const searchInput = document.getElementById('visitSearch');
         const btnClearSearch = document.getElementById('btnClearSearch');
+
+        // Chuyển đổi chế độ xem Kanban vs Bảng dữ liệu
+        const btnViewKanban = document.getElementById('btnViewKanban');
+        const btnViewGrid = document.getElementById('btnViewGrid');
+        const viewKanbanSection = document.getElementById('viewKanbanSection');
+        const viewGridSection = document.getElementById('viewGridSection');
+
+        if (btnViewKanban && btnViewGrid && viewKanbanSection && viewGridSection) {
+            btnViewKanban.addEventListener('click', (e) => {
+                e.preventDefault();
+                btnViewKanban.classList.add('active');
+                btnViewGrid.classList.remove('active');
+                viewKanbanSection.style.display = 'block';
+                viewGridSection.style.display = 'none';
+            });
+
+            btnViewGrid.addEventListener('click', (e) => {
+                e.preventDefault();
+                btnViewGrid.classList.add('active');
+                btnViewKanban.classList.remove('active');
+                viewKanbanSection.style.display = 'none';
+                viewGridSection.style.display = 'block';
+            });
+        }
 
         if (searchInput) {
             searchInput.addEventListener('input', () => {

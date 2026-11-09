@@ -203,6 +203,11 @@
             Object.entries(groupCounts).forEach(([grp, cnt]) => {
                 const badgeEl = $(`badge_${grp}`);
                 if (badgeEl) badgeEl.textContent = Number(cnt || 0);
+                const optEl = $(`opt_tab_${grp}`);
+                if (optEl) {
+                    const baseLabel = optEl.dataset.label || optEl.textContent.split("(")[0].trim();
+                    optEl.textContent = `${baseLabel} (${cnt || 0})`;
+                }
             });
         } catch {
             setKpiError("Không tải được thống kê CSKH");
@@ -466,7 +471,7 @@
     // =========================================================================
     // CẤU HÌNH CỘT BẢNG CSKH & COLUMN CUSTOMIZER (THEO CHUẨN CV-DCMS ENTERPRISE)
     // =========================================================================
-    const CC_COLUMNS_KEY = "cvdcms_cc_table_columns_v3";
+    const CC_COLUMNS_KEY = "cvdcms_cc_table_columns_v4";
     const DEFAULT_CC_COLUMNS = [
         { id: "taskCode", title: "Mã CV", width: 120, visible: true, required: true },
         { id: "patient", title: "Bệnh nhân", width: 210, visible: true, required: true },
@@ -476,7 +481,7 @@
         { id: "staff", title: "Phụ trách", width: 150, visible: true },
         { id: "interaction", title: "Tương tác gần nhất", width: 165, visible: true },
         { id: "status", title: "Trạng thái", width: 145, visible: true },
-        { id: "actions", title: "Thao tác", width: 255, visible: true, required: true }
+        { id: "actions", title: "Thao tác", width: 380, visible: true, required: true }
     ];
 
     let ccColumns = loadCcColumns();
@@ -487,6 +492,10 @@
             if (raw) {
                 const parsed = JSON.parse(raw);
                 if (Array.isArray(parsed) && parsed.length === DEFAULT_CC_COLUMNS.length) {
+                    const actCol = parsed.find(c => c.id === "actions");
+                    if (actCol && (!actCol.width || actCol.width < 380)) {
+                        actCol.width = 380;
+                    }
                     return parsed;
                 }
             }
@@ -509,6 +518,10 @@
             if (!col.visible) return;
             const th = document.createElement("th");
             th.style.width = col.width + "px";
+            th.style.minWidth = col.width + "px";
+            if (col.id === "actions") {
+                th.classList.add("col-actions-pinned", "dv-col-pinned-right");
+            }
             th.innerHTML = `
                 <div class="d-flex align-items-center justify-content-between">
                     <span class="cell-ellipsis" title="${col.title}">${col.title}</span>
@@ -517,6 +530,11 @@
             `;
             theadTr.appendChild(th);
         });
+
+        // Track Thao tác nổi bám mép phải khi cuộn ngang (chuẩn /doctor/daily-visits)
+        const trackTh = document.createElement("th");
+        trackTh.className = "dv-floating-actions-track";
+        theadTr.appendChild(trackTh);
 
         setupCcColResizers();
     }
@@ -702,7 +720,7 @@
         renderCcTableHeader();
         const visibleCols = ccColumns.filter(c => c.visible);
         const tbody = $("tasksTableBody");
-        tbody.innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">Đang tải danh sách công việc CSKH...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${visibleCols.length + 1}" class="empty">Đang tải danh sách công việc CSKH...</td></tr>`;
 
         if (state.tasksAbortController) {
             state.tasksAbortController.abort();
@@ -732,7 +750,7 @@
             if ($("tasksTotalBadge")) $("tasksTotalBadge").textContent = `${totalElements} công việc`;
 
             if (!rows.length) {
-                tbody.innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">Không có công việc CSKH nào phù hợp với bộ lọc hiện tại.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="${visibleCols.length + 1}" class="empty">Không có công việc CSKH nào phù hợp với bộ lọc hiện tại.</td></tr>`;
                 renderCcPagination(0, 0, 0);
                 return;
             }
@@ -831,8 +849,8 @@
                         `);
                     } else if (col.id === "actions") {
                         cells.push(`
-                            <td style="width:${col.width}px;">
-                                <div class="row-actions">
+                            <td class="col-actions-pinned dv-col-pinned-right text-center" style="width:${col.width}px;min-width:${col.width}px;">
+                                <div class="row-actions dv-actions-cell-always" onclick="event.stopPropagation()">
                                     <button type="button" class="btn-primary-custom button-sm" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ">
                                         Ghi KQ
                                     </button>
@@ -855,13 +873,39 @@
                         `);
                     }
                 });
-                return `<tr>${cells.join("")}</tr>`;
+
+                // Cụm nút nổi bám mép phải viewport khi hover dòng (chuẩn 100% theo /doctor/daily-visits)
+                const floatingBarHtml = `
+                    <td class="dv-floating-actions-track">
+                        <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
+                            <button type="button" class="btn-primary-custom button-sm" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ">
+                                Ghi KQ
+                            </button>
+                            <button type="button" class="btn-secondary-custom button-sm text-danger" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn">
+                                Chuyển BS
+                            </button>
+                            <button type="button" class="btn-secondary-custom button-sm" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân">
+                                Lịch sử
+                            </button>
+                            ${(t.status === "ESCALATED_TO_DOCTOR" || t.escalatedToDoctorId) && (state.careRole === "BAC_SI" || state.careRole === "ADMIN") ? `
+                                <button type="button" class="button-danger button-sm" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn">
+                                    Phản hồi
+                                </button>
+                            ` : ""}
+                            <button type="button" class="btn-secondary-custom button-sm" data-edit-task="${t.taskId}" title="Sửa / Phân công lại">
+                                Sửa
+                            </button>
+                        </div>
+                    </td>
+                `;
+                cells.push(floatingBarHtml);
+                return `<tr class="dv-data-row">${cells.join("")}</tr>`;
             }).join("");
 
             renderCcPagination(totalElements, page, state.totalPages);
         } catch (err) {
             if (err.name === "AbortError") return;
-            tbody.innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">${escapeHtml(err.message)}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${visibleCols.length + 1}" class="empty">${escapeHtml(err.message)}</td></tr>`;
             showMessage(err.message, "error");
         }
     }
@@ -1401,14 +1445,22 @@
 
     function switchTab(tab) {
         state.activeTab = tab;
+        const tabSelect = $("filterTabGroup");
+        if (tabSelect && tabSelect.value !== tab) {
+            tabSelect.value = tab;
+        }
         document.querySelectorAll(".tab").forEach(btn => {
             btn.classList.toggle("active", btn.dataset.tab === tab);
         });
 
         const isHistory = tab === "HISTORY";
         if ($("tasksPanel")) $("tasksPanel").hidden = isHistory;
-        if ($("filterToolbarSection")) $("filterToolbarSection").hidden = isHistory;
         if ($("historyPanel")) $("historyPanel").hidden = !isHistory;
+
+        // Ẩn/hiện bộ lọc chi tiết công việc khi chuyển sang tab Lịch sử BN
+        document.querySelectorAll(".task-filter-field").forEach(el => {
+            el.style.display = isHistory ? "none" : "";
+        });
 
         if (!isHistory) {
             const meta = TAB_META[tab] || TAB_META.ALL;
@@ -1426,6 +1478,11 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+        safeOn("filterTabGroup", "change", () => {
+            if ($("filterStatus")) $("filterStatus").value = "";
+            switchTab($("filterTabGroup").value);
+        });
+
         document.querySelectorAll(".tab").forEach(btn => {
             btn.addEventListener("click", () => {
                 if ($("filterStatus")) $("filterStatus").value = "";

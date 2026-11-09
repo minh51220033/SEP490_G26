@@ -108,6 +108,7 @@
                             <td class="text-center fw-bold text-muted" th:text="${it.lineOrder != null ? it.lineOrder : 1}">1</td>
                             <td class="text-start wrap-cell">
                                 <strong class="text-dark" th:text="${it.itemName}">Trám răng</strong>
+                                <small class="d-block text-secondary" th:if="${it.service != null and it.itemName != it.service.serviceName}" th:text="'DV gốc: ' + ${it.service.serviceName}"></small>
                                 <small class="d-block text-muted" th:if="${it.performedService != null and it.performedService.doctor != null}"
                                        th:text="'BS: ' + ${it.performedService.doctor.fullName}"></small>
                             </td>
@@ -306,10 +307,10 @@
             <div class="fin-grid-2col">
                 <!-- Cột trái: Lịch sử thanh toán & Hoàn tiền -->
                 <div>
-                    <!-- Lịch sử các lần thanh toán (FT22) -->
+                    <!-- Lịch sử các lần thanh toán -->
                     <div class="fin-card mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h4 class="fw-bold m-0 text-success"><i class="bi bi-credit-card me-2"></i> Lịch sử Thu tiền &amp; Phân bổ (FT22)</h4>
+                            <h4 class="fw-bold m-0 text-success"><i class="bi bi-credit-card me-2"></i> Lịch sử Thu tiền &amp; Phân bổ</h4>
                             <span class="badge bg-success" th:text="${payments.size()} + ' lần thu'">0 lần</span>
                         </div>
                         <div class="fin-table-wrapper">

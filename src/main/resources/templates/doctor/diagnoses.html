@@ -311,17 +311,8 @@
                             <span>Thêm bệnh nhân</span>
                         </button>
 
-                        <!-- 6. Dropdown Cơ sở -->
-                        <div class="df-tb-branch-wrapper position-relative">
-                            <select id="toolbarBranchSelect" class="df-tb-select fw-bold"
-                                    onchange="handleToolbarBranchChange(this.value)"
-                                    th:title="${isDoctorRestricted ? 'Bác sĩ hiện chỉ được tác nghiệp tại ' + doctorAssignedBranchFullName : 'Chọn cơ sở khám chữa bệnh'}">
-                                <option th:each="b : ${branches}"
-                                        th:value="${b.branchId}"
-                                        th:text="${(b.branchCode != null and !b.branchCode.isEmpty() ? b.branchCode : b.branchName) + (doctorAssignedBranchId != null and b.branchId == doctorAssignedBranchId ? ' (Đang làm việc)' : (isDoctorRestricted ? ' (Khác CS)' : ''))}"
-                                        th:selected="${b.branchId == selectedBranchId}">DEMO</option>
-                            </select>
-                        </div>
+                        <!-- 6. Dropdown Cơ sở chuẩn DentalSoft -->
+                        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                     </div>
                 </div>
 
@@ -1557,12 +1548,12 @@
             let turnBadgeHtml = `<span class="badge rounded-2 font-monospace fw-bold px-2 py-1" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;font-size:11px;" title="Số thứ tự lượt khám trong ngày">#${escapeHtml(dispNum)}</span>`;
             if (v.isEmergency) {
                 turnBadgeHtml = `
-                    <span class="badge rounded-2 font-monospace fw-bold px-2 py-1" style="background:#fee2e2;color:#b91c1c;border:1px solid #f87171;font-size:11px;" title="${escapeHtml(v.priorityReason || 'Ca cấp cứu khẩn cấp (FT10)')}">#${escapeHtml(dispNum)}</span>
+                    <span class="badge rounded-2 font-monospace fw-bold px-2 py-1" style="background:#fee2e2;color:#b91c1c;border:1px solid #f87171;font-size:11px;" title="${escapeHtml(v.priorityReason || 'Ca cấp cứu khẩn cấp')}">#${escapeHtml(dispNum)}</span>
                     <span class="badge bg-danger text-white" style="font-size:10px;"><i class="bi bi-lightning-charge-fill"></i> Cấp cứu</span>
                 `;
             } else if (v.isPriority) {
                 turnBadgeHtml = `
-                    <span class="badge rounded-2 font-monospace fw-bold px-2 py-1" style="background:#fef3c7;color:#92400e;border:1px solid #fbbf24;font-size:11px;" title="${escapeHtml(v.priorityReason || 'Ca khám ưu tiên (FT09 / FT10)')}">#${escapeHtml(dispNum)}</span>
+                    <span class="badge rounded-2 font-monospace fw-bold px-2 py-1" style="background:#fef3c7;color:#92400e;border:1px solid #fbbf24;font-size:11px;" title="${escapeHtml(v.priorityReason || 'Ca khám ưu tiên')}">#${escapeHtml(dispNum)}</span>
                     <span class="badge bg-warning text-dark" style="font-size:10px;"><i class="bi bi-star-fill"></i> Ưu tiên</span>
                 `;
             }
