@@ -16,6 +16,35 @@
 
         <main class="app-content">
             <link rel="stylesheet" th:href="@{/css/account.css}">
+            <style>
+                .misa-feature-tree-header {
+                    transition: background-color 0.15s ease;
+                }
+                .misa-feature-tree-header:hover {
+                    background-color: #f1f5f9 !important;
+                }
+                .misa-feature-tree-group.is-collapsed .misa-subtabs-body {
+                    display: none !important;
+                }
+                .misa-feature-tree-group.is-collapsed .misa-tree-chevron i {
+                    transform: rotate(-90deg);
+                }
+                .misa-tree-chevron i {
+                    display: inline-block;
+                    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .misa-subtab-row {
+                    transition: all 0.15s ease;
+                }
+                .misa-subtab-row:hover {
+                    background-color: #f8fafc !important;
+                    border-color: #cbd5e1 !important;
+                }
+                .misa-subtab-row.is-granted {
+                    background-color: #f8fafc !important;
+                    border-color: #bfdbfe !important;
+                }
+            </style>
 
             <!-- THÔNG BÁO THÀNH CÔNG -->
             <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
@@ -234,82 +263,123 @@
 
 
 
-                            <!-- DANH SÁCH PHÂN HỆ & CHỨC NĂNG SIDEBAR (PHONG CÁCH MISA) -->
-                            <div class="d-flex flex-column gap-3 mb-4">
-                                <div th:each="moduleSec : ${misaModules}"
-                                     class="misa-module-section"
-                                     th:attr="data-module-key=${moduleSec.moduleKey}">
+                            <!-- DANH SÁCH MENU SIDEBAR & TAB NGHIỆP VỤ -->
+                            <div class="d-flex flex-column gap-2 mb-4" id="mainSidebarList">
+                                <th:block th:each="grp : ${sidebarGroups}">
 
-                                    <!-- HEADER PHÂN HỆ (BẤM ĐỂ GOM / XỔ) -->
-                                    <div class="misa-module-header" onclick="toggleModuleCollapse(this.closest('.misa-module-section'))" title="Bấm để gom gọn hoặc xổ toạc phân hệ này">
-                                        <div class="misa-module-title">
-                                            <i class="bi bi-chevron-down misa-module-chevron me-1"></i>
-                                            <i class="bi text-primary" th:classappend="${moduleSec.moduleIcon}"></i>
-                                            <span th:text="${moduleSec.moduleTitle}">Tên phân hệ</span>
-                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-0 ms-2 misa-module-counter"
-                                                  style="font-size: 0.72rem; font-weight: 600;"
-                                                  th:text="|0 / ${moduleSec.groups.size()}|">0 / 7</span>
-                                        </div>
-                                        <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
-                                            <label class="d-inline-flex align-items-center gap-2 small fw-semibold text-secondary m-0"
-                                                   style="cursor: pointer;">
-                                                <input type="checkbox"
-                                                       class="form-check-input m-0 misa-module-master-check"
-                                                       th:disabled="${!selectedRoleEditable}">
-                                                <span>Chọn cả phân hệ</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <!-- THÂN PHÂN HỆ (CÁC DÒNG CHỨC NĂNG) -->
-                                    <div class="misa-module-body">
-                                        <!-- CÁC DÒNG CHỨC NĂNG (KHỚP 100% VỚI MENU TRÊN SIDEBAR) -->
-                                        <div th:each="grp : ${moduleSec.groups}"
-                                             class="misa-feature-row"
-                                             th:with="isRowChecked=${!grp.actions.isEmpty() and (isAdminRole ? true : selectedPermissionIds.contains(grp.actions[0].permissionId))}"
-                                             th:classappend="${isRowChecked ? 'is-granted' : ''}">
-                                            <div class="misa-feature-info">
-                                                <div class="misa-feature-name">
-                                                    <span class="misa-feature-icon">
-                                                        <i class="bi" th:classappend="${grp.iconClass}"></i>
-                                                    </span>
-                                                    <span th:text="${grp.groupTitle}">Tên chức năng trên Sidebar</span>
+                                    <!-- 1. MENU CÓ TAB NGANG CON -->
+                                    <div th:if="${grp.hasSubTabs}"
+                                         class="misa-feature-tree-group card border rounded-3 overflow-hidden shadow-xs is-collapsed"
+                                         th:attr="data-group-key=${grp.groupKey}">
+                                        <div class="misa-feature-tree-header py-2 px-3 d-flex align-items-center justify-content-between gap-3"
+                                             style="cursor: pointer; user-select: none; background: #f8fafc;"
+                                             onclick="toggleSubTabsDropdown(this.closest('.misa-feature-tree-group'))"
+                                             th:title="${grp.groupDescription}">
+                                            <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+                                                <span class="misa-tree-chevron text-muted d-flex align-items-center justify-content-center" style="width: 20px; height: 20px;">
+                                                    <i class="bi bi-chevron-down fs-6"></i>
+                                                </span>
+                                                <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                                                     style="width: 32px; height: 32px; background: #eff6ff; color: #2563eb;">
+                                                    <i class="bi" th:classappend="${grp.iconClass}"></i>
                                                 </div>
-                                                <p class="small text-muted mb-2 mt-1" th:text="${grp.groupDescription}">Mô tả chức năng...</p>
-                                                <div class="misa-sidebar-tags">
-                                                    <span class="text-muted" style="font-size: 0.72rem;">Menu Sidebar:</span>
-                                                    <span class="misa-sidebar-tag">
-                                                        <i class="bi bi-layout-sidebar-inset text-primary"></i>
-                                                        <span th:text="${grp.sidebarBadge}">Mục menu</span>
-                                                    </span>
+                                                <div class="d-flex align-items-center gap-2 flex-wrap min-w-0">
+                                                    <span class="fw-semibold text-dark fs-6 text-nowrap" th:text="${grp.groupTitle}">Tên Menu</span>
+                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-1 misa-subtabs-counter"
+                                                          th:text="|0 / ${grp.subTabs.size()} tab con|">0 / 3 tab con</span>
                                                 </div>
                                             </div>
-
-                                            <!-- CÔNG TẮC BẬT/TẮT CHỨC NĂNG PHẲNG THEO MENU SIDEBAR -->
-                                            <div class="misa-feature-toggle">
-                                                <input type="checkbox"
-                                                       th:each="act : ${grp.actions}"
-                                                       class="d-none misa-action-check"
-                                                       name="permissionIds"
-                                                       th:value="${act.permissionId}"
-                                                       th:attr="data-code=${act.permissionCode}"
-                                                       th:checked="${isAdminRole ? true : selectedPermissionIds.contains(act.permissionId)}"
-                                                       th:disabled="${!selectedRoleEditable}">
-
-                                                <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                            <div class="d-flex align-items-center gap-3 flex-shrink-0" onclick="event.stopPropagation()">
+                                                <label class="form-check form-switch m-0 d-flex align-items-center gap-2" style="cursor: pointer;">
                                                     <input type="checkbox"
-                                                           class="form-check-input misa-menu-switch"
+                                                           class="form-check-input misa-group-master-switch m-0"
                                                            role="switch"
-                                                           th:checked="${isRowChecked}"
-                                                           th:disabled="${!selectedRoleEditable}">
-                                                    <span class="misa-switch-badge"
-                                                          th:classappend="${isRowChecked ? 'state-granted' : 'state-denied'}"
-                                                          th:text="${isRowChecked ? 'Được phép' : 'Chưa cấp'}">Chưa cấp</span>
+                                                           th:disabled="${!selectedRoleEditable}"
+                                                           onchange="toggleGroupMasterSwitch(this)">
+                                                    <span class="small fw-semibold text-secondary text-nowrap">Chọn cả menu</span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <!-- THÂN DROPDOWN TAB CON (CÂY PHÂN CẤP) -->
+                                        <div class="misa-subtabs-body ps-4 pe-3 pb-2 pt-2 border-start border-2 border-primary-subtle ms-4 mb-2">
+                                            <div class="d-flex flex-column gap-2">
+                                                <div th:each="tab : ${grp.subTabs}"
+                                                     class="misa-subtab-row misa-feature-row p-2 px-3 rounded-2 border d-flex align-items-center justify-content-between gap-3 bg-white"
+                                                     th:with="isTabChecked=${!tab.actions.isEmpty() and (isAdminRole ? true : selectedPermissionIds.contains(tab.actions[0].permissionId))}"
+                                                     th:classappend="${isTabChecked ? 'is-granted' : ''}">
+                                                    <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0" th:title="${tab.tabDescription}">
+                                                        <i class="bi text-primary fs-6 flex-shrink-0" th:classappend="${tab.iconClass}"></i>
+                                                        <span class="fw-semibold text-dark small text-nowrap" th:text="${tab.tabTitle}">Tên Tab</span>
+                                                        <span class="text-muted small text-truncate d-none d-md-inline ps-2 border-start" style="max-width: 340px;" th:text="${tab.tabDescription}"></span>
+                                                    </div>
+
+                                                    <div class="misa-feature-toggle d-flex align-items-center gap-2 flex-shrink-0">
+                                                        <input type="checkbox"
+                                                               th:each="act : ${tab.actions}"
+                                                               class="d-none misa-action-check"
+                                                               name="permissionIds"
+                                                               th:value="${act.permissionId}"
+                                                               th:attr="data-code=${act.permissionCode}"
+                                                               th:checked="${isAdminRole ? true : selectedPermissionIds.contains(act.permissionId)}"
+                                                               th:disabled="${!selectedRoleEditable}">
+                                                        <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                                            <input type="checkbox"
+                                                                   class="form-check-input misa-menu-switch"
+                                                                   role="switch"
+                                                                   th:checked="${isTabChecked}"
+                                                                   th:disabled="${!selectedRoleEditable}">
+                                                            <span class="misa-switch-badge"
+                                                                  th:classappend="${isTabChecked ? 'state-granted' : 'state-denied'}"
+                                                                  th:text="${isTabChecked ? 'Được phép' : 'Chưa cấp'}">Chưa cấp</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+
+                                    <!-- 2. MENU ĐƠN LẺ (KHÔNG CÓ TAB CON) -->
+                                    <div th:unless="${grp.hasSubTabs}"
+                                         class="misa-feature-row card border rounded-3 p-2 px-3 shadow-xs d-flex flex-row align-items-center justify-content-between gap-3 bg-white"
+                                         th:with="isRowChecked=${!grp.actions.isEmpty() and (isAdminRole ? true : selectedPermissionIds.contains(grp.actions[0].permissionId))}"
+                                         th:classappend="${isRowChecked ? 'is-granted' : ''}"
+                                         th:title="${grp.groupDescription}">
+                                        <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+                                            <span style="width: 20px; height: 20px;" class="d-none d-sm-inline-block"></span>
+                                            <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                                                 style="width: 32px; height: 32px; background: #eff6ff; color: #2563eb;">
+                                                <i class="bi" th:classappend="${grp.iconClass}"></i>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                                <span class="fw-semibold text-dark fs-6 text-nowrap" th:text="${grp.groupTitle}">Tên Menu</span>
+                                                <span class="text-muted small text-truncate d-none d-md-inline ps-2 border-start" style="max-width: 360px;" th:text="${grp.groupDescription}"></span>
+                                            </div>
+                                        </div>
+
+                                        <div class="misa-feature-toggle d-flex align-items-center gap-2 flex-shrink-0">
+                                            <input type="checkbox"
+                                                   th:each="act : ${grp.actions}"
+                                                   class="d-none misa-action-check"
+                                                   name="permissionIds"
+                                                   th:value="${act.permissionId}"
+                                                   th:attr="data-code=${act.permissionCode}"
+                                                   th:checked="${isAdminRole ? true : selectedPermissionIds.contains(act.permissionId)}"
+                                                   th:disabled="${!selectedRoleEditable}">
+                                            <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                                <input type="checkbox"
+                                                       class="form-check-input misa-menu-switch"
+                                                       role="switch"
+                                                       th:checked="${isRowChecked}"
+                                                       th:disabled="${!selectedRoleEditable}">
+                                                <span class="misa-switch-badge"
+                                                      th:classappend="${isRowChecked ? 'state-granted' : 'state-denied'}"
+                                                      th:text="${isRowChecked ? 'Được phép' : 'Chưa cấp'}">Chưa cấp</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </th:block>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center pt-3 border-top" th:if="${selectedRoleEditable}">
@@ -381,71 +451,118 @@
                         </div>
                     </div>
 
-                    <div class="d-flex flex-column gap-3">
-                        <div th:each="moduleSec : ${misaModules}" class="misa-module-section" th:attr="data-module-key=${moduleSec.moduleKey}">
-                            <div class="misa-module-header" onclick="toggleModuleCollapse(this.closest('.misa-module-section'))" title="Bấm để gom gọn hoặc xổ toạc phân hệ này">
-                                <div class="misa-module-title">
-                                    <i class="bi bi-chevron-down misa-module-chevron me-1"></i>
-                                    <i class="bi text-primary" th:classappend="${moduleSec.moduleIcon}"></i>
-                                    <span th:text="${moduleSec.moduleTitle}">Tên phân hệ</span>
-                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-0 ms-2 misa-module-counter"
-                                          style="font-size: 0.72rem; font-weight: 600;"
-                                          th:text="|0 / ${moduleSec.groups.size()}|">0 / 7</span>
-                                </div>
-                                <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
-                                    <label class="d-inline-flex align-items-center gap-2 small fw-semibold text-secondary m-0" style="cursor: pointer;">
-                                        <input type="checkbox" class="form-check-input m-0 misa-module-master-check">
-                                        <span>Chọn cả phân hệ</span>
-                                    </label>
-                                </div>
-                            </div>
+                    <!-- DANH SÁCH MENU SIDEBAR & TAB CON TRONG MODAL -->
+                    <div class="d-flex flex-column gap-2 mb-3" id="modalSidebarList">
+                        <th:block th:each="grp : ${sidebarGroups}">
 
-                            <div class="misa-module-body">
-                                <div th:each="grp : ${moduleSec.groups}"
-                                     class="misa-feature-row"
-                                     th:with="isRowChecked=${!grp.actions.isEmpty() and grp.actions[0].permissionCode == 'SCHEDULE_MY'}"
-                                     th:classappend="${isRowChecked ? 'is-granted' : ''}">
-                                    <div class="misa-feature-info">
-                                        <div class="misa-feature-name">
-                                            <span class="misa-feature-icon">
-                                                <i class="bi" th:classappend="${grp.iconClass}"></i>
-                                            </span>
-                                            <span class="fw-semibold text-dark" th:text="${grp.groupTitle}">Tên chức năng</span>
+                            <!-- 1. MENU CÓ TAB NGANG CON -->
+                            <div th:if="${grp.hasSubTabs}"
+                                 class="misa-feature-tree-group card border rounded-3 overflow-hidden shadow-xs is-collapsed"
+                                 th:attr="data-group-key=${grp.groupKey}">
+                                <div class="misa-feature-tree-header py-2 px-3 d-flex align-items-center justify-content-between gap-3"
+                                     style="cursor: pointer; user-select: none; background: #f8fafc;"
+                                     onclick="toggleSubTabsDropdown(this.closest('.misa-feature-tree-group'))"
+                                     th:title="${grp.groupDescription}">
+                                    <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+                                        <span class="misa-tree-chevron text-muted d-flex align-items-center justify-content-center" style="width: 20px; height: 20px;">
+                                            <i class="bi bi-chevron-down fs-6"></i>
+                                        </span>
+                                        <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                                             style="width: 32px; height: 32px; background: #eff6ff; color: #2563eb;">
+                                            <i class="bi" th:classappend="${grp.iconClass}"></i>
                                         </div>
-                                        <p class="small text-muted mb-2 mt-1" th:text="${grp.groupDescription}">Mô tả chức năng...</p>
-                                        <div class="misa-sidebar-tags">
-                                            <span class="text-muted" style="font-size: 0.72rem;">Menu Sidebar:</span>
-                                            <span class="misa-sidebar-tag">
-                                                <i class="bi bi-layout-sidebar-inset text-primary"></i>
-                                                <span th:text="${grp.sidebarBadge}">Mục menu</span>
-                                            </span>
+                                        <div class="d-flex align-items-center gap-2 flex-wrap min-w-0">
+                                            <span class="fw-semibold text-dark fs-6 text-nowrap" th:text="${grp.groupTitle}">Tên Menu</span>
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-1 misa-subtabs-counter"
+                                                  th:text="|0 / ${grp.subTabs.size()} tab con|">0 / 3 tab con</span>
                                         </div>
                                     </div>
-
-                                    <div class="misa-feature-toggle">
-                                        <input type="checkbox"
-                                               th:each="act : ${grp.actions}"
-                                               class="d-none misa-action-check"
-                                               name="permissionIds"
-                                               th:value="${act.permissionId}"
-                                               th:attr="data-code=${act.permissionCode}"
-                                               th:checked="${act.permissionCode == 'SCHEDULE_MY'}">
-
-                                        <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                    <div class="d-flex align-items-center gap-3 flex-shrink-0" onclick="event.stopPropagation()">
+                                        <label class="form-check form-switch m-0 d-flex align-items-center gap-2" style="cursor: pointer;">
                                             <input type="checkbox"
-                                                   class="form-check-input misa-menu-switch"
+                                                   class="form-check-input misa-group-master-switch m-0"
                                                    role="switch"
-                                                   th:checked="${isRowChecked}">
-                                            <span class="misa-switch-badge"
-                                                  th:classappend="${isRowChecked ? 'state-granted' : 'state-denied'}"
-                                                  th:text="${isRowChecked ? 'Được phép' : 'Chưa cấp'}">Chưa cấp</span>
+                                                   onchange="toggleGroupMasterSwitch(this)">
+                                            <span class="small fw-semibold text-secondary text-nowrap">Chọn cả menu</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="misa-subtabs-body ps-4 pe-3 pb-2 pt-2 border-start border-2 border-primary-subtle ms-4 mb-2">
+                                    <div class="d-flex flex-column gap-2">
+                                        <div th:each="tab : ${grp.subTabs}"
+                                             class="misa-subtab-row misa-feature-row p-2 px-3 rounded-2 border d-flex align-items-center justify-content-between gap-3 bg-white"
+                                             th:with="isTabChecked=${!tab.actions.isEmpty() and tab.actions[0].permissionCode == 'SCHEDULE_MY'}"
+                                             th:classappend="${isTabChecked ? 'is-granted' : ''}">
+                                            <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0" th:title="${tab.tabDescription}">
+                                                <i class="bi text-primary fs-6 flex-shrink-0" th:classappend="${tab.iconClass}"></i>
+                                                <span class="fw-semibold text-dark small text-nowrap" th:text="${tab.tabTitle}">Tên Tab</span>
+                                                <span class="text-muted small text-truncate d-none d-md-inline ps-2 border-start" style="max-width: 340px;" th:text="${tab.tabDescription}"></span>
+                                            </div>
+
+                                            <div class="misa-feature-toggle d-flex align-items-center gap-2 flex-shrink-0">
+                                                <input type="checkbox"
+                                                       th:each="act : ${tab.actions}"
+                                                       class="d-none misa-action-check"
+                                                       name="permissionIds"
+                                                       th:value="${act.permissionId}"
+                                                       th:attr="data-code=${act.permissionCode}"
+                                                       th:checked="${act.permissionCode == 'SCHEDULE_MY'}">
+                                                <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                                    <input type="checkbox"
+                                                           class="form-check-input misa-menu-switch"
+                                                           role="switch"
+                                                           th:checked="${isTabChecked}">
+                                                    <span class="misa-switch-badge"
+                                                          th:classappend="${isTabChecked ? 'state-granted' : 'state-denied'}"
+                                                          th:text="${isTabChecked ? 'Được phép' : 'Chưa cấp'}">Chưa cấp</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
+
+                            <!-- 2. MENU ĐƠN LẺ (KHÔNG CÓ TAB CON) -->
+                            <div th:unless="${grp.hasSubTabs}"
+                                 class="misa-feature-row card border rounded-3 p-2 px-3 shadow-xs d-flex flex-row align-items-center justify-content-between gap-3 bg-white"
+                                 th:with="isRowChecked=${!grp.actions.isEmpty() and grp.actions[0].permissionCode == 'SCHEDULE_MY'}"
+                                 th:classappend="${isRowChecked ? 'is-granted' : ''}"
+                                 th:title="${grp.groupDescription}">
+                                <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+                                    <span style="width: 20px; height: 20px;" class="d-none d-sm-inline-block"></span>
+                                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                                         style="width: 32px; height: 32px; background: #eff6ff; color: #2563eb;">
+                                        <i class="bi" th:classappend="${grp.iconClass}"></i>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 min-w-0">
+                                        <span class="fw-semibold text-dark fs-6 text-nowrap" th:text="${grp.groupTitle}">Tên Menu</span>
+                                        <span class="text-muted small text-truncate d-none d-md-inline ps-2 border-start" style="max-width: 360px;" th:text="${grp.groupDescription}"></span>
+                                    </div>
+                                </div>
+
+                                <div class="misa-feature-toggle d-flex align-items-center gap-2 flex-shrink-0">
+                                    <input type="checkbox"
+                                           th:each="act : ${grp.actions}"
+                                           class="d-none misa-action-check"
+                                           name="permissionIds"
+                                           th:value="${act.permissionId}"
+                                           th:attr="data-code=${act.permissionCode}"
+                                           th:checked="${act.permissionCode == 'SCHEDULE_MY'}">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                        <input type="checkbox"
+                                               class="form-check-input misa-menu-switch"
+                                               role="switch"
+                                               th:checked="${isRowChecked}">
+                                        <span class="misa-switch-badge"
+                                              th:classappend="${isRowChecked ? 'state-granted' : 'state-denied'}"
+                                              th:text="${isRowChecked ? 'Được phép' : 'Chưa cấp'}">Chưa cấp</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </th:block>
+                    </div></div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                     <button type="submit" class="btn btn-primary px-4">
@@ -469,6 +586,66 @@
      * Nếu có bất kỳ action nào được tích -> Switch bật ON và hiện badge "Được phép".
      * Nếu không có action nào được tích -> Switch tắt OFF và hiện badge "Chưa cấp".
      */
+    function toggleSubTabsDropdown(groupEl) {
+        if (!groupEl) return;
+        groupEl.classList.toggle('is-collapsed');
+    }
+
+    function toggleGroupMasterSwitch(masterSwitch) {
+        var groupEl = masterSwitch.closest('.misa-feature-tree-group');
+        var container = masterSwitch.closest('#mainRoleMatrixContainer, #modalRoleMatrixContainer');
+        if (!groupEl) return;
+        var isChecked = masterSwitch.checked;
+
+        groupEl.querySelectorAll('.misa-action-check:not(:disabled)').forEach(function (cb) {
+            cb.checked = isChecked;
+        });
+
+        groupEl.querySelectorAll('.misa-feature-row').forEach(function (r) {
+            syncMisaRowState(r, false);
+        });
+
+        syncGroupMasterState(groupEl);
+        if (container) syncContainerCounter(container);
+    }
+
+    function syncGroupMasterState(groupEl) {
+        if (!groupEl) return;
+        var masterSwitch = groupEl.querySelector('.misa-group-master-switch');
+        var counterBadge = groupEl.querySelector('.misa-subtabs-counter');
+        var rows = groupEl.querySelectorAll('.misa-subtab-row');
+        if (!rows.length) return;
+
+        var activeRows = Array.from(rows).filter(function (r) {
+            var sw = r.querySelector('.misa-menu-switch');
+            return sw && sw.checked;
+        });
+
+        if (masterSwitch) {
+            if (activeRows.length === rows.length) {
+                masterSwitch.checked = true;
+                masterSwitch.indeterminate = false;
+            } else if (activeRows.length === 0) {
+                masterSwitch.checked = false;
+                masterSwitch.indeterminate = false;
+            } else {
+                masterSwitch.checked = false;
+                masterSwitch.indeterminate = true;
+            }
+        }
+
+        if (counterBadge) {
+            counterBadge.innerHTML = '<strong>' + activeRows.length + '</strong> / ' + rows.length + ' tab con';
+            if (activeRows.length === rows.length) {
+                counterBadge.className = 'badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 misa-subtabs-counter';
+            } else if (activeRows.length > 0) {
+                counterBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 misa-subtabs-counter';
+            } else {
+                counterBadge.className = 'badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2.5 py-1 misa-subtabs-counter';
+            }
+        }
+    }
+
     function syncMisaRowState(row) {
         var actions = Array.from(row.querySelectorAll('.misa-action-check'));
         var menuSwitch = row.querySelector('.misa-menu-switch');
@@ -523,11 +700,11 @@
     function toggleAllModules(containerId, expand) {
         var container = document.getElementById(containerId);
         if (!container) return;
-        container.querySelectorAll('.misa-module-section').forEach(function (sec) {
+        container.querySelectorAll('.misa-feature-tree-group').forEach(function (grp) {
             if (expand) {
-                sec.classList.remove('is-collapsed');
+                grp.classList.remove('is-collapsed');
             } else {
-                sec.classList.add('is-collapsed');
+                grp.classList.add('is-collapsed');
             }
         });
     }
@@ -603,7 +780,7 @@
     function refreshAllMisaStates(container) {
         if (!container) return;
         container.querySelectorAll('.misa-feature-row').forEach(syncMisaRowState);
-        container.querySelectorAll('.misa-module-section').forEach(syncMisaModuleState);
+        container.querySelectorAll('.misa-feature-tree-group').forEach(syncGroupMasterState);
         syncContainerCounter(container);
     }
 
@@ -643,7 +820,7 @@
         document.querySelectorAll('.misa-menu-switch').forEach(function (sw) {
             sw.addEventListener('change', function () {
                 var row = sw.closest('.misa-feature-row');
-                var modSec = sw.closest('.misa-module-section');
+                var groupEl = sw.closest('.misa-feature-tree-group');
                 var container = sw.closest('#mainRoleMatrixContainer, #modalRoleMatrixContainer');
                 if (!row) return;
 
@@ -653,7 +830,7 @@
                 });
 
                 syncMisaRowState(row);
-                if (modSec) syncMisaModuleState(modSec);
+                if (groupEl) syncGroupMasterState(groupEl);
                 if (container) syncContainerCounter(container);
             });
         });

@@ -71,7 +71,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
         FROM User u
         JOIN u.roles r
         WHERE (r.roleName IN ('LE_TAN', 'ROLE_LE_TAN', 'ADMIN', 'ROLE_ADMIN'))
-          AND (u.branch.branchId = :branchId OR u.branch IS NULL)
+          AND (u.branch.branchId = :branchId OR u.branch IS NULL
+               OR EXISTS (
+                   SELECT sba FROM StaffBranchAssignment sba
+                   WHERE sba.staff.user.userId = u.userId
+                     AND sba.branch.branchId = :branchId
+                     AND sba.status = com.cvdcms.entity.enums.AssignmentStatus.ACTIVE
+               ))
           AND u.isActive = true
     """)
     List<User> findActiveReceptionistsAndAdminsByBranch(@Param("branchId") Long branchId);

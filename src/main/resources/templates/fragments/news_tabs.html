@@ -78,7 +78,7 @@
 
         <!-- 2. Kiểm duyệt bình luận -->
         <li class="news-tab-item"
-            th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_NEWS') or #lists.contains(permissionCodes, 'SYSTEM_BANS')))}">
+            th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'NEWS_COMMENTS_MODERATE') or #lists.contains(permissionCodes, 'CATALOG_NEWS')))}">
             <a th:href="@{/admin/comments}"
                class="news-tab-btn"
                th:classappend="${active == 'comments'} ? 'active' : ''">

@@ -55,12 +55,23 @@ public class RoleManagementController {
             String dependsOnCode
     ) {}
 
+    public record PermissionSubTab(
+            String tabKey,
+            String tabTitle,
+            String tabDescription,
+            String tabBadge,
+            String iconClass,
+            List<PermissionActionItem> actions
+    ) {}
+
     public record FeaturePermissionGroup(
             String groupKey,
             String groupTitle,
             String groupDescription,
             String sidebarBadge,
             String iconClass,
+            boolean hasSubTabs,
+            List<PermissionSubTab> subTabs,
             List<PermissionActionItem> actions
     ) {}
 
@@ -72,14 +83,32 @@ public class RoleManagementController {
             int totalPermissions
     ) {}
 
+    private record SubTabSpec(
+            String tabKey,
+            String tabTitle,
+            String tabDescription,
+            String tabBadge,
+            String iconClass,
+            List<ActionSpec> actionSpecs
+    ) {}
+
     private record GroupSpec(
             String groupKey,
             String groupTitle,
             String groupDescription,
             String sidebarBadge,
             String iconClass,
+            List<SubTabSpec> subTabSpecs,
             List<ActionSpec> actionSpecs
-    ) {}
+    ) {
+        public GroupSpec(String groupKey, String groupTitle, String groupDescription, String sidebarBadge, String iconClass, List<ActionSpec> actionSpecs) {
+            this(groupKey, groupTitle, groupDescription, sidebarBadge, iconClass, Collections.emptyList(), actionSpecs);
+        }
+
+        public GroupSpec(String groupKey, String groupTitle, String groupDescription, String sidebarBadge, String iconClass, List<SubTabSpec> subTabSpecs, boolean hasTabs) {
+            this(groupKey, groupTitle, groupDescription, sidebarBadge, iconClass, subTabSpecs, Collections.emptyList());
+        }
+    }
 
     private record ActionSpec(
             String code,
@@ -110,7 +139,7 @@ public class RoleManagementController {
     }
 
     @GetMapping
-    @Transactional(readOnly = true)
+    @Transactional
     public String listRoles(
             @RequestParam(required = false) Long editRoleId,
             HttpSession session,
@@ -121,6 +150,8 @@ public class RoleManagementController {
         }
         requireAdmin(session);
         addLayoutAttributes(session, model);
+
+        ensureStandardPermissionsExist();
 
         List<Role> roles = roleRepository.findAllWithPermissions();
         List<Permission> allPermissions = permissionRepository.findAllByOrderByModuleAscPermissionCodeAsc();
@@ -137,6 +168,7 @@ public class RoleManagementController {
         permissionsByModule.entrySet().removeIf(e -> e.getValue().isEmpty());
 
         // Xây dựng cấu trúc phân quyền MISA (Phân hệ -> Chức năng Sidebar -> Dropdown hành động)
+        List<FeaturePermissionGroup> sidebarGroups = buildSidebarGroups(allPermissions);
         List<ModulePermissionSection> misaModules = buildMisaModuleSections(allPermissions);
 
         // Đếm số lượng tài khoản đang gắn với từng vai trò
@@ -196,6 +228,7 @@ public class RoleManagementController {
         model.addAttribute("roles", roles);
         model.addAttribute("permissionsByModule", permissionsByModule);
         model.addAttribute("misaModules", misaModules);
+        model.addAttribute("sidebarGroups", sidebarGroups);
         model.addAttribute("moduleLabels", moduleLabels);
         model.addAttribute("userCountByRoleId", userCountByRoleId);
         model.addAttribute("selectedRole", selectedRole);
@@ -463,11 +496,42 @@ public class RoleManagementController {
         return new ArrayList<>(permissionRepository.findAllById(permissionIds));
     }
 
+    private void ensureStandardPermissionsExist() {
+        List<com.cvdcms.config.PermissionDataInitializer.PermissionSeed> seeds =
+                com.cvdcms.config.PermissionDataInitializer.getStandardPermissionSeeds();
+        boolean addedAny = false;
+        Map<String, Permission> allMap = new LinkedHashMap<>();
+        for (com.cvdcms.config.PermissionDataInitializer.PermissionSeed seed : seeds) {
+            Optional<Permission> existing = permissionRepository.findByPermissionCodeIgnoreCase(seed.code());
+            Permission perm;
+            if (existing.isPresent()) {
+                perm = existing.get();
+            } else {
+                perm = new Permission();
+                perm.setPermissionCode(seed.code());
+                perm.setModule(seed.module());
+                perm.setDescription(seed.description());
+                perm = permissionRepository.save(perm);
+                addedAny = true;
+            }
+            allMap.put(seed.code().toUpperCase(), perm);
+        }
+        if (addedAny) {
+            List<Role> allRoles = roleRepository.findAllWithPermissions();
+            for (Role r : allRoles) {
+                if (isAdminRole(r)) {
+                    r.getPermissions().clear();
+                    r.getPermissions().addAll(allMap.values());
+                    roleRepository.save(r);
+                }
+            }
+        }
+    }
+
     /**
-     * Xây dựng danh sách Phân hệ -> Chức năng Sidebar -> Các hành động con theo chuẩn giao diện MISA AMIS.
-     * Tên từng dòng khớp 100% với tên các mục hiển thị trên thanh điều hướng (Sidebar).
+     * Xây dựng danh sách các Menu Sidebar nghiệp vụ (17 mục khớp 100% Sidebar bên trái và đầy đủ toàn bộ Tab ngang con).
      */
-    private List<ModulePermissionSection> buildMisaModuleSections(List<Permission> allPermissions) {
+    private List<FeaturePermissionGroup> buildSidebarGroups(List<Permission> allPermissions) {
         Map<String, Permission> byCode = new HashMap<>();
         for (Permission p : allPermissions) {
             if (p.getPermissionCode() != null) {
@@ -475,415 +539,719 @@ public class RoleManagementController {
             }
         }
 
-        Map<String, List<GroupSpec>> moduleSpecs = new LinkedHashMap<>();
-
-        // 1. LỄ TÂN, TIẾP ĐÓN & CSKH (Khớp 1:1 từng menu Sidebar)
-        moduleSpecs.put("RECEPTION", List.of(
+        List<GroupSpec> groupSpecs = List.of(
+                // 1. Quản lý tài khoản (Có 3 Tab ngang)
                 new GroupSpec(
-                        "GRP_RECEPTION_PATIENT",
-                        "Hồ sơ bệnh nhân",
-                        "Tiếp nhận bệnh nhân mới, tra cứu và cập nhật hồ sơ hành chính.",
-                        "Hồ sơ bệnh nhân",
+                        "GRP_MENU_ACCOUNTS",
+                        "Quản lý tài khoản",
+                        "Quản lý tài khoản nhân viên/người dùng, vai trò & phân quyền ma trận, quản lý tài khoản bị cấm bình luận.",
+                        "Quản lý tài khoản",
+                        "bi-people",
+                        List.of(
+                                new SubTabSpec(
+                                        "TAB_ACC_LIST",
+                                        "Danh sách tài khoản",
+                                        "Xem danh sách tài khoản người dùng, tạo tài khoản mới, cấp mật khẩu và phân quyền cơ sở.",
+                                        "Tab ngang",
+                                        "bi-people",
+                                        List.of(new ActionSpec("ACCOUNT_MANAGE", "Toàn quyền", "Tạo & quản lý tài khoản", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_ACC_ROLES",
+                                        "Vai trò & Phân quyền",
+                                        "Cấu hình vai trò hệ thống, ma trận phân quyền chi tiết theo từng chức năng.",
+                                        "Tab ngang",
+                                        "bi-shield-check",
+                                        List.of(new ActionSpec("ROLE_MANAGE", "Toàn quyền", "Cấu hình vai trò & phân quyền", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_ACC_BANS",
+                                        "Tài khoản bị cấm bình luận",
+                                        "Quản lý danh sách tài khoản bị khóa tính năng bình luận tin tức y khoa.",
+                                        "Tab ngang",
+                                        "bi-slash-circle",
+                                        List.of(new ActionSpec("SYSTEM_BANS", "Toàn quyền", "Quản lý tài khoản bị ban", ""))
+                                )
+                        ),
+                        true
+                ),
+
+                // 2. Quản lý nhân sự (Có 4 Tab ngang: Hồ sơ nhân sự, Phân ca làm việc, Chấm công chi nhánh, Duyệt nghỉ phép)
+                new GroupSpec(
+                        "GRP_MENU_HR",
+                        "Quản lý nhân sự",
+                        "Quản lý toàn bộ nhân sự phòng khám: Hồ sơ nhân sự, Phân ca làm việc, Chấm công chi nhánh và Duyệt nghỉ phép.",
+                        "Quản lý nhân sự",
+                        "bi-person-badge",
+                        List.of(
+                                new SubTabSpec(
+                                        "TAB_HR_STAFFS",
+                                        "Hồ sơ nhân sự",
+                                        "Quản lý danh sách nhân viên, thông tin chuyên môn, chứng chỉ hành nghề và hợp đồng.",
+                                        "Tab ngang",
+                                        "bi-person-lines-fill",
+                                        List.of(new ActionSpec("STAFF_MANAGE", "Toàn quyền", "Thêm, sửa hồ sơ & hợp đồng nhân viên", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_HR_SCHEDULES",
+                                        "Phân ca làm việc",
+                                        "Lên lịch và phân bổ ca làm việc, ca trực lâm sàng cho Bác sĩ, Phụ tá và Lễ tân theo tuần/tháng.",
+                                        "Tab ngang",
+                                        "bi-calendar-range",
+                                        List.of(new ActionSpec("SCHEDULE_MANAGE", "Toàn quyền", "Xếp lịch làm việc & phân ca chi nhánh", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_HR_ATTENDANCE",
+                                        "Chấm công chi nhánh",
+                                        "Theo dõi, đối soát bảng chấm công theo GPS/WiFi chi nhánh và xuất báo cáo công.",
+                                        "Tab ngang",
+                                        "bi-fingerprint",
+                                        List.of(new ActionSpec("HR_BRANCH_ATTENDANCE", "Toàn quyền", "Theo dõi bảng chấm công toàn chi nhánh", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_HR_LEAVES",
+                                        "Duyệt nghỉ phép",
+                                        "Tiếp nhận, xét duyệt hoặc từ chối đơn xin nghỉ phép và khóa lịch khám của nhân sự.",
+                                        "Tab ngang",
+                                        "bi-calendar-check",
+                                        List.of(new ActionSpec("HR_LEAVE_APPROVE", "Toàn quyền", "Phê duyệt đơn xin nghỉ phép nhân sự", ""))
+                                )
+                        ),
+                        true
+                ),
+
+                // 3. Quản lý khách hàng (Đơn lẻ)
+                new GroupSpec(
+                        "GRP_MENU_PATIENT_RECORDS",
+                        "Quản lý khách hàng",
+                        "Tiếp nhận bệnh nhân mới, tra cứu và cập nhật hồ sơ hành chính & lịch sử điều trị.",
+                        "Quản lý khách hàng",
                         "bi-person-vcard",
                         List.of(new ActionSpec("PATIENT_PROFILE_MANAGE", "Toàn quyền", "Tiếp nhận bệnh nhân & quản lý hồ sơ hành chính", ""))
                 ),
-                new GroupSpec(
-                        "GRP_RECEPTION_MEMBERSHIP",
-                        "Thẻ thành viên & Điểm",
-                        "Tra cứu thông tin hạng thẻ thành viên, điểm tích lũy và đổi quyền lợi bệnh nhân (FT19).",
-                        "Thẻ thành viên & Điểm",
-                        "bi-credit-card",
-                        List.of(new ActionSpec("RECEPTION_MEMBERSHIPS", "Toàn quyền", "Tra cứu thẻ thành viên & điểm tích lũy", ""))
-                ),
-                new GroupSpec(
-                        "GRP_RECEPTION_APPOINTMENT",
-                        "Quản lý lịch hẹn",
-                        "Xem danh sách lịch hẹn khám, đặt lịch hẹn mới và điều phối lịch hẹn theo tuần/tháng.",
-                        "Quản lý lịch hẹn",
-                        "bi-calendar3",
-                        List.of(new ActionSpec("APPOINTMENT_MANAGE", "Toàn quyền", "Tạo và quản lý lịch hẹn khám", ""))
-                ),
-                new GroupSpec(
-                        "GRP_RECEPTION_CHECKIN",
-                        "Tiếp đón & Check-in",
-                        "Thực hiện thủ tục check-in đón bệnh nhân và phân luồng tiếp đón tại quầy.",
-                        "Tiếp đón & Check-in",
-                        "bi-person-check",
-                        List.of(new ActionSpec("RECEPTION_CHECKIN", "Toàn quyền", "Thực hiện check-in tiếp đón bệnh nhân", ""))
-                ),
-                new GroupSpec(
-                        "GRP_RECEPTION_QUEUE",
-                        "Hàng chờ khám",
-                        "Theo dõi danh sách và thứ tự bệnh nhân đang trong hàng chờ khám.",
-                        "Hàng chờ khám",
-                        "bi-list-ol",
-                        List.of(new ActionSpec("APPOINTMENT_VIEW", "Toàn quyền", "Theo dõi hàng chờ khám tại phòng khám", ""))
-                ),
-                new GroupSpec(
-                        "GRP_RECEPTION_DISPATCH",
-                        "Điều phối ghế nha",
-                        "Bảng Kanban theo dõi và điều phối bệnh nhân vào từng ghế khám răng.",
-                        "Điều phối ghế nha",
-                        "bi-kanban",
-                        List.of(new ActionSpec("RECEPTION_DISPATCH", "Toàn quyền", "Điều phối ghế nha khoa", ""))
-                ),
-                new GroupSpec(
-                        "GRP_RECEPTION_CUSTOMER_CARE",
-                        "Chăm sóc khách hàng",
-                        "Quản lý danh sách nhắc hẹn sau điều trị, gửi tin nhắn chăm sóc và gọi điện hỏi thăm bệnh nhân (FT44).",
-                        "Chăm sóc khách hàng",
-                        "bi-headset",
-                        List.of(new ActionSpec("CUSTOMER_CARE_MANAGE", "Toàn quyền", "Quản lý chăm sóc khách hàng & nhắc tái khám", ""))
-                )
-        ));
 
-        // 2. BÁC SĨ & ĐIỀU TRỊ LÂM SÀNG (Khớp 1:1 từng menu Sidebar)
-        moduleSpecs.put("CLINICAL", List.of(
+                // 4. Quản lý danh mục (Có 4 Tab ngang: Danh mục dịch vụ, Nhóm dịch vụ, Danh mục thuốc, Danh mục ICD-10)
                 new GroupSpec(
-                        "GRP_CLINICAL_DAILY_VISITS",
-                        "Khám trong ngày",
-                        "Xem danh sách ca khám theo ngày, tuần và mở ca để bắt đầu phiên khám.",
-                        "Khám trong ngày",
-                        "bi-calendar2-week",
-                        List.of(new ActionSpec("CLINICAL_DAILY_VISITS", "Toàn quyền", "Bắt đầu ca khám và chẩn đoán bệnh", ""))
+                        "GRP_MENU_CATALOGS",
+                        "Quản lý danh mục",
+                        "Quản lý danh mục kỹ thuật y tế: Danh mục dịch vụ, Nhóm dịch vụ, Danh mục thuốc và Danh mục ICD-10.",
+                        "Quản lý danh mục",
+                        "bi-collection",
+                        List.of(
+                                new SubTabSpec(
+                                        "TAB_CAT_SERVICES",
+                                        "Danh mục dịch vụ",
+                                        "Quản lý đơn giá dịch vụ khám nha khoa, thủ thuật điều trị và cấu hình kỹ thuật.",
+                                        "Tab ngang",
+                                        "bi-tags",
+                                        List.of(new ActionSpec("CATALOG_SERVICES", "Toàn quyền", "Quản lý dịch vụ & bảng giá", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_CAT_CATEGORIES",
+                                        "Nhóm dịch vụ",
+                                        "Quản lý phân nhóm chuyên khoa dịch vụ nha khoa (Nha chu, Phục hình, Chỉnh nha, Implant...).",
+                                        "Tab ngang",
+                                        "bi-grid-3x3-gap",
+                                        List.of(new ActionSpec("CATALOG_SERVICE_CATEGORIES", "Toàn quyền", "Quản lý nhóm dịch vụ nha khoa", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_CAT_MEDS",
+                                        "Danh mục thuốc",
+                                        "Quản lý danh mục thuốc tân dược, biệt dược, hướng dẫn sử dụng và đơn giá.",
+                                        "Tab ngang",
+                                        "bi-capsule",
+                                        List.of(new ActionSpec("CATALOG_MEDICATIONS", "Toàn quyền", "Quản lý danh mục thuốc", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_CAT_ICD10",
+                                        "Danh mục ICD-10",
+                                        "Tra cứu và cấu hình danh mục mã chẩn đoán bệnh theo chuẩn quốc tế ICD-10.",
+                                        "Tab ngang",
+                                        "bi-clipboard2-pulse",
+                                        List.of(new ActionSpec("CATALOG_ICD10", "Toàn quyền", "Quản lý mã bệnh ICD-10", ""))
+                                )
+                        ),
+                        true
                 ),
-                new GroupSpec(
-                        "GRP_CLINICAL_WORKFLOWS",
-                        "Quy trình kỹ thuật",
-                        "Quản lý và thực hiện quy trình kỹ thuật lâm sàng chuẩn Bộ Y Tế (QĐ 3207/QĐ-BYT).",
-                        "Quy trình kỹ thuật",
-                        "bi-journal-medical",
-                        List.of(new ActionSpec("CLINICAL_WORKFLOWS", "Toàn quyền", "Thực hiện quy trình kỹ thuật lâm sàng", ""))
-                ),
-                new GroupSpec(
-                        "GRP_CLINICAL_CHAIRS",
-                        "Điều phối ghế nha",
-                        "Bảng Kanban theo dõi và điều phối bệnh nhân vào từng ghế khám răng.",
-                        "Điều phối ghế nha",
-                        "bi-kanban",
-                        List.of(new ActionSpec("CLINICAL_DISPATCH", "Toàn quyền", "Điều phối ghế nha khoa", ""))
-                ),
-                new GroupSpec(
-                        "GRP_CLINICAL_PRESCRIPTION",
-                        "Đơn thuốc & Dặn dò",
-                        "Kê đơn thuốc điện tử, hướng dẫn dặn dò người bệnh sau điều trị và in đơn thuốc (FT18).",
-                        "Đơn thuốc & Dặn dò",
-                        "bi-capsule",
-                        List.of(new ActionSpec("PRESCRIPTION_WRITE", "Toàn quyền", "Kê đơn thuốc & dặn dò sau điều trị", ""))
-                ),
-                new GroupSpec(
-                        "GRP_CLINICAL_TREATMENT_PLAN",
-                        "Kế hoạch điều trị",
-                        "Lập kế hoạch điều trị nha khoa nhiều giai đoạn và lộ trình chi phí cho bệnh nhân (FT15).",
-                        "Kế hoạch điều trị",
-                        "bi-diagram-3-fill",
-                        List.of(new ActionSpec("TREATMENT_PLAN_MANAGE", "Toàn quyền", "Lập kế hoạch điều trị nhiều giai đoạn", ""))
-                ),
-                new GroupSpec(
-                        "GRP_CLINICAL_PHOTOS",
-                        "Kho ảnh lâm sàng",
-                        "Quản lý kho hình ảnh trước/sau điều trị và ảnh chụp khoang miệng của bệnh nhân (FT17).",
-                        "Kho ảnh lâm sàng",
-                        "bi-images",
-                        List.of(new ActionSpec("CLINICAL_PHOTOS", "Toàn quyền", "Xem & tải ảnh lâm sàng trước/sau", ""))
-                ),
-                new GroupSpec(
-                        "GRP_CLINICAL_XRAY",
-                        "Phim X-quang NanoPix",
-                        "Trình xem ảnh X-quang nha khoa tích hợp máy chụp Eighteeth NanoPix (FT12).",
-                        "Phim X-quang NanoPix",
-                        "bi-radioactive",
-                        List.of(new ActionSpec("CLINICAL_XRAY", "Toàn quyền", "Xem & đối chiếu ảnh X-quang NanoPix", ""))
-                ),
-                new GroupSpec(
-                        "GRP_CLINICAL_LABO",
-                        "Quản lý labo",
-                        "Quản lý phiếu gửi mẫu Labo chế tác răng sứ và phục hình ngoài (FT13, FT15).",
-                        "Quản lý labo",
-                        "bi-box-seam-fill",
-                        List.of(new ActionSpec("CLINICAL_LABO", "Toàn quyền", "Quản lý phiếu xưởng Labo & xét nghiệm", ""))
-                ),
-                new GroupSpec(
-                        "GRP_CLINICAL_PATIENT_RECORDS",
-                        "Hồ sơ bệnh nhân (Bác sĩ)",
-                        "Xem hồ sơ bệnh án điện tử (EMR), tiền sử bệnh, phim chụp và toàn bộ lịch sử điều trị.",
-                        "Hồ sơ bệnh nhân",
-                        "bi-folder2-open",
-                        List.of(new ActionSpec("MEDICAL_RECORD_VIEW", "Toàn quyền", "Xem hồ sơ bệnh án điện tử EMR", ""))
-                )
-        ));
 
-        // 3. TÀI CHÍNH & KẾ TOÁN (Khớp 1:1 từng menu Sidebar)
-        moduleSpecs.put("FINANCE", List.of(
+                // 5. Quản lý tin tức (Có 2 Tab ngang: Bài viết tin tức, Kiểm duyệt bình luận)
                 new GroupSpec(
-                        "GRP_FINANCE_DASHBOARD",
-                        "Dashboard Bệnh nhân",
-                        "Bảng điều khiển tổng quan viện phí, công nợ và tình hình thanh toán của bệnh nhân (SCR-22.1).",
-                        "Dashboard Bệnh nhân",
-                        "bi-speedometer2",
-                        List.of(new ActionSpec("FINANCE_DASHBOARD", "Toàn quyền", "Xem Dashboard tài chính bệnh nhân", ""))
+                        "GRP_MENU_NEWS",
+                        "Quản lý tin tức",
+                        "Quản lý truyền thông y khoa: Đăng tải bài viết tin tức và kiểm duyệt bình luận độc giả.",
+                        "Quản lý tin tức",
+                        "bi-file-earmark-richtext",
+                        List.of(
+                                new SubTabSpec(
+                                        "TAB_NEWS_POSTS",
+                                        "Bài viết tin tức",
+                                        "Soạn thảo, xuất bản và quản lý các bài viết kiến thức nha khoa, thông báo phòng khám.",
+                                        "Tab ngang",
+                                        "bi-file-earmark-richtext",
+                                        List.of(new ActionSpec("CATALOG_NEWS", "Toàn quyền", "Đăng & quản lý bài viết tin tức", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_NEWS_COMMENTS",
+                                        "Kiểm duyệt bình luận",
+                                        "Theo dõi, ẩn/xóa bình luận vi phạm tiêu chuẩn cộng đồng trên các bài viết tin tức.",
+                                        "Tab ngang",
+                                        "bi-chat-square-dots",
+                                        List.of(new ActionSpec("NEWS_COMMENTS_MODERATE", "Toàn quyền", "Kiểm duyệt bình luận tin tức", ""))
+                                )
+                        ),
+                        true
                 ),
-                new GroupSpec(
-                        "GRP_FINANCE_INVOICE",
-                        "Quản lý hoá đơn",
-                        "Lập hóa đơn viện phí mới, áp dụng voucher khuyến mãi và in hóa đơn thanh toán (SCR-21.2).",
-                        "Quản lý hoá đơn",
-                        "bi-receipt",
-                        List.of(new ActionSpec("INVOICE_CREATE", "Toàn quyền", "Tạo và quản lý hóa đơn viện phí", ""))
-                ),
-                new GroupSpec(
-                        "GRP_FINANCE_PAYMENT",
-                        "Lịch sử Thanh toán",
-                        "Thu tiền viện phí từng đợt (tiền mặt / chuyển khoản), gạch nợ và in biên lai thu tiền (SCR-22.3).",
-                        "Lịch sử Thanh toán",
-                        "bi-credit-card-2-front",
-                        List.of(new ActionSpec("PAYMENT_COLLECT", "Toàn quyền", "Thu tiền viện phí & ghi nhận thanh toán", ""))
-                ),
-                new GroupSpec(
-                        "GRP_FINANCE_DEBT",
-                        "Công nợ bệnh nhân",
-                        "Theo dõi số dư nợ viện phí, lịch sử trả góp và quản lý công nợ khách hàng.",
-                        "Công nợ bệnh nhân",
-                        "bi-cash-stack",
-                        List.of(new ActionSpec("FINANCE_DEBT", "Toàn quyền", "Theo dõi công nợ bệnh nhân", ""))
-                ),
-                new GroupSpec(
-                        "GRP_FINANCE_REFUND",
-                        "Quản lý Hoàn tiền",
-                        "Tiếp nhận và xử lý yêu cầu hoàn trả tiền dịch vụ viện phí hoặc hủy quy trình điều trị.",
-                        "Quản lý Hoàn tiền",
-                        "bi-arrow-counterclockwise",
-                        List.of(new ActionSpec("REFUND_MANAGE", "Toàn quyền", "Xử lý yêu cầu hoàn tiền dịch vụ", ""))
-                )
-        ));
 
-        // 4. KHO & VẬT TƯ (Khớp 1:1 từng menu Sidebar)
-        moduleSpecs.put("INVENTORY", List.of(
+                // 6. Quản lý cơ sở (Đơn lẻ)
                 new GroupSpec(
-                        "GRP_INVENTORY_STOCK",
-                        "Quản lý kho vật tư",
-                        "Tra cứu tồn kho vật tư tiêu hao, lập phiếu nhập kho, xuất kho và cảnh báo tồn tối thiểu.",
-                        "Quản lý kho vật tư",
-                        "bi-box-seam",
-                        List.of(new ActionSpec("INVENTORY_STOCK", "Toàn quyền", "Quản lý tồn kho, nhập & xuất kho vật tư", ""))
-                ),
-                new GroupSpec(
-                        "GRP_INVENTORY_SUPPLIER",
-                        "Nhà cung cấp",
-                        "Quản lý danh bạ nhà cung cấp vật tư y tế và theo dõi công nợ phải trả nhà cung cấp.",
-                        "Nhà cung cấp",
-                        "bi-truck",
-                        List.of(new ActionSpec("SUPPLIER_MANAGE", "Toàn quyền", "Quản lý nhà cung cấp & công nợ", ""))
-                )
-        ));
-
-        // 5. NHÂN SỰ, CA TRỰC & CHẤM CÔNG (Khớp 1:1 từng menu Sidebar)
-        moduleSpecs.put("HR", List.of(
-                new GroupSpec(
-                        "GRP_HR_MY_SCHEDULE",
-                        "Lịch trực & Chấm công",
-                        "Xem lịch làm việc cá nhân hàng tuần (SCR-33.3).",
-                        "Lịch trực & Chấm công",
-                        "bi-calendar-check",
-                        List.of(new ActionSpec("SCHEDULE_MY", "Toàn quyền", "Xem lịch làm việc cá nhân", ""))
-                ),
-                new GroupSpec(
-                        "GRP_HR_MY_ATTENDANCE",
-                        "Chấm công",
-                        "Check-in / Check-out chấm công hàng ngày và tra cứu lịch sử công (SCR-33.2, 33.4).",
-                        "Chấm công",
-                        "bi-fingerprint",
-                        List.of(new ActionSpec("HR_MY_ATTENDANCE", "Toàn quyền", "Check-in & xem lịch sử chấm công", ""))
-                ),
-                new GroupSpec(
-                        "GRP_HR_LEAVE_REQUESTS",
-                        "Yêu cầu nghỉ / Khóa lịch",
-                        "Gửi đơn xin nghỉ phép và khóa lịch nhận khám của Bác sĩ.",
-                        "Yêu cầu nghỉ / Khóa lịch",
-                        "bi-calendar-x",
-                        List.of(new ActionSpec("HR_LEAVE_REQUESTS", "Toàn quyền", "Gửi đơn nghỉ phép & Khóa lịch", ""))
-                ),
-                new GroupSpec(
-                        "GRP_HR_BRANCH_SCHEDULE",
-                        "Phân ca làm việc",
-                        "Xếp lịch phân ca làm việc tuần cho toàn bộ nhân viên tại chi nhánh cơ sở.",
-                        "Phân ca làm việc",
-                        "bi-calendar-range",
-                        List.of(new ActionSpec("SCHEDULE_MANAGE", "Toàn quyền", "Phân ca làm việc cho nhân viên", ""))
-                ),
-                new GroupSpec(
-                        "GRP_HR_ATTENDANCE",
-                        "Chấm công chi nhánh",
-                        "Theo dõi và quản lý bảng tổng hợp chấm công thực tế của nhân viên toàn chi nhánh.",
-                        "Chấm công chi nhánh",
-                        "bi-fingerprint",
-                        List.of(new ActionSpec("HR_BRANCH_ATTENDANCE", "Toàn quyền", "Theo dõi bảng chấm công chi nhánh", ""))
-                ),
-                new GroupSpec(
-                        "GRP_HR_STAFF",
-                        "Quản lý nhân sự",
-                        "Quản lý hồ sơ nhân viên, chứng chỉ hành nghề y tế và điều động phân công làm việc.",
-                        "Quản lý nhân sự",
-                        "bi-person-badge",
-                        List.of(new ActionSpec("STAFF_MANAGE", "Toàn quyền", "Quản lý hồ sơ nhân sự cơ sở", ""))
-                )
-        ));
-
-        // 6. QUẢN TRỊ HỆ THỐNG & DANH MỤC (Khớp 1:1 từng menu Sidebar)
-        moduleSpecs.put("SYSTEM", List.of(
-                new GroupSpec(
-                        "GRP_SYSTEM_ACCOUNT",
-                        "Quản lý tài khoản",
-                        "Tạo tài khoản mới, khóa hoặc mở khóa tài khoản nhân viên và phân quyền cá nhân.",
-                        "Quản lý tài khoản",
-                        "bi-people",
-                        List.of(new ActionSpec("ACCOUNT_MANAGE", "Toàn quyền", "Quản lý tài khoản người dùng", ""))
-                ),
-                new GroupSpec(
-                        "GRP_SYSTEM_ROLE",
-                        "Vai trò & Phân quyền",
-                        "Cấu hình ma trận phân quyền các vai trò hệ thống và mở rộng thêm các vai trò mới.",
-                        "Vai trò & Phân quyền",
-                        "bi-shield-lock",
-                        List.of(new ActionSpec("ROLE_MANAGE", "Toàn quyền", "Cấu hình vai trò & phân quyền", ""))
-                ),
-                new GroupSpec(
-                        "GRP_SYSTEM_BRANCH",
+                        "GRP_MENU_BRANCH",
                         "Quản lý cơ sở",
                         "Quản lý danh sách chi nhánh cơ sở phòng khám, phòng điều trị, ghế nha và dải IP chấm công.",
                         "Quản lý cơ sở",
                         "bi-buildings",
                         List.of(new ActionSpec("BRANCH_MANAGE", "Toàn quyền", "Quản lý cơ sở & ghế nha khoa", ""))
                 ),
+
+                // 7. Quản lý thẻ & ưu đãi (Có 3 Tab ngang: Thẻ bệnh nhân, Hạng thẻ & Tích điểm, Khuyến mãi & Voucher)
                 new GroupSpec(
-                        "GRP_SYSTEM_SERVICES",
-                        "Dịch vụ & Bảng giá",
-                        "Quản lý danh mục dịch vụ nha khoa, đơn giá và bảng giá niêm yết (FT02).",
-                        "Dịch vụ & Bảng giá",
-                        "bi-tags",
-                        List.of(new ActionSpec("CATALOG_SERVICES", "Toàn quyền", "Quản lý danh mục dịch vụ & bảng giá", ""))
+                        "GRP_MENU_MEMBERSHIPS",
+                        "Quản lý thẻ & ưu đãi",
+                        "Chính sách khách hàng thân thiết: Thẻ bệnh nhân, Hạng thẻ & Tích điểm, Khuyến mãi & Voucher.",
+                        "Quản lý thẻ & ưu đãi",
+                        "bi-credit-card",
+                        List.of(
+                                new SubTabSpec(
+                                        "TAB_MEMBERSHIP_CARDS",
+                                        "Thẻ bệnh nhân",
+                                        "Tra cứu thông tin thẻ thành viên, số dư điểm tích lũy và lịch sử đổi quyền lợi.",
+                                        "Tab ngang",
+                                        "bi-credit-card-2-front",
+                                        List.of(new ActionSpec("RECEPTION_MEMBERSHIPS", "Toàn quyền", "Tra cứu thẻ thành viên & điểm tích lũy", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_MEMBERSHIP_TIERS",
+                                        "Hạng thẻ & Tích điểm",
+                                        "Cấu hình các hạng thẻ (Đồng, Bạc, Vàng, Kim Cương), tỷ lệ chiết khấu và quy tắc tích điểm.",
+                                        "Tab ngang",
+                                        "bi-award",
+                                        List.of(new ActionSpec("CATALOG_MEMBERSHIP_TIERS", "Toàn quyền", "Cấu hình hạng thẻ & quyền lợi", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_MEMBERSHIP_PROMOTIONS",
+                                        "Khuyến mãi & Voucher",
+                                        "Quản lý các chương trình ưu đãi, mã voucher giảm giá viện phí và thời hạn áp dụng.",
+                                        "Tab ngang",
+                                        "bi-ticket-perforated",
+                                        List.of(new ActionSpec("CATALOG_PROMOTIONS", "Toàn quyền", "Cấu hình voucher & khuyến mãi", ""))
+                                )
+                        ),
+                        true
                 ),
+
+                // 8. Nhật ký thao tác (Đơn lẻ)
                 new GroupSpec(
-                        "GRP_SYSTEM_MEDICATIONS",
-                        "Danh mục thuốc",
-                        "Quản lý danh mục thuốc điều trị, biệt dược và hướng dẫn liều dùng.",
-                        "Danh mục thuốc",
-                        "bi-capsule",
-                        List.of(new ActionSpec("CATALOG_MEDICATIONS", "Toàn quyền", "Quản lý danh mục thuốc", ""))
-                ),
-                new GroupSpec(
-                        "GRP_SYSTEM_ICD10",
-                        "Danh mục ICD-10",
-                        "Quản lý bảng mã bệnh quốc tế ICD-10 phục vụ chẩn đoán lâm sàng.",
-                        "Danh mục ICD-10",
-                        "bi-clipboard2-pulse",
-                        List.of(new ActionSpec("CATALOG_ICD10", "Toàn quyền", "Quản lý danh mục mã bệnh ICD-10", ""))
-                ),
-                new GroupSpec(
-                        "GRP_SYSTEM_MEMBERSHIP_TIERS",
-                        "Hạng thẻ & Tích điểm",
-                        "Quản lý các hạng thành viên (Bạc, Vàng, Kim Cương) và quy tắc tích lũy điểm thưởng (FT19).",
-                        "Hạng thẻ & Tích điểm",
-                        "bi-award",
-                        List.of(new ActionSpec("CATALOG_MEMBERSHIP_TIERS", "Toàn quyền", "Quản lý hạng thành viên & tích điểm", ""))
-                ),
-                new GroupSpec(
-                        "GRP_SYSTEM_PROMOTIONS",
-                        "Khuyến mãi & Voucher",
-                        "Quản lý các chương trình ưu đãi, giảm giá và mã voucher viện phí (FT20).",
-                        "Khuyến mãi & Voucher",
-                        "bi-ticket-perforated",
-                        List.of(new ActionSpec("CATALOG_PROMOTIONS", "Toàn quyền", "Quản lý khuyến mãi & voucher", ""))
-                ),
-                new GroupSpec(
-                        "GRP_SYSTEM_NEWS",
-                        "Quản lý tin tức",
-                        "Đăng tải bài viết tin tức, thông báo và quản lý chuyên mục kiến thức nha khoa.",
-                        "Quản lý tin tức",
-                        "bi-file-earmark-richtext",
-                        List.of(new ActionSpec("CATALOG_NEWS", "Toàn quyền", "Quản lý tin tức & bài viết", ""))
-                ),
-                new GroupSpec(
-                        "GRP_SYSTEM_BANS",
-                        "Tài khoản bị ban",
-                        "Quản lý danh sách tài khoản vi phạm bị cấm bình luận hoặc khóa tạm thời.",
-                        "Tài khoản bị ban",
-                        "bi-person-slash",
-                        List.of(new ActionSpec("SYSTEM_BANS", "Toàn quyền", "Quản lý tài khoản bị ban", ""))
-                ),
-                new GroupSpec(
-                        "GRP_SYSTEM_REPORTS",
-                        "Báo cáo & Thống kê",
-                        "Báo cáo tài chính viện phí, doanh thu điều hành và phân tích hiệu suất.",
-                        "Báo cáo & Thống kê",
-                        "bi-graph-up",
-                        List.of(new ActionSpec("FINANCE_REPORTS", "Toàn quyền", "Xem báo cáo doanh thu & viện phí", ""))
-                ),
-                new GroupSpec(
-                        "GRP_SYSTEM_AUDIT",
+                        "GRP_MENU_AUDIT",
                         "Nhật ký thao tác",
                         "Theo dõi nhật ký kiểm toán thao tác người dùng và thay đổi dữ liệu (Audit Log).",
                         "Nhật ký thao tác",
                         "bi-journal-text",
                         List.of(new ActionSpec("SYSTEM_AUDIT", "Toàn quyền", "Xem nhật ký kiểm toán hệ thống", ""))
-                )
-        ));
+                ),
 
-        Map<String, String> moduleTitles = getOrderedModuleLabels();
-        Map<String, String> moduleIcons = Map.of(
-                "RECEPTION", "bi-person-workspace",
-                "CLINICAL", "bi-heart-pulse",
-                "FINANCE", "bi-cash-coin",
-                "INVENTORY", "bi-boxes",
-                "HR", "bi-people",
-                "SYSTEM", "bi-sliders"
+                // 9. Quản lý kho vật tư (Có 8 Tab ngang khớp 100% trang Quản lý kho vật tư)
+                new GroupSpec(
+                        "GRP_MENU_INVENTORY",
+                        "Quản lý kho vật tư",
+                        "Hệ thống kho vật tư y tế: Tồn kho, Lô & Hạn dùng, Phiếu nhập, Phiếu xuất, Điều chuyển, Danh mục VT, Nhóm VT, NCC & Công nợ.",
+                        "Quản lý kho vật tư",
+                        "bi-boxes",
+                        List.of(
+                                new SubTabSpec(
+                                        "TAB_INV_STOCK",
+                                        "Tồn kho",
+                                        "Tra cứu số lượng tồn kho tổng hợp theo thời gian thực và cảnh báo sắp hết.",
+                                        "Tab ngang",
+                                        "bi-box-seam",
+                                        List.of(new ActionSpec("INVENTORY_STOCK", "Toàn quyền", "Tra cứu & quản lý tồn kho", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_INV_BATCHES",
+                                        "Lô & Hạn dùng",
+                                        "Theo dõi số lượng còn lại theo từng số lô nhập và cảnh báo lô sắp hết hạn sử dụng.",
+                                        "Tab ngang",
+                                        "bi-calendar2-range",
+                                        List.of(new ActionSpec("INVENTORY_BATCHES", "Toàn quyền", "Quản lý lô vật tư & hạn dùng", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_INV_RECEIPT",
+                                        "Phiếu nhập kho",
+                                        "Lập phiếu nhập kho vật tư mới từ nhà cung cấp và kiểm kê chứng từ nhập.",
+                                        "Tab ngang",
+                                        "bi-box-arrow-in-down",
+                                        List.of(new ActionSpec("INVENTORY_RECEIPT", "Toàn quyền", "Lập & quản lý phiếu nhập kho", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_INV_ISSUE",
+                                        "Phiếu xuất kho",
+                                        "Lập phiếu xuất kho vật tư tiêu hao phục vụ điều trị lâm sàng tại các phòng khám.",
+                                        "Tab ngang",
+                                        "bi-box-arrow-up",
+                                        List.of(new ActionSpec("INVENTORY_ISSUE", "Toàn quyền", "Lập & quản lý phiếu xuất kho", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_INV_TRANSFER",
+                                        "Điều chuyển kho",
+                                        "Tạo và xác nhận phiếu điều chuyển vật tư y tế giữa các chi nhánh cơ sở.",
+                                        "Tab ngang",
+                                        "bi-arrow-left-right",
+                                        List.of(new ActionSpec("INVENTORY_TRANSFER", "Toàn quyền", "Điều chuyển vật tư liên chi nhánh", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_INV_MATERIALS",
+                                        "Danh mục vật tư",
+                                        "Quản lý danh mục chuẩn các mặt hàng vật tư y tế, quy cách đóng gói và định mức tồn.",
+                                        "Tab ngang",
+                                        "bi-card-list",
+                                        List.of(new ActionSpec("INVENTORY_MATERIALS", "Toàn quyền", "Quản lý danh mục vật tư", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_INV_CATEGORIES",
+                                        "Nhóm vật tư",
+                                        "Phân loại nhóm vật tư tiêu hao, vật liệu phục hình, dụng cụ nha khoa.",
+                                        "Tab ngang",
+                                        "bi-folder2",
+                                        List.of(new ActionSpec("INVENTORY_CATEGORIES", "Toàn quyền", "Quản lý nhóm vật tư", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_INV_SUPPLIERS",
+                                        "NCC & Công nợ",
+                                        "Quản lý danh mục nhà cung cấp vật tư thiết bị, lịch sử nhập hàng và thanh toán công nợ NCC.",
+                                        "Tab ngang",
+                                        "bi-truck",
+                                        List.of(new ActionSpec("SUPPLIER_MANAGE", "Toàn quyền", "Quản lý đối tác & công nợ NCC", ""))
+                                )
+                        ),
+                        true
+                ),
+
+                // 10. Tài chính (Có 11 Tab ngang: 6 Tab Khách hàng + 5 Tab Phòng khám)
+                new GroupSpec(
+                        "GRP_MENU_FINANCE",
+                        "Tài chính",
+                        "Quản lý tài chính toàn diện: 6 tab Viện phí Khách hàng (Tổng quan, Hóa đơn, Công nợ, Tạm ứng, Hoàn tiền, Thanh toán) & 5 tab Phòng khám (Chi phí, Lương, Tạm ứng, Hoa hồng, Lợi nhuận).",
+                        "Tài chính",
+                        "bi-wallet2",
+                        List.of(
+                                new SubTabSpec(
+                                        "TAB_FIN_DASHBOARD",
+                                        "[Khách hàng] Tổng quan viện phí",
+                                        "Bảng điều khiển tổng quan viện phí, công nợ và tình hình thanh toán của bệnh nhân.",
+                                        "Tab ngang",
+                                        "bi-speedometer2",
+                                        List.of(new ActionSpec("FINANCE_DASHBOARD", "Toàn quyền", "Xem Tổng quan tài chính khách hàng", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_FIN_INVOICES",
+                                        "[Khách hàng] Hóa đơn",
+                                        "Lập hóa đơn viện phí mới, áp dụng voucher khuyến mãi và in hóa đơn thanh toán.",
+                                        "Tab ngang",
+                                        "bi-receipt",
+                                        List.of(new ActionSpec("INVOICE_CREATE", "Toàn quyền", "Tạo và quản lý hóa đơn viện phí", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_FIN_DEBTS",
+                                        "[Khách hàng] Công nợ",
+                                        "Theo dõi số dư nợ viện phí, lịch sử trả góp và quản lý công nợ khách hàng.",
+                                        "Tab ngang",
+                                        "bi-cash-stack",
+                                        List.of(new ActionSpec("FINANCE_DEBT", "Toàn quyền", "Theo dõi công nợ bệnh nhân", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_FIN_DEPOSITS",
+                                        "[Khách hàng] Tiền tạm ứng",
+                                        "Quản lý thu tiền đặt cọc tạm ứng điều trị và đối trừ tạm ứng vào hóa đơn viện phí.",
+                                        "Tab ngang",
+                                        "bi-wallet2",
+                                        List.of(new ActionSpec("FINANCE_DEPOSIT", "Toàn quyền", "Quản lý tiền tạm ứng bệnh nhân", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_FIN_REFUNDS",
+                                        "[Khách hàng] Hoàn tiền",
+                                        "Tiếp nhận và xử lý yêu cầu hoàn trả tiền dịch vụ viện phí hoặc hủy quy trình điều trị.",
+                                        "Tab ngang",
+                                        "bi-arrow-counterclockwise",
+                                        List.of(new ActionSpec("REFUND_MANAGE", "Toàn quyền", "Xử lý hoàn tiền dịch vụ viện phí", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_FIN_PAYMENTS",
+                                        "[Khách hàng] Lịch sử thanh toán",
+                                        "Thu tiền viện phí từng đợt (tiền mặt / chuyển khoản), gạch nợ và in biên lai thu tiền.",
+                                        "Tab ngang",
+                                        "bi-credit-card-2-front",
+                                        List.of(new ActionSpec("PAYMENT_COLLECT", "Toàn quyền", "Thu tiền viện phí & lịch sử thanh toán", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_FIN_EXPENSES",
+                                        "[Phòng khám] Chi phí vận hành",
+                                        "Lập phiếu chi và quản lý các khoản chi phí vận hành, điện nước, маркеting phòng khám.",
+                                        "Tab ngang",
+                                        "bi-journal-arrow-down",
+                                        List.of(new ActionSpec("FINANCE_EXPENSES", "Toàn quyền", "Quản lý chi phí vận hành phòng khám", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_FIN_PAYROLL",
+                                        "[Phòng khám] Bảng lương",
+                                        "Tính lương cơ bản, phụ cấp, hoa hồng thủ thuật và chốt bảng lương nhân sự hàng tháng.",
+                                        "Tab ngang",
+                                        "bi-calendar3",
+                                        List.of(new ActionSpec("FINANCE_PAYROLL", "Toàn quyền", "Quản lý bảng lương nhân sự", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_FIN_ADVANCES",
+                                        "[Phòng khám] Tạm ứng lương",
+                                        "Quản lý danh sách đề nghị tạm ứng lương của nhân viên và xét duyệt chi tạm ứng.",
+                                        "Tab ngang",
+                                        "bi-cash-coin",
+                                        List.of(new ActionSpec("FINANCE_PAYROLL_ADVANCES", "Toàn quyền", "Quản lý tạm ứng lương nhân viên", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_FIN_COMMISSION",
+                                        "[Phòng khám] Cấu hình hoa hồng",
+                                        "Thiết lập định mức và tỷ lệ phần trăm hoa hồng điều trị cho Bác sĩ và Phụ tá.",
+                                        "Tab ngang",
+                                        "bi-sliders",
+                                        List.of(new ActionSpec("FINANCE_COMMISSION_CONFIG", "Toàn quyền", "Cấu hình tỷ lệ hoa hồng", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_FIN_DISTRIBUTIONS",
+                                        "[Phòng khám] Phân chia lợi nhuận",
+                                        "Theo dõi kết quả kinh doanh ròng và phân chia cổ tức lợi nhuận cho các cổ đông.",
+                                        "Tab ngang",
+                                        "bi-diagram-2",
+                                        List.of(new ActionSpec("FINANCE_OWNER_DISTRIBUTIONS", "Toàn quyền", "Quản lý phân chia lợi nhuận", ""))
+                                )
+                        ),
+                        true
+                ),
+
+                // 11. Tiếp đón bệnh nhân (Có 4 Tab ngang)
+                new GroupSpec(
+                        "GRP_MENU_RECEPTION",
+                        "Tiếp đón bệnh nhân",
+                        "Quy trình tiếp đón bệnh nhân tại quầy: Lịch hẹn, Tiếp đón & Check-in, Điều phối ghế nha và Hàng chờ gọi số.",
+                        "Tiếp đón bệnh nhân",
+                        "bi-person-check",
+                        List.of(
+                                new SubTabSpec(
+                                        "TAB_REC_APPOINTMENT",
+                                        "Lịch hẹn",
+                                        "Xem danh sách lịch hẹn khám, đặt lịch hẹn mới và điều phối lịch hẹn theo ngày/tuần/tháng.",
+                                        "Tab ngang",
+                                        "bi-calendar3",
+                                        List.of(new ActionSpec("APPOINTMENT_MANAGE", "Toàn quyền", "Tạo và quản lý lịch hẹn khám", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_REC_CHECKIN",
+                                        "Tiếp đón & Check-in",
+                                        "Thực hiện thủ tục check-in đón bệnh nhân và phân luồng tiếp đón tại quầy.",
+                                        "Tab ngang",
+                                        "bi-person-check",
+                                        List.of(new ActionSpec("RECEPTION_CHECKIN", "Toàn quyền", "Thực hiện check-in tiếp đón bệnh nhân", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_REC_DISPATCH",
+                                        "Điều phối ghế nha",
+                                        "Bảng Kanban theo dõi và điều phối bệnh nhân vào từng ghế khám răng.",
+                                        "Tab ngang",
+                                        "bi-kanban",
+                                        List.of(new ActionSpec("RECEPTION_DISPATCH", "Toàn quyền", "Điều phối ghế nha khoa", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_REC_QUEUE",
+                                        "Hàng chờ gọi số",
+                                        "Theo dõi danh sách và thứ tự bệnh nhân đang trong hàng chờ khám.",
+                                        "Tab ngang",
+                                        "bi-list-ol",
+                                        List.of(new ActionSpec("APPOINTMENT_VIEW", "Toàn quyền", "Theo dõi hàng chờ khám tại phòng khám", ""))
+                                )
+                        ),
+                        true
+                ),
+
+                // 12. Khám trong ngày (Có 7 Tab/Thao tác lâm sàng)
+                new GroupSpec(
+                        "GRP_MENU_DAILY_VISITS",
+                        "Khám trong ngày",
+                        "Danh sách ca khám theo ngày, thực hiện chẩn đoán lâm sàng, kê đơn, cận lâm sàng và phác đồ điều trị.",
+                        "Khám trong ngày",
+                        "bi-heart-pulse",
+                        List.of(
+                                new SubTabSpec(
+                                        "TAB_CLIN_EXAM",
+                                        "Phiên khám & Chẩn đoán",
+                                        "Bắt đầu ca khám, ghi nhận chẩn đoán và diễn tiến lâm sàng của người bệnh.",
+                                        "Thao tác ca khám",
+                                        "bi-clipboard2-pulse",
+                                        List.of(new ActionSpec("CLINICAL_DAILY_VISITS", "Toàn quyền", "Thực hiện phiên khám & chẩn đoán lâm sàng", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_CLIN_PLAN",
+                                        "Kế hoạch điều trị",
+                                        "Lập phác đồ điều trị chi tiết nhiều giai đoạn, dự toán chi phí và theo dõi tiến độ.",
+                                        "Thao tác ca khám",
+                                        "bi-calendar-check",
+                                        List.of(new ActionSpec("TREATMENT_PLAN_MANAGE", "Toàn quyền", "Lập kế hoạch & phác đồ điều trị", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_CLIN_PRESCRIPTION",
+                                        "Đơn thuốc & Dặn dò",
+                                        "Kê đơn thuốc điện tử, hướng dẫn dặn dò người bệnh sau điều trị và in đơn thuốc.",
+                                        "Thao tác ca khám",
+                                        "bi-capsule-pill",
+                                        List.of(new ActionSpec("PRESCRIPTION_WRITE", "Toàn quyền", "Kê đơn thuốc & dặn dò bệnh nhân", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_CLIN_PHOTOS",
+                                        "Ảnh chụp lâm sàng",
+                                        "Quản lý kho hình ảnh trước/sau điều trị và ảnh chụp khoang miệng của bệnh nhân.",
+                                        "Thao tác ca khám",
+                                        "bi-camera",
+                                        List.of(new ActionSpec("CLINICAL_PHOTOS", "Toàn quyền", "Tải lên & quản lý ảnh chụp lâm sàng", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_CLIN_XRAY",
+                                        "Phim X-quang NanoPix",
+                                        "Trình xem ảnh X-quang nha khoa tích hợp máy chụp Eighteeth NanoPix.",
+                                        "Thao tác ca khám",
+                                        "bi-radioactive",
+                                        List.of(new ActionSpec("CLINICAL_XRAY", "Toàn quyền", "Xem & đối chiếu ảnh X-quang NanoPix", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_CLIN_EMR",
+                                        "Hồ sơ bệnh án điện tử (EMR)",
+                                        "Xem hồ sơ bệnh án điện tử (EMR), tiền sử bệnh, phim chụp và toàn bộ lịch sử điều trị.",
+                                        "Thao tác ca khám",
+                                        "bi-folder2-open",
+                                        List.of(new ActionSpec("MEDICAL_RECORD_VIEW", "Toàn quyền", "Xem hồ sơ bệnh án điện tử EMR", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_CLIN_CHAIRS",
+                                        "Điều phối ghế điều trị",
+                                        "Theo dõi trạng thái ghế nha và điều phối vào ghế điều trị lâm sàng.",
+                                        "Thao tác ca khám",
+                                        "bi-kanban",
+                                        List.of(new ActionSpec("CLINICAL_DISPATCH", "Toàn quyền", "Điều phối ghế nha khoa", ""))
+                                )
+                        ),
+                        true
+                ),
+
+                // 13. Quy trình kỹ thuật (Đơn lẻ)
+                new GroupSpec(
+                        "GRP_MENU_WORKFLOWS",
+                        "Quy trình kỹ thuật",
+                        "Thiết lập các bước quy trình kỹ thuật chuẩn trong điều trị nha khoa (FT43).",
+                        "Quy trình kỹ thuật",
+                        "bi-diagram-3",
+                        List.of(new ActionSpec("CLINICAL_WORKFLOWS", "Toàn quyền", "Thiết lập quy trình kỹ thuật điều trị", ""))
+                ),
+
+                // 14. Quản lý labo (Có 3 Tab ngang: Phiếu đặt xưởng, Nhà cung cấp, Bảng giá)
+                new GroupSpec(
+                        "GRP_MENU_LABO",
+                        "Quản lý labo",
+                        "Quản lý toàn diện Labo gia công: Phiếu đặt xưởng chế tác răng sứ, Nhà cung cấp xưởng và Bảng giá Labo.",
+                        "Quản lý labo",
+                        "bi-gear-wide-connected",
+                        List.of(
+                                new SubTabSpec(
+                                        "TAB_LABO_ORDERS",
+                                        "Phiếu đặt xưởng",
+                                        "Lập phiếu đặt gia công răng sứ/khí cụ, theo dõi tiến độ giao nhận và bảo hành Labo.",
+                                        "Tab ngang",
+                                        "bi-file-earmark-medical",
+                                        List.of(new ActionSpec("CLINICAL_LABO", "Toàn quyền", "Quản lý phiếu đặt xưởng Labo", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_LABO_SUPPLIERS",
+                                        "Nhà cung cấp",
+                                        "Quản lý thông tin các đối tác xưởng chế tác răng sứ ngoài và lịch sử hợp tác.",
+                                        "Tab ngang",
+                                        "bi-building",
+                                        List.of(new ActionSpec("LABO_SUPPLIERS", "Toàn quyền", "Quản lý nhà cung cấp xưởng Labo", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_LABO_PRICING",
+                                        "Bảng giá",
+                                        "Cấu hình đơn giá gia công từng dòng răng sứ, trụ Implant và khí cụ chỉnh nha.",
+                                        "Tab ngang",
+                                        "bi-tags",
+                                        List.of(new ActionSpec("LABO_PRICING", "Toàn quyền", "Quản lý bảng giá gia công Labo", ""))
+                                )
+                        ),
+                        true
+                ),
+
+                // 15. Chăm sóc khách hàng (Đơn lẻ)
+                new GroupSpec(
+                        "GRP_MENU_CUSTOMER_CARE",
+                        "Chăm sóc khách hàng",
+                        "Quản lý danh sách nhắc hẹn sau điều trị, gửi tin nhắn chăm sóc và gọi điện hỏi thăm bệnh nhân.",
+                        "Chăm sóc khách hàng",
+                        "bi-headset",
+                        List.of(new ActionSpec("CUSTOMER_CARE_MANAGE", "Toàn quyền", "Chăm sóc khách hàng sau điều trị", ""))
+                ),
+
+                // 16. Chấm công & Ca trực cá nhân (Có 3 Tab ngang: Chấm công cá nhân, Lịch trực tuần của tôi, Yêu cầu nghỉ / Khóa lịch)
+                new GroupSpec(
+                        "GRP_MENU_MY_SCHEDULE",
+                        "Chấm công & Ca trực cá nhân",
+                        "Theo dõi lịch trực tuần của tôi, thực hiện điểm danh chấm công cá nhân và gửi yêu cầu nghỉ / khóa lịch.",
+                        "Chấm công & Ca trực cá nhân",
+                        "bi-calendar2-check",
+                        List.of(
+                                new SubTabSpec(
+                                        "TAB_MY_ATTENDANCE",
+                                        "Chấm công cá nhân",
+                                        "Thực hiện điểm danh vào/ra ca qua WiFi/GPS chi nhánh và tra cứu lịch sử chấm công.",
+                                        "Tab ngang",
+                                        "bi-fingerprint",
+                                        List.of(new ActionSpec("HR_MY_ATTENDANCE", "Toàn quyền", "Chấm công cá nhân hàng ngày", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_MY_SCHEDULE",
+                                        "Lịch trực tuần của tôi",
+                                        "Xem lịch phân ca cá nhân theo tuần/tháng, thông tin ca trực và vị trí phòng khám.",
+                                        "Tab ngang",
+                                        "bi-calendar-week",
+                                        List.of(new ActionSpec("SCHEDULE_MY", "Toàn quyền", "Xem lịch làm việc cá nhân", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_MY_LEAVE",
+                                        "Yêu cầu nghỉ / Khóa lịch",
+                                        "Tạo đơn xin nghỉ phép/khóa lịch khám, theo dõi tiến độ phê duyệt từ ban quản lý.",
+                                        "Tab ngang",
+                                        "bi-calendar-x",
+                                        List.of(new ActionSpec("HR_LEAVE_REQUESTS", "Toàn quyền", "Tạo và theo dõi đơn xin nghỉ phép", ""))
+                                )
+                        ),
+                        true
+                ),
+
+                // 17. Báo cáo & Thống kê (Có 4 Tab ngang: Tổng quan điều hành, Báo cáo Tài chính & Dòng tiền, Công nợ Bệnh nhân, Vận hành & Nguồn khách)
+                new GroupSpec(
+                        "GRP_MENU_REPORTS",
+                        "Báo cáo & Thống kê",
+                        "Hệ thống báo cáo quản trị: Tổng quan điều hành, Báo cáo Tài chính & Dòng tiền, Công nợ Bệnh nhân và Vận hành & Nguồn khách.",
+                        "Báo cáo & Thống kê",
+                        "bi-graph-up",
+                        List.of(
+                                new SubTabSpec(
+                                        "TAB_REP_OVERVIEW",
+                                        "Tổng quan điều hành (29.1)",
+                                        "Phân tích các chỉ số KPI điều hành cốt lõi, thực thu dòng tiền và cơ cấu doanh thu.",
+                                        "Tab ngang",
+                                        "bi-speedometer2",
+                                        List.of(new ActionSpec("FINANCE_REPORTS", "Toàn quyền", "Xem báo cáo Tổng quan điều hành", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_REP_FINANCIAL",
+                                        "Báo cáo Tài chính & Dòng tiền (29.2)",
+                                        "Báo cáo chi tiết doanh thu, chi phí vận hành, lợi nhuận trước/sau thuế và dòng tiền.",
+                                        "Tab ngang",
+                                        "bi-cash-stack",
+                                        List.of(new ActionSpec("REPORT_FINANCIAL", "Toàn quyền", "Xem báo cáo Tài chính & Dòng tiền", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_REP_DEBTS",
+                                        "Công nợ Bệnh nhân",
+                                        "Thống kê danh sách bệnh nhân còn nợ viện phí, tỷ lệ thu hồi nợ và phân tích tuổi nợ.",
+                                        "Tab ngang",
+                                        "bi-receipt-cutoff",
+                                        List.of(new ActionSpec("REPORT_DEBTS", "Toàn quyền", "Xem báo cáo Công nợ Bệnh nhân", ""))
+                                ),
+                                new SubTabSpec(
+                                        "TAB_REP_OPERATIONAL",
+                                        "Vận hành & Nguồn khách",
+                                        "Thống kê số lượt khám, tỷ lệ khách mới/tái khám và hiệu suất điều trị theo bác sĩ.",
+                                        "Tab ngang",
+                                        "bi-people",
+                                        List.of(new ActionSpec("REPORT_OPERATIONAL", "Toàn quyền", "Xem báo cáo Vận hành & Nguồn khách", ""))
+                                )
+                        ),
+                        true
+                )
         );
 
-        List<ModulePermissionSection> sections = new ArrayList<>();
-        for (Map.Entry<String, List<GroupSpec>> entry : moduleSpecs.entrySet()) {
-            String modKey = entry.getKey();
-            List<FeaturePermissionGroup> builtGroups = new ArrayList<>();
-            int modPermCount = 0;
+        List<FeaturePermissionGroup> builtGroups = new ArrayList<>();
+        for (GroupSpec gs : groupSpecs) {
+            boolean hasSubTabs = gs.subTabSpecs() != null && !gs.subTabSpecs().isEmpty();
+            List<PermissionSubTab> builtSubTabs = new ArrayList<>();
+            List<PermissionActionItem> directActions = new ArrayList<>();
 
-            for (GroupSpec gs : entry.getValue()) {
-                List<PermissionActionItem> builtActions = new ArrayList<>();
+            if (hasSubTabs) {
+                for (SubTabSpec sts : gs.subTabSpecs()) {
+                    List<PermissionActionItem> tabActions = new ArrayList<>();
+                    for (ActionSpec as : sts.actionSpecs()) {
+                        Permission p = byCode.get(as.code());
+                        if (p != null) {
+                            tabActions.add(new PermissionActionItem(
+                                    p.getPermissionId(),
+                                    p.getPermissionCode(),
+                                    as.shortBadge(),
+                                    as.actionDetail(),
+                                    as.dependsOnCode()
+                            ));
+                        }
+                    }
+                    builtSubTabs.add(new PermissionSubTab(
+                            sts.tabKey(),
+                            sts.tabTitle(),
+                            sts.tabDescription(),
+                            sts.tabBadge(),
+                            sts.iconClass(),
+                            tabActions
+                    ));
+                }
+            } else {
                 for (ActionSpec as : gs.actionSpecs()) {
                     Permission p = byCode.get(as.code());
                     if (p != null) {
-                        builtActions.add(new PermissionActionItem(
+                        directActions.add(new PermissionActionItem(
                                 p.getPermissionId(),
                                 p.getPermissionCode(),
                                 as.shortBadge(),
                                 as.actionDetail(),
                                 as.dependsOnCode()
                         ));
-                        modPermCount++;
                     }
                 }
-                if (!builtActions.isEmpty()) {
-                    builtGroups.add(new FeaturePermissionGroup(
-                            gs.groupKey(),
-                            gs.groupTitle(),
-                            gs.groupDescription(),
-                            gs.sidebarBadge(),
-                            gs.iconClass(),
-                            builtActions
-                    ));
-                }
             }
 
-            if (!builtGroups.isEmpty()) {
-                sections.add(new ModulePermissionSection(
-                        modKey,
-                        moduleTitles.getOrDefault(modKey, modKey),
-                        moduleIcons.getOrDefault(modKey, "bi-folder2-open"),
-                        builtGroups,
-                        modPermCount
-                ));
-            }
+            builtGroups.add(new FeaturePermissionGroup(
+                    gs.groupKey(),
+                    gs.groupTitle(),
+                    gs.groupDescription(),
+                    gs.sidebarBadge(),
+                    gs.iconClass(),
+                    hasSubTabs,
+                    builtSubTabs,
+                    directActions
+            ));
         }
 
-        return sections;
+        return builtGroups;
+    }
+
+    private List<ModulePermissionSection> buildMisaModuleSections(List<Permission> allPermissions) {
+        List<FeaturePermissionGroup> groups = buildSidebarGroups(allPermissions);
+        return List.of(new ModulePermissionSection(
+                "SIDEBAR",
+                "Chức năng trên thanh Sidebar",
+                "bi-layout-sidebar-inset",
+                groups,
+                allPermissions.size()
+        ));
     }
 
     private Map<String, String> getOrderedModuleLabels() {
