@@ -78,22 +78,29 @@
                 </div>
             </div>
 
-            <!-- Filter Card -->
-            <div class="fin-card">
+            <!-- Filter Card Chuẩn MISA / Daily-Visits -->
+            <div class="fin-card fin-filter-container">
                 <form th:action="@{/invoices}" method="get" class="fin-filter-bar">
+                    <!-- Ô tìm kiếm lớn có icon bên trái -->
+                    <div class="fin-form-group fin-search-group">
+                        <i class="bi bi-search search-lead-icon"></i>
+                        <input type="text" id="keyword" name="keyword" class="fin-input"
+                               placeholder="Tìm kiếm nhanh theo Mã HĐ, Mã BN, Tên BN, Số điện thoại..." th:value="${keyword}">
+                    </div>
+
+                    <!-- Cơ sở chi nhánh -->
                     <div class="fin-form-group">
-                        <label for="branchSelect">Cơ sở nha khoa</label>
-                        <select id="branchSelect" name="branchId" class="fin-select">
+                        <select id="branchSelect" name="branchId" class="fin-select" title="Cơ sở nha khoa">
                             <option value="">-- Tất cả cơ sở --</option>
                             <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
                                     th:selected="${b.branchId == selectedBranchId}"></option>
                         </select>
                     </div>
 
+                    <!-- Trạng thái thanh toán -->
                     <div class="fin-form-group">
-                        <label for="paymentStatus">Thanh toán</label>
-                        <select id="paymentStatus" name="paymentStatus" class="fin-select">
-                            <option value="">-- Tất cả trạng thái --</option>
+                        <select id="paymentStatus" name="paymentStatus" class="fin-select" title="Trạng thái thanh toán">
+                            <option value="">-- Tất cả thanh toán --</option>
                             <option value="UNPAID" th:selected="${selectedPaymentStatus?.name() == 'UNPAID'}">Chưa thanh toán</option>
                             <option value="PARTIAL" th:selected="${selectedPaymentStatus?.name() == 'PARTIAL'}">Thanh toán 1 phần</option>
                             <option value="PAID" th:selected="${selectedPaymentStatus?.name() == 'PAID'}">Đã thanh toán đủ</option>
@@ -101,41 +108,44 @@
                         </select>
                     </div>
 
+                    <!-- Trạng thái HĐ -->
                     <div class="fin-form-group">
-                        <label for="invoiceStatus">Trạng thái HĐ</label>
-                        <select id="invoiceStatus" name="status" class="fin-select">
-                            <option value="">-- Tất cả --</option>
+                        <select id="invoiceStatus" name="status" class="fin-select" title="Trạng thái hóa đơn">
+                            <option value="">-- Tất cả trạng thái HĐ --</option>
                             <option value="CONFIRMED" th:selected="${selectedStatus?.name() == 'CONFIRMED'}">Đã phát hành</option>
                             <option value="DRAFT" th:selected="${selectedStatus?.name() == 'DRAFT'}">Bản nháp</option>
                             <option value="CANCELLED" th:selected="${selectedStatus?.name() == 'CANCELLED'}">Đã hủy</option>
                         </select>
                     </div>
 
-                    <div class="fin-form-group">
-                        <label for="startDate">Từ ngày</label>
-                        <input type="date" id="startDate" name="startDate" class="fin-input" th:value="${startDate}">
+                    <!-- Khoảng ngày -->
+                    <div class="fin-form-group fin-date-group">
+                        <input type="date" id="startDate" name="startDate" class="fin-input" th:value="${startDate}" title="Từ ngày">
+                        <span class="text-muted small fw-semibold mx-1">đến</span>
+                        <input type="date" id="endDate" name="endDate" class="fin-input" th:value="${endDate}" title="Đến ngày">
                     </div>
 
-                    <div class="fin-form-group">
-                        <label for="endDate">Đến ngày</label>
-                        <input type="date" id="endDate" name="endDate" class="fin-input" th:value="${endDate}">
-                    </div>
-
-                    <div class="fin-form-group" style="flex: 2; min-width: 200px;">
-                        <label for="keyword">Tìm kiếm (Mã HĐ, Mã BN, Tên BN, SĐT)</label>
-                        <input type="text" id="keyword" name="keyword" class="fin-input"
-                               placeholder="VD: HD10001, BN000101, Nguyễn Văn A, 0987..." th:value="${keyword}">
-                    </div>
-
-                    <div class="d-flex gap-2 align-items-end">
+                    <!-- Nút thao tác lọc -->
+                    <div class="d-flex gap-2 align-items-center ms-auto">
                         <button type="submit" class="fin-btn fin-btn-primary"><i class="bi bi-search"></i> Lọc dữ liệu</button>
-                        <a th:href="@{/invoices}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-clockwise"></i> Đặt lại</a>
+                        <a th:href="@{/invoices}" class="fin-btn fin-btn-outline" title="Đặt lại bộ lọc"><i class="bi bi-arrow-clockwise"></i> Đặt lại</a>
                     </div>
                 </form>
             </div>
 
             <!-- Table Card -->
-            <div class="fin-card p-0">
+            <div class="fin-card fin-table-card p-0">
+                <!-- Thanh thông tin trên bảng chuẩn daily-visits -->
+                <div class="fin-grid-topbar">
+                    <div class="fin-topbar-left">
+                        Hiển thị <span class="text-primary fw-bolder" th:text="${invoices != null ? invoices.size() : 0}">0</span> hóa đơn
+                        <span class="text-muted mx-1">•</span>
+                        <span class="text-secondary fw-semibold" th:if="${startDate == null and endDate == null}">Tất cả các ngày</span>
+                        <span class="text-secondary fw-semibold" th:if="${startDate != null or endDate != null}"
+                              th:text="'Từ ' + (${startDate != null} ? ${#temporals.format(startDate, 'dd/MM/yyyy')} : 'đầu') + ' đến ' + (${endDate != null} ? ${#temporals.format(endDate, 'dd/MM/yyyy')} : 'nay')"></span>
+                    </div>
+                </div>
+
                 <div class="fin-table-wrapper">
                     <table class="fin-table" data-enhanced-table="ft21-invoices">
                         <thead>
@@ -190,7 +200,7 @@
                                 <small class="text-muted d-block" th:text="${#temporals.format(inv.issuedAt, 'HH:mm')}">14:30</small>
                             </td>
                             <td data-column-key="patient">
-                                <div class="fw-bold" th:text="${inv.patientProfile.fullName}">Nguyễn Văn A</div>
+                                <div class="fw-bold text-dark" th:text="${inv.patientProfile.fullName}">Nguyễn Văn A</div>
                                 <small class="text-muted" th:text="${inv.patientProfile.patientCode} + ' - ' + ${inv.patientProfile.phoneNumber}">BN001 - 098...</small>
                             </td>
                             <td data-column-key="branch" th:text="${inv.branch.branchName}">Cơ sở Quận 1</td>
@@ -241,23 +251,34 @@
                     </table>
                 </div>
 
-                <!-- Pagination -->
-                <div th:if="${totalPages > 1}" class="p-3 d-flex justify-content-between align-items-center border-top">
-                    <span class="text-muted small" th:text="'Hiển thị ' + ${invoices.size()} + ' / ' + ${totalElements} + ' hóa đơn'"></span>
-                    <nav aria-label="Phân trang">
-                        <ul class="pagination pagination-sm m-0">
-                            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
-                                <a class="page-link" th:href="@{/invoices(page=${currentPage - 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}">Trước</a>
-                            </li>
-                            <li th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
-                                class="page-item" th:classappend="${i == currentPage} ? 'active' : ''">
-                                <a class="page-link" th:href="@{/invoices(page=${i}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}" th:text="${i + 1}">1</a>
-                            </li>
-                            <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">
-                                <a class="page-link" th:href="@{/invoices(page=${currentPage + 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}">Sau</a>
-                            </li>
-                        </ul>
-                    </nav>
+                <!-- Pagination MISA -->
+                <div th:if="${totalPages > 1}" class="misa-pagination-footer">
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong th:text="${totalElements}">0</strong> hóa đơn
+                    </div>
+                    <div class="misa-pagination-right">
+                        <div class="misa-page-range">
+                            Trang <span th:text="${currentPage + 1}">1</span> / <span th:text="${totalPages}">1</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <a class="misa-nav-btn" th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                               th:href="@{/invoices(page=0, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, status=${selectedStatus}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang đầu">
+                                <i class="bi bi-chevron-bar-left"></i>
+                            </a>
+                            <a class="misa-nav-btn" th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                               th:href="@{/invoices(page=${currentPage - 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, status=${selectedStatus}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang trước">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                            <a class="misa-nav-btn" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''"
+                               th:href="@{/invoices(page=${currentPage + 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, status=${selectedStatus}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang sau">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                            <a class="misa-nav-btn" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''"
+                               th:href="@{/invoices(page=${totalPages - 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, status=${selectedStatus}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang cuối">
+                                <i class="bi bi-chevron-bar-right"></i>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
