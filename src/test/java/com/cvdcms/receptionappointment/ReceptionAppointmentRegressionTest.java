@@ -167,7 +167,7 @@ class ReceptionAppointmentRegressionTest {
     @Test
     @DisplayName("CV-01: Đặt lịch với hồ sơ đã có được tìm kiếm hợp lệ")
     void testCreateWithExistingProfile() {
-        when(patients.findBookable(10L, 1L)).thenReturn(Optional.of(profile));
+        when(patients.findBookable(10L)).thenReturn(Optional.of(profile));
         ReceptionAppointmentService.CreateRequest request = new ReceptionAppointmentService.CreateRequest(
                 1L, 10L, LocalDate.now().plusDays(1), PreferredSession.MORNING,
                 null, null, "Khám định kỳ", null
@@ -186,7 +186,7 @@ class ReceptionAppointmentRegressionTest {
     @Test
     @DisplayName("CV-02: Khi ensureBookable ném lỗi (quá hạn/kín chỗ), không được bypass kể cả isTentative=true")
     void testEnsureBookableExceptionIsNotBypassedWhenTentative() {
-        when(patients.findBookable(10L, 1L)).thenReturn(Optional.of(profile));
+        when(patients.findBookable(10L)).thenReturn(Optional.of(profile));
         doThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Ca khám đã đạt tối đa công suất tiếp nhận."))
                 .when(rules).ensureBookable(any(), any(), any(), any(), any(), any());
 
@@ -206,7 +206,7 @@ class ReceptionAppointmentRegressionTest {
     @Test
     @DisplayName("CV-02: Khi resolveFlexibly ném lỗi (slot kín/bác sĩ trùng), không được nuốt exception fallback về raw time")
     void testSlotConflictThrowsExceptionAndIsNotSwallowed() {
-        when(patients.findBookable(10L, 1L)).thenReturn(Optional.of(profile));
+        when(patients.findBookable(10L)).thenReturn(Optional.of(profile));
         LocalTime requestedTime = LocalTime.of(9, 30);
         when(slots.resolveFlexibly(any(), any(), any(), any(), anyInt(), any(), eq(requestedTime), any()))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Khung giờ 09:30 đã đạt tối đa công suất."));

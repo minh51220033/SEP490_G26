@@ -68,7 +68,8 @@ public class MisaAmisPaginationUnitTest {
     @Test
     @DisplayName("Workflows: Size hợp lệ và phân trang chuẩn MISA AMIS")
     void testWorkflowsPagination_Normal() {
-        ClinicalWorkflowController controller = new ClinicalWorkflowController(workflowService, performedServiceService);
+        ClinicalWorkflowController controller = new ClinicalWorkflowController(workflowService,
+                performedServiceService);
 
         List<WorkflowTemplateResponseDTO> mockList = new ArrayList<>();
         for (int i = 1; i <= 24; i++) {
@@ -103,7 +104,8 @@ public class MisaAmisPaginationUnitTest {
     @Test
     @DisplayName("Workflows: Dữ liệu rỗng (0 bản ghi) hiển thị 0 - 0")
     void testWorkflowsPagination_Empty() {
-        ClinicalWorkflowController controller = new ClinicalWorkflowController(workflowService, performedServiceService);
+        ClinicalWorkflowController controller = new ClinicalWorkflowController(workflowService,
+                performedServiceService);
         when(workflowService.getAllTemplates()).thenReturn(List.of());
         when(performedServiceService.getAllActiveServices()).thenReturn(List.of());
 
@@ -119,7 +121,8 @@ public class MisaAmisPaginationUnitTest {
     @Test
     @DisplayName("Workflows: Size không hợp lệ (không phải 10, 25, 50, 100) tự động reset về 10")
     void testWorkflowsPagination_InvalidSizeFallback() {
-        ClinicalWorkflowController controller = new ClinicalWorkflowController(workflowService, performedServiceService);
+        ClinicalWorkflowController controller = new ClinicalWorkflowController(workflowService,
+                performedServiceService);
         when(workflowService.getAllTemplates()).thenReturn(List.of());
         when(performedServiceService.getAllActiveServices()).thenReturn(List.of());
 
@@ -134,7 +137,8 @@ public class MisaAmisPaginationUnitTest {
     @Test
     @DisplayName("Labo: Size hợp lệ và phân trang chuẩn MISA AMIS")
     void testLaboPagination() {
-        LaboPageController controller = new LaboPageController(laboOrderService, supplierRepository, patientProfileRepository, branchRepository);
+        LaboPageController controller = new LaboPageController(laboOrderService, supplierRepository,
+                patientProfileRepository, branchRepository);
 
         List<LaboOrderResponseDTO> mockOrders = new ArrayList<>();
         for (int i = 1; i <= 35; i++) {
@@ -162,7 +166,8 @@ public class MisaAmisPaginationUnitTest {
     @Test
     @DisplayName("DoctorRecord: Phân trang bệnh nhân với 6 thuộc tính bắt buộc")
     void testDoctorRecordPagination() {
-        DoctorRecordPageController controller = new DoctorRecordPageController(doctorRecordService, invoiceRepository);
+        DoctorRecordPageController controller = new DoctorRecordPageController(doctorRecordService, invoiceRepository,
+                patientOverviewService);
 
         List<PatientView> content = List.of();
         Page<PatientView> mockPage = new PageImpl<>(content, PageRequest.of(0, 10), 42);
@@ -187,7 +192,8 @@ public class MisaAmisPaginationUnitTest {
     @Test
     @DisplayName("Reception Patient: Phân trang bệnh nhân với 6 thuộc tính bắt buộc")
     void testPatientPageControllerPagination() {
-        PatientPageController controller = new PatientPageController(patientService, invoiceRepository);
+        PatientPageController controller = new PatientPageController(patientService, invoiceRepository,
+                patientOverviewService);
 
         List<PatientView> content = List.of();
         Page<PatientView> mockPage = new PageImpl<>(content, PageRequest.of(1, 50), 120);
@@ -211,7 +217,8 @@ public class MisaAmisPaginationUnitTest {
     @Test
     @DisplayName("Admin Patient: Phân trang chuẩn MISA AMIS")
     void testAdminPatientPageControllerPagination() {
-        AdminPatientPageController controller = new AdminPatientPageController(patientOverviewService, patientDocumentStorageService);
+        AdminPatientPageController controller = new AdminPatientPageController(patientOverviewService,
+                patientDocumentStorageService);
 
         List<PatientOverviewDTO> content = List.of();
         Page<PatientOverviewDTO> mockPage = new PageImpl<>(content, PageRequest.of(0, 10), 6);
@@ -273,7 +280,8 @@ public class MisaAmisPaginationUnitTest {
     @Test
     @DisplayName("DoctorRecord: Yêu cầu page vượt quá totalPages tự động lùi về trang cuối hợp lệ")
     void testDoctorRecord_OutOfBoundsPageFallback() {
-        DoctorRecordPageController controller = new DoctorRecordPageController(doctorRecordService, invoiceRepository);
+        DoctorRecordPageController controller = new DoctorRecordPageController(doctorRecordService, invoiceRepository,
+                patientOverviewService);
 
         Page<PatientView> outOfBoundsPage = new PageImpl<>(List.of(), PageRequest.of(5, 10), 15);
         Page<PatientView> lastValidPage = new PageImpl<>(List.of(), PageRequest.of(1, 10), 15);
@@ -295,14 +303,17 @@ public class MisaAmisPaginationUnitTest {
     @Test
     @DisplayName("AdminPatient: Yêu cầu page vượt quá totalPages tự động lùi về trang 0")
     void testAdminPatient_OutOfBoundsPageFallback() {
-        AdminPatientPageController controller = new AdminPatientPageController(patientOverviewService, patientDocumentStorageService);
+        AdminPatientPageController controller = new AdminPatientPageController(patientOverviewService,
+                patientDocumentStorageService);
 
         Page<PatientOverviewDTO> outOfBoundsPage = new PageImpl<>(List.of(), PageRequest.of(10, 10), 6);
         Page<PatientOverviewDTO> lastValidPage = new PageImpl<>(List.of(), PageRequest.of(0, 10), 6);
 
         when(patientOverviewService.requireAdminOrManager(any())).thenReturn(new com.cvdcms.entity.User());
-        when(patientOverviewService.searchPatients(any(), any(), any(), any(), eq(10), eq(10))).thenReturn(outOfBoundsPage);
-        when(patientOverviewService.searchPatients(any(), any(), any(), any(), eq(0), eq(10))).thenReturn(lastValidPage);
+        when(patientOverviewService.searchPatients(any(), any(), any(), any(), eq(10), eq(10)))
+                .thenReturn(outOfBoundsPage);
+        when(patientOverviewService.searchPatients(any(), any(), any(), any(), eq(0), eq(10)))
+                .thenReturn(lastValidPage);
         when(patientOverviewService.getAllActiveBranches()).thenReturn(List.of());
 
         Model model = new ConcurrentModel();
@@ -318,7 +329,8 @@ public class MisaAmisPaginationUnitTest {
     @Test
     @DisplayName("PatientPageController: Yêu cầu page vượt quá totalPages tự động lùi về trang cuối")
     void testPatientPageController_OutOfBoundsPageFallback() {
-        PatientPageController controller = new PatientPageController(patientService, invoiceRepository);
+        PatientPageController controller = new PatientPageController(patientService, invoiceRepository,
+                patientOverviewService);
 
         Page<PatientView> outOfBoundsPage = new PageImpl<>(List.of(), PageRequest.of(8, 25), 35);
         Page<PatientView> lastValidPage = new PageImpl<>(List.of(), PageRequest.of(1, 25), 35);
@@ -337,4 +349,3 @@ public class MisaAmisPaginationUnitTest {
         assertEquals(35L, model.getAttribute("toItem"));
     }
 }
-

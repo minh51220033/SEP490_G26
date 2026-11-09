@@ -84,21 +84,28 @@
 
                         <div class="checkin-state p-2.5 rounded-3 border mt-3" style="background: #f8fafc; border-color: #e2e8f0 !important;" th:if="${todayRecord != null and todayRecord.checkInAt != null}">
                             <i class="bi bi-box-arrow-in-right text-primary" aria-hidden="true"></i>
-                            Check-in lúc <strong class="text-dark" th:text="${#temporals.format(todayRecord.checkInAt, 'HH:mm:ss')}">08:00:00</strong>
+                            <span th:text="${todayRecord.checkOutAt == null ? 'Đang trong ca: Check-in lúc ' : 'Ca gần nhất: Check-in lúc '}">Check-in lúc </span>
+                            <strong class="text-dark" th:text="${#temporals.format(todayRecord.checkInAt, 'HH:mm:ss')}">08:00:00</strong>
                             <span th:if="${todayRecord.checkOutAt != null}">
                                 · <i class="bi bi-box-arrow-right text-secondary" aria-hidden="true"></i>
                                 Check-out lúc <strong class="text-dark" th:text="${#temporals.format(todayRecord.checkOutAt, 'HH:mm:ss')}">17:00:00</strong>
                             </span>
+                            <span th:if="${todayRecord.workedMinutes != null and todayRecord.workedMinutes > 0}" class="text-success fw-bold ms-1">
+                                · Tích lũy: <span th:text="${(todayRecord.workedMinutes / 60) + 'h ' + (todayRecord.workedMinutes % 60) + 'm'}">0h 0m</span>
+                            </span>
                             <span class="status-badge ms-2"
                                   th:classappend="'status-badge--' + ${#strings.toLowerCase(todayRecord.status.name())}"
                                   th:text="${todayRecord.status.name() == 'ON_TIME' ? 'Đúng giờ' : (todayRecord.status.name() == 'LATE' ? 'Đi muộn' : (todayRecord.status.name() == 'EARLY_LEAVE' ? 'Về sớm' : 'Khác'))}">Đúng giờ</span>
+                            <div class="text-muted small mt-1" th:if="${todayRecord.notes != null and !#strings.isEmpty(todayRecord.notes)}">
+                                <i class="bi bi-info-circle me-1"></i><span th:text="${todayRecord.notes}">Ghi chú</span>
+                            </div>
                         </div>
 
                         <div class="checkin-card__actions mt-3 d-flex gap-2 flex-wrap">
                             <form th:action="@{/attendance/check-in}" method="post" class="m-0">
                                 <button type="submit" class="btn btn-primary fw-bold px-4 py-2.5 rounded-3 shadow-xs d-inline-flex align-items-center gap-2" id="btnCheckIn"
                                         style="height: 44px; font-size: 14.5px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;"
-                                        th:disabled="${#lists.isEmpty(todayShifts) or (todayRecord != null and todayRecord.checkInAt != null)}">
+                                        th:disabled="${#lists.isEmpty(todayShifts) or (todayRecord != null and todayRecord.checkInAt != null and todayRecord.checkOutAt == null)}">
                                     <i class="bi bi-box-arrow-in-right fs-5"></i> Check-in vào ca
                                 </button>
                             </form>
