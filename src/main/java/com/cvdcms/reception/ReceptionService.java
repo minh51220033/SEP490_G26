@@ -108,7 +108,13 @@ public class ReceptionService {
         Visit existing = visits.findByAppointmentId(appointmentId).orElse(null);
         if (existing != null && existing.getStatus() != VisitStatus.CANCELLED) return result(existing);
 
-        if (keys.findByRequestKey(requestKey).isPresent()) {
+        var prior = keys.findByRequestKey(requestKey);
+        if (prior.isPresent()) {
+            Visit priorVisit = prior.get().getVisit();
+            if (priorVisit != null && appointmentId.equals(priorVisit.getAppointmentId())
+                    && priorVisit.getStatus() != VisitStatus.CANCELLED) {
+                return result(priorVisit);
+            }
             throw error(HttpStatus.CONFLICT, "Mã yêu cầu check-in đã dùng cho lượt khám khác.");
         }
 
@@ -130,21 +136,12 @@ public class ReceptionService {
             visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] " + visit.getNotes());
         }
         visits.saveAndFlush(visit);
-        if (clinicalExamRepository != null && appointment.getDoctor() != null) {
-            try {
-                visit.setPrimaryDoctor(appointment.getDoctor());
-                visits.saveAndFlush(visit);
-                if (clinicalExamRepository.findByVisit_VisitId(visit.getVisitId()).isEmpty()) {
-                    ClinicalExamination exam = new ClinicalExamination();
-                    exam.setVisit(visit);
-                    exam.setPatientProfile(patient);
-                    exam.setDoctor(appointment.getDoctor());
-                    exam.setChiefComplaint(visit.getInitialSymptoms() != null && !visit.getInitialSymptoms().isBlank()
-                            ? visit.getInitialSymptoms() : "Tiếp nhận khám nha khoa");
-                    exam.setExamTime(LocalDateTime.now());
-                    clinicalExamRepository.save(exam);
-                }
-            } catch (Exception ignored) {}
+        if (appointment.getDoctor() != null) {
+            visit.setPrimaryDoctor(appointment.getDoctor());
+            visits.saveAndFlush(visit);
+            if (examinations != null) {
+                examinations.ensureForAssignedVisit(visit.getVisitId());
+            }
         }
         storeKey(requestKey, visit);
 
@@ -229,21 +226,12 @@ public class ReceptionService {
             visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] " + visit.getNotes());
         }
         visits.saveAndFlush(visit);
-        if (clinicalExamRepository != null && appointment.getDoctor() != null) {
-            try {
-                visit.setPrimaryDoctor(appointment.getDoctor());
-                visits.saveAndFlush(visit);
-                if (clinicalExamRepository.findByVisit_VisitId(visit.getVisitId()).isEmpty()) {
-                    ClinicalExamination exam = new ClinicalExamination();
-                    exam.setVisit(visit);
-                    exam.setPatientProfile(patient);
-                    exam.setDoctor(appointment.getDoctor());
-                    exam.setChiefComplaint(visit.getInitialSymptoms() != null && !visit.getInitialSymptoms().isBlank()
-                            ? visit.getInitialSymptoms() : "Tiếp nhận khám nha khoa");
-                    exam.setExamTime(LocalDateTime.now());
-                    clinicalExamRepository.save(exam);
-                }
-            } catch (Exception ignored) {}
+        if (appointment.getDoctor() != null) {
+            visit.setPrimaryDoctor(appointment.getDoctor());
+            visits.saveAndFlush(visit);
+            if (examinations != null) {
+                examinations.ensureForAssignedVisit(visit.getVisitId());
+            }
         }
         storeKey(requestKey, visit);
 
@@ -416,7 +404,7 @@ public class ReceptionService {
         Map<Long, Visit> visitByAppointmentId = new HashMap<>();
         for (Visit v : dayVisits) {
             if (v.getAppointmentId() != null && v.getStatus() != VisitStatus.CANCELLED) {
-                visitByAppointmentId.put(v.getAppointmentId(), v);
+                visitByAppointmentId.putIfAbsent(v.getAppointmentId(), v);
             }
         }
         List<AppointmentRow> appointmentRows = appointments.forDay(branchId, day,
@@ -591,9 +579,9 @@ public class ReceptionService {
         if (tickets != null) {
             try {
                 List<QueueTicket> visitTickets = tickets.findAllByVisitAndType(visit.getVisitId(), QueueType.EXAM);
-                boolean hasActiveTicket = visitTickets != null && visitTickets.stream()
-                        .anyMatch(t -> t.getStatus() != QueueStatus.CANCELLED);
-                if (hasActiveTicket) return false;
+                boolean isAlreadyBeingExamined = visitTickets != null && visitTickets.stream()
+                        .anyMatch(t -> t.getStatus() == QueueStatus.IN_SERVICE || t.getStatus() == QueueStatus.DONE);
+                if (isAlreadyBeingExamined) return false;
             } catch (Exception ignored) {}
         }
         return true;
@@ -604,17 +592,22 @@ public class ReceptionService {
     }
 
     private AppointmentRow appointmentRow(Appointment a, Visit linkedVisit, Map<Long, QueueTicket> ticketMap) {
-        long lateMinutes = a.getExpectedTime() == null || a.getStatus() == AppointmentStatus.CHECKED_IN
-                ? 0 : Math.max(0, Duration.between(a.getExpectedTime(), LocalTime.now(CLINIC_ZONE)).toMinutes());
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        long lateMinutes = 0;
+        if (a.getExpectedTime() != null && a.getStatus() != AppointmentStatus.CHECKED_IN && a.getAppointmentDate() != null) {
+            if (a.getAppointmentDate().isBefore(today)) {
+                lateMinutes = Duration.between(a.getAppointmentDate().atTime(a.getExpectedTime()), LocalDateTime.now(CLINIC_ZONE)).toMinutes();
+            } else if (a.getAppointmentDate().isEqual(today)) {
+                lateMinutes = Math.max(0, Duration.between(a.getExpectedTime(), LocalTime.now(CLINIC_ZONE)).toMinutes());
+            }
+        }
         boolean canRevert = false;
         if (a.getStatus() == AppointmentStatus.CHECKED_IN) {
             Visit v = linkedVisit != null ? linkedVisit : visits.findByAppointmentId(a.getAppointmentId()).orElse(null);
             if (v == null) {
                 canRevert = true;
             } else {
-                QueueTicket t = ticketMap != null ? ticketMap.get(v.getVisitId()) : null;
-                boolean hasTicketInMap = t != null && t.getStatus() != QueueStatus.CANCELLED;
-                canRevert = !hasTicketInMap && canRevertVisit(v);
+                canRevert = canRevertVisit(v);
             }
         }
         return new AppointmentRow(a.getAppointmentId(), a.getAppointmentCode(), patientRow(a.getPatientProfile()),

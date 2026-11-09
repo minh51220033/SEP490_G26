@@ -17,7 +17,23 @@ import java.time.LocalDateTime;
  * Cột user_id được để trống cho hồ sơ chưa nhận quyền tài khoản.
  */
 @Entity(name = "ReceptionPatientRecord")
-@Table(name = "patient_profiles")
+@Table(
+        name = "patient_profiles",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_patient_code",
+                        columnNames = "patient_code"
+                ),
+                @UniqueConstraint(
+                        name = "uk_patient_phone",
+                        columnNames = "phone_number"
+                ),
+                @UniqueConstraint(
+                        name = "uk_patient_id_card",
+                        columnNames = "id_card_number"
+                )
+        }
+)
 @DynamicUpdate
 @Getter
 @Setter
