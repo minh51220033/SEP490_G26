@@ -41,6 +41,33 @@
                     font-size: 13.5px;
                 }
 
+                /* BREADCRUMB PHÂN CẤP CHUẨN BOOTSTRAP MÀU XANH ĐEN */
+                .df-exam-breadcrumb-nav .breadcrumb {
+                    font-size: 13.5px;
+                    font-weight: 500;
+                    margin-bottom: 0;
+                    padding: 0;
+                    background: transparent;
+                }
+                .df-exam-breadcrumb-nav .breadcrumb-item a {
+                    color: #1a2f6e !important;
+                    text-decoration: none !important;
+                    font-weight: 600 !important;
+                    transition: color 0.15s ease;
+                }
+                .df-exam-breadcrumb-nav .breadcrumb-item a:hover {
+                    color: #0284c7 !important;
+                    text-decoration: underline !important;
+                }
+                .df-exam-breadcrumb-nav .breadcrumb-item.active {
+                    color: #334155 !important;
+                    font-weight: 700 !important;
+                }
+                .df-exam-breadcrumb-nav .breadcrumb-item + .breadcrumb-item::before {
+                    color: #94a3b8;
+                    padding: 0 6px;
+                }
+
                 .df-avatar-circle {
                     width: 44px;
                     height: 44px;
@@ -317,22 +344,14 @@
                                 data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
                             <i class="bi bi-list fs-6"></i>
                         </button>
-                        <div>
-                            <a th:href="@{/doctor/daily-visits}" class="text-primary text-decoration-none fw-semibold">DS Khám Trong Ngày</a>
-                            <span class="mx-1 text-muted">&gt;</span>
-                            <a th:href="@{'/doctor/examination/' + ${visit.visitId} + '/diagnoses'}" class="text-dark fw-bold text-decoration-none">
-                                <span th:text="${patient != null and patient.patientCode != null ? patient.patientCode : 'BN-0008'}">BN-0008</span>
-                            </a>
-                            <span class="mx-1 text-muted">&gt;</span>
-                            <span class="text-secondary">Khám &amp; Điều trị</span>
-                            <span class="mx-1 text-muted">&gt;</span>
-                            <span class="text-dark fw-bold">Lập Kế hoạch &amp; Lộ trình</span>
-                        </div>
-                    </div>
-                    <div>
-                        <a th:href="@{'/doctor/examination/' + ${visit.visitId} + '/diagnoses#tab-treatment-plan'}" class="btn btn-outline-secondary btn-sm px-3 rounded-pill fw-semibold">
-                            <i class="bi bi-arrow-left me-1"></i> Quay lại ca khám
-                        </a>
+                        <nav aria-label="breadcrumb" class="df-exam-breadcrumb-nav mb-0">
+                            <ol class="breadcrumb mb-0">
+                                <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+                                <li class="breadcrumb-item"><a th:href="@{/doctor/daily-visits}">DS Khám</a></li>
+                                <li class="breadcrumb-item"><a th:href="${visit != null ? '/doctor/examination/' + visit.visitId + '/diagnoses' : '/doctor/examination'}">Khám &amp; Điều trị</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Lập Kế hoạch &amp; Lộ trình</li>
+                            </ol>
+                        </nav>
                     </div>
                 </div>
 

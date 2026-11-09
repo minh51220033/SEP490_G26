@@ -7,17 +7,12 @@
 <!-- Frontend Fragment: doctor/fragments/appointments-tab.html             -->
 <!-- ===================================================================== -->
 <div th:fragment="appointmentsTab">
-    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden bg-white">
-        <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
-            <div class="d-flex align-items-center gap-2">
-                <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                    <i class="bi bi-calendar2-check-fill fs-5"></i>
-                </div>
-                <div>
-                    <h4 class="mb-0 fw-bold text-dark fs-6">Lịch hẹn &amp; Kế hoạch tái khám (SCR-18.1)</h4>
-                    <span class="text-secondary small">Quản lý lịch hẹn tái khám của bệnh nhân theo lộ trình điều trị</span>
-                </div>
-
+    <div class="card border shadow-sm rounded-3 mb-4 overflow-hidden bg-white">
+        <div class="card-header df-tab-content-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
+            <div class="df-tab-title-standard">
+                <i class="bi bi-calendar2-check"></i>
+                <span>LỊCH HẸN &amp; KẾ HOẠCH TÁI KHÁM</span>
+                <span class="df-tab-subtitle-text d-none d-lg-inline">(Theo dõi lịch hẹn theo lộ trình điều trị)</span>
             </div>
 
             <button type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white"

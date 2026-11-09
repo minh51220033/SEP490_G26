@@ -19,24 +19,340 @@
             <link rel="stylesheet" th:href="@{/css/staff.css}">
 
             <style>
-                #branchTable {
-                    min-width: 1680px !important;
-                    width: 100% !important;
-                    table-layout: fixed !important;
-                }
-                #branchTable thead th {
-                    position: sticky !important;
-                    top: 0 !important;
-                    z-index: 20 !important;
-                    background: #f1f5f9 !important;
-                    white-space: nowrap !important;
-                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-                }
-                .dv-table-scroll-container {
-                    max-height: calc(100vh - 310px);
-                    min-height: 400px;
+                /* Gỡ bỏ khóa cứng overflow: hidden để không bị nuốt mất thanh cuộn ngang và phân trang */
+                body.staff-page-body,
+                body.staff-page-body .app-shell,
+                body.staff-page-body .app-main {
+                    height: auto !important;
+                    min-height: 100vh !important;
                     overflow-y: auto !important;
+                }
+
+                body.staff-page-body .app-content {
+                    overflow-y: visible !important;
+                    overflow-x: hidden !important;
+                    height: auto !important;
+                    min-height: calc(100vh - 64px) !important;
+                    padding-bottom: 24px !important;
+                }
+
+                /* =========================================================================
+                   BẢNG DỮ LIỆU CƠ SỞ CHUẨN MISA AMIS (ĐỒNG BỘ 100% DOCTOR/DAILY-VISITS)
+                   ========================================================================= */
+                .staff-table-card {
+                    background: #ffffff !important;
+                    border: 1.5px solid #cbd5e1 !important;
+                    border-radius: 16px !important;
+                    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+                    overflow: hidden !important;
+                    position: relative !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    margin-bottom: 24px !important;
+                }
+
+                .dv-table-scroll-container {
+                    width: 100% !important;
                     overflow-x: auto !important;
+                    overflow-y: auto !important;
+                    position: relative !important;
+                    scroll-behavior: smooth !important;
+                    scrollbar-width: thin !important;
+                    scrollbar-color: #94a3b8 #f1f5f9 !important;
+                }
+
+                /* Thanh cuộn ngang rõ nét chuẩn Desktop */
+                .dv-table-scroll-container::-webkit-scrollbar {
+                    height: 10px !important;
+                    width: 8px !important;
+                    display: block !important;
+                }
+
+                .dv-table-scroll-container::-webkit-scrollbar-track {
+                    background: #f1f5f9 !important;
+                    border-radius: 5px !important;
+                }
+
+                .dv-table-scroll-container::-webkit-scrollbar-thumb {
+                    background: #94a3b8 !important;
+                    border-radius: 5px !important;
+                    border: 2px solid #f1f5f9 !important;
+                }
+
+                .dv-table-scroll-container::-webkit-scrollbar-thumb:hover {
+                    background: #64748b !important;
+                }
+
+                #branchTable,
+                .dv-amis-table {
+                    width: 1760px !important;
+                    min-width: 1760px !important;
+                    border-collapse: separate !important;
+                    border-spacing: 0 !important;
+                    margin-bottom: 0 !important;
+                }
+
+                .dv-amis-table thead th {
+                    background: #f1f5f9;
+                    color: #334155;
+                    font-size: 13px;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.4px;
+                    padding: 15px 18px;
+                    border-bottom: 2px solid #cbd5e1;
+                    border-right: 1px solid #e2e8f0;
+                    white-space: nowrap;
+                    position: sticky;
+                    top: 0;
+                    z-index: 10;
+                    user-select: none;
+                    transition: background 0.15s;
+                }
+
+                .dv-amis-table thead th:hover {
+                    background: #e2e8f0;
+                }
+
+                .dv-th-inner {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
+                }
+
+                .dv-pin-btn {
+                    border: none;
+                    background: transparent;
+                    color: #94a3b8;
+                    width: 26px;
+                    height: 26px;
+                    border-radius: 6px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 13px;
+                    cursor: pointer;
+                    transition: all 0.15s;
+                }
+
+                .dv-pin-btn:hover {
+                    background: #cbd5e1;
+                    color: #0f172a;
+                }
+
+                .dv-pin-btn.is-pinned {
+                    color: #0284c7;
+                    background: #e0f2fe;
+                }
+
+                .dv-amis-table tbody tr.dv-data-row {
+                    position: relative;
+                    transition: background-color 0.12s ease;
+                }
+
+                .dv-amis-table tbody tr.dv-data-row td:not(.dv-floating-actions-track) {
+                    padding: 16px 18px;
+                    border-bottom: 1px solid #e2e8f0;
+                    border-right: 1px solid #f1f5f9;
+                    vertical-align: middle;
+                    font-size: 14.5px;
+                    color: #1e293b;
+                    background: #ffffff;
+                    transition: background-color 0.12s ease;
+                    white-space: nowrap;
+                }
+
+                .dv-amis-table tbody tr.dv-data-row:hover td {
+                    background: #f0f9ff !important;
+                }
+
+                /* Cột được Ghim bên Trái (Sticky Pinned Left Column) */
+                .dv-amis-table th.dv-col-pinned,
+                .dv-amis-table td.dv-col-pinned {
+                    position: sticky !important;
+                    z-index: 15 !important;
+                    background: #ffffff;
+                }
+
+                .dv-amis-table thead th.dv-col-pinned {
+                    z-index: 25 !important;
+                    background: #e0f2fe !important;
+                    color: #0369a1;
+                }
+
+                .dv-amis-table th.dv-col-pinned-last,
+                .dv-amis-table td.dv-col-pinned-last {
+                    border-right: 2px solid #93c5fd !important;
+                    box-shadow: 6px 0 14px -4px rgba(15, 23, 42, 0.12);
+                }
+
+                /* Cột Thao tác nổi khi Hover dòng */
+                .dv-floating-actions-track {
+                    position: sticky !important;
+                    right: 0 !important;
+                    width: 0 !important;
+                    min-width: 0 !important;
+                    max-width: 0 !important;
+                    height: 0 !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    border: none !important;
+                    overflow: visible !important;
+                    z-index: 25;
+                    background: transparent !important;
+                }
+
+                .dv-floating-actions-bar {
+                    position: absolute;
+                    right: 0;
+                    top: 50%;
+                    transform: translateY(-50%) translateX(10px);
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 16px 8px 36px;
+                    background: linear-gradient(90deg, rgba(240, 249, 255, 0) 0%, rgba(240, 249, 255, 0.96) 20%, #f0f9ff 100%);
+                    opacity: 0;
+                    visibility: hidden;
+                    pointer-events: none;
+                    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+                    white-space: nowrap;
+                    z-index: 30;
+                }
+
+                .dv-amis-table tbody tr.dv-data-row:hover .dv-floating-actions-bar {
+                    opacity: 1;
+                    visibility: visible;
+                    transform: translateY(-50%) translateX(0);
+                    pointer-events: auto;
+                }
+
+                .dv-actions-cell-always {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    white-space: nowrap;
+                }
+
+                .dv-equal-btn-primary {
+                    width: 120px;
+                    height: 38px;
+                    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+                    color: #ffffff !important;
+                    border: none;
+                    border-radius: 9px;
+                    font-size: 13.5px;
+                    font-weight: 700;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                    text-decoration: none !important;
+                    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.28);
+                    transition: all 0.15s ease;
+                    flex-shrink: 0;
+                    white-space: nowrap;
+                }
+
+                .dv-equal-btn-primary:hover {
+                    background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+                    transform: translateY(-1px);
+                    box-shadow: 0 6px 14px rgba(2, 132, 199, 0.38);
+                }
+
+                .dv-equal-btn-secondary {
+                    width: 110px;
+                    height: 38px;
+                    background: #ffffff;
+                    color: #334155;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 9px;
+                    font-size: 13.5px;
+                    font-weight: 700;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                    text-decoration: none !important;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+                    transition: all 0.15s ease;
+                    flex-shrink: 0;
+                    white-space: nowrap;
+                }
+
+                .dv-equal-btn-secondary:hover {
+                    background: #f8fafc;
+                    border-color: #94a3b8;
+                }
+
+                /* POPOVER TÙY BIẾN CỘT CHUẨN MISA AMIS */
+                .dv-col-customizer-wrapper {
+                    position: relative;
+                }
+
+                .dv-col-popover {
+                    position: absolute;
+                    right: 0;
+                    top: calc(100% + 8px);
+                    width: 360px;
+                    background: #ffffff;
+                    border: 1.5px solid #cbd5e1;
+                    border-radius: 16px;
+                    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16);
+                    z-index: 100;
+                    display: none;
+                    overflow: hidden;
+                }
+
+                .dv-col-popover.show {
+                    display: block;
+                    animation: dvFadeSlideDown 0.18s ease-out;
+                }
+
+                @keyframes dvFadeSlideDown {
+                    from { opacity: 0; transform: translateY(-8px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+
+                .dv-col-item {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 10px 14px;
+                    border-bottom: 1px solid #f1f5f9;
+                    background: #ffffff;
+                    transition: background 0.15s;
+                    cursor: grab;
+                }
+
+                .dv-col-item:hover {
+                    background: #f8fafc;
+                }
+
+                .dv-col-item.dragging {
+                    opacity: 0.5;
+                    background: #e0f2fe;
+                }
+
+                .dv-col-order-btn {
+                    border: 1px solid #e2e8f0;
+                    background: #f8fafc;
+                    color: #475569;
+                    width: 26px;
+                    height: 26px;
+                    border-radius: 6px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                    cursor: pointer;
+                }
+
+                .dv-col-order-btn:hover {
+                    background: #e2e8f0;
+                    color: #0f172a;
                 }
             </style>
 
@@ -178,7 +494,7 @@
                 <div class="dv-grid-topbar">
                     <div class="d-flex align-items-center gap-3 flex-wrap">
                         <div class="fw-bold text-dark" style="font-size: 15px;">
-                            Hiển thị <span class="text-primary fw-bolder" th:text="${#lists.size(branches)}">0</span> cơ sở
+                            Hiển thị <span class="text-primary fw-bolder" id="topbarBranchCount" th:text="${#lists.size(branches)}">0</span> cơ sở
                             <span class="text-muted mx-1">•</span>
                             <span class="text-secondary fw-semibold">Tất cả các ngày</span>
                         </div>
@@ -188,84 +504,42 @@
                         </span>
                     </div>
 
-                    <!-- Bên phải: Nút Tùy biến cột -->
+                    <!-- Bên phải: Nút Tùy biến cột & Ghim cột -->
                     <div class="d-flex align-items-center gap-2">
-                        <div class="custom-col-dropdown position-relative d-inline-block">
-                            <button type="button" class="btn btn-white bg-white border fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2 shadow-xs"
+                        <div class="dv-col-customizer-wrapper" id="colCustomizerWrapper">
+                            <button type="button"
+                                    class="btn btn-white bg-white border fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2 shadow-xs"
                                     style="font-size: 13.5px; border-color: #cbd5e1 !important; color: #0f172a;"
-                                    id="btnToggleCustomColumns" title="Tùy chỉnh cột">
+                                    id="btnToggleCustomColumns"
+                                    onclick="toggleColumnCustomizer(event)">
                                 <i class="bi bi-layout-three-columns text-primary"></i>
-                                <span>Tùy biến cột</span>
+                                <span>Tùy biến cột &amp; Ghim cột</span>
+                                <span class="badge bg-primary-subtle text-primary rounded-pill" id="pinnedColCountBadge">2 ghim</span>
                             </button>
 
-                            <!-- POPOVER DROPDOWN XỔ XUỐNG DƯỚI BÁNH RĂNG (Không làm đen màn hình) -->
-                            <div class="custom-column-popover" id="customColumnPopover" style="display: none;">
-                                <div class="custom-column-header">
-                                    <h6 class="custom-column-title">
-                                        <i class="bi bi-layout-three-columns text-primary me-2"></i>Tùy chỉnh cột
-                                    </h6>
-                                    <button type="button" class="btn-close" id="btnCloseColPopover" aria-label="Đóng"></button>
+                            <!-- Popover Tùy biến cột chuẩn MISA AMIS như /doctor/daily-visits -->
+                            <div class="dv-col-popover" id="colCustomizerPopover" onclick="event.stopPropagation()">
+                                <div class="p-3 bg-light border-bottom d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <div class="fw-bold text-dark" style="font-size: 14.5px;">
+                                            <i class="bi bi-sliders text-primary me-1"></i>Tùy chỉnh cột hiển thị
+                                        </div>
+                                        <div class="text-muted" style="font-size: 11.5px;">Ẩn/hiện, kéo thả đổi thứ tự hoặc bấm 📌 để ghim cột</div>
+                                    </div>
+                                    <button type="button"
+                                            class="btn btn-sm btn-link text-primary fw-bold text-decoration-none p-0"
+                                            onclick="resetDefaultColumns()">
+                                        Mặc định
+                                    </button>
                                 </div>
-
-                                <!-- Ô tìm kiếm tên trường -->
-                                <div class="custom-column-search">
-                                    <div class="input-group input-group-sm">
-                                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                                        <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên trường...">
-                                    </div>
+                                <div id="colCustomizerList" style="max-height: 340px; overflow-y: auto;">
+                                    <!-- Render động bằng JS giống 100% daily-visits -->
                                 </div>
-
-                                <!-- Tiêu đề danh sách cột -->
-                                <div class="custom-column-table-head">
-                                    <div class="flex-grow-1">Tên trường</div>
-                                </div>
-
-                                <!-- Danh sách các cột cho phép ẩn/hiện & kéo thả (cuộn nội bộ) -->
-                                <div class="custom-col-list-scroll p-0" id="customColList" style="max-height: 280px; overflow-y: auto;">
-                                    <div class="custom-col-item" data-col-target="stt">
-                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-stt" checked>
-                                        <label for="chk-col-stt" class="custom-col-name"># (STT)</label>
-                                    </div>
-                                    <div class="custom-col-item" data-col-target="code">
-                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-code" checked>
-                                        <label for="chk-col-code" class="custom-col-name">Mã cơ sở</label>
-                                    </div>
-                                    <div class="custom-col-item" data-col-target="name">
-                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-name" checked>
-                                        <label for="chk-col-name" class="custom-col-name">Tên chi nhánh</label>
-                                    </div>
-                                    <div class="custom-col-item" data-col-target="address">
-                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-address" checked>
-                                        <label for="chk-col-address" class="custom-col-name">Địa chỉ</label>
-                                    </div>
-                                    <div class="custom-col-item" data-col-target="contact">
-                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-contact" checked>
-                                        <label for="chk-col-contact" class="custom-col-name">Thông tin liên hệ</label>
-                                    </div>
-                                    <div class="custom-col-item" data-col-target="scale">
-                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-scale" checked>
-                                        <label for="chk-col-scale" class="custom-col-name">Quy mô</label>
-                                    </div>
-                                    <div class="custom-col-item" data-col-target="status">
-                                        <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                        <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-status" checked>
-                                        <label for="chk-col-status" class="custom-col-name">Trạng thái</label>
-                                    </div>
-                                </div>
-
-                                <!-- Chân Popover -->
-                                <div class="custom-column-footer">
-                                    <button type="button" class="btn btn-link custom-column-reset" id="btnResetCols">Lấy lại mặc định</button>
-                                    <div class="custom-column-actions">
-                                        <button type="button" class="btn btn-secondary-custom btn-be" id="btnCancelColPopover">Hủy</button>
-                                        <button type="button" class="btn btn-primary btn-be" id="btnSaveCols">Lưu</button>
-                                    </div>
+                                <div class="p-2.5 bg-light border-top text-end">
+                                    <button type="button" class="btn btn-primary btn-sm px-3 fw-bold rounded-pill"
+                                            onclick="closeColumnCustomizer()">
+                                        Hoàn tất
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -276,28 +550,63 @@
                     <table class="dv-amis-table" id="branchTable">
                         <thead>
                         <tr>
-                            <th data-col="stt" style="width: 60px; min-width: 60px;" class="text-center">
-                                <div class="dv-th-inner justify-content-center"><span>#</span></div>
+                            <th data-col="stt" class="text-center" style="min-width: 70px; width: 70px;">
+                                <div class="dv-th-inner justify-content-center">
+                                    <span>#</span>
+                                    <button type="button" class="dv-pin-btn is-pinned" onclick="togglePinColumn('stt')" title="Bỏ ghim cột này">
+                                        <i class="bi bi-pin-angle-fill"></i>
+                                    </button>
+                                </div>
                             </th>
-                            <th data-col="code" style="width: 140px; min-width: 140px;">
-                                <div class="dv-th-inner"><span>Mã cơ sở</span></div>
+                            <th data-col="code" style="min-width: 140px; width: 140px;">
+                                <div class="dv-th-inner">
+                                    <span>Mã cơ sở</span>
+                                    <button type="button" class="dv-pin-btn is-pinned" onclick="togglePinColumn('code')" title="Bỏ ghim cột này">
+                                        <i class="bi bi-pin-angle-fill"></i>
+                                    </button>
+                                </div>
                             </th>
-                            <th data-col="name" style="width: 280px; min-width: 280px;">
-                                <div class="dv-th-inner"><span>Tên chi nhánh</span></div>
+                            <th data-col="name" style="min-width: 320px; width: 320px;">
+                                <div class="dv-th-inner">
+                                    <span>Tên chi nhánh</span>
+                                    <button type="button" class="dv-pin-btn" onclick="togglePinColumn('name')" title="Ghim cột này cố định bên trái khi cuộn ngang">
+                                        <i class="bi bi-pin-angle"></i>
+                                    </button>
+                                </div>
                             </th>
-                            <th data-col="address" style="width: 280px; min-width: 280px;">
-                                <div class="dv-th-inner"><span>Địa chỉ</span></div>
+                            <th data-col="address" style="min-width: 340px; width: 340px;">
+                                <div class="dv-th-inner">
+                                    <span>Địa chỉ</span>
+                                    <button type="button" class="dv-pin-btn" onclick="togglePinColumn('address')" title="Ghim cột này cố định bên trái khi cuộn ngang">
+                                        <i class="bi bi-pin-angle"></i>
+                                    </button>
+                                </div>
                             </th>
-                            <th data-col="contact" style="width: 240px; min-width: 240px;">
-                                <div class="dv-th-inner"><span>Thông tin liên hệ</span></div>
+                            <th data-col="contact" style="min-width: 250px; width: 250px;">
+                                <div class="dv-th-inner">
+                                    <span>Thông tin liên hệ</span>
+                                    <button type="button" class="dv-pin-btn" onclick="togglePinColumn('contact')" title="Ghim cột này cố định bên trái khi cuộn ngang">
+                                        <i class="bi bi-pin-angle"></i>
+                                    </button>
+                                </div>
                             </th>
-                            <th data-col="scale" style="width: 180px; min-width: 180px;">
-                                <div class="dv-th-inner"><span>Quy mô</span></div>
+                            <th data-col="scale" style="min-width: 200px; width: 200px;">
+                                <div class="dv-th-inner">
+                                    <span>Quy mô</span>
+                                    <button type="button" class="dv-pin-btn" onclick="togglePinColumn('scale')" title="Ghim cột này cố định bên trái khi cuộn ngang">
+                                        <i class="bi bi-pin-angle"></i>
+                                    </button>
+                                </div>
                             </th>
-                            <th data-col="status" style="width: 160px; min-width: 160px;">
-                                <div class="dv-th-inner"><span>Trạng thái</span></div>
+                            <th data-col="status" style="min-width: 180px; width: 180px;">
+                                <div class="dv-th-inner">
+                                    <span>Trạng thái</span>
+                                    <button type="button" class="dv-pin-btn" onclick="togglePinColumn('status')" title="Ghim cột này cố định bên trái khi cuộn ngang">
+                                        <i class="bi bi-pin-angle"></i>
+                                    </button>
+                                </div>
                             </th>
-                            <th data-col="actions" class="text-center" style="width: 240px; min-width: 240px;">
+                            <th data-col="actions" class="text-center" style="min-width: 260px; width: 260px;">
                                 <div class="dv-th-inner justify-content-center"><span>Nút ấn nhanh</span></div>
                             </th>
                             <th class="dv-floating-actions-track"></th>
@@ -313,12 +622,14 @@
                                      data-manager-id=${branch.managerUser != null ? branch.managerUser.userId : ''},
                                      data-rooms=${roomCounts[branch.branchId] != null ? roomCounts[branch.branchId] : 0},
                                      data-chairs=${chairCounts[branch.branchId] != null ? chairCounts[branch.branchId] : 0},
-                                     data-search=${(branch.branchCode != null ? branch.branchCode : '') + ' ' + (branch.branchName != null ? branch.branchName : '') + ' ' + (branch.address != null ? branch.address : '') + ' ' + (branch.phone != null ? branch.phone : '') + ' ' + (branch.email != null ? branch.email : '')}">
+                                     data-search=${(branch.branchCode != null ? branch.branchCode : '') + ' ' + (branch.branchName != null ? branch.branchName : '') + ' ' + (branch.address != null ? branch.address : '') + ' ' + (branch.phone != null ? branch.phone : '') + ' ' + (branch.email != null ? branch.email : '')}"
+                            th:onclick="|if (!event.target.closest('a, button, form, input')) window.location.href='@{/admin/branches/{id}(id=${branch.branchId})}'|"
+                            style="cursor: pointer;">
                             <!-- 1. STT -->
-                            <td class="text-center text-muted fw-semibold" style="width: 60px; min-width: 60px;" th:text="${iterStat.count}" data-col="stt">1</td>
+                            <td class="text-center text-muted fw-semibold" style="min-width: 70px; width: 70px;" th:text="${iterStat.count}" data-col="stt">1</td>
 
                             <!-- 2. Mã chi nhánh -->
-                            <td data-col="code" style="width: 140px; min-width: 140px;">
+                            <td data-col="code" style="min-width: 140px; width: 140px;">
                                 <span class="dv-code-pill" th:text="${branch.branchCode}">CN01</span>
                                 <div class="text-muted small mt-1" th:if="${branch.taxCode != null and !branch.taxCode.isBlank()}">
                                     MST: <span th:text="${branch.taxCode}">0101234567</span>
@@ -326,19 +637,19 @@
                             </td>
 
                             <!-- 3. Tên chi nhánh & Quản lý -->
-                            <td data-col="name" style="width: 280px; min-width: 280px;">
-                                <div class="d-flex align-items-center gap-2">
+                            <td data-col="name" style="min-width: 320px; width: 320px;">
+                                <div class="d-flex align-items-center gap-3">
                                     <img th:if="${branch.imageUrl != null and !branch.imageUrl.isBlank()}"
                                          th:src="${branch.imageUrl}"
                                          th:alt="${branch.branchName}"
-                                         style="width: 38px; height: 38px; border-radius: 8px; object-fit: cover; border: 1px solid #cbd5e1; flex-shrink: 0;">
+                                         style="width: 40px; height: 40px; border-radius: 10px; object-fit: cover; border: 1px solid #cbd5e1; flex-shrink: 0;">
                                     <div th:if="${branch.imageUrl == null or branch.imageUrl.isBlank()}"
-                                         class="dv-patient-avatar flex-shrink-0" style="background: linear-gradient(135deg, #0284c7, #3b82f6); font-size: 1.1rem; width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                         class="dv-patient-avatar flex-shrink-0" style="background: linear-gradient(135deg, #0284c7, #3b82f6); font-size: 1.1rem; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 0 !important;">
                                         <i class="bi bi-buildings text-white"></i>
                                     </div>
                                     <div class="d-flex flex-column justify-content-center">
                                         <a th:href="@{/admin/branches/{id}(id=${branch.branchId})}"
-                                           class="dv-patient-name"
+                                           class="dv-patient-name text-decoration-none"
                                            th:text="${branch.branchName}">Chi nhánh</a>
                                         <div class="text-muted small mt-1" th:if="${branch.managerUser != null}">
                                              <i class="bi bi-person-badge text-primary me-1"></i>
@@ -349,12 +660,12 @@
                             </td>
 
                             <!-- 4. Địa chỉ -->
-                            <td data-col="address" style="width: 280px; min-width: 280px;">
+                            <td data-col="address" style="min-width: 340px; width: 340px;">
                                 <div class="text-secondary small fw-semibold" th:text="${branch.address}">Địa chỉ</div>
                             </td>
 
                             <!-- 5. Thông tin liên hệ -->
-                            <td data-col="contact" style="width: 240px; min-width: 240px;">
+                            <td data-col="contact" style="min-width: 250px; width: 250px;">
                                 <div class="small fw-semibold text-dark" th:if="${branch.phone != null and !branch.phone.isBlank()}">
                                     <i class="bi bi-telephone text-primary me-1"></i><span th:text="${branch.phone}">0901234567</span>
                                 </div>
@@ -367,7 +678,7 @@
                             </td>
 
                             <!-- 6. Quy mô (Phòng / Ghế) -->
-                            <td data-col="scale" style="width: 180px; min-width: 180px;">
+                            <td data-col="scale" style="min-width: 200px; width: 200px;">
                                 <div class="d-flex align-items-center gap-1 flex-wrap">
                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small fw-bold">
                                         <i class="bi bi-door-open me-1"></i><span th:text="${roomCounts[branch.branchId]}">0</span> phòng
@@ -379,7 +690,7 @@
                             </td>
 
                             <!-- 7. Trạng thái -->
-                            <td data-col="status" style="width: 160px; min-width: 160px;">
+                            <td data-col="status" style="min-width: 180px; width: 180px;">
                                 <span th:if="${branch.isActive}" class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#ecfdf5; color:#059669; font-size:12.5px; border:1px solid #a7f3d0;">
                                     <i class="bi bi-check-circle-fill me-1"></i>Đang hoạt động
                                 </span>
@@ -389,7 +700,7 @@
                             </td>
 
                             <!-- 8. Cột Thao tác tĩnh (Gọn gàng 2 nút: Chi tiết/Quản lý cơ sở + Đổi trạng thái/Xóa nhầm) -->
-                            <td class="text-center" data-col="actions" style="width: 240px; min-width: 240px;">
+                            <td class="text-center" data-col="actions" style="min-width: 260px; width: 260px;">
                                 <div class="dv-actions-cell-always" onclick="event.stopPropagation()">
                                     <a th:href="@{/admin/branches/{id}(id=${branch.branchId})}"
                                        class="dv-equal-btn-primary" title="Xem chi tiết cơ sở, quản lý sơ đồ phòng, ghế &amp; sửa thông tin">
@@ -855,6 +1166,8 @@
 
             // Cập nhật text tổng số và range
             if (countEl) countEl.textContent = total;
+            const topbarCount = document.getElementById('topbarBranchCount');
+            if (topbarCount) topbarCount.textContent = total;
             if (pageRangeText) {
                 pageRangeText.textContent = total === 0 ? '0 - 0' : `${fromIdx} - ${toIdx}`;
             }
@@ -936,239 +1249,284 @@
             });
         }
 
-        // ==================== KÉO DÃN CỘT (COLUMN RESIZER) ====================
-        const defaultBranchColWidths = {
-            stt: 60,
-            code: 140,
-            name: 280,
-            address: 280,
-            contact: 240,
-            scale: 180,
-            status: 160,
-            actions: 240
+        // ==================== TÙY BIẾN CỘT & GHIM CỘT CHUẨN DOCTOR/DAILY-VISITS ====================
+        const DEFAULT_COLUMNS = [
+            { id: 'stt',     label: '#',                  visible: true, pinned: 'left', minWidth: 70 },
+            { id: 'code',    label: 'Mã cơ sở',           visible: true, pinned: 'left', minWidth: 140 },
+            { id: 'name',    label: 'Tên chi nhánh',      visible: true, pinned: false,  minWidth: 320 },
+            { id: 'address', label: 'Địa chỉ',            visible: true, pinned: false,  minWidth: 340 },
+            { id: 'contact', label: 'Thông tin liên hệ',  visible: true, pinned: false,  minWidth: 250 },
+            { id: 'scale',   label: 'Quy mô',             visible: true, pinned: false,  minWidth: 200 },
+            { id: 'status',  label: 'Trạng thái',         visible: true, pinned: false,  minWidth: 180 },
+            { id: 'actions', label: 'Nút ấn nhanh',       visible: true, pinned: false,  minWidth: 260, nonHidable: true }
+        ];
+
+        const STORAGE_COL_CONFIG_KEY = 'cv_branch_column_config_v2';
+
+        function loadColumnConfig() {
+            try {
+                const raw = localStorage.getItem(STORAGE_COL_CONFIG_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed) && parsed.length === DEFAULT_COLUMNS.length) {
+                        return parsed;
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load branch column config:', e);
+            }
+            return JSON.parse(JSON.stringify(DEFAULT_COLUMNS));
+        }
+
+        let columnConfig = loadColumnConfig();
+        let draggedColIndex = null;
+
+        function saveColumnConfig() {
+            try {
+                localStorage.setItem(STORAGE_COL_CONFIG_KEY, JSON.stringify(columnConfig));
+            } catch (e) {}
+            updatePinnedBadgeCount();
+        }
+
+        function updatePinnedBadgeCount() {
+            const pinnedCount = columnConfig.filter(c => c.visible && (c.pinned === true || c.pinned === 'left')).length;
+            const badge = document.getElementById('pinnedColCountBadge');
+            if (badge) {
+                badge.textContent = `${pinnedCount} ghim`;
+            }
+        }
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        window.toggleColumnCustomizer = function (e) {
+            if (e) e.stopPropagation();
+            const pop = document.getElementById('colCustomizerPopover');
+            if (pop) {
+                const isShown = pop.classList.toggle('show');
+                if (isShown) {
+                    renderColumnCustomizerList();
+                }
+            }
         };
-        ['cv_branch_table_widths_v2', 'cv_branch_table_widths_v3', 'cv_branch_table_widths_v4', 'cv_branch_table_widths_v5'].forEach(k => {
-            try { localStorage.removeItem(k); } catch (e) {}
-        });
-        const STORAGE_WIDTH_KEY = 'cv_branch_table_widths_v5';
-        const table = document.getElementById('branchTable');
 
-        function loadColWidths() {
-            try {
-                const raw = localStorage.getItem(STORAGE_WIDTH_KEY);
-                return raw ? Object.assign({}, defaultBranchColWidths, JSON.parse(raw)) : Object.assign({}, defaultBranchColWidths);
-            } catch (e) {
-                return Object.assign({}, defaultBranchColWidths);
+        window.closeColumnCustomizer = function () {
+            const pop = document.getElementById('colCustomizerPopover');
+            if (pop) pop.classList.remove('show');
+        };
+
+        window.togglePinColumn = function (colId) {
+            const col = columnConfig.find(c => c.id === colId);
+            if (!col) return;
+            col.pinned = (col.pinned === true || col.pinned === 'left') ? false : 'left';
+            if (col.pinned) col.visible = true;
+            saveColumnConfig();
+            renderColumnCustomizerList();
+            applyTableColumns();
+        };
+
+        window.toggleColumnVisibility = function (colId, checked) {
+            const visibleCount = columnConfig.filter(c => c.visible).length;
+            if (!checked && visibleCount <= 2) {
+                alert('Cần giữ lại tối thiểu 2 cột hiển thị trên bảng dữ liệu!');
+                renderColumnCustomizerList();
+                return;
             }
+            const col = columnConfig.find(c => c.id === colId);
+            if (col) {
+                col.visible = checked;
+                if (!checked) col.pinned = false;
+                saveColumnConfig();
+                renderColumnCustomizerList();
+                applyTableColumns();
+            }
+        };
+
+        window.moveColumnOrder = function (idx, direction) {
+            const targetIdx = idx + direction;
+            if (targetIdx < 0 || targetIdx >= columnConfig.length) return;
+            const temp = columnConfig[idx];
+            columnConfig[idx] = columnConfig[targetIdx];
+            columnConfig[targetIdx] = temp;
+            saveColumnConfig();
+            renderColumnCustomizerList();
+            applyTableColumns();
+        };
+
+        window.resetDefaultColumns = function () {
+            columnConfig = JSON.parse(JSON.stringify(DEFAULT_COLUMNS));
+            saveColumnConfig();
+            renderColumnCustomizerList();
+            applyTableColumns();
+        };
+
+        function renderColumnCustomizerList() {
+            const container = document.getElementById('colCustomizerList');
+            if (!container) return;
+
+            let html = '';
+            columnConfig.forEach((col, idx) => {
+                const isActions = col.id === 'actions';
+                const isPinned = (col.pinned === true || col.pinned === 'left');
+                html += `
+                <div class="dv-col-item"
+                     ${!isActions ? `draggable="true" ondragstart="onColDragStart(event, ${idx})" ondragover="onColDragOver(event)" ondrop="onColDrop(event, ${idx})"` : ''}>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi ${!isActions ? 'bi-grip-vertical text-muted' : 'bi-lock-fill text-primary'}" style="${!isActions ? 'cursor: grab;' : ''}"></i>
+                        <input type="checkbox" class="form-check-input mt-0"
+                               style="width: 17px; height: 17px; cursor: pointer;"
+                               ${col.visible ? 'checked' : ''}
+                               ${isActions ? 'disabled checked' : ''}
+                               onchange="toggleColumnVisibility('${col.id}', this.checked)">
+                        <span class="fw-bold text-dark" style="font-size: 13.5px;">${escapeHtml(col.label)} ${isActions ? '<span class="badge bg-primary-subtle text-primary ms-1" style="font-size: 10px;">Cuối bảng</span>' : ''}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        ${!isActions ? `
+                            <button type="button"
+                                    class="dv-pin-btn ${isPinned ? 'is-pinned' : ''}"
+                                    title="${isPinned ? 'Đang ghim cố định trái (Bấm để bỏ ghim)' : 'Ghim cột này cố định bên trái'}"
+                                    onclick="togglePinColumn('${col.id}')">
+                                <i class="bi ${isPinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}"></i>
+                            </button>
+                            <button type="button" class="dv-col-order-btn" title="Đưa cột lên trước" onclick="moveColumnOrder(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>
+                                <i class="bi bi-arrow-up"></i>
+                            </button>
+                            <button type="button" class="dv-col-order-btn" title="Đưa cột xuống sau" onclick="moveColumnOrder(${idx}, 1)" ${idx === columnConfig.length - 1 ? 'disabled' : ''}>
+                                <i class="bi bi-arrow-down"></i>
+                            </button>
+                        ` : '<span class="badge bg-light text-secondary border px-2 py-1" style="font-size: 11px;">Cố định</span>'}
+                    </div>
+                </div>
+            `;
+            });
+            container.innerHTML = html;
         }
 
-        let currentWidths = loadColWidths();
+        window.onColDragStart = function (e, idx) {
+            draggedColIndex = idx;
+            e.currentTarget.classList.add('dragging');
+        };
 
-        function applyColWidths() {
+        window.onColDragOver = function (e) {
+            e.preventDefault();
+        };
+
+        window.onColDrop = function (e, dropIdx) {
+            e.preventDefault();
+            if (draggedColIndex === null || draggedColIndex === dropIdx) return;
+            const moved = columnConfig.splice(draggedColIndex, 1)[0];
+            columnConfig.splice(dropIdx, 0, moved);
+            draggedColIndex = null;
+            saveColumnConfig();
+            renderColumnCustomizerList();
+            applyTableColumns();
+        };
+
+        document.addEventListener('click', (e) => {
+            const wrap = document.getElementById('colCustomizerWrapper');
+            if (wrap && !wrap.contains(e.target)) {
+                closeColumnCustomizer();
+            }
+        });
+
+        function applyTableColumns() {
+            const table = document.getElementById('branchTable');
             if (!table) return;
-            let totalW = 0;
-            const ths = table.querySelectorAll('thead tr:first-child th');
-            ths.forEach(th => {
-                if (th.classList.contains('dv-floating-actions-track')) return;
-                const colKey = th.getAttribute('data-col');
-                const w = currentWidths[colKey] || defaultBranchColWidths[colKey] || 180;
-                th.style.width = w + 'px';
-                th.style.minWidth = w + 'px';
-                th.style.maxWidth = w + 'px';
-                totalW += w;
+
+            const theadRow = table.querySelector('thead tr');
+            const trackTh = theadRow.querySelector('.dv-floating-actions-track');
+            const rows = table.querySelectorAll('tbody tr.branch-data-row');
+
+            // 1. Sắp xếp lại thứ tự DOM cột theo columnConfig
+            columnConfig.forEach(col => {
+                const th = theadRow.querySelector(`th[data-col="${col.id}"]`);
+                if (th && trackTh) theadRow.insertBefore(th, trackTh);
             });
-            table.style.tableLayout = 'fixed';
-            table.style.width = Math.max(totalW, 1680) + 'px';
-            table.style.minWidth = '1680px';
-        }
 
-        const ths = Array.from(table.querySelectorAll('thead th'));
-        ths.forEach(th => {
-            if (th.classList.contains('dv-floating-actions-track')) return;
-            let resizer = th.querySelector('.col-resizer');
-            if (!resizer) {
-                resizer = document.createElement('span');
-                resizer.className = 'col-resizer';
-                resizer.title = 'Kéo để chỉnh độ rộng cột';
-                th.appendChild(resizer);
-            }
-            resizer.onmousedown = function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                const colKey = th.getAttribute('data-col');
-                const startX = e.pageX;
-                const startW = th.offsetWidth;
-                const minW = (colKey === 'stt' || colKey === 'code') ? 60 : 70;
-
-                let otherColsW = 0;
-                ths.forEach(otherTh => {
-                    if (otherTh !== th && !otherTh.classList.contains('dv-floating-actions-track') && otherTh.offsetParent !== null) {
-                        otherColsW += otherTh.offsetWidth;
-                    }
+            rows.forEach(row => {
+                const trackTd = row.querySelector('.dv-floating-actions-track');
+                columnConfig.forEach(col => {
+                    const td = row.querySelector(`td[data-col="${col.id}"]`);
+                    if (td && trackTd) row.insertBefore(td, trackTd);
                 });
+            });
 
-                resizer.classList.add('is-resizing');
-                document.body.classList.add('is-col-resizing');
+            // 2. Tính toán Sticky Offset cho các cột được ghim bên trái
+            let leftOffset = 0;
+            const visibleCols = columnConfig.filter(c => c.visible);
+            const leftCols = visibleCols.filter(c => c.pinned === true || c.pinned === 'left');
 
-                function onMouseMove(moveEvent) {
-                    const diff = moveEvent.pageX - startX;
-                    const newW = Math.max(minW, startW + diff);
-                    if (colKey) currentWidths[colKey] = newW;
+            const colStickyMeta = {};
+            leftCols.forEach((col, idx) => {
+                colStickyMeta[col.id] = {
+                    type: 'left',
+                    left: leftOffset,
+                    isLastLeft: idx === leftCols.length - 1
+                };
+                leftOffset += col.minWidth;
+            });
 
-                    th.style.width = newW + 'px';
-                    th.style.minWidth = newW + 'px';
-                    th.style.maxWidth = newW + 'px';
+            // 3. Áp dụng hiển thị, độ rộng và trạng thái ghim
+            columnConfig.forEach(col => {
+                const isVisible = col.visible;
+                const meta = colStickyMeta[col.id];
 
-                    const newTotal = otherColsW + newW;
-                    table.style.width = newTotal + 'px';
-                    table.style.minWidth = newTotal + 'px';
-                }
+                // Header TH
+                const th = theadRow.querySelector(`th[data-col="${col.id}"]`);
+                if (th) {
+                    th.style.display = isVisible ? '' : 'none';
+                    th.style.minWidth = col.minWidth + 'px';
+                    th.style.width = col.minWidth + 'px';
 
-                function onMouseUp() {
-                    resizer.classList.remove('is-resizing');
-                    document.body.classList.remove('is-col-resizing');
-                    document.removeEventListener('mousemove', onMouseMove);
-                    document.removeEventListener('mouseup', onMouseUp);
+                    th.classList.remove('dv-col-pinned', 'dv-col-pinned-last');
+                    th.style.left = '';
 
-                    if (colKey) {
-                        try {
-                            localStorage.setItem(STORAGE_WIDTH_KEY, JSON.stringify(currentWidths));
-                        } catch (err) {}
+                    if (isVisible && meta && meta.type === 'left') {
+                        th.classList.add('dv-col-pinned');
+                        if (meta.isLastLeft) th.classList.add('dv-col-pinned-last');
+                        th.style.left = meta.left + 'px';
+                    }
+
+                    const pinBtn = th.querySelector('.dv-pin-btn');
+                    if (pinBtn) {
+                        const isPinned = Boolean(col.pinned === true || col.pinned === 'left');
+                        pinBtn.classList.toggle('is-pinned', isPinned);
+                        pinBtn.title = isPinned ? 'Bỏ ghim cột này' : 'Ghim cột này cố định bên trái khi cuộn ngang';
+                        const icon = pinBtn.querySelector('i');
+                        if (icon) {
+                            icon.className = `bi ${isPinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}`;
+                        }
                     }
                 }
 
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
-            };
-        });
+                // Body TD
+                rows.forEach(row => {
+                    const td = row.querySelector(`td[data-col="${col.id}"]`);
+                    if (td) {
+                        td.style.display = isVisible ? '' : 'none';
+                        td.style.minWidth = col.minWidth + 'px';
+                        td.style.width = col.minWidth + 'px';
 
-        // ==================== TÙY CHỈNH CỘT (POPOVER) ====================
-        const defaultBranchCols = ['stt', 'code', 'name', 'address', 'contact', 'scale', 'status'];
-        const STORAGE_BRANCH_COLS_KEY = 'cv_branch_table_columns_v3';
-        const popoverEl = document.getElementById('customColumnPopover');
-        const btnToggleCol = document.getElementById('btnToggleCustomColumns');
-        const btnCloseCol = document.getElementById('btnCloseColPopover');
-        const btnCancelCol = document.getElementById('btnCancelColPopover');
-        const btnSaveCols = document.getElementById('btnSaveCols');
-        const btnResetCols = document.getElementById('btnResetCols');
+                        td.classList.remove('dv-col-pinned', 'dv-col-pinned-last');
+                        td.style.left = '';
 
-        function loadBranchColConfig() {
-            try {
-                const raw = localStorage.getItem(STORAGE_BRANCH_COLS_KEY);
-                return raw ? JSON.parse(raw) : { hidden: [] };
-            } catch (e) {
-                return { hidden: [] };
-            }
-        }
-
-        let branchColConfig = loadBranchColConfig();
-
-        function applyBranchColConfig(cfg) {
-            if (!table) return;
-            const hidden = (cfg && cfg.hidden) ? cfg.hidden : [];
-            defaultBranchCols.forEach(col => {
-                const isHidden = hidden.includes(col);
-                table.querySelectorAll(`[data-col="${col}"]`).forEach(el => {
-                    if (isHidden) el.classList.add('d-none');
-                    else el.classList.remove('d-none');
-                });
-                const colEl = table.querySelector(`colgroup col[data-col="${col}"]`);
-                if (colEl) colEl.style.display = isHidden ? 'none' : '';
-
-                const chk = document.getElementById(`chk-col-${col}`);
-                if (chk) chk.checked = !isHidden;
-            });
-            applyColWidths();
-        }
-
-        function openCustomColPopover() {
-            if (!popoverEl) return;
-            popoverEl.style.display = 'block';
-            if (btnToggleCol) {
-                btnToggleCol.setAttribute('aria-expanded', 'true');
-                btnToggleCol.classList.add('active');
-            }
-            defaultBranchCols.forEach(col => {
-                const chk = document.getElementById(`chk-col-${col}`);
-                if (chk) chk.checked = !branchColConfig.hidden.includes(col);
-            });
-            const searchInput = document.getElementById('colSearchInput');
-            if (searchInput) {
-                searchInput.value = '';
-                document.querySelectorAll('#customColList .custom-col-item').forEach(it => it.style.display = '');
-                setTimeout(() => searchInput.focus(), 60);
-            }
-        }
-
-        function closeCustomColPopover() {
-            if (!popoverEl) return;
-            popoverEl.style.display = 'none';
-            if (btnToggleCol) {
-                btnToggleCol.setAttribute('aria-expanded', 'false');
-                btnToggleCol.classList.remove('active');
-            }
-        }
-
-        if (btnToggleCol) {
-            btnToggleCol.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (popoverEl.style.display === 'none' || !popoverEl.style.display) {
-                    openCustomColPopover();
-                } else {
-                    closeCustomColPopover();
-                }
-            });
-        }
-
-        if (btnCloseCol) btnCloseCol.addEventListener('click', (e) => { e.preventDefault(); closeCustomColPopover(); });
-        if (btnCancelCol) btnCancelCol.addEventListener('click', (e) => { e.preventDefault(); closeCustomColPopover(); });
-
-        document.addEventListener('click', function (e) {
-            if (popoverEl && popoverEl.style.display !== 'none') {
-                if (!popoverEl.contains(e.target) && !btnToggleCol.contains(e.target)) {
-                    closeCustomColPopover();
-                }
-            }
-        });
-
-        if (btnSaveCols) {
-            btnSaveCols.addEventListener('click', function () {
-                const hidden = [];
-                document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
-                    const colKey = item.getAttribute('data-col-target');
-                    const chk = item.querySelector('.custom-col-check');
-                    if (chk && !chk.checked) {
-                        hidden.push(colKey);
+                        if (isVisible && meta && meta.type === 'left') {
+                            td.classList.add('dv-col-pinned');
+                            if (meta.isLastLeft) td.classList.add('dv-col-pinned-last');
+                            td.style.left = meta.left + 'px';
+                        }
                     }
                 });
-                branchColConfig = { hidden };
-                localStorage.setItem(STORAGE_BRANCH_COLS_KEY, JSON.stringify(branchColConfig));
-                applyBranchColConfig(branchColConfig);
-                closeCustomColPopover();
             });
-        }
 
-        if (btnResetCols) {
-            btnResetCols.addEventListener('click', function () {
-                branchColConfig = { hidden: [] };
-                localStorage.removeItem(STORAGE_BRANCH_COLS_KEY);
-                localStorage.removeItem(STORAGE_WIDTH_KEY);
-                currentWidths = Object.assign({}, defaultBranchColWidths);
-                applyBranchColConfig(branchColConfig);
-                closeCustomColPopover();
-            });
-        }
-
-        const colSearchInput = document.getElementById('colSearchInput');
-        if (colSearchInput) {
-            colSearchInput.addEventListener('input', function () {
-                const val = this.value.toLowerCase().trim();
-                document.querySelectorAll('#customColList .custom-col-item').forEach(item => {
-                    const name = item.querySelector('.custom-col-name').textContent.toLowerCase();
-                    item.style.display = name.includes(val) ? 'flex' : 'none';
-                });
-            });
+            updatePinnedBadgeCount();
         }
 
         // Tự động bổ sung địa bàn từ dữ liệu bảng nếu chưa có trong select (Đảm bảo 100% động)
@@ -1196,7 +1554,7 @@
         populateLocations();
 
         // Khởi tạo
-        applyBranchColConfig(branchColConfig);
+        applyTableColumns();
         applyAllFilters();
     });
 </script>

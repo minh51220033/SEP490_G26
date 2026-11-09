@@ -733,15 +733,20 @@ body.account-page-body .app-content {
 .account-table-wrapper {
     position: relative;
     overflow-x: auto !important;
-    overflow-y: auto !important;
+    overflow-y: hidden !important;
     flex: 1 1 auto;
     min-height: 0;
     width: 100%;
     background-color: #ffffff;
 }
 
+.account-table-wrapper::-webkit-scrollbar:vertical {
+    width: 0 !important;
+    display: none !important;
+}
+
 .account-table-wrapper::-webkit-scrollbar {
-    width: 10px;
+    width: 0;
     height: 10px;
 }
 

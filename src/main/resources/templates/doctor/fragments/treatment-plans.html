@@ -161,20 +161,16 @@
         }
     </style>
 
-    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden bg-white" id="treatmentPlanSection">
-        <div class="df-plan-header d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 bg-light border-bottom">
-            <div class="df-plan-title-box d-flex flex-wrap align-items-center gap-2">
-                <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                    <i class="bi bi-diagram-3-fill fs-5"></i>
-                </div>
-                <div>
-                    <h4 class="mb-0 fw-bold text-dark fs-6">Kế hoạch &amp; Lộ trình điều trị</h4>
-                    <span class="text-secondary small">Kế hoạch hiển thị chi phí dự kiến theo từng bước và tự động đồng bộ sang Kế toán khi lưu</span>
-                </div>
-                <span class="badge bg-primary-subtle text-primary border border-primary ms-2" id="planCountBadge"
-                      th:text="${treatmentPlans != null ? treatmentPlans.size() : 0} + ' kế hoạch'">
+    <div class="card border shadow-sm rounded-3 mb-4 overflow-hidden bg-white" id="treatmentPlanSection">
+        <div class="df-plan-header df-tab-content-header d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 bg-light border-bottom">
+            <div class="df-tab-title-standard">
+                <i class="bi bi-diagram-3"></i>
+                <span>KẾ HOẠCH &amp; LỘ TRÌNH ĐIỀU TRỊ</span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-0.5 ms-1" id="planCountBadge"
+                      th:text="${treatmentPlans != null ? treatmentPlans.size() : 0} + ' kế hoạch'" style="text-transform: none; letter-spacing: normal;">
                     0 kế hoạch
                 </span>
+                <span class="df-tab-subtitle-text d-none d-lg-inline">(Dự kiến chi phí &amp; đồng bộ Kế toán)</span>
             </div>
 
             <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -220,7 +216,7 @@
                     <th style="width: 100px;">Mã KHĐT</th>
                     <th>Tên phác đồ / Kế hoạch điều trị</th>
                     <th style="width: 180px;">Thời gian thực hiện</th>
-                    <th style="width: 160px;">Tiến độ các giai đoạn</th>
+                    <th style="width: 170px;">Tiến độ điều trị</th>
                     <th style="width: 170px;" class="text-end">Giá dự kiến (Tạm tính)</th>
                     <th style="width: 130px;" class="text-center">Trạng thái</th>
                     <th style="width: 200px;" class="text-center">Thao tác</th>
@@ -271,7 +267,7 @@
                     <td style="padding: 10px 12px;">
                         <div class="d-flex align-items-center justify-content-between mb-1 small">
                             <span class="fw-semibold text-secondary" th:id="'plan-stages-text-' + ${plan.planId}"
-                                  th:text="${plan.completedStages} + '/' + ${plan.totalStages} + ' giai đoạn'">1/3 giai đoạn</span>
+                                  th:text="(${plan.totalItems != null and plan.totalItems > 0} ? (${plan.completedItems} + '/' + ${plan.totalItems} + ' bước') : (${plan.completedStages} + '/' + ${plan.totalStages} + ' giai đoạn'))">1/3 giai đoạn</span>
                             <strong class="text-primary" th:id="'plan-progress-percent-' + ${plan.planId}"
                                     th:text="${plan.progressPercent} + '%'">33%</strong>
                         </div>
