@@ -246,10 +246,10 @@
                 <div class="tab-pane fade" th:classappend="${activeTab == 'overview' ? 'show active' : ''}"
                      id="overview-pane" role="tabpanel">
 
-                    <!-- 4 THẺ CHỈ SỐ KPI CHÍNH (Đồng bộ chuẩn hệ thống) -->
+                    <!-- 5 THẺ CHỈ SỐ KPI CHÍNH (Đồng bộ chuẩn hệ thống) -->
                     <div class="row g-3 mb-4">
                         <!-- KPI 1: Thực thu dòng tiền -->
-                        <div class="col-sm-6 col-xl-3">
+                        <div class="col-sm-6 col-xl">
                             <div class="dv-kpi-card" style="--kpi-accent: #10b981;">
                                 <div>
                                     <div class="dv-kpi-num text-success"
@@ -266,7 +266,7 @@
                         </div>
 
                         <!-- KPI 2: Tổng giá trị hóa đơn -->
-                        <div class="col-sm-6 col-xl-3">
+                        <div class="col-sm-6 col-xl">
                             <div class="dv-kpi-card" style="--kpi-accent: #0284c7;">
                                 <div>
                                     <div class="dv-kpi-num text-primary"
@@ -281,7 +281,7 @@
                         </div>
 
                         <!-- KPI 3: Công nợ viện phí phát sinh -->
-                        <div class="col-sm-6 col-xl-3">
+                        <div class="col-sm-6 col-xl">
                             <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;">
                                 <div>
                                     <div class="dv-kpi-num text-warning"
@@ -296,7 +296,7 @@
                         </div>
 
                         <!-- KPI 4: Lượt khám & Tỷ lệ hoàn tất -->
-                        <div class="col-sm-6 col-xl-3">
+                        <div class="col-sm-6 col-xl">
                             <div class="dv-kpi-card" style="--kpi-accent: #6366f1;">
                                 <div>
                                     <div class="dv-kpi-num" style="color: #4f46e5;"
@@ -308,6 +308,21 @@
                                 </div>
                                 <div class="dv-kpi-icon" style="background: #e0e7ff; color: #4f46e5;">
                                     <i class="bi bi-people-fill"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KPI 5: Bệnh nhân mới trong kỳ -->
+                        <div class="col-sm-6 col-xl">
+                            <div class="dv-kpi-card" style="--kpi-accent: #0284c7;">
+                                <div>
+                                    <div class="dv-kpi-num text-primary"
+                                         th:text="${(dashboard.newPatientsCount ?: 0) + ' BN'}">0 BN</div>
+                                    <div class="dv-kpi-label">Bệnh nhân mới trong kỳ</div>
+                                    <div class="dv-kpi-sub">Hồ sơ tạo mới theo bộ lọc kỳ</div>
+                                </div>
+                                <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                                    <i class="bi bi-person-plus-fill"></i>
                                 </div>
                             </div>
                         </div>

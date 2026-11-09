@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.LockModeType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -85,5 +86,17 @@ public interface PatientProfileRepository extends JpaRepository<PatientProfile, 
     List<PatientProfile> searchActivePatientsForLoyalty(
             @Param("keyword") String keyword,
             @Param("branchId") Long branchId
+    );
+
+    @Query("""
+        SELECT COUNT(p) FROM PatientProfile p
+        WHERE (:branchIds IS NULL OR p.preferredBranch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR p.createdAt >= :startDate)
+          AND (:endDate IS NULL OR p.createdAt <= :endDate)
+    """)
+    long countNewPatientsByBranchesAndPeriod(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate
     );
 }

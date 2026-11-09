@@ -125,9 +125,17 @@ public class AdminReportController {
             HttpSession session
     ) {
         Long currentUserId = getCurrentUserId(session);
-        populateUserAndSidebar(model, session, "reports");
-
         boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
+        if (isAdmin) {
+            org.springframework.web.util.UriComponentsBuilder builder = org.springframework.web.util.UriComponentsBuilder.fromPath("/home");
+            if (branchId != null) builder.queryParam("branchId", branchId);
+            if (startDate != null) builder.queryParam("startDate", startDate);
+            if (endDate != null) builder.queryParam("endDate", endDate);
+            if (taxRate != null) builder.queryParam("taxRate", taxRate);
+            if (tab != null && !tab.isBlank()) builder.queryParam("tab", tab);
+            return "redirect:" + builder.toUriString();
+        }
+        populateUserAndSidebar(model, session, "reports");
         List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
         Collection<Long> resolvedBranchIds = resolveBranchScope(branchId, currentUserId, allowedBranches);
 
