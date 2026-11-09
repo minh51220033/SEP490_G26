@@ -20,7 +20,7 @@ public class FinanceRedirectController {
         this.userRepository = userRepository;
     }
 
-    @GetMapping("/finance")
+    @GetMapping({"/finance", "/finance/customer"})
     public String redirectFinance(HttpServletRequest request, HttpSession session) {
         if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)) {
             return "redirect:/login";
@@ -67,6 +67,14 @@ public class FinanceRedirectController {
         }
 
         // 2. Nhóm Phòng khám (fallback):
+        return "redirect:/expenses";
+    }
+
+    @GetMapping("/finance/clinic")
+    public String redirectFinanceClinic(HttpServletRequest request, HttpSession session) {
+        if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)) {
+            return "redirect:/login";
+        }
         return "redirect:/expenses";
     }
 
