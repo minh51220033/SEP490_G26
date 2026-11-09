@@ -697,7 +697,46 @@
             if ($('kpiCompleted')) $('kpiCompleted').textContent = completedCount;
             if ($('kpiNoShow')) $('kpiNoShow').textContent = noShowCount;
             if ($('kpiCancelled')) $('kpiCancelled').textContent = cancelledCount;
+
+            // Kiểm tra & hiển thị Banner cảnh báo + Chuông thông báo cho Lễ tân
+            checkDoctorLeaveCancelledAlert(list);
         }
+
+        function checkDoctorLeaveCancelledAlert(list) {
+            const leaveCancelled = (list || []).filter(a =>
+                a.status === 'CANCELLED' && (
+                    (a.cancelReason && a.cancelReason.toLowerCase().includes('nghỉ phép')) ||
+                    (a.reason && a.reason.toLowerCase().includes('nghỉ phép'))
+                )
+            );
+            const banner = $('doctorLeaveAlertBanner');
+            const countEl = $('leaveAlertCount');
+
+            if (leaveCancelled.length > 0) {
+                if (banner) {
+                    banner.classList.remove('d-none');
+                    banner.classList.add('d-flex');
+                }
+                if (countEl) countEl.textContent = leaveCancelled.length;
+            } else {
+                if (banner) {
+                    banner.classList.remove('d-flex');
+                    banner.classList.add('d-none');
+                }
+            }
+        }
+
+        $('btnCloseLeaveAlert')?.addEventListener('click', () => {
+            $('doctorLeaveAlertBanner')?.classList.add('d-none');
+            $('doctorLeaveAlertBanner')?.classList.remove('d-flex');
+        });
+
+        $('btnFilterLeaveCancelled')?.addEventListener('click', () => {
+            currentKpiFilter = 'CANCELLED';
+            if ($('advFilterStatus')) $('advFilterStatus').value = 'CANCELLED';
+            applyFiltersAndRender();
+            document.querySelector('.dv-main-table')?.scrollIntoView({ behavior: 'smooth' });
+        });
 
         // Active Filter Tags management
         function updateActiveFilterTags(activeTags) {

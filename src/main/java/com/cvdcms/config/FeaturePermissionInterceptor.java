@@ -163,9 +163,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         }
         if (uri.startsWith("/doctor/labo") || uri.startsWith("/api/doctor/labo-orders")) {
             if (!isWriteMethod) {
-                return List.of("CLINICAL_LABO", "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+                return List.of("CLINICAL_LABO", "LABO_SUPPLIERS", "LABO_PRICING", "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
             }
-            return List.of("CLINICAL_LABO");
+            return List.of("CLINICAL_LABO", "LABO_SUPPLIERS", "LABO_PRICING");
         }
         if (uri.startsWith("/api/doctor/treatment-plans")) {
             if (!isWriteMethod) {
@@ -211,6 +211,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/payments/debts")) {
             return List.of("FINANCE_DEBT");
         }
+        if (uri.startsWith("/payments/deposits")) {
+            return List.of("FINANCE_DEPOSIT", "PAYMENT_COLLECT");
+        }
         if (uri.startsWith("/payments/refunds") || uri.startsWith("/api/payments/refunds")) {
             return List.of("REFUND_MANAGE");
         }
@@ -218,14 +221,29 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             return List.of("INVOICE_CREATE");
         }
         if (uri.startsWith("/payments") || uri.startsWith("/api/payments")) {
-            return List.of("PAYMENT_COLLECT");
+            return List.of("PAYMENT_COLLECT", "FINANCE_DEPOSIT");
+        }
+        if (uri.startsWith("/expenses") || uri.startsWith("/api/expenses")) {
+            return List.of("FINANCE_EXPENSES", "FINANCE_DASHBOARD", "INVOICE_CREATE", "PAYMENT_COLLECT");
+        }
+        if (uri.startsWith("/payroll/advances")) {
+            return List.of("FINANCE_PAYROLL_ADVANCES", "FINANCE_PAYROLL", "FINANCE_DASHBOARD");
+        }
+        if (uri.startsWith("/payroll/commission-config") || uri.startsWith("/payroll/config")) {
+            return List.of("FINANCE_COMMISSION_CONFIG");
+        }
+        if (uri.startsWith("/payroll/owner-distributions")) {
+            return List.of("FINANCE_OWNER_DISTRIBUTIONS", "FINANCE_DASHBOARD");
+        }
+        if (uri.startsWith("/payroll")) {
+            return List.of("FINANCE_PAYROLL", "FINANCE_DASHBOARD", "INVOICE_CREATE", "PAYMENT_COLLECT");
         }
         if (uri.startsWith("/api/finance")) {
-            return List.of("PAYMENT_COLLECT", "INVOICE_CREATE", "FINANCE_DASHBOARD");
+            return List.of("PAYMENT_COLLECT", "INVOICE_CREATE", "FINANCE_DASHBOARD", "FINANCE_DEPOSIT", "FINANCE_EXPENSES", "FINANCE_PAYROLL");
         }
 
         // =====================================================================
-        // 4. KHO VẬT TƯ & NHÀ CUNG CẤP (INVENTORY - 2 chức năng độc lập 1:1)
+        // 4. KHO VẬT TƯ & NHÀ CUNG CẤP (INVENTORY)
         // =====================================================================
         if (uri.startsWith("/suppliers")
                 || uri.startsWith("/inventory/suppliers")
@@ -234,11 +252,12 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             return List.of("SUPPLIER_MANAGE");
         }
         if (uri.startsWith("/inventory") || uri.startsWith("/api/inventory")) {
-            return List.of("INVENTORY_STOCK");
+            return List.of("INVENTORY_STOCK", "INVENTORY_BATCHES", "INVENTORY_RECEIPT", "INVENTORY_ISSUE",
+                    "INVENTORY_TRANSFER", "INVENTORY_MATERIALS", "INVENTORY_CATEGORIES", "SUPPLIER_MANAGE");
         }
 
         // =====================================================================
-        // 5. NHÂN SỰ, CA TRỰC & CHẤM CÔNG (HR - 6 chức năng độc lập 1:1)
+        // 5. NHÂN SỰ, CA TRỰC & CHẤM CÔNG (HR)
         // =====================================================================
         if (uri.startsWith("/attendance/my")
                 || uri.startsWith("/attendance/check-in")
@@ -255,7 +274,7 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             return List.of("HR_BRANCH_ATTENDANCE");
         }
         if (uri.startsWith("/admin/leave-requests") || uri.startsWith("/api/admin/leave-requests")) {
-            return List.of("SCHEDULE_MANAGE", "STAFF_MANAGE");
+            return List.of("HR_LEAVE_APPROVE", "SCHEDULE_MANAGE", "STAFF_MANAGE");
         }
         if (uri.startsWith("/admin/schedules") || uri.startsWith("/api/schedules")) {
             return List.of("SCHEDULE_MANAGE");
@@ -265,7 +284,7 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         }
 
         // =====================================================================
-        // 6. QUẢN TRỊ HỆ THỐNG & DANH MỤC (SYSTEM - 12 chức năng độc lập 1:1)
+        // 6. QUẢN TRỊ HỆ THỐNG & DANH MỤC (SYSTEM)
         // =====================================================================
         if (uri.startsWith("/accounts/roles")) {
             return List.of("ROLE_MANAGE");
@@ -280,7 +299,7 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             return List.of("BRANCH_MANAGE", "ACCOUNT_MANAGE");
         }
         if (uri.startsWith("/admin/reports")) {
-            return List.of("FINANCE_REPORTS");
+            return List.of("FINANCE_REPORTS", "REPORT_FINANCIAL", "REPORT_DEBTS", "REPORT_OPERATIONAL");
         }
         if (uri.startsWith("/admin/audit")) {
             return List.of("SYSTEM_AUDIT");
@@ -289,13 +308,16 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             return List.of("SYSTEM_BANS");
         }
         if (uri.startsWith("/admin/comments")) {
-            return List.of("CATALOG_NEWS", "SYSTEM_BANS");
+            return List.of("NEWS_COMMENTS_MODERATE", "CATALOG_NEWS", "SYSTEM_BANS");
         }
         if (uri.startsWith("/admin/catalogs") || uri.startsWith("/admin/catalog")) {
-            return List.of("CATALOG_SERVICES", "CATALOG_MEDICATIONS", "CATALOG_ICD10", "CATALOG_MANAGE");
+            return List.of("CATALOG_SERVICES", "CATALOG_SERVICE_CATEGORIES", "CATALOG_MEDICATIONS", "CATALOG_ICD10", "CATALOG_MANAGE");
+        }
+        if (uri.startsWith("/admin/services/categories")) {
+            return List.of("CATALOG_SERVICE_CATEGORIES", "CATALOG_SERVICES", "CATALOG_MANAGE");
         }
         if (uri.startsWith("/admin/services")) {
-            return List.of("CATALOG_SERVICES", "CATALOG_MANAGE");
+            return List.of("CATALOG_SERVICES", "CATALOG_SERVICE_CATEGORIES", "CATALOG_MANAGE");
         }
         if (uri.startsWith("/admin/medications")) {
             return List.of("CATALOG_MEDICATIONS", "CATALOG_MANAGE");

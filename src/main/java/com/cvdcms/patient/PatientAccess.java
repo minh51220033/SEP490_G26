@@ -11,7 +11,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Component
 public class PatientAccess {
@@ -57,17 +60,31 @@ public class PatientAccess {
         if (!admin && !hasReceptionPermission) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản của bạn không được cấp quyền truy cập chức năng này.");
         }
-        Long branchId = admin ? null : user.getBranch() == null ? null : user.getBranch().getBranchId();
-        if (!admin && branchId == null && staffBranchAssignments != null) {
+        Set<Long> accessibleBranchIds = new HashSet<>();
+        if (user.getBranch() != null && user.getBranch().getBranchId() != null) {
+            accessibleBranchIds.add(user.getBranch().getBranchId());
+        }
+        if (staffBranchAssignments != null) {
             List<Long> activeBranches = staffBranchAssignments.findActiveBranchIdsByUserId(user.getUserId(), AssignmentStatus.ACTIVE);
             if (activeBranches != null && !activeBranches.isEmpty()) {
-                branchId = activeBranches.get(0);
+                accessibleBranchIds.addAll(activeBranches);
             }
         }
-        if (!admin && branchId == null) {
+
+        Long branchId = admin ? null : (user.getBranch() == null ? null : user.getBranch().getBranchId());
+        if (session != null) {
+            Object sBranchId = session.getAttribute("currentBranchId");
+            if (sBranchId instanceof Long sId && (admin || accessibleBranchIds.contains(sId))) {
+                branchId = sId;
+            }
+        }
+        if (!admin && branchId == null && !accessibleBranchIds.isEmpty()) {
+            branchId = accessibleBranchIds.iterator().next();
+        }
+        if (!admin && branchId == null && accessibleBranchIds.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản của bạn chưa được phân công chi nhánh hoạt động.");
         }
-        return new Scope(user, branchId, admin);
+        return new Scope(user, branchId, admin, Collections.unmodifiableSet(accessibleBranchIds));
     }
 
     private boolean hasRole(User user, String name) {
@@ -80,9 +97,16 @@ public class PatientAccess {
         return actual.equals(name) || actual.equals("ROLE_" + name);
     }
 
-    public record Scope(User user, Long branchId, boolean admin) {
+    public record Scope(User user, Long branchId, boolean admin, Set<Long> branchIds) {
+        public Scope(User user, Long branchId, boolean admin) {
+            this(user, branchId, admin, branchId != null ? Set.of(branchId) : Collections.emptySet());
+        }
+
         public boolean permits(Long targetBranchId) {
-            return admin || (branchId != null && branchId.equals(targetBranchId));
+            if (admin) return true;
+            if (targetBranchId == null) return false;
+            if (branchId != null && branchId.equals(targetBranchId)) return true;
+            return branchIds != null && branchIds.contains(targetBranchId);
         }
     }
 }

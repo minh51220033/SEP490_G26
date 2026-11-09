@@ -285,6 +285,43 @@
                     </div>
                 </nav>
 
+                <!-- BANNER CẢNH BÁO LỊCH HẸN BỊ HỦY DO BÁC SĨ NGHỈ PHÉP (SCR-42 / FT-07) -->
+                <div id="doctorLeaveAlertBanner"
+                    class="alert alert-danger border-danger shadow-sm rounded-4 mb-3 p-3 d-none align-items-center justify-content-between flex-wrap gap-2"
+                    style="background: #fef2f2; border: 1.5px solid #ef4444 !important; animation: fadeIn 0.3s ease-in-out;">
+                    <div class="d-flex align-items-center gap-3">
+                        <div
+                            style="width: 42px; height: 42px; background: #fee2e2; color: #dc2626; border-radius: 12px; display: grid; place-items: center; font-size: 20px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.15);">
+                            <i class="bi bi-bell-fill"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h6 class="mb-0 text-danger fw-bold" style="font-size: 14.5px;">
+                                    <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i> Cảnh báo: Có <span
+                                        id="leaveAlertCount" class="badge bg-danger rounded-pill px-2">0</span> lịch hẹn
+                                    bị hủy do Bác sĩ nghỉ phép
+                                </h6>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle"
+                                    style="font-size: 11px;">Cần liên hệ bệnh nhân</span>
+                            </div>
+                            <p class="mb-0 text-secondary small mt-1" id="leaveAlertText" style="font-size: 12.8px;">
+                                Bác sĩ có lịch nghỉ phép đã được duyệt. Vui lòng chủ động gọi điện thoại cho bệnh nhân
+                                để đổi bác sĩ phụ trách hoặc sắp xếp lại ngày khám mới.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button"
+                            class="btn btn-danger btn-sm fw-bold px-3 py-1.5 rounded-pill shadow-xs d-inline-flex align-items-center gap-1.5"
+                            id="btnFilterLeaveCancelled"
+                            style="background:#dc2626; border:none; color:white; font-size: 12.5px;">
+                            <i class="bi bi-telephone-outbound"></i> Xem danh sách cần gọi
+                        </button>
+                        <button type="button" class="btn-close ms-2" id="btnCloseLeaveAlert"
+                            aria-label="Đóng cảnh báo"></button>
+                    </div>
+                </div>
+
                 <!-- THANH ĐIỀU KHIỂN & BỘ LỌC CHUẨN ENTERPRISE (GIỐNG DANH SÁCH KHÁM THEO NGÀY) -->
                 <div class="dv-toolbar-card">
                     <!-- TẦNG 1: ĐIỀU HƯỚNG THỜI GIAN, PHẠM VI NGÀY/TUẦN/THÁNG & CHẾ ĐỘ XEM (DANH SÁCH / Ô LỊCH) -->

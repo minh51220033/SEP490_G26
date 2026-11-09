@@ -31,12 +31,22 @@
                 </div>
             </div>
 
+            <!-- BREADCRUMB PHÂN CẤP -->
+            <nav class="dv-breadcrumb mb-2" aria-label="Đường dẫn phân cấp">
+                <a th:href="@{/}">Trang chủ</a> /
+                <a th:href="@{/accounts}">Quản lý tài khoản</a> /
+                <a th:href="@{/accounts/{id}(id=${account.userId})}" th:text="${account.username}">Tài khoản</a> /
+                <span>Chỉnh sửa</span>
+            </nav>
+
             <!-- FORM SỬA TÀI KHOẢN (SCR-01.2) -->
             <section class="panel">
                 <div class="panel__head d-flex flex-wrap justify-content-between align-items-center gap-3">
                     <div>
-                        <a th:href="@{/accounts/{id}(id=${account.userId})}" class="text-decoration-none small text-muted">
-                            <i class="bi bi-arrow-left" aria-hidden="true"></i> Quay lại chi tiết
+                        <a th:href="@{/accounts}"
+                           onclick="if (document.referrer && document.referrer.indexOf(window.location.host) !== -1) { event.preventDefault(); window.history.back(); }"
+                           class="text-decoration-none small text-muted d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-arrow-left" aria-hidden="true"></i> Quay lại
                         </a>
                         <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
                             <h3 class="panel__title mb-0">Cập nhật thông tin &amp; Phân quyền</h3>
@@ -175,7 +185,9 @@
                     <!-- NÚT LƯU & QUAY LẠI -->
                     <div class="card border-0 shadow-sm rounded-3 mt-3">
                         <div class="card-body d-flex justify-content-between align-items-center py-3">
-                            <a th:href="@{/accounts/{id}(id=${account.userId})}" class="btn btn-outline-secondary">
+                            <a th:href="@{/accounts}"
+                               onclick="if (document.referrer && document.referrer.indexOf(window.location.host) !== -1) { event.preventDefault(); window.history.back(); }"
+                               class="btn btn-outline-secondary">
                                 <i class="bi bi-x-circle me-1"></i> Hủy bỏ
                             </a>
                             <button type="submit" class="btn btn-primary px-4">
