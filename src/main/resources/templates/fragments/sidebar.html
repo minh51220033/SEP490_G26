@@ -390,6 +390,29 @@
         </div>
     </nav>
 
+    <!-- Khôi phục vị trí cuộn sidebar tức thì trước khi render (chống FOUC / giật nhảy lên đầu trang) -->
+    <script>
+        (function () {
+            var nav = document.querySelector(".app-sidebar__nav");
+            if (!nav) return;
+            try {
+                var saved = sessionStorage.getItem("cvdcms.sidebar.navScrollTop");
+                if (saved !== null) {
+                    nav.scrollTop = parseInt(saved, 10) || 0;
+                }
+                var active = nav.querySelector(".side-link.is-active");
+                if (active) {
+                    var navRect = nav.getBoundingClientRect();
+                    var actRect = active.getBoundingClientRect();
+                    if (actRect.top < navRect.top || actRect.bottom > navRect.bottom) {
+                        var target = active.offsetTop - (nav.clientHeight / 2) + (active.clientHeight / 2);
+                        nav.scrollTop = Math.max(0, target);
+                    }
+                }
+            } catch (e) {}
+        })();
+    </script>
+
     <!-- CHÂN SIDEBAR: thẻ người dùng + popup dropup + nút thu gọn (desktop) -->
     <div class="app-sidebar__foot">
         <div class="sidebar-user-dropdown" data-dropdown th:if="${session.loggedInUser != null}">
