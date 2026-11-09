@@ -220,13 +220,29 @@ function renderPlanInlineRoadmapHtml(plan) {
                 else if (st.status === 'IN_PROGRESS') cardClass += ' is-in-progress';
                 else cardClass += ' is-pending';
 
-                const completedBadgeHtml = st.completedAt
-                    ? `<span class="badge px-2.5 py-1.5 rounded-pill bg-success-subtle text-success border border-success" id="stage-completed-badge-${st.stageId}">
-                           <i class="bi bi-clock-history me-1"></i><span>Ngày làm: ${st.completedAt}</span>
-                       </span>`
-                    : `<span class="badge px-2.5 py-1.5 rounded-pill bg-light text-secondary border" id="stage-completed-badge-${st.stageId}">
-                           <i class="bi bi-clock-history me-1"></i><span>Chưa thực hiện</span>
-                       </span>`;
+                const totalItemsInStage = (st.items && st.items.length) || 0;
+                const doneItemsInStage = (st.items && st.items.filter(i => i.status === 'COMPLETED').length) || 0;
+
+                let completedBadgeHtml = '';
+                if (st.status === 'COMPLETED' || (totalItemsInStage > 0 && doneItemsInStage === totalItemsInStage)) {
+                    completedBadgeHtml = `
+                        <span class="badge px-2.5 py-1.5 rounded-pill bg-success-subtle text-success border border-success" id="stage-completed-badge-${st.stageId}">
+                            <i class="bi bi-check2-circle me-1"></i><span>${st.completedAt ? 'Hoàn thành: ' + st.completedAt : 'Đã hoàn thành'}</span>
+                        </span>
+                    `;
+                } else if (doneItemsInStage > 0 || st.status === 'IN_PROGRESS') {
+                    completedBadgeHtml = `
+                        <span class="badge px-2.5 py-1.5 rounded-pill bg-primary-subtle text-primary border border-primary" id="stage-completed-badge-${st.stageId}">
+                            <i class="bi bi-arrow-repeat me-1"></i><span>Tiến độ: ${doneItemsInStage}/${totalItemsInStage} bước</span>
+                        </span>
+                    `;
+                } else {
+                    completedBadgeHtml = `
+                        <span class="badge px-2.5 py-1.5 rounded-pill bg-light text-secondary border" id="stage-completed-badge-${st.stageId}">
+                            <i class="bi bi-clock-history me-1"></i><span>Chưa thực hiện</span>
+                        </span>
+                    `;
+                }
 
                 const expectedEnd = st.expectedEndDate || plan.expectedEndDate || '---';
 
@@ -418,7 +434,7 @@ function renderPlanInlineRoadmapHtml(plan) {
                         <strong>${plan.expectedEndDate || '---'}</strong>
                     </span>
                     <span class="badge bg-light text-primary border px-2.5 py-1.5 rounded-pill fw-bold" id="plan-progress-badge-${plan.planId}">
-                        ${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)
+                        ${plan.totalItems ? `${plan.completedItems}/${plan.totalItems} bước (${plan.progressPercent}%)` : `${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)`}
                     </span>
                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 shadow-xs d-inline-flex align-items-center gap-1 ms-1"
                             onclick="toggleAllCoursesInPlan(${plan.planId})"
@@ -529,7 +545,9 @@ function updatePlanInlineView(plan) {
     if (parentRow) {
         const progBadge = document.getElementById(`plan-progress-badge-${plan.planId}`);
         if (progBadge) {
-            progBadge.innerText = `${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)`;
+            progBadge.innerText = (plan.totalItems && plan.totalItems > 0)
+                ? `${plan.completedItems}/${plan.totalItems} bước (${plan.progressPercent}%)`
+                : `${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)`;
         }
         const progPercent = document.getElementById(`plan-progress-bar-${plan.planId}`);
         if (progPercent && plan.progressPercent !== undefined) {
@@ -541,8 +559,10 @@ function updatePlanInlineView(plan) {
             progPercentText.innerText = `${plan.progressPercent}%`;
         }
         const stageCountText = document.getElementById(`plan-stages-text-${plan.planId}`);
-        if (stageCountText && plan.totalStages !== undefined) {
-            stageCountText.innerText = `${plan.completedStages}/${plan.totalStages} giai đoạn`;
+        if (stageCountText) {
+            stageCountText.innerText = (plan.totalItems && plan.totalItems > 0)
+                ? `${plan.completedItems}/${plan.totalItems} bước`
+                : `${plan.completedStages}/${plan.totalStages} giai đoạn`;
         }
 
         const statusCell = document.getElementById(`plan-status-cell-${plan.planId}`);
