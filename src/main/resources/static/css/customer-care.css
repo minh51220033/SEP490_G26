@@ -30,59 +30,15 @@
     --muted: #64748b;
 }
 
-* {
-    box-sizing: border-box;
-}
-
-/* 1. KHÓA TRIỆT ĐỂ THANH CUỘN CỦA TRÌNH DUYỆT (VIEWPORT SCROLL LOCK 100vh) */
-html, body {
-    height: 100vh !important;
-    max-height: 100vh !important;
-    overflow: hidden !important;
-    margin: 0;
-    padding: 0;
-    font-family: 'Be Vietnam Pro', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-    background-color: var(--bg);
-    color: var(--ink);
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-}
-
-.app-shell {
-    display: flex;
-    height: 100vh;
-    width: 100vw;
-    overflow: hidden;
-}
-
-.app-main {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-    min-width: 0;
-}
-
-/* TOPBAR CỐ ĐỊNH 56px */
-.app-topbar__bar {
-    height: 56px;
-    flex-shrink: 0;
-    background: linear-gradient(90deg, var(--brand-navy-start) 0%, var(--brand-navy-end) 100%) !important;
-    color: #ffffff !important;
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    z-index: 1030;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
-}
-
-/* 2. VÙNG NỘI DUNG CHÍNH CỦA TRANG CSKH */
+/* 2. VÙNG NỘI DUNG CHÍNH CỦA TRANG CSKH (ĐỒNG BỘ 100% LAYOUT HỆ THỐNG) */
 .cc-app-view {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    min-height: 0;
+    min-height: calc(100vh - 56px);
+    padding: 16px 20px 24px 20px;
+    background-color: var(--bg);
+}
     padding: 12px 18px 0 18px;
     overflow: hidden;
     background-color: var(--bg);
