@@ -643,6 +643,12 @@ public class PaymentPageController {
     @GetMapping("/deposits")
     public String listDeposits(
             @RequestParam(required = false) Long profileId,
+            @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
             Model model,
             HttpSession session
     ) {
@@ -650,6 +656,40 @@ public class PaymentPageController {
         populateUserAndSidebar(model, session, "deposits");
         List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
         model.addAttribute("branches", allowedBranches);
+
+        Long effectiveBranchId = resolveBranchId(branchId, currentUserId);
+
+        LocalDateTime startDt = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime endDt = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "paidAt"));
+        Page<Payment> depositPage = paymentService.getPayments(
+                effectiveBranchId,
+                PaymentType.ADVANCE_DEPOSIT,
+                null,
+                keyword,
+                startDt,
+                endDt,
+                pageable
+        );
+
+        long totalItems = depositPage.getTotalElements();
+        long fromItem = totalItems == 0 ? 0 : (long) page * size + 1;
+        long toItem = Math.min((long) (page + 1) * size, totalItems);
+
+        model.addAttribute("deposits", depositPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("pageSize", size);
+        model.addAttribute("totalPages", depositPage.getTotalPages());
+        model.addAttribute("totalElements", totalItems);
+        model.addAttribute("totalItems", totalItems);
+        model.addAttribute("fromItem", fromItem);
+        model.addAttribute("toItem", toItem);
+
+        model.addAttribute("selectedBranchId", effectiveBranchId);
+        model.addAttribute("keyword", keyword);
+        model.addAttribute("startDate", startDate);
+        model.addAttribute("endDate", endDate);
 
         if (profileId != null) {
             patientProfileRepository.findById(profileId).ifPresent(p -> {
