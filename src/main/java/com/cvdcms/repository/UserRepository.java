@@ -308,10 +308,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
       AND u.isActive = TRUE
       AND r.isActive = TRUE
       AND (
-          UPPER(r.roleName) IN ('ADMIN', 'ROLE_ADMIN')
+          UPPER(TRIM(r.roleName)) IN ('ADMIN', 'ROLE_ADMIN', 'KE_TOAN', 'ROLE_KE_TOAN', 'ACCOUNTANT', 'ROLE_ACCOUNTANT')
           OR (
               (UPPER(COALESCE(p.module, '')) = 'FINANCE'
-               OR UPPER(COALESCE(p.permissionCode, '')) IN ('INVOICE_VIEW', 'INVOICE_CREATE', 'PAYMENT_COLLECT', 'REFUND_MANAGE'))
+               OR UPPER(COALESCE(p.permissionCode, '')) IN ('INVOICE_VIEW', 'INVOICE_CREATE', 'PAYMENT_COLLECT', 'REFUND_MANAGE', 'FINANCE_DASHBOARD', 'FINANCE_DEBT', 'FINANCE_REPORTS'))
               AND (COALESCE(u.customPermissionsEnabled, FALSE) = FALSE OR cp = p)
           )
       )

@@ -419,7 +419,7 @@
                                         <span>Chưa có dịch vụ nào được thực hiện trong ca khám này. Nhấn <strong>"+ Thêm điều trị"</strong> để ghi nhận.</span>
                                     </td>
                                 </tr>
-                                <tr th:each="ps : ${performedServices}" th:id="'ps-row-' + ${ps.performedId}">
+                                <tr th:each="ps : ${performedServices}" th:id="'ps-row-' + ${ps.performedId}" th:data-plan-item-id="${ps.planItemId}">
                                     <td>
                                         <span class="small text-muted fw-semibold" th:text="${ps.completedAt}">21/10/2026</span>
                                     </td>
@@ -2222,6 +2222,9 @@
 
         const tr = document.createElement('tr');
         tr.id = `ps-row-${ps.performedId}`;
+        if (ps.planItemId) {
+            tr.setAttribute('data-plan-item-id', ps.planItemId);
+        }
         tr.className = 'dv-data-row';
 
         const toothDisplay = ps.toothNumbers ? (String(ps.toothNumbers).includes("Toàn hàm") ? ps.toothNumbers : ps.toothNumbers) : 'Toàn hàm';
@@ -2247,16 +2250,6 @@
             </td>
             <td class="text-center" style="white-space: nowrap;">
                 <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Đã thực hiện</span>
-            </td>
-            <td class="text-center dv-col-pinned-right" style="white-space: nowrap;">
-                <button type="button" class="btn btn-sm btn-outline-primary px-3 py-1.5 rounded-2 fw-semibold"
-                        data-service-id="${ps.serviceId}"
-                        data-service-name="${ps.serviceName}"
-                        data-performed-id="${ps.performedId}"
-                        onclick="openChairsideWorkflowModal(this.getAttribute('data-service-id'), this.getAttribute('data-service-name'), this.getAttribute('data-performed-id'))"
-                        title="Theo dõi các bước quy trình kỹ thuật tại ghế">
-                    Quy trình kỹ thuật
-                </button>
             </td>
         `;
 
