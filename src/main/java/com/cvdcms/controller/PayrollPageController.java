@@ -180,6 +180,7 @@ public class PayrollPageController {
         Long currentUserId = getCurrentUserId(session);
         populateUserAndSidebar(model, session, "payroll");
 
+        boolean isAdmin = isCurrentUserAdmin(currentUserId, session);
         boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId, session);
         List<Branch> allowedBranches = resolveAllowedBranches(currentUserId, session);
         List<Long> allowedBranchIds = isPrivileged ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
@@ -402,8 +403,9 @@ public class PayrollPageController {
         populateUserAndSidebar(model, session, "payroll");
 
         boolean isAdmin = isCurrentUserAdmin(currentUserId, session);
+        boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId, session);
         List<Branch> allowedBranches = resolveAllowedBranches(currentUserId, session);
-        List<Long> allowedBranchIds = isAdmin ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
+        List<Long> allowedBranchIds = isPrivileged ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
 
         Pageable pageable = PageRequest.of(page, size);
         Page<SalaryAdvance> advances = salaryAdvanceService.getAdvances(
@@ -646,6 +648,7 @@ public class PayrollPageController {
         Long currentUserId = getCurrentUserId(session);
         populateUserAndSidebar(model, session, "payroll");
 
+        boolean isAdmin = isCurrentUserAdmin(currentUserId, session);
         boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId, session);
         List<Branch> allowedBranches = resolveAllowedBranches(currentUserId, session);
         List<Long> allowedBranchIds = isPrivileged ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
