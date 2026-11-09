@@ -354,4 +354,58 @@ class QueueWorkflowServiceTest {
         assertEquals(11L, calledNumber.ticketId());
         assertNotNull(calledNumber.callTime());
     }
+
+    @Test
+    void testPublicQueuePiiMaskingAndShortName() {
+        when(branches.findById(1L)).thenReturn(Optional.of(branch));
+        PatientProfile p1 = new PatientProfile();
+        p1.setFullName("An");
+        p1.setPhoneNumber("0987654321");
+        p1.setPatientCode("BN01");
+        Visit v1 = new Visit();
+        v1.setPatientProfile(p1);
+        v1.setStatus(VisitStatus.WAITING);
+        QueueTicket t1 = new QueueTicket();
+        t1.setTicketId(101L);
+        t1.setBranch(branch);
+        t1.setVisit(v1);
+        t1.setStatus(QueueStatus.WAITING);
+        t1.setTicketNumber(1);
+        t1.setDisplayNumber("01");
+
+        when(tickets.forBoard(eq(1L), any(), eq(QueueType.EXAM))).thenReturn(List.of(t1));
+
+        var rows = service.publicQueueList(1L);
+        assertEquals(1, rows.size());
+        assertEquals("A*", rows.get(0).patientName());
+        assertEquals("098****321", rows.get(0).phoneNumber());
+    }
+
+    @Test
+    void testCallAndStartForWaitingResultVisit() {
+        permitted();
+        StaffProfile doctor = new StaffProfile();
+        doctor.setStaffId(2L);
+        visit.setPrimaryDoctor(doctor);
+        visit.setStatus(VisitStatus.WAITING_RESULT); // Returning paraclinical patient
+
+        when(tickets.countOtherForDoctor(eq(1L), any(), eq(QueueType.EXAM), eq(2L), eq(QueueStatus.CALLED), eq(11L))).thenReturn(0L);
+        when(tickets.forBoard(eq(1L), any(), eq(QueueType.EXAM))).thenReturn(List.of(ticket));
+
+        // Call step
+        service.transition(session, 11L, QueueWorkflowService.Action.CALL, null);
+        assertEquals(QueueStatus.CALLED, ticket.getStatus());
+
+        // Start step
+        Room room = new Room(); room.setRoomId(10L); room.setBranch(branch); room.setStatus(RoomStatus.ACTIVE);
+        DentalChair chair = new DentalChair(); chair.setChairId(20L); chair.setBranch(branch); chair.setRoom(room); chair.setStatus(ChairStatus.AVAILABLE);
+        visit.setRoomId(10L); visit.setChairId(20L);
+        when(rooms.findById(10L)).thenReturn(Optional.of(room));
+        when(chairs.findById(20L)).thenReturn(Optional.of(chair));
+        when(visits.occupiedChair(eq(20L), eq(7L), anySet())).thenReturn(0);
+
+        service.transition(session, 11L, QueueWorkflowService.Action.START, null);
+        assertEquals(QueueStatus.IN_SERVICE, ticket.getStatus());
+        assertEquals(VisitStatus.IN_EXAM, visit.getStatus());
+    }
 }

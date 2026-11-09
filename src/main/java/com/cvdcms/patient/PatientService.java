@@ -422,8 +422,30 @@ public class PatientService {
     }
 
     private void requireDuplicateConfirmation(PatientAccess.Scope scope, PatientProfileForm form, Long excludeId) {
-        if (!form.confirmDuplicate() && !findCandidates(scope, form.fullName(), form.dob(),
-                form.phoneNumber(), form.idCardNumber(), excludeId).isEmpty()) {
+        List<DuplicateCandidate> candidates = findCandidates(scope, form.fullName(), form.dob(),
+                form.phoneNumber(), form.idCardNumber(), excludeId);
+        if (candidates.isEmpty()) {
+            return;
+        }
+
+        String cleanIdCard = blankToNull(form.idCardNumber());
+        String cleanPhone = blankToNull(form.phoneNumber());
+        String cleanName = blankToNull(form.fullName());
+
+        for (DuplicateCandidate c : candidates) {
+            boolean exactIdCardMatch = cleanIdCard != null && c.matchedFields().contains("Số CCCD");
+            boolean exactPhoneMatch = cleanPhone != null && c.matchedFields().contains("Số điện thoại");
+            if (exactIdCardMatch) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Số CCCD " + cleanIdCard + " đã được sử dụng cho bệnh nhân (Mã: " + c.code() + " - " + c.fullName() + " tại " + c.branchName() + "). Không được tạo hồ sơ trùng số CCCD.");
+            }
+            if (exactPhoneMatch) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Số điện thoại " + cleanPhone + " đã được sử dụng cho bệnh nhân (Mã: " + c.code() + " - " + c.fullName() + " tại " + c.branchName() + "). Không được tạo hồ sơ trùng số điện thoại.");
+            }
+        }
+
+        if (!form.confirmDuplicate()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Có hồ sơ tương tự. Vui lòng đối chiếu và xác nhận trước khi lưu.");
         }
@@ -435,7 +457,7 @@ public class PatientService {
         String cleanPhone = blankToNull(phone);
         String cleanIdCard = blankToNull(idCardNumber);
         if (cleanPhone == null && (cleanName == null || dob == null) && cleanIdCard == null) return List.of();
-        List<ReceptionPatientRecord> found = search.candidates(scope.branchId(),
+        List<ReceptionPatientRecord> found = search.candidates(null,
                 cleanPhone == null ? "" : cleanPhone,
                 dob, cleanName == null ? "" : cleanName.toLowerCase(Locale.ROOT),
                 cleanIdCard == null ? "" : cleanIdCard,

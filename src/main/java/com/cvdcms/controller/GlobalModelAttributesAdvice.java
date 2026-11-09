@@ -60,6 +60,15 @@ public class GlobalModelAttributesAdvice {
         this.patientProfileRepositoryProvider = patientProfileRepositoryProvider;
     }
 
+    public GlobalModelAttributesAdvice(
+            UserRepository userRepository,
+            ObjectProvider<CustomerPortalService> customerPortalServiceProvider,
+            ObjectProvider<ServiceCatalogService> serviceCatalogServiceProvider,
+            ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider,
+            Object branchServiceProvider) {
+        this(userRepository, customerPortalServiceProvider, serviceCatalogServiceProvider, patientProfileRepositoryProvider);
+    }
+
     @ModelAttribute("roleNames")
     public List<String> populateRoleNames(HttpServletRequest request, HttpSession session) {
         // 1. Lấy từ request attribute (do FeaturePermissionInterceptor đồng bộ)

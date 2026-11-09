@@ -429,6 +429,28 @@
                 }
             });
         }
+
+        // MISA AMIS Pagination handler
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+        const filterForm = document.getElementById('filterForm');
+        const pageSizeInput = document.getElementById('pageSizeInput');
+        const pageIndexInput = document.getElementById('pageIndexInput');
+        if (filterForm) {
+            filterForm.addEventListener('submit', function () {
+                if (pageIndexInput) {
+                    pageIndexInput.value = '0';
+                }
+            });
+        }
+        if (pageSizeSelect && filterForm && pageSizeInput) {
+            pageSizeSelect.addEventListener('change', function () {
+                pageSizeInput.value = this.value;
+                if (pageIndexInput) {
+                    pageIndexInput.value = '0';
+                }
+                filterForm.submit();
+            });
+        }
     }
 
     // Event delegation toàn cục cho toàn bộ nút thao tác, modal, chip lọc và click hàng mở Drawer
