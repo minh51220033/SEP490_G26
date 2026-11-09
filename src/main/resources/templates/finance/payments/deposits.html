@@ -297,18 +297,18 @@
 
                     <!-- BẢNG CUỘN DỮ LIỆU -->
                     <div class="dv-table-scroll-container">
-                        <table class="dv-amis-table table mb-0 align-middle">
+                        <table class="dv-amis-table fin-table table mb-0 align-middle" data-enhanced-table="ft22-deposits">
                             <thead>
                                 <tr>
-                                    <th style="width: 55px; text-align: center;">#</th>
-                                    <th style="width: 175px;">Thời gian</th>
-                                    <th style="width: 260px;">Bệnh nhân</th>
-                                    <th style="width: 160px;">Cơ sở / Chi nhánh</th>
-                                    <th style="width: 170px;" class="text-end">Số tiền tạm ứng</th>
-                                    <th style="width: 170px;">Phương thức</th>
-                                    <th style="min-width: 200px;">Ghi chú / Mục đích</th>
-                                    <th style="width: 180px;">Người thu</th>
-                                    <th style="width: 170px; text-align: center;">Thao tác</th>
+                                    <th data-column-key="stt" data-column-required="true" data-column-pinned="true" style="width: 55px; text-align: center;">#</th>
+                                    <th data-column-key="paid_at" style="width: 175px;">Thời gian</th>
+                                    <th data-column-key="patient" data-column-pinned="true" style="width: 260px;">Bệnh nhân</th>
+                                    <th data-column-key="branch" style="width: 160px;">Cơ sở / Chi nhánh</th>
+                                    <th data-column-key="amount" style="width: 170px;" class="text-end">Số tiền tạm ứng</th>
+                                    <th data-column-key="method" style="width: 170px;">Phương thức</th>
+                                    <th data-column-key="notes" style="min-width: 200px;">Ghi chú / Mục đích</th>
+                                    <th data-column-key="cashier" style="width: 180px;">Người thu</th>
+                                    <th data-column-key="actions" data-column-action="true" style="width: 170px; text-align: center;">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody>

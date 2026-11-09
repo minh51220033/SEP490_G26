@@ -1476,3 +1476,393 @@
     background-color: transparent !important;
     opacity: 0.65 !important;
 }
+
+/* ============================================================================
+   CV-DCMS UNIFIED FINANCE TABLE & FILTER STYLES (ĐỒNG BỘ CHUẨN DAILY-VISITS)
+   Phạm vi: .finance-page, .cashier-page, .fin-brand-theme
+   ============================================================================ */
+
+/* 1. KHUNG BỘ LỌC (FILTER CARD) */
+.finance-page .fin-filter-container,
+.cashier-page .fin-filter-container,
+.finance-page .fin-card:has(form.fin-filter-bar),
+.cashier-page .fin-card:has(form.fin-filter-bar),
+.finance-page .fin-card:has(form#patientSearchFilterForm),
+.cashier-page .fin-card:has(form#patientSearchFilterForm),
+.finance-page .deposit-filter-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 14px 18px !important;
+    margin-bottom: 14px !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+}
+
+.finance-page .fin-filter-bar,
+.cashier-page .fin-filter-bar,
+.fin-brand-theme .fin-filter-bar {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+/* Form group bên trong filter bar: luôn nằm ngang 1 hàng, không xếp dọc */
+.finance-page .fin-filter-bar .fin-form-group,
+.cashier-page .fin-filter-bar .fin-form-group,
+.fin-brand-theme .fin-filter-bar .fin-form-group {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin-bottom: 0 !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+}
+
+.finance-page .fin-filter-bar .fin-form-group label,
+.cashier-page .fin-filter-bar .fin-form-group label,
+.fin-brand-theme .fin-filter-bar .fin-form-group label {
+    margin-bottom: 0 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    white-space: nowrap !important;
+}
+
+/* Khoảng ngày (Từ ngày - Đến ngày) luôn nằm ngang cùng hàng, không bao giờ bị xếp dọc */
+.finance-page .fin-filter-bar .fin-date-group,
+.cashier-page .fin-filter-bar .fin-date-group,
+.fin-brand-theme .fin-filter-bar .fin-date-group,
+.finance-page .fin-filter-bar .fin-form-group:has(input[type="date"]),
+.cashier-page .fin-filter-bar .fin-form-group:has(input[type="date"]),
+.fin-brand-theme .fin-filter-bar .fin-form-group:has(input[type="date"]) {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+    flex-wrap: nowrap !important;
+}
+
+/* Ô tìm kiếm có icon bên trái */
+.finance-page .fin-filter-bar .fin-form-group.fin-search-group,
+.cashier-page .fin-filter-bar .fin-form-group.fin-search-group,
+.fin-brand-theme .fin-filter-bar .fin-form-group.fin-search-group {
+    position: relative !important;
+    flex: 1 1 220px !important;
+    min-width: 180px !important;
+    max-width: 380px !important;
+}
+
+.finance-page .fin-filter-bar .fin-search-group .search-lead-icon,
+.cashier-page .fin-filter-bar .fin-search-group .search-lead-icon,
+.fin-brand-theme .fin-filter-bar .fin-search-group .search-lead-icon {
+    position: absolute !important;
+    left: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #64748b !important;
+    font-size: 14px !important;
+    pointer-events: none !important;
+    z-index: 2 !important;
+}
+
+.finance-page .fin-filter-bar .fin-search-group input.fin-input,
+.cashier-page .fin-filter-bar .fin-search-group input.fin-input,
+.fin-brand-theme .fin-filter-bar .fin-search-group input.fin-input {
+    width: 100% !important;
+    height: 38px !important;
+    padding: 6px 14px 6px 36px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    outline: none !important;
+    transition: all 0.15s ease !important;
+    background: #ffffff !important;
+}
+
+.finance-page .fin-filter-bar .fin-search-group input.fin-input:focus,
+.cashier-page .fin-filter-bar .fin-search-group input.fin-input:focus,
+.fin-brand-theme .fin-filter-bar .fin-search-group input.fin-input:focus {
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12) !important;
+}
+
+/* Các trường chọn, date và button đồng đều chiều cao 38px */
+.finance-page .fin-filter-bar select.fin-select,
+.cashier-page .fin-filter-bar select.fin-select,
+.fin-brand-theme .fin-filter-bar select.fin-select {
+    height: 38px !important;
+    padding: 5px 10px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    color: #334155 !important;
+    background-color: #ffffff !important;
+    outline: none !important;
+    min-width: 130px !important;
+    transition: all 0.15s ease !important;
+}
+
+.finance-page .fin-filter-bar input[type="date"].fin-input,
+.cashier-page .fin-filter-bar input[type="date"].fin-input,
+.fin-brand-theme .fin-filter-bar input[type="date"].fin-input {
+    height: 38px !important;
+    width: 140px !important;
+    min-width: 130px !important;
+    max-width: 150px !important;
+    padding: 5px 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    color: #334155 !important;
+    background-color: #ffffff !important;
+    outline: none !important;
+    display: inline-block !important;
+    transition: all 0.15s ease !important;
+}
+
+.finance-page .fin-filter-bar input[type="number"].fin-input,
+.cashier-page .fin-filter-bar input[type="number"].fin-input,
+.fin-brand-theme .fin-filter-bar input[type="number"].fin-input {
+    height: 38px !important;
+    padding: 5px 10px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    color: #334155 !important;
+    background-color: #ffffff !important;
+}
+
+.finance-page .fin-filter-bar .fin-btn-primary,
+.cashier-page .fin-filter-bar .fin-btn-primary,
+.fin-brand-theme .fin-filter-bar .fin-btn-primary {
+    height: 38px !important;
+    padding: 0 16px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #0284c7, #1d4ed8) !important;
+    border: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    box-shadow: 0 1px 2px rgba(2, 132, 199, 0.15) !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+}
+
+.finance-page .fin-filter-bar .fin-btn-primary:hover,
+.cashier-page .fin-filter-bar .fin-btn-primary:hover,
+.fin-brand-theme .fin-filter-bar .fin-btn-primary:hover {
+    background: linear-gradient(135deg, #0369a1, #1e40af) !important;
+}
+
+.finance-page .fin-filter-bar .fin-btn-outline,
+.cashier-page .fin-filter-bar .fin-btn-outline,
+.fin-brand-theme .fin-filter-bar .fin-btn-outline {
+    height: 38px !important;
+    padding: 0 12px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #64748b !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+}
+
+.finance-page .fin-filter-bar .fin-btn-outline:hover,
+.cashier-page .fin-filter-bar .fin-btn-outline:hover,
+.fin-brand-theme .fin-filter-bar .fin-btn-outline:hover {
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    border-color: #94a3b8 !important;
+}
+
+/* 2. KHUNG BẢNG VÀ TOOLBAR TRÊN BẢNG (TABLE CARD & TOPBAR) */
+.finance-page .fin-card:has(.fin-table-wrapper),
+.cashier-page .fin-card:has(.fin-table-wrapper),
+.finance-page .fin-card:has(table[data-enhanced-table]),
+.cashier-page .fin-card:has(table[data-enhanced-table]),
+.finance-page .enhanced-table-container,
+.cashier-page .enhanced-table-container,
+.fin-brand-theme .enhanced-table-container {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+    margin-bottom: 20px !important;
+    padding: 0 !important;
+}
+
+/* Thanh thông tin & tùy biến cột phía trên bảng: Nút tùy biến luôn ở góc trên bên phải */
+.finance-page .fin-grid-topbar,
+.cashier-page .fin-grid-topbar,
+.fin-brand-theme .fin-grid-topbar {
+    background: #f8fafc !important;
+    border-bottom: 1.5px solid #e2e8f0 !important;
+    padding: 10px 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+}
+
+.finance-page .enhanced-table-toolbar,
+.cashier-page .enhanced-table-toolbar,
+.fin-brand-theme .enhanced-table-toolbar {
+    background: #f8fafc !important;
+    border-bottom: 1.5px solid #e2e8f0 !important;
+    padding: 8px 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+}
+
+/* Nút Tùy chỉnh cột luôn dạt sang góc trên bên phải bảng */
+.finance-page .enhanced-custom-toggle-btn,
+.cashier-page .enhanced-custom-toggle-btn,
+.fin-brand-theme .enhanced-custom-toggle-btn {
+    margin-left: auto !important;
+    white-space: nowrap !important;
+}
+
+.finance-page .fin-topbar-left,
+.cashier-page .fin-topbar-left,
+.fin-brand-theme .fin-topbar-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+}
+
+/* TÊN BỆNH NHÂN LUÔN MÀU ĐEN ĐẬM ĐỂ KHÁC VỚI MÃ HÓA ĐƠN MÀU XANH */
+.finance-page table td[data-column-key="patient"] .fw-bold,
+.finance-page table td[data-column-key="patient_name"] .fw-bold,
+.finance-page table td[data-column-key="patient"] a,
+.finance-page table td[data-column-key="patient_name"] a,
+.cashier-page table td[data-column-key="patient"] a,
+.cashier-page table td[data-column-key="patient_name"] a,
+.cashier-page table td a.text-primary,
+.finance-page table a.patient-name,
+.cashier-page table a.patient-name,
+table[data-enhanced-table] td[data-column-key="patient"] a,
+table[data-enhanced-table] td[data-column-key="patient_name"] a,
+table[data-enhanced-table] td[data-column-key="patient"] .fw-bold,
+table[data-enhanced-table] td[data-column-key="patient_name"] .fw-bold,
+table#cashier-pending-patients td a {
+    color: #0f172a !important;
+    font-weight: 600 !important;
+    text-decoration: none !important;
+}
+
+.finance-page table td[data-column-key="patient"] a:hover,
+.finance-page table td[data-column-key="patient_name"] a:hover,
+.cashier-page table td[data-column-key="patient"] a:hover,
+.cashier-page table td[data-column-key="patient_name"] a:hover,
+table[data-enhanced-table] td[data-column-key="patient"] a:hover,
+table[data-enhanced-table] td[data-column-key="patient_name"] a:hover,
+table#cashier-pending-patients td a:hover {
+    color: #0284c7 !important;
+    text-decoration: underline !important;
+}
+
+/* Header bảng chuẩn ảnh: nền xanh rất nhạt, chữ đậm rõ */
+.finance-page table.fin-table thead th,
+.cashier-page table.fin-table thead th,
+.finance-page table[data-enhanced-table] thead th,
+.cashier-page table[data-enhanced-table] thead th {
+    background: #f1f5f9 !important;
+    color: #334155 !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.3px !important;
+    padding: 13px 16px !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+    border-right: 1px solid #e2e8f0 !important;
+    white-space: nowrap !important;
+}
+
+/* Hàng dữ liệu padding đồng đều, hover xanh dịu */
+.finance-page table.fin-table tbody td,
+.cashier-page table.fin-table tbody td,
+.finance-page table[data-enhanced-table] tbody td,
+.cashier-page table[data-enhanced-table] tbody td {
+    padding: 11px 16px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    border-right: 1px solid #f8fafc !important;
+    font-size: 13.5px !important;
+    vertical-align: middle !important;
+    color: #334155 !important;
+}
+
+.finance-page table.fin-table tbody tr:hover td,
+.cashier-page table.fin-table tbody tr:hover td,
+.finance-page table[data-enhanced-table] tbody tr:hover td,
+.cashier-page table[data-enhanced-table] tbody tr:hover td {
+    background-color: #f0f9ff !important;
+}
+
+/* Căn phải cột tiền */
+.finance-page table.fin-table td.text-end,
+.cashier-page table.fin-table td.text-end,
+.finance-page table[data-enhanced-table] td.text-end,
+.cashier-page table[data-enhanced-table] td.text-end {
+    text-align: right !important;
+    font-variant-numeric: tabular-nums !important;
+    white-space: nowrap !important;
+}
+
+/* Nút thao tác kích thước đồng đều */
+.finance-page .fin-table-btn,
+.cashier-page .fin-table-btn {
+    border-radius: 6px !important;
+    height: 30px !important;
+    padding: 0 10px !important;
+    font-size: 12.5px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+}
+
+/* Thanh cuộn ngang an toàn trong khung */
+.finance-page .fin-table-wrapper,
+.cashier-page .fin-table-wrapper,
+.finance-page .enhanced-table-wrapper,
+.cashier-page .enhanced-table-wrapper,
+.finance-page .table-responsive,
+.cashier-page .table-responsive {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch !important;
+    border: none !important;
+    border-radius: 0 !important;
+}
+
+/* Thanh phân trang MISA đồng bộ */
+.finance-page .misa-pagination-footer,
+.cashier-page .misa-pagination-footer {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 10px 18px !important;
+    background: #ffffff !important;
+    border-top: 1px solid #e2e8f0 !important;
+    font-size: 0.85rem !important;
+    color: #334155 !important;
+}
+
