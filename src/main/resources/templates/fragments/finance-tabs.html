@@ -1,308 +1,307 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
 <body>
 
-<!--
+    <!--
     THANH ĐIỀU HƯỚNG TÀI CHÍNH 2 CẤP THỐNG NHẤT (CV-DCMS UNIFIED FINANCE TABS)
     - activeGroup: 'customer' | 'clinic'
     - activeTab:
         (Customer): 'dashboard' | 'invoices' | 'payments' | 'debts' | 'deposits' | 'refunds'
         (Clinic)  : 'expenses' | 'payroll' | 'advances' | 'commission-config' | 'owner-distributions'
 -->
-<div th:fragment="financeTabs(activeGroup, activeTab)" class="finance-nav-wrapper mb-3" id="financeTabsWrapper">
-    <style>
-        .finance-nav-wrapper {
-            margin-bottom: 1.25rem;
-        }
+    <div th:fragment="financeTabs(activeGroup, activeTab)" class="finance-nav-wrapper mb-3" id="financeTabsWrapper">
+        <style>
+            .finance-nav-wrapper {
+                margin-bottom: 1.25rem;
+            }
 
-        /* Hàng 1: Hai nút chuyển nhóm chính [ Khách hàng ] [ Phòng khám ] */
-        .finance-group-switch-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 0.75rem;
-        }
+            /* Hàng 1: Hai nút chuyển nhóm chính [ Khách hàng ] [ Phòng khám ] */
+            .finance-group-switch-container {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 0.75rem;
+            }
 
-        .finance-group-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 20px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #475569;
-            background: #f1f5f9;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            text-decoration: none;
-            transition: all 0.15s ease;
-            cursor: pointer;
-            line-height: 1.4;
-        }
+            .finance-group-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 20px;
+                font-size: 14px;
+                font-weight: 600;
+                color: #475569;
+                background: #f1f5f9;
+                border: 1px solid #cbd5e1;
+                border-radius: 8px;
+                text-decoration: none;
+                transition: all 0.15s ease;
+                cursor: pointer;
+                line-height: 1.4;
+            }
 
-        .finance-group-btn:hover {
-            color: #0f172a;
-            background: #e2e8f0;
-            border-color: #94a3b8;
-        }
+            .finance-group-btn:hover {
+                color: #0f172a;
+                background: #e2e8f0;
+                border-color: #94a3b8;
+            }
 
-        .finance-group-btn.active {
-            background: #0284c7 !important;
-            color: #ffffff !important;
-            border-color: #0284c7 !important;
-            box-shadow: 0 2px 4px rgba(2, 132, 199, 0.2);
-        }
+            .finance-group-btn.active {
+                background: #0284c7 !important;
+                color: #ffffff !important;
+                border-color: #0284c7 !important;
+                box-shadow: 0 2px 4px rgba(2, 132, 199, 0.2);
+            }
 
-        .finance-group-btn i {
-            font-size: 16px;
-        }
+            .finance-group-btn i {
+                font-size: 16px;
+            }
 
-        /* Hàng 2: Hàng nút chức năng dạng compact pill buttons */
-        .finance-subtabs-nav {
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 0.75rem;
-            margin-bottom: 1rem;
-        }
+            /* Hàng 2: Hàng nút chức năng dạng compact pill buttons */
+            .finance-subtabs-nav {
+                border-bottom: 1px solid #e2e8f0;
+                padding-bottom: 0.75rem;
+                margin-bottom: 1rem;
+            }
 
-        .finance-subtabs-list {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-wrap: wrap;
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
+            .finance-subtabs-list {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                flex-wrap: wrap;
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
 
-        .finance-subtab-item {
-            display: inline-flex;
-        }
+            .finance-subtab-item {
+                display: inline-flex;
+            }
 
-        .finance-subtab-btn {
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            color: #374151;
-            font-weight: 500;
-            font-size: 13px;
-            padding: 6px 14px;
-            background: #ffffff;
-            transition: all 0.15s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            line-height: 1.4;
-            cursor: pointer;
-            text-decoration: none;
-            white-space: nowrap;
-        }
+            .finance-subtab-btn {
+                border: 1px solid #d1d5db;
+                border-radius: 6px;
+                color: #374151;
+                font-weight: 500;
+                font-size: 13px;
+                padding: 6px 14px;
+                background: #ffffff;
+                transition: all 0.15s ease;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                line-height: 1.4;
+                cursor: pointer;
+                text-decoration: none;
+                white-space: nowrap;
+            }
 
-        .finance-subtab-btn:hover {
-            border-color: #9ca3af;
-            background: #f8fafc;
-            color: #0f172a;
-        }
+            .finance-subtab-btn:hover {
+                border-color: #9ca3af;
+                background: #f8fafc;
+                color: #0f172a;
+            }
 
-        .finance-subtab-btn.active {
-            border-color: #0284c7 !important;
-            color: #0284c7 !important;
-            background: #eff6ff !important;
-            font-weight: 600;
-            box-shadow: 0 1px 2px rgba(2, 132, 199, 0.08);
-        }
+            .finance-subtab-btn.active {
+                border-color: #0284c7 !important;
+                color: #0284c7 !important;
+                background: #eff6ff !important;
+                font-weight: 600;
+                box-shadow: 0 1px 2px rgba(2, 132, 199, 0.08);
+            }
 
-        .finance-subtab-btn i {
-            font-size: 14px;
-        }
-    </style>
+            .finance-subtab-btn i {
+                font-size: 14px;
+            }
+        </style>
 
-    <!-- TIÊU ĐỀ TRANG TÀI CHÍNH ĐỒNG BỘ CHUẨN HỆ THỐNG -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-        <div class="d-flex align-items-center gap-3">
-            <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
-                <i class="bi bi-wallet2"></i>
+        <!-- TIÊU ĐỀ TRANG TÀI CHÍNH ĐỒNG BỘ CHUẨN HỆ THỐNG -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="dv-header-icon"
+                    style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+                <div>
+                    <h1 class="dv-page-title mb-0">Tài chính</h1>
+                    <p class="dv-page-subtitle">Quản lý toàn diện tài chính khách hàng và hoạt động chi phí, bảng lương
+                        phòng khám</p>
+                </div>
             </div>
-            <div>
-                <h1 class="dv-page-title mb-0">Tài chính</h1>
-                <p class="dv-page-subtitle">Quản lý toàn diện tài chính khách hàng và hoạt động chi phí, bảng lương phòng khám</p>
+            <div class="d-flex align-items-center gap-2">
+                <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                <a th:if="${activeGroup == 'clinic' and activeTab == 'expenses'}" th:href="@{/expenses/create}"
+                    class="btn btn-primary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                    style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none; font-size: 13px;">
+                    <i class="bi bi-plus-lg"></i> Lập phiếu chi mới
+                </a>
+                <a th:if="${activeGroup == 'clinic' and activeTab == 'expenses'}" th:href="@{/expenses}"
+                    class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                    style="font-size: 13px;">
+                    <i class="bi bi-arrow-clockwise"></i> Làm mới
+                </a>
+                <a th:if="${activeGroup == 'clinic' and activeTab == 'payroll'}" th:href="@{/payroll}"
+                    class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                    style="font-size: 13px;">
+                    <i class="bi bi-arrow-clockwise"></i> Làm mới
+                </a>
+                <a th:if="${activeGroup == 'clinic' and activeTab == 'advances'}" th:href="@{/payroll/advances}"
+                    class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                    style="font-size: 13px;">
+                    <i class="bi bi-arrow-clockwise"></i> Làm mới
+                </a>
+                <a th:if="${activeGroup == 'customer' and activeTab == 'dashboard'}" th:href="@{/payments/dashboard}"
+                    class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                    style="font-size: 13px;">
+                    <i class="bi bi-arrow-clockwise"></i> Làm mới
+                </a>
             </div>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-            <a th:if="${activeGroup == 'clinic' and activeTab == 'expenses'}" th:href="@{/expenses/create}" class="btn btn-primary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none; font-size: 13px;">
-                <i class="bi bi-plus-lg"></i> Lập phiếu chi mới
+
+        <!-- HÀNG 1: HAI NÚT CHUYỂN NHÓM [ Khách hàng ] [ Phòng khám ] -->
+        <div class="finance-group-switch-container" role="tablist" aria-label="Chuyển nhóm tài chính">
+            <!-- Nút 1: Khách hàng -->
+            <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'FINANCE_DEBT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}"
+                th:href="@{/finance/customer}" class="finance-group-btn"
+                th:classappend="${activeGroup == 'customer'} ? 'active' : ''" role="tab"
+                th:aria-selected="${activeGroup == 'customer'}">
+                <i class="bi bi-people-fill" aria-hidden="true"></i>
+                <span>Khách hàng</span>
             </a>
-            <a th:if="${activeGroup == 'clinic' and activeTab == 'expenses'}" th:href="@{/expenses}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="font-size: 13px;">
-                <i class="bi bi-arrow-clockwise"></i> Làm mới
-            </a>
-            <a th:if="${activeGroup == 'clinic' and activeTab == 'payroll'}" th:href="@{/payroll}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="font-size: 13px;">
-                <i class="bi bi-arrow-clockwise"></i> Làm mới
-            </a>
-            <a th:if="${activeGroup == 'clinic' and activeTab == 'advances'}" th:href="@{/payroll/advances}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="font-size: 13px;">
-                <i class="bi bi-arrow-clockwise"></i> Làm mới
-            </a>
-            <a th:if="${activeGroup == 'customer' and activeTab == 'dashboard'}" th:href="@{/payments/dashboard}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="font-size: 13px;">
-                <i class="bi bi-arrow-clockwise"></i> Làm mới
+
+            <!-- Nút 2: Phòng khám -->
+            <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'FINANCE_DEBT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}"
+                th:href="@{/expenses}" class="finance-group-btn"
+                th:classappend="${activeGroup == 'clinic'} ? 'active' : ''" role="tab"
+                th:aria-selected="${activeGroup == 'clinic'}">
+                <i class="bi bi-building" aria-hidden="true"></i>
+                <span>Phòng khám</span>
             </a>
         </div>
+
+        <!-- HÀNG 2: CÁC NÚT CHỨC NĂNG CỦA NHÓM ĐANG CHỌN -->
+        <!-- Nhóm KHÁCH HÀNG -->
+        <nav th:if="${activeGroup == 'customer'}" class="finance-subtabs-nav"
+            aria-label="Chức năng tài chính khách hàng">
+            <ul class="finance-subtabs-list">
+                <!--Tổng quan -->
+                <li class="finance-subtab-item"
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_DASHBOARD'))}">
+                    <a th:href="@{/payments/dashboard}" class="finance-subtab-btn"
+                        th:classappend="${activeTab == 'dashboard'} ? 'active' : ''">
+                        <i class="bi bi-speedometer2" aria-hidden="true"></i>
+                        <span>Tổng quan</span>
+                    </a>
+                </li>
+
+                <!--Hóa đơn -->
+                <li class="finance-subtab-item"
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'INVOICE_VIEW')))}">
+                    <a th:href="@{/invoices}" class="finance-subtab-btn"
+                        th:classappend="${activeTab == 'invoices'} ? 'active' : ''">
+                        <i class="bi bi-receipt" aria-hidden="true"></i>
+                        <span>Hóa đơn</span>
+                    </a>
+                </li>
+
+                <!--Công nợ -->
+                <li class="finance-subtab-item"
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_DEBT'))}">
+                    <a th:href="@{/payments/debts}" class="finance-subtab-btn"
+                        th:classappend="${activeTab == 'debts'} ? 'active' : ''">
+                        <i class="bi bi-cash-stack" aria-hidden="true"></i>
+                        <span>Công nợ</span>
+                    </a>
+                </li>
+
+                <!--Đặt cọc -->
+                <li class="finance-subtab-item"
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'PAYMENT_COLLECT'))}">
+                    <a th:href="@{/payments/deposits}" class="finance-subtab-btn"
+                        th:classappend="${activeTab == 'deposits'} ? 'active' : ''">
+                        <i class="bi bi-wallet2" aria-hidden="true"></i>
+                        <span>tiền tạm ứng</span>
+                    </a>
+                </li>
+
+                <!--  Hoàn tiền -->
+                <li class="finance-subtab-item"
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'REFUND_MANAGE'))}">
+                    <a th:href="@{/payments/refunds}" class="finance-subtab-btn"
+                        th:classappend="${activeTab == 'refunds'} ? 'active' : ''">
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                        <span>Hoàn tiền</span>
+                    </a>
+                </li>
+                <!--Lịch sử thanh toán -->
+                <li class="finance-subtab-item"
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'PAYMENT_COLLECT'))}">
+                    <a th:href="@{/payments}" class="finance-subtab-btn"
+                        th:classappend="${activeTab == 'payments'} ? 'active' : ''">
+                        <i class="bi bi-credit-card-2-front" aria-hidden="true"></i>
+                        <span>Lịch sử thanh toán</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Nhóm PHÒNG KHÁM -->
+        <nav th:if="${activeGroup == 'clinic'}" class="finance-subtabs-nav" aria-label="Chức năng tài chính phòng khám">
+            <ul class="finance-subtabs-list">
+                <!-- 1. Chi phí vận hành -->
+                <li class="finance-subtab-item"
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
+                    <a th:href="@{/expenses}" class="finance-subtab-btn"
+                        th:classappend="${activeTab == 'expenses'} ? 'active' : ''">
+                        <i class="bi bi-journal-arrow-down" aria-hidden="true"></i>
+                        <span>Chi phí vận hành</span>
+                    </a>
+                </li>
+
+                <!-- 2. Bảng lương -->
+                <li class="finance-subtab-item"
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
+                    <a th:href="@{/payroll}" class="finance-subtab-btn"
+                        th:classappend="${activeTab == 'payroll'} ? 'active' : ''">
+                        <i class="bi bi-calendar3" aria-hidden="true"></i>
+                        <span>Bảng lương</span>
+                    </a>
+                </li>
+
+                <!-- 3. Tạm ứng lương -->
+                <li class="finance-subtab-item"
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
+                    <a th:href="@{/payroll/advances}" class="finance-subtab-btn"
+                        th:classappend="${activeTab == 'advances'} ? 'active' : ''">
+                        <i class="bi bi-cash-coin" aria-hidden="true"></i>
+                        <span>Tạm ứng lương</span>
+                    </a>
+                </li>
+
+                <!-- 4. Cấu hình hoa hồng (SCR-32.3 - Chỉ hiển thị cho Quản trị viên) -->
+                <li class="finance-subtab-item"
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN')))}">
+                    <a th:href="@{/payroll/commission-config}" class="finance-subtab-btn"
+                        th:classappend="${activeTab == 'commission-config' or activeTab == 'config'} ? 'active' : ''">
+                        <i class="bi bi-sliders" aria-hidden="true"></i>
+                        <span>Cấu hình hoa hồng</span>
+                    </a>
+                </li>
+
+                <!-- 5. Phân chia lợi nhuận -->
+                <li class="finance-subtab-item"
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
+                    <a th:href="@{/payroll/owner-distributions}" class="finance-subtab-btn"
+                        th:classappend="${activeTab == 'owner-distributions'} ? 'active' : ''">
+                        <i class="bi bi-diagram-2" aria-hidden="true"></i>
+                        <span>Phân chia lợi nhuận</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
     </div>
-
-    <!-- HÀNG 1: HAI NÚT CHUYỂN NHÓM [ Khách hàng ] [ Phòng khám ] -->
-    <div class="finance-group-switch-container" role="tablist" aria-label="Chuyển nhóm tài chính">
-        <!-- Nút 1: Khách hàng -->
-        <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'FINANCE_DEBT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}"
-           th:href="@{/finance/customer}"
-           class="finance-group-btn"
-           th:classappend="${activeGroup == 'customer'} ? 'active' : ''"
-           role="tab"
-           th:aria-selected="${activeGroup == 'customer'}">
-            <i class="bi bi-people-fill" aria-hidden="true"></i>
-            <span>Khách hàng</span>
-        </a>
-
-        <!-- Nút 2: Phòng khám -->
-        <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'FINANCE_DEBT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}"
-           th:href="@{/expenses}"
-           class="finance-group-btn"
-           th:classappend="${activeGroup == 'clinic'} ? 'active' : ''"
-           role="tab"
-           th:aria-selected="${activeGroup == 'clinic'}">
-            <i class="bi bi-building" aria-hidden="true"></i>
-            <span>Phòng khám</span>
-        </a>
-    </div>
-
-    <!-- HÀNG 2: CÁC NÚT CHỨC NĂNG CỦA NHÓM ĐANG CHỌN -->
-    <!-- Nhóm KHÁCH HÀNG -->
-    <nav th:if="${activeGroup == 'customer'}" class="finance-subtabs-nav" aria-label="Chức năng tài chính khách hàng">
-        <ul class="finance-subtabs-list">
-            <!-- 1. Tổng quan -->
-            <li class="finance-subtab-item"
-                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_DASHBOARD'))}">
-                <a th:href="@{/payments/dashboard}"
-                   class="finance-subtab-btn"
-                   th:classappend="${activeTab == 'dashboard'} ? 'active' : ''">
-                    <i class="bi bi-speedometer2" aria-hidden="true"></i>
-                    <span>Tổng quan</span>
-                </a>
-            </li>
-
-            <!-- 2. Hóa đơn -->
-            <li class="finance-subtab-item"
-                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'INVOICE_VIEW')))}">
-                <a th:href="@{/invoices}"
-                   class="finance-subtab-btn"
-                   th:classappend="${activeTab == 'invoices'} ? 'active' : ''">
-                    <i class="bi bi-receipt" aria-hidden="true"></i>
-                    <span>Hóa đơn</span>
-                </a>
-            </li>
-
-            <!-- 3. Lịch sử thanh toán -->
-            <li class="finance-subtab-item"
-                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'PAYMENT_COLLECT'))}">
-                <a th:href="@{/payments}"
-                   class="finance-subtab-btn"
-                   th:classappend="${activeTab == 'payments'} ? 'active' : ''">
-                    <i class="bi bi-credit-card-2-front" aria-hidden="true"></i>
-                    <span>Lịch sử thanh toán</span>
-                </a>
-            </li>
-
-            <!-- 4. Công nợ -->
-            <li class="finance-subtab-item"
-                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_DEBT'))}">
-                <a th:href="@{/payments/debts}"
-                   class="finance-subtab-btn"
-                   th:classappend="${activeTab == 'debts'} ? 'active' : ''">
-                    <i class="bi bi-cash-stack" aria-hidden="true"></i>
-                    <span>Công nợ</span>
-                </a>
-            </li>
-
-            <!-- 5. Đặt cọc -->
-            <li class="finance-subtab-item"
-                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'PAYMENT_COLLECT'))}">
-                <a th:href="@{/payments/deposits}"
-                   class="finance-subtab-btn"
-                   th:classappend="${activeTab == 'deposits'} ? 'active' : ''">
-                    <i class="bi bi-wallet2" aria-hidden="true"></i>
-                    <span>Đặt cọc</span>
-                </a>
-            </li>
-
-            <!-- 6. Hoàn tiền -->
-            <li class="finance-subtab-item"
-                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'REFUND_MANAGE'))}">
-                <a th:href="@{/payments/refunds}"
-                   class="finance-subtab-btn"
-                   th:classappend="${activeTab == 'refunds'} ? 'active' : ''">
-                    <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
-                    <span>Hoàn tiền</span>
-                </a>
-            </li>
-        </ul>
-    </nav>
-
-    <!-- Nhóm PHÒNG KHÁM -->
-    <nav th:if="${activeGroup == 'clinic'}" class="finance-subtabs-nav" aria-label="Chức năng tài chính phòng khám">
-        <ul class="finance-subtabs-list">
-            <!-- 1. Chi phí vận hành -->
-            <li class="finance-subtab-item"
-                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
-                <a th:href="@{/expenses}"
-                   class="finance-subtab-btn"
-                   th:classappend="${activeTab == 'expenses'} ? 'active' : ''">
-                    <i class="bi bi-journal-arrow-down" aria-hidden="true"></i>
-                    <span>Chi phí vận hành</span>
-                </a>
-            </li>
-
-            <!-- 2. Bảng lương -->
-            <li class="finance-subtab-item"
-                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
-                <a th:href="@{/payroll}"
-                   class="finance-subtab-btn"
-                   th:classappend="${activeTab == 'payroll'} ? 'active' : ''">
-                    <i class="bi bi-calendar3" aria-hidden="true"></i>
-                    <span>Bảng lương</span>
-                </a>
-            </li>
-
-            <!-- 3. Tạm ứng lương -->
-            <li class="finance-subtab-item"
-                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
-                <a th:href="@{/payroll/advances}"
-                   class="finance-subtab-btn"
-                   th:classappend="${activeTab == 'advances'} ? 'active' : ''">
-                    <i class="bi bi-cash-coin" aria-hidden="true"></i>
-                    <span>Tạm ứng lương</span>
-                </a>
-            </li>
-
-            <!-- 4. Cấu hình hoa hồng (SCR-32.3 - Chỉ hiển thị cho Quản trị viên) -->
-            <li class="finance-subtab-item"
-                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN')))}">
-                <a th:href="@{/payroll/commission-config}"
-                   class="finance-subtab-btn"
-                   th:classappend="${activeTab == 'commission-config' or activeTab == 'config'} ? 'active' : ''">
-                    <i class="bi bi-sliders" aria-hidden="true"></i>
-                    <span>Cấu hình hoa hồng</span>
-                </a>
-            </li>
-
-            <!-- 5. Phân chia lợi nhuận -->
-            <li class="finance-subtab-item"
-                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
-                <a th:href="@{/payroll/owner-distributions}"
-                   class="finance-subtab-btn"
-                   th:classappend="${activeTab == 'owner-distributions'} ? 'active' : ''">
-                    <i class="bi bi-diagram-2" aria-hidden="true"></i>
-                    <span>Phân chia lợi nhuận</span>
-                </a>
-            </li>
-        </ul>
-    </nav>
-</div>
 
 </body>
+
 </html>
