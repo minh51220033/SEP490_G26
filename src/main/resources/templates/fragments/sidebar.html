@@ -415,6 +415,9 @@
                     <span class="user-card__role"
                           th:text="${roleNames != null and !#lists.isEmpty(roleNames)
                                   ? #strings.listJoin(roleNames, ', ') : 'Chưa xác định'}">Admin</span>
+                    <span th:if="${inactiveBranchWarning != null}" class="badge bg-danger text-wrap text-start mt-1" style="font-size: 0.7rem; line-height: 1.2;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Cơ sở ngừng HĐ
+                    </span>
                 </span>
 
                 <!-- Icon cài đặt / Tùy chọn tài khoản (trực quan theo ảnh minh họa) -->

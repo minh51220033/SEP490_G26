@@ -34,6 +34,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     long countByAppointmentDateBetween(LocalDate startDate, LocalDate endDate);
 
     long countByAppointmentDateBeforeAndStatusIn(LocalDate date, List<AppointmentStatus> statuses);
+
+    @Query("SELECT COUNT(a) FROM Appointment a WHERE a.branch.branchId = :branchId AND a.appointmentDate >= :startDate AND a.status IN :statuses")
+    long countPendingAppointmentsByBranch(
+            @Param("branchId") Long branchId,
+            @Param("startDate") LocalDate startDate,
+            @Param("statuses") List<AppointmentStatus> statuses
+    );
     /**
      * Lấy danh sách lịch hẹn hợp lệ theo chi nhánh kèm thông tin bệnh nhân, bác sĩ và dịch vụ.
      */
@@ -110,6 +117,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         SELECT a
         FROM Appointment a
         JOIN FETCH a.patientProfile p
+        LEFT JOIN FETCH p.user u
         JOIN FETCH a.branch b
         LEFT JOIN FETCH a.doctor d
         LEFT JOIN FETCH a.service srv

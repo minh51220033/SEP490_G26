@@ -65,6 +65,17 @@ public interface UserRepository extends JpaRepository<User, Long> {
         """)
     List<User> findByRole_RoleId(@Param("roleId") Integer roleId);
 
+    // FT42: Tìm danh sách Lễ tân và Quản trị viên đang hoạt động tại chi nhánh
+    @Query("""
+        SELECT DISTINCT u
+        FROM User u
+        JOIN u.roles r
+        WHERE (r.roleName IN ('LE_TAN', 'ROLE_LE_TAN', 'ADMIN', 'ROLE_ADMIN'))
+          AND (u.branch.branchId = :branchId OR u.branch IS NULL)
+          AND u.isActive = true
+    """)
+    List<User> findActiveReceptionistsAndAdminsByBranch(@Param("branchId") Long branchId);
+
     // Tìm các tài khoản không được gán vai trò có ID đã chỉ định.
     // Ví dụ: tìm tài khoản không có vai trò ADMIN.
     @Query("""
