@@ -81,7 +81,13 @@
      3. CÁC BẢNG RIÊNG BIỆT THEO TỪNG BÁC SĨ PHỤ TRÁCH (HIỂN THỊ THỨ TỰ VÀO KHÁM CỤ THỂ)
      ========================================================================= -->
 <div id="doctorDispatchTablesWrapper">
+  <div th:if="${totalItems == 0}" class="card border-0 shadow-sm rounded-4 p-5 text-center text-muted mb-3 bg-white">
+    <i class="bi bi-inbox fs-1 text-secondary opacity-50 d-block mb-2"></i>
+    <span class="fw-semibold">Không tìm thấy lượt điều phối nào phù hợp với bộ lọc hiện tại.</span>
+  </div>
+
   <section th:each="doc : ${board.doctors}"
+           th:if="${(selectedDoctorId == null and not #lists.isEmpty(doctorVisitMap[doc.id])) or (selectedDoctorId != null and selectedDoctorId == doc.id)}"
            class="dispatch-card-container doctor-dispatch-card mb-3"
            th:id="|doctorCard-${doc.id}|"
            th:attr="data-doctor-card-id=${doc.id}">
@@ -378,7 +384,8 @@
 <!-- =========================================================================
      5. BẢNG CUỐI DANH SÁCH: BỆNH NHÂN VÃNG LAI / CHƯA XẾP HÀNG CHỜ PHÂN CÔNG BÁC SĨ
      ========================================================================= -->
-<section class="dispatch-card-container mb-3" id="unassignedDispatchCard">
+<section class="dispatch-card-container mb-3" id="unassignedDispatchCard"
+         th:if="${(selectedDoctorId == null or selectedDoctorId == 0) and not #lists.isEmpty(unassignedItems)}">
   <div class="dispatch-card-header" style="background: #fffbeb;">
     <div class="d-flex align-items-center gap-2.5 flex-wrap">
       <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold"
@@ -539,6 +546,62 @@
         </tbody>
       </table>
     </div>
+
+    <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+    <div class="misa-pagination-footer mt-2">
+      <!-- Bên trái: Tổng số -->
+      <div class="misa-pagination-left">
+        Tổng số: <strong th:text="${totalItems}">0</strong>
+      </div>
+      <!-- Bên phải: Số dòng/trang + Range + 4 Nút điều hướng -->
+      <div class="misa-pagination-right">
+        <!-- Dropdown chọn số dòng/trang -->
+        <div class="misa-page-size-wrapper">
+          <span>Số dòng/trang</span>
+          <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang">
+            <option value="10" th:selected="${pageSize == 10}">10</option>
+            <option value="25" th:selected="${pageSize == 25}">25</option>
+            <option value="50" th:selected="${pageSize == 50}">50</option>
+            <option value="100" th:selected="${pageSize == 100}">100</option>
+          </select>
+        </div>
+        <!-- Khoảng hiển thị bản ghi (Ví dụ: 1 - 10) -->
+        <div class="misa-page-range">
+          <span th:text="${fromItem}">0</span> - <span th:text="${toItem}">0</span>
+        </div>
+        <!-- Cụm 4 nút phân trang (|< < > >|) -->
+        <div class="d-flex align-items-center gap-1">
+          <!-- 1. Về trang đầu -->
+          <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=0, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus})}"
+             class="misa-nav-btn"
+             th:classappend="${currentPage == 0} ? 'disabled' : ''"
+             title="Trang đầu">
+            <i class="bi bi-chevron-bar-left"></i>
+          </a>
+          <!-- 2. Trang trước -->
+          <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=${currentPage - 1}, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus})}"
+             class="misa-nav-btn"
+             th:classappend="${currentPage == 0} ? 'disabled' : ''"
+             title="Trang trước">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+          <!-- 3. Trang sau -->
+          <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=${currentPage + 1}, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus})}"
+             class="misa-nav-btn"
+             th:classappend="${currentPage >= totalPages - 1 or totalPages == 0} ? 'disabled' : ''"
+             title="Trang sau">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+          <!-- 4. Đến trang cuối -->
+          <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=${totalPages > 0 ? totalPages - 1 : 0}, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus})}"
+             class="misa-nav-btn"
+             th:classappend="${currentPage >= totalPages - 1 or totalPages == 0} ? 'disabled' : ''"
+             title="Trang cuối">
+            <i class="bi bi-chevron-bar-right"></i>
+          </a>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -546,6 +609,10 @@
 <form id="filterForm" method="get" th:action="@{/reception/dispatch}" class="d-none">
   <input type="hidden" name="branchId" th:value="${board.branchId}">
   <input type="hidden" id="filterKeywordInput" name="keyword" th:value="${keyword}">
+  <input type="hidden" id="filterDoctorIdInput" name="doctorId" th:value="${selectedDoctorId}">
+  <input type="hidden" id="filterStatusInput" name="status" th:value="${selectedStatus}">
+  <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
+  <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
 </form>
 
 <!-- =========================================================================

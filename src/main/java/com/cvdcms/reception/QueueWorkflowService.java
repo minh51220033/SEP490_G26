@@ -99,9 +99,11 @@ public class QueueWorkflowService {
                         t.getVisit().getChairId() == null ? "" : chairs.findById(t.getVisit().getChairId()).map(DentalChair::getChairName).orElse(""),
                         null)).toList();
         long waiting = all.stream().filter(t -> t.getStatus() == QueueStatus.WAITING
-                && t.getVisit().getStatus() == VisitStatus.WAITING).count();
+                && t.getVisit() != null
+                && (t.getVisit().getStatus() == VisitStatus.WAITING || t.getVisit().getStatus() == VisitStatus.WAITING_RESULT)).count();
         List<String> next = all.stream().filter(t -> t.getStatus() == QueueStatus.WAITING
-                        && t.getVisit().getStatus() == VisitStatus.WAITING)
+                        && t.getVisit() != null
+                        && (t.getVisit().getStatus() == VisitStatus.WAITING || t.getVisit().getStatus() == VisitStatus.WAITING_RESULT))
                 .limit(5).map(t -> t.getDisplayNumber() + " · " + doctorName(t)).toList();
         List<PublicQueueRow> queueList = buildPublicQueueList(all);
         return new PublicBoard(branch.getBranchName(), called, serving, next, waiting, queueList);
@@ -117,6 +119,38 @@ public class QueueWorkflowService {
         return buildPublicQueueList(all);
     }
 
+    private String maskName(String fullName) {
+        if (fullName == null || fullName.isBlank()) return "—";
+        String[] parts = fullName.trim().split("\\s+");
+        if (parts.length == 1) {
+            String w = parts[0];
+            if (w.length() <= 1) return "*";
+            if (w.length() == 2) return w.charAt(0) + "*";
+            return w.substring(0, 1) + "*".repeat(w.length() - 2) + w.substring(w.length() - 1);
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < parts.length; i++) {
+            String w = parts[i];
+            if (i > 0) sb.append(" ");
+            if (i == 0) {
+                sb.append(w.length() <= 2 ? (w.charAt(0) + "*") : w);
+            } else if (i == parts.length - 1) {
+                sb.append(w.charAt(0)).append("*");
+            } else {
+                sb.append(w.charAt(0)).append("**");
+            }
+        }
+        return sb.toString();
+    }
+
+    private String maskPhone(String phone) {
+        if (phone == null || phone.isBlank()) return "—";
+        String p = phone.trim();
+        if (p.length() <= 4) return "****";
+        if (p.length() <= 7) return p.substring(0, 2) + "****" + p.substring(p.length() - 1);
+        return p.substring(0, 3) + "****" + p.substring(p.length() - 3);
+    }
+
     private List<PublicQueueRow> buildPublicQueueList(List<QueueTicket> all) {
         List<PublicQueueRow> rows = new ArrayList<>();
         int stt = 1;
@@ -129,12 +163,16 @@ public class QueueWorkflowService {
                     idx,
                     t.getDisplayNumber(),
                     p != null && p.getPatientCode() != null ? p.getPatientCode() : "—",
-                    p != null && p.getFullName() != null ? p.getFullName() : "—",
-                    p != null && p.getPhoneNumber() != null ? p.getPhoneNumber() : "—",
+                    p != null && p.getFullName() != null ? maskName(p.getFullName()) : "—",
+                    p != null && p.getPhoneNumber() != null ? maskPhone(p.getPhoneNumber()) : "—",
                     t.getStatus() != null ? t.getStatus().name() : "WAITING"
             ));
         }
         return rows;
+    }
+
+    private boolean isWaitingOrResult(Visit visit) {
+        return visit != null && (visit.getStatus() == VisitStatus.WAITING || visit.getStatus() == VisitStatus.WAITING_RESULT);
     }
 
     @Transactional
@@ -146,7 +184,7 @@ public class QueueWorkflowService {
                 QueueStatus.CALLED, -1L) == 0, "Bác sĩ này đã có số được gọi.");
         QueueTicket next = tickets.forBoard(branchId, today, QueueType.EXAM).stream()
                 .filter(t -> t.getStatus() == QueueStatus.WAITING
-                        && t.getVisit().getStatus() == VisitStatus.WAITING
+                        && isWaitingOrResult(t.getVisit())
                         && t.getVisit().getPrimaryDoctor() != null
                         && doctorId.equals(t.getVisit().getPrimaryDoctor().getStaffId()))
                 .min(waitingOrder())
@@ -159,7 +197,7 @@ public class QueueWorkflowService {
                 && today.equals(locked.getQueueDate()) && locked.getQueueType() == QueueType.EXAM
                 && locked.getStatus() == QueueStatus.WAITING
                 && lockedVisit.getBranch().getBranchId().equals(branchId)
-                && lockedVisit.getStatus() == VisitStatus.WAITING
+                && isWaitingOrResult(lockedVisit)
                 && lockedVisit.getPrimaryDoctor() != null
                 && doctorId.equals(lockedVisit.getPrimaryDoctor().getStaffId()),
                 "Hàng chờ đã thay đổi. Vui lòng tải lại.");
@@ -193,7 +231,7 @@ public class QueueWorkflowService {
         QueueStatus before = ticket.getStatus();
         switch (action) {
             case CALL -> {
-                require((before == QueueStatus.WAITING || before == QueueStatus.CALLED) && visit.getStatus() == VisitStatus.WAITING, "Chỉ gọi số đang chờ hoặc đang gọi.");
+                require((before == QueueStatus.WAITING || before == QueueStatus.CALLED) && isWaitingOrResult(visit), "Chỉ gọi số đang chờ hoặc đang gọi.");
                 require(visit.getPrimaryDoctor() != null, "Lượt khám chưa được phân bác sĩ.");
                 Long doctorId = visit.getPrimaryDoctor().getStaffId();
                 require(tickets.countOtherForDoctor(branchId, today, QueueType.EXAM, doctorId, QueueStatus.CALLED, id) == 0,
@@ -201,7 +239,7 @@ public class QueueWorkflowService {
                 if (before != QueueStatus.CALLED) {
                     Long nextId = tickets.forBoard(branchId, today, QueueType.EXAM).stream()
                             .filter(t -> t.getStatus() == QueueStatus.WAITING
-                                    && t.getVisit().getStatus() == VisitStatus.WAITING
+                                    && isWaitingOrResult(t.getVisit())
                                     && t.getVisit().getPrimaryDoctor() != null
                                     && doctorId.equals(t.getVisit().getPrimaryDoctor().getStaffId()))
                             .min(waitingOrder()).map(QueueTicket::getTicketId).orElse(null);
@@ -215,14 +253,14 @@ public class QueueWorkflowService {
             }
             case PAUSE -> {
                 require(before == QueueStatus.WAITING || before == QueueStatus.CALLED, "Chỉ tạm dừng số đang chờ hoặc đang gọi.");
-                require(visit.getStatus() == VisitStatus.WAITING, "Lượt khám đã bắt đầu.");
+                require(isWaitingOrResult(visit), "Lượt khám đã bắt đầu.");
                 require(validReason(reason), "Cần ghi lý do tạm dừng từ 10 đến 255 ký tự.");
                 ticket.setStatus(QueueStatus.PAUSED);
                 ticket.setPausedAt(LocalDateTime.now(ZONE));
                 ticket.setPauseReason(reason.trim());
             }
             case RESUME -> {
-                require(before == QueueStatus.PAUSED && visit.getStatus() == VisitStatus.WAITING, "Chỉ tiếp tục số đang tạm dừng.");
+                require(before == QueueStatus.PAUSED && isWaitingOrResult(visit), "Chỉ tiếp tục số đang tạm dừng.");
                 ticket.setStatus(QueueStatus.WAITING);
                 if (isClinicPauseReason(ticket.getPauseReason())) {
                     ticket.setResumedAt(null);
@@ -232,7 +270,7 @@ public class QueueWorkflowService {
             }
             case EMERGENCY -> {
                 require((before == QueueStatus.WAITING || before == QueueStatus.PAUSED)
-                        && visit.getStatus() == VisitStatus.WAITING, "Chỉ ưu tiên lượt chưa bắt đầu.");
+                        && isWaitingOrResult(visit), "Chỉ ưu tiên lượt chưa bắt đầu.");
                 require(validReason(reason), "Cần ghi lý do cấp cứu từ 10 đến 255 ký tự.");
                 ticket.setIsEmergency(true); ticket.setIsPriority(true); ticket.setPriorityScore(100); ticket.setPriorityReason(reason.trim());
                 visit.setVisitType(VisitType.EMERGENCY);
@@ -242,13 +280,13 @@ public class QueueWorkflowService {
             }
             case PRIORITIZE -> {
                 require((before == QueueStatus.WAITING || before == QueueStatus.PAUSED)
-                        && visit.getStatus() == VisitStatus.WAITING && !Boolean.TRUE.equals(ticket.getIsEmergency()),
+                        && isWaitingOrResult(visit) && !Boolean.TRUE.equals(ticket.getIsEmergency()),
                         "Chỉ ưu tiên số chưa bắt đầu và không phải cấp cứu.");
                 require(validReason(reason), "Cần ghi lý do ưu tiên từ 10 đến 255 ký tự.");
                 ticket.setPriorityScore(50); ticket.setPriorityReason(reason.trim());
             }
             case START -> {
-                require(before == QueueStatus.CALLED && visit.getStatus() == VisitStatus.WAITING,
+                require(before == QueueStatus.CALLED && isWaitingOrResult(visit),
                         "Phải gọi số trước khi bắt đầu khám.");
                 require(visit.getPrimaryDoctor() != null, "Lượt khám chưa được phân bác sĩ.");
                 Long effectiveChairId = chairId != null ? chairId : visit.getChairId();
@@ -340,7 +378,9 @@ public class QueueWorkflowService {
 
     private Comparator<QueueTicket> waitingOrder() {
         return Comparator.comparingInt((QueueTicket t) -> t.getPriorityScore() == null ? 0 : t.getPriorityScore())
-                .reversed().thenComparing((QueueTicket t) -> t.getResumedAt() == null ? t.getIssuedAt() : t.getResumedAt(),
+                .reversed()
+                .thenComparingInt((QueueTicket t) -> t.getVisit() != null && t.getVisit().getStatus() == VisitStatus.WAITING_RESULT ? 0 : 1)
+                .thenComparing((QueueTicket t) -> t.getResumedAt() == null ? t.getIssuedAt() : t.getResumedAt(),
                         Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(QueueTicket::getTicketNumber).thenComparing(QueueTicket::getTicketId);
     }

@@ -58,8 +58,15 @@ public class GlobalModelAttributesAdvice {
         this.customerPortalServiceProvider = customerPortalServiceProvider;
         this.serviceCatalogServiceProvider = serviceCatalogServiceProvider;
         this.patientProfileRepositoryProvider = patientProfileRepositoryProvider;
+    }
 
-        this.branchServiceProvider = branchServiceProvide;
+    public GlobalModelAttributesAdvice(
+            UserRepository userRepository,
+            ObjectProvider<CustomerPortalService> customerPortalServiceProvider,
+            ObjectProvider<ServiceCatalogService> serviceCatalogServiceProvider,
+            ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider,
+            Object branchServiceProvider) {
+        this(userRepository, customerPortalServiceProvider, serviceCatalogServiceProvider, patientProfileRepositoryProvider);
     }
 
     @ModelAttribute("roleNames")

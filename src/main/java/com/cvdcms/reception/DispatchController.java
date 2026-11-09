@@ -106,23 +106,44 @@ public class DispatchController {
         }).toList();
 
         long totalItems = filtered.size();
+        int totalPages = (int) Math.ceil((double) totalItems / size);
+        int currentPage = page;
+        if (currentPage >= totalPages && totalPages > 0) {
+            currentPage = totalPages - 1;
+        }
+        if (currentPage < 0) {
+            currentPage = 0;
+        }
+
+        int fromIndex = currentPage * size;
+        int toIndex = Math.min(fromIndex + size, (int) totalItems);
+        List<Visit> pagedItems = totalItems == 0 ? List.of() : filtered.subList(fromIndex, toIndex);
+
+        long toItem = Math.min(((long) (currentPage + 1) * size), totalItems);
+        long fromItem = totalItems == 0 ? 0 : Math.min(((long) currentPage * size) + 1, toItem);
+
         java.util.Map<Long, List<Visit>> filteredDoctorVisits = new java.util.LinkedHashMap<>();
         for (var doc : board.doctors()) {
-            List<Visit> docList = filtered.stream()
+            List<Visit> docList = pagedItems.stream()
                     .filter(v -> v.getPrimaryDoctor() != null && doc.id().equals(v.getPrimaryDoctor().getStaffId()))
                     .toList();
             filteredDoctorVisits.put(doc.id(), docList);
         }
-        List<Visit> filteredUnassigned = filtered.stream()
+        List<Visit> filteredUnassigned = pagedItems.stream()
                 .filter(v -> v.getPrimaryDoctor() == null)
                 .toList();
 
         model.addAttribute("board", board);
         model.addAttribute("currentBranchId", board.branchId());
-        model.addAttribute("items", filtered);
+        model.addAttribute("items", pagedItems);
         model.addAttribute("doctorVisitMap", filteredDoctorVisits);
         model.addAttribute("unassignedItems", filteredUnassigned);
         model.addAttribute("totalItems", totalItems);
+        model.addAttribute("currentPage", currentPage);
+        model.addAttribute("pageSize", size);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("fromItem", fromItem);
+        model.addAttribute("toItem", toItem);
         model.addAttribute("keyword", keyword != null ? keyword : "");
         model.addAttribute("selectedDoctorId", doctorId);
         model.addAttribute("selectedStatus", status != null ? status : "ALL");

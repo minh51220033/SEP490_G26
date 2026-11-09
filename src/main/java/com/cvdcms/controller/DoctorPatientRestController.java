@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -157,10 +158,15 @@ public class DoctorPatientRestController {
         }
         newVisit.setBranch(branch);
 
-        // Gán bác sĩ
-        StaffProfile doctor = staffProfileRepository.findAll().stream()
-                .filter(s -> s.getStaffCode() != null && s.getStaffCode().startsWith("BS"))
-                .findFirst().orElse(null);
+        // Gán bác sĩ đang đăng nhập nếu có
+        StaffProfile doctor = null;
+        if (currentUser != null) {
+            doctor = staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null);
+        }
+        if (doctor == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Chỉ tài khoản bác sĩ đã liên kết hồ sơ nhân sự (StaffProfile) mới được mở hoặc tiếp nhận ca khám.");
+        }
         newVisit.setPrimaryDoctor(doctor);
 
         long visitCount = visitRepository.count() + 1;
@@ -531,58 +537,75 @@ public class DoctorPatientRestController {
 
     private QueueTicket ensureQueueTicketForVisit(Visit visit) {
         if (visit == null || visit.getVisitId() == null || visit.getBranch() == null || clinicalQueueTicketRepository == null) {
-            return null;
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Lượt khám hoặc chi nhánh không hợp lệ để cấp vé hàng chờ.");
         }
-        try {
-            List<QueueTicket> existing = clinicalQueueTicketRepository.findByVisitVisitIdAndQueueType(visit.getVisitId(), QueueType.EXAM);
-            if (existing != null && !existing.isEmpty()) {
-                for (QueueTicket t : existing) {
-                    if (t.getStatus() != QueueStatus.CANCELLED) {
-                        return t;
-                    }
-                }
-                return existing.get(0);
-            }
-
-            LocalDate day = visit.getCheckInAt() != null ? visit.getCheckInAt().toLocalDate() : LocalDate.now();
-            boolean isEmergency = visit.getVisitType() == VisitType.EMERGENCY;
-            boolean isPriority = isEmergency;
-            String priorityReason = isEmergency
-                    ? (visit.getInitialSymptoms() != null && !visit.getInitialSymptoms().isBlank() ? visit.getInitialSymptoms() : "Ca cấp cứu khẩn cấp (FT10)")
-                    : null;
-
-            PatientProfile p = visit.getPatientProfile();
-            if (!isPriority && p != null && p.getDob() != null) {
-                int age = Period.between(p.getDob(), day).getYears();
-                if (age >= 65) {
-                    isPriority = true;
-                    priorityReason = "Ưu tiên người cao tuổi (65+ tuổi - FT10)";
-                } else if (age >= 0 && age <= 6) {
-                    isPriority = true;
-                    priorityReason = "Ưu tiên trẻ nhỏ (<= 6 tuổi - FT10)";
+        List<QueueTicket> existing = clinicalQueueTicketRepository.findByVisitVisitIdAndQueueType(visit.getVisitId(), QueueType.EXAM);
+        if (existing != null && !existing.isEmpty()) {
+            for (QueueTicket t : existing) {
+                if (t.getStatus() != QueueStatus.CANCELLED) {
+                    return t;
                 }
             }
-
-            int next = clinicalQueueTicketRepository.maxTicketNumber(visit.getBranch().getBranchId(), day, QueueType.EXAM, isPriority) + 1;
-            if (next > 999) next = 999;
-
-            QueueTicket ticket = new QueueTicket();
-            ticket.setVisit(visit);
-            ticket.setBranch(visit.getBranch());
-            ticket.setQueueDate(day);
-            ticket.setQueueType(QueueType.EXAM);
-            ticket.setIsPriority(isPriority);
-            ticket.setIsEmergency(isEmergency);
-            ticket.setPriorityScore(isEmergency ? 100 : (isPriority ? 50 : 0));
-            ticket.setPriorityReason(priorityReason);
-            ticket.setTicketNumber(next);
-            ticket.setDisplayNumber((isPriority ? "P-" : "") + String.format("%02d", next));
-            ticket.setStatus(visit.getStatus() == VisitStatus.IN_EXAM ? QueueStatus.IN_SERVICE : QueueStatus.WAITING);
-            return clinicalQueueTicketRepository.save(ticket);
-        } catch (Exception e) {
-            log.warn("Could not auto-issue QueueTicket for visit {}: {}", visit.getVisitId(), e.getMessage());
-            return null;
         }
+
+        LocalDate day = visit.getCheckInAt() != null ? visit.getCheckInAt().toLocalDate() : LocalDate.now();
+        boolean isEmergency = visit.getVisitType() == VisitType.EMERGENCY;
+        boolean isPriority = isEmergency;
+        String priorityReason = isEmergency
+                ? (visit.getInitialSymptoms() != null && !visit.getInitialSymptoms().isBlank() ? visit.getInitialSymptoms() : "Ca cấp cứu khẩn cấp (FT10)")
+                : null;
+
+        PatientProfile p = visit.getPatientProfile();
+        if (!isPriority && p != null && p.getDob() != null) {
+            int age = Period.between(p.getDob(), day).getYears();
+            if (age >= 65) {
+                isPriority = true;
+                priorityReason = "Ưu tiên người cao tuổi (65+ tuổi - FT10)";
+            } else if (age >= 0 && age <= 6) {
+                isPriority = true;
+                priorityReason = "Ưu tiên trẻ nhỏ (<= 6 tuổi - FT10)";
+            }
+        }
+
+        // Khóa bi quan chi nhánh để đồng bộ tuần tự hóa cấp số
+        branchRepository.findByIdForUpdate(visit.getBranch().getBranchId());
+
+        List<QueueTicket> doubleCheck = clinicalQueueTicketRepository.findByVisitVisitIdAndQueueType(visit.getVisitId(), QueueType.EXAM);
+        if (doubleCheck != null) {
+            for (QueueTicket t : doubleCheck) {
+                if (t.getStatus() != QueueStatus.CANCELLED) {
+                    return t;
+                }
+            }
+        }
+
+        QueueTicket ticket = (existing != null && !existing.isEmpty() && existing.get(0).getStatus() == QueueStatus.CANCELLED)
+                ? existing.get(0)
+                : new QueueTicket();
+
+        int next = clinicalQueueTicketRepository.maxTicketNumber(visit.getBranch().getBranchId(), day, QueueType.EXAM, isPriority) + 1;
+        if (next > 999) {
+            log.error("Đã hết dải số hàng chờ trong ngày cho chi nhánh {}", visit.getBranch().getBranchId());
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Đã hết dải số hàng chờ trong ngày cho chi nhánh này.");
+        }
+        ticket.setVisit(visit);
+        ticket.setBranch(visit.getBranch());
+        ticket.setQueueDate(day);
+        ticket.setQueueType(QueueType.EXAM);
+        ticket.setTicketNumber(next);
+        ticket.setDisplayNumber((isPriority ? "P-" : "") + String.format("%02d", next));
+
+        ticket.setIsPriority(isPriority);
+        ticket.setIsEmergency(isEmergency);
+        ticket.setPriorityScore(isEmergency ? 100 : (isPriority ? 50 : 0));
+        ticket.setPriorityReason(priorityReason);
+        ticket.setStatus(visit.getStatus() == VisitStatus.IN_EXAM ? QueueStatus.IN_SERVICE : QueueStatus.WAITING);
+        ticket.setIssuedAt(LocalDateTime.now());
+        ticket.setCalledAt(null);
+        ticket.setPausedAt(null);
+        ticket.setResumedAt(null);
+        ticket.setCompletedAt(null);
+        return clinicalQueueTicketRepository.save(ticket);
     }
 
     private com.cvdcms.DTO.DailyVisitDTO mapToDailyVisitDTO(Visit v, Long currentVisitId, ResolvedTurnInfo turnInfo) {
@@ -772,9 +795,14 @@ public class DoctorPatientRestController {
         visit.setInitialSymptoms(symptoms);
         visit.setBranch(branch);
 
-        StaffProfile doctor = staffProfileRepository.findAll().stream()
-                .filter(s -> s.getStaffCode() != null && s.getStaffCode().startsWith("BS"))
-                .findFirst().orElse(null);
+        StaffProfile doctor = null;
+        if (currentUser != null) {
+            doctor = staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null);
+        }
+        if (doctor == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Chỉ tài khoản bác sĩ đã liên kết hồ sơ nhân sự (StaffProfile) mới được tạo nhanh ca khám.");
+        }
         visit.setPrimaryDoctor(doctor);
 
         long vCount = visitRepository.count() + 1;

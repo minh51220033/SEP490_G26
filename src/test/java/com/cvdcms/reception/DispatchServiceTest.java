@@ -293,4 +293,32 @@ class DispatchServiceTest {
         assertNull(visit.getChairId(), "Ghế không bị lưu dở dang sau khi rollback");
         assertEquals(VisitStatus.WAITING, visit.getStatus());
     }
+
+    @Test
+    void reissuingCancelledTicketWithPriorityReallocatesTicketAndDisplayNumber() {
+        permitted();
+        visit.setPrimaryDoctor(doctor);
+        visit.setStatus(VisitStatus.WAITING);
+
+        QueueTicket cancelledTicket = new QueueTicket();
+        cancelledTicket.setTicketId(99L);
+        cancelledTicket.setVisit(visit);
+        cancelledTicket.setBranch(branch);
+        cancelledTicket.setStatus(QueueStatus.CANCELLED);
+        cancelledTicket.setIsPriority(false);
+        cancelledTicket.setTicketNumber(1);
+        cancelledTicket.setDisplayNumber("01");
+
+        when(tickets.findByVisitVisitIdAndQueueType(7L, QueueType.EXAM)).thenReturn(Optional.of(cancelledTicket));
+        when(tickets.maxNumber(eq(1L), any(), eq(QueueType.EXAM), eq(true))).thenReturn(5);
+
+        QueueTicket reissued = service.issue(session, 1L, 7L, true, "Ưu tiên cấp cứu đột xuất");
+
+        assertSame(cancelledTicket, reissued, "Phải tái sử dụng đúng bản ghi thực thể để không vi phạm uk_ft09_visit_queue");
+        assertEquals(QueueStatus.WAITING, reissued.getStatus());
+        assertTrue(reissued.getIsPriority());
+        assertEquals(6, reissued.getTicketNumber());
+        assertEquals("P-06", reissued.getDisplayNumber(), "Display number phải có prefix P- và số thứ tự mới");
+        verify(tickets).saveAndFlush(cancelledTicket);
+    }
 }

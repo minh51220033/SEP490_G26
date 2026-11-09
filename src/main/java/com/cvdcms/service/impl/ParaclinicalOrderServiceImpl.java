@@ -182,6 +182,15 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             savedItem.setExternalRefId(item.getExternalRefId());
         }
 
+        if (savedItem.getStatus() != ParaclinicalOrderItemStatus.COMPLETED) {
+            if (visit.getStatus() == VisitStatus.IN_EXAM || visit.getStatus() == VisitStatus.WAITING) {
+                visit.setStatus(VisitStatus.WAITING_PARACLINICAL);
+                visitRepository.save(visit);
+            }
+        } else {
+            checkAndUpdateVisitParaclinicalStatus(savedItem.getOrder());
+        }
+
         log.info("Bác sĩ đã tạo chỉ định cận lâm sàng thành công: ItemId={}, ExternalRefId={}, Service={}, Tooth={}",
                 savedItem.getOrderItemId(), savedItem.getExternalRefId(), service.getServiceName(), savedItem.getToothNumbers());
 
@@ -249,6 +258,7 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         syncOrderItemToPerformedService(item);
 
         ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
+        checkAndUpdateVisitParaclinicalStatus(savedItem.getOrder());
         return mapToDTO(savedItem);
     }
 
@@ -275,18 +285,25 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         syncOrderItemToPerformedService(item);
 
         ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
+        checkAndUpdateVisitParaclinicalStatus(savedItem.getOrder());
 
-        // Kiểm tra nếu tất cả các chỉ định đều hoàn thành thì chuyển trạng thái Order cha
-        ParaclinicalOrder parentOrder = savedItem.getOrder();
+        return mapToDTO(savedItem);
+    }
+
+    private void checkAndUpdateVisitParaclinicalStatus(ParaclinicalOrder parentOrder) {
+        if (parentOrder == null) return;
         List<ParaclinicalOrderItem> allItems = paraclinicalOrderItemRepository.findByOrder_OrderId(parentOrder.getOrderId());
-        boolean allCompleted = allItems.stream().allMatch(i -> i.getStatus() == ParaclinicalOrderItemStatus.COMPLETED);
+        boolean allCompleted = !allItems.isEmpty() && allItems.stream().allMatch(i -> i.getStatus() == ParaclinicalOrderItemStatus.COMPLETED);
         if (allCompleted) {
             parentOrder.setStatus(ParaclinicalOrderStatus.COMPLETED);
             parentOrder.setCompletedAt(LocalDateTime.now());
             paraclinicalOrderRepository.save(parentOrder);
+            Visit v = parentOrder.getVisit();
+            if (v != null && v.getStatus() == VisitStatus.WAITING_PARACLINICAL) {
+                v.setStatus(VisitStatus.WAITING_RESULT);
+                visitRepository.save(v);
+            }
         }
-
-        return mapToDTO(savedItem);
     }
 
     @Override
