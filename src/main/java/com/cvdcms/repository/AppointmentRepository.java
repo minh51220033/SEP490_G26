@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,6 +33,17 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     long countByAppointmentDate(LocalDate appointmentDate);
 
     long countByAppointmentDateBetween(LocalDate startDate, LocalDate endDate);
+
+    @Query("""
+        SELECT COUNT(a) FROM Appointment a
+        WHERE (:branchIds IS NULL OR a.branch.branchId IN :branchIds)
+          AND a.appointmentDate = :date
+          AND (a.status IS NULL OR a.status <> com.cvdcms.entity.enums.AppointmentStatus.CANCELLED)
+    """)
+    long countActiveAppointmentsByBranchesAndDate(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("date") LocalDate date
+    );
 
     long countByAppointmentDateBeforeAndStatusIn(LocalDate date, List<AppointmentStatus> statuses);
 

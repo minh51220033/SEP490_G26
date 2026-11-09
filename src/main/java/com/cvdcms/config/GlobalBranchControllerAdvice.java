@@ -128,11 +128,14 @@ public class GlobalBranchControllerAdvice {
         String currentBranchCode = currentBranch != null && currentBranch.getBranchCode() != null && !currentBranch.getBranchCode().isBlank()
                 ? currentBranch.getBranchCode()
                 : (currentBranch != null ? currentBranch.getBranchName() : "Toàn hệ thống");
+        String currentBranchAddress = currentBranch != null && currentBranch.getAddress() != null ? currentBranch.getAddress() : "";
         session.setAttribute("currentBranchName", currentBranchName);
+        session.setAttribute("currentBranchAddress", currentBranchAddress);
 
         model.addAttribute("currentBranchId", currentBranchId);
         model.addAttribute("currentBranch", currentBranch);
         model.addAttribute("currentBranchName", currentBranchName);
         model.addAttribute("currentBranchCode", currentBranchCode);
+        model.addAttribute("currentBranchAddress", currentBranchAddress);
     }
 }
