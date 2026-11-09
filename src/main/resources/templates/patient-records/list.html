@@ -625,6 +625,14 @@
                 }
             </style>
 
+            <!-- BREADCRUMB -->
+            <nav aria-label="breadcrumb" class="mb-2">
+                <ol class="breadcrumb mb-0" style="font-size: 13.5px;">
+                    <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+                    <li class="breadcrumb-item active" aria-current="page" th:text="${sidebarMenu == 'doctor-records' ? 'Quản lý khách hàng' : 'Quản lý khách hàng'}">Quản lý khách hàng</li>
+                </ol>
+            </nav>
+
             <!-- SUB-HEADER TITLE -->
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                 <div>

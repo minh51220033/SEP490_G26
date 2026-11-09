@@ -6,9 +6,95 @@
     THANH ĐIỀU HƯỚNG TÀI CHÍNH (Đồng bộ qua fragments/finance-tabs)
     Nhóm: Phòng khám (clinic)
 -->
-<div th:fragment="expenseIncomeTabs(activeTab)">
-    <div th:replace="~{fragments/finance-tabs :: financeTabs('clinic', ${activeTab})}"></div>
+<div th:fragment="expenseIncomeTabs(activeTab)" class="expense-income-tabs-wrapper mb-3" id="expenseIncomeTabsWrapper">
+    <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN HỆ THỐNG -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                <i class="bi bi-calculator"></i>
+            </div>
+            <div>
+                <h1 class="dv-page-title mb-0">Chi phí &amp; Thu nhập</h1>
+                <p class="dv-page-subtitle">Quản lý chi phí vận hành, bảng lương, tạm ứng, cấu hình hoa hồng và phân chia lợi nhuận</p>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+            <a th:href="@{/expenses}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+                <i class="bi bi-arrow-clockwise"></i> Làm mới
+            </a>
+            <a th:if="${activeTab == 'expenses'}" th:href="@{/expenses/create}" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                <i class="bi bi-plus-lg"></i> Lập phiếu chi mới
+            </a>
+        </div>
+    </div>
+
+    <!-- Hàng tab ngang dạng nút gọn (DentalSoft Compact Pill Style - Ảnh 3) -->
+    <nav class="expense-income-tabs-nav" aria-label="Phân hệ Chi phí &amp; Thu nhập">
+        <ul class="expense-income-tabs-list" id="expenseIncomeTabsList">
+            <!-- 1. Chi phí vận hành (FT25) -->
+            <li class="expense-income-tab-item"
+                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
+                <a th:href="@{/expenses}"
+                   class="expense-income-tab-btn"
+                   th:classappend="${activeTab == 'expenses'} ? 'active' : ''"
+                   data-tab="expenses">
+                    <i class="bi bi-journal-arrow-down" aria-hidden="true"></i>
+                    <span>Chi phí vận hành</span>
+                </a>
+            </li>
+
+            <!-- 2. Bảng lương (FT32) -->
+            <li class="expense-income-tab-item"
+                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
+                <a th:href="@{/payroll}"
+                   class="expense-income-tab-btn"
+                   th:classappend="${activeTab == 'payroll'} ? 'active' : ''"
+                   data-tab="payroll">
+                    <i class="bi bi-calendar3" aria-hidden="true"></i>
+                    <span>Bảng lương</span>
+                </a>
+            </li>
+
+            <!-- 3. Tạm ứng lương (FT32) -->
+            <li class="expense-income-tab-item"
+                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
+                <a th:href="@{/payroll/advances}"
+                   class="expense-income-tab-btn"
+                   th:classappend="${activeTab == 'advances'} ? 'active' : ''"
+                   data-tab="advances">
+                    <i class="bi bi-cash-coin" aria-hidden="true"></i>
+                    <span>Tạm ứng lương</span>
+                </a>
+            </li>
+
+            <!-- 4. Cấu hình hoa hồng (SCR-32.3 - Chỉ hiển thị cho Quản trị viên) -->
+            <li class="expense-income-tab-item"
+                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN')))}">
+                <a th:href="@{/payroll/commission-config}"
+                   class="expense-income-tab-btn"
+                   th:classappend="${activeTab == 'commission-config'} ? 'active' : ''"
+                   data-tab="commission-config">
+                    <i class="bi bi-sliders" aria-hidden="true"></i>
+                    <span>Cấu hình hoa hồng</span>
+                </a>
+            </li>
+
+            <!-- 5. Phân chia lợi nhuận -->
+            <li class="expense-income-tab-item"
+                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
+                <a th:href="@{/payroll/owner-distributions}"
+                   class="expense-income-tab-btn"
+                   th:classappend="${activeTab == 'owner-distributions'} ? 'active' : ''"
+                   data-tab="owner-distributions">
+                    <i class="bi bi-diagram-2" aria-hidden="true"></i>
+                    <span>Phân chia lợi nhuận</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
 </div>
 
 </body>
 </html>
+

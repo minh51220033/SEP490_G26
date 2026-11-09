@@ -478,13 +478,8 @@
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-link text-danger p-0" title="Hủy dịch vụ thực hiện này"
-                                                th:data-id="${ps.performedId}"
-                                                onclick="deletePerformedService(this.getAttribute('data-id'))">
-                                            <i class="bi bi-trash3-fill"></i>
-                                        </button>
-                                        <span th:if="${isClinicalLocked}" class="text-muted" title="Bệnh án đã khóa (BR-EMR-02)">
-                                            <i class="bi bi-lock-fill text-secondary"></i>
+                                        <span class="text-muted small" title="Dịch vụ đã thực hiện không thể xóa">
+                                            <i class="bi bi-shield-check text-success"></i> Đã làm
                                         </span>
                                     </td>
                                 </tr>
@@ -2286,10 +2281,9 @@
                 </span>
             </td>
             <td class="text-center">
-                <button type="button" class="btn btn-sm btn-link text-danger p-0" title="Hủy dịch vụ này"
-                        onclick="deletePerformedService(${ps.performedId})">
-                    <i class="bi bi-trash3-fill"></i>
-                </button>
+                <span class="text-muted small" title="Dịch vụ đã thực hiện không thể xóa">
+                    <i class="bi bi-shield-check text-success"></i> Đã làm
+                </span>
             </td>
         `;
 

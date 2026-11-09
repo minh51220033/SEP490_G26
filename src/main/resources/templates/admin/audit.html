@@ -31,6 +31,25 @@
                         right: 24px;
                     }
 
+                    /* Khung bảng mở rộng tối đa chiều cao, cố định thanh phân trang ở đáy và không để khoảng trống dư */
+                    .staff-table-card {
+                        display: flex !important;
+                        flex-direction: column !important;
+                        flex: 1 1 auto !important;
+                        min-height: 0 !important;
+                        margin-bottom: 0 !important;
+                    }
+                    .dv-table-scroll-container {
+                        flex: 1 1 auto !important;
+                        min-height: 0 !important;
+                        overflow-y: auto !important;
+                        overflow-x: auto !important;
+                    }
+                    .misa-pagination-footer {
+                        flex-shrink: 0 !important;
+                        margin-top: auto !important;
+                    }
+
                     /* Hàng trong bảng có con trỏ pointer để bấm xem đối chiếu */
                     #auditTable tbody tr {
                         cursor: pointer;

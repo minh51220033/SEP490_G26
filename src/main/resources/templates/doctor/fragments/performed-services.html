@@ -293,8 +293,8 @@
                                 <i class="bi bi-check2-circle me-1"></i>Đã thực hiện
                             </span>
                         </td>
-                        <td class="text-center" style="white-space: nowrap; min-width: 240px;">
-                            <!-- 1. CỘT THAO TÁC Ở CUỐI BẢNG: Luôn hiển thị các nút đầy đủ -->
+                        <td class="text-center" style="white-space: nowrap; min-width: 140px;">
+                            <!-- 1. CỘT THAO TÁC Ở CUỐI BẢNG: Dịch vụ đã thực hiện không cho phép xóa, chỉ theo dõi quy trình ghế -->
                             <div class="ps-actions-cell-always" onclick="event.stopPropagation()">
                                 <button type="button" class="ps-btn-workflow"
                                         th:data-service-id="${ps.serviceId}"
@@ -304,13 +304,6 @@
                                         title="Theo dõi các bước quy trình kỹ thuật tại ghế">
                                     <i class="bi bi-diagram-3-fill"></i>
                                     <span>Quy trình ghế</span>
-                                </button>
-                                <button th:if="${!isClinicalLocked}" type="button" class="ps-btn-delete"
-                                        th:data-id="${ps.performedId}"
-                                        onclick="deletePerformedService(this.getAttribute('data-id'))"
-                                        title="Hủy dịch vụ thực hiện này (Hoàn tác lại KHDT)">
-                                    <i class="bi bi-trash3-fill"></i>
-                                    <span>Hủy dịch vụ</span>
                                 </button>
                                 <span th:if="${isClinicalLocked}" class="badge bg-light text-secondary border px-2 py-1" style="font-size: 12px;" title="Bệnh án đã khóa (BR-EMR-02)">
                                     <i class="bi bi-lock-fill me-1"></i>Đã khóa
@@ -328,13 +321,6 @@
                                         title="Theo dõi các bước quy trình kỹ thuật tại ghế">
                                     <i class="bi bi-diagram-3-fill"></i>
                                     <span>Quy trình ghế</span>
-                                </button>
-                                <button th:if="${!isClinicalLocked}" type="button" class="ps-btn-delete"
-                                        th:data-id="${ps.performedId}"
-                                        onclick="deletePerformedService(this.getAttribute('data-id'))"
-                                        title="Hủy dịch vụ thực hiện này (Hoàn tác lại KHDT)">
-                                    <i class="bi bi-trash3-fill"></i>
-                                    <span>Hủy dịch vụ</span>
                                 </button>
                                 <span th:if="${isClinicalLocked}" class="badge bg-light text-secondary border px-2 py-1" style="font-size: 12px;" title="Bệnh án đã khóa (BR-EMR-02)">
                                     <i class="bi bi-lock-fill me-1"></i>Đã khóa

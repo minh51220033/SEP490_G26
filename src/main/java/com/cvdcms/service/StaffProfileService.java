@@ -64,13 +64,15 @@ public class StaffProfileService {
 
     // ===================== TRA CỨU (SCR-41.1, 41.4) =====================
 
-    // Tìm kiếm theo Mã NV / Họ tên / CCCD / SĐT và lọc theo chuyên khoa, trạng thái, chi nhánh.
+    // Tìm kiếm theo Mã NV / Họ tên / CCCD / SĐT và lọc theo chuyên khoa, trạng
+    // thái, chi nhánh.
     @Transactional(readOnly = true)
     public List<StaffProfile> searchStaff(String keyword, String specialty, StaffStatus status, Long branchId) {
         return searchStaff(keyword, specialty, status, branchId, null, null, null, null, null);
     }
 
-    // Tra cứu nâng cao theo từ khóa, chuyên khoa, trạng thái, chi nhánh, vị trí công việc, CCHN, vai trò, sắp xếp
+    // Tra cứu nâng cao theo từ khóa, chuyên khoa, trạng thái, chi nhánh, vị trí
+    // công việc, CCHN, vai trò, sắp xếp
     @Transactional(readOnly = true)
     public List<StaffProfile> searchStaff(
             String keyword,
@@ -91,7 +93,8 @@ public class StaffProfileService {
         Set<Long> staffInBranch = null;
         if (branchId != null) {
             staffInBranch = new HashSet<>();
-            for (StaffBranchAssignment a : assignmentRepository.findByBranchAndStatus(branchId, AssignmentStatus.ACTIVE)) {
+            for (StaffBranchAssignment a : assignmentRepository.findByBranchAndStatus(branchId,
+                    AssignmentStatus.ACTIVE)) {
                 staffInBranch.add(a.getStaff().getStaffId());
             }
         }
@@ -136,10 +139,12 @@ public class StaffProfileService {
             if (staffWithRole != null && !staffWithRole.contains(s.getStaffId())) {
                 continue;
             }
-            if ("YES".equalsIgnoreCase(hasLicense) && (s.getPracticeLicenseNo() == null || s.getPracticeLicenseNo().isBlank())) {
+            if ("YES".equalsIgnoreCase(hasLicense)
+                    && (s.getPracticeLicenseNo() == null || s.getPracticeLicenseNo().isBlank())) {
                 continue;
             }
-            if ("NO".equalsIgnoreCase(hasLicense) && (s.getPracticeLicenseNo() != null && !s.getPracticeLicenseNo().isBlank())) {
+            if ("NO".equalsIgnoreCase(hasLicense)
+                    && (s.getPracticeLicenseNo() != null && !s.getPracticeLicenseNo().isBlank())) {
                 continue;
             }
             result.add(s);
@@ -150,7 +155,8 @@ public class StaffProfileService {
             result.sort((a, b) -> {
                 String nameA = a.getFullName() != null ? a.getFullName() : "";
                 String nameB = b.getFullName() != null ? b.getFullName() : "";
-                return "desc".equalsIgnoreCase(direction) ? nameB.compareToIgnoreCase(nameA) : nameA.compareToIgnoreCase(nameB);
+                return "desc".equalsIgnoreCase(direction) ? nameB.compareToIgnoreCase(nameA)
+                        : nameA.compareToIgnoreCase(nameB);
             });
         } else if ("createdAt".equalsIgnoreCase(sort)) {
             result.sort((a, b) -> {
@@ -203,7 +209,8 @@ public class StaffProfileService {
         return staffRepository.findDistinctPositionTitles();
     }
 
-    // Các phân công đang hiệu lực gom theo nhân viên - để hiển thị chi nhánh/vai trò trong danh sách.
+    // Các phân công đang hiệu lực gom theo nhân viên - để hiển thị chi nhánh/vai
+    // trò trong danh sách.
     @Transactional(readOnly = true)
     public Map<Long, List<StaffBranchAssignment>> getActiveAssignmentsByStaff() {
         Map<Long, List<StaffBranchAssignment>> map = new LinkedHashMap<>();
@@ -211,8 +218,8 @@ public class StaffProfileService {
             map.computeIfAbsent(a.getStaff().getStaffId(), k -> new ArrayList<>()).add(a);
         }
         // Chi nhánh chính luôn đứng đầu.
-        map.values().forEach(list -> list.sort((x, y) ->
-                Boolean.compare(Boolean.TRUE.equals(y.getIsPrimary()), Boolean.TRUE.equals(x.getIsPrimary()))));
+        map.values().forEach(list -> list.sort((x, y) -> Boolean.compare(Boolean.TRUE.equals(y.getIsPrimary()),
+                Boolean.TRUE.equals(x.getIsPrimary()))));
         return map;
     }
 
@@ -221,7 +228,8 @@ public class StaffProfileService {
         return assignmentRepository.findByStaffId(staffId);
     }
 
-    // Bác sĩ/nhân viên đang công tác tại chi nhánh - dành cho các phân hệ khác (đặt lịch, phân công khám).
+    // Bác sĩ/nhân viên đang công tác tại chi nhánh - dành cho các phân hệ khác (đặt
+    // lịch, phân công khám).
     @Transactional(readOnly = true)
     public List<StaffBranchAssignment> getActiveStaffByBranch(Long branchId) {
         return assignmentRepository.findByBranchAndStatus(branchId, AssignmentStatus.ACTIVE);
@@ -229,7 +237,8 @@ public class StaffProfileService {
 
     // ===================== DỮ LIỆU CHO FORM =====================
 
-    // Vai trò có thể phân công cho nhân sự (loại bỏ vai trò Bệnh nhân, Quản trị hệ thống và vai trò ngừng hoạt động).
+    // Vai trò có thể phân công cho nhân sự (loại bỏ vai trò Bệnh nhân, Quản trị hệ
+    // thống và vai trò ngừng hoạt động).
     @Transactional(readOnly = true)
     public List<Role> getAssignableRoles() {
         List<Role> roles = new ArrayList<>();
@@ -255,7 +264,8 @@ public class StaffProfileService {
                 || "ROLE_ADMIN".equalsIgnoreCase(name);
     }
 
-    // Xác định vai trò hiện tại của nhân sự: ưu tiên phân công ACTIVE -> vai trò trên tài khoản liên kết -> lịch sử phân công gần nhất.
+    // Xác định vai trò hiện tại của nhân sự: ưu tiên phân công ACTIVE -> vai trò
+    // trên tài khoản liên kết -> lịch sử phân công gần nhất.
     @Transactional(readOnly = true)
     public Role resolveCurrentStaffRole(StaffProfile staff, List<StaffBranchAssignment> activeAssignments) {
         if (activeAssignments != null && !activeAssignments.isEmpty()) {
@@ -295,8 +305,10 @@ public class StaffProfileService {
         return null;
     }
 
-    // Tài khoản chưa gắn hồ sơ nhân sự nào (loại bỏ tài khoản Bệnh nhân thuần và Admin thuần).
-    // currentUserId: tài khoản đang gắn với hồ sơ đang sửa - vẫn phải được chọn lại.
+    // Tài khoản chưa gắn hồ sơ nhân sự nào (loại bỏ tài khoản Bệnh nhân thuần và
+    // Admin thuần).
+    // currentUserId: tài khoản đang gắn với hồ sơ đang sửa - vẫn phải được chọn
+    // lại.
     @Transactional(readOnly = true)
     public List<LinkableUserDTO> getLinkableUsers(Long currentUserId) {
         Set<Long> linked = new HashSet<>();
@@ -330,8 +342,10 @@ public class StaffProfileService {
                         .map(r -> r.getDisplayName() != null ? r.getDisplayName() : r.getRoleName())
                         .collect(Collectors.joining(", "));
 
-                String display = u.getUsername() + " (" + u.getEmail() + ")" + (roleDisplayNames.isBlank() ? "" : " - " + roleDisplayNames);
-                users.add(new LinkableUserDTO(u.getUserId(), u.getUsername(), u.getEmail(), roleIds, roleNames, display));
+                String display = u.getUsername() + " (" + u.getEmail() + ")"
+                        + (roleDisplayNames.isBlank() ? "" : " - " + roleDisplayNames);
+                users.add(
+                        new LinkableUserDTO(u.getUserId(), u.getUsername(), u.getEmail(), roleIds, roleNames, display));
             }
         }
         return users;
@@ -342,7 +356,8 @@ public class StaffProfileService {
             return false;
         }
         return user.getRoles().stream()
-                .allMatch(r -> ROLE_ADMIN.equalsIgnoreCase(r.getRoleName()) || "ROLE_ADMIN".equalsIgnoreCase(r.getRoleName()));
+                .allMatch(r -> ROLE_ADMIN.equalsIgnoreCase(r.getRoleName())
+                        || "ROLE_ADMIN".equalsIgnoreCase(r.getRoleName()));
     }
 
     // ===================== THÊM / SỬA HỒ SƠ (SCR-41.2) =====================
@@ -395,7 +410,8 @@ public class StaffProfileService {
         assignment.setStatus(AssignmentStatus.ACTIVE);
         assignmentRepository.save(assignment);
 
-        // Đồng bộ tài khoản đăng nhập: là tài khoản nhân viên, thuộc chi nhánh chính, vai trò chuyên môn và trạng thái hoạt động.
+        // Đồng bộ tài khoản đăng nhập: là tài khoản nhân viên, thuộc chi nhánh chính,
+        // vai trò chuyên môn và trạng thái hoạt động.
         if (user != null) {
             syncUserStatusWithStaff(user, saved.getStatus());
             syncUserWithStaff(user, branch, role);
@@ -408,15 +424,17 @@ public class StaffProfileService {
         StaffProfile staff = getStaffById(staffId);
         validateProfile(dto, staff);
 
-        List<StaffBranchAssignment> activeAssignments =
-                assignmentRepository.findByStaffStaffIdAndStatus(staffId, AssignmentStatus.ACTIVE);
+        List<StaffBranchAssignment> activeAssignments = assignmentRepository.findByStaffStaffIdAndStatus(staffId,
+                AssignmentStatus.ACTIVE);
 
         // Nếu người dùng chọn đổi vai trò chuyên môn trên form sửa
         Role selectedRole = null;
         if (dto.getRoleId() != null) {
             selectedRole = findRole(dto.getRoleId());
-            if (ROLE_ADMIN.equalsIgnoreCase(selectedRole.getRoleName()) || "ROLE_ADMIN".equalsIgnoreCase(selectedRole.getRoleName())) {
-                throw new IllegalArgumentException("Không thể gán vai trò Quản trị hệ thống (Admin) cho hồ sơ nhân sự.");
+            if (ROLE_ADMIN.equalsIgnoreCase(selectedRole.getRoleName())
+                    || "ROLE_ADMIN".equalsIgnoreCase(selectedRole.getRoleName())) {
+                throw new IllegalArgumentException(
+                        "Không thể gán vai trò Quản trị hệ thống (Admin) cho hồ sơ nhân sự.");
             }
         }
 
@@ -431,13 +449,15 @@ public class StaffProfileService {
         boolean isFixedDoctor = isDoctor;
         applyProfile(staff, dto, isFixedDoctor);
 
-        // Cập nhật vai trò chuyên môn mới vào phân công chi nhánh chính đang hiệu lực (nếu có đổi vai trò)
+        // Cập nhật vai trò chuyên môn mới vào phân công chi nhánh chính đang hiệu lực
+        // (nếu có đổi vai trò)
         if (selectedRole != null) {
             StaffBranchAssignment primary = activeAssignments.stream()
                     .filter(a -> Boolean.TRUE.equals(a.getIsPrimary()))
                     .findFirst()
                     .orElse(null);
-            if (primary != null && (primary.getRole() == null || !primary.getRole().getRoleId().equals(selectedRole.getRoleId()))) {
+            if (primary != null
+                    && (primary.getRole() == null || !primary.getRole().getRoleId().equals(selectedRole.getRoleId()))) {
                 primary.setRole(selectedRole);
                 assignmentRepository.save(primary);
             }
@@ -447,7 +467,8 @@ public class StaffProfileService {
         Long currentUserId = previousUser != null ? previousUser.getUserId() : null;
         User user = resolveLinkedUser(dto.getUserId(), staff, fixedRole);
 
-        // Nếu gỡ tài khoản cũ hoặc đổi sang tài khoản khác -> giải phóng chi nhánh trên tài khoản cũ.
+        // Nếu gỡ tài khoản cũ hoặc đổi sang tài khoản khác -> giải phóng chi nhánh trên
+        // tài khoản cũ.
         if (previousUser != null && (user == null || !previousUser.getUserId().equals(user.getUserId()))) {
             previousUser.setBranch(null);
             userRepository.save(previousUser);
@@ -457,7 +478,8 @@ public class StaffProfileService {
         staff.setUser(user);
         StaffProfile saved = staffRepository.save(staff);
 
-        // Đồng bộ tài khoản liên kết theo chi nhánh chính hiện tại, vai trò chuyên môn và trạng thái làm việc.
+        // Đồng bộ tài khoản liên kết theo chi nhánh chính hiện tại, vai trò chuyên môn
+        // và trạng thái làm việc.
         if (user != null) {
             syncUserStatusWithStaff(user, saved.getStatus());
             StaffBranchAssignment primary = activeAssignments.stream()
@@ -497,15 +519,16 @@ public class StaffProfileService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chi nhánh."));
 
         // Tự động lấy vai trò chuyên môn hiện tại của nhân sự này.
-        List<StaffBranchAssignment> active =
-                assignmentRepository.findByStaffStaffIdAndStatus(staffId, AssignmentStatus.ACTIVE);
+        List<StaffBranchAssignment> active = assignmentRepository.findByStaffStaffIdAndStatus(staffId,
+                AssignmentStatus.ACTIVE);
         Role role = resolveCurrentStaffRole(staff, active);
         if (role == null) {
             role = findRole(requireId(dto.getRoleId(), "Vai trò"));
         }
 
         if (role != null && isPatientOrAdminRoleName(role.getRoleName())) {
-            throw new IllegalArgumentException("Không thể phân công vai trò Quản trị hệ thống hoặc Bệnh nhân cho nhân sự chi nhánh.");
+            throw new IllegalArgumentException(
+                    "Không thể phân công vai trò Quản trị hệ thống hoặc Bệnh nhân cho nhân sự chi nhánh.");
         }
 
         LocalDate start = dto.getStartDate() != null ? dto.getStartDate() : LocalDate.now();
@@ -548,7 +571,8 @@ public class StaffProfileService {
         assignment.setStartDate(start);
         assignment.setEndDate(end);
         assignment.setStatus(end != null && end.isBefore(LocalDate.now())
-                ? AssignmentStatus.ENDED : AssignmentStatus.ACTIVE);
+                ? AssignmentStatus.ENDED
+                : AssignmentStatus.ACTIVE);
         StaffBranchAssignment saved = assignmentRepository.save(assignment);
 
         if (staff.getUser() != null) {
@@ -574,7 +598,8 @@ public class StaffProfileService {
         }
         assignmentRepository.save(assignment);
 
-        // Nếu vừa kết thúc chi nhánh chính -> tự chuyển chi nhánh chính sang phân công còn hiệu lực sớm nhất (hoặc xóa chi nhánh trên tài khoản nếu hết phân công).
+        // Nếu vừa kết thúc chi nhánh chính -> tự chuyển chi nhánh chính sang phân công
+        // còn hiệu lực sớm nhất (hoặc xóa chi nhánh trên tài khoản nếu hết phân công).
         if (wasPrimary) {
             reassignNextPrimaryOrClearBranch(staffId, assignment.getStaff());
         }
@@ -608,7 +633,8 @@ public class StaffProfileService {
             assignment.setStatus(AssignmentStatus.ACTIVE);
             if (Boolean.TRUE.equals(dto.getIsPrimary())) {
                 assignment.setIsPrimary(true);
-                for (StaffBranchAssignment a : assignmentRepository.findByStaffStaffIdAndStatus(staffId, AssignmentStatus.ACTIVE)) {
+                for (StaffBranchAssignment a : assignmentRepository.findByStaffStaffIdAndStatus(staffId,
+                        AssignmentStatus.ACTIVE)) {
                     if (!a.getAssignmentId().equals(assignmentId) && Boolean.TRUE.equals(a.getIsPrimary())) {
                         a.setIsPrimary(false);
                         assignmentRepository.save(a);
@@ -631,7 +657,8 @@ public class StaffProfileService {
             throw new IllegalArgumentException("Chỉ có thể đặt chi nhánh chính cho phân công đang hiệu lực.");
         }
 
-        for (StaffBranchAssignment a : assignmentRepository.findByStaffStaffIdAndStatus(staffId, AssignmentStatus.ACTIVE)) {
+        for (StaffBranchAssignment a : assignmentRepository.findByStaffStaffIdAndStatus(staffId,
+                AssignmentStatus.ACTIVE)) {
             boolean isTarget = a.getAssignmentId().equals(assignmentId);
             if (Boolean.TRUE.equals(a.getIsPrimary()) != isTarget) {
                 a.setIsPrimary(isTarget);
@@ -663,7 +690,8 @@ public class StaffProfileService {
                 .orElseThrow(() -> new IllegalArgumentException("Vai trò không tồn tại."));
     }
 
-    // Tài khoản liên kết: phải tồn tại, chưa gắn với hồ sơ khác, không phải Admin/Bệnh nhân và khớp vai trò chuyên môn.
+    // Tài khoản liên kết: phải tồn tại, chưa gắn với hồ sơ khác, không phải
+    // Admin/Bệnh nhân và khớp vai trò chuyên môn.
     private User resolveLinkedUser(Long userId, StaffProfile current, Role expectedRole) {
         if (userId == null) {
             return null;
@@ -674,19 +702,22 @@ public class StaffProfileService {
         staffRepository.findByUserUserId(userId).ifPresent(other -> {
             if (current == null || !other.getStaffId().equals(current.getStaffId())) {
                 throw new IllegalArgumentException(
-                        "Tài khoản '" + user.getUsername() + "' đã được gắn với hồ sơ nhân viên " + other.getStaffCode() + ".");
+                        "Tài khoản '" + user.getUsername() + "' đã được gắn với hồ sơ nhân viên " + other.getStaffCode()
+                                + ".");
             }
         });
 
         if (isPureAdminUser(user)) {
-            throw new IllegalArgumentException("Tài khoản Quản trị hệ thống ('" + user.getUsername() + "') không thuộc đối tượng nhân sự phòng khám.");
+            throw new IllegalArgumentException("Tài khoản Quản trị hệ thống ('" + user.getUsername()
+                    + "') không thuộc đối tượng nhân sự phòng khám.");
         }
 
         boolean isCurrentLinked = current != null && current.getUser() != null
                 && userId.equals(current.getUser().getUserId());
 
         if (!isCurrentLinked && user.getPatientProfiles() != null && !user.getPatientProfiles().isEmpty()) {
-            throw new IllegalArgumentException("Tài khoản '" + user.getUsername() + "' đã có hồ sơ bệnh nhân nên không thể gắn cho nhân sự.");
+            throw new IllegalArgumentException(
+                    "Tài khoản '" + user.getUsername() + "' đã có hồ sơ bệnh nhân nên không thể gắn cho nhân sự.");
         }
 
         if (!isCurrentLinked && expectedRole != null && user.getRoles() != null && !user.getRoles().isEmpty()) {
@@ -694,20 +725,23 @@ public class StaffProfileService {
                     .anyMatch(r -> r.getRoleId() != null && r.getRoleId().equals(expectedRole.getRoleId()));
             if (!roleMatches) {
                 throw new IllegalArgumentException(
-                        "Vai trò của tài khoản '" + user.getUsername() + "' không khớp với vai trò chuyên môn của hồ sơ nhân sự.");
+                        "Vai trò của tài khoản '" + user.getUsername()
+                                + "' không khớp với vai trò chuyên môn của hồ sơ nhân sự.");
             }
         }
 
         return user;
     }
 
-    // Đồng bộ 2 chiều Email và Số điện thoại giữa Hồ sơ nhân sự và Tài khoản liên kết.
+    // Đồng bộ 2 chiều Email và Số điện thoại giữa Hồ sơ nhân sự và Tài khoản liên
+    // kết.
     private void syncContactBetweenStaffAndUser(StaffProfile staff, User user) {
         if (user == null) {
             return;
         }
 
-        // Email: nếu hồ sơ nhân sự để trống -> lấy từ tài khoản; nếu có nhập -> cập nhật sang tài khoản (kiểm tra trùng).
+        // Email: nếu hồ sơ nhân sự để trống -> lấy từ tài khoản; nếu có nhập -> cập
+        // nhật sang tài khoản (kiểm tra trùng).
         if (staff.getEmail() == null) {
             staff.setEmail(user.getEmail());
         } else {
@@ -716,12 +750,14 @@ public class StaffProfileService {
             userRepository.findByEmail(normalizedEmail)
                     .filter(existing -> !existing.getUserId().equals(user.getUserId()))
                     .ifPresent(existing -> {
-                        throw new IllegalArgumentException("Email '" + normalizedEmail + "' đã được sử dụng bởi tài khoản khác.");
+                        throw new IllegalArgumentException(
+                                "Email '" + normalizedEmail + "' đã được sử dụng bởi tài khoản khác.");
                     });
             user.setEmail(normalizedEmail);
         }
 
-        // Số điện thoại: nếu hồ sơ nhân sự để trống -> lấy từ tài khoản; nếu có nhập -> cập nhật sang tài khoản (kiểm tra trùng).
+        // Số điện thoại: nếu hồ sơ nhân sự để trống -> lấy từ tài khoản; nếu có nhập ->
+        // cập nhật sang tài khoản (kiểm tra trùng).
         if (staff.getPhoneNumber() == null) {
             staff.setPhoneNumber(user.getPhoneNumber());
         } else {
@@ -730,13 +766,15 @@ public class StaffProfileService {
             userRepository.findByPhoneNumber(normalizedPhone)
                     .filter(existing -> !existing.getUserId().equals(user.getUserId()))
                     .ifPresent(existing -> {
-                        throw new IllegalArgumentException("Số điện thoại '" + normalizedPhone + "' đã được sử dụng bởi tài khoản khác.");
+                        throw new IllegalArgumentException(
+                                "Số điện thoại '" + normalizedPhone + "' đã được sử dụng bởi tài khoản khác.");
                     });
             user.setPhoneNumber(normalizedPhone);
         }
     }
 
-    // Đồng bộ trạng thái làm việc của nhân sự sang trạng thái khóa/mở khóa tài khoản đăng nhập.
+    // Đồng bộ trạng thái làm việc của nhân sự sang trạng thái khóa/mở khóa tài
+    // khoản đăng nhập.
     private void syncUserStatusWithStaff(User user, StaffStatus status) {
         if (user == null || status == null) {
             return;
@@ -750,9 +788,11 @@ public class StaffProfileService {
         }
     }
 
-    // Chuyển chi nhánh chính sang phân công đang hiệu lực sớm nhất, hoặc xóa chi nhánh trên tài khoản nếu hết phân công.
+    // Chuyển chi nhánh chính sang phân công đang hiệu lực sớm nhất, hoặc xóa chi
+    // nhánh trên tài khoản nếu hết phân công.
     private void reassignNextPrimaryOrClearBranch(Long staffId, StaffProfile staff) {
-        StaffBranchAssignment next = assignmentRepository.findByStaffStaffIdAndStatus(staffId, AssignmentStatus.ACTIVE).stream()
+        StaffBranchAssignment next = assignmentRepository.findByStaffStaffIdAndStatus(staffId, AssignmentStatus.ACTIVE)
+                .stream()
                 .min((x, y) -> x.getStartDate().compareTo(y.getStartDate()))
                 .orElse(null);
 
@@ -819,7 +859,8 @@ public class StaffProfileService {
             }
             staffRepository.findByIdCardNumber(idCard).ifPresent(other -> {
                 if (current == null || !other.getStaffId().equals(current.getStaffId())) {
-                    throw new IllegalArgumentException("CCCD '" + idCard + "' đã thuộc hồ sơ " + other.getStaffCode() + ".");
+                    throw new IllegalArgumentException(
+                            "CCCD '" + idCard + "' đã thuộc hồ sơ " + other.getStaffCode() + ".");
                 }
             });
         }
@@ -828,13 +869,24 @@ public class StaffProfileService {
         if (license != null) {
             staffRepository.findByPracticeLicenseNo(license).ifPresent(other -> {
                 if (current == null || !other.getStaffId().equals(current.getStaffId())) {
-                    throw new IllegalArgumentException("Số CCHN '" + license + "' đã thuộc hồ sơ " + other.getStaffCode() + ".");
+                    throw new IllegalArgumentException(
+                            "Số CCHN '" + license + "' đã thuộc hồ sơ " + other.getStaffCode() + ".");
                 }
             });
         }
 
-        if (dto.getDob() != null && !dto.getDob().isBefore(LocalDate.now())) {
-            throw new IllegalArgumentException("Ngày sinh phải nằm trong quá khứ.");
+        if (dto.getDob() != null) {
+            if (!dto.getDob().isBefore(LocalDate.now())) {
+                throw new IllegalArgumentException("Ngày sinh phải nằm trong quá khứ.");
+            }
+            long age = java.time.temporal.ChronoUnit.YEARS.between(dto.getDob(), LocalDate.now());
+            if (age < 18) {
+                throw new IllegalArgumentException(
+                        "Nhân sự phải đủ từ 18 tuổi trở lên (ngày sinh hiện tại: " + age + " tuổi).");
+            }
+            if (age > 100) {
+                throw new IllegalArgumentException("Ngày sinh không hợp lệ (tuổi không được vượt quá 100 tuổi).");
+            }
         }
 
         checkNotNegative(dto.getBaseSalary(), "Lương cơ bản");
@@ -848,7 +900,8 @@ public class StaffProfileService {
         }
     }
 
-    // Chép dữ liệu form vào entity (không đụng tới mã nhân viên & tài khoản liên kết).
+    // Chép dữ liệu form vào entity (không đụng tới mã nhân viên & tài khoản liên
+    // kết).
     private void applyProfile(StaffProfile staff, StaffFormDTO dto, boolean isDoctor) {
         staff.setFullName(dto.getFullName().trim());
         staff.setGender(dto.getGender());

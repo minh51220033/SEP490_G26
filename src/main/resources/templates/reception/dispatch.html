@@ -14,33 +14,43 @@
 <link rel="stylesheet" th:href="@{/css/reception-dispatch.css}">
 <link rel="stylesheet" th:href="@{/css/reception-workflow-navigation.css}">
 
+<!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN HỆ THỐNG -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+    <div class="d-flex align-items-center gap-3">
+        <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+            <i class="bi bi-diagram-3-fill"></i>
+        </div>
+        <div>
+            <h1 class="dv-page-title mb-0">Điều phối lượt khám &amp; Ghế nha</h1>
+            <p class="dv-page-subtitle">Quản lý sơ đồ ghế, điều phối bệnh nhân vào phòng khám và theo dõi trạng thái điều trị</p>
+        </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+        <a th:href="@{/reception/dispatch(branchId=${board.branchId})}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+            <i class="bi bi-arrow-clockwise"></i> Làm mới
+        </a>
+    </div>
+</div>
+
 <!-- 1. THANH DẪN HƯỚNG QUY TRÌNH TIẾP ĐÓN THỐNG NHẤT -->
 <nav class="card border-0 shadow-sm rounded-4 mb-2.5 p-2 bg-white" data-reception-stepper aria-label="Quy trình tiếp đón">
-  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-2 py-1">
-    <div class="d-flex align-items-center gap-2 small">
-      <span class="badge bg-primary-subtle text-primary fw-bold px-2.5 py-1.5"><i class="bi bi-diagram-3 me-1"></i>QUY TRÌNH TIẾP ĐÓN</span>
-      <span class="text-muted d-none d-lg-inline">Chuỗi nghiệp vụ lễ tân &amp; điều phối khám:</span>
-    </div>
-    <div class="d-flex flex-wrap align-items-center gap-2 small">
-      <a th:href="@{/reception/appointments(branchId=${board.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 1: Quản lý lịch hẹn">
-        <span class="badge rounded-circle">1</span><span>Lịch hẹn</span>
-      </a>
-      <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
-      <a th:href="@{/reception/check-in(branchId=${board.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 2: Tiếp đón &amp; Check-in">
-        <span class="badge rounded-circle">2</span><span>Tiếp đón &amp; Check-in</span>
-      </a>
-      <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
-      <span class="btn btn-sm reception-step-pill is-active rounded-pill" title="Bước 3: Đang ở màn hình Điều phối ghế nha">
-        <span class="badge rounded-circle">3</span><span>Điều phối ghế nha</span>
-      </span>
-      <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
-      <a th:href="@{/reception/queue(branchId=${board.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 4: Hàng chờ gọi số">
-        <span class="badge rounded-circle">4</span><span>Hàng chờ gọi số</span>
-      </a>
-    </div>
-    <div>
-      <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-    </div>
+  <div class="d-flex flex-wrap align-items-center gap-2 px-2 py-1">
+    <a th:href="@{/reception/appointments(branchId=${board.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 1: Quản lý lịch hẹn">
+      <span class="badge rounded-circle">1</span><span>Lịch hẹn</span>
+    </a>
+    <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
+    <a th:href="@{/reception/check-in(branchId=${board.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 2: Tiếp đón &amp; Check-in">
+      <span class="badge rounded-circle">2</span><span>Tiếp đón &amp; Check-in</span>
+    </a>
+    <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
+    <span class="btn btn-sm reception-step-pill is-active rounded-pill" title="Bước 3: Đang ở màn hình Điều phối ghế nha">
+      <span class="badge rounded-circle">3</span><span>Điều phối ghế nha</span>
+    </span>
+    <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
+    <a th:href="@{/reception/queue(branchId=${board.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 4: Hàng chờ gọi số">
+      <span class="badge rounded-circle">4</span><span>Hàng chờ gọi số</span>
+    </a>
   </div>
 </nav>
 
@@ -81,7 +91,13 @@
      3. CÁC BẢNG RIÊNG BIỆT THEO TỪNG BÁC SĨ PHỤ TRÁCH (HIỂN THỊ THỨ TỰ VÀO KHÁM CỤ THỂ)
      ========================================================================= -->
 <div id="doctorDispatchTablesWrapper">
+  <div th:if="${totalItems == 0}" class="card border-0 shadow-sm rounded-4 p-5 text-center text-muted mb-3 bg-white">
+    <i class="bi bi-inbox fs-1 text-secondary opacity-50 d-block mb-2"></i>
+    <span class="fw-semibold">Không tìm thấy lượt điều phối nào phù hợp với bộ lọc hiện tại.</span>
+  </div>
+
   <section th:each="doc : ${board.doctors}"
+           th:if="${(selectedDoctorId == null and not #lists.isEmpty(doctorVisitMap[doc.id])) or (selectedDoctorId != null and selectedDoctorId == doc.id)}"
            class="dispatch-card-container doctor-dispatch-card mb-3"
            th:id="|doctorCard-${doc.id}|"
            th:attr="data-doctor-card-id=${doc.id}">
@@ -91,13 +107,16 @@
           <h3 class="h6 fw-bold text-dark mb-0 d-inline-flex align-items-center gap-2">
             <span th:text="|Bác sĩ phụ trách: ${doc.name}|">Bác sĩ phụ trách: BS. CK1 Lê Hoàng Nam</span>
             <span class="badge rounded-pill bg-light text-secondary border fw-normal" style="font-size: 11px;"
-                  th:text="|Vào ca: ${doc.shiftStart}|">Vào ca: 08:00</span>
+                  th:if="${doc.shiftStart != null and !#strings.isEmpty(doc.shiftStart)}"
+                  th:text="|Vào ca: ${doc.shiftStart}|">Vào ca: --:--</span>
+            <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle fw-normal" style="font-size: 11px;"
+                  th:if="${doc.shiftStart == null or #strings.isEmpty(doc.shiftStart)}">Đang trực ca</span>
           </h3>
         </div>
         <span class="badge rounded-pill px-2.5 py-1 fw-bold"
               th:classappend="${doc.isFull} ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle'"
-              th:text="|${doctorVisitMap[doc.id] != null ? #lists.size(doctorVisitMap[doc.id]) : 0} / 8 bệnh nhân đang chờ|">
-          3 / 8 bệnh nhân đang chờ
+              th:text="|${doctorVisitMap[doc.id] != null ? #lists.size(doctorVisitMap[doc.id]) : 0} / ${doc.maxLimit} bệnh nhân đang chờ|">
+          0 / 8 bệnh nhân đang chờ
         </span>
       </div>
     </div>
@@ -107,37 +126,37 @@
         <table class="dv-amis-table align-middle mb-0">
           <thead>
             <tr>
-              <th data-col="queueOrder" class="text-center" style="width: 155px; min-width: 155px;">
-                <div class="dv-th-inner justify-content-center text-center"><span>Thứ tự vào khám</span></div>
+              <th data-col="queueOrder" class="text-center" style="width: 100px; min-width: 90px;">
+                <div class="dv-th-inner justify-content-center text-center"><span>Thứ tự</span></div>
               </th>
-              <th data-col="patientCode" class="text-center" style="width: 125px; min-width: 125px;">
-                <div class="dv-th-inner justify-content-center text-center"><span>Mã bệnh nhân</span></div>
+              <th data-col="patientCode" class="text-center" style="width: 105px; min-width: 95px;">
+                <div class="dv-th-inner justify-content-center text-center"><span>Mã BN</span></div>
               </th>
-              <th data-col="checkInTime" class="text-center" style="width: 95px; min-width: 95px;">
+              <th data-col="checkInTime" class="text-center" style="width: 80px; min-width: 75px;">
                 <div class="dv-th-inner justify-content-center text-center"><span>Giờ đến</span></div>
               </th>
-              <th data-col="patientName" class="text-center" style="width: 195px; min-width: 195px;">
+              <th data-col="patientName" class="text-center" style="width: 150px; min-width: 135px;">
                 <div class="dv-th-inner justify-content-center text-center"><span>Bệnh nhân</span></div>
               </th>
-              <th data-col="phone" class="text-center" style="width: 125px; min-width: 125px;">
+              <th data-col="phone" class="text-center" style="width: 105px; min-width: 95px;">
                 <div class="dv-th-inner justify-content-center text-center"><span>Số điện thoại</span></div>
               </th>
-              <th data-col="type" class="text-center" style="width: 115px; min-width: 115px;">
+              <th data-col="type" class="text-center" style="width: 95px; min-width: 85px;">
                 <div class="dv-th-inner justify-content-center text-center"><span>Phân loại</span></div>
               </th>
-              <th data-col="roomChair" class="text-center" style="width: 175px; min-width: 175px;">
-                <div class="dv-th-inner justify-content-center text-center"><span>Phòng &amp; Ghế nha</span></div>
+              <th data-col="roomChair" class="text-center" style="width: 130px; min-width: 120px;">
+                <div class="dv-th-inner justify-content-center text-center"><span>Phòng &amp; Ghế</span></div>
               </th>
-              <th data-col="symptoms" class="text-center" style="width: 200px; min-width: 200px;">
+              <th data-col="symptoms" class="text-center" style="width: 140px; min-width: 125px;">
                 <div class="dv-th-inner justify-content-center text-center"><span>Nội dung khám</span></div>
               </th>
-              <th data-col="ticket" class="text-center" style="width: 120px; min-width: 120px;">
+              <th data-col="ticket" class="text-center" style="width: 85px; min-width: 80px;">
                 <div class="dv-th-inner justify-content-center text-center"><span>Số phiếu</span></div>
               </th>
-              <th data-col="status" class="text-center" style="width: 130px; min-width: 130px;">
+              <th data-col="status" class="text-center" style="width: 110px; min-width: 100px;">
                 <div class="dv-th-inner justify-content-center text-center"><span>Trạng thái</span></div>
               </th>
-              <th data-col="actions" class="text-center" style="width: 245px; min-width: 245px;">
+              <th data-col="actions" class="text-center" style="width: 165px; min-width: 155px;">
                 <div class="dv-th-inner justify-content-center text-center"><span>Thao tác</span></div>
               </th>
               <th class="dv-floating-actions-track"></th>
@@ -181,7 +200,7 @@
               <!-- 3. Giờ đến -->
               <td data-col="checkInTime" class="text-center">
                 <span class="fw-semibold text-dark">
-                  <i class="bi bi-clock text-primary me-1.5"></i><span th:text="${#temporals.format(v.checkInAt, 'HH:mm')}">08:00</span>
+                  <i class="bi bi-clock text-primary me-1.5"></i><span th:text="${#temporals.format(v.checkInAt, 'HH:mm')}">--:--</span>
                 </span>
               </td>
 
@@ -225,7 +244,7 @@
 
               <!-- 8. Nội dung khám -->
               <td data-col="symptoms">
-                <div class="small text-secondary text-truncate" style="max-width: 200px;"
+                <div class="small text-secondary text-truncate" style="max-width: 140px;"
                      th:text="${v.initialSymptoms != null and !v.initialSymptoms.isBlank() ? v.initialSymptoms : '—'}"
                      th:title="${v.initialSymptoms}">Khám tổng quát và tư vấn</div>
                 <div th:if="${v.notes != null and !v.notes.isBlank() and v.notes != '[ƯU TIÊN]'}"
@@ -378,7 +397,8 @@
 <!-- =========================================================================
      5. BẢNG CUỐI DANH SÁCH: BỆNH NHÂN VÃNG LAI / CHƯA XẾP HÀNG CHỜ PHÂN CÔNG BÁC SĨ
      ========================================================================= -->
-<section class="dispatch-card-container mb-3" id="unassignedDispatchCard">
+<section class="dispatch-card-container mb-3" id="unassignedDispatchCard"
+         th:if="${(selectedDoctorId == null or selectedDoctorId == 0) and not #lists.isEmpty(unassignedItems)}">
   <div class="dispatch-card-header" style="background: #fffbeb;">
     <div class="d-flex align-items-center gap-2.5 flex-wrap">
       <div class="bg-warning text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold"
@@ -401,34 +421,34 @@
       <table class="dv-amis-table align-middle mb-0" id="unassignedDispatchTable">
         <thead>
           <tr>
-            <th data-col="stt" class="text-center" style="width: 55px; min-width: 55px;">
+            <th data-col="stt" class="text-center" style="width: 45px; min-width: 45px;">
               <div class="dv-th-inner justify-content-center text-center"><span>#</span></div>
             </th>
-            <th data-col="patientCode" class="text-center" style="width: 130px; min-width: 130px;">
-              <div class="dv-th-inner justify-content-center text-center"><span>Mã bệnh nhân</span></div>
+            <th data-col="patientCode" class="text-center" style="width: 105px; min-width: 95px;">
+              <div class="dv-th-inner justify-content-center text-center"><span>Mã BN</span></div>
             </th>
-            <th data-col="checkInTime" class="text-center" style="width: 100px; min-width: 100px;">
+            <th data-col="checkInTime" class="text-center" style="width: 80px; min-width: 75px;">
               <div class="dv-th-inner justify-content-center text-center"><span>Giờ đến</span></div>
             </th>
-            <th data-col="patientName" class="text-center" style="width: 205px; min-width: 205px;">
+            <th data-col="patientName" class="text-center" style="width: 150px; min-width: 135px;">
               <div class="dv-th-inner justify-content-center text-center"><span>Bệnh nhân</span></div>
             </th>
-            <th data-col="phone" class="text-center" style="width: 130px; min-width: 130px;">
+            <th data-col="phone" class="text-center" style="width: 105px; min-width: 95px;">
               <div class="dv-th-inner justify-content-center text-center"><span>Số điện thoại</span></div>
             </th>
-            <th data-col="type" class="text-center" style="width: 120px; min-width: 120px;">
+            <th data-col="type" class="text-center" style="width: 95px; min-width: 85px;">
               <div class="dv-th-inner justify-content-center text-center"><span>Phân loại</span></div>
             </th>
-            <th data-col="requestedDoc" class="text-center" style="width: 190px; min-width: 190px;">
+            <th data-col="requestedDoc" class="text-center" style="width: 140px; min-width: 125px;">
               <div class="dv-th-inner justify-content-center text-center"><span>Bác sĩ yêu cầu</span></div>
             </th>
-            <th data-col="symptoms" class="text-center" style="width: 230px; min-width: 230px;">
+            <th data-col="symptoms" class="text-center" style="width: 140px; min-width: 125px;">
               <div class="dv-th-inner justify-content-center text-center"><span>Nội dung khám</span></div>
             </th>
-            <th data-col="status" class="text-center" style="width: 140px; min-width: 140px;">
+            <th data-col="status" class="text-center" style="width: 110px; min-width: 100px;">
               <div class="dv-th-inner justify-content-center text-center"><span>Trạng thái</span></div>
             </th>
-            <th data-col="actions" class="text-center" style="width: 180px; min-width: 180px;">
+            <th data-col="actions" class="text-center" style="width: 165px; min-width: 155px;">
               <div class="dv-th-inner justify-content-center text-center"><span>Thao tác</span></div>
             </th>
             <th class="dv-floating-actions-track"></th>
@@ -481,7 +501,7 @@
                     class="text-muted small">Tự động phân bổ</span>
             </td>
             <td>
-              <div class="small text-secondary text-truncate" style="max-width: 220px;"
+              <div class="small text-secondary text-truncate" style="max-width: 140px;"
                    th:text="${v.initialSymptoms != null and !v.initialSymptoms.isBlank() ? v.initialSymptoms : '—'}"
                    th:title="${v.initialSymptoms}">Đau răng hàm dưới</div>
             </td>
@@ -539,6 +559,62 @@
         </tbody>
       </table>
     </div>
+
+    <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+    <div class="misa-pagination-footer mt-2">
+      <!-- Bên trái: Tổng số -->
+      <div class="misa-pagination-left">
+        Tổng số: <strong th:text="${totalItems}">0</strong>
+      </div>
+      <!-- Bên phải: Số dòng/trang + Range + 4 Nút điều hướng -->
+      <div class="misa-pagination-right">
+        <!-- Dropdown chọn số dòng/trang -->
+        <div class="misa-page-size-wrapper">
+          <span>Số dòng/trang</span>
+          <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang">
+            <option value="10" th:selected="${pageSize == 10}">10</option>
+            <option value="25" th:selected="${pageSize == 25}">25</option>
+            <option value="50" th:selected="${pageSize == 50}">50</option>
+            <option value="100" th:selected="${pageSize == 100}">100</option>
+          </select>
+        </div>
+        <!-- Khoảng hiển thị bản ghi (Ví dụ: 1 - 10) -->
+        <div class="misa-page-range">
+          <span th:text="${fromItem}">0</span> - <span th:text="${toItem}">0</span>
+        </div>
+        <!-- Cụm 4 nút phân trang (|< < > >|) -->
+        <div class="d-flex align-items-center gap-1">
+          <!-- 1. Về trang đầu -->
+          <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=0, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus})}"
+             class="misa-nav-btn"
+             th:classappend="${currentPage == 0} ? 'disabled' : ''"
+             title="Trang đầu">
+            <i class="bi bi-chevron-bar-left"></i>
+          </a>
+          <!-- 2. Trang trước -->
+          <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=${currentPage - 1}, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus})}"
+             class="misa-nav-btn"
+             th:classappend="${currentPage == 0} ? 'disabled' : ''"
+             title="Trang trước">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+          <!-- 3. Trang sau -->
+          <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=${currentPage + 1}, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus})}"
+             class="misa-nav-btn"
+             th:classappend="${currentPage >= totalPages - 1 or totalPages == 0} ? 'disabled' : ''"
+             title="Trang sau">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+          <!-- 4. Đến trang cuối -->
+          <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=${totalPages > 0 ? totalPages - 1 : 0}, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus})}"
+             class="misa-nav-btn"
+             th:classappend="${currentPage >= totalPages - 1 or totalPages == 0} ? 'disabled' : ''"
+             title="Trang cuối">
+            <i class="bi bi-chevron-bar-right"></i>
+          </a>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -546,6 +622,10 @@
 <form id="filterForm" method="get" th:action="@{/reception/dispatch}" class="d-none">
   <input type="hidden" name="branchId" th:value="${board.branchId}">
   <input type="hidden" id="filterKeywordInput" name="keyword" th:value="${keyword}">
+  <input type="hidden" id="filterDoctorIdInput" name="doctorId" th:value="${selectedDoctorId}">
+  <input type="hidden" id="filterStatusInput" name="status" th:value="${selectedStatus}">
+  <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
+  <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
 </form>
 
 <!-- =========================================================================
@@ -752,7 +832,7 @@
               </tr>
               <tr>
                 <td class="py-1 text-secondary">Giờ cấp:</td>
-                <td class="py-1 text-end text-muted small" id="k80IssuedTime">08:00</td>
+                <td class="py-1 text-end text-muted small" id="k80IssuedTime">--:--</td>
               </tr>
             </tbody>
           </table>
@@ -815,7 +895,7 @@
           </div>
           <div class="reception-detail-row">
             <span class="detail-label">Thời điểm tiếp đón (Check-in)</span>
-            <span class="detail-value" id="drawerCheckInTime">08:00</span>
+            <span class="detail-value" id="drawerCheckInTime">--:--</span>
           </div>
           <div class="reception-detail-row flex-column align-items-start gap-2">
             <span class="detail-label">Nội dung hẹn / Triệu chứng ban đầu</span>

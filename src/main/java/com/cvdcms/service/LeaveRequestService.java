@@ -227,7 +227,7 @@ public class LeaveRequestService {
     // =========================================================================
 
     @Transactional
-    public void approveLeaveRequest(Long leaveId, Long reviewerUserId, String reviewNote) {
+    public int approveLeaveRequest(Long leaveId, Long reviewerUserId, String reviewNote) {
         LeaveRequest leave = leaveRequestRepository.findByIdWithDetails(leaveId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn xin nghỉ."));
 
@@ -262,7 +262,7 @@ public class LeaveRequestService {
             } catch (Exception ignored) {}
         }
 
-        // TỰ ĐỘNG KHÓA LỊCH TRỰC: Cập nhật các ca làm việc của bác sĩ trong khoảng ngày sang ON_LEAVE
+        // 1. TỰ ĐỘNG KHÓA LỊCH TRỰC: Cập nhật các ca làm việc của bác sĩ trong khoảng ngày sang ON_LEAVE
         List<StaffSchedule> schedules;
         if (leave.getShift() != null) {
             schedules = scheduleRepository.findByStaffStaffIdAndShiftShiftIdAndWorkDateBetween(
@@ -286,8 +286,84 @@ public class LeaveRequestService {
         }
         scheduleRepository.saveAll(schedules);
 
-        // Gửi thông báo hệ thống cho Bác sĩ
-        if (leave.getStaff().getUser() != null) {
+        // 2. TỰ ĐỘNG XỬ LÝ CÁC LỊCH HẸN BỊ ẢNH HƯỞNG (PENDING & CONFIRMED)
+        List<Appointment> affectedAppointments = Collections.emptyList();
+        if (leave.getStaff() != null && leave.getStaff().getStaffId() != null) {
+            List<Appointment> potential = appointmentRepository.findAffectedAppointments(
+                    leave.getStaff().getStaffId(),
+                    leave.getStartDate(),
+                    leave.getEndDate(),
+                    List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED)
+            );
+            if (potential != null && !potential.isEmpty()) {
+                affectedAppointments = new ArrayList<>();
+                for (Appointment app : potential) {
+                    // Nếu đơn nghỉ theo ca cụ thể: chỉ xử lý lịch hẹn thuộc khung giờ ca đó
+                    if (leave.getShift() != null && app.getExpectedTime() != null) {
+                        LocalTime sStart = leave.getShift().getStartTime();
+                        LocalTime sEnd = leave.getShift().getEndTime();
+                        if (app.getExpectedTime().isBefore(sStart) || app.getExpectedTime().isAfter(sEnd)) {
+                            continue;
+                        }
+                    }
+                    affectedAppointments.add(app);
+                }
+            }
+        }
+
+        String doctorName = leave.getStaff() != null ? leave.getStaff().getFullName() : "Bác sĩ";
+        List<SystemNotification> extraNotifications = new ArrayList<>();
+
+        if (!affectedAppointments.isEmpty()) {
+            LocalDateTime now = LocalDateTime.now();
+            for (Appointment app : affectedAppointments) {
+                app.setStatus(AppointmentStatus.CANCELLED);
+                app.setCancelReason("Bác sĩ " + doctorName + " nghỉ phép theo đơn #LR-" + leave.getLeaveId()
+                        + ". Quý khách vui lòng đặt lại lịch khám mới hoặc liên hệ phòng khám để được đổi bác sĩ hỗ trợ.");
+                app.setCancelledBy(reviewerUserId);
+                app.setCancelledAt(now);
+
+                // Gửi thông báo cho bệnh nhân có tài khoản User
+                if (app.getPatientProfile() != null && app.getPatientProfile().getUser() != null) {
+                    SystemNotification patientNotif = new SystemNotification();
+                    patientNotif.setUser(app.getPatientProfile().getUser());
+                    patientNotif.setTitle("Thông báo hủy lịch hẹn #" + app.getAppointmentCode());
+                    String timeStr = (app.getExpectedTime() != null ? " lúc " + app.getExpectedTime().toString() : "");
+                    patientNotif.setMessage("Lịch hẹn khám mã " + app.getAppointmentCode() + " ngày " + app.getAppointmentDate() + timeStr
+                            + " với Bác sĩ " + doctorName + " đã bị hủy do bác sĩ có lịch nghỉ phép đột xuất. "
+                            + "Quý khách vui lòng đặt lại lịch mới hoặc liên hệ hotline phòng khám để được hỗ trợ sắp xếp bác sĩ khác.");
+                    patientNotif.setNotificationType(NotificationType.APPOINTMENT);
+                    extraNotifications.add(patientNotif);
+                }
+            }
+            appointmentRepository.saveAll(affectedAppointments);
+
+            // Bắn thông báo cho Lễ tân chi nhánh để chủ động liên hệ dời lịch/đổi bác sĩ cho bệnh nhân
+            if (leave.getBranch() != null && leave.getBranch().getBranchId() != null) {
+                try {
+                    List<User> receptionists = userRepository.findActiveReceptionistsAndAdminsByBranch(leave.getBranch().getBranchId());
+                    if (receptionists != null) {
+                        for (User rec : receptionists) {
+                            if (rec.getUserId().equals(reviewerUserId)) {
+                                continue;
+                            }
+                            SystemNotification recNotif = new SystemNotification();
+                            recNotif.setUser(rec);
+                            recNotif.setTitle("Cảnh báo: Có " + affectedAppointments.size() + " lịch hẹn bị hủy do Bác sĩ nghỉ phép");
+                            recNotif.setMessage("Bác sĩ " + doctorName + " vừa được duyệt nghỉ phép từ ngày "
+                                    + leave.getStartDate() + " đến " + leave.getEndDate()
+                                    + ". Hệ thống đã tự động hủy " + affectedAppointments.size()
+                                    + " lịch hẹn bị trùng ca. Vui lòng kiểm tra và chủ động liên hệ bệnh nhân để đổi bác sĩ hoặc sắp xếp lại lịch khám.");
+                            recNotif.setNotificationType(NotificationType.SYSTEM);
+                            extraNotifications.add(recNotif);
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+
+        // 3. Gửi thông báo hệ thống cho Bác sĩ
+        if (leave.getStaff() != null && leave.getStaff().getUser() != null) {
             SystemNotification notif = new SystemNotification();
             notif.setUser(leave.getStaff().getUser());
             notif.setTitle("Đơn nghỉ phép đã được phê duyệt");
@@ -296,6 +372,13 @@ public class LeaveRequestService {
             notif.setNotificationType(NotificationType.LEAVE_APPROVAL);
             notificationRepository.save(notif);
         }
+
+        // Lưu các thông báo bổ sung cho bệnh nhân và lễ tân
+        for (SystemNotification extra : extraNotifications) {
+            notificationRepository.save(extra);
+        }
+
+        return affectedAppointments.size();
     }
 
     @Transactional

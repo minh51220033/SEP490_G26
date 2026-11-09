@@ -467,7 +467,8 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         }
         if (queueTickets != null) {
             queueTickets.findByVisitVisitIdAndQueueType(visitId, com.cvdcms.entity.enums.QueueType.EXAM)
-                    .stream().filter(t -> t.getStatus() == com.cvdcms.entity.enums.QueueStatus.IN_SERVICE)
+                    .stream().filter(t -> t.getStatus() == com.cvdcms.entity.enums.QueueStatus.IN_SERVICE
+                            || t.getStatus() == com.cvdcms.entity.enums.QueueStatus.CALLED)
                     .forEach(t -> {
                         t.setStatus(com.cvdcms.entity.enums.QueueStatus.DONE);
                         t.setCompletedAt(LocalDateTime.now());
