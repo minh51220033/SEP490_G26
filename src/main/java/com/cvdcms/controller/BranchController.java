@@ -262,7 +262,7 @@ public class BranchController {
         try {
             branchService.deactivateBranch(id);
             redirectAttributes.addFlashAttribute("successMessage", "Đã ngừng hoạt động chi nhánh.");
-        } catch (IllegalArgumentException ex) {
+        } catch (IllegalArgumentException | IllegalStateException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }
         return "redirect:/admin/branches";

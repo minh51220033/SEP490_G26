@@ -61,7 +61,12 @@
                                  th:text="${#temporals.format(s.shift.startTime, 'HH:mm')} + ' - ' + ${#temporals.format(s.shift.endTime, 'HH:mm')}">
                                 08:00 - 12:00
                             </div>
-                            <div class="staff-sub" th:text="${s.branch.branchName}">Chi nhánh</div>
+                            <div class="staff-sub d-flex align-items-center gap-1 flex-wrap">
+                                <span th:text="${s.branch.branchName}">Chi nhánh</span>
+                                <span class="badge bg-danger ms-1" style="font-size: 11px;" th:if="${s.branch != null and !s.branch.isActive}">
+                                    <i class="bi bi-pause-circle"></i> Đã ngừng hoạt động
+                                </span>
+                            </div>
                             <div class="staff-sub" th:if="${s.note != null}" th:text="${s.note}"></div>
                             <span class="status-badge"
                                   th:classappend="${s.status.name() == 'SCHEDULED'} ? 'status-badge--active' : 'status-badge--on_leave'"

@@ -243,7 +243,15 @@
 <!--    các chức năng tài khoản và cấu hình đã chuyển xuống góc trái dưới sidebar) -->
 <!-- ===================================================================== -->
 
-<th:block th:fragment="appTopbar(pageTitle)"></th:block>
+<th:block th:fragment="appTopbar(pageTitle)">
+    <div th:if="${inactiveBranchWarning != null}" class="alert alert-warning border-0 rounded-0 shadow-sm px-4 py-2 mb-3 d-flex align-items-center gap-2" role="alert" style="background-color: #fff3cd; color: #856404; font-size: 0.9rem; z-index: 1020; border-left: 4px solid #ffc107 !important;">
+        <i class="bi bi-exclamation-triangle-fill fs-5 text-warning flex-shrink-0"></i>
+        <div class="flex-grow-1">
+            <strong class="me-1">Cảnh báo:</strong>
+            <span th:text="${inactiveBranchWarning}">Cơ sở trực thuộc hiện đang tạm ngừng hoạt động.</span>
+        </div>
+    </div>
+</th:block>
 
 </body>
 </html>

@@ -103,9 +103,12 @@ public class AdminLeaveController {
         }
 
         try {
-            leaveService.approveLeaveRequest(leaveId, user.getUserId(), reviewNote);
-            ra.addFlashAttribute("successMessage",
-                    "Đã phê duyệt đơn nghỉ phép #" + leaveId + " thành công! Lịch làm việc của Bác sĩ đã được chuyển sang trạng thái Nghỉ phép.");
+            int cancelledAppointments = leaveService.approveLeaveRequest(leaveId, user.getUserId(), reviewNote);
+            String successMsg = "Đã phê duyệt đơn nghỉ phép #" + leaveId + " thành công! Lịch làm việc của Bác sĩ đã chuyển sang trạng thái Nghỉ phép.";
+            if (cancelledAppointments > 0) {
+                successMsg += " Hệ thống đã tự động hủy " + cancelledAppointments + " lịch hẹn bị ảnh hưởng, gửi thông báo cho bệnh nhân và báo lễ tân dời lịch.";
+            }
+            ra.addFlashAttribute("successMessage", successMsg);
         } catch (IllegalArgumentException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         }
