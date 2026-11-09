@@ -130,8 +130,15 @@
             .staff-table-wrapper {
                 width: 100% !important;
                 overflow-x: auto !important;
+                overflow-y: hidden !important;
                 position: relative !important;
                 scroll-behavior: smooth !important;
+            }
+
+            .dv-table-scroll-container::-webkit-scrollbar:vertical,
+            .staff-table-wrapper::-webkit-scrollbar:vertical {
+                width: 0 !important;
+                display: none !important;
             }
 
             /* Khung tìm kiếm chuẩn kích thước gọn gàng, không bị kéo dài quá mức */

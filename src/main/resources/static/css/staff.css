@@ -268,18 +268,22 @@ body.staff-page-body .app-content {
 .staff-table-wrapper {
     position: relative;
     overflow-x: auto !important;
-    overflow-y: auto !important;
+    overflow-y: hidden !important;
     flex: 1 1 auto;
     /* Tự động giãn đầy khoảng trống còn lại */
     min-height: 0;
-    /* Quan trọng: Bắt buộc để thanh scroll dọc chỉ cuộn bên trong bảng */
     width: 100%;
     background-color: #ffffff;
 }
 
-/* Thanh scrollbar rõ nét, luôn hiển thị theo chuẩn desktop table */
+/* Thanh scrollbar rõ nét, luôn hiển thị theo chuẩn desktop table (chỉ cuộn ngang, ẩn cuộn dọc) */
+.staff-table-wrapper::-webkit-scrollbar:vertical {
+    width: 0 !important;
+    display: none !important;
+}
+
 .staff-table-wrapper::-webkit-scrollbar {
-    width: 10px;
+    width: 0;
     height: 10px;
 }
 
@@ -1120,9 +1124,16 @@ body.staff-page-body .app-content {
 .staff-table-wrapper {
     width: 100%;
     overflow-x: auto;
+    overflow-y: hidden !important;
     position: relative;
     scroll-behavior: smooth;
     background: #ffffff;
+}
+
+.dv-table-scroll-container::-webkit-scrollbar:vertical,
+.staff-table-wrapper::-webkit-scrollbar:vertical {
+    width: 0 !important;
+    display: none !important;
 }
 
 /* 4. Cấu trúc Bảng hiện đại AMIS (Chuẩn .dv-amis-table) */
