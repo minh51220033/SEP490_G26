@@ -252,8 +252,12 @@ public class InvoiceServiceImpl implements InvoiceService {
                     if (itemDto.getQuantity() != null && itemDto.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
                         throw new IllegalArgumentException("Số lượng dịch vụ phải lớn hơn 0.");
                     }
-                    unitPrice = itemDto.getUnitPrice();
-                    quantity = itemDto.getQuantity();
+                    if (itemDto.getUnitPrice() != null) {
+                        unitPrice = itemDto.getUnitPrice();
+                    }
+                    if (itemDto.getQuantity() != null) {
+                        quantity = itemDto.getQuantity();
+                    }
                 }
 
                 BigDecimal lineTotal = unitPrice.multiply(quantity).subtract(clinicalDiscount);
@@ -901,22 +905,36 @@ public class InvoiceServiceImpl implements InvoiceService {
             }
         }
 
-        // Hoàn nguyên voucher nếu đã dùng
+        // Hoàn nguyên voucher nếu đã dùng: chỉ hoàn trả khi chưa hết hạn và không có hóa đơn hiệu lực khác đang gắn
         if (invoice.getVoucher() != null) {
             PatientVoucher voucher = invoice.getVoucher();
             if (voucher.getStatus() == VoucherStatus.USED) {
-                voucher.setStatus(VoucherStatus.AVAILABLE);
-                voucher.setUsedAt(null);
-                patientVoucherRepository.save(voucher);
+                boolean isExpired = voucher.getExpiresAt() != null && voucher.getExpiresAt().isBefore(LocalDateTime.now());
+                boolean usedByOther = invoiceRepository.existsByVoucher_VoucherIdAndStatusNot(voucher.getVoucherId(), InvoiceStatus.CANCELLED);
+                if (!isExpired && !usedByOther) {
+                    voucher.setStatus(VoucherStatus.AVAILABLE);
+                    voucher.setUsedAt(null);
+                    patientVoucherRepository.save(voucher);
+                }
             }
         }
 
-        // Hoàn nguyên số lượt dùng khuyến mãi nếu đã từng tính
+        // Hoàn nguyên số lượt dùng khuyến mãi nếu đã từng tính và chưa từng hoàn lại
         if (invoice.getPromotion() != null) {
-            Promotion promo = invoice.getPromotion();
-            if (promo.getUsedCount() != null && promo.getUsedCount() > 0) {
-                promo.setUsedCount(promo.getUsedCount() - 1);
-                promotionRepository.save(promo);
+            boolean promoWasApplied = invoiceAuditLogRepository.existsByInvoice_InvoiceIdAndActionType(invoice.getInvoiceId(), "PROMOTION_APPLIED");
+            boolean promoAlreadyReverted = invoiceAuditLogRepository.existsByInvoice_InvoiceIdAndActionType(invoice.getInvoiceId(), "PROMOTION_REVERTED");
+            if (promoWasApplied && !promoAlreadyReverted) {
+                Promotion promo = promotionRepository.findByIdForUpdate(invoice.getPromotion().getPromotionId())
+                        .orElse(invoice.getPromotion());
+                if (promo.getUsedCount() != null && promo.getUsedCount() > 0) {
+                    promo.setUsedCount(promo.getUsedCount() - 1);
+                    promotionRepository.save(promo);
+                }
+                InvoiceAuditLog promoRevLog = new InvoiceAuditLog();
+                promoRevLog.setInvoice(invoice);
+                promoRevLog.setActionType("PROMOTION_REVERTED");
+                promoRevLog.setReason("Hoàn trả lượt khuyến mãi do hủy hóa đơn");
+                invoiceAuditLogRepository.save(promoRevLog);
             }
         }
 
@@ -1013,11 +1031,26 @@ public class InvoiceServiceImpl implements InvoiceService {
             }
         }
 
-        // 2. Chốt lượt sử dụng promotion chung nếu có
+        // 2. Chốt lượt sử dụng promotion chung nếu có (khóa bi quan PESSIMISTIC_WRITE và chống ghi nhận trùng lặp)
         if (invoice.getPromotion() != null) {
-            Promotion promo = invoice.getPromotion();
-            promo.setUsedCount((promo.getUsedCount() != null ? promo.getUsedCount() : 0) + 1);
-            promotionRepository.save(promo);
+            boolean alreadyApplied = invoiceAuditLogRepository.existsByInvoice_InvoiceIdAndActionType(
+                    invoice.getInvoiceId(), "PROMOTION_APPLIED");
+            if (!alreadyApplied) {
+                Long promoId = invoice.getPromotion().getPromotionId();
+                Promotion promo = promotionRepository.findByIdForUpdate(promoId)
+                        .orElse(invoice.getPromotion());
+                if (promo.getUsageLimit() != null && promo.getUsedCount() != null && promo.getUsedCount() >= promo.getUsageLimit()) {
+                    throw new IllegalStateException("Chương trình khuyến mãi '" + promo.getPromoName() + "' đã đạt giới hạn số lượt sử dụng tối đa.");
+                }
+                promo.setUsedCount((promo.getUsedCount() != null ? promo.getUsedCount() : 0) + 1);
+                promotionRepository.save(promo);
+
+                InvoiceAuditLog promoLog = new InvoiceAuditLog();
+                promoLog.setInvoice(invoice);
+                promoLog.setActionType("PROMOTION_APPLIED");
+                promoLog.setReason("Ghi nhận lượt sử dụng khuyến mãi " + promo.getPromoCode());
+                invoiceAuditLogRepository.save(promoLog);
+            }
         }
 
         // 3. Trừ điểm Loyalty và ghi nhận giao dịch REDEEM (đúng một lần duy nhất)
