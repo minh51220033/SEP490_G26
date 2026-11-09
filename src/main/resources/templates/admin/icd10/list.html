@@ -241,7 +241,8 @@
 <!-- ══ MODAL CHỈNH SỬA ═════════════════════════════════════════════════════ -->
 <div class="modal fade" id="modalEdit" tabindex="-1" aria-labelledby="modalEditLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
-    <form id="formEdit" method="post" class="modal-content needs-validation" novalidate>
+    <form id="formEdit" th:action="@{/admin/icd10/0/update}" method="post" class="modal-content needs-validation" novalidate>
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
       <div class="modal-header">
         <h5 class="modal-title" id="modalEditLabel">
           <i class="bi bi-pencil-square me-1"></i> Chỉnh sửa mã ICD-10

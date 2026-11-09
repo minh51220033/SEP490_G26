@@ -104,16 +104,19 @@ table[data-enhanced-table] thead th {
     white-space: nowrap;
     user-select: none;
     vertical-align: middle;
+    text-align: center;
 }
 
 /* NỘI DUNG TIÊU ĐỀ */
 .enhanced-th-content {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-    width: calc(100% - 16px);
+    width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-align: center;
 }
 
 /* NÚT GHIM TRÊN TIÊU ĐỀ */

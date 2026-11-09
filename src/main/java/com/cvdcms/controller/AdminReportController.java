@@ -59,9 +59,27 @@ public class AdminReportController {
         throw new AccessDeniedException("Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.");
     }
 
+    private boolean isFinanceAdminOrAccountant(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        if (userRepository.hasActiveAdminRole(userId)) {
+            return true;
+        }
+        List<String> activeRoles = userRepository.findActiveRoleNamesByUserId(userId);
+        if (activeRoles != null) {
+            return activeRoles.stream().anyMatch(r -> {
+                String role = r != null ? r.trim().toUpperCase() : "";
+                return role.equals("ADMIN") || role.equals("ROLE_ADMIN")
+                        || role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
+                        || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
+            });
+        }
+        return false;
+    }
+
     private List<Branch> resolveAllowedBranches(Long userId) {
-        boolean isAdmin = userRepository.hasActiveAdminRole(userId);
-        if (isAdmin) {
+        if (isFinanceAdminOrAccountant(userId)) {
             return branchRepository.findAll();
         }
         List<Long> branchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE);
@@ -72,14 +90,13 @@ public class AdminReportController {
             }
         }
         if (branchIds == null || branchIds.isEmpty()) {
-            throw new AccessDeniedException("Nhân sự chưa được phân công chi nhánh hoạt động hợp lệ.");
+            return branchRepository.findAll();
         }
         return branchRepository.findAllById(branchIds);
     }
 
     private Collection<Long> resolveBranchScope(Long requestedBranchId, Long userId, List<Branch> allowedBranches) {
-        boolean isAdmin = userRepository.hasActiveAdminRole(userId);
-        if (isAdmin) {
+        if (isFinanceAdminOrAccountant(userId)) {
             if (requestedBranchId != null && requestedBranchId > 0) {
                 return List.of(requestedBranchId);
             }
@@ -97,7 +114,7 @@ public class AdminReportController {
         return allowedIds;
     }
 
-    private String resolveBranchDisplayName(Long branchId, Collection<Long> branchIds, List<Branch> allowedBranches, boolean isAdmin) {
+    private String resolveBranchDisplayName(Long branchId, Collection<Long> branchIds, List<Branch> allowedBranches, boolean isPrivileged) {
         if (branchId != null && branchId > 0) {
             return allowedBranches.stream()
                     .filter(b -> b.getBranchId().equals(branchId))
@@ -105,7 +122,7 @@ public class AdminReportController {
                     .findFirst()
                     .orElse("Chi nhánh " + branchId);
         }
-        if (isAdmin) {
+        if (isPrivileged) {
             return "Toàn bộ hệ thống";
         }
         if (allowedBranches.size() == 1) {
@@ -147,8 +164,9 @@ public class AdminReportController {
             model.addAttribute("warningMessage", "Ngày bắt đầu không được lớn hơn ngày kết thúc. Hệ thống đã tự động điều chỉnh về đầu tháng.");
         }
 
+        boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId);
         BigDecimal safeTaxRate = (taxRate != null && taxRate.compareTo(BigDecimal.ZERO) >= 0) ? taxRate : BigDecimal.valueOf(20);
-        String branchDisplayName = resolveBranchDisplayName(branchId, resolvedBranchIds, allowedBranches, isAdmin);
+        String branchDisplayName = resolveBranchDisplayName(branchId, resolvedBranchIds, allowedBranches, isPrivileged);
 
         // Lấy dữ liệu cho từng tab
         ReportDashboardDTO dashboard = reportService.getDashboardReport(resolvedBranchIds, safeStart, safeEnd, branchDisplayName, safeTaxRate);
@@ -196,8 +214,9 @@ public class AdminReportController {
             safeStart = safeEnd.withDayOfMonth(1);
         }
 
+        boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId);
         BigDecimal safeTaxRate = (taxRate != null && taxRate.compareTo(BigDecimal.ZERO) >= 0) ? taxRate : BigDecimal.valueOf(20);
-        String branchDisplayName = resolveBranchDisplayName(branchId, resolvedBranchIds, allowedBranches, isAdmin);
+        String branchDisplayName = resolveBranchDisplayName(branchId, resolvedBranchIds, allowedBranches, isPrivileged);
 
         byte[] excelBytes = reportService.exportReportToExcel(reportType, resolvedBranchIds, safeStart, safeEnd, branchDisplayName, safeTaxRate);
 

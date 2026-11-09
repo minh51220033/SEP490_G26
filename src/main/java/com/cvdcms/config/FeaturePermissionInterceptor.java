@@ -65,6 +65,16 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (contextPath != null && !contextPath.isEmpty() && uri.startsWith(contextPath)) {
             uri = uri.substring(contextPath.length());
         }
+
+        // Kế toán viên có toàn quyền đối với mọi chức năng liên quan đến Tài chính, Kế toán và Báo cáo
+        boolean isKeToan = roleNames != null && roleNames.stream().anyMatch(r -> {
+            String role = r != null ? r.trim().toUpperCase() : "";
+            return role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
+                    || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
+        });
+        if (isKeToan && isFinanceUri(uri)) {
+            return true;
+        }
         String method = request.getMethod() == null ? "GET" : request.getMethod().toUpperCase();
         boolean isWriteMethod = "POST".equals(method) || "PUT".equals(method) || "DELETE".equals(method) || "PATCH".equals(method);
 
@@ -362,5 +372,21 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             }
             response.sendRedirect(request.getContextPath() + "/home");
         }
+    }
+
+    private boolean isFinanceUri(String uri) {
+        if (uri == null) return false;
+        return uri.startsWith("/finance")
+                || uri.startsWith("/invoices")
+                || uri.startsWith("/payments")
+                || uri.startsWith("/expenses")
+                || uri.startsWith("/payroll")
+                || uri.startsWith("/admin/reports")
+                || uri.startsWith("/api/finance")
+                || uri.startsWith("/api/invoices")
+                || uri.startsWith("/api/payments")
+                || uri.startsWith("/api/expenses")
+                || uri.startsWith("/api/payroll")
+                || uri.startsWith("/api/reports");
     }
 }

@@ -1044,6 +1044,10 @@
                 const chevPhotos = document.getElementById('chevron-photos');
                 if (chevPhotos) chevPhotos.className = 'bi bi-chevron-down df-foldable-chevron text-primary';
             }
+
+            if (tabId === 'tab-performed-services' && typeof window.renderDiagnosisProgressTables === 'function') {
+                window.renderDiagnosisProgressTables();
+            }
         }
 
         // 3. Cập nhật hash trên URL để khi reload hoặc copy link giữ đúng tab đang xem

@@ -110,13 +110,50 @@ public class PayrollPageController {
         return false;
     }
 
-    private List<Branch> resolveAllowedBranches(Long userId, HttpSession session) {
+    private boolean isFinanceAdminOrAccountant(Long userId, HttpSession session) {
         if (isCurrentUserAdmin(userId, session)) {
+            return true;
+        }
+        if (session != null) {
+            Object rolesObj = session.getAttribute("roleNames");
+            if (rolesObj instanceof Collection<?> col) {
+                boolean match = col.stream()
+                        .filter(Objects::nonNull)
+                        .map(Object::toString)
+                        .anyMatch(r -> {
+                            String role = r != null ? r.trim().toUpperCase() : "";
+                            return role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
+                                    || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
+                        });
+                if (match) return true;
+            }
+        }
+        if (userId != null) {
+            List<String> roles = userRepository.findActiveRoleNamesByUserId(userId);
+            if (roles != null) {
+                return roles.stream().anyMatch(r -> {
+                    String role = r != null ? r.trim().toUpperCase() : "";
+                    return role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
+                            || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
+                });
+            }
+        }
+        return false;
+    }
+
+    private List<Branch> resolveAllowedBranches(Long userId, HttpSession session) {
+        if (isFinanceAdminOrAccountant(userId, session)) {
             return branchRepository.findAll();
         }
         List<Long> branchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE);
         if (branchIds.isEmpty()) {
-            throw new AccessDeniedException("Nhân sự chưa được phân công chi nhánh hoạt động hợp lệ.");
+            User u = userRepository.findById(userId).orElse(null);
+            if (u != null && u.getBranch() != null && u.getBranch().getBranchId() != null) {
+                branchIds = List.of(u.getBranch().getBranchId());
+            }
+        }
+        if (branchIds.isEmpty()) {
+            return branchRepository.findAll();
         }
         return branchRepository.findAllById(branchIds);
     }
@@ -143,9 +180,10 @@ public class PayrollPageController {
         Long currentUserId = getCurrentUserId(session);
         populateUserAndSidebar(model, session, "payroll");
 
-        boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
-        List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
-        List<Long> allowedBranchIds = isAdmin ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
+        boolean isAdmin = isCurrentUserAdmin(currentUserId, session);
+        boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId, session);
+        List<Branch> allowedBranches = resolveAllowedBranches(currentUserId, session);
+        List<Long> allowedBranchIds = isPrivileged ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
 
         Pageable pageable = PageRequest.of(page, size);
         Page<PayrollPeriod> periods = payrollService.getPeriods(
@@ -365,8 +403,9 @@ public class PayrollPageController {
         populateUserAndSidebar(model, session, "payroll");
 
         boolean isAdmin = isCurrentUserAdmin(currentUserId, session);
+        boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId, session);
         List<Branch> allowedBranches = resolveAllowedBranches(currentUserId, session);
-        List<Long> allowedBranchIds = isAdmin ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
+        List<Long> allowedBranchIds = isPrivileged ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
 
         Pageable pageable = PageRequest.of(page, size);
         Page<SalaryAdvance> advances = salaryAdvanceService.getAdvances(
@@ -404,8 +443,8 @@ public class PayrollPageController {
     ) {
         try {
             Long currentUserId = getCurrentUserId(session);
-            boolean isAdmin = isCurrentUserAdmin(currentUserId, session);
-            if (!isAdmin) {
+            boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId, session);
+            if (!isPrivileged) {
                 List<Long> activeBranchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(currentUserId, AssignmentStatus.ACTIVE);
                 if (activeBranchIds == null || !activeBranchIds.contains(branchId)) {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -609,9 +648,10 @@ public class PayrollPageController {
         Long currentUserId = getCurrentUserId(session);
         populateUserAndSidebar(model, session, "payroll");
 
-        boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
-        List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
-        List<Long> allowedBranchIds = isAdmin ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
+        boolean isAdmin = isCurrentUserAdmin(currentUserId, session);
+        boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId, session);
+        List<Branch> allowedBranches = resolveAllowedBranches(currentUserId, session);
+        List<Long> allowedBranchIds = isPrivileged ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
 
         Pageable pageable = PageRequest.of(page, size);
         Page<OwnerDistribution> distributions = ownerDistributionService.getDistributions(allowedBranchIds, month, year, status, pageable);
