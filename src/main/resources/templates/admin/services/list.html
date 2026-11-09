@@ -15,6 +15,7 @@
     <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục')}"></header>
 
     <main class="app-content">
+      <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
       <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
 
       <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN QUẢN LÝ CƠ SỞ -->
@@ -191,25 +192,50 @@
         </form>
       </section>
 
-      <section class="panel p-0 mt-0">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0" data-enhanced-table="ft02-services">
+      <!-- BẢNG DỮ LIỆU DỊCH VỤ (ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS) -->
+      <div class="dv-grid-card">
+        <div class="dv-grid-topbar">
+          <div class="d-flex align-items-center gap-2">
+            <span class="fw-bold text-dark fs-6">Danh sách dịch vụ</span>
+            <span class="badge bg-primary-subtle text-primary rounded-pill fw-bold" th:text="|Tổng ${totalItems ?: #lists.size(services)}|">Tổng 0</span>
+          </div>
+          <div class="small text-muted">
+            <i class="bi bi-info-circle me-1 text-primary"></i> Cuộn ngang để xem đầy đủ cột · Cột Thao tác được ghim cố định
+          </div>
+        </div>
 
-            <thead class="table-light">
+        <div class="dv-table-scroll-container">
+          <table class="dv-amis-table align-middle mb-0" data-enhanced-table="ft02-services">
+
+            <thead>
             <tr>
-              <th scope="col" data-column-key="service" data-column-required="true" data-column-pinned="true">Dịch vụ</th>
-              <th scope="col" data-column-key="category">Nhóm</th>
-              <th scope="col" data-column-key="type">Loại</th>
-              <th scope="col" class="text-end" data-column-key="base_price">Đơn giá</th>
-              <th scope="col" class="text-end" data-column-key="surcharge">Phụ phí</th>
-              <th scope="col" data-column-key="status">Trạng thái</th>
-              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true" style="min-width: 150px;">Thao tác</th>
+              <th scope="col" data-column-key="service" data-column-required="true" data-column-pinned="true">
+                <div class="dv-th-inner"><span>Dịch vụ</span></div>
+              </th>
+              <th scope="col" data-column-key="category">
+                <div class="dv-th-inner"><span>Nhóm</span></div>
+              </th>
+              <th scope="col" data-column-key="type">
+                <div class="dv-th-inner"><span>Loại</span></div>
+              </th>
+              <th scope="col" class="text-end" data-column-key="base_price">
+                <div class="dv-th-inner justify-content-end"><span>Đơn giá</span></div>
+              </th>
+              <th scope="col" class="text-end" data-column-key="surcharge">
+                <div class="dv-th-inner justify-content-end"><span>Phụ phí</span></div>
+              </th>
+              <th scope="col" data-column-key="status">
+                <div class="dv-th-inner"><span>Trạng thái</span></div>
+              </th>
+              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true" style="min-width: 150px;">
+                <div class="dv-th-inner justify-content-end"><span>Thao tác</span></div>
+              </th>
             </tr>
             </thead>
 
             <tbody>
 
-            <tr th:each="service : ${services}">
+            <tr th:each="service : ${services}" class="dv-data-row">
 
               <td data-column-key="service">
                 <div class="d-flex align-items-center gap-3">
@@ -444,7 +470,7 @@
           </div>
         </div>
 
-      </section>
+      </div> <!-- /dv-grid-card -->
     </main>
   </div>
 </div>
