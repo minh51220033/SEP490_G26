@@ -10,6 +10,7 @@
         <div class="app-main">
             <header th:replace="~{fragments/header :: appTopbar('Quản lý lịch hẹn')}"></header>
             <main id="reception-content-area" class="app-content dentalsoft-appointment-page p-3">
+                <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
                 <link rel="stylesheet" th:href="@{/css/patients.css}">
                 <link rel="stylesheet" th:href="@{/css/reception-appointments.css}">
                 <link rel="stylesheet" th:href="@{/css/reception-workflow-navigation.css}">
