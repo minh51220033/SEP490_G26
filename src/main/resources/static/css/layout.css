@@ -766,6 +766,7 @@ a {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+    scroll-behavior: auto !important;
     padding: 8px 10px 16px;
     overscroll-behavior: contain;
     scrollbar-width: thin;
