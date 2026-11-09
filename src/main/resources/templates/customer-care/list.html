@@ -2,7 +2,7 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Quản lý Chăm sóc Khách hàng')}"></head>
 
-<body class="app-body viewport-locked-page">
+<body class="app-body">
 
 <!-- CSS và Script riêng của trang CSKH -->
 <link rel="stylesheet" th:href="@{/css/misa-pagination.css}">
@@ -21,7 +21,7 @@
         <!-- Topbar tiêu đề hệ thống Navy chuẩn 56px -->
         <header th:replace="~{fragments/header :: appTopbar('Quản lý Chăm sóc Khách hàng')}"></header>
 
-        <main class="cc-app-view">
+        <main class="app-content cc-app-view">
             <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
 
             <!-- 1. TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN ENTERPRISE (NHƯ ADMIN/BRANCHES & ADMIN/NEWS) -->
