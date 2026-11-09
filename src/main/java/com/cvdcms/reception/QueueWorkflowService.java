@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class QueueWorkflowService {
@@ -76,9 +77,26 @@ public class QueueWorkflowService {
                             && ticket.getVisit().getStatus() == VisitStatus.WAITING ? 1 : 0),
                     previous.called() + (ticket.getStatus() == QueueStatus.CALLED ? 1 : 0)));
         }
+        List<DentalChair> chairsList = chairs.findByBranchBranchIdOrderByChairCode(id);
+        Map<Long, String> roomLookup = rooms.findAll().stream()
+                .collect(Collectors.toMap(Room::getRoomId, Room::getRoomName, (a, b) -> a));
+        Map<Long, String> chairLookup = chairsList.stream()
+                .collect(Collectors.toMap(DentalChair::getChairId, DentalChair::getChairName, (a, b) -> a));
+        Map<Long, String> roomNames = new LinkedHashMap<>();
+        Map<Long, String> chairNames = new LinkedHashMap<>();
+        for (QueueTicket ticket : rows) {
+            if (ticket.getVisit() == null) continue;
+            Long vId = ticket.getVisit().getVisitId();
+            Long rId = ticket.getVisit().getRoomId();
+            Long cId = ticket.getVisit().getChairId();
+            String rName = rId != null ? roomLookup.get(rId) : null;
+            String cName = cId != null ? chairLookup.get(cId) : null;
+            roomNames.put(vId, rName != null ? rName : (rId != null ? "Phòng " + rId : "Chưa phân phòng"));
+            chairNames.put(vId, cName != null ? cName : (cId != null ? "Ghế " + cId : "Chưa xếp ghế"));
+        }
         return new Board(id, choices, rows, doctorQueues.values().stream()
                 .sorted(Comparator.comparing(DoctorQueue::name)).toList(),
-                chairs.findByBranchBranchIdOrderByChairCode(id));
+                chairsList, roomNames, chairNames);
     }
 
     @Transactional(readOnly = true)
@@ -326,10 +344,14 @@ public class QueueWorkflowService {
             }
             case DONE -> {
                 require(before == QueueStatus.IN_SERVICE, "Chỉ hoàn tất số đã bắt đầu khám.");
-                require(Set.of(VisitStatus.WAITING_PARACLINICAL, VisitStatus.WAITING_RESULT,
+                require(Set.of(VisitStatus.IN_EXAM, VisitStatus.WAITING_PARACLINICAL, VisitStatus.WAITING_RESULT,
                                 VisitStatus.WAITING_PAYMENT, VisitStatus.COMPLETED)
                                 .contains(visit.getStatus()),
                         "Chỉ hoàn tất số sau khi bệnh nhân rời ghế khám hoặc hoàn thành lượt khám.");
+                if (visit.getStatus() == VisitStatus.IN_EXAM) {
+                    visit.setStatus(VisitStatus.WAITING_PAYMENT);
+                    visits.save(visit);
+                }
                 if (visit.getChairId() != null) {
                     chairs.findById(visit.getChairId()).ifPresent(chair -> {
                         if (chair.getStatus() == ChairStatus.IN_USE) {
@@ -413,9 +435,13 @@ public class QueueWorkflowService {
     public enum Action { CALL, PAUSE, RESUME, PRIORITIZE, EMERGENCY, START, DONE }
     public record DoctorQueue(Long id, String name, long waiting, long called) { }
     public record Board(Long branchId, List<Branch> branches, List<QueueTicket> tickets,
-                        List<DoctorQueue> doctors, List<DentalChair> chairs) {
+                        List<DoctorQueue> doctors, List<DentalChair> chairs,
+                        Map<Long, String> roomNames, Map<Long, String> chairNames) {
+        public Board(Long branchId, List<Branch> branches, List<QueueTicket> tickets, List<DoctorQueue> doctors, List<DentalChair> chairs) {
+            this(branchId, branches, tickets, doctors, chairs, Map.of(), Map.of());
+        }
         public Board(Long branchId, List<Branch> branches, List<QueueTicket> tickets, List<DoctorQueue> doctors) {
-            this(branchId, branches, tickets, doctors, List.of());
+            this(branchId, branches, tickets, doctors, List.of(), Map.of(), Map.of());
         }
     }
     public record PublicNumber(Long ticketId, String number, String doctor, String room, String chair, Long callTime) {

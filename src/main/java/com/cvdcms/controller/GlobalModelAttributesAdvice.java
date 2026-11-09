@@ -227,6 +227,44 @@ public class GlobalModelAttributesAdvice {
         return username != null ? username.toString() : "";
     }
 
+    @ModelAttribute("currentBranchName")
+    public String populateCurrentBranchName(HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        Object branchName = session.getAttribute("currentBranchName");
+        if (branchName != null && !branchName.toString().isBlank()) {
+            return branchName.toString();
+        }
+        if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
+            User user = userRepository.findById(sessionUser.getUserId()).orElse(sessionUser);
+            if (user.getBranch() != null) {
+                Branch b = user.getBranch();
+                String name = (b.getBranchCode() != null && !b.getBranchCode().isBlank() ? b.getBranchCode() + " - " : "") + b.getBranchName();
+                if (Boolean.FALSE.equals(b.getIsActive())) {
+                    name += " [Tạm ngừng hoạt động]";
+                }
+                return name;
+            }
+        }
+        return null;
+    }
+
+    @ModelAttribute("inactiveBranchWarning")
+    public String populateInactiveBranchWarning(HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
+            User user = userRepository.findById(sessionUser.getUserId()).orElse(sessionUser);
+            if (user.getBranch() != null && Boolean.FALSE.equals(user.getBranch().getIsActive())) {
+                Branch b = user.getBranch();
+                String bName = (b.getBranchName() != null ? b.getBranchName() : "hiện tại");
+                return "Cơ sở \"" + bName + "\" hiện đang tạm ngừng hoạt động. Một số tác vụ tiếp đón và chấm công tại đây sẽ bị hạn chế.";
+            }
+        }
+        return null;
+    }
     @ModelAttribute("systemNotice")
     public String populateSystemNotice(HttpSession session) {
         if (session == null) {

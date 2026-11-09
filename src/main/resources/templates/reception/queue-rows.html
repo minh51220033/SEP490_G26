@@ -90,7 +90,7 @@
                             </div>
                             <div class="text-muted d-flex align-items-center gap-1.5">
                                 <i class="bi bi-geo-alt text-primary"></i>
-                                <span th:text="|Phòng ${t.visit.roomId ?: '—'} · Ghế ${t.visit.chairId ?: '—'}|">Phòng 101 · Ghế 01</span>
+                                <span th:text="|${board.roomNames != null and board.roomNames[t.visit.visitId] != null ? board.roomNames[t.visit.visitId] : (t.visit.roomId != null ? 'Phòng ' + t.visit.roomId : '—')} · ${board.chairNames != null and board.chairNames[t.visit.visitId] != null ? board.chairNames[t.visit.visitId] : (t.visit.chairId != null ? 'Ghế ' + t.visit.chairId : '—')}|">Phòng 101 · Ghế 01</span>
                             </div>
                         </div>
                     </div>
@@ -170,7 +170,7 @@
                             <form th:action="@{/reception/queue/{id}/DONE(id=${t.ticketId})}" method="post" class="m-0">
                                 <input type="hidden" name="branchId" th:value="${board.branchId}">
                                 <button class="btn btn-outline-success btn-sm fw-semibold d-inline-flex align-items-center gap-1.5" type="submit"
-                                        th:disabled="${t.visit.status.name() != 'WAITING_PARACLINICAL' and t.visit.status.name() != 'WAITING_RESULT' and t.visit.status.name() != 'WAITING_PAYMENT' and t.visit.status.name() != 'COMPLETED'}">
+                                        th:disabled="${t.visit.status.name() != 'IN_EXAM' and t.visit.status.name() != 'WAITING_PARACLINICAL' and t.visit.status.name() != 'WAITING_RESULT' and t.visit.status.name() != 'WAITING_PAYMENT' and t.visit.status.name() != 'COMPLETED'}">
                                     <i class="bi bi-check2-circle"></i><span>Hoàn tất số</span>
                                 </button>
                             </form>
