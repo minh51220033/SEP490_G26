@@ -4,7 +4,66 @@
     <th:block th:replace="~{fragments/head :: head('Thu ngân - Quản lý Tạm ứng & Đặt cọc')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
     <link rel="stylesheet" th:href="@{/css/cashier.css}">
+    <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
     <script th:src="@{/js/cashier-tabs.js}" defer></script>
+    <style>
+        .audit-user-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0284c7, #1d4ed8);
+            color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .dv-search-box {
+            position: relative !important;
+            width: 320px !important;
+            max-width: 100% !important;
+            flex: 0 1 320px !important;
+        }
+        .dv-search-box input {
+            width: 100%;
+            height: 44px;
+            padding: 8px 16px 8px 40px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 13.5px;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .dv-search-box input:focus {
+            border-color: #0284c7;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+        }
+        .dv-search-box .search-lead-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+            font-size: 15px;
+        }
+        .deposit-filter-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+        .staff-table-card {
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        }
+    </style>
 </head>
 <body class="app-body fin-brand-theme">
 <div class="app-shell">
@@ -30,131 +89,417 @@
             <!-- Vùng nội dung tab Đặt cọc -->
             <div id="cashierTabContent" class="cashier-tab-content">
                 <!-- Page Sub Header -->
-                <div class="cashier-subhead">
+                <div class="cashier-subhead mb-4">
                     <div>
                         <h2 class="cashier-subhead-title"><i class="bi bi-wallet2 text-warning"></i> Quản lý tiền tạm ứng &amp; đặt cọc</h2>
-                        <p class="cashier-subhead-desc">Thu tiền đặt cọc dịch vụ, nạp tiền vào ví tạm ứng và trừ dần vào các đợt thanh toán viện phí</p>
+                        <p class="cashier-subhead-desc">Thu tiền đặt cọc dịch vụ, nạp tiền vào ví tạm ứng và theo dõi danh sách tất cả bệnh nhân đã nộp tạm ứng</p>
                     </div>
                     <div class="d-flex gap-2">
-                        <a th:href="@{/payments}" class="fin-btn fin-btn-outline fin-btn-sm"><i class="bi bi-credit-card"></i> Danh sách phiếu thu</a>
-                    </div>
-                </div>
-
-            <!-- Search Patient Card -->
-            <div class="fin-card">
-                <form th:action="@{/payments/deposits}" method="get" class="row g-3 align-items-end">
-                    <div class="col-md-8">
-                        <label for="searchQuery" class="form-label fw-bold">Tìm kiếm Bệnh nhân nạp tiền tạm ứng</label>
-                        <input type="text" id="searchQuery" name="query" class="form-control form-control-lg"
-                               placeholder="Nhập Mã BN (BN000101), Tên bệnh nhân hoặc Số điện thoại...">
-                    </div>
-                    <div class="col-md-4">
-                        <button type="button" class="fin-btn fin-btn-primary w-100 py-2 fs-6" onclick="searchPatientForDeposit()">
-                            <i class="bi bi-search"></i> Tìm bệnh nhân
+                        <button type="button" class="fin-btn fin-btn-success d-inline-flex align-items-center gap-2" onclick="toggleDepositSearchBox()">
+                            <i class="bi bi-plus-circle-fill"></i> Thu tiền tạm ứng mới
                         </button>
-                    </div>
-                </form>
-                <div id="patientSearchResults" class="mt-3 list-group" style="display: none;"></div>
-            </div>
-
-            <!-- Deposit Box when patient is selected -->
-            <div th:if="${selectedPatient != null}" class="fin-grid-2col">
-                <!-- Form nộp tiền tạm ứng -->
-                <div>
-                    <div class="fin-card">
-                        <h4 class="fw-bold mb-3 text-primary"><i class="bi bi-plus-circle me-2"></i> Thu Tiền Tạm ứng / Đặt cọc Mới</h4>
-
-                        <div class="p-3 mb-4 rounded bg-light border">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h5 class="fw-bold m-0" th:text="${selectedPatient.fullName}">Nguyễn Văn An</h5>
-                                    <small class="text-muted" th:text="${selectedPatient.patientCode} + ' - ' + ${selectedPatient.phoneNumber}">BN000101</small>
-                                </div>
-                                <div class="text-end">
-                                    <span class="text-muted small d-block">SỐ DƯ TẠM ỨNG HIỆN CÓ</span>
-                                    <span class="fs-4 fw-bold text-success"
-                                          th:text="${#numbers.formatDecimal(selectedPatient.depositBalance, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <form th:action="@{/payments/deposits}" method="post">
-                            <input type="hidden" name="profileId" th:value="${selectedPatient.profileId}">
-                            <input type="hidden" name="paymentType" value="ADVANCE_DEPOSIT">
-
-                            <div class="mb-3">
-                                <label for="depositBranchId" class="form-label fw-bold">Cơ sở thu tiền <span class="text-danger">*</span></label>
-                                <select id="depositBranchId" name="branchId" class="fin-select w-100" required>
-                                    <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"></option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="depositAmount" class="form-label fw-bold">Số tiền khách nộp tạm ứng (VNĐ) <span class="text-danger">*</span></label>
-                                <input type="number" id="depositAmount" name="amount" class="form-control form-control-lg fw-bold text-success"
-                                       placeholder="VD: 5000000, 10000000..." step="10000" min="10000" required>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="depositMethod" class="form-label fw-bold">Phương thức nộp tiền <span class="text-danger">*</span></label>
-                                <select id="depositMethod" name="paymentMethod" class="form-select form-select-lg" required>
-                                    <option value="CASH">💵 Tiền mặt tại quầy</option>
-                                    <option value="BANK_TRANSFER">🏦 Chuyển khoản ngân hàng (QR)</option>
-                                    <option value="POS_CARD">💳 Quẹt thẻ máy POS</option>
-                                </select>
-                            </div>
-
-                            <input type="hidden" id="depositBankAccountId" name="bankAccountId">
-                            <input type="hidden" id="depositExpectedTransferContent" name="expectedTransferContent">
-                            <input type="hidden" id="depositIdempotencyKey" name="idempotencyKey">
-                            <div id="advanceDepositQrContainer" class="mb-3" style="display: none;"></div>
-
-                            <div class="mb-3">
-                                <label for="depositRef" class="form-label">Mã giao dịch ngân hàng / POS</label>
-                                <input type="text" id="depositRef" name="transactionRef" class="form-control" placeholder="Mã giao dịch...">
-                            </div>
-
-                            <div class="mb-4">
-                                <label for="depositNotes" class="form-label">Ghi chú mục đích đặt cọc</label>
-                                <textarea id="depositNotes" name="notes" class="form-control" rows="2"
-                                          placeholder="VD: Đặt cọc làm 4 răng sứ Cercon, Đặt cọc chỉnh nha gói mắc cài..."></textarea>
-                            </div>
-
-                            <button type="submit" class="fin-btn fin-btn-success w-100 py-3 fs-6">
-                                <i class="bi bi-wallet-fill me-2"></i> Xác nhận Nạp tiền tạm ứng &amp; In phiếu
-                            </button>
-                        </form>
+                        <a th:href="@{/payments}" class="fin-btn fin-btn-outline fin-btn-sm d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-credit-card"></i> Danh sách phiếu thu
+                        </a>
                     </div>
                 </div>
 
-                <!-- Lịch sử nộp tiền tạm ứng -->
-                <div>
-                    <div class="fin-card">
-                        <h4 class="fw-bold mb-3 text-primary"><i class="bi bi-clock-history me-2"></i> Lịch sử Nộp tiền Tạm ứng</h4>
+                <!-- Khung tìm kiếm bệnh nhân để nộp tiền tạm ứng (Có thể ẩn/hiện) -->
+                <div id="patientSearchDepositBox" class="fin-card mb-4" th:style="${selectedPatient != null} ? 'display: block;' : 'display: none;'">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold m-0 text-primary"><i class="bi bi-search me-1"></i> Tìm kiếm Bệnh nhân để nạp tạm ứng</h5>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleDepositSearchBox()"><i class="bi bi-x-lg"></i> Đóng</button>
+                    </div>
+                    <form th:action="@{/payments/deposits}" method="get" class="row g-3 align-items-end" onsubmit="event.preventDefault(); searchPatientForDeposit();">
+                        <div class="col-md-9">
+                            <label for="searchQuery" class="form-label fw-semibold">Nhập thông tin bệnh nhân</label>
+                            <input type="text" id="searchQuery" name="query" class="form-control form-control-lg"
+                                   placeholder="Nhập Mã BN (BN000101), Tên bệnh nhân hoặc Số điện thoại...">
+                        </div>
+                        <div class="col-md-3">
+                            <button type="button" class="fin-btn fin-btn-primary w-100 py-2 fs-6" onclick="searchPatientForDeposit()">
+                                <i class="bi bi-search"></i> Tìm bệnh nhân
+                            </button>
+                        </div>
+                    </form>
+                    <div id="patientSearchResults" class="mt-3 list-group" style="display: none;"></div>
+                </div>
 
-                        <div th:if="${#lists.isEmpty(depositHistory)}" class="text-muted py-4 text-center">
-                            Chưa có lịch sử nộp tạm ứng nào cho bệnh nhân này.
+                <!-- Form nộp tạm ứng khi đã chọn Bệnh nhân -->
+                <div th:if="${selectedPatient != null}" class="fin-grid-2col mb-4">
+                    <!-- Form nộp tiền tạm ứng -->
+                    <div>
+                        <div class="fin-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="fw-bold m-0 text-primary"><i class="bi bi-plus-circle me-2"></i> Thu Tiền Tạm ứng / Đặt cọc Mới</h4>
+                                <a th:href="@{/payments/deposits}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x"></i> Hủy chọn</a>
+                            </div>
+
+                            <div class="p-3 mb-4 rounded bg-light border">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="fw-bold m-0" th:text="${selectedPatient.fullName}">Nguyễn Văn An</h5>
+                                        <small class="text-muted" th:text="${selectedPatient.patientCode} + ' - ' + ${selectedPatient.phoneNumber}">BN000101</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="text-muted small d-block">SỐ DƯ TẠM ỨNG HIỆN CÓ</span>
+                                        <span class="fs-4 fw-bold text-success"
+                                              th:text="${#numbers.formatDecimal(selectedPatient.depositBalance, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.000.000 đ</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form th:action="@{/payments/deposits}" method="post">
+                                <input type="hidden" name="profileId" th:value="${selectedPatient.profileId}">
+                                <input type="hidden" name="paymentType" value="ADVANCE_DEPOSIT">
+
+                                <div class="mb-3">
+                                    <label for="depositBranchId" class="form-label fw-bold">Cơ sở thu tiền <span class="text-danger">*</span></label>
+                                    <select id="depositBranchId" name="branchId" class="fin-select w-100" required>
+                                        <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"></option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="depositAmount" class="form-label fw-bold">Số tiền khách nộp tạm ứng (VNĐ) <span class="text-danger">*</span></label>
+                                    <input type="number" id="depositAmount" name="amount" class="form-control form-control-lg fw-bold text-success"
+                                           placeholder="VD: 5000000, 10000000..." step="10000" min="10000" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="depositMethod" class="form-label fw-bold">Phương thức nộp tiền <span class="text-danger">*</span></label>
+                                    <select id="depositMethod" name="paymentMethod" class="form-select form-select-lg" required>
+                                        <option value="CASH">💵 Tiền mặt tại quầy</option>
+                                        <option value="BANK_TRANSFER">🏦 Chuyển khoản ngân hàng (QR)</option>
+                                        <option value="POS_CARD">💳 Quẹt thẻ máy POS</option>
+                                    </select>
+                                </div>
+
+                                <input type="hidden" id="depositBankAccountId" name="bankAccountId">
+                                <input type="hidden" id="depositExpectedTransferContent" name="expectedTransferContent">
+                                <input type="hidden" id="depositIdempotencyKey" name="idempotencyKey">
+                                <div id="advanceDepositQrContainer" class="mb-3" style="display: none;"></div>
+
+                                <div class="mb-3">
+                                    <label for="depositRef" class="form-label">Mã giao dịch ngân hàng / POS</label>
+                                    <input type="text" id="depositRef" name="transactionRef" class="form-control" placeholder="Mã giao dịch...">
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="depositNotes" class="form-label">Ghi chú mục đích đặt cọc</label>
+                                    <textarea id="depositNotes" name="notes" class="form-control" rows="2"
+                                              placeholder="VD: Đặt cọc làm 4 răng sứ Cercon, Đặt cọc chỉnh nha gói mắc cài..."></textarea>
+                                </div>
+
+                                <button type="submit" class="fin-btn fin-btn-success w-100 py-3 fs-6">
+                                    <i class="bi bi-wallet-fill me-2"></i> Xác nhận Nạp tiền tạm ứng &amp; In phiếu
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Lịch sử nộp tiền tạm ứng của bệnh nhân này -->
+                    <div>
+                        <div class="fin-card">
+                            <h4 class="fw-bold mb-3 text-primary"><i class="bi bi-clock-history me-2"></i> Lịch sử Nộp tạm ứng của BN này</h4>
+
+                            <div th:if="${#lists.isEmpty(depositHistory)}" class="text-muted py-4 text-center">
+                                Chưa có lịch sử nộp tạm ứng nào cho bệnh nhân này.
+                            </div>
+
+                            <div th:each="dh : ${depositHistory}" class="p-3 mb-3 bg-light rounded border">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong class="text-success" th:text="${dh.paymentCode}">TU10001</strong>
+                                    <span class="fw-bold text-dark fs-6"
+                                          th:text="'+' + ${#numbers.formatDecimal(dh.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">+2.000.000 đ</span>
+                                </div>
+                                <div class="small text-muted" th:text="${#temporals.format(dh.paidAt, 'dd/MM/yyyy HH:mm')} + ' qua ' + ${dh.paymentMethod}"></div>
+                                <div class="small text-dark mt-1" th:text="${dh.notes}">Mục đích cọc</div>
+                                <div class="text-end mt-2">
+                                    <a th:href="@{/payments/{id}/receipt(id=${dh.paymentId})}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-printer"></i> In phiếu thu
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BỘ LỌC TÌM KIẾM & THEO NGÀY (CHUẨN ẢNH 2) -->
+                <div class="deposit-filter-card">
+                    <form th:action="@{/payments/deposits}" method="get" id="depositFilterForm" class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <input type="hidden" name="size" th:value="${pageSize}">
+                        <input type="hidden" name="page" value="0">
+
+                        <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1">
+                            <!-- Ô tìm kiếm -->
+                            <div class="dv-search-box">
+                                <i class="bi bi-search search-lead-icon"></i>
+                                <input type="text" id="keyword" name="keyword" th:value="${keyword}"
+                                       placeholder="Tìm theo Mã BN, Tên BN, SĐT, Mã phiếu...">
+                            </div>
+
+                            <!-- Nút Tìm kiếm màu xanh chuẩn ảnh 2 -->
+                            <button type="submit" class="btn btn-primary fw-bold px-3 d-inline-flex align-items-center gap-2 rounded-3 shadow-xs" style="height: 44px; font-size: 14px;">
+                                <i class="bi bi-search"></i>
+                                <span>Tìm kiếm</span>
+                            </button>
+
+                            <!-- Lọc theo ngày (Từ ngày -> Đến ngày) -->
+                            <div class="d-inline-flex align-items-center gap-1.5 ms-2">
+                                <span class="text-muted small fw-bold">Từ:</span>
+                                <input type="date" name="startDate" th:value="${startDate}" class="form-control" style="height: 44px; width: 140px; font-size: 13.5px;" title="Từ ngày">
+                                <span class="text-muted small fw-bold mx-1">Đến:</span>
+                                <input type="date" name="endDate" th:value="${endDate}" class="form-control" style="height: 44px; width: 140px; font-size: 13.5px;" title="Đến ngày">
+                                <button type="submit" class="btn btn-outline-secondary fw-semibold px-2.5 rounded-3 d-inline-flex align-items-center gap-1" style="height: 44px;" title="Áp dụng lọc ngày">
+                                    <i class="bi bi-funnel"></i> Lọc
+                                </button>
+                            </div>
+
+                            <!-- Nút Xóa lọc nếu có điều kiện -->
+                            <a th:if="${(keyword != null and keyword != '') or startDate != null or endDate != null or selectedBranchId != null}"
+                               th:href="@{/payments/deposits}"
+                               class="btn btn-link text-decoration-none text-danger p-0 ms-2 small fw-semibold"
+                               title="Xóa tất cả bộ lọc">
+                                <i class="bi bi-x-circle me-1"></i>Xóa lọc
+                            </a>
                         </div>
 
-                        <div th:each="dh : ${depositHistory}" class="p-3 mb-3 bg-light rounded border">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <strong class="text-success" th:text="${dh.paymentCode}">TU10001</strong>
-                                <span class="fw-bold text-dark fs-6"
-                                      th:text="'+' + ${#numbers.formatDecimal(dh.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">+2.000.000 đ</span>
+                        <!-- Dropdown chọn cơ sở / chi nhánh -->
+                        <div class="d-flex align-items-center gap-2">
+                            <select name="branchId" class="form-select fw-semibold" style="height: 44px; min-width: 170px; font-size: 13.5px;" onchange="this.form.submit()">
+                                <option value="">Tất cả cơ sở</option>
+                                <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                        th:selected="${b.branchId == selectedBranchId}"></option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- BẢNG DANH SÁCH BỆNH NHÂN ĐÃ ĐÓNG TẠM ỨNG (CHUẨN ẢNH 2) -->
+                <section class="staff-table-card">
+                    <!-- THANH THÔNG TIN BẢNG (CHUẨN ẢNH 2) -->
+                    <div class="dv-grid-topbar">
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <div class="fw-bold text-dark" style="font-size: 15px;">
+                                Hiển thị <span class="text-primary fw-bolder" th:text="${deposits != null ? #lists.size(deposits) : 0}">0</span> lượt nộp tạm ứng
+                                <span class="text-muted mx-1">•</span>
+                                <span class="text-secondary fw-semibold" th:if="${startDate == null and endDate == null}">Tất cả các ngày</span>
+                                <span class="text-secondary fw-semibold" th:if="${startDate != null or endDate != null}"
+                                      th:text="'Từ ' + (${startDate != null} ? ${#temporals.format(startDate, 'dd/MM/yyyy')} : 'đầu') + ' đến ' + (${endDate != null} ? ${#temporals.format(endDate, 'dd/MM/yyyy')} : 'nay')"></span>
                             </div>
-                            <div class="small text-muted" th:text="${#temporals.format(dh.paidAt, 'dd/MM/yyyy HH:mm')} + ' qua ' + ${dh.paymentMethod}"></div>
-                            <div class="small text-dark mt-1" th:text="${dh.notes}">Mục đích cọc</div>
-                            <div class="text-end mt-2">
-                                <a th:href="@{/payments/{id}/receipt(id=${dh.paymentId})}" target="_blank" class="btn btn-sm btn-outline-secondary">
-                                    <i class="bi bi-printer"></i> In phiếu thu
+                            <span class="badge rounded-pill px-3 py-1.5"
+                                  style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700;">
+                                <i class="bi bi-wallet-fill me-1"></i>Theo dõi chi tiết số tiền nộp vào ví tạm ứng &amp; đặt cọc
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- BẢNG CUỘN DỮ LIỆU -->
+                    <div class="dv-table-scroll-container">
+                        <table class="dv-amis-table table mb-0 align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width: 55px; text-align: center;">#</th>
+                                    <th style="width: 175px;">Thời gian</th>
+                                    <th style="width: 260px;">Bệnh nhân</th>
+                                    <th style="width: 160px;">Cơ sở / Chi nhánh</th>
+                                    <th style="width: 170px;" class="text-end">Số tiền tạm ứng</th>
+                                    <th style="width: 170px;">Phương thức</th>
+                                    <th style="min-width: 200px;">Ghi chú / Mục đích</th>
+                                    <th style="width: 180px;">Người thu</th>
+                                    <th style="width: 170px; text-align: center;">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="p, stat : ${deposits}">
+                                    <!-- 1. STT -->
+                                    <td class="text-center fw-semibold text-muted" th:text="${(currentPage * pageSize) + stat.count}">1</td>
+
+                                    <!-- 2. Thời gian -->
+                                    <td>
+                                        <div class="fw-bold text-dark" style="font-size: 13.5px;" th:text="${#temporals.format(p.paidAt, 'dd/MM/yyyy HH:mm:ss')}">08/11/2026 22:33:12</div>
+                                        <div class="small text-muted font-monospace" th:text="${p.paymentCode}">TU10001</div>
+                                    </td>
+
+                                    <!-- 3. Bệnh nhân -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2.5">
+                                            <div class="audit-user-avatar"
+                                                 th:text="${p.patientProfile != null and p.patientProfile.fullName != null and !p.patientProfile.fullName.isEmpty() ? #strings.substring(p.patientProfile.fullName, 0, 1).toUpperCase() : 'BN'}">BN</div>
+                                            <div>
+                                                <a th:href="@{/payments/deposits(profileId=${p.patientProfile?.profileId})}" class="fw-bold text-dark text-decoration-none" style="font-size: 13.5px;" th:text="${p.patientProfile?.fullName}" title="Xem nộp thêm tạm ứng cho bệnh nhân này">Nguyễn Văn An</a>
+                                                <div class="small text-muted">
+                                                    <span class="badge bg-light text-secondary border font-monospace px-1.5 py-0.5" th:text="${p.patientProfile?.patientCode}">BN0001</span>
+                                                    <span th:if="${p.patientProfile?.phoneNumber != null}" th:text="' • ' + ${p.patientProfile?.phoneNumber}"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- 4. Chi nhánh -->
+                                    <td>
+                                        <span class="badge bg-light text-dark border px-2 py-1">
+                                            <i class="bi bi-building text-danger me-1"></i>
+                                            <span th:text="${p.branch != null ? p.branch.branchName : 'Toàn hệ thống'}">Cơ sở Quận 1</span>
+                                        </span>
+                                    </td>
+
+                                    <!-- 5. Số tiền tạm ứng -->
+                                    <td class="text-end">
+                                        <div class="fw-bolder text-success fs-6"
+                                             th:text="'+' + ${#numbers.formatDecimal(p.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">+1.000.000 đ</div>
+                                        <small class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 11px;">Tạm ứng</small>
+                                    </td>
+
+                                    <!-- 6. Phương thức -->
+                                    <td>
+                                        <span th:if="${p.paymentMethod?.name() == 'CASH'}" class="badge bg-light text-dark border px-2 py-1">
+                                            💵 Tiền mặt
+                                        </span>
+                                        <span th:if="${p.paymentMethod?.name() == 'BANK_TRANSFER'}" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                            🏦 Chuyển khoản QR
+                                        </span>
+                                        <span th:if="${p.paymentMethod?.name() == 'POS_CARD'}" class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1">
+                                            💳 Quẹt thẻ POS
+                                        </span>
+                                        <span th:if="${p.paymentMethod?.name() != 'CASH' and p.paymentMethod?.name() != 'BANK_TRANSFER' and p.paymentMethod?.name() != 'POS_CARD'}" class="badge bg-light text-secondary border px-2 py-1" th:text="${p.paymentMethod}"></span>
+                                        <div th:if="${p.transactionRef != null and !p.transactionRef.isEmpty()}" class="font-monospace text-muted mt-0.5" style="font-size: 11px;" th:text="'Ref: ' + ${p.transactionRef}"></div>
+                                    </td>
+
+                                    <!-- 7. Ghi chú / Mục đích -->
+                                    <td>
+                                        <span class="text-secondary" style="font-size: 13px;" th:text="${p.notes != null and !p.notes.isEmpty() ? p.notes : '-'}">-</span>
+                                    </td>
+
+                                    <!-- 8. Người thu -->
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="audit-user-avatar" style="background: linear-gradient(135deg, #0284c7, #0369a1); width: 28px; height: 28px; font-size: 11px;"
+                                                 th:text="${p.cashier != null and p.cashier.fullName != null and !p.cashier.fullName.isEmpty() ? #strings.substring(p.cashier.fullName, 0, 1).toUpperCase() : 'TN'}">LF</div>
+                                            <div>
+                                                <span class="small fw-bold text-dark d-block" th:text="${p.cashier?.fullName ?: 'Hệ thống'}">Lễ tân FT07</span>
+                                                <small class="text-muted" th:text="${p.cashier?.staffCode ?: ''}">NV001</small>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- 9. Thao tác -->
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center gap-1.5">
+                                            <a th:href="@{/payments/{id}/receipt(id=${p.paymentId})}" target="_blank"
+                                               class="btn btn-sm btn-primary fw-semibold px-2.5 py-1 d-inline-flex align-items-center gap-1 shadow-xs"
+                                               style="font-size: 12.5px; border-radius: 6px;" title="Xem chi tiết &amp; In phiếu thu">
+                                                <i class="bi bi-printer"></i> In phiếu
+                                            </a>
+                                            <a th:if="${p.patientProfile != null}" th:href="@{/payments/deposits(profileId=${p.patientProfile.profileId})}"
+                                               class="btn btn-sm btn-outline-success fw-semibold px-2 py-1 d-inline-flex align-items-center gap-1 shadow-xs"
+                                               style="font-size: 12.5px; border-radius: 6px;" title="Nộp thêm tiền tạm ứng cho bệnh nhân này">
+                                                <i class="bi bi-plus-circle"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Empty State -->
+                                <tr th:if="${deposits == null or deposits.isEmpty()}">
+                                    <td colspan="9" class="p-5 text-center text-muted">
+                                        <div class="mb-2 fs-2 text-secondary"><i class="bi bi-wallet2"></i></div>
+                                        <h6 class="fw-bold text-dark">Chưa có lượt nộp tiền tạm ứng nào</h6>
+                                        <p class="small text-muted mb-3">Không tìm thấy bản ghi nộp tiền tạm ứng phù hợp với điều kiện tìm kiếm và khoảng ngày đã chọn.</p>
+                                        <a th:href="@{/payments/deposits}" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại bộ lọc</a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- FOOTER PHÂN TRANG CHUẨN MISA (ẢNH 2) -->
+                    <div class="misa-pagination-footer">
+                        <!-- Bên trái: Tổng số -->
+                        <div class="misa-pagination-left">
+                            Tổng số: <strong th:text="${totalItems != null ? totalItems : 0}">0</strong>
+                        </div>
+
+                        <!-- Bên phải: Số dòng/trang + Range + Navigation -->
+                        <div class="misa-pagination-right">
+                            <!-- Chọn số dòng/trang -->
+                            <div class="misa-page-size-wrapper">
+                                <span>Số dòng/trang</span>
+                                <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" onchange="changePageSize(this.value)">
+                                    <option value="10" th:selected="${pageSize == 10}">10</option>
+                                    <option value="20" th:selected="${pageSize == 20}">20</option>
+                                    <option value="50" th:selected="${pageSize == 50}">50</option>
+                                    <option value="100" th:selected="${pageSize == 100}">100</option>
+                                </select>
+                            </div>
+
+                            <!-- Khoảng hiển thị (1 - 10) -->
+                            <div class="misa-page-range">
+                                <span th:text="${fromItem != null ? fromItem : 0}">0</span> - <span th:text="${toItem != null ? toItem : 0}">0</span>
+                            </div>
+
+                            <!-- Nút phân trang (|< < > >|) -->
+                            <div class="d-flex align-items-center gap-1">
+                                <!-- Về trang đầu -->
+                                <a th:href="@{/payments/deposits(page=0, size=${pageSize}, keyword=${keyword}, branchId=${selectedBranchId}, startDate=${startDate}, endDate=${endDate})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                                   title="Trang đầu">
+                                    <i class="bi bi-chevron-bar-left"></i>
+                                </a>
+
+                                <!-- Trang trước -->
+                                <a th:href="@{/payments/deposits(page=${currentPage - 1}, size=${pageSize}, keyword=${keyword}, branchId=${selectedBranchId}, startDate=${startDate}, endDate=${endDate})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                                   title="Trang trước">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+
+                                <!-- Trang sau -->
+                                <a th:href="@{/payments/deposits(page=${currentPage + 1}, size=${pageSize}, keyword=${keyword}, branchId=${selectedBranchId}, startDate=${startDate}, endDate=${endDate})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage >= (totalPages != null and totalPages > 0 ? totalPages - 1 : 0)} ? 'disabled' : ''"
+                                   title="Trang sau">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+
+                                <!-- Trang cuối -->
+                                <a th:href="@{/payments/deposits(page=${totalPages != null and totalPages > 0 ? totalPages - 1 : 0}, size=${pageSize}, keyword=${keyword}, branchId=${selectedBranchId}, startDate=${startDate}, endDate=${endDate})}"
+                                   class="misa-nav-btn"
+                                   th:classappend="${currentPage >= (totalPages != null and totalPages > 0 ? totalPages - 1 : 0)} ? 'disabled' : ''"
+                                   title="Trang cuối">
+                                    <i class="bi bi-chevron-bar-right"></i>
                                 </a>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                </section>
+            </div> <!-- end #cashierTabContent -->
+        </main>
+    </div>
+</div>
 
 <script th:inline="javascript">
+    function toggleDepositSearchBox() {
+        const box = document.getElementById('patientSearchDepositBox');
+        if (box) {
+            box.style.display = (box.style.display === 'none' || !box.style.display) ? 'block' : 'none';
+            if (box.style.display === 'block') {
+                const input = document.getElementById('searchQuery');
+                if (input) input.focus();
+            }
+        }
+    }
+
+    function changePageSize(newSize) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('size', newSize);
+        url.searchParams.set('page', '0');
+        window.location.href = url.toString();
+    }
+
     async function searchPatientForDeposit() {
         const query = document.getElementById('searchQuery').value.trim();
         const resultsEl = document.getElementById('patientSearchResults');
@@ -217,9 +562,5 @@
         }
     });
 </script>
-            </div> <!-- end #cashierTabContent -->
-        </main>
-    </div>
-</div>
 </body>
 </html>
