@@ -310,7 +310,8 @@
 <div class="modal fade" id="editAccountModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form id="editAccountForm" method="post">
+            <form id="editAccountForm" th:action="@{/admin/bank-accounts/0}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                 <input type="hidden" id="editBranchIdHidden" name="branchId">
                 <div class="modal-header bg-dark text-white">
                     <h5 class="modal-title" id="editModalLabel"><i class="bi bi-pencil-square me-2"></i>Chỉnh sửa tài khoản ngân hàng</h5>

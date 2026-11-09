@@ -29,6 +29,9 @@
 
             <!-- Vùng nội dung tab Tổng quan -->
             <div id="cashierTabContent" class="cashier-tab-content">
+
+            <!-- 1. TRANG DANH SÁCH BỆNH NHÂN CHỜ (HIỂN THỊ KHI CHƯA CHỌN BỆNH NHÂN CỤ THỂ) -->
+            <th:block th:if="${patient == null}">
             <!-- 1. Thanh tìm kiếm bệnh nhân (Backend search & pagination - Requirement 3 & 7) -->
             <div class="fin-card fin-filter-container mb-3">
                 <form method="get" th:action="@{/payments/dashboard}" class="fin-filter-bar">
@@ -129,13 +132,13 @@
                                 <td class="text-center text-muted fw-medium"
                                     th:text="${(currentPendingPage * 10) + stat.index + 1}">1</td>
 
-                                <!-- Bệnh nhân (Tên & Mã) -->
+                                <!-- Bệnh nhân (Tên & Mã) - Bấm nhảy sang trang chi tiết bệnh nhân -->
                                 <td>
                                     <div>
-                                        <a th:href="@{/payments/dashboard(patientId=${p.profileId}, keyword=${pendingKeyword}, pendingPage=${currentPendingPage})}"
+                                        <a th:href="@{/payments/patient/{id}(id=${p.profileId})}"
                                            class="fw-bold text-dark text-decoration-none patient-name"
                                            th:text="${p.fullName}"
-                                           title="Bấm để xem chi tiết tài chính của bệnh nhân này">
+                                           title="Bấm để xem chi tiết tài chính của bệnh nhân này trên trang riêng">
                                             Nguyễn Văn A
                                         </a>
                                         <span th:if="${patient != null and patient.profileId == p.profileId}"
@@ -211,11 +214,11 @@
                                     </div>
                                 </td>
 
-                                <!-- Thao tác: Chỉ còn một nút "Xem thông tin" -->
+                                <!-- Thao tác: Bấm nhảy sang trang chi tiết bệnh nhân -->
                                 <td class="text-center" data-column-key="actions" data-column-action="true">
-                                    <a th:href="@{/payments/dashboard(patientId=${p.profileId}, keyword=${pendingKeyword}, pendingPage=${currentPendingPage})}"
+                                    <a th:href="@{/payments/patient/{id}(id=${p.profileId})}"
                                        class="fin-table-btn fin-table-btn-view"
-                                       title="Xem thông tin chi tiết tài chính của bệnh nhân này">
+                                       title="Xem thông tin chi tiết tài chính của bệnh nhân này trên trang riêng">
                                         <i class="bi bi-eye"></i> <span>Xem thông tin</span>
                                     </a>
                                 </td>
@@ -368,13 +371,17 @@
                     </div>
                 </div>
             </div>
+            </th:block>
 
-            <!-- 3. Khi chưa chọn bệnh nhân: Gợi ý thao tác bên dưới bảng -->
-            <div th:if="${patient == null}" class="alert alert-light border text-center py-4 my-3 text-muted">
-                <i class="bi bi-hand-index-thumb text-primary me-2 fs-5"></i>
-                <span>Bấm <strong>Xem thông tin</strong> hoặc chọn tên bệnh nhân trong bảng trên để mở chi tiết công nợ, hóa đơn và lịch sử giao dịch.</span>
-            </div>
+            <!-- 2. TRANG CHI TIẾT TÀI CHÍNH BỆNH NHÂN (KHI ĐÃ CHỌN BỆNH NHÂN CỤ THỂ) -->
             <div th:if="${patient != null}">
+                <!-- Thanh điều hướng quay lại danh sách -->
+                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                    <a th:href="@{/payments/dashboard}" class="fin-btn fin-btn-outline d-inline-flex align-items-center gap-1.5 shadow-xs">
+                        <i class="bi bi-arrow-left"></i> <span>Quay lại Danh sách Bệnh nhân chờ</span>
+                    </a>
+                    <span class="text-muted small">Chi tiết hồ sơ tài chính &amp; Lịch sử giao dịch bệnh nhân</span>
+                </div>
                 <!-- Patient Profile Summary Card -->
                 <div class="fin-card mb-4 border-primary">
                     <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2 flex-wrap gap-2">
