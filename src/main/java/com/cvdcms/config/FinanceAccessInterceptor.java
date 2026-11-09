@@ -87,7 +87,21 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
                 || userRepository.hasActivePermission(userId, "REFUND_MANAGE")
                 || userRepository.hasActivePermission(userId, "FINANCE_DASHBOARD")
                 || userRepository.hasActivePermission(userId, "FINANCE_DEBT");
-        boolean isFinanceRole = isAdmin || hasFinancePermission;
+        boolean isKeToan = false;
+        if (session != null) {
+            Object rolesObj = session.getAttribute("roleNames");
+            if (rolesObj instanceof java.util.Collection<?> col) {
+                isKeToan = col.stream()
+                        .filter(java.util.Objects::nonNull)
+                        .map(Object::toString)
+                        .anyMatch(r -> "KE_TOAN".equalsIgnoreCase(r.trim()) || "ROLE_KE_TOAN".equalsIgnoreCase(r.trim()));
+            }
+        }
+        if (!isKeToan) {
+            List<String> userRoles = userRepository.findActiveRoleNamesByUserId(userId);
+            isKeToan = userRoles.stream().anyMatch(r -> "KE_TOAN".equalsIgnoreCase(r.trim()) || "ROLE_KE_TOAN".equalsIgnoreCase(r.trim()));
+        }
+        boolean isFinanceRole = isAdmin || isKeToan || hasFinancePermission;
 
         if (!isFinanceRole) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập phân hệ Tài chính & Kế toán.");
@@ -111,7 +125,7 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
             request.setAttribute("currentUserActiveBranchIds", activeBranchIds);
 
             // Chặn kế toán can thiệp cấu hình hoa hồng hoặc duyệt/từ chối tạm ứng
-            if (uri.contains("/payroll/commission-config")) {
+            if (uri.contains("/payroll/commission-config") || uri.contains("/payroll/config")) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên (Admin) mới có quyền truy cập hoặc chỉnh sửa cấu hình hoa hồng.");
                 return false;
             }
