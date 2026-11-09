@@ -38,8 +38,6 @@
                 font-size: 0.85rem;
                 color: #334155;
                 font-family: 'Be Vietnam Pro', 'Inter', sans-serif !important;
-                flex-shrink: 0 !important;
-                margin-top: auto !important;
             }
             .misa-pagination-left {
                 font-size: 0.85rem;
@@ -115,10 +113,6 @@
                 box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
                 overflow: hidden !important;
                 position: relative !important;
-                display: flex !important;
-                flex-direction: column !important;
-                flex: 1 1 auto !important;
-                min-height: 0 !important;
             }
 
             .dv-grid-topbar {
@@ -130,18 +124,14 @@
                 justify-content: space-between !important;
                 flex-wrap: wrap !important;
                 gap: 12px !important;
-                flex-shrink: 0 !important;
             }
 
             .dv-table-scroll-container,
             .staff-table-wrapper {
                 width: 100% !important;
                 overflow-x: auto !important;
-                overflow-y: auto !important;
                 position: relative !important;
                 scroll-behavior: smooth !important;
-                flex: 1 1 auto !important;
-                min-height: 0 !important;
             }
 
             /* Khung tìm kiếm chuẩn kích thước gọn gàng, không bị kéo dài quá mức */
@@ -174,7 +164,7 @@
                 border-bottom: 2px solid #cbd5e1 !important;
                 border-right: 1px solid #e2e8f0 !important;
                 white-space: nowrap !important;
-                position: relative !important;
+                position: sticky !important;
                 top: 0 !important;
                 z-index: 10 !important;
                 user-select: none !important;
