@@ -839,8 +839,8 @@
                 days: 0,
                 steps: wf.steps.map(st => ({
                     name: st.stepName || 'Thủ thuật kỹ thuật',
-                    activeTeeth: activeTeethNums,
-                    qty: d.qty,
+                    activeTeeth: [...activeTeethNums],
+                    qty: isPackage ? 1 : (activeTeethNums.length || 1),
                     price: defStepP,
                     notes: st.stepDescription || 'Thực hiện chuẩn Bộ Y Tế (QĐ 3207/QĐ-BYT)'
                 }))
@@ -865,12 +865,57 @@
             days: st.days,
             steps: st.steps.map(sp => ({
                 name: sp.name,
-                activeTeeth: activeTeethNums,
-                qty: d.qty,
+                activeTeeth: [...activeTeethNums],
+                qty: isPackage ? 1 : (activeTeethNums.length || 1),
                 price: (sp.price !== undefined && sp.price !== null) ? sp.price : defStepP,
                 notes: sp.notes
             }))
         }));
+    }
+
+    // Tự động phân bổ lại đơn giá dịch vụ đều cho các bước thực hiện
+    function recalculateStepPrices(d) {
+        if (!d || !d.stages) return;
+        const srv = SERVICES_DICT[d.serviceId];
+        const srvP = srv ? Number(srv.price || 0) : 0;
+        let totalSteps = 0;
+        d.stages.forEach(st => {
+            if (st.steps) totalSteps += st.steps.length;
+        });
+        if (totalSteps === 0) return;
+        const avgPrice = srvP > 0 ? Math.round(srvP / totalSteps) : 0;
+        d.stages.forEach(st => {
+            if (st.steps) {
+                st.steps.forEach(sp => {
+                    sp.price = avgPrice;
+                });
+            }
+        });
+    }
+
+    // Tự động tính toán lại ngày kết thúc kế hoạch dựa trên max số ngày của các giai đoạn
+    function recalculatePlanEndDate() {
+        const startInp = document.getElementById('planStartDate');
+        const endInp = document.getElementById('planEndDate');
+        if (!startInp || !endInp) return;
+        const baseDateStr = startInp.value || new Date().toISOString().split('T')[0];
+
+        let maxDays = 0;
+        const active = (typeof DIAGNOSES !== 'undefined' && Array.isArray(DIAGNOSES))
+            ? DIAGNOSES.filter(d => d.selected)
+            : [];
+        active.forEach(d => {
+            if (d.stages) {
+                d.stages.forEach(st => {
+                    const days = parseInt(st.days, 10) || 0;
+                    if (days > maxDays) maxDays = days;
+                });
+            }
+        });
+
+        const d = new Date(baseDateStr);
+        d.setDate(d.getDate() + maxDays);
+        endInp.value = d.toISOString().split('T')[0];
     }
 
     // Tìm dịch vụ phòng khám phù hợp nhất với chẩn đoán (ICD-10 & Tên bệnh lý)
@@ -1256,7 +1301,11 @@
             d.stages.forEach(st => {
                 if (st.steps) {
                     st.steps.forEach(sp => {
-                        sp.qty = d.qty;
+                        if (isPackageService(d.serviceId)) {
+                            sp.qty = d.qty;
+                        } else {
+                            sp.qty = (sp.activeTeeth && sp.activeTeeth.length > 0) ? sp.activeTeeth.length : d.qty;
+                        }
                     });
                 }
             });
@@ -1269,7 +1318,8 @@
         const d = DIAGNOSES.find(x => x.id === id);
         if (!d) return;
 
-        const activeTeethNums = isPackageService(d.serviceId) ? ['Toàn hàm'] : d.teeth.map(t => t.num);
+        const isPackage = isPackageService(d.serviceId);
+        const activeTeethNums = isPackage ? ['Toàn hàm'] : d.teeth.map(t => t.num);
         const srv = SERVICES_DICT[d.serviceId];
         const srvP = srv ? Number(srv.price || 0) : 0;
 
@@ -1288,8 +1338,8 @@
                     days: 0,
                     steps: (wf.steps || []).map(st => ({
                         name: st.stepName || 'Thủ thuật',
-                        activeTeeth: activeTeethNums,
-                        qty: d.qty,
+                        activeTeeth: [...activeTeethNums],
+                        qty: isPackage ? 1 : (activeTeethNums.length || 1),
                         price: defP,
                         notes: st.stepDescription || 'Thực hiện chuẩn Bộ Y Tế (QĐ 3207/QĐ-BYT)'
                     }))
@@ -1310,13 +1360,15 @@
                 days: st.days,
                 steps: st.steps.map(sp => ({
                     name: sp.name,
-                    activeTeeth: activeTeethNums,
-                    qty: d.qty,
+                    activeTeeth: [...activeTeethNums],
+                    qty: isPackage ? 1 : (activeTeethNums.length || 1),
                     price: (sp.price !== undefined && sp.price !== null) ? sp.price : defP,
                     notes: sp.notes
                 }))
             }));
         }
+        recalculateStepPrices(d);
+        recalculatePlanEndDate();
         renderAll();
     }
 
@@ -1328,6 +1380,8 @@
 
         // Tự động chuyển Mẫu phác đồ & Quy trình kỹ thuật THEO DỊCH VỤ
         initDiagStagesFromService(d);
+        recalculateStepPrices(d);
+        recalculatePlanEndDate();
 
         renderAll();
     }
@@ -1396,14 +1450,22 @@
                     `).join('');
 
                     const toothButtons = d.teeth.map(t => {
-                        const isChecked = sp.activeTeeth.includes(t.num);
+                        const isChecked = sp.activeTeeth && sp.activeTeeth.includes(t.num);
                         return `
                             <button type="button" class="btn btn-sm ${isChecked ? 'btn-outline-primary active fw-bold' : 'btn-outline-secondary'} py-0 px-2" style="font-size: 11.5px;"
-                                    onclick="toggleStepTooth('${d.id}', ${sIdx}, ${spIdx}, '${t.num}')">
+                                    onclick="toggleStepTooth('${d.id}', ${sIdx}, ${spIdx}, '${t.num}')"
+                                    title="${isChecked ? 'Click để bỏ chọn răng này' : 'Click để chọn răng này'}">
                                 ${isChecked ? '✓' : '✗'} ${t.disp}
                             </button>
                         `;
                     }).join(' ');
+
+                    const addToothBtn = `
+                        <button type="button" class="btn btn-sm btn-outline-info py-0 px-1.5" style="font-size: 11px;"
+                                onclick="promptAddStepTooth('${d.id}', ${sIdx}, ${spIdx})" title="Thêm răng khác áp dụng cho bước này">
+                            <i class="bi bi-plus-circle"></i> Răng
+                        </button>
+                    `;
 
                     const srv = SERVICES_DICT[d.serviceId];
                     const srvPrice = srv ? Number(srv.price || 0) : 0;
@@ -1435,7 +1497,7 @@
                                 </div>
                             </td>
                             <td style="width: 18%;" class="text-center">
-                                <div class="d-flex flex-wrap justify-content-center gap-1">${toothButtons}</div>
+                                <div class="d-flex flex-wrap justify-content-center align-items-center gap-1">${toothButtons} ${addToothBtn}</div>
                             </td>
                             <td style="width: 8%;" class="text-center">
                                 <div class="d-inline-flex align-items-center justify-content-center gap-1">
@@ -1569,10 +1631,39 @@
         if (d) d.stages[sIdx].steps[spIdx].name = val;
     }
 
+    function promptAddStepTooth(id, sIdx, spIdx) {
+        const d = DIAGNOSES.find(x => x.id === id);
+        if (!d) return;
+        const toothInput = prompt('Nhập số răng muốn áp dụng cho bước này (Ví dụ: 16, 26, 36, 46...):');
+        if (!toothInput) return;
+        const cleaned = toothInput.replace(/[^0-9]/g, '').trim();
+        if (!cleaned || cleaned.length < 2) {
+            alert('Số răng không hợp lệ. Vui lòng nhập số răng chuẩn (Ví dụ: 11, 16, 28, 48...)');
+            return;
+        }
+        const existsInDiag = d.teeth.some(t => t.num === cleaned);
+        if (!existsInDiag) {
+            d.teeth.push({
+                num: cleaned,
+                surf: '',
+                disp: `R-${cleaned}`
+            });
+            d.qty = d.teeth.length;
+        }
+        const sp = d.stages[sIdx].steps[spIdx];
+        if (!sp.activeTeeth) sp.activeTeeth = [];
+        if (!sp.activeTeeth.includes(cleaned)) {
+            sp.activeTeeth.push(cleaned);
+        }
+        sp.qty = sp.activeTeeth.length;
+        renderAll();
+    }
+
     function toggleStepTooth(id, sIdx, spIdx, num) {
         const d = DIAGNOSES.find(x => x.id === id);
         if (!d) return;
         const sp = d.stages[sIdx].steps[spIdx];
+        if (!sp.activeTeeth) sp.activeTeeth = [];
         const i = sp.activeTeeth.indexOf(num);
         if (i >= 0) {
             if (sp.activeTeeth.length === 1) {
@@ -1585,6 +1676,7 @@
         }
         sp.qty = sp.activeTeeth.length;
         renderRoadmaps();
+        renderFooter();
     }
 
     function editStepNotes(id, sIdx, spIdx, val) {
@@ -1637,6 +1729,7 @@
         const d = DIAGNOSES.find(x => x.id === id);
         if (d) {
             d.stages[sIdx].days = Math.max(0, parseInt(val, 10) || 0);
+            recalculatePlanEndDate();
             renderRoadmaps();
         }
     }
@@ -1645,13 +1738,16 @@
         const d = DIAGNOSES.find(x => x.id === id);
         if (!d) return;
         const preset = PRESETS_DICT[d.presetKey];
+        const isPackage = isPackageService(d.serviceId);
+        const activeTeeth = isPackage ? ['Toàn hàm'] : d.teeth.map(t => t.num);
         d.stages[sIdx].steps.push({
-            name: preset?.stepsPool[0] || '',
-            activeTeeth: d.teeth.map(t => t.num),
-            qty: d.teeth.length || 1,
+            name: preset?.stepsPool[0] || 'Thủ thuật',
+            activeTeeth: [...activeTeeth],
+            qty: isPackage ? 1 : (activeTeeth.length || 1),
             price: 0,
             notes: ''
         });
+        recalculateStepPrices(d);
         renderRoadmaps();
         renderFooter();
     }
@@ -1660,6 +1756,7 @@
         const d = DIAGNOSES.find(x => x.id === id);
         if (!d) return;
         d.stages[sIdx].steps.splice(spIdx, 1);
+        recalculateStepPrices(d);
         renderRoadmaps();
         renderFooter();
     }
@@ -1667,19 +1764,23 @@
     function addNewStage(id) {
         const d = DIAGNOSES.find(x => x.id === id);
         if (!d) return;
+        const isPackage = isPackageService(d.serviceId);
+        const activeTeeth = isPackage ? ['Toàn hàm'] : d.teeth.map(t => t.num);
         d.stages.push({
             name: `Giai đoạn ${d.stages.length + 1}`,
             days: 7,
             steps: [
                 {
-                    name: '',
-                    activeTeeth: d.teeth.map(t => t.num),
-                    qty: d.teeth.length || 1,
+                    name: 'Thủ thuật mới',
+                    activeTeeth: [...activeTeeth],
+                    qty: isPackage ? 1 : (activeTeeth.length || 1),
                     price: 0,
                     notes: ''
                 }
             ]
         });
+        recalculateStepPrices(d);
+        recalculatePlanEndDate();
         renderRoadmaps();
         renderFooter();
     }
@@ -1692,6 +1793,8 @@
             return;
         }
         d.stages.splice(sIdx, 1);
+        recalculateStepPrices(d);
+        recalculatePlanEndDate();
         renderRoadmaps();
         renderFooter();
     }
@@ -1744,6 +1847,7 @@
         renderDiagnosisTable();
         renderMappingTable();
         syncPlanTitle();
+        recalculatePlanEndDate();
         renderRoadmaps();
         renderFooter();
     }
@@ -1751,14 +1855,11 @@
     document.addEventListener('DOMContentLoaded', async function() {
         const today = new Date();
         const startStr = today.toISOString().split('T')[0];
-        const endDay = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
-        const endStr = endDay.toISOString().split('T')[0];
 
         const startInp = document.getElementById('planStartDate');
-        const endInp = document.getElementById('planEndDate');
         if (startInp) startInp.value = startStr;
-        if (endInp) endInp.value = endStr;
 
+        recalculatePlanEndDate();
         renderAll();
 
         // Kiểm tra nếu có tham số ?planId=... để nạp dữ liệu chi tiết kế hoạch

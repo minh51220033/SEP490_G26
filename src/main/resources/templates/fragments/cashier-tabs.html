@@ -6,17 +6,23 @@
     THANH TAB NGANG CHO PHÂN HỆ THU NGÂN (CV-DCMS CASHIER TABS)
     activeTab: 'dashboard' | 'invoices' | 'payments' | 'debts' | 'deposits' | 'refunds'
 -->
-<div th:fragment="cashierTabs(activeTab)" class="cashier-tabs-wrapper" id="cashierTabsWrapper">
-    <!-- Tiêu đề phân hệ thu ngân -->
-    <div class="cashier-header-bar d-flex justify-content-between align-items-center">
-        <div class="cashier-title-group">
-            <h1 class="cashier-main-title">
-                <i class="bi bi-cash-coin text-primary" aria-hidden="true"></i> Thu ngân
-            </h1>
-            <p class="cashier-main-desc">Quản lý hóa đơn, thanh toán, công nợ viện phí, tạm ứng và hoàn tiền</p>
+<div th:fragment="cashierTabs(activeTab)" class="cashier-tabs-wrapper mb-3" id="cashierTabsWrapper">
+    <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN HỆ THỐNG -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                <i class="bi bi-cash-coin"></i>
+            </div>
+            <div>
+                <h1 class="dv-page-title mb-0">Thu ngân</h1>
+                <p class="dv-page-subtitle">Quản lý hóa đơn, thanh toán, công nợ viện phí, tạm ứng và hoàn tiền</p>
+            </div>
         </div>
-        <div>
+        <div class="d-flex align-items-center gap-2">
             <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+            <a th:href="@{/payments/dashboard}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+                <i class="bi bi-arrow-clockwise"></i> Làm mới
+            </a>
         </div>
     </div>
 

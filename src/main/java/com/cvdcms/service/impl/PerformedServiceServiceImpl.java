@@ -206,6 +206,11 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         PerformedService ps = performedServiceRepository.findById(performedId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ thực hiện với ID: " + performedId));
 
+        // Dịch vụ đã thực hiện tại ghế (đã hoàn thành / đồng bộ kế toán) không được phép xóa
+        if (ps.getStatus() == PerformedServiceStatus.COMPLETED) {
+            throw new IllegalStateException("Dịch vụ đã thực hiện tại ghế (đã đồng bộ sang kế toán), không được phép hủy hoặc xóa.");
+        }
+
         // Quy tắc BR-EMR-02: Khóa bất biến
         if (ps.getVisit() != null &&
                 (ps.getVisit().getStatus() == VisitStatus.WAITING_PAYMENT || ps.getVisit().getStatus() == VisitStatus.COMPLETED)) {

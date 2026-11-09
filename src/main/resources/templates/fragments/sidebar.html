@@ -285,28 +285,13 @@
                             <span class="side-link__label">Quản lý thẻ &amp; ưu đãi</span>
                         </a>
                     </th:block>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'APPOINTMENT_MANAGE'))}"
-                       th:href="@{/reception/appointments}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'appointments'} ? 'is-active' : ''">
-                        <i class="bi bi-calendar3" aria-hidden="true"></i><span class="side-link__label">Quản lý lịch hẹn</span>
-                    </a>
-
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_CHECKIN'))}"
-                       th:href="@{/reception/check-in}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'checkin'} ? 'is-active' : ''">
-                        <i class="bi bi-person-check" aria-hidden="true"></i><span class="side-link__label">Tiếp đón &amp; Check-in</span>
-                    </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'APPOINTMENT_VIEW'))}"
-                       th:href="@{/reception/queue}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'queue'} ? 'is-active' : ''">
-                        <i class="bi bi-list-ol" aria-hidden="true"></i><span class="side-link__label">Hàng chờ khám</span>
-                    </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_DISPATCH'))}"
-                       th:href="@{/reception/dispatch}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'dispatch'} ? 'is-active' : ''"
-                       title="Bảng điều phối ghế nha &amp; hàng chờ">
-                        <i class="bi bi-kanban" aria-hidden="true"></i><span class="side-link__label">Điều phối ghế nha</span>
-
+                    <!-- TIẾP ĐÓN BỆNH NHÂN: Gộp toàn bộ 4 bước quy trình (Lịch hẹn, Check-in, Điều phối, Hàng chờ) thành 1 mục duy nhất cho mọi role -->
+                    <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'APPOINTMENT_MANAGE') or #lists.contains(permissionCodes, 'RECEPTION_CHECKIN') or #lists.contains(permissionCodes, 'APPOINTMENT_VIEW') or #lists.contains(permissionCodes, 'RECEPTION_DISPATCH')))}"
+                       th:href="@{${(isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'APPOINTMENT_MANAGE'))) ? '/reception/appointments' : ((permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_CHECKIN')) ? '/reception/check-in' : ((permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_DISPATCH')) ? '/reception/dispatch' : '/reception/queue'))}}"
+                       class="side-link side-sublink"
+                       th:classappend="${#strings.contains(',appointments,checkin,queue,dispatch,', ',' + activeMenu + ',')} ? 'is-active' : ''"
+                       title="Quy trình tiếp đón: Lịch hẹn, Tiếp đón &amp; Check-in, Điều phối ghế nha, Hàng chờ gọi số">
+                        <i class="bi bi-person-check" aria-hidden="true"></i><span class="side-link__label">Tiếp đón bệnh nhân</span>
                     </a>
                 </div>
             </div>
@@ -385,20 +370,13 @@
             </button>
             <div class="side-group__panel" id="sgPersonal">
                 <div class="side-group__inner">
-                    <!-- Lịch trực & Chấm công -->
-                    <a th:if="${permissionCodes != null and #lists.contains(permissionCodes, 'SCHEDULE_MY')}"
-                       th:href="@{/schedules/my}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'my-schedule'} ? 'is-active' : ''"
-                       title="Lịch làm việc cá nhân hàng tuần">
-                        <i class="bi bi-calendar-check" aria-hidden="true"></i><span class="side-link__label">Lịch trực &amp; Chấm công</span>
-                    </a>
-                    <!-- Check-in / Check-out chấm công -->
-                    <a th:if="${permissionCodes != null and #lists.contains(permissionCodes, 'HR_MY_ATTENDANCE')}"
-                       th:href="@{/attendance/my}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'my-attendance'} ? 'is-active' : ''"
-                       title="Check-in / Check-out &amp; lịch sử chấm công">
-                        <i class="bi bi-fingerprint" aria-hidden="true"></i><span
-                            class="side-link__label">Chấm công</span>
+                    <!-- GỘP CHẤM CÔNG & LỊCH TRỰC CÁ NHÂN THÀNH 1 THANH DUY NHẤT -->
+                    <a th:if="${permissionCodes != null and (#lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') or #lists.contains(permissionCodes, 'SCHEDULE_MY'))}"
+                       th:href="@{${#lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') ? '/attendance/my' : '/schedules/my'}}"
+                       class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'my-attendance' or activeMenu == 'my-schedule'} ? 'is-active' : ''"
+                       title="Chấm công và lịch trực cá nhân">
+                        <i class="bi bi-fingerprint" aria-hidden="true"></i><span class="side-link__label">Chấm công &amp; Ca trực</span>
                     </a>
                     <!-- Đơn xin nghỉ / Khóa lịch (SCR-33.5 - Dành riêng cho Bác sĩ theo FT42 & Matrix 4.4) -->
                     <a th:if="${permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS')}"
@@ -437,6 +415,9 @@
                     <span class="user-card__role"
                           th:text="${roleNames != null and !#lists.isEmpty(roleNames)
                                   ? #strings.listJoin(roleNames, ', ') : 'Chưa xác định'}">Admin</span>
+                    <span th:if="${inactiveBranchWarning != null}" class="badge bg-danger text-wrap text-start mt-1" style="font-size: 0.7rem; line-height: 1.2;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Cơ sở ngừng HĐ
+                    </span>
                 </span>
 
                 <!-- Icon cài đặt / Tùy chọn tài khoản (trực quan theo ảnh minh họa) -->
