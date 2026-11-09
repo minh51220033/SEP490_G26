@@ -38,12 +38,10 @@ class CustomerPortalServiceBeanTest {
     void testCustomerPortalServiceImplIsAnnotatedWithService() {
         assertTrue(
                 CustomerPortalServiceImpl.class.isAnnotationPresent(org.springframework.stereotype.Service.class),
-                "CustomerPortalServiceImpl phải được đánh dấu @Service để Spring component scan tự động quản lý"
-        );
+                "CustomerPortalServiceImpl phải được đánh dấu @Service để Spring component scan tự động quản lý");
         assertTrue(
                 CustomerPortalService.class.isAssignableFrom(CustomerPortalServiceImpl.class),
-                "CustomerPortalServiceImpl phải implement CustomerPortalService"
-        );
+                "CustomerPortalServiceImpl phải implement CustomerPortalService");
     }
 
     @Test
@@ -52,7 +50,7 @@ class CustomerPortalServiceBeanTest {
         CustomerPortalService stubService = new DummyCustomerPortalService();
 
         ObjectProvider<CustomerPortalService> provider = new SimpleObjectProvider<>(stubService);
-        GlobalModelAttributesAdvice advice = new GlobalModelAttributesAdvice(null, provider, null, null);
+        GlobalModelAttributesAdvice advice = new GlobalModelAttributesAdvice(null, provider, null, null, null);
 
         assertDoesNotThrow(() -> {
             List<Service> services = advice.populateFooterServices();
@@ -79,7 +77,7 @@ class CustomerPortalServiceBeanTest {
     @DisplayName("4. GlobalModelAttributesAdvice an toàn fail-safe ngay cả khi CustomerPortalService chưa sẵn sàng (null)")
     void testGlobalModelAttributesAdviceNullSafety() {
         ObjectProvider<CustomerPortalService> provider = new SimpleObjectProvider<>(null);
-        GlobalModelAttributesAdvice advice = new GlobalModelAttributesAdvice(null, provider, null, null);
+        GlobalModelAttributesAdvice advice = new GlobalModelAttributesAdvice(null, provider, null, null, null);
 
         assertDoesNotThrow(() -> {
             List<Service> services = advice.populateFooterServices();
@@ -170,7 +168,8 @@ class CustomerPortalServiceBeanTest {
         }
 
         @Override
-        public List<com.cvdcms.DTO.PublicDoctorCardDTO> getPublicDoctors(String keyword, String specialty, Long branchId) {
+        public List<com.cvdcms.DTO.PublicDoctorCardDTO> getPublicDoctors(String keyword, String specialty,
+                Long branchId) {
             return Collections.emptyList();
         }
 

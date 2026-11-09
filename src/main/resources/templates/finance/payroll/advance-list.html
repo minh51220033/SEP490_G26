@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head('Quản lý Tạm Ứng Lương - FT32')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head('Quản lý Tạm Ứng Lương')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
     <link rel="stylesheet" th:href="@{/css/expense-income.css}">
 </head>
@@ -31,7 +31,7 @@
                 <!-- Subhead & Thao tác chính -->
                 <div class="expense-income-subhead">
                     <div>
-                        <h2 class="expense-income-subhead__title">Tạm Ứng Lương Nhân Viên (FT32)</h2>
+                        <h2 class="expense-income-subhead__title">Tạm Ứng Lương Nhân Viên</h2>
                         <p class="expense-income-subhead__desc">Theo dõi yêu cầu tạm ứng, phê duyệt, giải ngân (tự động tạo phiếu chi vận hành) và quản lý khấu trừ khi chạy bảng lương.</p>
                     </div>
                     <div class="d-flex gap-2">
@@ -282,7 +282,7 @@
                                         </select>
                                     </div>
                                     <div class="alert alert-warning py-2 small mb-0">
-                                        <i class="bi bi-info-circle me-1"></i> Khi chi tiền, hệ thống sẽ tự động tạo một phiếu chi vào Chi phí vận hành (FT25). Số tiền này sẽ được cấn trừ dần trong các kỳ tính lương tiếp theo.
+                                        <i class="bi bi-info-circle me-1"></i> Khi chi tiền, hệ thống sẽ tự động tạo một phiếu chi vào Chi phí vận hành. Số tiền này sẽ được cấn trừ dần trong các kỳ tính lương tiếp theo.
                                     </div>
                                 </div>
                                 <div class="modal-footer">

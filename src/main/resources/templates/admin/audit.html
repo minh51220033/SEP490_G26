@@ -86,10 +86,7 @@
                     }
                 </style>
 
-                <!-- BREADCRUMB CHUẨN ĐỒNG BỘ -->
-                <nav class="dv-breadcrumb mb-2">
-                    <a th:href="@{/}">Trang chủ</a> / <span>Giám sát hệ thống</span> / <span>Nhật ký thao tác</span>
-                </nav>
+
 
                 <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS -->
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
@@ -100,12 +97,12 @@
                         <div>
                             <div class="d-flex align-items-center gap-2">
                                 <h1 class="dv-page-title mb-0">Nhật ký thao tác</h1>
-                                <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 fw-bold" style="font-size: 11px;">FT31 / UC-25</span>
                             </div>
                             <p class="dv-page-subtitle">Giám sát, kiểm toán và truy vết toàn bộ thay đổi dữ liệu, tài chính và phân quyền hệ thống</p>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
+                        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                         <a th:href="@{/admin/audit}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
                             <i class="bi bi-arrow-clockwise"></i> Làm mới
                         </a>
@@ -219,6 +216,11 @@
                                title="Xóa tất cả bộ lọc">
                                 <i class="bi bi-x-circle me-1"></i>Xóa lọc
                             </a>
+                        </div>
+
+                        <!-- BÊN PHẢI TOOLBAR: BỘ CHỌN CƠ SỞ CHUẨN DENTALSOFT -->
+                        <div class="d-flex align-items-center gap-2">
+                            <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                         </div>
                     </form>
                 </div>

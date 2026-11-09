@@ -41,12 +41,7 @@
                         <a th:if="${canManageAdministrative == null or canManageAdministrative}" class="btn btn-sm btn-primary rounded-3 px-3 py-1.5 fw-semibold shadow-sm d-flex align-items-center gap-1.5" th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/new'}" style="background-color: #1e40af; border-color: #1e40af;">
                             <i class="bi bi-plus-lg"></i> Thêm bệnh nhân
                         </a>
-                        <div th:if="${branches != null and #lists.size(branches) > 0}" style="min-width: 120px;">
-                            <select id="branchId" class="form-select form-select-sm rounded-3 fw-medium text-dark" name="branchId" onchange="document.getElementById('patientFilterForm').submit()">
-                                <option value="">Tất cả</option>
-                                <option th:each="branch : ${branches}" th:value="${branch.branchId}" th:text="${branch.branchName}" th:selected="${branchId == branch.branchId}"></option>
-                            </select>
-                        </div>
+                        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                     </div>
 
                     <!-- Collapsible Advanced Filters -->

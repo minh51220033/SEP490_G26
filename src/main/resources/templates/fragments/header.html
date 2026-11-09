@@ -253,5 +253,50 @@
     </div>
 </th:block>
 
+<!-- ===================================================================== -->
+<!-- 3. BỘ CHỌN CHI NHÁNH INLINE CHUẨN DENTALSOFT (TÍCH HỢP THANH TÌM KIẾM/BỘ LỌC) -->
+<!-- ===================================================================== -->
+<div th:fragment="branchSelectInline" class="df-tb-branch-wrapper position-relative d-inline-block">
+    <div class="dropdown d-inline-block">
+        <button type="button"
+                class="btn btn-sm df-branch-btn d-inline-flex align-items-center gap-1.5 bg-white border fw-bold shadow-xs dropdown-toggle"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                style="height: 36px; padding: 4px 12px; border-radius: 8px; border-color: #cbd5e1 !important; color: #1e293b; font-size: 13.5px; user-select: none; background-color: #ffffff;"
+                th:title="'Cơ sở làm việc: ' + (${currentBranch != null ? currentBranch.branchName : (currentBranchName != null ? currentBranchName : (dashboard != null and dashboard.branchName != null ? dashboard.branchName : 'Toàn hệ thống'))})">
+            <i class="bi bi-building text-primary" style="font-size: 13px;"></i>
+            <span th:text="${currentBranchCode != null and !#strings.isEmpty(currentBranchCode) ? currentBranchCode : (currentBranch != null and currentBranch.branchCode != null and !#strings.isEmpty(currentBranch.branchCode) ? currentBranch.branchCode : (currentBranchName != null and !#strings.isEmpty(currentBranchName) ? currentBranchName : (dashboard != null and dashboard.branchName != null ? dashboard.branchName : 'Toàn hệ thống')))}">Toàn hệ thống</span>
+            <i class="bi bi-chevron-down ms-1" style="font-size: 11px; color: #64748b;"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm border py-1" style="border-radius: 10px; min-width: 210px; z-index: 1060; border-color: #e2e8f0;">
+            <li class="px-3 py-1.5 border-bottom bg-light">
+                <span class="small fw-bold text-secondary text-uppercase" style="font-size: 11px;">
+                    <i class="bi bi-geo-alt-fill text-primary me-1"></i>Chọn cơ sở làm việc
+                </span>
+            </li>
+            <li th:if="${isAdmin}">
+                <a class="dropdown-item py-2 fw-semibold small d-flex align-items-center justify-content-between"
+                   href="javascript:void(0)"
+                   onclick="window.switchAppBranchContext ? window.switchAppBranchContext('') : (location.href = location.pathname)">
+                    <span>🌐 Toàn hệ thống</span>
+                    <i th:if="${currentBranchId == null or currentBranchId == 0}" class="bi bi-check2 text-primary fw-bold"></i>
+                </a>
+            </li>
+            <li th:each="b : ${accessibleBranches != null and !#lists.isEmpty(accessibleBranches) ? accessibleBranches : (dashboard != null and dashboard.branches != null ? dashboard.branches : (board != null and board.branches != null ? board.branches : (branches != null ? branches : (allActiveBranches != null ? allActiveBranches : {}))))}">
+                <a class="dropdown-item py-2 fw-semibold small d-flex align-items-center justify-content-between"
+                   href="javascript:void(0)"
+                   th:onclick="'window.switchAppBranchContext ? window.switchAppBranchContext(' + ${b.branchId} + ') : (location.href = \'?branchId=' + ${b.branchId} + '\')'"
+                   th:classappend="${currentBranchId != null and currentBranchId == b.branchId} ? 'active' : ''">
+                    <div>
+                        <span class="fw-bold" th:text="${b.branchCode != null and !#strings.isEmpty(b.branchCode) ? b.branchCode : b.branchName}">CN</span>
+                        <span class="text-muted small d-block" style="font-size: 11px;" th:text="${b.branchName}">Cơ sở chính</span>
+                    </div>
+                    <i th:if="${currentBranchId != null and currentBranchId == b.branchId}" class="bi bi-check2 text-primary fw-bold ms-2"></i>
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
 </body>
 </html>

@@ -383,7 +383,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         List<Map<String, Object>> serviceSummaries = completedServices.stream().map(ps -> {
             Map<String, Object> map = new HashMap<>();
             map.put("performedId", ps.getPerformedId());
-            map.put("serviceName", ps.getService() != null ? ps.getService().getServiceName() : "");
+            String displayName = ps.getStepName() != null && !ps.getStepName().isBlank()
+                    ? ps.getStepName()
+                    : (ps.getService() != null ? ps.getService().getServiceName() : "");
+            map.put("serviceName", displayName);
             map.put("serviceCode", ps.getService() != null ? ps.getService().getServiceCode() : "");
             map.put("toothNumbers", ps.getToothNumbers() != null ? ps.getToothNumbers() : "");
             map.put("quantity", ps.getQuantity() != null ? ps.getQuantity() : BigDecimal.ONE);

@@ -751,9 +751,17 @@ public class AdminServiceCatalogController {
                         model.addAttribute("deleteToken", session.getAttribute(DELETE_TOKEN_SESSION_KEY));
                 }
 
-                model.addAttribute(
-                                "categories",
-                                serviceCatalogService.getAllCategories());
+                List<ServiceCategory> allCategories = serviceCatalogService.getAllCategories();
+                model.addAttribute("categories", allCategories);
+
+                List<Service> allServices = serviceCatalogService.getAllServices();
+                long totalServicesCount = allServices.size();
+                long activeServicesCount = allServices.stream().filter(s -> s.getStatus() == ServiceStatus.ACTIVE).count();
+                long inactiveServicesCount = allServices.stream().filter(s -> s.getStatus() == ServiceStatus.INACTIVE).count();
+                model.addAttribute("totalServicesCount", totalServicesCount);
+                model.addAttribute("activeServicesCount", activeServicesCount);
+                model.addAttribute("inactiveServicesCount", inactiveServicesCount);
+                model.addAttribute("totalCategoriesCount", (long) allCategories.size());
 
                 List<Service> services = serviceCatalogService.searchServices(keyword, categoryId, status);
 

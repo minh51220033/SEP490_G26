@@ -220,7 +220,14 @@ public class ReceptionAppointmentService {
     public Dashboard dashboard(HttpSession session, LocalDate date, Long branchId, Long doctorId) {
         PatientAccess.Scope scope = access.require(session);
         if (date == null) date = LocalDate.now(ReceptionAppointmentRules.ZONE);
-        Long effectiveBranch = scopedBranch(scope, branchId);
+        Long targetBranch = branchId;
+        if (targetBranch == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid && scope.permits(sid)) {
+                targetBranch = sid;
+            }
+        }
+        Long effectiveBranch = scopedBranch(scope, targetBranch);
         List<AppointmentView> list = appointments.findInRange(date, date, effectiveBranch, doctorId, null)
                 .stream().map(this::view).toList();
         return new Dashboard(date, list.size(), count(list, AppointmentStatus.PENDING),
@@ -234,15 +241,29 @@ public class ReceptionAppointmentService {
         PatientAccess.Scope scope = access.require(session);
         if (start == null || end == null || end.isBefore(start) || end.isAfter(start.plusDays(42)))
             throw bad("Khoảng xem lịch không hợp lệ hoặc vượt quá 43 ngày.");
-        return appointments.findInRange(start, end, scopedBranch(scope, branchId), doctorId, status)
+        Long targetBranch = branchId;
+        if (targetBranch == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid && scope.permits(sid)) {
+                targetBranch = sid;
+            }
+        }
+        return appointments.findInRange(start, end, scopedBranch(scope, targetBranch), doctorId, status)
                 .stream().map(this::view).toList();
     }
 
     @Transactional(readOnly = true)
     public List<AppointmentView> noShows(HttpSession session, Long branchId) {
         PatientAccess.Scope scope = access.require(session);
+        Long targetBranch = branchId;
+        if (targetBranch == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid && scope.permits(sid)) {
+                targetBranch = sid;
+            }
+        }
         LocalDate today = LocalDate.now(ReceptionAppointmentRules.ZONE);
-        return appointments.findInRange(today.minusDays(7), today, scopedBranch(scope, branchId), null,
+        return appointments.findInRange(today.minusDays(7), today, scopedBranch(scope, targetBranch), null,
                         AppointmentStatus.NO_SHOW).stream().map(this::view).toList();
     }
 

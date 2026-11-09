@@ -628,15 +628,13 @@
             <!-- SUB-HEADER TITLE -->
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
                 <div>
-                    <div class="dv-breadcrumb mb-1">
-                        <a th:href="@{/home}">Trang chủ</a> &gt;
-                        <span th:text="${sidebarMenu == 'doctor-records' ? 'Bác sĩ & Điều trị' : 'Hồ sơ & Tiếp đón'}">Hồ sơ</span> &gt;
-                        <span class="text-dark fw-bold" th:text="${sidebarMenu == 'doctor-records' ? 'Quản Lý Khách Hàng' : 'Hồ sơ bệnh nhân'}">Hồ sơ bệnh nhân</span>
-                    </div>
                     <h1 class="dv-page-title">
                         <i class="bi bi-people-fill text-primary fs-3"></i>
                         <span th:text="${sidebarMenu == 'doctor-records' ? 'Quản Lý Hồ Sơ Khách Hàng' : 'Danh Sách Hồ Sơ Bệnh Nhân'}">Danh Sách Hồ Sơ Bệnh Nhân</span>
                     </h1>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                 </div>
             </div>
 
@@ -673,16 +671,8 @@
                             </button>
                         </div>
 
-                        <!-- Right Side: Branch selector & Primary Add Button -->
+                        <!-- Right Side: Primary Add Button -->
                         <div class="d-flex align-items-center gap-2">
-                            <!-- Branch Selector -->
-                            <div th:if="${branches != null and #lists.size(branches) > 0}" style="min-width: 140px;">
-                                <select class="dv-adv-control fw-semibold" name="branchId" onchange="const p = document.getElementById('pageIndexInput'); if (p) p.value = '0'; document.getElementById('patientFilterForm').submit();">
-                                    <option value="">Tất cả cơ sở</option>
-                                    <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}" th:selected="${branchId == b.branchId}"></option>
-                                </select>
-                            </div>
-
                             <!-- Primary Add Patient Button -->
                             <button type="button" class="dv-btn-add-patient" onclick="openAddPatientModal()">
                                 <i class="bi bi-person-plus-fill fs-5"></i>

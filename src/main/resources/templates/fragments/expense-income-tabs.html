@@ -3,17 +3,29 @@
 <body>
 
 <!--
-    THANH TAB NGANG CHO PHÂN HỆ CHI PHÍ & THU NHẬP (FT25, FT32)
+    THANH TAB NGANG CHO PHÂN HỆ CHI PHÍ & THU NHẬP 
     activeTab: 'expenses' | 'payroll' | 'advances' | 'commission-config' | 'owner-distributions'
 -->
-<div th:fragment="expenseIncomeTabs(activeTab)" class="expense-income-tabs-wrapper" id="expenseIncomeTabsWrapper">
-    <!-- Tiêu đề phân hệ chi phí & thu nhập -->
-    <div class="expense-income-header-bar">
-        <div class="expense-income-title-group">
-            <h1 class="expense-income-main-title">
-                <i class="bi bi-calculator text-primary" aria-hidden="true"></i> Chi phí &amp; thu nhập
-            </h1>
-            <p class="expense-income-main-desc">Quản lý chi phí vận hành, bảng lương, tạm ứng, cấu hình hoa hồng và phân chia lợi nhuận</p>
+<div th:fragment="expenseIncomeTabs(activeTab)" class="expense-income-tabs-wrapper mb-3" id="expenseIncomeTabsWrapper">
+    <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN HỆ THỐNG -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                <i class="bi bi-calculator"></i>
+            </div>
+            <div>
+                <h1 class="dv-page-title mb-0">Chi phí &amp; Thu nhập</h1>
+                <p class="dv-page-subtitle">Quản lý chi phí vận hành, bảng lương, tạm ứng, cấu hình hoa hồng và phân chia lợi nhuận</p>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+            <a th:href="@{/expenses}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+                <i class="bi bi-arrow-clockwise"></i> Làm mới
+            </a>
+            <a th:if="${activeTab == 'expenses'}" th:href="@{/expenses/create}" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                <i class="bi bi-plus-lg"></i> Lập phiếu chi mới
+            </a>
         </div>
     </div>
 

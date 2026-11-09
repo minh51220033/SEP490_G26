@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head('Báo cáo & Thống kê - FT29/FT30')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head('Báo cáo & Thống kê')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
     <link rel="stylesheet" th:href="@{/css/enhanced-table.css}">
     <style>
@@ -132,49 +132,39 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <!-- Page Header -->
-            <div class="fin-header d-flex flex-wrap justify-content-between align-items-center mb-4">
-                <div>
-                    <h1 class="h3 fw-bold text-dark mb-1">Báo cáo & Thống kê Quản trị (FT29–30)</h1>
-                    <p class="text-muted mb-0">
-                        Phân tích doanh thu, thực thu dòng tiền, chi phí vận hành, công nợ viện phí và hiệu suất điều trị theo cơ sở.
-                    </p>
+            <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN HỆ THỐNG -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <div>
+                        <h1 class="dv-page-title mb-0">Báo cáo &amp; Thống kê Quản trị</h1>
+                        <p class="dv-page-subtitle">Phân tích doanh thu, thực thu dòng tiền, chi phí vận hành, công nợ viện phí và hiệu suất điều trị</p>
+                    </div>
                 </div>
-                <div class="d-flex gap-2 mt-2 mt-md-0">
-                    <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2 shadow-sm"
-                            data-bs-toggle="modal" data-bs-target="#exportExcelModal">
+                <div class="d-flex align-items-center gap-2">
+                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                    <a th:href="@{/admin/reports(branchId=${selectedBranchId}, startDate=${filter.startDate}, endDate=${filter.endDate}, tab=${activeTab})}"
+                       class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" title="Làm mới dữ liệu">
+                        <i class="bi bi-arrow-clockwise"></i> Làm mới
+                    </a>
+                    <button type="button" class="btn btn-success fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                            data-bs-toggle="modal" data-bs-target="#exportExcelModal" style="border: none;">
                         <i class="bi bi-file-earmark-excel"></i> Xuất Excel (.xlsx)
                     </button>
-                    <a th:href="@{/admin/reports(branchId=${selectedBranchId}, startDate=${filter.startDate}, endDate=${filter.endDate}, tab=${activeTab})}"
-                       class="btn btn-outline-secondary d-inline-flex align-items-center gap-1 shadow-sm" title="Làm mới dữ liệu">
-                        <i class="bi bi-arrow-clockwise"></i> Tải lại
-                    </a>
                 </div>
             </div>
 
-            <!-- SCR-29.4: BỘ LỌC CHUNG THEO CHI NHÁNH & THỜI GIAN -->
+            <!-- SCR-29.4: BỘ LỌC CHUNG THEO THỜI GIAN & THUẾ SUẤT -->
             <div class="report-filter-bar shadow-sm">
                 <form id="reportFilterForm" th:action="@{/admin/reports}" method="get" class="row g-3 align-items-end">
                     <input type="hidden" name="tab" id="activeTabInput" th:value="${activeTab}">
-
-                    <!-- Lọc Chi nhánh -->
-                    <div class="col-md-3">
-                        <label for="branchSelect" class="form-label fw-semibold small text-secondary">
-                            <i class="bi bi-geo-alt me-1"></i>Chi nhánh / Cơ sở:
-                        </label>
-                        <select id="branchSelect" name="branchId" class="form-select form-select-sm">
-                            <option th:if="${isAdmin}" value="" th:selected="${selectedBranchId == null}">Toàn bộ hệ thống</option>
-                            <option th:each="b : ${branches}"
-                                    th:value="${b.branchId}"
-                                    th:text="${b.branchName}"
-                                    th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">
-                                Chi nhánh Nha khoa
-                            </option>
-                        </select>
-                    </div>
+                    <!-- Chi nhánh ẩn (đồng bộ theo bộ chọn cơ sở chuẩn góc phải tiêu đề) -->
+                    <input type="hidden" name="branchId" id="branchSelect" th:value="${selectedBranchId}">
 
                     <!-- Lọc Từ ngày -->
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label for="startDateInput" class="form-label fw-semibold small text-secondary">
                             <i class="bi bi-calendar-event me-1"></i>Từ ngày:
                         </label>
@@ -183,7 +173,7 @@
                     </div>
 
                     <!-- Lọc Đến ngày -->
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label for="endDateInput" class="form-label fw-semibold small text-secondary">
                             <i class="bi bi-calendar-check me-1"></i>Đến ngày:
                         </label>
@@ -206,7 +196,7 @@
                     </div>
 
                     <!-- Nút Thao tác & Phím tắt nhanh -->
-                    <div class="col-md-3 d-flex flex-wrap gap-2 justify-content-md-end">
+                    <div class="col-md-4 d-flex flex-wrap gap-2 justify-content-md-end">
                         <div class="btn-group btn-group-sm" role="group">
                             <button type="button" class="btn btn-outline-secondary" onclick="setDateRange('today')">Hôm nay</button>
                             <button type="button" class="btn btn-outline-secondary" onclick="setDateRange('thisWeek')">Tuần này</button>
@@ -256,60 +246,68 @@
                 <div class="tab-pane fade" th:classappend="${activeTab == 'overview' ? 'show active' : ''}"
                      id="overview-pane" role="tabpanel">
 
-                    <!-- 4 THẺ CHỈ SỐ KPI CHÍNH -->
+                    <!-- 4 THẺ CHỈ SỐ KPI CHÍNH (Đồng bộ chuẩn hệ thống) -->
                     <div class="row g-3 mb-4">
                         <!-- KPI 1: Thực thu dòng tiền -->
                         <div class="col-sm-6 col-xl-3">
-                            <div class="report-kpi-card kpi-success">
+                            <div class="dv-kpi-card" style="--kpi-accent: #10b981;">
                                 <div>
-                                    <div class="report-kpi-card__title">Thực thu dòng tiền (Net Cash)</div>
-                                    <div class="report-kpi-card__value text-success"
+                                    <div class="dv-kpi-num text-success"
                                          th:text="${#numbers.formatDecimal(dashboard.totalRealRevenue, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                    <div class="dv-kpi-label">Thực thu dòng tiền (Net Cash)</div>
+                                    <div class="dv-kpi-sub">
+                                        Đã trừ hoàn: <span class="fw-semibold text-danger" th:text="${#numbers.formatDecimal(dashboard.totalRefundAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</span>
+                                    </div>
                                 </div>
-                                <div class="report-kpi-card__sub">
-                                    Tiền mặt, CK, POS đã trừ hoàn trả: <span class="fw-semibold text-danger" th:text="${#numbers.formatDecimal(dashboard.totalRefundAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</span>
+                                <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                                    <i class="bi bi-cash-stack"></i>
                                 </div>
                             </div>
                         </div>
 
                         <!-- KPI 2: Tổng giá trị hóa đơn -->
                         <div class="col-sm-6 col-xl-3">
-                            <div class="report-kpi-card kpi-primary">
+                            <div class="dv-kpi-card" style="--kpi-accent: #0284c7;">
                                 <div>
-                                    <div class="report-kpi-card__title">Giá trị hóa đơn phát sinh</div>
-                                    <div class="report-kpi-card__value text-primary"
+                                    <div class="dv-kpi-num text-primary"
                                          th:text="${#numbers.formatDecimal(dashboard.totalInvoiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                    <div class="dv-kpi-label">Giá trị hóa đơn phát sinh</div>
+                                    <div class="dv-kpi-sub">Viện phí đã xác nhận trong kỳ</div>
                                 </div>
-                                <div class="report-kpi-card__sub">
-                                    Viện phí đã xác nhận phát sinh trong kỳ lọc
+                                <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                                    <i class="bi bi-receipt"></i>
                                 </div>
                             </div>
                         </div>
 
                         <!-- KPI 3: Công nợ viện phí phát sinh -->
                         <div class="col-sm-6 col-xl-3">
-                            <div class="report-kpi-card kpi-warning">
+                            <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;">
                                 <div>
-                                    <div class="report-kpi-card__title">Công nợ hóa đơn trong kỳ</div>
-                                    <div class="report-kpi-card__value text-warning"
+                                    <div class="dv-kpi-num text-warning"
                                          th:text="${#numbers.formatDecimal(dashboard.totalDebtAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                    <div class="dv-kpi-label">Công nợ hóa đơn trong kỳ</div>
+                                    <div class="dv-kpi-sub">Viện phí chưa thu trong kỳ</div>
                                 </div>
-                                <div class="report-kpi-card__sub">
-                                    Số tiền viện phí chưa thu của các HĐ trong kỳ
+                                <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                                    <i class="bi bi-clock-history"></i>
                                 </div>
                             </div>
                         </div>
 
                         <!-- KPI 4: Lượt khám & Tỷ lệ hoàn tất -->
                         <div class="col-sm-6 col-xl-3">
-                            <div class="report-kpi-card kpi-info">
+                            <div class="dv-kpi-card" style="--kpi-accent: #6366f1;">
                                 <div>
-                                    <div class="report-kpi-card__title">Lượt khám & Hoàn tất</div>
-                                    <div class="report-kpi-card__value text-info"
+                                    <div class="dv-kpi-num" style="color: #4f46e5;"
                                          th:text="${dashboard.totalVisits} + ' lượt'">0 lượt</div>
+                                    <div class="dv-kpi-label">Lượt khám &amp; Hoàn tất</div>
+                                    <div class="dv-kpi-sub">
+                                        Hoàn tất: <strong class="text-dark" th:text="${dashboard.completionRate} + '%'">0%</strong> (<span th:text="${dashboard.completedVisits}">0</span> đạt)
+                                    </div>
                                 </div>
-                                <div class="report-kpi-card__sub">
-                                    Tỷ lệ hoàn tất: <strong class="text-dark" th:text="${dashboard.completionRate} + '%'">0%</strong> (<span th:text="${dashboard.completedVisits}">0</span> đạt)
+                                <div class="dv-kpi-icon" style="background: #e0e7ff; color: #4f46e5;">
+                                    <i class="bi bi-people-fill"></i>
                                 </div>
                             </div>
                         </div>
@@ -576,7 +574,7 @@
                                 <tr class="table-light">
                                     <td colspan="3" class="py-2">
                                         <div class="d-flex flex-wrap justify-content-between align-items-center small text-muted px-2">
-                                            <span><i class="bi bi-info-circle me-1"></i> <b>Nghĩa vụ thuế khác trong kỳ:</b> Thuế GTGT đầu ra (Thuốc 5%, DV KCT): <b class="text-primary" th:text="${#numbers.formatDecimal(financial.totalVatAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b> | Thuế TNCN khấu trừ từ lương (FT32): <b class="text-danger" th:text="${#numbers.formatDecimal(financial.totalPitWithheld, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b></span>
+                                            <span><i class="bi bi-info-circle me-1"></i> <b>Nghĩa vụ thuế khác trong kỳ:</b> Thuế GTGT đầu ra (Thuốc 5%, DV KCT): <b class="text-primary" th:text="${#numbers.formatDecimal(financial.totalVatAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b> | Thuế TNCN khấu trừ từ lương: <b class="text-danger" th:text="${#numbers.formatDecimal(financial.totalPitWithheld, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b></span>
                                             <span th:if="${!financial.taxConfigured}" class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> Chưa đủ cơ sở tính thuế</span>
                                         </div>
                                     </td>

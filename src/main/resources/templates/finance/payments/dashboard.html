@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head('Dashboard Tài chính Bệnh nhân (SCR-22.1) - FT22')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head('Dashboard Tài chính Bệnh nhân')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
     <link rel="stylesheet" th:href="@{/css/cashier.css}">
     <link rel="stylesheet" th:href="@{/css/enhanced-table.css}">
@@ -29,14 +29,6 @@
 
             <!-- Vùng nội dung tab Tổng quan -->
             <div id="cashierTabContent" class="cashier-tab-content">
-                <!-- Page Header -->
-                <div class="cashier-subhead">
-                    <div>
-                        <h2 class="cashier-subhead-title"><i class="bi bi-speedometer2 text-primary"></i> Tổng quan tài chính bệnh nhân</h2>
-                        <p class="cashier-subhead-desc">Tổng quan toàn diện tài chính, công nợ viện phí, số dư ví tạm ứng và lịch sử giao dịch thanh toán của bệnh nhân</p>
-                    </div>
-
-                </div>
             <!-- 1. Thanh tìm kiếm bệnh nhân (Backend search & pagination - Requirement 3 & 7) -->
             <div class="fin-card mb-3 p-3 border shadow-xs">
                 <form method="get" th:action="@{/payments/dashboard}" class="row g-2 align-items-center">
@@ -927,7 +919,7 @@
                 <div th:if="${treatmentPlans != null and !#lists.isEmpty(treatmentPlans)}" class="fin-card mt-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4 class="fw-bold m-0 text-dark">
-                            <i class="bi bi-journal-medical text-primary me-2"></i> Kế hoạch điều trị liên quan (FT15)
+                            <i class="bi bi-journal-medical text-primary me-2"></i> Kế hoạch điều trị liên quan
                         </h4>
                         <span class="badge bg-secondary" th:text="${treatmentPlans.size()} + ' kế hoạch'">0 kế hoạch</span>
                     </div>

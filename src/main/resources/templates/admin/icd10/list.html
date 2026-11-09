@@ -50,11 +50,12 @@
               </button>
               <a th:href="@{/admin/icd10}" class="btn btn-outline-secondary ms-1">Bỏ lọc</a>
             </div>
-            <div class="col-12 col-md-auto ms-md-auto text-end">
-            <button type="button" class="btn btn-primary"
-                    data-bs-toggle="modal" data-bs-target="#modalCreate">
-              <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm mã ICD-10
-            </button>
+            <div class="col-12 col-md-auto ms-md-auto d-flex align-items-center justify-content-end gap-2">
+              <button type="button" class="btn btn-primary"
+                      data-bs-toggle="modal" data-bs-target="#modalCreate">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm mã ICD-10
+              </button>
+              <div th:replace="~{fragments/header :: branchSelectInline}"></div>
             </div>
           </div>
         </form>
@@ -77,7 +78,7 @@
                 <td colspan="6" class="text-center text-muted py-4">Không có mã ICD-10 nào.</td>
               </tr>
               <tr th:each="d : ${diseases}">
-                <td data-column-key="code"><code th:text="${d.icd10Code}">K02.1</code></td>
+                <td data-column-key="code" class="fw-semibold text-dark" th:text="${d.icd10Code}">K02.1</td>
                 <td data-column-key="diseaseVi" th:text="${d.diseaseNameVi}">Sâu ngà răng</td>
                 <td data-column-key="diseaseEn" th:text="${d.diseaseNameEn ?: '—'}">Dentine caries</td>
                 <td data-column-key="dental" class="text-center">

@@ -7,6 +7,7 @@ import com.cvdcms.entity.ServiceCategory;
 import com.cvdcms.entity.User;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.repository.UserRepository;
+import com.cvdcms.service.BranchService;
 import com.cvdcms.service.CustomerPortalService;
 import com.cvdcms.service.ServiceCatalogService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,8 +24,10 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Cung cấp các thuộc tính chung cho các trang Thymeleaf có sử dụng sidebar hoặc Customer Portal Header/Footer.
- * Đảm bảo isAdmin, roleNames, permissionCodes, displayName, publicBranches, footerServices luôn có giá trị an toàn.
+ * Cung cấp các thuộc tính chung cho các trang Thymeleaf có sử dụng sidebar hoặc
+ * Customer Portal Header/Footer.
+ * Đảm bảo isAdmin, roleNames, permissionCodes, displayName, publicBranches,
+ * footerServices luôn có giá trị an toàn.
  */
 @ControllerAdvice
 public class GlobalModelAttributesAdvice {
@@ -34,8 +37,7 @@ public class GlobalModelAttributesAdvice {
             "BAC_SI", "ROLE_BAC_SI",
             "LE_TAN", "ROLE_LE_TAN",
             "QUAN_LY_KHO", "ROLE_QUAN_LY_KHO",
-            "KE_TOAN", "ROLE_KE_TOAN"
-    );
+            "KE_TOAN", "ROLE_KE_TOAN");
 
     private final UserRepository userRepository;
     private final ObjectProvider<CustomerPortalService> customerPortalServiceProvider;
@@ -51,12 +53,13 @@ public class GlobalModelAttributesAdvice {
             UserRepository userRepository,
             ObjectProvider<CustomerPortalService> customerPortalServiceProvider,
             ObjectProvider<ServiceCatalogService> serviceCatalogServiceProvider,
-            ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider
-    ) {
+            ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider) {
         this.userRepository = userRepository;
         this.customerPortalServiceProvider = customerPortalServiceProvider;
         this.serviceCatalogServiceProvider = serviceCatalogServiceProvider;
         this.patientProfileRepositoryProvider = patientProfileRepositoryProvider;
+
+        this.branchServiceProvider = branchServiceProvide;
     }
 
     @ModelAttribute("roleNames")
@@ -180,7 +183,8 @@ public class GlobalModelAttributesAdvice {
 
     @ModelAttribute("defaultPatientProfile")
     public PatientProfile populateDefaultPatientProfile(HttpSession session) {
-        if (session == null || !(session.getAttribute("loggedInUser") instanceof User user) || user.getUserId() == null) {
+        if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)
+                || user.getUserId() == null) {
             return null;
         }
         PatientProfileRepository repo = patientProfileRepositoryProvider != null
@@ -254,7 +258,6 @@ public class GlobalModelAttributesAdvice {
         }
         return null;
     }
-
     @ModelAttribute("systemNotice")
     public String populateSystemNotice(HttpSession session) {
         if (session == null) {
@@ -287,13 +290,16 @@ public class GlobalModelAttributesAdvice {
             return null;
         }
         List<Branch> activeBranches = populatePublicBranches();
-        // 1. Nếu người dùng đã đăng nhập: ưu tiên cơ sở ưu tiên của hồ sơ bệnh nhân hoặc cơ sở của tài khoản
+        // 1. Nếu người dùng đã đăng nhập: ưu tiên cơ sở ưu tiên của hồ sơ bệnh nhân
+        // hoặc cơ sở của tài khoản
         if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
             PatientProfile pp = populateDefaultPatientProfile(session);
-            if (pp != null && pp.getPreferredBranch() != null && Boolean.TRUE.equals(pp.getPreferredBranch().getIsActive())) {
+            if (pp != null && pp.getPreferredBranch() != null
+                    && Boolean.TRUE.equals(pp.getPreferredBranch().getIsActive())) {
                 return pp.getPreferredBranch();
             }
-            User user = userRepository != null ? userRepository.findById(sessionUser.getUserId()).orElse(sessionUser) : sessionUser;
+            User user = userRepository != null ? userRepository.findById(sessionUser.getUserId()).orElse(sessionUser)
+                    : sessionUser;
             if (user != null && user.getBranch() != null && Boolean.TRUE.equals(user.getBranch().getIsActive())) {
                 return user.getBranch();
             }
