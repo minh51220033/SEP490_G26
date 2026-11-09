@@ -279,9 +279,9 @@
                     </a>
                 </li>
 
-                <!-- 4. Cấu hình hoa hồng (SCR-32.3 - Chỉ hiển thị cho Quản trị viên) -->
+                <!-- 4. Cấu hình hoa hồng (SCR-32.3 - Hiển thị cho Quản trị viên & Kế toán) -->
                 <li class="finance-subtab-item"
-                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN')))}">
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN')))}">
                     <a th:href="@{/payroll/commission-config}" class="finance-subtab-btn"
                         th:classappend="${activeTab == 'commission-config' or activeTab == 'config'} ? 'active' : ''">
                         <i class="bi bi-sliders" aria-hidden="true"></i>

@@ -94,23 +94,34 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
                 isKeToan = col.stream()
                         .filter(java.util.Objects::nonNull)
                         .map(Object::toString)
-                        .anyMatch(r -> "KE_TOAN".equalsIgnoreCase(r.trim()) || "ROLE_KE_TOAN".equalsIgnoreCase(r.trim()));
+                        .anyMatch(r -> {
+                            String role = r != null ? r.trim().toUpperCase() : "";
+                            return role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
+                                    || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
+                        });
             }
         }
         if (!isKeToan) {
             List<String> userRoles = userRepository.findActiveRoleNamesByUserId(userId);
-            isKeToan = userRoles.stream().anyMatch(r -> "KE_TOAN".equalsIgnoreCase(r.trim()) || "ROLE_KE_TOAN".equalsIgnoreCase(r.trim()));
+            if (userRoles != null) {
+                isKeToan = userRoles.stream().anyMatch(r -> {
+                    String role = r != null ? r.trim().toUpperCase() : "";
+                    return role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
+                            || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
+                });
+            }
         }
-        boolean isFinanceRole = isAdmin || isKeToan || hasFinancePermission;
+        boolean isFinanceRole = isAdmin || isKeToan || hasFinancePermission || userRepository.hasActiveFinanceRole(userId);
 
         if (!isFinanceRole) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập phân hệ Tài chính & Kế toán.");
             return false;
         }
 
-        // 4. Kiểm tra phân công chi nhánh cho non-admin (Kế toán viên / nhân sự được cấp quyền tài chính)
-        if (isAdmin) {
+        // 4. Admin và Kế toán có toàn quyền xem và quản lý tài chính toàn bộ hệ thống
+        if (isAdmin || isKeToan) {
             request.setAttribute("isFinanceAdmin", Boolean.TRUE);
+            return true;
         } else {
             List<Long> activeBranchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE);
             if ((activeBranchIds == null || activeBranchIds.isEmpty())

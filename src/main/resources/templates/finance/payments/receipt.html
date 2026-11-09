@@ -8,19 +8,40 @@
     <style>
         @media print {
             .no-print { display: none !important; }
-            body { background: #fff !important; font-size: 13px; }
+            body { background: #fff !important; font-size: 13px; margin: 0; padding: 0 !important; }
+            .print-container { width: 100% !important; max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
             .print-a4 { border: none !important; box-shadow: none !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; }
             thead { display: table-header-group; }
             tr { page-break-inside: avoid; }
         }
+        .print-a4 {
+            max-width: 780px;
+            width: 100%;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 24px 28px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            box-sizing: border-box;
+        }
+        .table-receipt {
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: auto !important;
+            margin-bottom: 0 !important;
+            border-collapse: collapse !important;
+        }
         .table-receipt th, .table-receipt td {
-            font-size: 12px;
-            vertical-align: middle;
-            padding: 5px 8px;
+            font-size: 12px !important;
+            vertical-align: middle !important;
+            padding: 6px 8px !important;
+            white-space: normal !important;
+            box-sizing: border-box !important;
         }
     </style>
 </head>
-<body class="bg-light py-4 fin-brand-theme">
+<body class="bg-light py-4 print-receipt-page">
 
 <div class="container text-center mb-4 no-print">
     <div class="d-inline-flex gap-2 p-2 bg-white rounded shadow-sm border">
@@ -111,46 +132,48 @@
         <!-- BẢNG CHI TIẾT THANH TOÁN LẦN NÀY (ITEMIZED ALLOCATIONS) -->
         <div th:if="${hasAllocations != null and hasAllocations and allocations != null and !#lists.isEmpty(allocations)}" class="mb-3">
             <h6 class="fw-bold text-dark mb-2">CHI TIẾT PHÂN BỔ THANH TOÁN LẦN NÀY:</h6>
-            <table class="table table-bordered table-sm table-receipt mb-0">
-                <thead class="table-light text-center">
-                <tr>
-                    <th style="width: 40px;">STT</th>
-                    <th>Khoản thanh toán</th>
-                    <th style="width: 100px;">Phân loại</th>
-                    <th class="text-end" style="width: 130px;">Số tiền phân bổ</th>
-                    <th class="text-end" style="width: 130px;">Còn nợ sau thu</th>
-                    <th style="width: 110px;">Trạng thái</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="al, iter : ${allocations}">
-                    <td class="text-center" th:text="${iter.count}">1</td>
-                    <td>
-                        <span class="fw-bold" th:text="${al.itemName}">Nhổ răng khôn</span>
-                    </td>
-                    <td class="text-center">
-                        <span th:if="${al.itemType == 'SERVICE'}" class="badge bg-primary-subtle text-primary border">Dịch vụ</span>
-                        <span th:if="${al.itemType == 'MEDICINE'}" class="badge bg-info-subtle text-info border">Thuốc</span>
-                        <span th:if="${al.itemType == 'SURCHARGE'}" class="badge bg-secondary-subtle text-secondary border">Phụ thu</span>
-                    </td>
-                    <td class="text-end fw-bold text-success" th:text="${#numbers.formatDecimal(al.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">200.000 đ</td>
-                    <td class="text-end fw-bold" th:classappend="${al.remainingDebtAfter > 0 ? 'text-danger' : 'text-success'}"
-                        th:text="${#numbers.formatDecimal(al.remainingDebtAfter, 0, 'COMMA', 0, 'POINT')} + ' đ'">100.000 đ</td>
-                    <td class="text-center">
-                        <span th:if="${al.statusAfter == 'PAID'}" class="badge bg-success-subtle text-success border">Đã trả hết</span>
-                        <span th:if="${al.statusAfter == 'PARTIALLY_PAID'}" class="badge bg-warning-subtle text-warning border">Trả 1 phần</span>
-                        <span th:if="${al.statusAfter == 'UNPAID'}" class="badge bg-danger-subtle text-danger border">Chưa trả</span>
-                    </td>
-                </tr>
-                </tbody>
-                <tfoot>
-                <tr class="table-light fw-bold">
-                    <td colspan="3" class="text-end">TỔNG CỘNG THU LẦN NÀY:</td>
-                    <td class="text-end text-success fs-6" th:text="${#numbers.formatDecimal(payment.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
-                    <td colspan="2"></td>
-                </tr>
-                </tfoot>
-            </table>
+            <div class="table-responsive border-0 m-0 p-0" style="overflow: visible;">
+                <table class="table table-bordered table-sm table-receipt mb-0">
+                    <thead class="table-light text-center">
+                    <tr>
+                        <th style="width: 38px;">STT</th>
+                        <th>Khoản thanh toán</th>
+                        <th style="width: 90px;">Phân loại</th>
+                        <th class="text-end" style="width: 120px;">Số tiền phân bổ</th>
+                        <th class="text-end" style="width: 120px;">Còn nợ sau thu</th>
+                        <th style="width: 95px;">Trạng thái</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="al, iter : ${allocations}">
+                        <td class="text-center" th:text="${iter.count}">1</td>
+                        <td>
+                            <span class="fw-bold" th:text="${al.itemName}">Nhổ răng khôn</span>
+                        </td>
+                        <td class="text-center">
+                            <span th:if="${al.itemType == 'SERVICE'}" class="badge bg-primary-subtle text-primary border">Dịch vụ</span>
+                            <span th:if="${al.itemType == 'MEDICINE'}" class="badge bg-info-subtle text-info border">Thuốc</span>
+                            <span th:if="${al.itemType == 'SURCHARGE'}" class="badge bg-secondary-subtle text-secondary border">Phụ thu</span>
+                        </td>
+                        <td class="text-end fw-bold text-success" th:text="${#numbers.formatDecimal(al.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">200.000 đ</td>
+                        <td class="text-end fw-bold" th:classappend="${al.remainingDebtAfter > 0 ? 'text-danger' : 'text-success'}"
+                            th:text="${#numbers.formatDecimal(al.remainingDebtAfter, 0, 'COMMA', 0, 'POINT')} + ' đ'">100.000 đ</td>
+                        <td class="text-center">
+                            <span th:if="${al.statusAfter == 'PAID'}" class="badge bg-success-subtle text-success border">Đã trả hết</span>
+                            <span th:if="${al.statusAfter == 'PARTIALLY_PAID'}" class="badge bg-warning-subtle text-warning border">Trả 1 phần</span>
+                            <span th:if="${al.statusAfter == 'UNPAID'}" class="badge bg-danger-subtle text-danger border">Chưa trả</span>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr class="table-light fw-bold">
+                        <td colspan="3" class="text-end">TỔNG CỘNG THU LẦN NÀY:</td>
+                        <td class="text-end text-success fs-6" th:text="${#numbers.formatDecimal(payment.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">500.000 đ</td>
+                        <td colspan="2"></td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
         </div>
 
         <!-- Thông tin công nợ hóa đơn sau thu -->
