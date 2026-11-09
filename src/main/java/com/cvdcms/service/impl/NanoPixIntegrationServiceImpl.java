@@ -3,11 +3,7 @@ package com.cvdcms.service.impl;
 import com.cvdcms.DTO.NanopixSyncRequestDTO;
 import com.cvdcms.DTO.NanopixSyncStatsDTO;
 import com.cvdcms.entity.*;
-import com.cvdcms.entity.enums.NanopixSyncStatus;
-import com.cvdcms.entity.enums.ParaclinicalFileType;
-import com.cvdcms.entity.enums.ParaclinicalOrderItemStatus;
-import com.cvdcms.entity.enums.ServiceType;
-import com.cvdcms.entity.enums.VisitStatus;
+import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.NanoPixIntegrationService;
 import lombok.RequiredArgsConstructor;
@@ -411,6 +407,20 @@ public class NanoPixIntegrationServiceImpl implements NanoPixIntegrationService 
             targetItem.setResultSummary("Đã đồng bộ ảnh X-quang từ máy NanoPix (" + syncLog.getExternalStudyUid() + ")");
         }
         paraclinicalOrderItemRepository.save(targetItem);
+
+        ParaclinicalOrder parentOrder = targetItem.getOrder();
+        if (parentOrder != null) {
+            List<ParaclinicalOrderItem> allItems = paraclinicalOrderItemRepository.findByOrder_OrderId(parentOrder.getOrderId());
+            boolean allCompleted = !allItems.isEmpty() && allItems.stream().allMatch(i -> i.getStatus() == ParaclinicalOrderItemStatus.COMPLETED);
+            if (allCompleted) {
+                parentOrder.setStatus(ParaclinicalOrderStatus.COMPLETED);
+                parentOrder.setCompletedAt(LocalDateTime.now());
+                if (visit != null && visit.getStatus() == VisitStatus.WAITING_PARACLINICAL) {
+                    visit.setStatus(VisitStatus.WAITING_RESULT);
+                    visitRepository.save(visit);
+                }
+            }
+        }
 
         // Tạo file đính kèm kết quả để bác sĩ xem được ngay trong bệnh án
         ParaclinicalResultAttachment attachment = new ParaclinicalResultAttachment();

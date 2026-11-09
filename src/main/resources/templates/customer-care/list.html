@@ -2,7 +2,7 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Quản lý Chăm sóc Khách hàng')}"></head>
 
-<body class="app-body viewport-locked-page">
+<body class="app-body">
 
 <!-- CSS và Script riêng của trang CSKH -->
 <link rel="stylesheet" th:href="@{/css/misa-pagination.css}">
@@ -21,35 +21,39 @@
         <!-- Topbar tiêu đề hệ thống Navy chuẩn 56px -->
         <header th:replace="~{fragments/header :: appTopbar('Quản lý Chăm sóc Khách hàng')}"></header>
 
-        <main class="cc-app-view">
+        <main class="app-content cc-app-view">
+            <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
 
-            <!-- 1. TOOLBAR CHÍNH (ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS) -->
-            <div class="table-toolbar-card">
-                <div class="d-flex align-items-center gap-3 flex-wrap">
-                    <div class="table-toolbar-title">
-                        <p class="eyebrow">CV-DCMS · CHĂM SÓC KHÁCH HÀNG &amp; HẬU PHẪU</p>
-                        <h1>Quản lý Chăm sóc Khách hàng</h1>
+            <!-- 1. TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN ENTERPRISE (NHƯ ADMIN/BRANCHES & ADMIN/NEWS) -->
+            <div class="d-flex flex-wrap flex-xl-nowrap align-items-center justify-content-between gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white; width: 44px; height: 44px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
+                        <i class="bi bi-heart-pulse-fill"></i>
                     </div>
-                    <div class="branch-select-wrap ms-md-2">
-                        <label for="branchId">Cơ sở:</label>
-                        <select id="branchId" name="branchId" aria-label="Chọn chi nhánh" class="form-select form-select-sm">
-                            <option value="">Đang tải chi nhánh...</option>
-                        </select>
+                    <div>
+                        <h1 class="dv-page-title mb-0" style="font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">Quản lý Chăm sóc Khách hàng</h1>
+                        <p class="dv-page-subtitle mb-0" style="font-size: 13px; color: #64748b;">Quản lý lịch gọi hậu phẫu, tiếp nhận phản hồi và chăm sóc định kỳ bệnh nhân</p>
                     </div>
                 </div>
 
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-                    <button id="autoGenerateBtn" class="btn-secondary-custom" type="button" title="Tự động quét ca khám hoàn thành, đơn thuốc và lịch hẹn để tạo công việc CSKH">
-                        Tổng hợp tự động
-                    </button>
-                    <button id="openCreateTaskBtn" class="btn-primary-custom" type="button">
-                        Lập lịch CSKH
-                    </button>
-                    <button id="refreshBtn" class="btn-secondary-custom" type="button" title="Làm mới dữ liệu">
+                <div class="d-flex align-items-center gap-2 flex-shrink-0 flex-wrap">
+                    <div class="position-relative d-inline-flex align-items-center">
+                        <i class="bi bi-building position-absolute text-muted" style="left: 10px; pointer-events: none; font-size: 13px;"></i>
+                        <select id="branchId" name="branchId" aria-label="Chọn chi nhánh" class="form-select form-select-sm shadow-sm fw-semibold"
+                                style="height: 38px; border-radius: 8px; border-color: #cbd5e1; padding-left: 28px; max-width: 185px; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; background-color: #ffffff; color: #0f172a;">
+                            <option value="">Đang tải chi nhánh...</option>
+                        </select>
+                    </div>
+                    <button id="refreshBtn" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1.5" style="height: 38px; font-size: 13px;" type="button" title="Làm mới dữ liệu">
                         <i class="bi bi-arrow-clockwise"></i> Làm mới
                     </button>
-                    <button id="openColumnDrawerBtn" class="btn-gear-customizer" type="button" title="Tùy chỉnh cột hiển thị" onclick="openCcColumnDrawer()">
+                    <button id="autoGenerateBtn" class="btn btn-outline-primary fw-semibold px-2.5 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1.5" style="height: 38px; font-size: 13px;" type="button" title="Tự động quét ca khám hoàn thành, đơn thuốc và lịch hẹn để tạo công việc CSKH">
+                        <i class="bi bi-magic"></i> Tổng hợp tự động
+                    </button>
+                    <button id="openCreateTaskBtn" class="btn btn-primary fw-bold px-3.5 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1.5" type="button" style="height: 38px; font-size: 13px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                        <i class="bi bi-plus-lg"></i> Lập lịch CSKH
+                    </button>
+                    <button id="openColumnDrawerBtn" class="btn btn-outline-secondary px-2.5 py-2 rounded-3 shadow-sm d-inline-flex align-items-center justify-content-center" style="height: 38px; width: 38px; border-color: #cbd5e1;" type="button" title="Tùy chỉnh cột hiển thị" onclick="openCcColumnDrawer()">
                         <i class="bi bi-sliders"></i>
                     </button>
                 </div>
@@ -102,47 +106,43 @@
                 </article>
             </section>
 
-            <!-- 3. THANH TABS BAR PHÂN NHÓM BỆNH NHÂN (TỐI GIẢN ICON) -->
-            <nav class="tabs-bar" aria-label="Phân nhóm công việc chăm sóc khách hàng">
-                <button class="tab active" type="button" data-tab="ALL">
-                    Tổng quan <span class="tab-badge" id="badge_ALL">0</span>
-                </button>
-                <button class="tab" type="button" data-tab="TODAY">
-                    Hôm nay <span class="tab-badge" id="badge_TODAY">0</span>
-                </button>
-                <button class="tab" type="button" data-tab="POST_TREATMENT">
-                    Sau điều trị <span class="tab-badge" id="badge_POST_TREATMENT">0</span>
-                </button>
-                <button class="tab" type="button" data-tab="APPOINTMENT_REMINDER">
-                    Nhắc hẹn <span class="tab-badge" id="badge_APPOINTMENT_REMINDER">0</span>
-                </button>
-                <button class="tab" type="button" data-tab="INSTALLMENT_REMINDER">
-                    Trả góp <span class="tab-badge" id="badge_INSTALLMENT_REMINDER">0</span>
-                </button>
-                <button class="tab" type="button" data-tab="NO_SHOW_RECALL">
-                    Hẹn lỡ <span class="tab-badge" id="badge_NO_SHOW_RECALL">0</span>
-                </button>
-                <button class="tab" type="button" data-tab="NO_SERVICE_FOLLOWUP">
-                    Chưa làm DV <span class="tab-badge" id="badge_NO_SERVICE_FOLLOWUP">0</span>
-                </button>
-                <button class="tab" type="button" data-tab="FEEDBACK_COMPLAINT">
-                    Phản ánh <span class="tab-badge" id="badge_FEEDBACK_COMPLAINT">0</span>
-                </button>
-                <button class="tab tab-doctor" type="button" data-tab="ESCALATED">
-                    Chuyển Bác sĩ <span class="tab-badge" id="badge_ESCALATED">0</span>
-                </button>
-                <button class="tab" type="button" data-tab="HISTORY">
-                    Lịch sử CSKH BN
-                </button>
+            <!-- 3. THANH TABS ẨN LƯU TRỮ ĐỒNG BỘ JS -->
+            <nav class="tabs-bar d-none" aria-hidden="true">
+                <button class="tab active" type="button" data-tab="ALL"><span class="tab-badge" id="badge_ALL">0</span></button>
+                <button class="tab" type="button" data-tab="TODAY"><span class="tab-badge" id="badge_TODAY">0</span></button>
+                <button class="tab" type="button" data-tab="POST_TREATMENT"><span class="tab-badge" id="badge_POST_TREATMENT">0</span></button>
+                <button class="tab" type="button" data-tab="APPOINTMENT_REMINDER"><span class="tab-badge" id="badge_APPOINTMENT_REMINDER">0</span></button>
+                <button class="tab" type="button" data-tab="INSTALLMENT_REMINDER"><span class="tab-badge" id="badge_INSTALLMENT_REMINDER">0</span></button>
+                <button class="tab" type="button" data-tab="NO_SHOW_RECALL"><span class="tab-badge" id="badge_NO_SHOW_RECALL">0</span></button>
+                <button class="tab" type="button" data-tab="NO_SERVICE_FOLLOWUP"><span class="tab-badge" id="badge_NO_SERVICE_FOLLOWUP">0</span></button>
+                <button class="tab" type="button" data-tab="FEEDBACK_COMPLAINT"><span class="tab-badge" id="badge_FEEDBACK_COMPLAINT">0</span></button>
+                <button class="tab tab-doctor" type="button" data-tab="ESCALATED"><span class="tab-badge" id="badge_ESCALATED">0</span></button>
+                <button class="tab" type="button" data-tab="HISTORY"></button>
             </nav>
 
             <!-- THÔNG BÁO HỆ THỐNG -->
             <p id="message" class="notice" role="status" aria-live="polite" hidden></p>
 
-            <!-- 4. BỘ LỌC TÌM KIẾM NHANH (ĐỒNG BỘ TOOLBAR DAILY-VISITS) -->
+            <!-- 4. BỘ LỌC TÌM KIẾM NHANH (GỘP PHÂN NHÓM DROPDOWN + BỘ LỌC CHUNG) -->
             <section id="filterToolbarSection" class="toolbar-card" aria-label="Bộ lọc công việc CSKH">
                 <div class="filter-grid">
-                    <div class="filter-field filter-keyword">
+                    <div class="filter-field filter-tab-select">
+                        <label for="filterTabGroup">Phân loại CSKH</label>
+                        <select id="filterTabGroup" class="fw-semibold">
+                            <option value="ALL" id="opt_tab_ALL" data-label="Tổng quan" selected>Tổng quan (0)</option>
+                            <option value="TODAY" id="opt_tab_TODAY" data-label="Hôm nay">Hôm nay (0)</option>
+                            <option value="POST_TREATMENT" id="opt_tab_POST_TREATMENT" data-label="Sau điều trị">Sau điều trị (0)</option>
+                            <option value="APPOINTMENT_REMINDER" id="opt_tab_APPOINTMENT_REMINDER" data-label="Nhắc hẹn">Nhắc hẹn (0)</option>
+                            <option value="INSTALLMENT_REMINDER" id="opt_tab_INSTALLMENT_REMINDER" data-label="Trả góp">Trả góp (0)</option>
+                            <option value="NO_SHOW_RECALL" id="opt_tab_NO_SHOW_RECALL" data-label="Hẹn lỡ">Hẹn lỡ (0)</option>
+                            <option value="NO_SERVICE_FOLLOWUP" id="opt_tab_NO_SERVICE_FOLLOWUP" data-label="Chưa làm DV">Chưa làm DV (0)</option>
+                            <option value="FEEDBACK_COMPLAINT" id="opt_tab_FEEDBACK_COMPLAINT" data-label="Phản ánh">Phản ánh (0)</option>
+                            <option value="ESCALATED" id="opt_tab_ESCALATED" data-label="Chuyển Bác sĩ" style="color: #b91c1c; font-weight: bold;">Chuyển Bác sĩ (0)</option>
+                            <option value="HISTORY" id="opt_tab_HISTORY" data-label="Lịch sử CSKH BN">Lịch sử CSKH BN</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-field filter-keyword task-filter-field">
                         <label for="keyword">Tìm kiếm nhanh</label>
                         <div class="dv-search-box">
                             <span class="dv-search-lead"><i class="bi bi-search"></i></span>
@@ -150,14 +150,14 @@
                         </div>
                     </div>
 
-                    <div class="filter-field">
+                    <div class="filter-field task-filter-field">
                         <label for="filterStaffId">Nhân viên phụ trách</label>
                         <select id="filterStaffId">
                             <option value="">Tất cả nhân viên</option>
                         </select>
                     </div>
 
-                    <div class="filter-field">
+                    <div class="filter-field task-filter-field">
                         <label for="filterStatus">Trạng thái công việc</label>
                         <select id="filterStatus">
                             <option value="">Tất cả trạng thái</option>
@@ -169,17 +169,17 @@
                         </select>
                     </div>
 
-                    <div class="filter-field">
+                    <div class="filter-field task-filter-field">
                         <label for="filterFromDate">Hạn từ ngày</label>
                         <input id="filterFromDate" type="date">
                     </div>
 
-                    <div class="filter-field">
+                    <div class="filter-field task-filter-field">
                         <label for="filterToDate">Đến ngày</label>
                         <input id="filterToDate" type="date">
                     </div>
 
-                    <div class="filter-actions">
+                    <div class="filter-actions task-filter-field">
                         <button id="searchBtn" class="btn-primary-custom" type="button">
                             Tìm kiếm
                         </button>
@@ -202,8 +202,8 @@
                         <span id="tasksTotalBadge" class="count-pill">Đang tải...</span>
                     </div>
                 </div>
-                <div class="table-viewport-wrapper" id="tasksTableWrapper">
-                    <table class="cv-table cc-tasks-table" id="ccTasksTable">
+                <div class="table-viewport-wrapper dv-table-scroll-container staff-table-wrapper" id="tasksTableWrapper">
+                    <table class="cv-table cc-tasks-table dv-amis-table" id="ccTasksTable">
                         <thead>
                             <tr id="ccTasksHeaderRow">
                                 <!-- Render Header bằng JavaScript theo Column Customizer -->

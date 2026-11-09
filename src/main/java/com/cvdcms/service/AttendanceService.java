@@ -82,31 +82,37 @@ public class AttendanceService {
             throw new IllegalArgumentException("Hôm nay bạn chưa được xếp ca làm việc nên không thể check-in.");
         }
 
-        AttendanceRecord existing = findRecord(staff.getStaffId(), today);
-        if (existing != null && existing.getCheckInAt() != null) {
-            throw new IllegalArgumentException("Bạn đã check-in hôm nay rồi.");
+        AttendanceRecord record = findRecord(staff.getStaffId(), today);
+        if (record != null && record.getCheckInAt() != null && record.getCheckOutAt() == null) {
+            throw new IllegalArgumentException("Bạn đang trong ca làm việc. Vui lòng check-out ca hiện tại trước khi check-in ca mới.");
         }
 
-        // Nếu có nhiều ca trong ngày (ví dụ ca sáng chi nhánh A, ca tối chi nhánh B),
-        // ưu tiên ca chưa kết thúc và nhân viên đang kết nối đúng Wifi của chi nhánh đó.
+        // Nếu có nhiều ca trong ngày (ví dụ ca sáng, ca chiều, ca tối):
+        // Tìm ca phù hợp: ca chưa kết thúc, và nếu đã từng check-in ca trước thì ca này phải bắt đầu sau ca trước.
         LocalTime currentTime = now.toLocalTime();
         StaffSchedule target = null;
         for (StaffSchedule s : shifts) {
-            if (!currentTime.isAfter(s.getShift().getEndTime())
-                    && isAllowedIp(s.getBranch().getAllowedIpRange(), clientIp)) {
+            boolean notEnded = !currentTime.isAfter(s.getShift().getEndTime());
+            boolean isNextShift = (record == null || record.getCheckOutAt() == null || s.getShift().getStartTime().isAfter(record.getCheckInAt().toLocalTime().minusMinutes(30)));
+            if (notEnded && isNextShift && isAllowedIp(s.getBranch().getAllowedIpRange(), clientIp)) {
                 target = s;
                 break;
             }
         }
         if (target == null) {
             for (StaffSchedule s : shifts) {
-                if (!currentTime.isAfter(s.getShift().getEndTime())) {
+                boolean notEnded = !currentTime.isAfter(s.getShift().getEndTime());
+                boolean isNextShift = (record == null || record.getCheckOutAt() == null || s.getShift().getStartTime().isAfter(record.getCheckInAt().toLocalTime().minusMinutes(30)));
+                if (notEnded && isNextShift) {
                     target = s;
                     break;
                 }
             }
         }
         if (target == null) {
+            if (record != null && record.getCheckOutAt() != null) {
+                throw new IllegalArgumentException("Bạn đã hoàn thành tất cả các ca làm việc được phân công hôm nay rồi.");
+            }
             StaffSchedule lastShift = shifts.get(shifts.size() - 1);
             throw new IllegalArgumentException("Ca làm việc hôm nay ("
                     + lastShift.getShift().getShiftName() + ": "
@@ -121,16 +127,35 @@ public class AttendanceService {
         }
         requireValidNetwork(branch, clientIp);
 
-        AttendanceRecord record = new AttendanceRecord();
-        record.setStaff(staff);
+        boolean isNew = (record == null);
+        if (isNew) {
+            record = new AttendanceRecord();
+            record.setStaff(staff);
+            record.setWorkDate(today);
+            record.setWorkedMinutes(0);
+        }
+
         record.setBranch(branch);
-        record.setWorkDate(today);
         record.setCheckInAt(now);
         record.setCheckInIp(clientIp);
+        record.setCheckOutAt(null);
+        record.setCheckOutIp(null);
         record.setIsValidNetwork(true);
 
         LocalTime lateAfter = target.getShift().getStartTime().plusMinutes(GRACE_MINUTES);
-        record.setStatus(now.toLocalTime().isAfter(lateAfter) ? AttendanceStatus.LATE : AttendanceStatus.ON_TIME);
+        if (now.toLocalTime().isAfter(lateAfter)) {
+            record.setStatus(AttendanceStatus.LATE);
+        } else if (isNew) {
+            record.setStatus(AttendanceStatus.ON_TIME);
+        }
+
+        String shiftLog = "Vào " + target.getShift().getShiftName();
+        if (record.getNotes() == null || record.getNotes().isBlank()) {
+            record.setNotes(shiftLog);
+        } else if (!record.getNotes().contains(shiftLog)) {
+            record.setNotes(record.getNotes() + " | " + shiftLog);
+        }
+
         return attendanceRepository.save(record);
     }
 
@@ -145,26 +170,49 @@ public class AttendanceService {
             throw new IllegalArgumentException("Bạn chưa check-in hôm nay nên không thể check-out.");
         }
         if (record.getCheckOutAt() != null) {
-            throw new IllegalArgumentException("Bạn đã check-out hôm nay rồi.");
+            throw new IllegalArgumentException("Bạn đã check-out ca làm việc này rồi.");
         }
         requireValidNetwork(record.getBranch(), clientIp);
 
+        // Xác định ca làm việc tương ứng với lần check-in này
+        List<StaffSchedule> shifts = getTodayShifts(staff.getStaffId(), today);
+        StaffSchedule currentShift = null;
+        LocalTime checkInTime = record.getCheckInAt().toLocalTime();
+        for (StaffSchedule s : shifts) {
+            if (!checkInTime.isAfter(s.getShift().getEndTime())) {
+                currentShift = s;
+                break;
+            }
+        }
+        if (currentShift == null && !shifts.isEmpty()) {
+            currentShift = shifts.get(shifts.size() - 1);
+        }
+
+        // LỖI 5: Giới hạn trần giờ làm việc (tránh tính khống 14-16 tiếng khi nhân viên quên check-out)
+        LocalTime shiftEnd = currentShift != null ? currentShift.getShift().getEndTime() : null;
+        LocalTime maxAllowedTime = shiftEnd != null ? shiftEnd.plusMinutes(30) : null;
+        LocalDateTime effectiveEndTime = now;
+
+        if (shiftEnd != null && maxAllowedTime != null && now.toLocalTime().isAfter(maxAllowedTime)) {
+            effectiveEndTime = LocalDateTime.of(today, shiftEnd);
+            String capNote = "Tự động chốt theo giờ ca (" + shiftEnd + ")";
+            if (record.getNotes() == null || record.getNotes().isBlank()) {
+                record.setNotes(capNote);
+            } else if (!record.getNotes().contains("Tự động chốt")) {
+                record.setNotes(record.getNotes() + " | " + capNote);
+            }
+        }
+
+        int sessionMinutes = (int) Math.max(0, Duration.between(record.getCheckInAt(), effectiveEndTime).toMinutes());
+        int prevWorked = record.getWorkedMinutes() != null ? record.getWorkedMinutes() : 0;
+        record.setWorkedMinutes(prevWorked + sessionMinutes);
+
         record.setCheckOutAt(now);
         record.setCheckOutIp(clientIp);
-        record.setWorkedMinutes((int) Math.max(0, Duration.between(record.getCheckInAt(), now).toMinutes()));
 
-        // Về sớm so với giờ kết thúc ca cuối cùng trong ngày (chỉ xét khi không đi
-        // muộn).
-        if (record.getStatus() != AttendanceStatus.LATE) {
-            List<StaffSchedule> shifts = getTodayShifts(staff.getStaffId(), today);
-            LocalTime lastEnd = null;
-            for (StaffSchedule s : shifts) {
-                LocalTime end = s.getShift().getEndTime();
-                if (lastEnd == null || end.isAfter(lastEnd)) {
-                    lastEnd = end;
-                }
-            }
-            if (lastEnd != null && now.toLocalTime().isBefore(lastEnd.minusMinutes(GRACE_MINUTES))) {
+        // Về sớm so với giờ kết thúc ca (chỉ xét khi không đi muộn)
+        if (record.getStatus() != AttendanceStatus.LATE && shiftEnd != null) {
+            if (now.toLocalTime().isBefore(shiftEnd.minusMinutes(GRACE_MINUTES))) {
                 record.setStatus(AttendanceStatus.EARLY_LEAVE);
             }
         }

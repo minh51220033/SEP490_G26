@@ -151,6 +151,57 @@
     $all(".side-link.is-active").forEach(function (link) { link.setAttribute("aria-current", "page"); });
 
     /* =============================================================
+       SIDEBAR SCROLL RESTORATION & SYNC
+       Bảo toàn vị trí cuộn của sidebar khi chuyển trang, chống giật / nhảy lên đầu trang
+       ============================================================= */
+    (function initSidebarScroll() {
+        var nav = document.querySelector(".app-sidebar__nav");
+        if (!nav) return;
+
+        var SCROLL_KEY = "cvdcms.sidebar.navScrollTop";
+
+        function saveScroll() {
+            try {
+                sessionStorage.setItem(SCROLL_KEY, String(nav.scrollTop));
+            } catch (e) {}
+        }
+
+        function restoreScroll() {
+            try {
+                var saved = sessionStorage.getItem(SCROLL_KEY);
+                if (saved !== null) {
+                    nav.scrollTop = parseInt(saved, 10) || 0;
+                }
+                var active = nav.querySelector(".side-link.is-active");
+                if (active) {
+                    var navRect = nav.getBoundingClientRect();
+                    var actRect = active.getBoundingClientRect();
+                    if (actRect.top < navRect.top || actRect.bottom > navRect.bottom) {
+                        var target = active.offsetTop - (nav.clientHeight / 2) + (active.clientHeight / 2);
+                        nav.scrollTop = Math.max(0, target);
+                        saveScroll();
+                    }
+                }
+            } catch (e) {}
+        }
+
+        var scrollTimer = null;
+        nav.addEventListener("scroll", function () {
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(saveScroll, 50);
+        }, { passive: true });
+
+        document.addEventListener("click", function (e) {
+            var link = e.target.closest(".app-sidebar a");
+            if (link) saveScroll();
+        }, true);
+
+        window.addEventListener("beforeunload", saveScroll);
+        window.addEventListener("pageshow", restoreScroll);
+        restoreScroll();
+    })();
+
+    /* =============================================================
        2. ACCORDION (nhóm menu con)
        ============================================================= */
     function setGroupOpen(group, open) {

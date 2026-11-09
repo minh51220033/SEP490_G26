@@ -457,14 +457,11 @@
                                 data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
                             <i class="bi bi-list fs-6"></i>
                         </button>
-                        <ol class="breadcrumb mb-0 p-0 bg-transparent" style="font-size: 13px;">
+                        <ol class="breadcrumb mb-0 p-0 bg-transparent" style="font-size: 13.5px;">
+                            <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
                             <li class="breadcrumb-item">
-                                <a th:if="${param.from != null and param.from[0] == 'daily-visits'}" href="/doctor/daily-visits" class="text-decoration-none fw-bold text-primary">
-                                    <i class="bi bi-arrow-left me-1"></i>Danh sách ca khám trong ngày
-                                </a>
-                                <a th:unless="${param.from != null and param.from[0] == 'daily-visits'}" th:href="${recordBasePath}" class="text-decoration-none fw-bold text-primary">
-                                    <i class="bi bi-arrow-left me-1"></i>Danh sách hồ sơ bệnh nhân
-                                </a>
+                                <a th:if="${param.from != null and param.from[0] == 'daily-visits'}" href="/doctor/daily-visits">Ca khám trong ngày</a>
+                                <a th:unless="${param.from != null and param.from[0] == 'daily-visits'}" th:href="${recordBasePath}">Quản lý khách hàng</a>
                             </li>
                             <li class="breadcrumb-item active text-secondary fw-semibold" aria-current="page">
                                 Chi tiết hồ sơ: <strong class="text-dark" th:text="${patient.fullName}">Bệnh nhân</strong>

@@ -7,40 +7,50 @@
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main">
         <header th:replace="~{fragments/header :: appTopbar('Tiếp đón & Check-in')}"></header>
-        <main id="reception-content-area" class="app-content checkin-page-wrapper p-3" th:attr="data-selected-appointment-id=${selectedAppointmentId},data-current-branch-id=${dashboard.branchId}">
+        <main id="reception-content-area" class="app-content checkin-page-wrapper p-3" th:attr="data-selected-appointment-id=${selectedAppointmentId}">
             <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
             <link rel="stylesheet" th:href="@{/css/patients.css}">
             <link rel="stylesheet" th:href="@{/css/check-in.css}">
             <link rel="stylesheet" th:href="@{/css/reception-dispatch.css}">
             <link rel="stylesheet" th:href="@{/css/reception-workflow-navigation.css}">
 
-            <!-- 1. THANH DẪN HƯỚNG QUY TRÌNH TIẾP ĐÓN THỐNG NHẤT -->
-            <nav class="card border-0 shadow-sm rounded-4 mb-2.5 p-2 bg-white" data-reception-stepper aria-label="Quy trình tiếp đón">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-2 py-1">
-                    <div class="d-flex align-items-center gap-2 small">
-                        <span class="badge bg-primary-subtle text-primary fw-bold px-2.5 py-1.5"><i class="bi bi-diagram-3 me-1"></i>QUY TRÌNH TIẾP ĐÓN</span>
-                        <span class="text-muted d-none d-lg-inline">Chuỗi nghiệp vụ lễ tân &amp; điều phối khám:</span>
-                    </div>
-                    <div class="d-flex flex-wrap align-items-center gap-2 small">
-                        <a th:href="@{/reception/appointments(branchId=${dashboard.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 1: Quản lý lịch hẹn">
-                            <span class="badge rounded-circle">1</span><span>Lịch hẹn</span>
-                        </a>
-                        <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
-                        <span class="btn btn-sm reception-step-pill is-active rounded-pill" title="Bước 2: Đang ở màn hình Tiếp đón & Check-in">
-                            <span class="badge rounded-circle">2</span><span>Tiếp đón &amp; Check-in</span>
-                        </span>
-                        <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
-                        <a th:href="@{/reception/dispatch(branchId=${dashboard.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 3: Điều phối ghế &amp; gán bác sĩ">
-                            <span class="badge rounded-circle">3</span><span>Điều phối ghế nha</span>
-                        </a>
-                        <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
-                        <a th:href="@{/reception/queue(branchId=${dashboard.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 4: Hàng chờ gọi số">
-                            <span class="badge rounded-circle">4</span><span>Hàng chờ gọi số</span>
-                        </a>
+            <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN HỆ THỐNG -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                        <i class="bi bi-person-check-fill"></i>
                     </div>
                     <div>
-                        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                        <h1 class="dv-page-title mb-0">Tiếp đón &amp; Check-in</h1>
+                        <p class="dv-page-subtitle">Tiếp đón bệnh nhân, kiểm tra lịch hẹn, tiếp nhận thông tin và đưa vào luồng khám</p>
                     </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                    <a th:href="@{/reception/check-in(branchId=${dashboard.branchId})}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-arrow-clockwise"></i> Làm mới
+                    </a>
+                </div>
+            </div>
+
+            <!-- 1. THANH DẪN HƯỚNG QUY TRÌNH TIẾP ĐÓN THỐNG NHẤT -->
+            <nav class="card border-0 shadow-sm rounded-4 mb-2.5 p-2 bg-white" data-reception-stepper aria-label="Quy trình tiếp đón">
+                <div class="d-flex flex-wrap align-items-center gap-2 px-2 py-1">
+                    <a th:href="@{/reception/appointments}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 1: Quản lý lịch hẹn">
+                        <span class="badge rounded-circle">1</span><span>Lịch hẹn</span>
+                    </a>
+                    <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
+                    <span class="btn btn-sm reception-step-pill is-active rounded-pill" title="Bước 2: Đang ở màn hình Tiếp đón & Check-in">
+                        <span class="badge rounded-circle">2</span><span>Tiếp đón &amp; Check-in</span>
+                    </span>
+                    <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
+                    <a th:href="@{/reception/dispatch(branchId=${dashboard.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 3: Điều phối ghế &amp; gán bác sĩ">
+                        <span class="badge rounded-circle">3</span><span>Điều phối ghế nha</span>
+                    </a>
+                    <i class="bi bi-chevron-right text-muted opacity-50" style="font-size: 11px;"></i>
+                    <a th:href="@{/reception/queue(branchId=${dashboard.branchId})}" class="btn btn-sm reception-step-pill rounded-pill text-decoration-none" title="Bước 4: Hàng chờ gọi số">
+                        <span class="badge rounded-circle">4</span><span>Hàng chờ gọi số</span>
+                    </a>
                 </div>
             </nav>
 

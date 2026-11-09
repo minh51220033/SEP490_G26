@@ -3,7 +3,7 @@
 
 <head th:replace="~{fragments/head :: head('Quản lý tin tức')}"></head>
 
-<body class="app-body account-page-body staff-page-body">
+<body class="app-body">
 
     <div class="app-shell">
 
@@ -18,6 +18,45 @@
                 <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
                 <link rel="stylesheet" th:href="@{/css/staff.css}">
                 <link rel="stylesheet" th:href="@{/css/account.css}">
+
+                <style>
+                    /* Mở rộng toàn bộ table content tràn viền và thoải mái chiều ngang */
+                    .dv-amis-table {
+                        width: 100% !important;
+                        min-width: 100% !important;
+                    }
+                    .dv-amis-table th[data-col="title"],
+                    .dv-amis-table td[data-col="title"] {
+                        min-width: 380px !important;
+                        width: auto !important;
+                    }
+                    .dv-amis-table th[data-col="branch"],
+                    .dv-amis-table td[data-col="branch"] {
+                        min-width: 220px !important;
+                    }
+                    .dv-amis-table th[data-col="author"],
+                    .dv-amis-table td[data-col="author"] {
+                        min-width: 180px !important;
+                    }
+                    .dv-amis-table th[data-col="publishedAt"],
+                    .dv-amis-table td[data-col="publishedAt"] {
+                        min-width: 180px !important;
+                    }
+                    .dv-amis-table th[data-col="status"],
+                    .dv-amis-table td[data-col="status"] {
+                        min-width: 160px !important;
+                    }
+                    .dv-amis-table th[data-col="actions"],
+                    .dv-amis-table td[data-col="actions"] {
+                        min-width: 360px !important;
+                    }
+                    /* Hàng tiêu đề cố định ở đầu bảng */
+                    .dv-amis-table thead th {
+                        position: sticky !important;
+                        top: 0 !important;
+                        z-index: 10 !important;
+                    }
+                </style>
 
                 <!-- THÔNG BÁO FLASH / PARAM -->
                 <div th:if="${param.success}" class="alert alert-success alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-0" role="alert">

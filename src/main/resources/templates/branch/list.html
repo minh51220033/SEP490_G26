@@ -18,6 +18,28 @@
             <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
             <link rel="stylesheet" th:href="@{/css/staff.css}">
 
+            <style>
+                #branchTable {
+                    min-width: 1680px !important;
+                    width: 100% !important;
+                    table-layout: fixed !important;
+                }
+                #branchTable thead th {
+                    position: sticky !important;
+                    top: 0 !important;
+                    z-index: 20 !important;
+                    background: #f1f5f9 !important;
+                    white-space: nowrap !important;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+                }
+                .dv-table-scroll-container {
+                    max-height: calc(100vh - 310px);
+                    min-height: 400px;
+                    overflow-y: auto !important;
+                    overflow-x: auto !important;
+                }
+            </style>
+
             <!-- THÔNG BÁO ALERT DISMISSIBLE -->
             <div class="alert alert-success alert-dismissible fade show" th:if="${successMessage}">
                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -257,25 +279,25 @@
                             <th data-col="stt" style="width: 60px; min-width: 60px;" class="text-center">
                                 <div class="dv-th-inner justify-content-center"><span>#</span></div>
                             </th>
-                            <th data-col="code" style="min-width: 140px;">
+                            <th data-col="code" style="width: 140px; min-width: 140px;">
                                 <div class="dv-th-inner"><span>Mã cơ sở</span></div>
                             </th>
-                            <th data-col="name" style="min-width: 280px;">
+                            <th data-col="name" style="width: 280px; min-width: 280px;">
                                 <div class="dv-th-inner"><span>Tên chi nhánh</span></div>
                             </th>
-                            <th data-col="address" style="min-width: 280px;">
+                            <th data-col="address" style="width: 280px; min-width: 280px;">
                                 <div class="dv-th-inner"><span>Địa chỉ</span></div>
                             </th>
-                            <th data-col="contact" style="min-width: 240px;">
+                            <th data-col="contact" style="width: 240px; min-width: 240px;">
                                 <div class="dv-th-inner"><span>Thông tin liên hệ</span></div>
                             </th>
-                            <th data-col="scale" style="min-width: 180px;">
+                            <th data-col="scale" style="width: 180px; min-width: 180px;">
                                 <div class="dv-th-inner"><span>Quy mô</span></div>
                             </th>
-                            <th data-col="status" style="min-width: 160px;">
+                            <th data-col="status" style="width: 160px; min-width: 160px;">
                                 <div class="dv-th-inner"><span>Trạng thái</span></div>
                             </th>
-                            <th data-col="actions" class="text-center" style="min-width: 320px;">
+                            <th data-col="actions" class="text-center" style="width: 240px; min-width: 240px;">
                                 <div class="dv-th-inner justify-content-center"><span>Nút ấn nhanh</span></div>
                             </th>
                             <th class="dv-floating-actions-track"></th>
@@ -296,7 +318,7 @@
                             <td class="text-center text-muted fw-semibold" style="width: 60px; min-width: 60px;" th:text="${iterStat.count}" data-col="stt">1</td>
 
                             <!-- 2. Mã chi nhánh -->
-                            <td data-col="code" style="min-width: 140px;">
+                            <td data-col="code" style="width: 140px; min-width: 140px;">
                                 <span class="dv-code-pill" th:text="${branch.branchCode}">CN01</span>
                                 <div class="text-muted small mt-1" th:if="${branch.taxCode != null and !branch.taxCode.isBlank()}">
                                     MST: <span th:text="${branch.taxCode}">0101234567</span>
@@ -304,7 +326,7 @@
                             </td>
 
                             <!-- 3. Tên chi nhánh & Quản lý -->
-                            <td data-col="name" style="min-width: 280px;">
+                            <td data-col="name" style="width: 280px; min-width: 280px;">
                                 <div class="d-flex align-items-center gap-2">
                                     <img th:if="${branch.imageUrl != null and !branch.imageUrl.isBlank()}"
                                          th:src="${branch.imageUrl}"
@@ -319,20 +341,20 @@
                                            class="dv-patient-name"
                                            th:text="${branch.branchName}">Chi nhánh</a>
                                         <div class="text-muted small mt-1" th:if="${branch.managerUser != null}">
-                                            <i class="bi bi-person-badge text-primary me-1"></i>
-                                            <span th:text="${managerDisplayMap != null and managerDisplayMap.containsKey(branch.managerUser.userId) ? managerDisplayMap.get(branch.managerUser.userId) : branch.managerUser.username}">admin</span>
+                                             <i class="bi bi-person-badge text-primary me-1"></i>
+                                             <span th:text="${managerDisplayMap != null and managerDisplayMap.containsKey(branch.managerUser.userId) ? managerDisplayMap.get(branch.managerUser.userId) : branch.managerUser.username}">admin</span>
                                         </div>
                                     </div>
                                 </div>
                             </td>
 
                             <!-- 4. Địa chỉ -->
-                            <td data-col="address" style="min-width: 280px;">
+                            <td data-col="address" style="width: 280px; min-width: 280px;">
                                 <div class="text-secondary small fw-semibold" th:text="${branch.address}">Địa chỉ</div>
                             </td>
 
                             <!-- 5. Thông tin liên hệ -->
-                            <td data-col="contact" style="min-width: 240px;">
+                            <td data-col="contact" style="width: 240px; min-width: 240px;">
                                 <div class="small fw-semibold text-dark" th:if="${branch.phone != null and !branch.phone.isBlank()}">
                                     <i class="bi bi-telephone text-primary me-1"></i><span th:text="${branch.phone}">0901234567</span>
                                 </div>
@@ -345,7 +367,7 @@
                             </td>
 
                             <!-- 6. Quy mô (Phòng / Ghế) -->
-                            <td data-col="scale" style="min-width: 180px;">
+                            <td data-col="scale" style="width: 180px; min-width: 180px;">
                                 <div class="d-flex align-items-center gap-1 flex-wrap">
                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small fw-bold">
                                         <i class="bi bi-door-open me-1"></i><span th:text="${roomCounts[branch.branchId]}">0</span> phòng
@@ -357,7 +379,7 @@
                             </td>
 
                             <!-- 7. Trạng thái -->
-                            <td data-col="status" style="min-width: 160px;">
+                            <td data-col="status" style="width: 160px; min-width: 160px;">
                                 <span th:if="${branch.isActive}" class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#ecfdf5; color:#059669; font-size:12.5px; border:1px solid #a7f3d0;">
                                     <i class="bi bi-check-circle-fill me-1"></i>Đang hoạt động
                                 </span>
@@ -367,7 +389,7 @@
                             </td>
 
                             <!-- 8. Cột Thao tác tĩnh (Gọn gàng 2 nút: Chi tiết/Quản lý cơ sở + Đổi trạng thái/Xóa nhầm) -->
-                            <td class="text-center" data-col="actions" style="width: 280px; min-width: 280px;">
+                            <td class="text-center" data-col="actions" style="width: 240px; min-width: 240px;">
                                 <div class="dv-actions-cell-always" onclick="event.stopPropagation()">
                                     <a th:href="@{/admin/branches/{id}(id=${branch.branchId})}"
                                        class="dv-equal-btn-primary" title="Xem chi tiết cơ sở, quản lý sơ đồ phòng, ghế &amp; sửa thông tin">
@@ -393,7 +415,7 @@
                                           method="post" class="d-inline m-0">
                                         <button type="submit" class="dv-equal-btn-secondary text-warning border-warning-subtle"
                                                 title="Ngừng hoạt động cơ sở này"
-                                                onclick="return confirm('Bạn có chắc chắn muốn ngừng hoạt động chi nhánh này?');">
+                                                onclick="return confirm('Bạn có chắc chắn muốn ngừng hoạt động chi nhánh này?\n- Hệ thống sẽ kiểm tra và chặn nếu còn lịch hẹn dở dang.\n- Toàn bộ ghế nha sẽ tự động tạm ngưng.\n- Các ca trực tương lai sẽ tự động được hủy.');">
                                             <i class="bi bi-pause-circle"></i>
                                             <span>Ngừng</span>
                                         </button>
@@ -440,7 +462,7 @@
                                           method="post" class="d-inline m-0">
                                         <button type="submit" class="dv-equal-btn-secondary text-warning border-warning-subtle"
                                                 title="Ngừng hoạt động cơ sở này"
-                                                onclick="return confirm('Bạn có chắc chắn muốn ngừng hoạt động chi nhánh này?');">
+                                                onclick="return confirm('Bạn có chắc chắn muốn ngừng hoạt động chi nhánh này?\n- Hệ thống sẽ kiểm tra và chặn nếu còn lịch hẹn dở dang.\n- Toàn bộ ghế nha sẽ tự động tạm ngưng.\n- Các ca trực tương lai sẽ tự động được hủy.');">
                                             <i class="bi bi-pause-circle"></i>
                                             <span>Ngừng</span>
                                         </button>
@@ -457,15 +479,6 @@
                                             <span>Kích hoạt</span>
                                         </button>
                                     </form>
-                                </div>
-                            </td>
-                                            <span>Kích hoạt</span>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                                        <span>Xóa</span>
-                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -927,17 +940,17 @@
         const defaultBranchColWidths = {
             stt: 60,
             code: 140,
-            name: 250,
+            name: 280,
             address: 280,
-            contact: 220,
-            scale: 190,
-            status: 170,
+            contact: 240,
+            scale: 180,
+            status: 160,
             actions: 240
         };
-        ['cv_branch_table_widths_v2', 'cv_branch_table_widths_v3', 'cv_branch_table_columns_v2', 'cv_branch_table_columns_v3'].forEach(k => {
+        ['cv_branch_table_widths_v2', 'cv_branch_table_widths_v3', 'cv_branch_table_widths_v4', 'cv_branch_table_widths_v5'].forEach(k => {
             try { localStorage.removeItem(k); } catch (e) {}
         });
-        const STORAGE_WIDTH_KEY = 'cv_branch_table_widths_v3';
+        const STORAGE_WIDTH_KEY = 'cv_branch_table_widths_v5';
         const table = document.getElementById('branchTable');
 
         function loadColWidths() {
@@ -958,7 +971,7 @@
             ths.forEach(th => {
                 if (th.classList.contains('dv-floating-actions-track')) return;
                 const colKey = th.getAttribute('data-col');
-                const w = currentWidths[colKey] || defaultBranchColWidths[colKey] || 200;
+                const w = currentWidths[colKey] || defaultBranchColWidths[colKey] || 180;
                 th.style.width = w + 'px';
                 th.style.minWidth = w + 'px';
                 th.style.maxWidth = w + 'px';
@@ -966,7 +979,7 @@
             });
             table.style.tableLayout = 'fixed';
             table.style.width = Math.max(totalW, 1680) + 'px';
-            table.style.minWidth = Math.max(totalW, 1680) + 'px';
+            table.style.minWidth = '1680px';
         }
 
         const ths = Array.from(table.querySelectorAll('thead th'));

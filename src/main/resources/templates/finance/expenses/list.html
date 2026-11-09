@@ -28,56 +28,52 @@
 
             <!-- Vùng nội dung tab hiển thị ngay bên dưới -->
             <div class="expense-income-tab-content" id="expenseIncomeTabContent">
-                <!-- Subhead & Thao tác chính -->
-                <div class="expense-income-subhead">
-                    <div>
-                        <h2 class="expense-income-subhead__title">Chi phí Vận hành</h2>
-                        <p class="expense-income-subhead__desc">Theo dõi các khoản chi thực tế phát sinh tại phòng khám, quản lý nguồn chi thủ công và đồng bộ từ bảng lương, tạm ứng.</p>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <a th:href="@{/expenses/create}" class="fin-btn fin-btn-primary">
-                            <i class="bi bi-plus-circle"></i> Lập phiếu chi mới
-                        </a>
-                    </div>
-                </div>
-
-                <!-- KPI Summary Cards -->
+                <!-- 3 THẺ KPI TỔNG QUAN CHUẨN HỆ THỐNG -->
                 <div class="row g-3 mb-4">
                     <div class="col-md-4">
-                        <div class="fin-stat-card" style="border-left: 4px solid #ef4444;">
-                            <span class="fin-stat-card__label">Tổng thực chi hợp lệ trong kỳ lọc</span>
-                            <div class="fin-stat-card__value text-danger"
-                                 th:text="${#numbers.formatDecimal(totalActiveAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
-                            <span class="fin-stat-card__hint">Đã trừ các phiếu chi bị hủy</span>
+                        <div class="dv-kpi-card" style="--kpi-accent: #ef4444;">
+                            <div>
+                                <div class="dv-kpi-num text-danger"
+                                     th:text="${#numbers.formatDecimal(totalActiveAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                <div class="dv-kpi-label">Tổng thực chi hợp lệ</div>
+                                <div class="dv-kpi-sub">Đã trừ các phiếu chi bị hủy trong kỳ lọc</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #fee2e2; color: #dc2626;">
+                                <i class="bi bi-cash-coin"></i>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="fin-stat-card" style="border-left: 4px solid #3b82f6;">
-                            <span class="fin-stat-card__label">Số lượng phiếu chi</span>
-                            <div class="fin-stat-card__value" th:text="${expenses.totalElements}">0</div>
-                            <span class="fin-stat-card__hint">Bao gồm cả chi thủ công và hệ thống</span>
+                        <div class="dv-kpi-card" style="--kpi-accent: #0284c7;">
+                            <div>
+                                <div class="dv-kpi-num text-primary" th:text="${expenses.totalElements}">0</div>
+                                <div class="dv-kpi-label">Số lượng phiếu chi</div>
+                                <div class="dv-kpi-sub">Bao gồm cả chi thủ công và hệ thống</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                                <i class="bi bi-receipt"></i>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="fin-stat-card" style="border-left: 4px solid #10b981;">
-                            <span class="fin-stat-card__label">Trạng thái dữ liệu</span>
-                            <div class="fin-stat-card__value text-success" style="font-size: 1.25rem;">Đã kiểm soát liên kết</div>
-                            <span class="fin-stat-card__hint">Bảo vệ chống trùng chi từ Lương &amp; Tạm ứng</span>
+                        <div class="dv-kpi-card" style="--kpi-accent: #10b981;">
+                            <div>
+                                <div class="dv-kpi-num text-success" style="font-size: 24px;">Đã kiểm soát liên kết</div>
+                                <div class="dv-kpi-label">Trạng thái liên kết dữ liệu</div>
+                                <div class="dv-kpi-sub">Bảo vệ chống trùng chi từ Lương &amp; Tạm ứng</div>
+                            </div>
+                            <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                                <i class="bi bi-shield-check"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Bộ lọc gọn gàng (Ảnh 2) -->
+                <!-- Bộ lọc gọn gàng -->
                 <div class="fin-card mb-4">
                     <form th:action="@{/expenses}" method="get" class="fin-filter-bar">
-                        <div class="fin-form-group">
-                            <label for="branchSelect">Cơ sở chi nhánh</label>
-                            <select id="branchSelect" name="branchId" class="fin-select">
-                                <option value="">-- Tất cả chi nhánh --</option>
-                                <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
-                                        th:selected="${b.branchId == selectedBranchId}"></option>
-                            </select>
-                        </div>
+                        <!-- Chi nhánh ẩn (đồng bộ theo bộ chọn cơ sở chuẩn góc phải tiêu đề) -->
+                        <input type="hidden" name="branchId" id="branchSelect" th:value="${selectedBranchId}">
 
                         <div class="fin-form-group">
                             <label for="categorySelect">Danh mục chi</label>
