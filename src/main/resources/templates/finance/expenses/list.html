@@ -70,10 +70,16 @@
                 </div>
 
                 <!-- Bộ lọc gọn gàng -->
-                <div class="fin-card mb-4">
+                <div class="fin-card fin-filter-container mb-3">
                     <form th:action="@{/expenses}" method="get" class="fin-filter-bar">
                         <!-- Chi nhánh ẩn (đồng bộ theo bộ chọn cơ sở chuẩn góc phải tiêu đề) -->
                         <input type="hidden" name="branchId" id="branchSelect" th:value="${selectedBranchId}">
+
+                        <div class="fin-form-group fin-search-group" style="flex: 2; min-width: 240px;">
+                            <i class="bi bi-search search-icon"></i>
+                            <input type="text" id="keyword" name="keyword" class="fin-input"
+                                   placeholder="Tìm kiếm phiếu chi, người nhận, nội dung..." th:value="${keyword}">
+                        </div>
 
                         <div class="fin-form-group">
                             <label for="categorySelect">Danh mục chi</label>
@@ -114,12 +120,6 @@
                             </select>
                         </div>
 
-                        <div class="fin-form-group" style="flex: 2; min-width: 200px;">
-                            <label for="keyword">Từ khóa tìm kiếm</label>
-                            <input type="text" id="keyword" name="keyword" class="fin-input"
-                                   placeholder="Mã phiếu, người nhận, nội dung chi..." th:value="${keyword}">
-                        </div>
-
                         <div class="d-flex gap-2 align-items-end">
                             <button type="submit" class="fin-btn fin-btn-primary"><i class="bi bi-search"></i> Lọc</button>
                             <a th:href="@{/expenses}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-counterclockwise"></i> Đặt lại</a>
@@ -128,7 +128,14 @@
                 </div>
 
                 <!-- Bảng danh sách chi phí -->
-                <div class="fin-card">
+                <div class="fin-card fin-table-card p-0 mb-4">
+                    <div class="fin-grid-topbar d-flex justify-content-between align-items-center">
+                        <div class="fin-grid-info">
+                            Hiển thị <span class="fw-bold" th:text="${expenses.numberOfElements}">0</span> / <span th:text="${expenses.totalElements}">0</span> phiếu chi
+                            <span class="text-muted" th:if="${keyword != null and !keyword.isEmpty()}" th:text="' &bull; Từ khóa: ' + ${keyword}"></span>
+                        </div>
+                        <div></div>
+                    </div>
                     <div class="table-responsive">
                         <table class="fin-table" data-enhanced-table="ft25-expenses">
                             <thead>
@@ -221,25 +228,31 @@
                         </table>
                     </div>
 
-                    <!-- Phân trang -->
-                    <div th:if="${expenses.totalPages > 1}" class="fin-pagination mt-4 d-flex justify-content-between align-items-center">
-                        <span class="text-muted small">
-                            Hiển thị trang <b th:text="${expenses.number + 1}"></b> / <span th:text="${expenses.totalPages}"></span>
-                            (Tổng <span th:text="${expenses.totalElements}"></span> phiếu chi)
-                        </span>
-                        <ul class="pagination pagination-sm mb-0">
-                            <li class="page-item" th:classappend="${expenses.first} ? 'disabled'">
-                                <a class="page-link" th:href="@{/expenses(branchId=${selectedBranchId}, category=${selectedCategory}, sourceType=${selectedSourceType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, isCancelled=${isCancelled}, keyword=${keyword}, page=${expenses.number - 1})}">&laquo;</a>
-                            </li>
-                            <li class="page-item" th:each="p : ${#numbers.sequence(0, expenses.totalPages - 1)}"
-                                th:classappend="${p == expenses.number} ? 'active'">
-                                <a class="page-link" th:href="@{/expenses(branchId=${selectedBranchId}, category=${selectedCategory}, sourceType=${selectedSourceType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, isCancelled=${isCancelled}, keyword=${keyword}, page=${p})}"
-                                   th:text="${p + 1}"></a>
-                            </li>
-                            <li class="page-item" th:classappend="${expenses.last} ? 'disabled'">
-                                <a class="page-link" th:href="@{/expenses(branchId=${selectedBranchId}, category=${selectedCategory}, sourceType=${selectedSourceType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, isCancelled=${isCancelled}, keyword=${keyword}, page=${expenses.number + 1})}">&raquo;</a>
-                            </li>
-                        </ul>
+                    <!-- Phân trang chuẩn giao diện tham chiếu -->
+                    <div class="misa-pagination-footer" th:if="${expenses.totalElements > 0}">
+                        <div class="misa-total-count">
+                            Tổng số: <strong th:text="${expenses.totalElements}">0</strong> bản ghi
+                        </div>
+                        <div class="misa-pagination-controls" th:if="${expenses.totalPages > 1}">
+                            <div class="misa-page-size-selector">
+                                <span>Số dòng/trang:</span>
+                                <span class="fw-semibold text-dark" th:text="${expenses.size}">10</span>
+                            </div>
+                            <div class="misa-page-index-info">
+                                <span th:text="${(expenses.number * expenses.size) + 1}">1</span> - 
+                                <span th:text="${(expenses.number + 1) * expenses.size > expenses.totalElements ? expenses.totalElements : (expenses.number + 1) * expenses.size}">10</span>
+                            </div>
+                            <div class="misa-nav-buttons">
+                                <a th:href="@{/expenses(branchId=${selectedBranchId}, category=${selectedCategory}, sourceType=${selectedSourceType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, isCancelled=${isCancelled}, keyword=${keyword}, page=0)}"
+                                   class="misa-nav-btn" th:classappend="${expenses.first} ? 'disabled'" title="Trang đầu">&laquo;</a>
+                                <a th:href="@{/expenses(branchId=${selectedBranchId}, category=${selectedCategory}, sourceType=${selectedSourceType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, isCancelled=${isCancelled}, keyword=${keyword}, page=${expenses.number - 1})}"
+                                   class="misa-nav-btn" th:classappend="${expenses.first} ? 'disabled'" title="Trang trước">&lsaquo;</a>
+                                <a th:href="@{/expenses(branchId=${selectedBranchId}, category=${selectedCategory}, sourceType=${selectedSourceType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, isCancelled=${isCancelled}, keyword=${keyword}, page=${expenses.number + 1})}"
+                                   class="misa-nav-btn" th:classappend="${expenses.last} ? 'disabled'" title="Trang sau">&rsaquo;</a>
+                                <a th:href="@{/expenses(branchId=${selectedBranchId}, category=${selectedCategory}, sourceType=${selectedSourceType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, isCancelled=${isCancelled}, keyword=${keyword}, page=${expenses.totalPages - 1})}"
+                                   class="misa-nav-btn" th:classappend="${expenses.last} ? 'disabled'" title="Trang cuối">&raquo;</a>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
