@@ -17,14 +17,19 @@
     <main class="app-content">
       <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
 
-      <!-- BREADCRUMB -->
-      <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb mb-0">
-          <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
-          <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
-          <li class="breadcrumb-item active" aria-current="page">Nhóm dịch vụ</li>
-        </ol>
-      </nav>
+      <!-- BREADCRUMB & BỘ CHỌN CƠ SỞ PHÍA TRÊN CÙNG -->
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Nhóm dịch vụ</li>
+          </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-2">
+          <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+        </div>
+      </div>
 
       <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
       <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('categories')}"></nav>
@@ -94,7 +99,7 @@
               </a>
             </div>
 
-            <!-- 4. Nút Thêm nhóm dịch vụ & Bộ chọn cơ sở chuẩn DentalSoft -->
+            <!-- 4. Nút Thêm nhóm dịch vụ -->
             <div class="col-12 col-md-auto ms-md-auto d-flex align-items-center justify-content-end gap-2">
               <button type="button"
                       class="btn btn-primary"
@@ -103,7 +108,6 @@
                 <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
                 Thêm nhóm dịch vụ
               </button>
-              <div th:replace="~{fragments/header :: branchSelectInline}"></div>
             </div>
           </div>
         </form>
