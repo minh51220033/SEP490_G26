@@ -720,7 +720,22 @@ public class InvoiceServiceImpl implements InvoiceService {
     public Invoice getInvoiceWithDetails(Long invoiceId) {
         Invoice invoice = invoiceRepository.findWithDetailsById(invoiceId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hóa đơn ID: " + invoiceId));
-        invoice.getItems().size(); // initialize items
+        if (invoice.getItems() != null) {
+            invoice.getItems().forEach(it -> {
+                if (it.getService() != null) {
+                    it.getService().getServiceName();
+                }
+                if (it.getPerformedService() != null) {
+                    it.getPerformedService().getToothNumbers();
+                    if (it.getPerformedService().getPlanItem() != null && it.getPerformedService().getPlanItem().getStage() != null) {
+                        it.getPerformedService().getPlanItem().getStage().getStageName();
+                    }
+                }
+                if (it.getBatch() != null) {
+                    it.getBatch().getBatchNumber();
+                }
+            });
+        }
         return invoice;
     }
 

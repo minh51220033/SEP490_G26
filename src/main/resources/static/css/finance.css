@@ -1688,10 +1688,10 @@
 }
 
 /* 2. KHUNG BẢNG VÀ TOOLBAR TRÊN BẢNG (TABLE CARD & TOPBAR) */
-.finance-page .fin-card:has(.fin-table-wrapper),
-.cashier-page .fin-card:has(.fin-table-wrapper),
-.finance-page .fin-card:has(table[data-enhanced-table]),
-.cashier-page .fin-card:has(table[data-enhanced-table]),
+.finance-page .fin-card.fin-table-card,
+.cashier-page .fin-card.fin-table-card,
+.finance-page .fin-card.p-0,
+.cashier-page .fin-card.p-0,
 .finance-page .enhanced-table-container,
 .cashier-page .enhanced-table-container,
 .fin-brand-theme .enhanced-table-container {
@@ -1700,8 +1700,47 @@
     border-radius: 12px !important;
     overflow: hidden !important;
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
-    margin-bottom: 20px !important;
+    margin-bottom: 24px !important;
     padding: 0 !important;
+}
+
+/* Các thẻ fin-card thông thường (như trong trang chi tiết bệnh nhân): giữ padding 20px 24px thoáng đãng */
+.finance-page .fin-card:not(.fin-table-card):not(.p-0),
+.cashier-page .fin-card:not(.fin-table-card):not(.p-0),
+.fin-brand-theme .fin-card:not(.fin-table-card):not(.p-0) {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    padding: 20px 24px !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
+    margin-bottom: 24px !important;
+}
+
+/* Khoảng cách thoáng cho tiêu đề thẻ và icon không bao giờ bị dính sát mép */
+.finance-page .fin-card h4,
+.cashier-page .fin-card h4,
+.fin-brand-theme .fin-card h4 {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 16px !important;
+}
+
+.finance-page .fin-card h4 i,
+.cashier-page .fin-card h4 i,
+.fin-brand-theme .fin-card h4 i {
+    font-size: 1.15rem !important;
+    margin-right: 4px !important;
+}
+
+/* Đảm bảo khoảng cách tách biệt rõ ràng giữa các bảng (tránh dính vào nhau) */
+.finance-page .fin-card + .fin-card,
+.cashier-page .fin-card + .fin-card,
+.fin-brand-theme .fin-card + .fin-card,
+.finance-page .fin-card.mt-4,
+.cashier-page .fin-card.mt-4,
+.fin-brand-theme .fin-card.mt-4 {
+    margin-top: 24px !important;
 }
 
 /* Thanh thông tin & tùy biến cột phía trên bảng: Nút tùy biến luôn ở góc trên bên phải */
@@ -1780,7 +1819,10 @@ table#cashier-pending-patients td a:hover {
     text-decoration: underline !important;
 }
 
-/* Header bảng chuẩn ảnh: nền xanh rất nhạt, chữ đậm rõ */
+/* Header bảng: căn giữa toàn bộ tiêu đề bảng */
+.finance-page table thead th,
+.cashier-page table thead th,
+.fin-brand-theme table thead th,
 .finance-page table.fin-table thead th,
 .cashier-page table.fin-table thead th,
 .finance-page table[data-enhanced-table] thead th,
@@ -1795,9 +1837,25 @@ table#cashier-pending-patients td a:hover {
     border-bottom: 2px solid #cbd5e1 !important;
     border-right: 1px solid #e2e8f0 !important;
     white-space: nowrap !important;
+    text-align: center !important;
+    vertical-align: middle !important;
 }
 
-/* Hàng dữ liệu padding đồng đều, hover xanh dịu */
+.finance-page table thead th .enhanced-th-content,
+.cashier-page table thead th .enhanced-th-content,
+.fin-brand-theme table thead th .enhanced-th-content,
+table[data-enhanced-table] thead th .enhanced-th-content {
+    justify-content: center !important;
+    text-align: center !important;
+    margin: 0 auto !important;
+    display: inline-flex !important;
+    width: auto !important;
+}
+
+/* Hàng dữ liệu: căn trái toàn bộ nội dung bên dưới */
+.finance-page table tbody td,
+.cashier-page table tbody td,
+.fin-brand-theme table tbody td,
 .finance-page table.fin-table tbody td,
 .cashier-page table.fin-table tbody td,
 .finance-page table[data-enhanced-table] tbody td,
@@ -1808,6 +1866,32 @@ table#cashier-pending-patients td a:hover {
     font-size: 13.5px !important;
     vertical-align: middle !important;
     color: #334155 !important;
+    text-align: left !important;
+}
+
+.finance-page table tbody td .d-flex,
+.cashier-page table tbody td .d-flex,
+.fin-brand-theme table tbody td .d-flex,
+.finance-page table tbody td .d-inline-flex,
+.cashier-page table tbody td .d-inline-flex,
+.fin-brand-theme table tbody td .d-inline-flex {
+    justify-content: flex-start !important;
+}
+
+/* Riêng hàng thông báo rỗng hoặc colspan thì căn giữa */
+.finance-page table tbody td[colspan],
+.cashier-page table tbody td[colspan],
+.fin-brand-theme table tbody td[colspan],
+.finance-page table.fin-table tbody td[colspan],
+.cashier-page table.fin-table tbody td[colspan] {
+    text-align: center !important;
+}
+
+.finance-page table tbody td[colspan] .empty-state-box,
+.cashier-page table tbody td[colspan] .empty-state-box,
+.fin-brand-theme table tbody td[colspan] .empty-state-box {
+    margin: 0 auto !important;
+    text-align: center !important;
 }
 
 .finance-page table.fin-table tbody tr:hover td,
@@ -1817,12 +1901,11 @@ table#cashier-pending-patients td a:hover {
     background-color: #f0f9ff !important;
 }
 
-/* Căn phải cột tiền */
+/* Định dạng số và tiền tệ gọn gàng */
 .finance-page table.fin-table td.text-end,
 .cashier-page table.fin-table td.text-end,
 .finance-page table[data-enhanced-table] td.text-end,
 .cashier-page table[data-enhanced-table] td.text-end {
-    text-align: right !important;
     font-variant-numeric: tabular-nums !important;
     white-space: nowrap !important;
 }
@@ -1864,5 +1947,49 @@ table#cashier-pending-patients td a:hover {
     border-top: 1px solid #e2e8f0 !important;
     font-size: 0.85rem !important;
     color: #334155 !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   BẢO VỆ GIAO DIỆN IN ẤN (IN HÓA ĐƠN & PHIẾU THU KHÔNG TRÀN KHUNG)
+   ════════════════════════════════════════════════════════════════════════════ */
+.print-container table,
+.print-a4 table,
+.print-receipt-page table,
+.print-invoice-page table,
+table.table-receipt,
+table.table-itemized {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: auto !important;
+    border-collapse: collapse !important;
+}
+
+.print-container table thead th,
+.print-a4 table thead th,
+.print-receipt-page table thead th,
+.print-invoice-page table thead th,
+table.table-receipt thead th,
+table.table-itemized thead th {
+    padding: 6px 8px !important;
+    font-size: 11.5px !important;
+    white-space: normal !important;
+    background: #f8fafc !important;
+    color: #1e293b !important;
+    border: 1px solid #cbd5e1 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+}
+
+.print-container table tbody td,
+.print-a4 table tbody td,
+.print-receipt-page table tbody td,
+.print-invoice-page table tbody td,
+table.table-receipt tbody td,
+table.table-itemized tbody td {
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+    white-space: normal !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #1e293b !important;
 }
 
