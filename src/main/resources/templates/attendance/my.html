@@ -344,6 +344,24 @@
                             <!-- Trạng thái check-in hôm nay nếu đã bấm -->
                             <div class="p-1 px-2 rounded-2 border mb-1" style="background: #f8fafc; border-color: #e2e8f0 !important; font-size: 12px;" th:if="${todayRecord != null and todayRecord.checkInAt != null}">
                                 <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                <span th:text="${todayRecord.checkOutAt == null ? 'Đang trong ca: ' : 'Ca gần nhất: '}"></span>
+                                Vào: <strong class="text-dark" th:text="${#temporals.format(todayRecord.checkInAt, 'HH:mm:ss')}">08:00:00</strong>
+                                <span th:if="${todayRecord.checkOutAt != null}">
+                                    · Ra: <strong class="text-dark" th:text="${#temporals.format(todayRecord.checkOutAt, 'HH:mm:ss')}">17:00:00</strong>
+                                </span>
+                                <span th:if="${todayRecord.workedMinutes != null and todayRecord.workedMinutes > 0}" class="text-success fw-bold ms-1">
+                                    · Tích lũy: <span th:text="${(todayRecord.workedMinutes / 60) + 'g ' + (todayRecord.workedMinutes % 60) + 'p'}">0g 0p</span>
+                                </span>
+                                <span class="status-badge ms-1" style="font-size: 10.5px; padding: 1px 5px;"
+                                      th:classappend="'status-badge--' + ${#strings.toLowerCase(todayRecord.status.name())}"
+                                      th:text="${todayRecord.status.name() == 'ON_TIME' ? 'Đúng giờ' : (todayRecord.status.name() == 'LATE' ? 'Đi muộn' : (todayRecord.status.name() == 'EARLY_LEAVE' ? 'Về sớm' : 'Khác'))}">Đúng giờ</span>
+                            </div>
+                                </div>
+                            </div>
+
+                            <!-- Trạng thái check-in hôm nay nếu đã bấm -->
+                            <div class="p-1 px-2 rounded-2 border mb-1" style="background: #f8fafc; border-color: #e2e8f0 !important; font-size: 12px;" th:if="${todayRecord != null and todayRecord.checkInAt != null}">
+                                <i class="bi bi-check-circle-fill text-success me-1"></i>
                                 Vào: <strong class="text-dark" th:text="${#temporals.format(todayRecord.checkInAt, 'HH:mm:ss')}">08:00:00</strong>
                                 <span th:if="${todayRecord.checkOutAt != null}">
                                     · Ra: <strong class="text-dark" th:text="${#temporals.format(todayRecord.checkOutAt, 'HH:mm:ss')}">17:00:00</strong>
@@ -368,7 +386,7 @@
                                     <form th:action="@{/attendance/check-in}" method="post" class="m-0">
                                         <button type="submit" class="btn btn-primary fw-bold px-2.5 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" id="btnCheckIn"
                                                 style="height: 32px; font-size: 12px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;"
-                                                th:disabled="${#lists.isEmpty(todayShifts) or (todayRecord != null and todayRecord.checkInAt != null)}">
+                                                th:disabled="${#lists.isEmpty(todayShifts) or (todayRecord != null and todayRecord.checkInAt != null and todayRecord.checkOutAt == null)}">
                                             <i class="bi bi-box-arrow-in-right"></i> Check-in vào ca
                                         </button>
                                     </form>
