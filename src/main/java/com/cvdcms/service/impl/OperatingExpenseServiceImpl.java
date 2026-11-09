@@ -182,6 +182,23 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
     }
 
     @Override
+    public void cancelAutomatedPayrollExpense(Long periodId, String reason, Long currentUserId) {
+        if (periodId == null) {
+            return;
+        }
+        operatingExpenseRepository.findByPayrollPeriod_PeriodId(periodId).ifPresent(expense -> {
+            if (!Boolean.TRUE.equals(expense.getIsCancelled())) {
+                expense.setIsCancelled(true);
+                expense.setCancelledReason(reason != null ? reason.trim() : "Hủy phiếu chi do bảng lương bị từ chối/hủy");
+                User currentUser = currentUserId != null ? userRepository.findById(currentUserId).orElse(null) : null;
+                expense.setCancelledBy(currentUser);
+                expense.setCancelledAt(LocalDateTime.now());
+                operatingExpenseRepository.save(expense);
+            }
+        });
+    }
+
+    @Override
     public OperatingExpense updateManualExpense(Long expenseId, OperatingExpenseRequestDTO dto, String editReason, Long currentUserId) {
         if (currentUserId == null) {
             throw new AccessDeniedException("Người dùng chưa đăng nhập");

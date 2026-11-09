@@ -84,7 +84,9 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
         boolean hasFinancePermission = userRepository.hasActivePermission(userId, "INVOICE_VIEW")
                 || userRepository.hasActivePermission(userId, "INVOICE_CREATE")
                 || userRepository.hasActivePermission(userId, "PAYMENT_COLLECT")
-                || userRepository.hasActivePermission(userId, "REFUND_MANAGE");
+                || userRepository.hasActivePermission(userId, "REFUND_MANAGE")
+                || userRepository.hasActivePermission(userId, "FINANCE_DASHBOARD")
+                || userRepository.hasActivePermission(userId, "FINANCE_DEBT");
         boolean isFinanceRole = isAdmin || hasFinancePermission;
 
         if (!isFinanceRole) {

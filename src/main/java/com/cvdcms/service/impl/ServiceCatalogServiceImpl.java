@@ -842,4 +842,10 @@ public class ServiceCatalogServiceImpl
         String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
         return serviceRepository.searchAdminServices(cleanKeyword, categoryId, status);
     }
+
+    @Override
+    public org.springframework.data.domain.Page<Service> searchServices(String keyword, Long categoryId, ServiceStatus status, org.springframework.data.domain.Pageable pageable) {
+        String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        return serviceRepository.searchAdminServices(cleanKeyword, categoryId, status, pageable);
+    }
 }

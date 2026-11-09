@@ -34,6 +34,8 @@ public interface OperatingExpenseService {
 
     OperatingExpense cancelExpense(Long expenseId, String reason, Long currentUserId);
 
+    void cancelAutomatedPayrollExpense(Long periodId, String reason, Long currentUserId);
+
     BigDecimal getTotalActiveExpenses(Long branchId, List<Long> allowedBranchIds, LocalDate startDate, LocalDate endDate);
 
     BigDecimal getTotalActiveExpenses(
