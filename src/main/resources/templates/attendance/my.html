@@ -356,20 +356,6 @@
                                       th:classappend="'status-badge--' + ${#strings.toLowerCase(todayRecord.status.name())}"
                                       th:text="${todayRecord.status.name() == 'ON_TIME' ? 'Đúng giờ' : (todayRecord.status.name() == 'LATE' ? 'Đi muộn' : (todayRecord.status.name() == 'EARLY_LEAVE' ? 'Về sớm' : 'Khác'))}">Đúng giờ</span>
                             </div>
-                                </div>
-                            </div>
-
-                            <!-- Trạng thái check-in hôm nay nếu đã bấm -->
-                            <div class="p-1 px-2 rounded-2 border mb-1" style="background: #f8fafc; border-color: #e2e8f0 !important; font-size: 12px;" th:if="${todayRecord != null and todayRecord.checkInAt != null}">
-                                <i class="bi bi-check-circle-fill text-success me-1"></i>
-                                Vào: <strong class="text-dark" th:text="${#temporals.format(todayRecord.checkInAt, 'HH:mm:ss')}">08:00:00</strong>
-                                <span th:if="${todayRecord.checkOutAt != null}">
-                                    · Ra: <strong class="text-dark" th:text="${#temporals.format(todayRecord.checkOutAt, 'HH:mm:ss')}">17:00:00</strong>
-                                </span>
-                                <span class="status-badge ms-1" style="font-size: 10.5px; padding: 1px 5px;"
-                                      th:classappend="'status-badge--' + ${#strings.toLowerCase(todayRecord.status.name())}"
-                                      th:text="${todayRecord.status.name() == 'ON_TIME' ? 'Đúng giờ' : (todayRecord.status.name() == 'LATE' ? 'Đi muộn' : (todayRecord.status.name() == 'EARLY_LEAVE' ? 'Về sớm' : 'Khác'))}">Đúng giờ</span>
-                            </div>
 
                             <!-- Nếu có ca hiển thị ca nhanh -->
                             <div th:if="${!#lists.isEmpty(todayShifts) and (todayRecord == null or todayRecord.checkInAt == null)}" class="d-flex align-items-center gap-1.5 mb-1 text-muted text-truncate" style="font-size: 12px;">
