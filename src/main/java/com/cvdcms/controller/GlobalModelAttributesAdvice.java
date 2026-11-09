@@ -58,8 +58,6 @@ public class GlobalModelAttributesAdvice {
         this.customerPortalServiceProvider = customerPortalServiceProvider;
         this.serviceCatalogServiceProvider = serviceCatalogServiceProvider;
         this.patientProfileRepositoryProvider = patientProfileRepositoryProvider;
-
-        this.branchServiceProvider = branchServiceProvide;
     }
 
     @ModelAttribute("roleNames")
