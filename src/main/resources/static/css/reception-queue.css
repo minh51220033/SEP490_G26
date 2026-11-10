@@ -307,17 +307,39 @@
     background: #ffffff;
 }
 
+.queue-doctor-section {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+}
+
+.queue-doctor-section .queue-avatar {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    flex: none;
+    border-radius: 10px;
+    color: #0284c7;
+    background: #e0f2fe;
+    font-size: 1.25rem;
+}
+
 .queue-kanban {
     display: grid;
-    grid-template-columns: repeat(5, minmax(245px, 1fr));
-    gap: 1rem;
-    overflow-x: auto;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.25rem;
+    width: 100%;
     padding-bottom: 0.5rem;
     align-items: stretch;
 }
 
 .queue-lane {
-    min-height: 520px;
+    min-height: 480px;
+    width: 100%;
+    min-width: 0;
     padding: 0.9rem;
     border: 1.5px solid #e2e8f0;
     border-radius: 14px;
