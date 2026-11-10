@@ -6,8 +6,8 @@
 
 <!-- CSS và Script riêng của trang CSKH -->
 <link rel="stylesheet" th:href="@{/css/misa-pagination.css}">
-<link rel="stylesheet" th:href="@{/css/customer-care.css(v='20261106-ui')}">
-<script th:src="@{/js/customer-care.js(v='20261106-ui')}" defer></script>
+<link rel="stylesheet" th:href="@{/css/customer-care.css(v='20261110-v5')}">
+<script th:src="@{/js/customer-care.js(v='20261110-v5')}" defer></script>
 
 <!-- Khu vực quản trị: sidebar và main content đồng bộ layout toàn hệ thống -->
 <div class="app-shell">
@@ -21,197 +21,582 @@
         <!-- Topbar tiêu đề hệ thống Navy chuẩn 56px -->
         <header th:replace="~{fragments/header :: appTopbar('Quản lý Chăm sóc Khách hàng')}"></header>
 
-        <main class="app-content cc-app-view">
-            <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
+        <main class="app-content p-3 p-md-4" style="background: #f1f5f9 !important; min-height: calc(100vh - 64px);">
+            <style>
+                :root {
+                    --dv-primary: #0284c7;
+                    --dv-primary-dark: #0369a1;
+                    --dv-primary-light: #e0f2fe;
+                    --dv-indigo: #2563eb;
+                    --dv-border: #cbd5e1;
+                    --dv-border-soft: #e2e8f0;
+                    --dv-text-dark: #0f172a;
+                    --dv-text-secondary: #334155;
+                    --dv-text-muted: #64748b;
+                    --dv-surface: #ffffff;
+                }
 
-            <!-- 1. TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN ENTERPRISE (NHƯ ADMIN/BRANCHES & ADMIN/NEWS) -->
-            <div class="d-flex flex-wrap flex-xl-nowrap align-items-center justify-content-between gap-3 mb-3">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white; width: 44px; height: 44px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
-                        <i class="bi bi-heart-pulse-fill"></i>
+                .dv-breadcrumb {
+                    font-size: 13.5px;
+                    color: #64748b;
+                    font-weight: 500;
+                }
+                .dv-breadcrumb a {
+                    color: #0284c7;
+                    text-decoration: none;
+                    font-weight: 600;
+                }
+                .dv-breadcrumb a:hover {
+                    text-decoration: underline;
+                }
+                .dv-page-title {
+                    font-size: 24px;
+                    font-weight: 800;
+                    color: #0f172a;
+                    letter-spacing: -0.5px;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    margin-bottom: 2px;
+                }
+
+                /* KPI CARDS */
+                .dv-kpi-card {
+                    background: #ffffff;
+                    border: 1.5px solid #e2e8f0;
+                    border-radius: 16px;
+                    padding: 18px 22px;
+                    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+                    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    cursor: pointer;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .dv-kpi-card::before {
+                    content: '';
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    bottom: 0;
+                    width: 5px;
+                    background: var(--kpi-accent, #0284c7);
+                    border-radius: 16px 0 0 16px;
+                }
+                .dv-kpi-card:hover {
+                    transform: translateY(-3px);
+                    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+                    border-color: #cbd5e1;
+                }
+                .dv-kpi-card.active-kpi {
+                    border-color: var(--kpi-accent, #0284c7);
+                    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+                    box-shadow: 0 8px 20px rgba(2, 132, 199, 0.12);
+                }
+                .dv-kpi-num {
+                    font-size: 32px;
+                    font-weight: 800;
+                    line-height: 1.05;
+                    color: #0f172a;
+                    letter-spacing: -0.8px;
+                }
+                .dv-kpi-label {
+                    font-size: 14px;
+                    font-weight: 700;
+                    color: #475569;
+                    margin-top: 6px;
+                }
+                .dv-kpi-sub {
+                    font-size: 12px;
+                    color: #94a3b8;
+                    font-weight: 600;
+                    margin-top: 2px;
+                }
+                .dv-kpi-icon {
+                    width: 52px;
+                    height: 52px;
+                    border-radius: 14px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 24px;
+                    flex-shrink: 0;
+                }
+
+                /* TOOLBAR */
+                .dv-toolbar-card {
+                    background: #ffffff;
+                    border: 1.5px solid #e2e8f0;
+                    border-radius: 16px;
+                    padding: 16px 20px;
+                    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+                    margin-bottom: 16px;
+                }
+                .dv-search-box {
+                    position: relative;
+                    flex: 1;
+                    min-width: 280px;
+                }
+                .dv-search-box input {
+                    width: 100%;
+                    height: 44px;
+                    padding: 10px 42px 10px 42px;
+                    border: 1.5px solid #cbd5e1;
+                    border-radius: 12px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: #0f172a;
+                    background: #f8fafc;
+                    transition: all 0.2s;
+                }
+                .dv-search-box input:focus {
+                    background: #ffffff;
+                    border-color: #0284c7;
+                    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
+                    outline: none;
+                }
+                .dv-search-box .search-lead-icon {
+                    position: absolute;
+                    left: 14px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    color: #64748b;
+                    font-size: 16px;
+                    pointer-events: none;
+                }
+                .dv-quick-segment {
+                    display: inline-flex;
+                    background: #f1f5f9;
+                    padding: 4px;
+                    border-radius: 12px;
+                    border: 1px solid #e2e8f0;
+                    gap: 3px;
+                    overflow-x: auto;
+                    max-width: 100%;
+                }
+                .dv-seg-btn {
+                    border: none;
+                    background: transparent;
+                    color: #475569;
+                    font-size: 13px;
+                    font-weight: 700;
+                    padding: 7px 13px;
+                    border-radius: 9px;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    white-space: nowrap;
+                    text-decoration: none;
+                }
+                .dv-seg-btn:hover {
+                    color: #0f172a;
+                    background: rgba(255, 255, 255, 0.6);
+                }
+                .dv-seg-btn.active {
+                    background: #ffffff;
+                    color: #0284c7;
+                    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+                }
+                .dv-seg-count {
+                    font-size: 11px;
+                    font-weight: 800;
+                    padding: 1px 7px;
+                    border-radius: 20px;
+                    background: #e2e8f0;
+                    color: #334155;
+                }
+                .dv-seg-btn.active .dv-seg-count {
+                    background: #e0f2fe;
+                    color: #0369a1;
+                }
+                .dv-adv-filter-btn {
+                    height: 44px;
+                    padding: 0 16px;
+                    border-radius: 12px;
+                    border: 1.5px solid #cbd5e1;
+                    background: #ffffff;
+                    color: #0f172a;
+                    font-size: 13.5px;
+                    font-weight: 700;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    white-space: nowrap;
+                }
+                .dv-adv-filter-btn:hover,
+                .dv-adv-filter-btn.is-open {
+                    border-color: #0284c7;
+                    color: #0284c7;
+                    background: #f0f9ff;
+                }
+                .dv-adv-filter-panel {
+                    display: none;
+                    margin-top: 14px;
+                    padding-top: 16px;
+                    border-top: 1.5px dashed #cbd5e1;
+                    animation: dvFadeSlideDown 0.2s ease-out;
+                }
+                .dv-adv-filter-panel.show {
+                    display: block;
+                }
+                @keyframes dvFadeSlideDown {
+                    from { opacity: 0; transform: translateY(-6px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .dv-adv-label {
+                    font-size: 12.5px;
+                    font-weight: 700;
+                    color: #475569;
+                    margin-bottom: 5px;
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                }
+                .dv-adv-control {
+                    height: 40px;
+                    border-radius: 10px;
+                    border: 1.5px solid #cbd5e1;
+                    font-size: 13.5px;
+                    font-weight: 600;
+                    color: #0f172a;
+                    padding: 6px 12px;
+                    background: #ffffff;
+                    width: 100%;
+                }
+                .dv-adv-control:focus {
+                    border-color: #0284c7;
+                    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
+                    outline: none;
+                }
+
+                /* GRID CARD & AMIS TABLE */
+                .dv-grid-card {
+                    background: #ffffff;
+                    border: 1.5px solid #cbd5e1;
+                    border-radius: 16px;
+                    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+                    overflow: hidden;
+                    position: relative;
+                }
+                .dv-grid-topbar {
+                    padding: 12px 20px;
+                    background: #f8fafc;
+                    border-bottom: 1.5px solid #e2e8f0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                }
+                .dv-table-scroll-container {
+                    width: 100%;
+                    overflow-x: auto;
+                    position: relative;
+                    scroll-behavior: smooth;
+                }
+                .dv-amis-table {
+                    width: 100%;
+                    border-collapse: separate;
+                    border-spacing: 0;
+                    min-width: 1600px;
+                }
+                .dv-amis-table thead th {
+                    background: #f1f5f9;
+                    color: #334155;
+                    font-size: 12.5px;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.4px;
+                    padding: 14px 16px;
+                    border-bottom: 2px solid #cbd5e1;
+                    border-right: 1px solid #e2e8f0;
+                    white-space: nowrap;
+                    position: sticky;
+                    top: 0;
+                    z-index: 10;
+                    user-select: none;
+                    transition: background 0.15s;
+                }
+                .dv-amis-table thead th:hover {
+                    background: #e2e8f0;
+                }
+                .dv-th-inner {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
+                }
+                .dv-amis-table tbody tr.dv-data-row td {
+                    padding: 14px 16px;
+                    border-bottom: 1px solid #e2e8f0;
+                    border-right: 1px solid #f1f5f9;
+                    vertical-align: middle;
+                    font-size: 13.5px;
+                    color: #1e293b;
+                    background: #ffffff;
+                    transition: background-color 0.12s ease;
+                }
+                .dv-amis-table tbody tr.dv-data-row:hover td {
+                    background: #f0f9ff !important;
+                }
+
+                /* Khung Hover nổi chuẩn doctor/daily-visits: Khi cuộn ngang ở bất kỳ cột nào, hover qua hàng sẽ nổi cụm nút ở mép phải viewport */
+                .dv-floating-actions-track {
+                    position: sticky !important;
+                    right: 0 !important;
+                    width: 0 !important;
+                    min-width: 0 !important;
+                    max-width: 0 !important;
+                    height: 0 !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    border: none !important;
+                    overflow: visible !important;
+                    z-index: 25;
+                    background: transparent !important;
+                }
+
+                .dv-floating-actions-bar {
+                    position: absolute;
+                    right: 0;
+                    top: 50%;
+                    transform: translateY(-50%) translateX(10px);
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 16px 8px 36px;
+                    background: linear-gradient(90deg, rgba(240, 249, 255, 0) 0%, rgba(240, 249, 255, 0.96) 20%, #f0f9ff 100%);
+                    opacity: 0;
+                    visibility: hidden;
+                    pointer-events: none;
+                    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+                    white-space: nowrap;
+                    z-index: 30;
+                }
+
+                .dv-amis-table tbody tr.dv-data-row:hover .dv-floating-actions-bar {
+                    opacity: 1;
+                    visibility: visible;
+                    transform: translateY(-50%) translateX(0);
+                    pointer-events: auto;
+                }
+            </style>
+
+            <!-- 1. TIÊU ĐỀ TRANG ĐỒNG BỘ DOCTOR/DAILY-VISITS -->
+            <div class="d-flex flex-wrap flex-xl-nowrap align-items-center justify-content-between gap-3 mb-4">
+                <div>
+                    <div class="dv-page-title">
+                        <i class="bi bi-heart-pulse-fill text-primary"></i>
+                        <span>Quản lý Chăm sóc Khách hàng</span>
                     </div>
-                    <div>
-                        <h1 class="dv-page-title mb-0" style="font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">Quản lý Chăm sóc Khách hàng</h1>
-                        <p class="dv-page-subtitle mb-0" style="font-size: 13px; color: #64748b;">Quản lý lịch gọi hậu phẫu, tiếp nhận phản hồi và chăm sóc định kỳ bệnh nhân</p>
-                    </div>
+                    <p class="text-muted mb-0" style="font-size: 13.5px;">Quản lý lịch gọi hậu phẫu, tiếp nhận phản hồi và chăm sóc định kỳ bệnh nhân</p>
                 </div>
 
                 <div class="d-flex align-items-center gap-2 flex-shrink-0 flex-wrap">
                     <div class="position-relative d-inline-flex align-items-center">
                         <i class="bi bi-building position-absolute text-muted" style="left: 10px; pointer-events: none; font-size: 13px;"></i>
-                        <select id="branchId" name="branchId" aria-label="Chọn chi nhánh" class="form-select form-select-sm shadow-sm fw-semibold"
-                                style="height: 38px; border-radius: 8px; border-color: #cbd5e1; padding-left: 28px; max-width: 185px; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; background-color: #ffffff; color: #0f172a;">
+                        <select id="branchId" name="branchId" aria-label="Chọn chi nhánh" class="form-select form-select-sm shadow-xs fw-semibold"
+                                style="height: 40px; border-radius: 10px; border-color: #cbd5e1; padding-left: 28px; max-width: 200px; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; background-color: #ffffff; color: #0f172a;">
                             <option value="">Đang tải chi nhánh...</option>
                         </select>
                     </div>
-                    <button id="refreshBtn" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1.5" style="height: 38px; font-size: 13px;" type="button" title="Làm mới dữ liệu">
+                    <button id="refreshBtn" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-xs d-inline-flex align-items-center gap-1.5" style="height: 40px; font-size: 13px;" type="button" title="Làm mới dữ liệu">
                         <i class="bi bi-arrow-clockwise"></i> Làm mới
                     </button>
-                    <button id="autoGenerateBtn" class="btn btn-outline-primary fw-semibold px-2.5 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1.5" style="height: 38px; font-size: 13px;" type="button" title="Tự động quét ca khám hoàn thành, đơn thuốc và lịch hẹn để tạo công việc CSKH">
+                    <button id="autoGenerateBtn" class="btn btn-outline-primary fw-semibold px-3 py-2 rounded-3 shadow-xs d-inline-flex align-items-center gap-1.5" style="height: 40px; font-size: 13px;" type="button" title="Tự động quét ca khám hoàn thành, đơn thuốc và lịch hẹn để tạo công việc CSKH">
                         <i class="bi bi-magic"></i> Tổng hợp tự động
                     </button>
-                    <button id="openCreateTaskBtn" class="btn btn-primary fw-bold px-3.5 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1.5" type="button" style="height: 38px; font-size: 13px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                    <button id="openCreateTaskBtn" class="btn btn-primary fw-bold px-3.5 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1.5" type="button" style="height: 40px; font-size: 13px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
                         <i class="bi bi-plus-lg"></i> Lập lịch CSKH
-                    </button>
-                    <button id="openColumnDrawerBtn" class="btn btn-outline-secondary px-2.5 py-2 rounded-3 shadow-sm d-inline-flex align-items-center justify-content-center" style="height: 38px; width: 38px; border-color: #cbd5e1;" type="button" title="Tùy chỉnh cột hiển thị" onclick="openCcColumnDrawer()">
-                        <i class="bi bi-sliders"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- 2. 4 THẺ KPI SUMMARY CARDS (ĐỒNG BỘ DASHBOARD WIDGETS DAILY-VISITS) -->
-            <section class="stats-grid" aria-label="Chỉ số tổng quan chăm sóc khách hàng">
-                <article class="stat-card is-loading" id="kpiCardTotal" data-kpi-tab="ALL" role="button" tabindex="0">
-                    <div class="stat-card-body">
-                        <strong id="statTotalTasks" class="stat-value">—</strong>
-                        <span class="stat-label">Tổng công việc CSKH</span>
-                        <span id="statTotalTasksSub" class="stat-meta">Đang tải dữ liệu...</span>
+            <!-- 2. 4 THẺ KPI SUMMARY CARDS (ĐỒNG BỘ DOCTOR/DAILY-VISITS) -->
+            <div class="row g-3 mb-4" aria-label="Chỉ số tổng quan chăm sóc khách hàng">
+                <div class="col-xl-3 col-sm-6">
+                    <div class="dv-kpi-card" id="kpiCardTotal" data-kpi-tab="ALL" role="button" tabindex="0" style="--kpi-accent: #0284c7;">
+                        <div>
+                            <div class="dv-kpi-num" id="statTotalTasks">—</div>
+                            <div class="dv-kpi-label">Tổng công việc CSKH</div>
+                            <div class="dv-kpi-sub" id="statTotalTasksSub">Đang tải dữ liệu...</div>
+                        </div>
+                        <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                            <i class="bi bi-clipboard-check"></i>
+                        </div>
                     </div>
-                    <div class="stat-icon stat-icon-brand" aria-hidden="true">
-                        <i class="bi bi-clipboard-check"></i>
-                    </div>
-                </article>
+                </div>
 
-                <article class="stat-card stat-warning is-loading" id="kpiCardDue" data-kpi-tab="TODAY" role="button" tabindex="0">
-                    <div class="stat-card-body">
-                        <strong id="statDueTasks" class="stat-value">—</strong>
-                        <span class="stat-label">Hôm nay / Quá hạn</span>
-                        <span id="statDueTasksSub" class="stat-meta">Đang kiểm tra lịch...</span>
+                <div class="col-xl-3 col-sm-6">
+                    <div class="dv-kpi-card" id="kpiCardDue" data-kpi-tab="TODAY" role="button" tabindex="0" style="--kpi-accent: #f59e0b;">
+                        <div>
+                            <div class="dv-kpi-num text-warning" id="statDueTasks">—</div>
+                            <div class="dv-kpi-label">Hôm nay / Quá hạn</div>
+                            <div class="dv-kpi-sub" id="statDueTasksSub">Đang kiểm tra lịch...</div>
+                        </div>
+                        <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
                     </div>
-                    <div class="stat-icon stat-icon-warning" aria-hidden="true">
-                        <i class="bi bi-clock-history"></i>
-                    </div>
-                </article>
+                </div>
 
-                <article class="stat-card stat-danger is-loading" id="kpiCardEscalated" data-kpi-tab="ESCALATED" role="button" tabindex="0">
-                    <div class="stat-card-body">
-                        <strong id="statEscalatedTasks" class="stat-value">—</strong>
-                        <span class="stat-label">Ca chuyển Bác sĩ</span>
-                        <span id="statEscalatedTasksSub" class="stat-meta">Đang kiểm tra ca BS...</span>
+                <div class="col-xl-3 col-sm-6">
+                    <div class="dv-kpi-card" id="kpiCardEscalated" data-kpi-tab="ESCALATED" role="button" tabindex="0" style="--kpi-accent: #ef4444;">
+                        <div>
+                            <div class="dv-kpi-num text-danger" id="statEscalatedTasks">—</div>
+                            <div class="dv-kpi-label">Ca chuyển Bác sĩ</div>
+                            <div class="dv-kpi-sub" id="statEscalatedTasksSub">Đang kiểm tra ca BS...</div>
+                        </div>
+                        <div class="dv-kpi-icon" style="background: #fee2e2; color: #dc2626;">
+                            <i class="bi bi-heart-pulse-fill"></i>
+                        </div>
                     </div>
-                    <div class="stat-icon stat-icon-danger" aria-hidden="true">
-                        <i class="bi bi-heart-pulse"></i>
-                    </div>
-                </article>
+                </div>
 
-                <article class="stat-card stat-success is-loading" id="kpiCardCompleted" data-kpi-tab="COMPLETED_FILTER" role="button" tabindex="0">
-                    <div class="stat-card-body">
-                        <strong id="statCompletedTasks" class="stat-value">—</strong>
-                        <span class="stat-label">Đã hoàn thành CSKH</span>
-                        <span id="statCompletedTasksSub" class="stat-meta">Đang tính tỷ lệ...</span>
+                <div class="col-xl-3 col-sm-6">
+                    <div class="dv-kpi-card" id="kpiCardCompleted" data-kpi-tab="COMPLETED_FILTER" role="button" tabindex="0" style="--kpi-accent: #10b981;">
+                        <div>
+                            <div class="dv-kpi-num text-success" id="statCompletedTasks">—</div>
+                            <div class="dv-kpi-label">Đã hoàn thành CSKH</div>
+                            <div class="dv-kpi-sub" id="statCompletedTasksSub">Đang tính tỷ lệ...</div>
+                        </div>
+                        <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                            <i class="bi bi-check2-circle"></i>
+                        </div>
                     </div>
-                    <div class="stat-icon stat-icon-success" aria-hidden="true">
-                        <i class="bi bi-check2-circle"></i>
-                    </div>
-                </article>
-            </section>
-
-            <!-- 3. THANH TABS ẨN LƯU TRỮ ĐỒNG BỘ JS -->
-            <nav class="tabs-bar d-none" aria-hidden="true">
-                <button class="tab active" type="button" data-tab="ALL"><span class="tab-badge" id="badge_ALL">0</span></button>
-                <button class="tab" type="button" data-tab="TODAY"><span class="tab-badge" id="badge_TODAY">0</span></button>
-                <button class="tab" type="button" data-tab="POST_TREATMENT"><span class="tab-badge" id="badge_POST_TREATMENT">0</span></button>
-                <button class="tab" type="button" data-tab="APPOINTMENT_REMINDER"><span class="tab-badge" id="badge_APPOINTMENT_REMINDER">0</span></button>
-                <button class="tab" type="button" data-tab="INSTALLMENT_REMINDER"><span class="tab-badge" id="badge_INSTALLMENT_REMINDER">0</span></button>
-                <button class="tab" type="button" data-tab="NO_SHOW_RECALL"><span class="tab-badge" id="badge_NO_SHOW_RECALL">0</span></button>
-                <button class="tab" type="button" data-tab="NO_SERVICE_FOLLOWUP"><span class="tab-badge" id="badge_NO_SERVICE_FOLLOWUP">0</span></button>
-                <button class="tab" type="button" data-tab="FEEDBACK_COMPLAINT"><span class="tab-badge" id="badge_FEEDBACK_COMPLAINT">0</span></button>
-                <button class="tab tab-doctor" type="button" data-tab="ESCALATED"><span class="tab-badge" id="badge_ESCALATED">0</span></button>
-                <button class="tab" type="button" data-tab="HISTORY"></button>
-            </nav>
+                </div>
+            </div>
 
             <!-- THÔNG BÁO HỆ THỐNG -->
             <p id="message" class="notice" role="status" aria-live="polite" hidden></p>
 
-            <!-- 4. BỘ LỌC TÌM KIẾM NHANH (GỘP PHÂN NHÓM DROPDOWN + BỘ LỌC CHUNG) -->
-            <section id="filterToolbarSection" class="toolbar-card" aria-label="Bộ lọc công việc CSKH">
-                <div class="filter-grid">
-                    <div class="filter-field filter-tab-select">
-                        <label for="filterTabGroup">Phân loại CSKH</label>
-                        <select id="filterTabGroup" class="fw-semibold">
-                            <option value="ALL" id="opt_tab_ALL" data-label="Tổng quan" selected>Tổng quan (0)</option>
-                            <option value="TODAY" id="opt_tab_TODAY" data-label="Hôm nay">Hôm nay (0)</option>
-                            <option value="POST_TREATMENT" id="opt_tab_POST_TREATMENT" data-label="Sau điều trị">Sau điều trị (0)</option>
-                            <option value="APPOINTMENT_REMINDER" id="opt_tab_APPOINTMENT_REMINDER" data-label="Nhắc hẹn">Nhắc hẹn (0)</option>
-                            <option value="INSTALLMENT_REMINDER" id="opt_tab_INSTALLMENT_REMINDER" data-label="Trả góp">Trả góp (0)</option>
-                            <option value="NO_SHOW_RECALL" id="opt_tab_NO_SHOW_RECALL" data-label="Hẹn lỡ">Hẹn lỡ (0)</option>
-                            <option value="NO_SERVICE_FOLLOWUP" id="opt_tab_NO_SERVICE_FOLLOWUP" data-label="Chưa làm DV">Chưa làm DV (0)</option>
-                            <option value="FEEDBACK_COMPLAINT" id="opt_tab_FEEDBACK_COMPLAINT" data-label="Phản ánh">Phản ánh (0)</option>
-                            <option value="ESCALATED" id="opt_tab_ESCALATED" data-label="Chuyển Bác sĩ" style="color: #b91c1c; font-weight: bold;">Chuyển Bác sĩ (0)</option>
-                            <option value="HISTORY" id="opt_tab_HISTORY" data-label="Lịch sử CSKH BN">Lịch sử CSKH BN</option>
-                        </select>
+            <!-- 3. BỘ LỌC TÌM KIẾM NHANH + FILTER TABS (ĐỒNG BỘ DOCTOR/DAILY-VISITS) -->
+            <div class="dv-toolbar-card" id="filterToolbarSection">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <!-- Filter 1: Tìm kiếm từ khóa -->
+                    <div class="dv-search-box task-filter-field">
+                        <i class="bi bi-search search-lead-icon"></i>
+                        <input id="keyword" type="search" placeholder="Tìm theo Mã CV, Mã BN, Họ tên, SĐT, Mã ca khám...">
                     </div>
 
-                    <div class="filter-field filter-keyword task-filter-field">
-                        <label for="keyword">Tìm kiếm nhanh</label>
-                        <div class="dv-search-box">
-                            <span class="dv-search-lead"><i class="bi bi-search"></i></span>
-                            <input id="keyword" type="search" placeholder="Mã CV, mã BN, họ tên BN, SĐT, mã ca khám...">
+                    <!-- Filter 2: Quick Segmented Tabs -->
+                    <div class="dv-quick-segment" aria-label="Bộ lọc phân nhóm CSKH">
+                        <button type="button" class="dv-seg-btn tab active" data-tab="ALL">
+                            Tổng quan <span class="dv-seg-count" id="badge_ALL">0</span>
+                        </button>
+                        <button type="button" class="dv-seg-btn tab" data-tab="TODAY">
+                            Hôm nay <span class="dv-seg-count" id="badge_TODAY">0</span>
+                        </button>
+                        <button type="button" class="dv-seg-btn tab" data-tab="POST_TREATMENT">
+                            Sau điều trị <span class="dv-seg-count" id="badge_POST_TREATMENT">0</span>
+                        </button>
+                        <button type="button" class="dv-seg-btn tab" data-tab="APPOINTMENT_REMINDER">
+                            Nhắc hẹn <span class="dv-seg-count" id="badge_APPOINTMENT_REMINDER">0</span>
+                        </button>
+                        <button type="button" class="dv-seg-btn tab" data-tab="ESCALATED" style="color:#b91c1c;">
+                            Chuyển BS <span class="dv-seg-count" id="badge_ESCALATED" style="background:#fee2e2;color:#b91c1c;">0</span>
+                        </button>
+                        <button type="button" class="dv-seg-btn tab" data-tab="HISTORY">
+                            <i class="bi bi-clock-history"></i> Lịch sử BN
+                        </button>
+                    </div>
+
+                    <!-- Filter 3: Nút Lọc nâng cao -->
+                    <button type="button" class="dv-adv-filter-btn task-filter-field" id="btnToggleAdvFilter" onclick="toggleCcAdvFilter()">
+                        <i class="bi bi-funnel-fill"></i>
+                        <span>Lọc nâng cao</span>
+                        <i class="bi bi-chevron-down small ms-1" id="advFilterChevron"></i>
+                    </button>
+                </div>
+
+                <!-- KHUNG LỌC NÂNG CAO -->
+                <div class="dv-adv-filter-panel" id="advFilterPanel">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div class="fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 14.5px;">
+                            <i class="bi bi-sliders2-vertical text-primary"></i>
+                            <span>Bộ lọc chi tiết công việc CSKH</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-link text-danger fw-bold text-decoration-none p-0" id="clearFilterBtn">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại bộ lọc
+                        </button>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-lg-3 col-md-6 task-filter-field">
+                            <label class="dv-adv-label" for="filterTabGroup"><i class="bi bi-grid text-primary"></i> Phân loại CSKH</label>
+                            <select id="filterTabGroup" class="dv-adv-control">
+                                <option value="ALL" id="opt_tab_ALL" data-label="Tổng quan" selected>Tổng quan (0)</option>
+                                <option value="TODAY" id="opt_tab_TODAY" data-label="Hôm nay">Hôm nay (0)</option>
+                                <option value="POST_TREATMENT" id="opt_tab_POST_TREATMENT" data-label="Sau điều trị">Sau điều trị (0)</option>
+                                <option value="APPOINTMENT_REMINDER" id="opt_tab_APPOINTMENT_REMINDER" data-label="Nhắc hẹn">Nhắc hẹn (0)</option>
+                                <option value="INSTALLMENT_REMINDER" id="opt_tab_INSTALLMENT_REMINDER" data-label="Trả góp">Trả góp (0)</option>
+                                <option value="NO_SHOW_RECALL" id="opt_tab_NO_SHOW_RECALL" data-label="Hẹn lỡ">Hẹn lỡ (0)</option>
+                                <option value="NO_SERVICE_FOLLOWUP" id="opt_tab_NO_SERVICE_FOLLOWUP" data-label="Chưa làm DV">Chưa làm DV (0)</option>
+                                <option value="FEEDBACK_COMPLAINT" id="opt_tab_FEEDBACK_COMPLAINT" data-label="Phản ánh">Phản ánh (0)</option>
+                                <option value="ESCALATED" id="opt_tab_ESCALATED" data-label="Chuyển Bác sĩ">Chuyển Bác sĩ (0)</option>
+                                <option value="HISTORY" id="opt_tab_HISTORY" data-label="Lịch sử CSKH BN">Lịch sử CSKH BN</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-3 col-md-6 task-filter-field">
+                            <label class="dv-adv-label" for="filterStaffId"><i class="bi bi-person-badge text-primary"></i> Nhân viên phụ trách</label>
+                            <select id="filterStaffId" class="dv-adv-control">
+                                <option value="">Tất cả nhân viên</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-2 col-md-6 task-filter-field">
+                            <label class="dv-adv-label" for="filterStatus"><i class="bi bi-flag text-primary"></i> Trạng thái</label>
+                            <select id="filterStatus" class="dv-adv-control">
+                                <option value="">Tất cả trạng thái</option>
+                                <option value="PENDING">Chờ liên hệ</option>
+                                <option value="IN_PROGRESS">Đang CS / Hẹn gọi lại</option>
+                                <option value="ESCALATED_TO_DOCTOR">Chuyển Bác sĩ</option>
+                                <option value="COMPLETED">Đã hoàn thành</option>
+                                <option value="CANCELLED">Đã hủy</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-2 col-md-3 task-filter-field">
+                            <label class="dv-adv-label" for="filterFromDate"><i class="bi bi-calendar-event text-primary"></i> Hạn từ ngày</label>
+                            <input id="filterFromDate" type="date" class="dv-adv-control">
+                        </div>
+                        <div class="col-lg-2 col-md-3 task-filter-field">
+                            <label class="dv-adv-label" for="filterToDate"><i class="bi bi-calendar-check text-primary"></i> Đến ngày</label>
+                            <input id="filterToDate" type="date" class="dv-adv-control">
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <div class="filter-field task-filter-field">
-                        <label for="filterStaffId">Nhân viên phụ trách</label>
-                        <select id="filterStaffId">
-                            <option value="">Tất cả nhân viên</option>
-                        </select>
+            <!-- 4. KHỐI BẢNG DỮ LIỆU THÔNG MINH (ĐỒNG BỘ DOCTOR/DAILY-VISITS) -->
+            <div class="dv-grid-card" id="tasksPanel">
+                <!-- Thanh công cụ phía trên bảng -->
+                <div class="dv-grid-topbar">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="fw-bold text-dark" style="font-size: 14.5px;">
+                            Hiển thị <span class="text-primary fw-bolder" id="tasksTotalBadge">0</span> công việc CSKH
+                        </div>
                     </div>
-
-                    <div class="filter-field task-filter-field">
-                        <label for="filterStatus">Trạng thái công việc</label>
-                        <select id="filterStatus">
-                            <option value="">Tất cả trạng thái</option>
-                            <option value="PENDING">Chờ liên hệ</option>
-                            <option value="IN_PROGRESS">Đang chăm sóc / Hẹn gọi lại</option>
-                            <option value="ESCALATED_TO_DOCTOR">Chuyển Bác sĩ chuyên môn</option>
-                            <option value="COMPLETED">Đã hoàn thành</option>
-                            <option value="CANCELLED">Đã hủy</option>
-                        </select>
-                    </div>
-
-                    <div class="filter-field task-filter-field">
-                        <label for="filterFromDate">Hạn từ ngày</label>
-                        <input id="filterFromDate" type="date">
-                    </div>
-
-                    <div class="filter-field task-filter-field">
-                        <label for="filterToDate">Đến ngày</label>
-                        <input id="filterToDate" type="date">
-                    </div>
-
-                    <div class="filter-actions task-filter-field">
-                        <button id="searchBtn" class="btn-primary-custom" type="button">
-                            Tìm kiếm
-                        </button>
-                        <button id="clearFilterBtn" class="btn-secondary-custom" type="button">
-                            Đặt lại
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-white bg-white border fw-bold px-3 py-1.5 rounded-3 d-inline-flex align-items-center gap-1.5 shadow-xs" style="font-size: 13px; border-color: #cbd5e1 !important; color: #0f172a;" id="openColumnDrawerBtn" onclick="openCcColumnDrawer()">
+                            <i class="bi bi-sliders text-primary"></i>
+                            <span>Tùy biến cột</span>
                         </button>
                     </div>
                 </div>
-            </section>
 
-            <!-- 5. PANEL 1: DANH SÁCH CÔNG VIỆC CSKH (DUY NHẤT VÙNG NÀY CUỘN DỌC & NGANG) -->
-            <section id="tasksPanel" class="panel">
-                <!-- Panel Header ngầm phục vụ đồng bộ meta tab & badge -->
-                <div class="panel-head d-none" aria-hidden="true">
-                    <div>
-                        <h2 id="tasksPanelTitle">Danh sách công việc chăm sóc khách hàng</h2>
-                        <p id="tasksPanelSubtitle">Quản lý lịch liên hệ bệnh nhân, ghi nhận kết quả cuộc gọi/Zalo/SMS và chuyển Bác sĩ khi có dấu hiệu bất thường.</p>
-                    </div>
-                    <div class="panel-actions">
-                        <span id="tasksTotalBadge" class="count-pill">Đang tải...</span>
-                    </div>
-                </div>
-                <div class="table-viewport-wrapper dv-table-scroll-container staff-table-wrapper" id="tasksTableWrapper">
-                    <table class="cv-table cc-tasks-table dv-amis-table" id="ccTasksTable">
+                <!-- Bảng dữ liệu chính -->
+                <div class="dv-table-scroll-container" id="tasksTableWrapper">
+                    <table class="dv-amis-table" id="ccTasksTable">
                         <thead>
-                            <tr id="ccTasksHeaderRow">
-                                <!-- Render Header bằng JavaScript theo Column Customizer -->
-                            </tr>
+                            <tr id="ccTasksHeaderRow"></tr>
                         </thead>
                         <tbody id="tasksTableBody">
                             <tr>
-                                <td colspan="9" class="empty">Đang tải danh sách công việc CSKH...</td>
+                                <td colspan="10" class="empty">Đang tải danh sách công việc CSKH...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -219,14 +604,10 @@
 
                 <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
                 <div class="misa-pagination-footer" id="tasksPaginationFooter">
-                    <!-- Bên trái: Tổng số -->
                     <div class="misa-pagination-left">
                         Tổng số: <strong id="lblTasksTotal">0</strong>
                     </div>
-
-                    <!-- Bên phải: Số dòng/trang + Range + 4 Nút điều hướng -->
                     <div class="misa-pagination-right">
-                        <!-- Dropdown chọn số dòng/trang -->
                         <div class="misa-page-size-wrapper">
                             <span>Số dòng/trang</span>
                             <select id="tasksPageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang" onchange="onCcPageSizeChange(this.value)">
@@ -236,49 +617,41 @@
                                 <option value="100">100</option>
                             </select>
                         </div>
-
-                        <!-- Khoảng hiển thị bản ghi -->
                         <div class="misa-page-range">
                             <span id="lblTasksRange">0 - 0</span>
                         </div>
-
-                        <!-- Cụm 4 nút điều hướng (|< < > >|) -->
                         <div class="d-flex align-items-center gap-1">
-                            <!-- 1. Về trang đầu -->
                             <button type="button" class="misa-nav-btn disabled" id="tasksFirstBtn" title="Trang đầu" onclick="goToCcPage(0)" disabled>
                                 <i class="bi bi-chevron-bar-left"></i>
                             </button>
-                            <!-- 2. Trang trước -->
                             <button type="button" class="misa-nav-btn disabled" id="tasksPrevBtn" title="Trang trước" onclick="goToCcPrevPage()" disabled>
                                 <i class="bi bi-chevron-left"></i>
                             </button>
-                            <!-- 3. Trang sau -->
                             <button type="button" class="misa-nav-btn disabled" id="tasksNextBtn" title="Trang sau" onclick="goToCcNextPage()" disabled>
                                 <i class="bi bi-chevron-right"></i>
                             </button>
-                            <!-- 4. Đến trang cuối -->
                             <button type="button" class="misa-nav-btn disabled" id="tasksLastBtn" title="Trang cuối" onclick="goToCcLastPage()" disabled>
                                 <i class="bi bi-chevron-bar-right"></i>
                             </button>
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
 
-            <!-- 6. PANEL 2: LỊCH SỬ CHĂM SÓC BỆNH NHÂN TIMELINE (SCR-44.6) -->
-            <section id="historyPanel" class="panel" hidden>
-                <div class="toolbar-card mb-2 py-2">
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <!-- 5. PANEL 2: LỊCH SỬ CHĂM SÓC BỆNH NHÂN TIMELINE (SCR-44.6) -->
+            <div id="historyPanel" class="dv-grid-card" hidden>
+                <div class="dv-grid-topbar">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 w-100">
                         <div>
-                            <h6 class="mb-0 fw-bold text-dark">Lịch sử chăm sóc bệnh nhân (Timeline)</h6>
+                            <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-clock-history text-primary me-1.5"></i>Lịch sử chăm sóc bệnh nhân (Timeline)</h6>
                             <p class="small text-muted mb-0">Xem toàn bộ lịch sử tương tác qua Điện thoại, Zalo, SMS của từng bệnh nhân.</p>
                         </div>
-                        <div class="inline-filters">
+                        <div class="d-flex align-items-center gap-2">
                             <label for="historyPatientSelect" class="small fw-bold text-secondary mb-0">Bệnh nhân:</label>
                             <select id="historyPatientSelect" aria-label="Chọn bệnh nhân xem lịch sử" class="form-select form-select-sm py-1" style="min-width: 250px;">
                                 <option value="">-- Chọn bệnh nhân --</option>
                             </select>
-                            <button id="loadHistoryBtn" class="btn-primary-custom" type="button">
+                            <button id="loadHistoryBtn" class="btn btn-primary btn-sm fw-bold px-3 py-1.5 rounded-2" type="button" style="background:linear-gradient(135deg, #0284c7, #2563eb);border:none;">
                                 Xem lịch sử
                             </button>
                         </div>
@@ -288,7 +661,7 @@
                 <!-- Thông tin tóm tắt bệnh nhân -->
                 <div id="historyPatientSummary" class="patient-summary-card" hidden></div>
 
-                <div class="table-viewport-wrapper p-3" style="background:#f8fafc;">
+                <div class="p-3" style="background:#f8fafc;">
                     <div class="history-layout">
                         <div class="history-column">
                             <h3 class="sub-heading">Timeline tương tác liên hệ (<span id="timelineCount">0</span> lần)</h3>
@@ -305,7 +678,7 @@
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
 
         </main>
     </div>
