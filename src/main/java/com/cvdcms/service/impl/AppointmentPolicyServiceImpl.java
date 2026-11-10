@@ -142,10 +142,7 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
             AppointmentActorType actorType) {
         String invalid = invalidSession(branch, date, session, actorType);
         if (invalid != null) throw conflict(invalid);
-        boolean duplicate = appointments.findOccupyingForPatientDay(profile.getProfileId(),
-                        branch.getBranchId(), date, OCCUPYING).stream()
-                .anyMatch(a -> !Objects.equals(a.getAppointmentId(), excludeAppointmentId));
-        if (duplicate) throw conflict("Hồ sơ đã có lịch còn hiệu lực tại chi nhánh trong ngày này.");
+        // Cho phép đặt nhiều lịch hẹn trong ngày cho cả Lễ tân và Bệnh nhân (khám nhiều dịch vụ, tái khám hoặc đi theo ca)
         List<StaffProfile> doctors = eligibleDoctors(branch, date, session);
         if (doctors.isEmpty()) throw conflict("Chưa có bác sĩ trực buổi này.");
         List<Appointment> booked = booked(branch.getBranchId(), date, session, excludeAppointmentId);
@@ -179,15 +176,18 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         }
         if (doctors.isEmpty() && branch != null && date != null) {
             Set<Long> assigned = new HashSet<>();
+            Map<Long, StaffProfile> activeBranchDoctors = new LinkedHashMap<>();
             for (StaffBranchAssignment assignment : assignments.findByBranchAndStatus(
                     branch.getBranchId(), AssignmentStatus.ACTIVE)) {
                 if (assignment.getStartDate().isAfter(date)
                         || (assignment.getEndDate() != null && assignment.getEndDate().isBefore(date))) continue;
                 String role = assignment.getRole().getRoleName();
-                if (!Boolean.TRUE.equals(assignment.getRole().getIsActive()) || role == null
-                        || !("BAC_SI".equalsIgnoreCase(role) || "ROLE_BAC_SI".equalsIgnoreCase(role))) continue;
+                if (!Boolean.TRUE.equals(assignment.getRole().getIsActive()) || role == null) continue;
+                String rUpper = role.toUpperCase();
+                if (!(rUpper.contains("BAC_SI") || rUpper.contains("DOCTOR") || rUpper.contains("BÁC SĨ"))) continue;
                 if (assignment.getStaff().getStatus() == StaffStatus.ACTIVE) {
                     assigned.add(assignment.getStaff().getStaffId());
+                    activeBranchDoctors.put(assignment.getStaff().getStaffId(), assignment.getStaff());
                 }
             }
             List<LeaveRequest> approved = leaves.findApprovedOn(branch.getBranchId(), date, LeaveStatus.APPROVED);
@@ -202,6 +202,15 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
                         doctors.put(doctor.getStaffId(), doctor);
                     }
                 }
+            }
+            // Nếu chưa phân ca biểu lịch làm việc cụ thể trong ngày, hiển thị tất cả bác sĩ đang trực thuộc chi nhánh (không nghỉ phép)
+            if (doctors.isEmpty()) {
+                activeBranchDoctors.values().forEach(doc -> {
+                    boolean absent = approved.stream().anyMatch(leave -> leave.getStaff().getStaffId().equals(doc.getStaffId()));
+                    if (!absent) {
+                        doctors.put(doc.getStaffId(), doc);
+                    }
+                });
             }
         }
         return doctors.values().stream().sorted(Comparator.comparing(StaffProfile::getFullName))
@@ -271,15 +280,18 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
                                                PreferredSession session) {
         SessionRange range = sessionRange(branch, session);
         Set<Long> assigned = new HashSet<>();
+        Map<Long, StaffProfile> activeBranchDoctors = new LinkedHashMap<>();
         for (StaffBranchAssignment assignment : assignments.findByBranchAndStatus(
                 branch.getBranchId(), AssignmentStatus.ACTIVE)) {
             if (assignment.getStartDate().isAfter(date)
                     || assignment.getEndDate() != null && assignment.getEndDate().isBefore(date)) continue;
             String role = assignment.getRole().getRoleName();
-            if (!Boolean.TRUE.equals(assignment.getRole().getIsActive()) || role == null
-                    || !("BAC_SI".equalsIgnoreCase(role) || "ROLE_BAC_SI".equalsIgnoreCase(role))) continue;
+            if (!Boolean.TRUE.equals(assignment.getRole().getIsActive()) || role == null) continue;
+            String rUpper = role.toUpperCase();
+            if (!(rUpper.contains("BAC_SI") || rUpper.contains("DOCTOR") || rUpper.contains("BÁC SĨ"))) continue;
             if (assignment.getStaff().getStatus() == StaffStatus.ACTIVE) {
                 assigned.add(assignment.getStaff().getStaffId());
+                activeBranchDoctors.put(assignment.getStaff().getStaffId(), assignment.getStaff());
             }
         }
         List<LeaveRequest> approved = leaves.findApprovedOn(branch.getBranchId(), date, LeaveStatus.APPROVED);
@@ -296,6 +308,13 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
                             && (leave.getShift() == null
                             || leave.getShift().getShiftId().equals(shift.getShiftId())));
             if (!absent) result.put(doctor.getStaffId(), doctor);
+        }
+
+        if (result.isEmpty()) {
+            activeBranchDoctors.values().forEach(doc -> {
+                boolean absent = approved.stream().anyMatch(leave -> leave.getStaff().getStaffId().equals(doc.getStaffId()));
+                if (!absent) result.put(doc.getStaffId(), doc);
+            });
         }
 
         return result.values().stream().sorted(Comparator.comparing(StaffProfile::getFullName)).toList();

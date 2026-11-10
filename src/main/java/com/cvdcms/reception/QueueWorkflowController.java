@@ -101,8 +101,8 @@ public class QueueWorkflowController {
         return "redirect:/reception/queue?branchId=" + branchId;
     }
     @GetMapping({"/tv", "/tv/{branchId}"})
-    public String tv(@PathVariable(required = false) Long branchId,
-                     @RequestParam(required = false) Long branchIdParam,
+    public String tv(@PathVariable(name = "branchId", required = false) Long branchId,
+                     @RequestParam(name = "branchId", required = false) Long branchIdParam,
                      HttpSession session, Model model) {
         Long targetBranchId = branchId != null ? branchId : branchIdParam;
         if (targetBranchId == null && session != null) {
@@ -117,8 +117,8 @@ public class QueueWorkflowController {
     }
     @GetMapping({"/tv/data", "/tv/{branchId}/data"})
     @ResponseBody
-    public QueueWorkflowService.PublicBoard tvData(@PathVariable(required = false) Long branchId,
-                                                   @RequestParam(required = false) Long branchIdParam,
+    public QueueWorkflowService.PublicBoard tvData(@PathVariable(name = "branchId", required = false) Long branchId,
+                                                   @RequestParam(name = "branchId", required = false) Long branchIdParam,
                                                    HttpSession session) {
         Long targetBranchId = branchId != null ? branchId : branchIdParam;
         if (targetBranchId == null && session != null) {
