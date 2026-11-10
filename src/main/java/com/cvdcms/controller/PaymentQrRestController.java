@@ -72,7 +72,9 @@ public class PaymentQrRestController {
             }
         }
 
-        if (activeBranchIds == null || activeBranchIds.isEmpty() || !activeBranchIds.contains(targetBranchId)) {
+        boolean isMultiBranch = (activeBranchIds == null || activeBranchIds.isEmpty())
+                && userRepository.findById(userId).map(u -> u.getBranch() == null).orElse(false);
+        if (!isMultiBranch && (activeBranchIds == null || activeBranchIds.isEmpty() || !activeBranchIds.contains(targetBranchId))) {
             throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu tài chính tại chi nhánh ID: " + targetBranchId);
         }
     }

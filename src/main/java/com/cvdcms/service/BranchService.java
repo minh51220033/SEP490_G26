@@ -451,7 +451,9 @@ public class BranchService {
         }
 
         if (branchMap.isEmpty() && !allActive.isEmpty()) {
-            branchMap.put(allActive.get(0).getBranchId(), allActive.get(0));
+            for (Branch b : allActive) {
+                branchMap.put(b.getBranchId(), b);
+            }
         }
 
         return new ArrayList<>(branchMap.values());

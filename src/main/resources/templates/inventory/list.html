@@ -2,7 +2,7 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Quản lý kho vật tư')}"></head>
 
-<body class="app-body staff-page-body">
+<body class="app-body staff-page-body" th:attr="data-current-branch-id=${currentBranchId}">
 
 <!-- CSS riêng của trang kho -->
 <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
@@ -1367,6 +1367,7 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 <script th:src="@{/js/inventory.js(v='20261106-ui')}" defer></script>
 </body>
 </html>

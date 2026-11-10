@@ -1,8 +1,10 @@
 package com.cvdcms.patient;
 
+import com.cvdcms.entity.Branch;
 import com.cvdcms.entity.Role;
 import com.cvdcms.entity.User;
 import com.cvdcms.entity.enums.AssignmentStatus;
+import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.StaffBranchAssignmentRepository;
 import com.cvdcms.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
@@ -20,6 +22,12 @@ import java.util.Set;
 public class PatientAccess {
     private final UserRepository users;
     private final StaffBranchAssignmentRepository staffBranchAssignments;
+    private BranchRepository branchRepository;
+
+    @Autowired(required = false)
+    public void setBranchRepository(BranchRepository branchRepository) {
+        this.branchRepository = branchRepository;
+    }
 
     public PatientAccess(UserRepository users) {
         this(users, null);
@@ -73,6 +81,12 @@ public class PatientAccess {
             List<Long> activeBranches = staffBranchAssignments.findActiveBranchIdsByUserId(user.getUserId(), AssignmentStatus.ACTIVE);
             if (activeBranches != null && !activeBranches.isEmpty()) {
                 accessibleBranchIds.addAll(activeBranches);
+            }
+        }
+
+        if (!admin && accessibleBranchIds.isEmpty() && branchRepository != null) {
+            for (Branch b : branchRepository.findByIsActiveTrueOrderByBranchNameAsc()) {
+                if (b.getBranchId() != null) accessibleBranchIds.add(b.getBranchId());
             }
         }
 
