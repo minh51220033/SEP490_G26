@@ -71,7 +71,15 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
         // Bác sĩ / Lễ tân: bắt buộc chỉ xem dữ liệu thuộc cơ sở được phân công
         Long effectiveBranchId = branchId;
         if (!"ADMIN".equals(role)) {
-            effectiveBranchId = resolveUserPrimaryBranchId(userId);
+            List<Long> allowedIds = resolveUserAccessibleBranchIds(userId);
+            if (effectiveBranchId != null) {
+                if (!allowedIds.isEmpty() && !allowedIds.contains(effectiveBranchId)) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "Bạn không có quyền xem dữ liệu X-quang của cơ sở khác.");
+                }
+            } else if (allowedIds.size() == 1) {
+                effectiveBranchId = allowedIds.get(0);
+            }
         }
 
         Page<NanopixXraySyncLog> page = nanopixRepository.findWithFilters(status, kw, fromTime, toTime, effectiveBranchId, pageable);
@@ -83,7 +91,13 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
     public List<NanopixXrayResponseDTO> getUnmatchedXrays(String keyword, Long userId) {
         String role = requireAuthorizedRole(userId);
         String kw = StringUtils.hasText(keyword) ? keyword.trim() : null;
-        Long branchId = !"ADMIN".equals(role) ? resolveUserPrimaryBranchId(userId) : null;
+        Long branchId = null;
+        if (!"ADMIN".equals(role)) {
+            List<Long> allowedIds = resolveUserAccessibleBranchIds(userId);
+            if (allowedIds.size() == 1) {
+                branchId = allowedIds.get(0);
+            }
+        }
         List<NanopixXraySyncLog> list = nanopixRepository.findUnmatchedWithFilter(NanopixSyncStatus.UNMATCHED, kw, branchId);
         return list.stream().map(this::toResponseDTO).collect(Collectors.toList());
     }
@@ -127,9 +141,9 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
 
         // Kiểm tra giới hạn cơ sở: Bác sĩ / Lễ tân chỉ được liên kết ca khám thuộc cơ sở mình đang làm việc
         if (!"ADMIN".equals(role)) {
-            Long userBranchId = resolveUserPrimaryBranchId(userId);
-            if (userBranchId != null && visit.getBranch() != null
-                    && !userBranchId.equals(visit.getBranch().getBranchId())) {
+            List<Long> allowedIds = resolveUserAccessibleBranchIds(userId);
+            if (!allowedIds.isEmpty() && visit.getBranch() != null
+                    && !allowedIds.contains(visit.getBranch().getBranchId())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Bạn không có quyền thao tác trên ca khám thuộc cơ sở khác (" + visit.getBranch().getBranchName() + ").");
             }
@@ -287,15 +301,11 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
                     .map(b -> new BranchOptionDTO(b.getBranchId(), b.getBranchCode(), b.getBranchName()))
                     .toList();
         } else {
-            Long userBranchId = resolveUserPrimaryBranchId(userId);
-            if (userBranchId != null) {
-                options = allBranches.stream()
-                        .filter(b -> b.getBranchId().equals(userBranchId))
-                        .map(b -> new BranchOptionDTO(b.getBranchId(), b.getBranchCode(), b.getBranchName()))
-                        .toList();
-            } else {
-                options = Collections.emptyList();
-            }
+            List<Long> allowedIds = resolveUserAccessibleBranchIds(userId);
+            options = allBranches.stream()
+                    .filter(b -> allowedIds.isEmpty() || allowedIds.contains(b.getBranchId()))
+                    .map(b -> new BranchOptionDTO(b.getBranchId(), b.getBranchCode(), b.getBranchName()))
+                    .toList();
         }
 
         Map<String, Object> res = new HashMap<>();
@@ -303,6 +313,27 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
         res.put("isAdmin", "ADMIN".equals(role));
         res.put("branches", options);
         return res;
+    }
+
+    private List<Long> resolveUserAccessibleBranchIds(Long userId) {
+        if (userId == null) return List.of();
+        Set<Long> ids = new LinkedHashSet<>();
+        if (staffBranchAssignmentRepository != null) {
+            List<Long> branchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE);
+            if (branchIds != null) {
+                ids.addAll(branchIds);
+            }
+        }
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null && user.getBranch() != null && user.getBranch().getBranchId() != null) {
+            ids.add(user.getBranch().getBranchId());
+        }
+        if (ids.isEmpty()) {
+            return branchRepository.findByIsActiveTrueOrderByBranchNameAsc().stream()
+                    .map(Branch::getBranchId)
+                    .toList();
+        }
+        return new ArrayList<>(ids);
     }
 
     private Long resolveUserPrimaryBranchId(Long userId) {
