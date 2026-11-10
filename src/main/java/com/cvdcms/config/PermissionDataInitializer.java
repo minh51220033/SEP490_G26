@@ -164,9 +164,17 @@ public class PermissionDataInitializer implements ApplicationRunner {
                 case "ADMIN", "ROLE_ADMIN" -> {
                     modified |= ensureSystemRoleMetadata(role, "Quản trị viên hệ thống",
                             "Toàn quyền quản trị hệ thống, tài khoản, nhân sự và đa chi nhánh.");
-                    if (role.getPermissions().size() != permissionMap.size()) {
+                    Set<String> adminExcluded = Set.of("HR_MY_ATTENDANCE", "SCHEDULE_MY", "HR_LEAVE_REQUESTS");
+                    List<Permission> adminPerms = permissionMap.values().stream()
+                            .filter(p -> p.getPermissionCode() == null
+                                    || !adminExcluded.contains(p.getPermissionCode().trim().toUpperCase()))
+                            .toList();
+                    boolean needsSync = role.getPermissions().size() != adminPerms.size()
+                            || role.getPermissions().stream().anyMatch(p -> p.getPermissionCode() != null
+                                    && adminExcluded.contains(p.getPermissionCode().trim().toUpperCase()));
+                    if (needsSync) {
                         role.getPermissions().clear();
-                        role.getPermissions().addAll(permissionMap.values());
+                        role.getPermissions().addAll(adminPerms);
                         modified = true;
                     }
                 }

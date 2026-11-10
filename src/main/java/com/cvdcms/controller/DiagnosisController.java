@@ -369,8 +369,8 @@ public class DiagnosisController {
                 for (QueueTicket t : activeTickets) {
                     if (t.getStatus() == QueueStatus.CALLED || t.getStatus() == QueueStatus.WAITING) {
                         t.setStatus(QueueStatus.IN_SERVICE);
-                        if (t.getStartedAt() == null) {
-                            t.setStartedAt(LocalDateTime.now());
+                        if (t.getCalledAt() == null) {
+                            t.setCalledAt(LocalDateTime.now());
                         }
                         clinicalQueueTicketRepository.save(t);
                     }

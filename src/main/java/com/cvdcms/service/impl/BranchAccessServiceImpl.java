@@ -38,7 +38,11 @@ public class BranchAccessServiceImpl implements BranchAccessService {
                 userId, branchId
         );
 
-        return count != null && count > 0;
+        if (count != null && count > 0) {
+            return true;
+        }
+
+        return userRepository.hasActiveInventoryPermissionForBranch(userId, branchId);
     }
 
 

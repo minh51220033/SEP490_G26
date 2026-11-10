@@ -632,8 +632,9 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     public PayrollPeriod approvePeriod(Long periodId, Long currentUserId) {
-        if (currentUserId == null || !userRepository.hasActiveAdminRole(currentUserId)) {
-            throw new AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền phê duyệt bảng lương");
+        if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
+                && !userRepository.hasActivePermission(currentUserId, "FINANCE_PAYROLL"))) {
+            throw new AccessDeniedException("Bạn không có quyền phê duyệt bảng lương");
         }
 
         PayrollPeriod period = payrollPeriodRepository.findByIdForUpdate(periodId)
@@ -655,8 +656,9 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     public PayrollPeriod rejectPeriod(Long periodId, String reason, Long currentUserId) {
-        if (currentUserId == null || !userRepository.hasActiveAdminRole(currentUserId)) {
-            throw new AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền từ chối duyệt bảng lương");
+        if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
+                && !userRepository.hasActivePermission(currentUserId, "FINANCE_PAYROLL"))) {
+            throw new AccessDeniedException("Bạn không có quyền từ chối duyệt bảng lương");
         }
 
         PayrollPeriod period = payrollPeriodRepository.findByIdForUpdate(periodId)

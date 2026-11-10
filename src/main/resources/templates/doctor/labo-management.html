@@ -245,16 +245,31 @@
 
             <!-- 2. THANH TABS PHÂN HỆ QUẢN LÝ LABO CHUẨN DENTALSOFT -->
             <div class="lab-tab-nav mb-3">
-                <button type="button" class="lab-tab-btn" id="btnTabOrders" th:classappend="${currentTab == 'orders' or currentTab == null ? 'active' : ''}" onclick="switchLabTab('orders')">
+                <button type="button" class="lab-tab-btn" id="btnTabOrders"
+                        th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_LABO'))}"
+                        th:classappend="${currentTab == 'orders' or currentTab == null ? 'active' : ''}" onclick="switchLabTab('orders')">
                     <i class="bi bi-file-earmark-medical me-1.5"></i>Phiếu đặt xưởng
                 </button>
-                <button type="button" class="lab-tab-btn" id="btnTabSuppliers" th:classappend="${currentTab == 'suppliers' ? 'active' : ''}" onclick="switchLabTab('suppliers')">
+                <button type="button" class="lab-tab-btn" id="btnTabSuppliers"
+                        th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'LABO_SUPPLIERS'))}"
+                        th:classappend="${currentTab == 'suppliers' ? 'active' : ''}" onclick="switchLabTab('suppliers')">
                     <i class="bi bi-building me-1.5"></i>Nhà cung cấp
                 </button>
-                <button type="button" class="lab-tab-btn" id="btnTabPricing" th:classappend="${currentTab == 'pricing' ? 'active' : ''}" onclick="switchLabTab('pricing')">
+                <button type="button" class="lab-tab-btn" id="btnTabPricing"
+                        th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'LABO_PRICING'))}"
+                        th:classappend="${currentTab == 'pricing' ? 'active' : ''}" onclick="switchLabTab('pricing')">
                     <i class="bi bi-tags me-1.5"></i>Bảng giá
                 </button>
             </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    var nav = document.querySelector('.lab-tab-nav');
+                    if (nav && !nav.querySelector('.lab-tab-btn.active')) {
+                        var firstBtn = nav.querySelector('.lab-tab-btn');
+                        if (firstBtn) firstBtn.click();
+                    }
+                });
+            </script>
 
             <!-- ============================================================= -->
             <!-- TAB 1: PHIẾU ĐẶT XƯỞNG                                        -->
