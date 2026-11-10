@@ -308,17 +308,20 @@
                 select.appendChild(option);
             });
 
+            const currentBranchIdAttr = Number(document.body?.dataset?.currentBranchId || 0);
+            const preferredBranch = branches.find(b => Number(b.branchId) === currentBranchIdAttr) || branches[0];
+
             if (state.branchSelectionAllowed) {
                 select.disabled = false;
                 $("fixedBranch").hidden = true;
-                select.value = String(branches[0].branchId);
+                select.value = String(preferredBranch.branchId);
             } else {
                 select.disabled = true;
                 $("fixedBranch").hidden = false;
                 $("fixedBranchName").textContent = branches.length === 1
                     ? branches[0].branchName
-                    : `${branches[0].branchName} (chi nhánh được phân công)`;
-                select.value = String(branches[0].branchId);
+                    : `${preferredBranch.branchName} (chi nhánh được phân công)`;
+                select.value = String(preferredBranch.branchId);
             }
 
             state.branchId = Number(select.value);

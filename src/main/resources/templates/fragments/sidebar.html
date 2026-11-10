@@ -1,464 +1,457 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
 <body>
 
-<!--
+    <!--
     SIDEBAR hệ thống (menu dọc đa cấp, accordion).
     Cách dùng (truyền tên menu đang active):
         <aside th:replace="~{fragments/sidebar :: sidebar('home')}"></aside>
         <div   th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 -->
-<aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống" data-sidebar
-       th:with="roleNames=${(session != null and session.roleNames != null and !#lists.isEmpty(session.roleNames)) ? session.roleNames : (roleNames != null ? roleNames : {})},
+    <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống" data-sidebar
+        th:with="roleNames=${(session != null and session.roleNames != null and !#lists.isEmpty(session.roleNames)) ? session.roleNames : (roleNames != null ? roleNames : {})},
 
                 displayName=${(displayName != null and !#strings.isEmpty(displayName)) ? displayName : (session != null and session.loggedInUser != null ? (session.loggedInUser.fullName != null and !#strings.isEmpty(session.loggedInUser.fullName) ? session.loggedInUser.fullName : session.loggedInUser.username) : '')},
                 membershipAdminEntry=${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS') or #lists.contains(permissionCodes, 'CATALOG_PROMOTIONS')))}">
-    <style>
-        .side-icon-labo {
-            color: #0284c7 !important;
-            transition: color .15s ease;
-        }
+        <style>
+            .side-icon-labo {
+                color: #0284c7 !important;
+                transition: color .15s ease;
+            }
 
-        .side-link:hover .side-icon-labo {
-            color: #0369a1 !important;
-        }
+            .side-link:hover .side-icon-labo {
+                color: #0369a1 !important;
+            }
 
-        .side-link.is-active .side-icon-labo {
-            color: #38bdf8 !important;
-        }
-    </style>
+            .side-link.is-active .side-icon-labo {
+                color: #38bdf8 !important;
+            }
+        </style>
 
 
-    <!-- Đầu sidebar: cùng chiều cao & màu với topbar để liền mạch -->
-    <div class="app-sidebar__head">
-        <a th:replace="~{fragments/logo :: logo('light')}"></a>
-        <button type="button" class="topbar-btn app-sidebar__close" data-sidebar-close aria-label="Đóng menu">
-            <i class="bi bi-x-lg" aria-hidden="true"></i>
-        </button>
-    </div>
-
-    <nav class="app-sidebar__nav" aria-label="Chức năng">
-
-        <!-- ============ CHUNG ============ -->
-        <p class="app-sidebar__section">Chung</p>
-
-        <a th:href="@{/home}" class="side-link"
-           th:classappend="${activeMenu == 'home'} ? 'is-active' : ''">
-            <i class="bi bi-grid" aria-hidden="true"></i><span class="side-link__label">Trang chủ</span>
-        </a>
-
-        <a th:href="@{/news}" class="side-link"
-           th:classappend="${activeMenu == 'news'} ? 'is-active' : ''">
-            <i class="bi bi-newspaper" aria-hidden="true"></i><span class="side-link__label">Tin tức</span>
-        </a>
-
-        <a th:if="${roleNames != null and #lists.contains(roleNames, 'BENH_NHAN')}"
-           th:href="@{/portal/records}" class="side-link"
-           th:classappend="${activeMenu == 'portal-records'} ? 'is-active' : ''">
-            <i class="bi bi-folder2-open" aria-hidden="true"></i><span class="side-link__label">Hồ sơ của tôi</span>
-        </a>
-
-        <a th:if="${roleNames != null and #lists.contains(roleNames, 'BENH_NHAN')}"
-           th:href="@{/portal/appointments}" class="side-link"
-           th:classappend="${activeMenu == 'portal-appointments'} ? 'is-active' : ''">
-            <i class="bi bi-calendar-check" aria-hidden="true"></i><span
-                class="side-link__label">Lịch hẹn của tôi</span>
-        </a>
-
-        <!-- Tin nhắn realtime theo cơ sở: nhân viên cơ sở & admin -->
-        <a th:if="${isAdmin or (permissionCodes != null and !#lists.isEmpty(permissionCodes))}"
-           th:href="@{/chat}" class="side-link"
-           th:classappend="${activeMenu == 'chat'} ? 'is-active' : ''"
-           title="Hộp thư tin nhắn trực tuyến theo cơ sở">
-            <i class="bi bi-chat-dots" aria-hidden="true"></i><span class="side-link__label">Tin nhắn trực tuyến</span>
-        </a>
-
-        <!-- ============ NGHIỆP VỤ (accordion) ============ -->
-        <p class="app-sidebar__section">Nghiệp vụ</p>
-
-        <!-- QUẢN TRỊ HỆ THỐNG -->
-        <div class="side-group" data-accordion
-             th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'ACCOUNT_MANAGE') or #lists.contains(permissionCodes, 'ROLE_MANAGE') or #lists.contains(permissionCodes, 'BRANCH_MANAGE') or #lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE') or #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW') or #lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_SERVICE_CATEGORIES') or #lists.contains(permissionCodes, 'CATALOG_MEDICATIONS') or #lists.contains(permissionCodes, 'CATALOG_ICD10') or #lists.contains(permissionCodes, 'CATALOG_NEWS') or #lists.contains(permissionCodes, 'NEWS_COMMENTS_MODERATE') or #lists.contains(permissionCodes, 'SYSTEM_BANS') or #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS') or #lists.contains(permissionCodes, 'CATALOG_PROMOTIONS') or #lists.contains(permissionCodes, 'FINANCE_REPORTS') or #lists.contains(permissionCodes, 'REPORT_FINANCIAL') or #lists.contains(permissionCodes, 'REPORT_DEBTS') or #lists.contains(permissionCodes, 'REPORT_OPERATIONAL') or #lists.contains(permissionCodes, 'SYSTEM_AUDIT') or #lists.contains(permissionCodes, 'CATALOG_MANAGE') or #lists.contains(permissionCodes, 'STAFF_MANAGE') or #lists.contains(permissionCodes, 'SCHEDULE_MANAGE') or #lists.contains(permissionCodes, 'HR_BRANCH_ATTENDANCE') or #lists.contains(permissionCodes, 'HR_LEAVE_APPROVE') or #lists.contains(permissionCodes, 'INVOICE_VIEW')))}"
-             th:classappend="${#strings.contains(',admin-patients,accounts,roles,staffs,catalogs,service-catalog,medications,icd10,admin-news,admin-comments,bans,branches,schedules,attendance,admin-leaves,membership-tiers,admin-promotions,reports,audit,', ',' + activeMenu + ',') or (membershipAdminEntry and activeMenu == 'reception-memberships')} ? 'is-open' : ''">
-            <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
-                    aria-controls="sgAdmin">
-                <i class="bi bi-shield-lock" aria-hidden="true"></i>
-                <span class="side-group__label">Quản trị hệ thống</span>
-                <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
+        <!-- Đầu sidebar: cùng chiều cao & màu với topbar để liền mạch -->
+        <div class="app-sidebar__head">
+            <a th:replace="~{fragments/logo :: logo('light')}"></a>
+            <button type="button" class="topbar-btn app-sidebar__close" data-sidebar-close aria-label="Đóng menu">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
             </button>
-            <div class="side-group__panel" id="sgAdmin">
+        </div>
 
-                <div class="side-group__inner">
+        <nav class="app-sidebar__nav" aria-label="Chức năng">
 
-                    <!-- QUẢN LÝ TÀI KHOẢN (gộp: Danh sách tài khoản, Vai trò & Phân quyền, Tài khoản bị cấm) -->
-                    <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'ACCOUNT_MANAGE') or #lists.contains(permissionCodes, 'ROLE_MANAGE') or #lists.contains(permissionCodes, 'SYSTEM_BANS')))}"
-                       th:href="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'ACCOUNT_MANAGE'))} ? @{/accounts} : (${permissionCodes != null and #lists.contains(permissionCodes, 'ROLE_MANAGE')} ? @{/accounts/roles} : @{/admin/bans})"
-                       class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'accounts' or activeMenu == 'roles' or activeMenu == 'bans'} ? 'is-active' : ''"
-                       title="Quản lý tài khoản: Danh sách tài khoản, Vai trò &amp; Phân quyền, Tài khoản bị cấm bình luận">
-                        <i class="bi bi-people" aria-hidden="true"></i><span class="side-link__label">Quản lý tài khoản</span>
-                    </a>
-                     <!-- QUẢN LÝ NHÂN SỰ (gộp: Hồ sơ NV, Phân ca, Chấm công chi nhánh, Duyệt nghỉ phép - chuyển qua thanh tab ngang trong trang) -->
-                     <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'STAFF_MANAGE') or #lists.contains(permissionCodes, 'SCHEDULE_MANAGE') or #lists.contains(permissionCodes, 'HR_BRANCH_ATTENDANCE') or #lists.contains(permissionCodes, 'HR_LEAVE_APPROVE')))}"
-                        th:href="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'STAFF_MANAGE'))} ? @{/admin/staffs} : (${permissionCodes != null and #lists.contains(permissionCodes, 'SCHEDULE_MANAGE')} ? @{/admin/schedules} : (${permissionCodes != null and #lists.contains(permissionCodes, 'HR_BRANCH_ATTENDANCE')} ? @{/admin/attendance} : @{/admin/leave-requests}))"
-                        class="side-link side-sublink"
-                        th:classappend="${activeMenu == 'staffs' or activeMenu == 'schedules' or activeMenu == 'attendance' or activeMenu == 'admin-leaves'} ? 'is-active' : ''"
-                        title="Quản lý nhân sự: Hồ sơ, Phân ca, Chấm công, Duyệt nghỉ phép">
-                         <i class="bi bi-person-badge" aria-hidden="true"></i><span class="side-link__label">Quản lý nhân sự</span>
-                     </a>
-                    <!-- Hồ sơ bệnh nhân (Dùng chung cho Quản trị, Lễ tân và Bác sĩ) -->
-                    <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE') or #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW')))}"
-                       th:href="@{/reception/patients}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'patients' or activeMenu == 'doctor-records'} ? 'is-active' : ''"
-                       title="Quản lý thông tin hồ sơ bệnh nhân &amp; lịch sử điều trị">
-                        <i class="bi bi-person-vcard" aria-hidden="true"></i><span class="side-link__label">Quản lý khách hàng</span>
-                    </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_SERVICE_CATEGORIES') or #lists.contains(permissionCodes, 'CATALOG_MEDICATIONS') or #lists.contains(permissionCodes, 'CATALOG_ICD10') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))}"
-                       th:href="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))} ? @{/admin/services} : (${permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_SERVICE_CATEGORIES')} ? @{/admin/services/categories} : (${permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_MEDICATIONS')} ? @{/admin/medications} : @{/admin/icd10}))"
-                       class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'catalogs' or activeMenu == 'service-catalog' or activeMenu == 'medications' or activeMenu == 'icd10'} ? 'is-active' : ''"
-                       title="Quản lý danh mục chung: Dịch vụ, Nhóm dịch vụ, Thuốc, ICD-10">
-                        <i class="bi bi-collection" aria-hidden="true"></i><span class="side-link__label">Quản lý danh mục</span>
-                    </a>
-                    <!-- QUẢN LÝ TIN TỨC (gộp: Bài viết tin tức, Kiểm duyệt bình luận) -->
-                    <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_NEWS') or #lists.contains(permissionCodes, 'NEWS_COMMENTS_MODERATE') or #lists.contains(permissionCodes, 'SYSTEM_BANS')))}"
-                       th:href="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_NEWS'))} ? @{/admin/news} : @{/admin/comments}"
-                       class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'admin-news' or activeMenu == 'admin-comments'} ? 'is-active' : ''"
-                       title="Quản lý tin tức &amp; Kiểm duyệt bình luận">
-                        <i class="bi bi-file-earmark-richtext" aria-hidden="true"></i><span class="side-link__label">Quản lý tin tức</span>
-                    </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'BRANCH_MANAGE'))}"
-                       th:href="@{/admin/branches}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'branches'} ? 'is-active' : ''">
-                        <i class="bi bi-buildings" aria-hidden="true"></i><span
-                            class="side-link__label">Quản lý cơ sở</span>
-                    </a>
+            <!-- ============ CHUNG ============ -->
+            <p class="app-sidebar__section">Chung</p>
+
+            <a th:href="@{/home}" class="side-link" th:classappend="${activeMenu == 'home'} ? 'is-active' : ''">
+                <i class="bi bi-grid" aria-hidden="true"></i><span class="side-link__label">Trang chủ</span>
+            </a>
+
+            <a th:href="@{/news}" class="side-link" th:classappend="${activeMenu == 'news'} ? 'is-active' : ''">
+                <i class="bi bi-newspaper" aria-hidden="true"></i><span class="side-link__label">Tin tức</span>
+            </a>
+
+            <a th:if="${roleNames != null and #lists.contains(roleNames, 'BENH_NHAN')}" th:href="@{/portal/records}"
+                class="side-link" th:classappend="${activeMenu == 'portal-records'} ? 'is-active' : ''">
+                <i class="bi bi-folder2-open" aria-hidden="true"></i><span class="side-link__label">Hồ sơ của tôi</span>
+            </a>
+
+            <a th:if="${roleNames != null and #lists.contains(roleNames, 'BENH_NHAN')}"
+                th:href="@{/portal/appointments}" class="side-link"
+                th:classappend="${activeMenu == 'portal-appointments'} ? 'is-active' : ''">
+                <i class="bi bi-calendar-check" aria-hidden="true"></i><span class="side-link__label">Lịch hẹn của
+                    tôi</span>
+            </a>
+
+            <!-- Tin nhắn realtime theo cơ sở: nhân viên cơ sở & admin -->
+            <a th:if="${isAdmin or (permissionCodes != null and !#lists.isEmpty(permissionCodes))}" th:href="@{/chat}"
+                class="side-link" th:classappend="${activeMenu == 'chat'} ? 'is-active' : ''"
+                title="Hộp thư tin nhắn trực tuyến theo cơ sở">
+                <i class="bi bi-chat-dots" aria-hidden="true"></i><span class="side-link__label">Tin nhắn trực
+                    tuyến</span>
+            </a>
+
+            <!-- ============ NGHIỆP VỤ (accordion) ============ -->
+            <p class="app-sidebar__section">Nghiệp vụ</p>
+
+            <!-- QUẢN TRỊ HỆ THỐNG -->
+            <div class="side-group" data-accordion
+                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'ACCOUNT_MANAGE') or #lists.contains(permissionCodes, 'ROLE_MANAGE') or #lists.contains(permissionCodes, 'BRANCH_MANAGE') or #lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE') or #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW') or #lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_SERVICE_CATEGORIES') or #lists.contains(permissionCodes, 'CATALOG_MEDICATIONS') or #lists.contains(permissionCodes, 'CATALOG_ICD10') or #lists.contains(permissionCodes, 'CATALOG_NEWS') or #lists.contains(permissionCodes, 'NEWS_COMMENTS_MODERATE') or #lists.contains(permissionCodes, 'SYSTEM_BANS') or #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS') or #lists.contains(permissionCodes, 'CATALOG_PROMOTIONS') or #lists.contains(permissionCodes, 'FINANCE_REPORTS') or #lists.contains(permissionCodes, 'REPORT_FINANCIAL') or #lists.contains(permissionCodes, 'REPORT_DEBTS') or #lists.contains(permissionCodes, 'REPORT_OPERATIONAL') or #lists.contains(permissionCodes, 'SYSTEM_AUDIT') or #lists.contains(permissionCodes, 'CATALOG_MANAGE') or #lists.contains(permissionCodes, 'STAFF_MANAGE') or #lists.contains(permissionCodes, 'SCHEDULE_MANAGE') or #lists.contains(permissionCodes, 'HR_BRANCH_ATTENDANCE') or #lists.contains(permissionCodes, 'HR_LEAVE_APPROVE') or #lists.contains(permissionCodes, 'INVOICE_VIEW')))}"
+                th:classappend="${#strings.contains(',admin-patients,accounts,roles,staffs,catalogs,service-catalog,medications,icd10,admin-news,admin-comments,bans,branches,schedules,attendance,admin-leaves,membership-tiers,admin-promotions,reports,audit,', ',' + activeMenu + ',') or (membershipAdminEntry and activeMenu == 'reception-memberships')} ? 'is-open' : ''">
+                <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
+                    aria-controls="sgAdmin">
+                    <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                    <span class="side-group__label">Quản trị hệ thống</span>
+                    <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
+                </button>
+                <div class="side-group__panel" id="sgAdmin">
+
+                    <div class="side-group__inner">
+
+                        <!-- QUẢN LÝ TÀI KHOẢN (gộp: Danh sách tài khoản, Vai trò & Phân quyền, Tài khoản bị cấm) -->
+                        <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'ACCOUNT_MANAGE') or #lists.contains(permissionCodes, 'ROLE_MANAGE') or #lists.contains(permissionCodes, 'SYSTEM_BANS')))}"
+                            th:href="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'ACCOUNT_MANAGE'))} ? @{/accounts} : (${permissionCodes != null and #lists.contains(permissionCodes, 'ROLE_MANAGE')} ? @{/accounts/roles} : @{/admin/bans})"
+                            class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'accounts' or activeMenu == 'roles' or activeMenu == 'bans'} ? 'is-active' : ''"
+                            title="Quản lý tài khoản: Danh sách tài khoản, Vai trò &amp; Phân quyền, Tài khoản bị cấm bình luận">
+                            <i class="bi bi-people" aria-hidden="true"></i><span class="side-link__label">Quản lý tài
+                                khoản</span>
+                        </a>
+                        <!-- QUẢN LÝ NHÂN SỰ (gộp: Hồ sơ NV, Phân ca, Chấm công chi nhánh, Duyệt nghỉ phép - chuyển qua thanh tab ngang trong trang) -->
+                        <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'STAFF_MANAGE') or #lists.contains(permissionCodes, 'SCHEDULE_MANAGE') or #lists.contains(permissionCodes, 'HR_BRANCH_ATTENDANCE') or #lists.contains(permissionCodes, 'HR_LEAVE_APPROVE')))}"
+                            th:href="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'STAFF_MANAGE'))} ? @{/admin/staffs} : (${permissionCodes != null and #lists.contains(permissionCodes, 'SCHEDULE_MANAGE')} ? @{/admin/schedules} : (${permissionCodes != null and #lists.contains(permissionCodes, 'HR_BRANCH_ATTENDANCE')} ? @{/admin/attendance} : @{/admin/leave-requests}))"
+                            class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'staffs' or activeMenu == 'schedules' or activeMenu == 'attendance' or activeMenu == 'admin-leaves'} ? 'is-active' : ''"
+                            title="Quản lý nhân sự: Hồ sơ, Phân ca, Chấm công, Duyệt nghỉ phép">
+                            <i class="bi bi-person-badge" aria-hidden="true"></i><span class="side-link__label">Quản lý
+                                nhân sự</span>
+                        </a>
+                        <!-- Hồ sơ bệnh nhân (Dùng chung cho Quản trị, Lễ tân và Bác sĩ) -->
+                        <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE') or #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW')))}"
+                            th:href="@{/reception/patients}" class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'patients' or activeMenu == 'doctor-records'} ? 'is-active' : ''"
+                            title="Quản lý thông tin hồ sơ bệnh nhân &amp; lịch sử điều trị">
+                            <i class="bi bi-person-vcard" aria-hidden="true"></i><span class="side-link__label">Quản lý
+                                khách hàng</span>
+                        </a>
+                        <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_SERVICE_CATEGORIES') or #lists.contains(permissionCodes, 'CATALOG_MEDICATIONS') or #lists.contains(permissionCodes, 'CATALOG_ICD10') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))}"
+                            th:href="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))} ? @{/admin/services} : (${permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_SERVICE_CATEGORIES')} ? @{/admin/services/categories} : (${permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_MEDICATIONS')} ? @{/admin/medications} : @{/admin/icd10}))"
+                            class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'catalogs' or activeMenu == 'service-catalog' or activeMenu == 'medications' or activeMenu == 'icd10'} ? 'is-active' : ''"
+                            title="Quản lý danh mục chung: Dịch vụ, Nhóm dịch vụ, Thuốc, ICD-10">
+                            <i class="bi bi-collection" aria-hidden="true"></i><span class="side-link__label">Quản lý
+                                danh mục</span>
+                        </a>
+                        <!-- QUẢN LÝ TIN TỨC (gộp: Bài viết tin tức, Kiểm duyệt bình luận) -->
+                        <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_NEWS') or #lists.contains(permissionCodes, 'NEWS_COMMENTS_MODERATE') or #lists.contains(permissionCodes, 'SYSTEM_BANS')))}"
+                            th:href="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_NEWS'))} ? @{/admin/news} : @{/admin/comments}"
+                            class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'admin-news' or activeMenu == 'admin-comments'} ? 'is-active' : ''"
+                            title="Quản lý tin tức &amp; Kiểm duyệt bình luận">
+                            <i class="bi bi-file-earmark-richtext" aria-hidden="true"></i><span
+                                class="side-link__label">Quản lý tin tức</span>
+                        </a>
+                        <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'BRANCH_MANAGE'))}"
+                            th:href="@{/admin/branches}" class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'branches'} ? 'is-active' : ''">
+                            <i class="bi bi-buildings" aria-hidden="true"></i><span class="side-link__label">Quản lý cơ
+                                sở</span>
+                        </a>
 
 
-                    <th:block th:if="${membershipAdminEntry}">
-                        <a class="side-link side-sublink"
-                           th:href="@{${(isAdmin or (permissionCodes != null
+                        <th:block th:if="${membershipAdminEntry}">
+                            <a class="side-link side-sublink" th:href="@{${(isAdmin or (permissionCodes != null
                              and #lists.contains(permissionCodes, 'RECEPTION_MEMBERSHIPS')))
                               ? '/reception/memberships': ((permissionCodes != null
                               and #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS'))
                               ? '/admin/membership-tiers'
-                              : '/admin/promotions')}}"
-                           th:classappend="${activeMenu == 'reception-memberships'
+                              : '/admin/promotions')}}" th:classappend="${activeMenu == 'reception-memberships'
                               or activeMenu == 'membership-tiers'
                               or activeMenu == 'admin-promotions'}
-                              ? 'is-active' : ''"
-                           title="Quản lý thẻ bệnh nhân, hạng thành viên, tích điểm và ưu đãi">
+                              ? 'is-active' : ''" title="Quản lý thẻ bệnh nhân, hạng thành viên, tích điểm và ưu đãi">
 
-                            <i class="bi bi-person-vcard" aria-hidden="true"></i>
-                            <span class="side-link__label">Quản lý thẻ &amp; ưu đãi</span>
+                                <i class="bi bi-person-vcard" aria-hidden="true"></i>
+                                <span class="side-link__label">Quản lý thẻ &amp; ưu đãi</span>
+                            </a>
+                        </th:block>
+                        <a th:if="${!isAdmin and ((permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_REPORTS') or #lists.contains(permissionCodes, 'REPORT_FINANCIAL') or #lists.contains(permissionCodes, 'REPORT_DEBTS') or #lists.contains(permissionCodes, 'REPORT_OPERATIONAL'))) or (roleNames != null and (#lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))))}"
+                            th:href="${(roleNames != null and (#lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_REPORTS'))} ? @{/admin/reports} : (${permissionCodes != null and #lists.contains(permissionCodes, 'REPORT_FINANCIAL')} ? @{/admin/reports(tab='financial')} : (${permissionCodes != null and #lists.contains(permissionCodes, 'REPORT_DEBTS')} ? @{/admin/reports(tab='debts')} : @{/admin/reports(tab='operational')}))"
+                            class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'reports'} ? 'is-active' : ''">
+                            <i class="bi bi-graph-up" aria-hidden="true"></i><span class="side-link__label">Báo cáo
+                                &amp; Thống kê</span>
                         </a>
-                    </th:block>
-                    <a th:if="${!isAdmin and ((permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_REPORTS') or #lists.contains(permissionCodes, 'REPORT_FINANCIAL') or #lists.contains(permissionCodes, 'REPORT_DEBTS') or #lists.contains(permissionCodes, 'REPORT_OPERATIONAL'))) or (roleNames != null and (#lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))))}"
-                       th:href="${(roleNames != null and (#lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_REPORTS'))} ? @{/admin/reports} : (${permissionCodes != null and #lists.contains(permissionCodes, 'REPORT_FINANCIAL')} ? @{/admin/reports(tab='financial')} : (${permissionCodes != null and #lists.contains(permissionCodes, 'REPORT_DEBTS')} ? @{/admin/reports(tab='debts')} : @{/admin/reports(tab='operational')}))"
-                       class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'reports'} ? 'is-active' : ''">
-                        <i class="bi bi-graph-up" aria-hidden="true"></i><span class="side-link__label">Báo cáo &amp; Thống kê</span>
-                    </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'SYSTEM_AUDIT'))}"
-                       th:href="@{/admin/audit}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'audit'} ? 'is-active' : ''">
-                        <i class="bi bi-journal-text" aria-hidden="true"></i><span class="side-link__label">Nhật ký thao tác</span>
-                    </a>
+                        <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'SYSTEM_AUDIT'))}"
+                            th:href="@{/admin/audit}" class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'audit'} ? 'is-active' : ''">
+                            <i class="bi bi-journal-text" aria-hidden="true"></i><span class="side-link__label">Nhật ký
+                                thao tác</span>
+                        </a>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- KHO & VẬT TƯ -->
-        <div class="side-group" data-accordion
-             th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'INVENTORY_STOCK') or #lists.contains(permissionCodes, 'INVENTORY_BATCHES') or #lists.contains(permissionCodes, 'INVENTORY_RECEIPT') or #lists.contains(permissionCodes, 'INVENTORY_ISSUE') or #lists.contains(permissionCodes, 'INVENTORY_TRANSFER') or #lists.contains(permissionCodes, 'INVENTORY_MATERIALS') or #lists.contains(permissionCodes, 'INVENTORY_CATEGORIES') or #lists.contains(permissionCodes, 'SUPPLIER_MANAGE') or #lists.contains(permissionCodes, 'INVENTORY_VIEW') or #lists.contains(permissionCodes, 'INVENTORY_MANAGE')))}"
-             th:classappend="${activeMenu == 'inventory' or activeMenu == 'suppliers'} ? 'is-open' : ''">
-            <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
+            <!-- KHO & VẬT TƯ -->
+            <div class="side-group" data-accordion
+                th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'INVENTORY_STOCK') or #lists.contains(permissionCodes, 'INVENTORY_BATCHES') or #lists.contains(permissionCodes, 'INVENTORY_RECEIPT') or #lists.contains(permissionCodes, 'INVENTORY_ISSUE') or #lists.contains(permissionCodes, 'INVENTORY_TRANSFER') or #lists.contains(permissionCodes, 'INVENTORY_MATERIALS') or #lists.contains(permissionCodes, 'INVENTORY_CATEGORIES') or #lists.contains(permissionCodes, 'SUPPLIER_MANAGE') or #lists.contains(permissionCodes, 'INVENTORY_VIEW') or #lists.contains(permissionCodes, 'INVENTORY_MANAGE')))}"
+                th:classappend="${activeMenu == 'inventory' or activeMenu == 'suppliers'} ? 'is-open' : ''">
+                <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
                     aria-controls="sgInventory">
-                <i class="bi bi-box-seam" aria-hidden="true"></i>
-                <span class="side-group__label">Kho &amp; Vật tư</span>
-                <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
-            </button>
-            <div class="side-group__panel" id="sgInventory">
-                <div class="side-group__inner">
-                    <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'INVENTORY_STOCK') or #lists.contains(permissionCodes, 'INVENTORY_BATCHES') or #lists.contains(permissionCodes, 'INVENTORY_RECEIPT') or #lists.contains(permissionCodes, 'INVENTORY_ISSUE') or #lists.contains(permissionCodes, 'INVENTORY_TRANSFER') or #lists.contains(permissionCodes, 'INVENTORY_MATERIALS') or #lists.contains(permissionCodes, 'INVENTORY_CATEGORIES') or #lists.contains(permissionCodes, 'SUPPLIER_MANAGE')))}"
-                       th:href="@{/inventory}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'inventory'} ? 'is-active' : ''">
-                        <i class="bi bi-boxes" aria-hidden="true"></i><span
-                            class="side-link__label">Quản lý kho vật tư</span>
-                    </a>
+                    <i class="bi bi-box-seam" aria-hidden="true"></i>
+                    <span class="side-group__label">Kho &amp; Vật tư</span>
+                    <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
+                </button>
+                <div class="side-group__panel" id="sgInventory">
+                    <div class="side-group__inner">
+                        <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'INVENTORY_STOCK') or #lists.contains(permissionCodes, 'INVENTORY_BATCHES') or #lists.contains(permissionCodes, 'INVENTORY_RECEIPT') or #lists.contains(permissionCodes, 'INVENTORY_ISSUE') or #lists.contains(permissionCodes, 'INVENTORY_TRANSFER') or #lists.contains(permissionCodes, 'INVENTORY_MATERIALS') or #lists.contains(permissionCodes, 'INVENTORY_CATEGORIES') or #lists.contains(permissionCodes, 'SUPPLIER_MANAGE')))}"
+                            th:href="@{/inventory}" class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'inventory'} ? 'is-active' : ''">
+                            <i class="bi bi-boxes" aria-hidden="true"></i><span class="side-link__label">Quản lý kho vật
+                                tư</span>
+                        </a>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- TÀI CHÍNH (FT21, FT22, FT24, FT25, FT32) -->
-        <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'FINANCE_DEBT') or #lists.contains(permissionCodes, 'FINANCE_DEPOSIT') or #lists.contains(permissionCodes, 'REFUND_MANAGE') or #lists.contains(permissionCodes, 'FINANCE_EXPENSES') or #lists.contains(permissionCodes, 'FINANCE_PAYROLL') or #lists.contains(permissionCodes, 'FINANCE_PAYROLL_ADVANCES') or #lists.contains(permissionCodes, 'FINANCE_COMMISSION_CONFIG') or #lists.contains(permissionCodes, 'FINANCE_OWNER_DISTRIBUTIONS') or #lists.contains(permissionCodes, 'INVOICE_VIEW')))}"
-           th:href="@{/finance}"
-           class="side-link"
-           th:classappend="${activeMenu == 'finance' or #strings.contains(',dashboard_finance,invoices,payments,debts,refunds,deposits,cashier,expenses,payroll,payroll_advances,payroll_config,owner_distributions,expense_income,', ',' + activeMenu + ',')} ? 'is-active' : ''"
-           title="Tài chính: Khách hàng &amp; Phòng khám">
-            <i class="bi bi-wallet2" aria-hidden="true"></i>
-            <span class="side-link__label">Tài chính</span>
-        </a>
+            <!-- TÀI CHÍNH (FT21, FT22, FT24, FT25, FT32) -->
+            <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'FINANCE_DEBT') or #lists.contains(permissionCodes, 'FINANCE_DEPOSIT') or #lists.contains(permissionCodes, 'REFUND_MANAGE') or #lists.contains(permissionCodes, 'FINANCE_EXPENSES') or #lists.contains(permissionCodes, 'FINANCE_PAYROLL') or #lists.contains(permissionCodes, 'FINANCE_PAYROLL_ADVANCES') or #lists.contains(permissionCodes, 'FINANCE_COMMISSION_CONFIG') or #lists.contains(permissionCodes, 'FINANCE_OWNER_DISTRIBUTIONS') or #lists.contains(permissionCodes, 'INVOICE_VIEW')))}"
+                th:href="@{/finance}" class="side-link"
+                th:classappend="${activeMenu == 'finance' or #strings.contains(',dashboard_finance,invoices,payments,debts,refunds,deposits,cashier,expenses,payroll,payroll_advances,payroll_config,owner_distributions,expense_income,', ',' + activeMenu + ',')} ? 'is-active' : ''"
+                title="Tài chính: Khách hàng &amp; Phòng khám">
+                <i class="bi bi-wallet2" aria-hidden="true"></i>
+                <span class="side-link__label">Tài chính</span>
+            </a>
 
-        <!-- LỄ TÂN -->
-        <div class="side-group" data-accordion
-             th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE') or #lists.contains(permissionCodes, 'RECEPTION_MEMBERSHIPS') or #lists.contains(permissionCodes, 'APPOINTMENT_MANAGE') or #lists.contains(permissionCodes, 'RECEPTION_CHECKIN') or #lists.contains(permissionCodes, 'APPOINTMENT_VIEW') or #lists.contains(permissionCodes, 'RECEPTION_DISPATCH') or #lists.contains(permissionCodes, 'CUSTOMER_CARE_MANAGE')))}"
-
-             th:classappend="${#strings.contains(',appointments,checkin,queue,accounts,dispatch,workflow-progress,', ',' + activeMenu + ',') or (!membershipAdminEntry and activeMenu == 'reception-memberships')} ? 'is-open' : ''">
-            <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
+            <!-- LỄ TÂN -->
+            <div class="side-group" data-accordion
+                th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE') or #lists.contains(permissionCodes, 'RECEPTION_MEMBERSHIPS') or #lists.contains(permissionCodes, 'APPOINTMENT_MANAGE') or #lists.contains(permissionCodes, 'RECEPTION_CHECKIN') or #lists.contains(permissionCodes, 'APPOINTMENT_VIEW') or #lists.contains(permissionCodes, 'RECEPTION_DISPATCH') or #lists.contains(permissionCodes, 'CUSTOMER_CARE_MANAGE')))}"
+                th:classappend="${#strings.contains(',appointments,checkin,queue,accounts,dispatch,workflow-progress,', ',' + activeMenu + ',') or (!membershipAdminEntry and activeMenu == 'reception-memberships')} ? 'is-open' : ''">
+                <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
                     aria-controls="sgReception">
 
-                <i class="bi bi-person-workspace" aria-hidden="true"></i>
-                <span class="side-group__label">Lễ tân</span>
-                <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
-            </button>
-            <div class="side-group__panel" id="sgReception">
-                <div class="side-group__inner">
-                    <th:block
+                    <i class="bi bi-person-workspace" aria-hidden="true"></i>
+                    <span class="side-group__label">Lễ tân</span>
+                    <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
+                </button>
+                <div class="side-group__panel" id="sgReception">
+                    <div class="side-group__inner">
+                        <th:block
                             th:if="${!membershipAdminEntry and permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_MEMBERSHIPS')}">
-                        <a class="side-link side-sublink"
-                           th:href="@{${(isAdmin or (permissionCodes != null
+                            <a class="side-link side-sublink" th:href="@{${(isAdmin or (permissionCodes != null
        and #lists.contains(permissionCodes, 'RECEPTION_MEMBERSHIPS')))
        ? '/reception/memberships'
        : ((permissionCodes != null
            and #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS'))
            ? '/admin/membership-tiers'
-           : '/admin/promotions')}}"
-                           th:classappend="${activeMenu == 'reception-memberships'
+           : '/admin/promotions')}}" th:classappend="${activeMenu == 'reception-memberships'
        or activeMenu == 'membership-tiers'
        or activeMenu == 'admin-promotions'}
-       ? 'is-active' : ''"
-                           title="Quản lý thẻ bệnh nhân, hạng thành viên, tích điểm và ưu đãi">
+       ? 'is-active' : ''" title="Quản lý thẻ bệnh nhân, hạng thành viên, tích điểm và ưu đãi">
 
-                            <i class="bi bi-person-vcard" aria-hidden="true"></i>
-                            <span class="side-link__label">Quản lý thẻ &amp; ưu đãi</span>
+                                <i class="bi bi-person-vcard" aria-hidden="true"></i>
+                                <span class="side-link__label">Quản lý thẻ &amp; ưu đãi</span>
+                            </a>
+                        </th:block>
+                        <!-- TIẾP ĐÓN BỆNH NHÂN: Gộp toàn bộ 4 bước quy trình (Lịch hẹn, Check-in, Điều phối, Hàng chờ) thành 1 mục duy nhất cho mọi role -->
+                        <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'APPOINTMENT_MANAGE') or #lists.contains(permissionCodes, 'RECEPTION_CHECKIN') or #lists.contains(permissionCodes, 'APPOINTMENT_VIEW') or #lists.contains(permissionCodes, 'RECEPTION_DISPATCH')))}"
+                            th:href="@{${(isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'APPOINTMENT_MANAGE'))) ? '/reception/appointments' : ((permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_CHECKIN')) ? '/reception/check-in' : ((permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_DISPATCH')) ? '/reception/dispatch' : '/reception/queue'))}}"
+                            class="side-link side-sublink"
+                            th:classappend="${#strings.contains(',appointments,checkin,queue,dispatch,', ',' + activeMenu + ',')} ? 'is-active' : ''"
+                            title="Quy trình tiếp đón: Lịch hẹn, Tiếp đón &amp; Check-in, Điều phối ghế nha, Hàng chờ gọi số">
+                            <i class="bi bi-person-check" aria-hidden="true"></i><span class="side-link__label">Tiếp đón
+                                bệnh nhân</span>
                         </a>
-                    </th:block>
-                    <!-- TIẾP ĐÓN BỆNH NHÂN: Gộp toàn bộ 4 bước quy trình (Lịch hẹn, Check-in, Điều phối, Hàng chờ) thành 1 mục duy nhất cho mọi role -->
-                    <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'APPOINTMENT_MANAGE') or #lists.contains(permissionCodes, 'RECEPTION_CHECKIN') or #lists.contains(permissionCodes, 'APPOINTMENT_VIEW') or #lists.contains(permissionCodes, 'RECEPTION_DISPATCH')))}"
-                       th:href="@{${(isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'APPOINTMENT_MANAGE'))) ? '/reception/appointments' : ((permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_CHECKIN')) ? '/reception/check-in' : ((permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_DISPATCH')) ? '/reception/dispatch' : '/reception/queue'))}}"
-                       class="side-link side-sublink"
-                       th:classappend="${#strings.contains(',appointments,checkin,queue,dispatch,', ',' + activeMenu + ',')} ? 'is-active' : ''"
-                       title="Quy trình tiếp đón: Lịch hẹn, Tiếp đón &amp; Check-in, Điều phối ghế nha, Hàng chờ gọi số">
-                        <i class="bi bi-person-check" aria-hidden="true"></i><span class="side-link__label">Tiếp đón bệnh nhân</span>
-                    </a>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- BÁC SĨ & ĐIỀU PHỐI -->
-        <div class="side-group" data-accordion
-             th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CLINICAL_DAILY_VISITS') or #lists.contains(permissionCodes, 'CLINICAL_WORKFLOWS') or #lists.contains(permissionCodes, 'CLINICAL_DISPATCH') or #lists.contains(permissionCodes, 'PRESCRIPTION_WRITE') or #lists.contains(permissionCodes, 'TREATMENT_PLAN_MANAGE') or #lists.contains(permissionCodes, 'CLINICAL_PHOTOS') or #lists.contains(permissionCodes, 'CLINICAL_XRAY') or #lists.contains(permissionCodes, 'CLINICAL_EXAM_WRITE') or #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW')))}"
-             th:classappend="${#strings.contains(',daily-visits,examination,doctor-dashboard,workflows,doctor-dispatch,prescriptions,treatment-plans,clinical-photos,', ',' + activeMenu + ',')} ? 'is-open' : ''">
-            <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
+            <!-- BÁC SĨ & ĐIỀU PHỐI -->
+            <div class="side-group" data-accordion
+                th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CLINICAL_DAILY_VISITS') or #lists.contains(permissionCodes, 'CLINICAL_WORKFLOWS') or #lists.contains(permissionCodes, 'CLINICAL_DISPATCH') or #lists.contains(permissionCodes, 'PRESCRIPTION_WRITE') or #lists.contains(permissionCodes, 'TREATMENT_PLAN_MANAGE') or #lists.contains(permissionCodes, 'CLINICAL_PHOTOS') or #lists.contains(permissionCodes, 'CLINICAL_XRAY') or #lists.contains(permissionCodes, 'CLINICAL_EXAM_WRITE') or #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW')))}"
+                th:classappend="${#strings.contains(',daily-visits,examination,doctor-dashboard,workflows,doctor-dispatch,prescriptions,treatment-plans,clinical-photos,', ',' + activeMenu + ',')} ? 'is-open' : ''">
+                <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
                     aria-controls="sgDoctor">
-                <i class="bi bi-heart-pulse" aria-hidden="true"></i>
-                <span class="side-group__label">Bác sĩ &amp; Điều phối</span>
-                <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
-            </button>
-            <div class="side-group__panel" id="sgDoctor">
-                <div class="side-group__inner">
-                    <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CLINICAL_DAILY_VISITS') or #lists.contains(permissionCodes, 'CLINICAL_XRAY') or #lists.contains(permissionCodes, 'CLINICAL_DISPATCH')))}"
-                       th:href="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_DAILY_VISITS'))} ? @{/doctor/daily-visits} : (${permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_XRAY')} ? @{/xray} : @{/reception/dispatch})"
-                       class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'daily-visits' or activeMenu == 'examination' or activeMenu == 'doctor-dashboard'} ? 'is-active' : ''"
-                       title="Danh sách ca khám trong ngày, lọc theo ngày / tuần">
-                        <i class="bi bi-calendar2-week" aria-hidden="true"></i><span class="side-link__label">Khám trong ngày</span>
-                    </a>
-                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_WORKFLOWS'))}"
-                       th:href="@{/doctor/workflows}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'workflows'} ? 'is-active' : ''"
-                       title="Quy trình kỹ thuật lâm sàng chuẩn Bộ Y tế (QĐ 3207/QĐ-BYT)">
-                        <i class="bi bi-journal-medical" aria-hidden="true"></i><span class="side-link__label">Quy trình kỹ thuật</span>
-                    </a>
+                    <i class="bi bi-heart-pulse" aria-hidden="true"></i>
+                    <span class="side-group__label">Bác sĩ &amp; Điều phối</span>
+                    <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
+                </button>
+                <div class="side-group__panel" id="sgDoctor">
+                    <div class="side-group__inner">
+                        <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CLINICAL_DAILY_VISITS') or #lists.contains(permissionCodes, 'CLINICAL_XRAY') or #lists.contains(permissionCodes, 'CLINICAL_DISPATCH')))}"
+                            th:href="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_DAILY_VISITS'))} ? @{/doctor/daily-visits} : (${permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_XRAY')} ? @{/xray} : @{/reception/dispatch})"
+                            class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'daily-visits' or activeMenu == 'examination' or activeMenu == 'doctor-dashboard'} ? 'is-active' : ''"
+                            title="Danh sách ca khám trong ngày, lọc theo ngày / tuần">
+                            <i class="bi bi-calendar2-week" aria-hidden="true"></i><span class="side-link__label">Khám
+                                trong ngày</span>
+                        </a>
+                        <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_WORKFLOWS'))}"
+                            th:href="@{/doctor/workflows}" class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'workflows'} ? 'is-active' : ''"
+                            title="Quy trình kỹ thuật lâm sàng chuẩn Bộ Y tế (QĐ 3207/QĐ-BYT)">
+                            <i class="bi bi-journal-medical" aria-hidden="true"></i><span class="side-link__label">Quy
+                                trình kỹ thuật</span>
+                        </a>
+                    </div>
                 </div>
             </div>
-        </div>
 
 
-        <!-- QUẢN LÝ LABO -->
-        <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CLINICAL_LABO') or #lists.contains(permissionCodes, 'LABO_SUPPLIERS') or #lists.contains(permissionCodes, 'LABO_PRICING')))}"
-           th:href="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_LABO'))} ? @{/doctor/labo} : (${permissionCodes != null and #lists.contains(permissionCodes, 'LABO_SUPPLIERS')} ? @{/doctor/labo(tab='suppliers')} : @{/doctor/labo(tab='pricing')})"
-           class="side-link"
-           th:classappend="${activeMenu == 'labo'} ? 'is-active' : ''"
-           title="Quản lý labo gia công">
-            <i class="bi bi-box-seam" aria-hidden="true"></i><span class="side-link__label">Quản lý labo</span>
-        </a>
+            <!-- QUẢN LÝ LABO -->
+            <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CLINICAL_LABO') or #lists.contains(permissionCodes, 'LABO_SUPPLIERS') or #lists.contains(permissionCodes, 'LABO_PRICING')))}"
+                th:href="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_LABO'))} ? @{/doctor/labo} : (${permissionCodes != null and #lists.contains(permissionCodes, 'LABO_SUPPLIERS')} ? @{/doctor/labo(tab='suppliers')} : @{/doctor/labo(tab='pricing')})"
+                class="side-link" th:classappend="${activeMenu == 'labo'} ? 'is-active' : ''"
+                title="Quản lý labo gia công">
+                <i class="bi bi-box-seam" aria-hidden="true"></i><span class="side-link__label">Quản lý labo</span>
+            </a>
 
-        <!-- HỒ SƠ & TÁI KHÁM -->
-        <div class="side-group" data-accordion
-             th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'BAC_SI') or #lists.contains(roleNames, 'LE_TAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW') or #lists.contains(permissionCodes, 'CUSTOMER_CARE_MANAGE') or #lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE')))}"
-             th:classappend="${activeMenu == 'doctor-records' or activeMenu == 'patients' or activeMenu == 'customer-care'} ? 'is-open' : ''">
-            <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
+            <!-- HỒ SƠ & TÁI KHÁM -->
+            <div class="side-group" data-accordion
+                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'BAC_SI') or #lists.contains(roleNames, 'LE_TAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW') or #lists.contains(permissionCodes, 'CUSTOMER_CARE_MANAGE') or #lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE')))}"
+                th:classappend="${activeMenu == 'doctor-records' or activeMenu == 'patients' or activeMenu == 'customer-care'} ? 'is-open' : ''">
+                <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
                     aria-controls="sgRecords">
-                <i class="bi bi-folder2-open" aria-hidden="true"></i>
-                <span class="side-group__label">Hồ sơ &amp; Tái khám</span>
-                <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
-            </button>
-            <div class="side-group__panel" id="sgRecords">
-                <div class="side-group__inner">
-                    <!-- CSKH -->
-                    <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'CUSTOMER_CARE_MANAGE'))}"
-
-                       th:href="@{/customer-care}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'customer-care'} ? 'is-active' : ''"
-                       title="Chăm sóc khách hàng &amp; nhắc hẹn tái khám">
-                        <i class="bi bi-headset" aria-hidden="true"></i><span class="side-link__label">Chăm sóc khách hàng</span>
-                    </a>
+                    <i class="bi bi-folder2-open" aria-hidden="true"></i>
+                    <span class="side-group__label">Hồ sơ &amp; Tái khám</span>
+                    <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
+                </button>
+                <div class="side-group__panel" id="sgRecords">
+                    <div class="side-group__inner">
+                        <!-- CSKH -->
+                        <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN') or #lists.contains(roleNames, 'BAC_SI'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'CUSTOMER_CARE_MANAGE'))}"
+                            th:href="@{/customer-care}" class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'customer-care'} ? 'is-active' : ''"
+                            title="Chăm sóc khách hàng &amp; nhắc hẹn tái khám">
+                            <i class="bi bi-headset" aria-hidden="true"></i><span class="side-link__label">Chăm sóc
+                                khách hàng</span>
+                        </a>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- CÁ NHÂN (Dành riêng cho Bác sĩ & Nhân viên đi ca, không hiển thị trên tài khoản Quản trị viên Admin) -->
-        <div class="side-group" data-accordion
-             th:if="${!isAdmin and (permissionCodes != null and (#lists.contains(permissionCodes, 'SCHEDULE_MY') or #lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') or #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS')))}"
-             th:classappend="${activeMenu == 'my-schedule' or activeMenu == 'my-attendance' or activeMenu == 'leave-requests'} ? 'is-open' : ''">
-            <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
+            <!-- CÁ NHÂN (Dành riêng cho Bác sĩ & Nhân viên đi ca, không hiển thị trên tài khoản Quản trị viên Admin) -->
+            <div class="side-group" data-accordion
+                th:if="${!isAdmin and (permissionCodes != null and (#lists.contains(permissionCodes, 'SCHEDULE_MY') or #lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') or #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS')))}"
+                th:classappend="${activeMenu == 'my-schedule' or activeMenu == 'my-attendance' or activeMenu == 'leave-requests'} ? 'is-open' : ''">
+                <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
                     aria-controls="sgPersonal">
-                <i class="bi bi-person-circle" aria-hidden="true"></i>
-                <span class="side-group__label">Cá nhân</span>
-                <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
-            </button>
-            <div class="side-group__panel" id="sgPersonal">
-                <div class="side-group__inner">
-                    <!-- GỘP CHẤM CÔNG & LỊCH TRỰC CÁ NHÂN THÀNH 1 THANH DUY NHẤT -->
-                    <a th:if="${permissionCodes != null and (#lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') or #lists.contains(permissionCodes, 'SCHEDULE_MY'))}"
-                       th:href="@{${#lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') ? '/attendance/my' : '/schedules/my'}}"
-                       class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'my-attendance' or activeMenu == 'my-schedule'} ? 'is-active' : ''"
-                       title="Chấm công và lịch trực cá nhân">
-                        <i class="bi bi-fingerprint" aria-hidden="true"></i><span class="side-link__label">Chấm công &amp; Ca trực</span>
-                    </a>
-                    <!-- Đơn xin nghỉ / Khóa lịch (SCR-33.5 - Dành riêng cho Bác sĩ theo FT42 & Matrix 4.4) -->
-                    <a th:if="${permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS')}"
-                       th:href="@{/doctor/leave-requests}" class="side-link side-sublink"
-                       th:classappend="${activeMenu == 'leave-requests'} ? 'is-active' : ''"
-                       title="Gửi yêu cầu nghỉ phép &amp; Khóa lịch">
-                        <i class="bi bi-calendar-x" aria-hidden="true"></i><span class="side-link__label">Yêu cầu nghỉ / Khóa lịch</span>
-                    </a>
+                    <i class="bi bi-person-circle" aria-hidden="true"></i>
+                    <span class="side-group__label">Cá nhân</span>
+                    <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
+                </button>
+                <div class="side-group__panel" id="sgPersonal">
+                    <div class="side-group__inner">
+                        <!-- GỘP CHẤM CÔNG & LỊCH TRỰC CÁ NHÂN THÀNH 1 THANH DUY NHẤT -->
+                        <a th:if="${permissionCodes != null and (#lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') or #lists.contains(permissionCodes, 'SCHEDULE_MY'))}"
+                            th:href="@{${#lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') ? '/attendance/my' : '/schedules/my'}}"
+                            class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'my-attendance' or activeMenu == 'my-schedule'} ? 'is-active' : ''"
+                            title="Chấm công và lịch trực cá nhân">
+                            <i class="bi bi-fingerprint" aria-hidden="true"></i><span class="side-link__label">Chấm công
+                                &amp; Ca trực</span>
+                        </a>
+                        <!-- Đơn xin nghỉ / Khóa lịch (SCR-33.5 - Dành riêng cho Bác sĩ theo FT42 & Matrix 4.4) -->
+                        <a th:if="${permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS')}"
+                            th:href="@{/doctor/leave-requests}" class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'leave-requests'} ? 'is-active' : ''"
+                            title="Gửi yêu cầu nghỉ phép &amp; Khóa lịch">
+                            <i class="bi bi-calendar-x" aria-hidden="true"></i><span class="side-link__label">Yêu cầu
+                                nghỉ / Khóa lịch</span>
+                        </a>
+                    </div>
                 </div>
             </div>
-        </div>
-    </nav>
+        </nav>
 
-    <!-- Khôi phục vị trí cuộn sidebar tức thì trước khi render (chống FOUC / giật nhảy lên đầu trang) -->
-    <script>
-        (function () {
-            var nav = document.querySelector(".app-sidebar__nav");
-            if (!nav) return;
-            try {
-                var saved = sessionStorage.getItem("cvdcms.sidebar.navScrollTop");
-                if (saved !== null) {
-                    nav.scrollTop = parseInt(saved, 10) || 0;
-                }
-                var active = nav.querySelector(".side-link.is-active");
-                if (active) {
-                    var navRect = nav.getBoundingClientRect();
-                    var actRect = active.getBoundingClientRect();
-                    if (actRect.top < navRect.top || actRect.bottom > navRect.bottom) {
-                        var target = active.offsetTop - (nav.clientHeight / 2) + (active.clientHeight / 2);
-                        nav.scrollTop = Math.max(0, target);
+        <!-- Khôi phục vị trí cuộn sidebar tức thì trước khi render (chống FOUC / giật nhảy lên đầu trang) -->
+        <script>
+            (function () {
+                var nav = document.querySelector(".app-sidebar__nav");
+                if (!nav) return;
+                try {
+                    var saved = sessionStorage.getItem("cvdcms.sidebar.navScrollTop");
+                    if (saved !== null) {
+                        nav.scrollTop = parseInt(saved, 10) || 0;
                     }
-                }
-            } catch (e) {}
-        })();
-    </script>
+                    var active = nav.querySelector(".side-link.is-active");
+                    if (active) {
+                        var navRect = nav.getBoundingClientRect();
+                        var actRect = active.getBoundingClientRect();
+                        if (actRect.top < navRect.top || actRect.bottom > navRect.bottom) {
+                            var target = active.offsetTop - (nav.clientHeight / 2) + (active.clientHeight / 2);
+                            nav.scrollTop = Math.max(0, target);
+                        }
+                    }
+                } catch (e) { }
+            })();
+        </script>
 
-    <!-- CHÂN SIDEBAR: thẻ người dùng + popup dropup + nút thu gọn (desktop) -->
-    <div class="app-sidebar__foot">
-        <div class="sidebar-user-dropdown" data-dropdown th:if="${session.loggedInUser != null}">
-            <!-- Nút / Thẻ kích hoạt dropup -->
-            <div class="app-sidebar__user"
-                 data-dropdown-toggle
-                 role="button"
-                 tabindex="0"
-                 aria-label="Tùy chọn tài khoản"
-                 aria-haspopup="true"
-                 aria-expanded="false"
-                 title="Tùy chọn tài khoản &amp; Cài đặt">
-                <span class="user-card__avatar"
-                      th:text="${displayName != null and !#strings.isEmpty(displayName)
+        <!-- CHÂN SIDEBAR: thẻ người dùng + popup dropup + nút thu gọn (desktop) -->
+        <div class="app-sidebar__foot">
+            <div class="sidebar-user-dropdown" data-dropdown th:if="${session.loggedInUser != null}">
+                <!-- Nút / Thẻ kích hoạt dropup -->
+                <div class="app-sidebar__user" data-dropdown-toggle role="button" tabindex="0"
+                    aria-label="Tùy chọn tài khoản" aria-haspopup="true" aria-expanded="false"
+                    title="Tùy chọn tài khoản &amp; Cài đặt">
+                    <span class="user-card__avatar" th:text="${displayName != null and !#strings.isEmpty(displayName)
                               ? #strings.substring(displayName, 0, 1).toUpperCase()
                               : (session.loggedInUser.username != null and !#strings.isEmpty(session.loggedInUser.username)
                                  ? #strings.substring(session.loggedInUser.username, 0, 1).toUpperCase()
                                  : 'U')}">A</span>
-                <span class="user-card__info">
-                    <span class="user-card__name"
-                          th:text="${displayName != null and !#strings.isEmpty(displayName)
+                    <span class="user-card__info">
+                        <span class="user-card__name" th:text="${displayName != null and !#strings.isEmpty(displayName)
                                   ? displayName : session.loggedInUser.username}">admin</span>
-                    <span class="user-card__role"
-                          th:text="${roleNames != null and !#lists.isEmpty(roleNames)
+                        <span class="user-card__role" th:text="${roleNames != null and !#lists.isEmpty(roleNames)
                                   ? #strings.listJoin(roleNames, ', ') : 'Chưa xác định'}">Admin</span>
-                    <span th:if="${inactiveBranchWarning != null}" class="badge bg-danger text-wrap text-start mt-1" style="font-size: 0.7rem; line-height: 1.2;">
-                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Cơ sở ngừng HĐ
+                        <span th:if="${inactiveBranchWarning != null}" class="badge bg-danger text-wrap text-start mt-1"
+                            style="font-size: 0.7rem; line-height: 1.2;">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Cơ sở ngừng HĐ
+                        </span>
                     </span>
-                </span>
 
-                <!-- Icon cài đặt / Tùy chọn tài khoản (trực quan theo ảnh minh họa) -->
-                <span class="icon-button user-card__gear" aria-hidden="true" title="Tùy chọn tài khoản">
-                    <i class="bi bi-person-gear"></i>
-                </span>
+                    <!-- Icon cài đặt / Tùy chọn tài khoản (trực quan theo ảnh minh họa) -->
+                    <span class="icon-button user-card__gear" aria-hidden="true" title="Tùy chọn tài khoản">
+                        <i class="bi bi-person-gear"></i>
+                    </span>
 
-                <!-- Đăng xuất nhanh (tùy chọn) -->
-                <form th:action="@{/logout}" method="post" class="m-0 user-card__action"
-                      onclick="event.stopPropagation()" onpointerdown="event.stopPropagation()">
-                    <button type="submit" class="icon-button" aria-label="Đăng xuất" title="Đăng xuất">
-                        <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
-                    </button>
-                </form>
-            </div>
-
-            <!-- POPUP DROPUP MENU (Mở ngược lên trên, hiển thị đủ các chức năng chuẩn DentalSoft/DentalFlow) -->
-            <div class="user-dropup-panel">
-                <div class="user-dropdown__header">
-                    <div class="user-dropdown__name"
-                         th:text="${displayName != null and !#strings.isEmpty(displayName)
-                                 ? displayName : session.loggedInUser.username}">Người dùng
-                    </div>
-                    <div class="user-dropdown__role"
-                         th:text="${roleNames != null and !#lists.isEmpty(roleNames)
-                                 ? #strings.listJoin(roleNames, ', ') : 'Chưa xác định'}">Vai trò
-                    </div>
+                    <!-- Đăng xuất nhanh (tùy chọn) -->
+                    <form th:action="@{/logout}" method="post" class="m-0 user-card__action"
+                        onclick="event.stopPropagation()" onpointerdown="event.stopPropagation()">
+                        <button type="submit" class="icon-button" aria-label="Đăng xuất" title="Đăng xuất">
+                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                        </button>
+                    </form>
                 </div>
 
-                <a th:href="@{/profile}" class="dropdown-item-link">
-                    <i class="bi bi-person-vcard" aria-hidden="true"></i> Thông tin cá nhân
-                </a>
+                <!-- POPUP DROPUP MENU (Mở ngược lên trên, hiển thị đủ các chức năng chuẩn DentalSoft/DentalFlow) -->
+                <div class="user-dropup-panel">
+                    <div class="user-dropdown__header">
+                        <div class="user-dropdown__name" th:text="${displayName != null and !#strings.isEmpty(displayName)
+                                 ? displayName : session.loggedInUser.username}">Người dùng
+                        </div>
+                        <div class="user-dropdown__role" th:text="${roleNames != null and !#lists.isEmpty(roleNames)
+                                 ? #strings.listJoin(roleNames, ', ') : 'Chưa xác định'}">Vai trò
+                        </div>
+                    </div>
 
-                <a th:href="@{/profile/edit}" class="dropdown-item-link">
-                    <i class="bi bi-pencil-square" aria-hidden="true"></i> Cập nhật tài khoản
-                </a>
+                    <a th:href="@{/profile}" class="dropdown-item-link">
+                        <i class="bi bi-person-vcard" aria-hidden="true"></i> Thông tin cá nhân
+                    </a>
 
-                <a th:href="@{/profile/change-password}" class="dropdown-item-link">
-                    <i class="bi bi-shield-lock" aria-hidden="true"></i> Đổi mật khẩu
-                </a>
+                    <a th:href="@{/profile/edit}" class="dropdown-item-link">
+                        <i class="bi bi-pencil-square" aria-hidden="true"></i> Cập nhật tài khoản
+                    </a>
 
-                <form th:action="@{/logout}" method="post" class="m-0">
-                    <button type="submit"
+                    <a th:href="@{/profile/change-password}" class="dropdown-item-link">
+                        <i class="bi bi-shield-lock" aria-hidden="true"></i> Đổi mật khẩu
+                    </a>
+
+                    <form th:action="@{/logout}" method="post" class="m-0">
+                        <button type="submit"
                             class="dropdown-item-link dropdown-item-link--danger w-100 border-0 bg-transparent text-start">
-                        <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Đăng xuất
-                    </button>
-                </form>
+                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Đăng xuất
+                        </button>
+                    </form>
+                </div>
             </div>
-        </div>
 
-        <button type="button" class="app-sidebar__collapse" data-sidebar-toggle aria-controls="appSidebar"
+            <button type="button" class="app-sidebar__collapse" data-sidebar-toggle aria-controls="appSidebar"
                 aria-label="Thu gọn menu">
-            <i class="bi bi-chevron-double-left" aria-hidden="true"></i>
-            <span class="side-link__label">Thu gọn</span>
+                <i class="bi bi-chevron-double-left" aria-hidden="true"></i>
+                <span class="side-link__label">Thu gọn</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Lớp phủ làm mờ nền khi mở sidebar trên mobile (click để đóng) -->
+    <div th:fragment="sidebarBackdrop">
+        <div class="app-sidebar__backdrop" data-sidebar-close aria-hidden="true"></div>
+        <button type="button" class="mobile-sidebar-toggle d-lg-none" data-sidebar-toggle aria-controls="appSidebar"
+            aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
+            <i class="bi bi-list"></i>
         </button>
     </div>
-</aside>
-
-<!-- Lớp phủ làm mờ nền khi mở sidebar trên mobile (click để đóng) -->
-<div th:fragment="sidebarBackdrop">
-    <div class="app-sidebar__backdrop" data-sidebar-close aria-hidden="true"></div>
-    <button type="button" class="mobile-sidebar-toggle d-lg-none" data-sidebar-toggle aria-controls="appSidebar"
-            aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
-        <i class="bi bi-list"></i>
-    </button>
-</div>
 
 </body>
+
 </html>
