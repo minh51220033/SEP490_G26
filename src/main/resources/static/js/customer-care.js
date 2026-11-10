@@ -1621,6 +1621,7 @@
         });
 
         // Delegated actions in tables
+        // Dùng capture phase: wrapper nút có onclick="event.stopPropagation()" (chặn click mở dòng) sẽ chặn bubble lên body
         document.body.addEventListener("click", async (e) => {
             const recordBtn = e.target.closest("[data-record-interaction]");
             if (recordBtn) {
@@ -1657,7 +1658,7 @@
                     showMessage(err.message, "error");
                 }
             }
-        });
+        }, true);
 
         loadBranchesAndInit();
     });

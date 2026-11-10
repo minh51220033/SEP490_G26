@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 
-<head th:replace="~{fragments/head :: head('Chấm công của tôi')}"></head>
+<head th:replace="~{fragments/head :: head('Lịch làm việc & Chấm công của tôi')}"></head>
 
 <body class="app-body account-page-body staff-page-body">
 
@@ -12,7 +12,7 @@
 
     <div class="app-main">
 
-        <header th:replace="~{fragments/header :: appTopbar('Chấm công của tôi')}"></header>
+        <header th:replace="~{fragments/header :: appTopbar('Lịch làm việc & Chấm công của tôi')}"></header>
 
         <main class="app-content">
             <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
@@ -268,41 +268,102 @@
                     height: 280px;
                     vertical-align: middle !important;
                 }
+
+                /* 6. TRANG GỘP LỊCH TRỰC + CHẤM CÔNG: cho phép cuộn dọc, không ép co các khối gây đè nhau */
+                body.staff-page-body .app-content,
+                body.account-page-body .app-content {
+                    overflow-y: auto !important;
+                    overflow-x: hidden !important;
+                    gap: 0 !important;
+                    display: block !important;
+                }
+                .app-content > *,
+                .app-content > .row {
+                    flex-shrink: 0 !important;
+                }
+                .app-content .dv-toolbar-card,
+                .app-content .staff-table-card,
+                .app-content > .row {
+                    margin-bottom: 12px !important;
+                }
+                .att-week-card {
+                    background: #ffffff;
+                    border: 1.5px solid #e2e8f0;
+                    border-radius: 12px;
+                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+                    padding: 12px;
+                    margin-bottom: 12px;
+                }
+                .att-week-card .schedule-container {
+                    flex: none !important;
+                    min-height: auto !important;
+                    display: block !important;
+                }
+                .att-week-card .my-week {
+                    display: grid;
+                    grid-template-columns: repeat(7, minmax(140px, 1fr));
+                    gap: 10px;
+                    overflow-x: auto;
+                    padding-bottom: 4px;
+                }
+                .att-week-card .my-day {
+                    min-height: 140px;
+                    min-width: 0;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                }
+                .att-week-card .my-shift {
+                    word-break: break-word;
+                }
+                .att-week-head {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 10px;
+                    padding-bottom: 10px;
+                    margin-bottom: 10px;
+                    border-bottom: 1px solid #f1f5f9;
+                }
+                .att-section-title {
+                    font-size: 13.5px;
+                    font-weight: 800;
+                    color: #0f172a;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    margin: 4px 0 8px;
+                }
             </style>
 
 
 
-            <!-- TIÊU ĐỀ TRANG & THANH ĐIỀU HƯỚNG TỔNG HỢP: 1 HÀNG DUY NHẤT -->
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2.5">
+            <!-- TIÊU ĐỀ TRANG: KẾT HỢP LỊCH LÀM VIỆC & CHẤM CÔNG CỦA TÔI (DUY NHẤT 1 TAB) -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-1">
                 <div class="d-flex align-items-center gap-3">
                     <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; margin-right: 4px;">
-                        <i class="bi bi-clock-history"></i>
+                        <i class="bi bi-calendar-check-fill"></i>
                     </div>
                     <div>
-                        <h1 class="dv-page-title mb-0" style="font-size: 17px; font-weight: 800; line-height: 1.2;">Chấm công của tôi</h1>
+                        <h1 class="dv-page-title mb-0" style="font-size: 17px; font-weight: 800; line-height: 1.2;">Lịch làm việc &amp; Chấm công của tôi</h1>
                         <p class="dv-page-subtitle mb-0 text-muted" style="font-size: 12px;" th:if="${staff != null}">
-                            Nhân sự: <strong class="text-primary" th:text="${staff.fullName}">Họ tên</strong> (<span th:text="${staff.staffCode}">BS0001</span>) · Tháng <strong th:text="${#temporals.format(month.atDay(1), 'MM/yyyy')}">11/2026</strong>
+                            Tuần <strong class="text-primary" th:text="${#temporals.format(monday, 'dd/MM/yyyy')} + ' - ' + ${#temporals.format(monday.plusDays(6), 'dd/MM/yyyy')}">09/11/2026 - 15/11/2026</strong> · <strong class="text-dark" th:text="${staff.fullName}">BS. Test Nha Khoa</strong> (<span th:text="${staff.staffCode}">BS-TEST</span>)
                         </p>
                         <p class="dv-page-subtitle mb-0 text-muted" style="font-size: 12px;" th:if="${staff == null}">
-                            Ghi nhận thời gian vào/ra ca trực và theo dõi bảng công cá nhân theo tháng
+                            Lịch làm việc ca trực và ghi nhận thời gian chấm công cá nhân
                         </p>
                     </div>
                 </div>
 
-                <!-- THANH ĐIỀU HƯỚNG TỔNG HỢP: CHẤM CÔNG & CA TRỰC CÁ NHÂN (CÙNG HÀNG HEADER) -->
+                <!-- BÊN PHẢI: NÚT YÊU CẦU NGHỈ / KHÓA LỊCH + CHỌN CƠ SỞ (DUY NHẤT 1 TAB ĐẦY ĐỦ CHỨC NĂNG) -->
                 <div class="d-flex align-items-center gap-2">
-                    <div class="dv-quick-segment" aria-label="Điều hướng nghiệp vụ cá nhân">
-                        <a th:href="@{/attendance/my}" class="dv-seg-btn active">
-                            <i class="bi bi-fingerprint"></i> Chấm công cá nhân
-                        </a>
-                        <a th:href="@{/schedules/my}" class="dv-seg-btn">
-                            <i class="bi bi-calendar-week"></i> Lịch trực tuần của tôi
-                        </a>
-                        <a th:href="@{/doctor/leave-requests}" class="dv-seg-btn"
-                           th:if="${permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS')}">
-                            <i class="bi bi-calendar-x"></i> Yêu cầu nghỉ / Khóa lịch
-                        </a>
-                    </div>
+                    <a th:href="@{/doctor/leave-requests}"
+                       class="btn btn-outline-secondary fw-semibold px-2.5 py-1.5 rounded-3 d-inline-flex align-items-center gap-1.5"
+                       style="font-size: 12.5px; height: 32px; border-color: #cbd5e1; background: #fff;"
+                       th:if="${permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS')}">
+                        <i class="bi bi-calendar2-plus text-primary"></i> Yêu cầu nghỉ / Khóa lịch
+                    </a>
                     <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                 </div>
             </div>
@@ -324,7 +385,7 @@
             <th:block th:if="${staff != null}">
 
                 <!-- HÀNG KẾT HỢP: CHECK-IN TRÁI (COL-XL-5) + 4 THẺ KPI PHẢI (COL-XL-7) TRÊN CÙNG 1 HÀNG -->
-                <div class="row g-2 mb-2 align-items-stretch">
+                <div class="row g-2.5 mb-3 align-items-stretch mt-1">
                     <!-- CỘT TRÁI: CHECK-IN / CHECK-OUT NHANH -->
                     <div class="col-xl-5 col-lg-5">
                         <div class="h-100 bg-white p-2.5 px-3 rounded-3 border d-flex flex-column justify-content-between shadow-xs" style="border-color: #e2e8f0 !important; border-radius: 12px !important;">
@@ -447,6 +508,82 @@
                     </div>
                 </div>
 
+                <!-- ==================== KHỐI LỊCH LÀM VIỆC TUẦN CỦA TÔI ==================== -->
+                <div class="att-week-card">
+                <div class="att-week-head">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 w-100">
+                        <!-- Bên trái: Tiêu đề khối & Chú thích phân biệt trạng thái ca trực -->
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="fw-bold text-dark d-inline-flex align-items-center gap-1.5 me-2" style="font-size: 13.5px;">
+                                <i class="bi bi-calendar-week text-primary"></i> Lịch trực tuần của tôi
+                            </span>
+                            <span class="badge border fw-semibold px-2 py-1 d-inline-flex align-items-center gap-1" style="background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe !important; font-size: 11.5px;">
+                                <i class="bi bi-circle-fill" style="font-size: 7px;"></i> Đã xếp ca
+                            </span>
+                            <span class="badge border fw-semibold px-2 py-1 d-inline-flex align-items-center gap-1" style="background: #fffbeb; color: #b45309; border-color: #fde68a !important; font-size: 11.5px;">
+                                <i class="bi bi-circle-fill" style="font-size: 7px;"></i> Nghỉ phép
+                            </span>
+                            <span class="badge border fw-semibold px-2 py-1 d-inline-flex align-items-center gap-1" style="background: #f1f5f9; color: #64748b; border-color: #cbd5e1 !important; font-size: 11.5px;">
+                                <i class="bi bi-circle-fill" style="font-size: 7px;"></i> Đã hủy
+                            </span>
+                            <span class="badge border fw-semibold px-2 py-1 d-inline-flex align-items-center gap-1" style="background: #f0fdf4; color: #15803d; border-color: #86efac !important; font-size: 11.5px;">
+                                <i class="bi bi-calendar-check" style="font-size: 10px;"></i> Hôm nay
+                            </span>
+                        </div>
+
+                        <!-- Bên phải: Điều hướng tuần (Segmented Control) -->
+                        <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
+                            <div class="dv-quick-segment" aria-label="Điều hướng tuần">
+                                <a th:href="@{/attendance/my(week=${prevWeek},month=${month})}" class="dv-seg-btn px-2.5" title="Tuần trước">
+                                    <i class="bi bi-chevron-left"></i> Tuần trước
+                                </a>
+                                <a th:href="@{/attendance/my(month=${month})}" class="dv-seg-btn px-3"
+                                   th:classappend="${monday == T(com.cvdcms.service.StaffScheduleService).mondayOf(today)} ? 'active' : ''" title="Về tuần hiện tại">
+                                    Tuần này
+                                </a>
+                                <a th:href="@{/attendance/my(week=${nextWeek},month=${month})}" class="dv-seg-btn px-2.5" title="Tuần sau">
+                                    Tuần sau <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LƯỚI LỊCH TRỰC 7 NGÀY TRONG TUẦN -->
+                <section class="schedule-container">
+                    <div th:if="${myWeek != null}" class="my-week">
+                        <div th:each="entry : ${myWeek}" class="my-day"
+                             th:classappend="${entry.key == today} ? 'is-today' : ''">
+                            <div class="my-day__head">
+                                <span th:text="${#temporals.dayOfWeekName(entry.key)}">Thứ hai</span>
+                                <strong th:text="${#temporals.format(entry.key, 'dd/MM')}">01/01</strong>
+                            </div>
+                            <div th:if="${#lists.isEmpty(entry.value)}" class="my-day__empty">Nghỉ</div>
+                            <div th:each="s : ${entry.value}" class="my-shift"
+                                 th:classappend="${s.status.name() == 'ON_LEAVE'} ? 'my-shift--leave' : (${s.status.name() == 'CANCELLED'} ? 'my-shift--cancel' : '')">
+                                <div class="my-shift__name" th:text="${s.shift.shiftName}">Ca sáng</div>
+                                <div class="my-shift__time"
+                                     th:text="${#temporals.format(s.shift.startTime, 'HH:mm')} + ' - ' + ${#temporals.format(s.shift.endTime, 'HH:mm')}">
+                                    08:00 - 12:00
+                                </div>
+                                <div class="staff-sub d-flex align-items-center gap-1 flex-wrap">
+                                    <span th:text="${s.branch.branchName}">Chi nhánh</span>
+                                    <span class="badge bg-danger ms-1" style="font-size: 11px;" th:if="${s.branch != null and !s.branch.isActive}">
+                                        <i class="bi bi-pause-circle"></i> Đã ngừng hoạt động
+                                    </span>
+                                </div>
+                                <div class="staff-sub" th:if="${s.note != null}" th:text="${s.note}"></div>
+                                <span class="status-badge"
+                                      th:classappend="${s.status.name() == 'SCHEDULED'} ? 'status-badge--active' : 'status-badge--on_leave'"
+                                      th:text="${s.status.name() == 'SCHEDULED' ? 'Đã xếp ca' : (s.status.name() == 'ON_LEAVE' ? 'Nghỉ phép' : 'Đã hủy')}">Đã xếp ca</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                </div>
+
+                <!-- ==================== KHỐI BẢNG CHẤM CÔNG CHI TIẾT THEO THÁNG ==================== -->
+                <div class="att-section-title"><i class="bi bi-fingerprint text-primary"></i> Bảng chấm công tháng</div>
                 <!-- TOOLBAR / BỘ LỌC ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS (GỌN GÀNG) -->
                 <div class="dv-toolbar-card mb-2">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -470,15 +607,15 @@
 
                             <!-- Phân đoạn điều hướng Tháng kiểu Segmented Control -->
                             <div class="dv-quick-segment" aria-label="Điều hướng tháng">
-                                <a th:href="@{/attendance/my(month=${prevMonth})}"
+                                <a th:href="@{/attendance/my(month=${prevMonth},week=${monday})}"
                                    class="dv-seg-btn px-2 py-1" title="Tháng trước">
                                     <i class="bi bi-chevron-left"></i> Tháng trước
                                 </a>
-                                <a th:href="@{/attendance/my}"
+                                <a th:href="@{/attendance/my(week=${monday})}"
                                    class="dv-seg-btn active px-2.5 py-1" title="Về tháng hiện tại">
                                     Tháng này (<span th:text="${#temporals.format(month.atDay(1), 'MM/yyyy')}">11/2026</span>)
                                 </a>
-                                <a th:href="@{/attendance/my(month=${nextMonth})}"
+                                <a th:href="@{/attendance/my(month=${nextMonth},week=${monday})}"
                                    class="dv-seg-btn px-2 py-1" title="Tháng sau">
                                     Tháng sau <i class="bi bi-chevron-right"></i>
                                 </a>
