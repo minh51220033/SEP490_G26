@@ -219,7 +219,10 @@ public class RoleManagementController {
         boolean selectedRoleEditable = selectedRole != null && !isAdminRole && !isPatientRole(selectedRole);
 
         if (isAdminRole && selectedRole != null) {
+            Set<String> adminExcluded = Set.of("HR_MY_ATTENDANCE", "SCHEDULE_MY", "HR_LEAVE_REQUESTS");
             selectedPermissionIds = allPermissions.stream()
+                    .filter(p -> p.getPermissionCode() == null
+                            || !adminExcluded.contains(p.getPermissionCode().trim().toUpperCase()))
                     .map(Permission::getPermissionId)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
@@ -516,12 +519,20 @@ public class RoleManagementController {
             }
             allMap.put(seed.code().toUpperCase(), perm);
         }
-        if (addedAny) {
-            List<Role> allRoles = roleRepository.findAllWithPermissions();
-            for (Role r : allRoles) {
-                if (isAdminRole(r)) {
+        Set<String> adminExcluded = Set.of("HR_MY_ATTENDANCE", "SCHEDULE_MY", "HR_LEAVE_REQUESTS");
+        List<Permission> adminPerms = allMap.values().stream()
+                .filter(p -> p.getPermissionCode() == null
+                        || !adminExcluded.contains(p.getPermissionCode().trim().toUpperCase()))
+                .toList();
+        List<Role> allRoles = roleRepository.findAllWithPermissions();
+        for (Role r : allRoles) {
+            if (isAdminRole(r)) {
+                boolean hasExcluded = r.getPermissions().stream()
+                        .anyMatch(p -> p.getPermissionCode() != null
+                                && adminExcluded.contains(p.getPermissionCode().trim().toUpperCase()));
+                if (addedAny || hasExcluded || r.getPermissions().size() != adminPerms.size()) {
                     r.getPermissions().clear();
-                    r.getPermissions().addAll(allMap.values());
+                    r.getPermissions().addAll(adminPerms);
                     roleRepository.save(r);
                 }
             }

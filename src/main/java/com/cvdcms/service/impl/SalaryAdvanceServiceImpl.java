@@ -154,8 +154,9 @@ public class SalaryAdvanceServiceImpl implements SalaryAdvanceService {
 
     @Override
     public SalaryAdvance approveAdvance(Long advanceId, Long approverUserId) {
-        if (approverUserId == null || !userRepository.hasActiveAdminRole(approverUserId)) {
-            throw new AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền duyệt đơn tạm ứng lương");
+        if (approverUserId == null || (!userRepository.hasActiveAdminRole(approverUserId)
+                && !userRepository.hasActivePermission(approverUserId, "FINANCE_PAYROLL_ADVANCES"))) {
+            throw new AccessDeniedException("Bạn không có quyền duyệt đơn tạm ứng lương");
         }
 
         SalaryAdvance advance = salaryAdvanceRepository.findByIdForUpdate(advanceId)
@@ -231,8 +232,9 @@ public class SalaryAdvanceServiceImpl implements SalaryAdvanceService {
 
     @Override
     public SalaryAdvance rejectAdvance(Long advanceId, String reason, Long rejecterUserId) {
-        if (rejecterUserId == null || !userRepository.hasActiveAdminRole(rejecterUserId)) {
-            throw new AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền từ chối đơn tạm ứng lương");
+        if (rejecterUserId == null || (!userRepository.hasActiveAdminRole(rejecterUserId)
+                && !userRepository.hasActivePermission(rejecterUserId, "FINANCE_PAYROLL_ADVANCES"))) {
+            throw new AccessDeniedException("Bạn không có quyền từ chối đơn tạm ứng lương");
         }
 
         SalaryAdvance advance = salaryAdvanceRepository.findByIdForUpdate(advanceId)

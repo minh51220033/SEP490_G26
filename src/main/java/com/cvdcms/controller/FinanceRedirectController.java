@@ -62,11 +62,30 @@ public class FinanceRedirectController {
         if (perms.contains("FINANCE_DEBT")) {
             return "redirect:/payments/debts";
         }
+        if (perms.contains("FINANCE_DEPOSIT")) {
+            return "redirect:/payments/deposits";
+        }
         if (perms.contains("REFUND_MANAGE")) {
             return "redirect:/payments/refunds";
         }
 
-        // 2. Nhóm Phòng khám (fallback):
+        // 2. Nhóm Phòng khám (fallback theo quyền từng tab):
+        if (perms.contains("FINANCE_EXPENSES")) {
+            return "redirect:/expenses";
+        }
+        if (perms.contains("FINANCE_PAYROLL")) {
+            return "redirect:/payroll";
+        }
+        if (perms.contains("FINANCE_PAYROLL_ADVANCES")) {
+            return "redirect:/payroll/advances";
+        }
+        if (perms.contains("FINANCE_COMMISSION_CONFIG")) {
+            return "redirect:/payroll/commission-config";
+        }
+        if (perms.contains("FINANCE_OWNER_DISTRIBUTIONS")) {
+            return "redirect:/payroll/owner-distributions";
+        }
+
         return "redirect:/expenses";
     }
 
@@ -74,6 +93,29 @@ public class FinanceRedirectController {
     public String redirectFinanceClinic(HttpServletRequest request, HttpSession session) {
         if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)) {
             return "redirect:/login";
+        }
+        boolean isAdmin = Boolean.TRUE.equals(session.getAttribute("isAdmin"));
+        List<String> roleNames = extractList(session.getAttribute("roleNames"));
+        List<String> perms = extractList(session.getAttribute("permissionCodes"));
+        if (perms.isEmpty() && user.getUserId() != null) {
+            perms = userRepository.findActivePermissionCodesByUserId(user.getUserId());
+        }
+        boolean isKeToan = roleNames.stream().anyMatch(r -> "KE_TOAN".equalsIgnoreCase(r) || "ROLE_KE_TOAN".equalsIgnoreCase(r));
+
+        if (isAdmin || isKeToan || perms.contains("FINANCE_EXPENSES")) {
+            return "redirect:/expenses";
+        }
+        if (perms.contains("FINANCE_PAYROLL")) {
+            return "redirect:/payroll";
+        }
+        if (perms.contains("FINANCE_PAYROLL_ADVANCES")) {
+            return "redirect:/payroll/advances";
+        }
+        if (perms.contains("FINANCE_COMMISSION_CONFIG")) {
+            return "redirect:/payroll/commission-config";
+        }
+        if (perms.contains("FINANCE_OWNER_DISTRIBUTIONS")) {
+            return "redirect:/payroll/owner-distributions";
         }
         return "redirect:/expenses";
     }

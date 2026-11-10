@@ -49,7 +49,7 @@ public class AttendanceController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
         }
         boolean isAdmin = userRepository.hasActiveAdminRole(user.getUserId());
-        if (!isAdmin && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MANAGE")) {
+        if (!isAdmin && !userRepository.hasActivePermission(user.getUserId(), "HR_BRANCH_ATTENDANCE")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem chấm công toàn chi nhánh.");
         }
     }
@@ -91,7 +91,9 @@ public class AttendanceController {
         if (isPureAdmin(session)) {
             return "redirect:/admin/attendance";
         }
-        if (!userRepository.hasActiveAdminRole(user.getUserId()) && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
+        if (!userRepository.hasActiveAdminRole(user.getUserId())
+                && !userRepository.hasActivePermission(user.getUserId(), "HR_MY_ATTENDANCE")
+                && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền truy cập chấm công cá nhân.");
         }
         addLayoutAttributes(session, model);
@@ -138,7 +140,9 @@ public class AttendanceController {
             ra.addFlashAttribute("errorMessage", "Tài khoản Quản trị hệ thống không thực hiện chấm công cá nhân.");
             return "redirect:/admin/attendance";
         }
-        if (!userRepository.hasActiveAdminRole(user.getUserId()) && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
+        if (!userRepository.hasActiveAdminRole(user.getUserId())
+                && !userRepository.hasActivePermission(user.getUserId(), "HR_MY_ATTENDANCE")
+                && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
             ra.addFlashAttribute("errorMessage", "Bạn không có quyền thực hiện chấm công cá nhân.");
             return "redirect:/home";
         }
@@ -162,7 +166,9 @@ public class AttendanceController {
             ra.addFlashAttribute("errorMessage", "Tài khoản Quản trị hệ thống không thực hiện chấm công cá nhân.");
             return "redirect:/admin/attendance";
         }
-        if (!userRepository.hasActiveAdminRole(user.getUserId()) && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
+        if (!userRepository.hasActiveAdminRole(user.getUserId())
+                && !userRepository.hasActivePermission(user.getUserId(), "HR_MY_ATTENDANCE")
+                && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
             ra.addFlashAttribute("errorMessage", "Bạn không có quyền thực hiện chấm công cá nhân.");
             return "redirect:/home";
         }

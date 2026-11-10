@@ -55,7 +55,12 @@ public class PatientAccess {
         boolean doctor = hasRole(user, "BAC_SI");
         boolean hasReceptionPermission = doctor
                 || users.hasActivePermission(user.getUserId(), "APPOINTMENT_MANAGE")
+                || users.hasActivePermission(user.getUserId(), "APPOINTMENT_VIEW")
+                || users.hasActivePermission(user.getUserId(), "RECEPTION_CHECKIN")
+                || users.hasActivePermission(user.getUserId(), "RECEPTION_DISPATCH")
+                || users.hasActivePermission(user.getUserId(), "RECEPTION_MEMBERSHIPS")
                 || users.hasActivePermission(user.getUserId(), "PATIENT_PROFILE_MANAGE")
+                || users.hasActivePermission(user.getUserId(), "CUSTOMER_CARE_MANAGE")
                 || users.hasActivePermission(user.getUserId(), "MEDICAL_RECORD_VIEW");
         if (!admin && !hasReceptionPermission) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản của bạn không được cấp quyền truy cập chức năng này.");

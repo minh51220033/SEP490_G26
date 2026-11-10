@@ -55,9 +55,9 @@ public class SupplierManagementInterceptor implements HandlerInterceptor {
 
         // Kiểm tra quyền mới nhất từ database ở mỗi request.
         boolean hasPermission =
-                userRepository.hasActiveSupplierManagementRole(
-                        sessionUser.getUserId()
-                );
+                userRepository.hasActiveSupplierManagementRole(sessionUser.getUserId())
+                || userRepository.hasActivePermission(sessionUser.getUserId(), "SUPPLIER_MANAGE")
+                || userRepository.hasActivePermission(sessionUser.getUserId(), "LABO_SUPPLIERS");
 
         if (!hasPermission) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
