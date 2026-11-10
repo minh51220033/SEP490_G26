@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
@@ -22,6 +23,29 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
         ORDER BY m.sentAt ASC, m.messageId ASC
     """)
     List<ChatMessage> findByConversationIdOrderBySentAtAsc(@Param("conversationId") Long conversationId);
+
+    /**
+     * Lấy toàn bộ tin nhắn thuộc danh sách cuộc hội thoại theo thứ tự thời gian tăng dần.
+     */
+    @Query("""
+        SELECT m FROM ChatMessage m
+        WHERE m.conversation.conversationId IN :conversationIds
+        ORDER BY m.sentAt ASC, m.messageId ASC
+    """)
+    List<ChatMessage> findAllByConversationIdsOrderBySentAtAsc(@Param("conversationIds") Collection<Long> conversationIds);
+
+    /**
+     * Tìm tin nhắn kèm thông tin cuộc hội thoại.
+     */
+    @Query("""
+        SELECT m FROM ChatMessage m
+        JOIN FETCH m.conversation c
+        LEFT JOIN FETCH c.user u
+        LEFT JOIN FETCH c.recipientUser ru
+        LEFT JOIN FETCH c.branch b
+        WHERE m.messageId = :messageId
+    """)
+    Optional<ChatMessage> findByIdWithConversation(@Param("messageId") Long messageId);
 
     /**
      * Đếm tổng số tin nhắn trong một cuộc hội thoại.
@@ -127,7 +151,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     @Query("""
         SELECT DISTINCT m.conversation.conversationId
         FROM ChatMessage m
-        WHERE LOWER(m.messageText) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        WHERE (m.isRecalled IS NULL OR m.isRecalled = false)
+          AND LOWER(m.messageText) LIKE LOWER(CONCAT('%', :keyword, '%'))
     """)
     List<Long> findConversationIdsByMessageKeyword(@Param("keyword") String keyword);
 }

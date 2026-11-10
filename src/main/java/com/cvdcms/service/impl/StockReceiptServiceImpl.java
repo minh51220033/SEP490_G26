@@ -20,12 +20,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
@@ -152,6 +147,7 @@ public class StockReceiptServiceImpl implements StockReceiptService {
 
         Map<String, MaterialBatch> batchCache = new HashMap<>();
         Map<Long, BranchInventory> inventoryCache = new HashMap<>();
+        Set<String> seenMaterialBatchesInReceipt = new HashSet<>();
 
         for (StockReceiptCreateDTO.Item input : dto.getItems()) {
             if (input == null || input.getMaterialId() == null || input.getMaterialId() <= 0) {
@@ -183,6 +179,12 @@ public class StockReceiptServiceImpl implements StockReceiptService {
                 bad("Vật tư " + material.getMaterialCode() + " đã ngừng hoạt động.");
             }
 
+            String batchKey = material.getMaterialId() + "::" + batchNo;
+            if (!seenMaterialBatchesInReceipt.add(batchKey)) {
+                bad("Vật tư " + material.getMaterialCode() + " (" + material.getMaterialName()
+                        + ") với số lô " + batchNo + " bị trùng lặp trong cùng phiếu nhập. Vui lòng gộp số lượng hoặc nhập số lô khác nhau.");
+            }
+
             StockReceiptItem item = new StockReceiptItem();
             item.setReceipt(receipt);
             item.setMaterial(material);
@@ -192,7 +194,6 @@ public class StockReceiptServiceImpl implements StockReceiptService {
             item.setUnitPrice(unitPrice);
             items.add(item);
 
-            String batchKey = material.getMaterialId() + "::" + batchNo;
             MaterialBatch batch = batchCache.get(batchKey);
             if (batch == null) {
                 batch = batchRepository.findForUpdate(branch.getBranchId(), material.getMaterialId(), batchNo)

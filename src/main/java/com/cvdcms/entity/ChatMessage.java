@@ -38,6 +38,18 @@ public class ChatMessage {
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
 
+    @Column(name = "is_edited")
+    private Boolean isEdited = false;
+
+    @Column(name = "edited_at")
+    private LocalDateTime editedAt;
+
+    @Column(name = "is_recalled")
+    private Boolean isRecalled = false;
+
+    @Column(name = "recalled_at")
+    private LocalDateTime recalledAt;
+
     @CreationTimestamp
     @Column(name = "sent_at", nullable = false, updatable = false)
     private LocalDateTime sentAt;
