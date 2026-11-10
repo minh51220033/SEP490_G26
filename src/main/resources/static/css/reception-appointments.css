@@ -1124,3 +1124,41 @@ a.btn-action-icon {
         padding: 6px 8px !important;
     }
 }
+
+/* =========================================================================
+   GẮN LIỀN 2 KHỐI BỘ LỌC VÀ DANH SÁCH / Ô LỊCH THÀNH 1 CARD THỐNG NHẤT
+   ========================================================================= */
+.apt-unified-container {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    overflow: hidden;
+}
+
+.apt-unified-container .dv-toolbar-card {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin-bottom: 0 !important;
+    border-bottom: 1.5px solid #f1f5f9 !important;
+    padding: 18px 20px !important;
+}
+
+.apt-unified-container #advancedFilterPanel {
+    border: none !important;
+    border-left: 4px solid #0284c7 !important;
+    border-bottom: 1.5px solid #f1f5f9 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin-bottom: 0 !important;
+}
+
+.apt-unified-container #listViewContainer,
+.apt-unified-container #calendarViewContainer {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin-bottom: 0 !important;
+    padding: 16px 20px !important;
+}

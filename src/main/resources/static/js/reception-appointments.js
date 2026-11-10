@@ -509,11 +509,16 @@
             }
             doctor.disabled = false;
             if (advDoctor) advDoctor.disabled = false;
-            const list = await request(`/doctors?branchId=${encodeURIComponent(branch.value)}&date=${dateInput.value}`);
-            list.forEach(d => {
-                doctor.appendChild(option(d.id, d.name));
-                if (advDoctor) advDoctor.appendChild(option(d.id, d.name));
-            });
+            try {
+                const res = await request(`/doctors?branchId=${encodeURIComponent(branch.value)}&date=${dateInput.value}`);
+                const list = Array.isArray(res) ? res : (Array.isArray(res?.doctors) ? res.doctors : []);
+                list.forEach(d => {
+                    doctor.appendChild(option(d.id, d.name));
+                    if (advDoctor) advDoctor.appendChild(option(d.id, d.name));
+                });
+            } catch (err) {
+                console.warn('Không tải được danh sách bác sĩ:', err);
+            }
         }
 
         // Sort BS Button
@@ -674,20 +679,25 @@
             const params = new URLSearchParams({ start, end });
             if (branch.value) params.set('branchId', branch.value);
 
-            const list = await request(`/calendar?${params}`);
-            currentAppointments = list || [];
+            try {
+                const res = await request(`/calendar?${params}`);
+                currentAppointments = Array.isArray(res) ? res : (Array.isArray(res?.appointments) ? res.appointments : []);
+            } catch (e) {
+                currentAppointments = [];
+            }
             updateKpisFromList(currentAppointments);
             applyFiltersAndRender();
         }
 
         function updateKpisFromList(list) {
-            const totalCount = list.length;
-            const pendingCount = list.filter(a => a.status === 'PENDING').length;
-            const confirmedCount = list.filter(a => a.status === 'CONFIRMED').length;
-            const checkedInCount = list.filter(a => a.status === 'CHECKED_IN').length;
-            const completedCount = list.filter(a => a.status === 'COMPLETED').length;
-            const noShowCount = list.filter(a => a.status === 'NO_SHOW').length;
-            const cancelledCount = list.filter(a => a.status === 'CANCELLED').length;
+            const arr = Array.isArray(list) ? list : [];
+            const totalCount = arr.length;
+            const pendingCount = arr.filter(a => a.status === 'PENDING').length;
+            const confirmedCount = arr.filter(a => a.status === 'CONFIRMED').length;
+            const checkedInCount = arr.filter(a => a.status === 'CHECKED_IN').length;
+            const completedCount = arr.filter(a => a.status === 'COMPLETED').length;
+            const noShowCount = arr.filter(a => a.status === 'NO_SHOW').length;
+            const cancelledCount = arr.filter(a => a.status === 'CANCELLED').length;
 
             if ($('kpiTotal')) $('kpiTotal').textContent = totalCount;
             if ($('kpiPending')) $('kpiPending').textContent = pendingCount;
@@ -822,7 +832,7 @@
 
         // Apply search, scope, KPI, session, doctor filter and render active view (List or Calendar)
         function applyFiltersAndRender() {
-            let list = [...currentAppointments];
+            let list = Array.isArray(currentAppointments) ? [...currentAppointments] : [];
             const activeTags = [];
 
             // 1. Doctor filter
@@ -1502,8 +1512,9 @@
                 return;
             }
             try {
-                const list = await request(`/doctors?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`);
-                select.replaceChildren(option('', '-- Chọn bác sĩ phụ trách --'));
+                const res = await request(`/doctors?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`);
+                const list = Array.isArray(res) ? res : (Array.isArray(res?.doctors) ? res.doctors : []);
+                select.replaceChildren(option('', list.length ? '-- Chọn bác sĩ phụ trách --' : '-- Không có bác sĩ trực ca này --'));
                 list.forEach(d => select.appendChild(option(d.id, `BS. ${d.name}${d.specialty ? ` · ${d.specialty}` : ''}`)));
                 select.disabled = false;
                 const sessNames = { MORNING: 'Ca Sáng', AFTERNOON: 'Ca Chiều', EVENING: 'Ca Tối' };
@@ -1511,8 +1522,8 @@
                     ? `Có ${list.length} bác sĩ trực (${sessNames[session] || 'Ca Sáng'}) ngày ${dateLabel(date)}.`
                     : `Chưa có bác sĩ phân ca trực ngày ${dateLabel(date)}.`;
             } catch (err) {
-                select.replaceChildren(option('', 'Không tải được danh sách bác sĩ'));
-                if (help) help.textContent = err.message || 'Không tải được danh sách bác sĩ trực.';
+                select.replaceChildren(option('', '-- Chưa có bác sĩ trực --'));
+                if (help) help.textContent = 'Chưa có bác sĩ phân ca trực hoặc tạm thời không tải được.';
             }
         }
 
@@ -1846,8 +1857,9 @@
                 return;
             }
             try {
-                const list = await request(`/doctors?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`);
-                select.replaceChildren(option('', '-- Chưa chỉ định bác sĩ --'));
+                const res = await request(`/doctors?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`);
+                const list = Array.isArray(res) ? res : (Array.isArray(res?.doctors) ? res.doctors : []);
+                select.replaceChildren(option('', list.length ? '-- Chưa chỉ định bác sĩ --' : '-- Không có bác sĩ trực ca này --'));
                 list.forEach(d => select.appendChild(option(d.id, `BS. ${d.name}${d.specialty ? ` · ${d.specialty}` : ''}`)));
                 if (selectedDoctorId && [...select.options].some(o => o.value === String(selectedDoctorId))) {
                     select.value = String(selectedDoctorId);
@@ -1863,7 +1875,7 @@
             } catch (err) {
                 select.replaceChildren(option('', '-- Chưa chỉ định bác sĩ --'));
                 select.disabled = false;
-                if (help) help.textContent = err.message || 'Không tải được danh sách bác sĩ trực.';
+                if (help) help.textContent = 'Chưa có bác sĩ phân ca trực hoặc tạm thời không tải được.';
             }
         }
 
@@ -2038,17 +2050,19 @@
                 }
             }
 
-            let list = Array.isArray(filteredList) ? filteredList : currentAppointments;
+            let list = Array.isArray(filteredList) ? filteredList : (Array.isArray(currentAppointments) ? currentAppointments : []);
             if (isMonth) {
                 const params = new URLSearchParams({ start: iso(first), end: iso(last) });
                 if (branch.value) params.set('branchId', branch.value);
                 if (doctor.value) params.set('doctorId', doctor.value);
                 try {
-                    list = await request(`/calendar?${params}`);
+                    const res = await request(`/calendar?${params}`);
+                    list = Array.isArray(res) ? res : (Array.isArray(res?.appointments) ? res.appointments : []);
                 } catch (e) {
-                    list = currentAppointments;
+                    list = Array.isArray(currentAppointments) ? currentAppointments : [];
                 }
             }
+            list = Array.isArray(list) ? list : [];
 
             const grid = $('calendarGrid');
             if (!grid) return;
@@ -2187,8 +2201,13 @@
             const select = $('calendarDoctor'); select.replaceChildren(option('', 'Tất cả bác sĩ'));
             select.disabled = !branch.value;
             if (!branch.value) return;
-            const doctors = await request(`/doctors?branchId=${encodeURIComponent(branch.value)}&date=${encodeURIComponent(date.value)}`);
-            doctors.forEach(d => select.appendChild(option(d.id, d.name)));
+            try {
+                const res = await request(`/doctors?branchId=${encodeURIComponent(branch.value)}&date=${encodeURIComponent(date.value)}`);
+                const doctors = Array.isArray(res) ? res : (Array.isArray(res?.doctors) ? res.doctors : []);
+                doctors.forEach(d => select.appendChild(option(d.id, d.name)));
+            } catch (err) {
+                console.warn('Không tải được danh sách bác sĩ:', err);
+            }
         }
         function move(direction) {
             const current = fromDate(date.value);

@@ -322,8 +322,10 @@
                     </div>
                 </div>
 
-                <!-- THANH ĐIỀU KHIỂN & BỘ LỌC CHUẨN ENTERPRISE (GIỐNG DANH SÁCH KHÁM THEO NGÀY) -->
-                <div class="dv-toolbar-card">
+                <!-- KHỐI BỘ LỌC VÀ NỘI DUNG LIỀN MẠCH THỐNG NHẤT (CHUẨN DENTALSOFT) -->
+                <div class="apt-unified-container mb-4">
+                    <!-- THANH ĐIỀU KHIỂN & BỘ LỌC CHUẨN ENTERPRISE (GIỐNG DANH SÁCH KHÁM THEO NGÀY) -->
+                    <div class="dv-toolbar-card">
                     <!-- TẦNG 1: ĐIỀU HƯỚNG THỜI GIAN, PHẠM VI NGÀY/TUẦN/THÁNG & CHẾ ĐỘ XEM (DANH SÁCH / Ô LỊCH) -->
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom"
                         style="border-color: #f1f5f9 !important;">
@@ -633,6 +635,7 @@
                     </div>
                     <div id="calendarGrid" class="appointment-calendar"></div>
                 </div>
+            </div> <!-- /apt-unified-container: Gắn liền 2 khối Bộ lọc và Danh sách/Ô lịch -->
 
                 <!-- =========================================================
                  MODAL 1: CHI TIẾT LỊCH HẸN (ĐỒNG BỘ 100% CẤU TRÚC VỚI FORM THÊM)
@@ -1241,30 +1244,19 @@
                                                 </select>
                                             </div>
 
-                                            <!-- Ghi chú nội bộ -->
-                                            <div class="mb-3">
-                                                <label for="modalInternalNote"
-                                                    class="form-label small fw-semibold text-secondary mb-1.5 text-uppercase">GHI
-                                                    CHÚ</label>
-                                                <input type="text" id="modalInternalNote"
-                                                    class="form-control form-control-sm py-2 px-3 rounded-3"
-                                                    placeholder="Ghi chú nội bộ (không gửi cho KH)">
-                                            </div>
-
-                                            <!-- Checkboxes -->
-                                            <div class="form-check mb-2">
-                                                <input class="form-check-input" type="checkbox" id="modalIsTentative">
-                                                <label class="form-check-label small text-secondary"
-                                                    for="modalIsTentative">
-                                                    Chờ xác nhận (lễ tân sẽ gọi điện chốt lại sau)
-                                                </label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="modalSendSms"
-                                                    checked>
-                                                <label class="form-check-label small text-secondary" for="modalSendSms">
-                                                    Gửi tin nhắn SMS/Zalo xác nhận ngay khi lưu
-                                                </label>
+                                            <!-- Ghi chú nội bộ dạng ẩn / hiện -->
+                                            <div class="mt-2.5">
+                                                <a class="text-decoration-none small text-muted d-inline-flex align-items-center gap-1"
+                                                    data-bs-toggle="collapse" href="#modalInternalNoteCollapse" role="button" aria-expanded="false"
+                                                    aria-controls="modalInternalNoteCollapse">
+                                                    <i class="bi bi-pencil-square text-primary"></i>
+                                                    <span>+ Thêm ghi chú nội bộ</span>
+                                                </a>
+                                                <div class="collapse mt-2" id="modalInternalNoteCollapse">
+                                                    <textarea id="modalInternalNote"
+                                                        class="form-control form-control-sm py-2 px-3 rounded-3" rows="2"
+                                                        placeholder="Ghi chú nội bộ (chỉ lưu hành phòng khám, không gửi cho KH)"></textarea>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
