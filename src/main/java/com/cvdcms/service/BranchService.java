@@ -405,7 +405,12 @@ public class BranchService {
             );
         }
 
-        return branchRepository.findAccessibleBranchesByUserId(userId);
+        List<Branch> branches = branchRepository.findAccessibleBranchesByUserId(userId);
+        if ((branches == null || branches.isEmpty())
+                && (userRepository.hasActiveAdminRole(userId) || userRepository.hasActiveSupplierManagementRole(userId))) {
+            return getUserAccessibleBranches(userId);
+        }
+        return branches != null ? branches : Collections.emptyList();
     }
 
 

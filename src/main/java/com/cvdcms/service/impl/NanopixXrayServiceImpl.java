@@ -340,6 +340,9 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
         if (roleNames.contains("LE_TAN") || roleNames.contains("ROLE_LE_TAN")) {
             return "LE_TAN";
         }
+        if (userRepository.hasActivePermission(userId, "CLINICAL_XRAY")) {
+            return "STAFF";
+        }
 
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền truy cập chức năng Quản lý kết quả phim X-quang NanoPix (FT12).");
     }

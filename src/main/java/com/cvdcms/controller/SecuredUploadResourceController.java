@@ -173,10 +173,11 @@ public class SecuredUploadResourceController {
             return; // Admin có toàn quyền quản trị
         }
 
-        boolean isAuthorizedStaff = roleNames.stream().anyMatch(XRAY_AUTHORIZED_STAFF_ROLES::contains)
+        boolean isPatient = roleNames.contains("BENH_NHAN") || roleNames.contains("ROLE_BENH_NHAN");
+        boolean isAuthorizedStaff = (!isPatient && !roleNames.isEmpty())
+                || roleNames.stream().anyMatch(XRAY_AUTHORIZED_STAFF_ROLES::contains)
                 || roleNames.contains("KE_TOAN") || roleNames.contains("ROLE_KE_TOAN")
                 || roleNames.contains("QUAN_LY_KHO") || roleNames.contains("ROLE_QUAN_LY_KHO");
-        boolean isPatient = roleNames.contains("BENH_NHAN") || roleNames.contains("ROLE_BENH_NHAN");
 
         if ("signatures".equals(category) || "labo".equals(category)) {
             if (!isAuthorizedStaff) {
@@ -209,8 +210,9 @@ public class SecuredUploadResourceController {
                 : Set.of();
 
         boolean isAdmin = roleNames.contains("ADMIN") || roleNames.contains("ROLE_ADMIN");
-        boolean isAuthorizedStaff = roleNames.stream().anyMatch(XRAY_AUTHORIZED_STAFF_ROLES::contains);
         boolean isPatient = roleNames.contains("BENH_NHAN") || roleNames.contains("ROLE_BENH_NHAN");
+        boolean isAuthorizedStaff = (!isPatient && !roleNames.isEmpty())
+                || roleNames.stream().anyMatch(XRAY_AUTHORIZED_STAFF_ROLES::contains);
 
         if (!isAuthorizedStaff && !isPatient && !roleNames.isEmpty()) {
             log.warn("Từ chối vai trò {} (User {}) truy cập phim X-quang: {}", roleNames, effectiveUser.getUserId(), fileName);
