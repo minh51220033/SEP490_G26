@@ -201,20 +201,10 @@ public class StaffScheduleController {
         if (!isAdmin && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem lịch trực cá nhân.");
         }
-        addLayoutAttributes(session, model);
-
-        LocalDate monday = StaffScheduleService.mondayOf(week != null ? week : LocalDate.now());
-        model.addAttribute("monday", monday);
-        model.addAttribute("prevWeek", monday.minusWeeks(1));
-        model.addAttribute("nextWeek", monday.plusWeeks(1));
-        model.addAttribute("today", LocalDate.now());
-
-        StaffProfile staff = scheduleService.findStaffByUserId(user.getUserId());
-        model.addAttribute("staff", staff);
-        if (staff != null) {
-            model.addAttribute("myWeek", scheduleService.getMyWeek(staff.getStaffId(), monday));
+        if (week != null) {
+            return "redirect:/attendance/my?week=" + week;
         }
-        return "schedule/my";
+        return "redirect:/attendance/my";
     }
 
     // ===================== API: BÁC SĨ KHẢ DỤNG THEO NGÀY =====================
