@@ -46,13 +46,15 @@
                         <strong id="fixedBranchName"></strong>
                     </div>
 
-                    <a th:href="@{/suppliers}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="height: 38px;">
+                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'SUPPLIER_MANAGE'))}"
+                       th:href="@{/suppliers}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="height: 38px;">
                         <i class="bi bi-truck"></i> Danh mục NCC
                     </a>
                     <button type="button" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" id="refreshBtn" title="Làm mới dữ liệu kho" style="height: 38px;">
                         <i class="bi bi-arrow-clockwise"></i> Làm mới
                     </button>
-                    <button type="button" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" onclick="document.querySelector('[data-tab=\'receipt\']')?.click(); setTimeout(() => document.getElementById('openCreateReceiptModalBtn')?.click(), 80);" style="height: 38px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                    <button th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'INVENTORY_RECEIPT'))}"
+                            type="button" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" onclick="document.querySelector('[data-tab=\'receipt\']')?.click(); setTimeout(() => document.getElementById('openCreateReceiptModalBtn')?.click(), 80);" style="height: 38px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
                         <i class="bi bi-plus-lg"></i> Thêm mới
                     </button>
                     <button type="button" class="btn btn-outline-secondary fw-semibold p-2 rounded-3 shadow-sm d-inline-flex align-items-center" id="openInvColumnDrawerBtn" title="Tùy chỉnh cột hiển thị" onclick="openInvColumnDrawer()" style="height: 38px; width: 38px; justify-content: center;">

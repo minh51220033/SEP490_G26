@@ -66,15 +66,6 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             uri = uri.substring(contextPath.length());
         }
 
-        // Kế toán viên có toàn quyền đối với mọi chức năng liên quan đến Tài chính, Kế toán và Báo cáo
-        boolean isKeToan = roleNames != null && roleNames.stream().anyMatch(r -> {
-            String role = r != null ? r.trim().toUpperCase() : "";
-            return role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
-                    || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
-        });
-        if (isKeToan && isFinanceUri(uri)) {
-            return true;
-        }
         String method = request.getMethod() == null ? "GET" : request.getMethod().toUpperCase();
         boolean isWriteMethod = "POST".equals(method) || "PUT".equals(method) || "DELETE".equals(method) || "PATCH".equals(method);
 
@@ -231,6 +222,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             return List.of("INVOICE_CREATE");
         }
         if (uri.startsWith("/payments") || uri.startsWith("/api/payments")) {
+            if (!isWriteMethod && (uri.startsWith("/payments/api") || uri.startsWith("/api/payments"))) {
+                return List.of("PAYMENT_COLLECT", "FINANCE_DEPOSIT", "FINANCE_DEBT", "FINANCE_DASHBOARD", "INVOICE_CREATE", "REFUND_MANAGE");
+            }
             return List.of("PAYMENT_COLLECT", "FINANCE_DEPOSIT");
         }
         if (uri.startsWith("/expenses") || uri.startsWith("/api/expenses")) {
@@ -245,19 +239,31 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/payroll/owner-distributions")) {
             return List.of("FINANCE_OWNER_DISTRIBUTIONS", "FINANCE_DASHBOARD");
         }
+        if (uri.startsWith("/payroll/api") || uri.startsWith("/api/payroll")) {
+            return List.of("FINANCE_PAYROLL", "FINANCE_PAYROLL_ADVANCES", "FINANCE_COMMISSION_CONFIG",
+                    "FINANCE_OWNER_DISTRIBUTIONS", "FINANCE_DASHBOARD");
+        }
         if (uri.startsWith("/payroll")) {
             return List.of("FINANCE_PAYROLL", "FINANCE_DASHBOARD", "INVOICE_CREATE", "PAYMENT_COLLECT");
         }
         if (uri.startsWith("/api/finance")) {
-            return List.of("PAYMENT_COLLECT", "INVOICE_CREATE", "FINANCE_DASHBOARD", "FINANCE_DEPOSIT", "FINANCE_EXPENSES", "FINANCE_PAYROLL");
+            return List.of("PAYMENT_COLLECT", "INVOICE_CREATE", "FINANCE_DASHBOARD", "FINANCE_DEPOSIT",
+                    "FINANCE_DEBT", "REFUND_MANAGE", "FINANCE_EXPENSES", "FINANCE_PAYROLL",
+                    "FINANCE_PAYROLL_ADVANCES", "FINANCE_COMMISSION_CONFIG", "FINANCE_OWNER_DISTRIBUTIONS");
         }
 
         // =====================================================================
         // 4. KHO VẬT TƯ & NHÀ CUNG CẤP (INVENTORY)
         // =====================================================================
+        if (uri.startsWith("/api/suppliers")) {
+            if (!isWriteMethod) {
+                return List.of("SUPPLIER_MANAGE", "LABO_SUPPLIERS", "CLINICAL_LABO",
+                        "INVENTORY_RECEIPT", "INVENTORY_STOCK", "INVENTORY_BATCHES");
+            }
+            return List.of("SUPPLIER_MANAGE", "LABO_SUPPLIERS");
+        }
         if (uri.startsWith("/suppliers")
                 || uri.startsWith("/inventory/suppliers")
-                || uri.startsWith("/api/suppliers")
                 || uri.startsWith("/api/inventory/supplier-payments")) {
             return List.of("SUPPLIER_MANAGE");
         }

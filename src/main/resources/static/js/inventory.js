@@ -2358,15 +2358,17 @@
             button.classList.toggle("active", button.dataset.tab === tab)
         );
 
-        if (tab === "receipt") loadReceiptHistory(0);
-        if (tab === "issue") loadIssueHistory(0);
-        if (tab === "transfer") loadTransferHistory(0);
+        if (state.branchId) {
+            if (tab === "receipt") loadReceiptHistory(0);
+            if (tab === "issue") loadIssueHistory(0);
+            if (tab === "transfer") loadTransferHistory(0);
+            if (tab === "supplier-payments") {
+                loadSupplierDebts();
+                loadPaymentHistory(0);
+            }
+        }
         if (tab === "materials") loadMaterialsTable(0);
         if (tab === "categories") loadCategoriesTable();
-        if (tab === "supplier-payments") {
-            loadSupplierDebts();
-            loadPaymentHistory(0);
-        }
 
         const appView = document.querySelector('.inventory-app-view');
         if (appView) {
@@ -2820,6 +2822,12 @@
             await refreshBranchData();
             showMessage("Đã làm mới dữ liệu kho.", "success");
         });
+
+        const nav = document.querySelector('nav.tabs[aria-label="Chức năng quản lý kho"]');
+        const initialTab = nav?.querySelector('.tab.active') || nav?.querySelector('.tab');
+        if (initialTab && initialTab.dataset.tab) {
+            switchTab(initialTab.dataset.tab);
+        }
 
         loadBranches();
     });
