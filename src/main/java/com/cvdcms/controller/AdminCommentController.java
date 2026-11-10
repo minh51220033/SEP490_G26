@@ -61,7 +61,11 @@ public class AdminCommentController {
 
     private boolean isModerator(HttpSession session) {
         User user = getLoggedInUser(session);
-        return hasRole(user, "ADMIN");
+        if (user == null || user.getUserId() == null) return false;
+        return hasRole(user, "ADMIN")
+                || userRepository.hasActiveAdminRole(user.getUserId())
+                || userRepository.hasActivePermission(user.getUserId(), "NEWS_COMMENTS_MODERATE")
+                || userRepository.hasActivePermission(user.getUserId(), "CATALOG_NEWS");
     }
 
     // =====================================================

@@ -622,6 +622,8 @@ public class AdminServiceCatalogController {
         }
 
         boolean isAllowed = userRepository.hasActiveAdminRole(user.getUserId())
+                || userRepository.hasActivePermission(user.getUserId(), "CATALOG_SERVICES")
+                || userRepository.hasActivePermission(user.getUserId(), "CATALOG_SERVICE_CATEGORIES")
                 || userRepository.hasActivePermission(user.getUserId(), "CATALOG_MANAGE");
         if (!isAllowed) {
             response.put("error", Map.of("message", "Bạn không có quyền tải ảnh dịch vụ lên."));
@@ -904,9 +906,12 @@ public class AdminServiceCatalogController {
 
         if (!(sessionUser instanceof User user)
                 || user.getUserId() == null
-                || !userRepository.hasActiveAdminRole(user.getUserId())) {
+                || (!userRepository.hasActiveAdminRole(user.getUserId())
+                && !userRepository.hasActivePermission(user.getUserId(), "CATALOG_SERVICES")
+                && !userRepository.hasActivePermission(user.getUserId(), "CATALOG_SERVICE_CATEGORIES")
+                && !userRepository.hasActivePermission(user.getUserId(), "CATALOG_MANAGE"))) {
             throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, "Chỉ Admin đang hoạt động mới được xóa dữ liệu dịch vụ.");
+                    HttpStatus.FORBIDDEN, "Bạn không có quyền xóa dữ liệu dịch vụ.");
         }
 
         if (deleteToken == null

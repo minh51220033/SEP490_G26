@@ -34,7 +34,10 @@ public class ReceptionAccess {
         }
         boolean admin = hasRole(user, "ADMIN") || users.hasActiveAdminRole(user.getUserId());
         boolean hasPermission = users.hasActivePermission(user.getUserId(), "APPOINTMENT_MANAGE")
-                || users.hasActivePermission(user.getUserId(), "APPOINTMENT_VIEW");
+                || users.hasActivePermission(user.getUserId(), "APPOINTMENT_VIEW")
+                || users.hasActivePermission(user.getUserId(), "RECEPTION_CHECKIN")
+                || users.hasActivePermission(user.getUserId(), "RECEPTION_DISPATCH")
+                || users.hasActivePermission(user.getUserId(), "RECEPTION_MEMBERSHIPS");
         if (!admin && !hasPermission) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản không có quyền tiếp đón & check-in.");
         }

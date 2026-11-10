@@ -86,7 +86,13 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
                 || userRepository.hasActivePermission(userId, "PAYMENT_COLLECT")
                 || userRepository.hasActivePermission(userId, "REFUND_MANAGE")
                 || userRepository.hasActivePermission(userId, "FINANCE_DASHBOARD")
-                || userRepository.hasActivePermission(userId, "FINANCE_DEBT");
+                || userRepository.hasActivePermission(userId, "FINANCE_DEBT")
+                || userRepository.hasActivePermission(userId, "FINANCE_DEPOSIT")
+                || userRepository.hasActivePermission(userId, "FINANCE_EXPENSES")
+                || userRepository.hasActivePermission(userId, "FINANCE_PAYROLL")
+                || userRepository.hasActivePermission(userId, "FINANCE_PAYROLL_ADVANCES")
+                || userRepository.hasActivePermission(userId, "FINANCE_COMMISSION_CONFIG")
+                || userRepository.hasActivePermission(userId, "FINANCE_OWNER_DISTRIBUTIONS");
         boolean isKeToan = false;
         if (session != null) {
             Object rolesObj = session.getAttribute("roleNames");
@@ -135,13 +141,15 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
             request.setAttribute("isFinanceAdmin", Boolean.FALSE);
             request.setAttribute("currentUserActiveBranchIds", activeBranchIds);
 
-            // Chặn kế toán can thiệp cấu hình hoa hồng hoặc duyệt/từ chối tạm ứng
-            if (uri.contains("/payroll/commission-config") || uri.contains("/payroll/config")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên (Admin) mới có quyền truy cập hoặc chỉnh sửa cấu hình hoa hồng.");
+            // Chặn kế toán can thiệp cấu hình hoa hồng hoặc duyệt/từ chối tạm ứng nếu chưa được cấp quyền
+            if ((uri.contains("/payroll/commission-config") || uri.contains("/payroll/config"))
+                    && !userRepository.hasActivePermission(userId, "FINANCE_COMMISSION_CONFIG")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên hoặc nhân sự được cấp quyền mới có thể chỉnh sửa cấu hình hoa hồng.");
                 return false;
             }
-            if (uri.matches(".*/payroll/advances/\\d+/(approve|reject).*")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên (Admin) mới có quyền phê duyệt hoặc từ chối tạm ứng lương.");
+            if (uri.matches(".*/payroll/advances/\\d+/(approve|reject).*")
+                    && !userRepository.hasActivePermission(userId, "FINANCE_PAYROLL_ADVANCES")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên hoặc nhân sự được cấp quyền mới có thể duyệt tạm ứng lương.");
                 return false;
             }
 

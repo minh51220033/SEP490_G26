@@ -56,11 +56,16 @@ public class CommissionPolicyServiceImpl implements CommissionPolicyService {
         return savePolicy(dto, null);
     }
 
+    private void requireCommissionPermission(Long currentUserId, String actionMessage) {
+        if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
+                && !userRepository.hasActivePermission(currentUserId, "FINANCE_COMMISSION_CONFIG"))) {
+            throw new org.springframework.security.access.AccessDeniedException(actionMessage);
+        }
+    }
+
     @Override
     public CommissionPolicy savePolicy(CommissionPolicyDTO dto, Long currentUserId) {
-        if (currentUserId == null || !userRepository.hasActiveAdminRole(currentUserId)) {
-            throw new org.springframework.security.access.AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền tạo hoặc chỉnh sửa chính sách hoa hồng");
-        }
+        requireCommissionPermission(currentUserId, "Bạn không có quyền tạo hoặc chỉnh sửa chính sách hoa hồng");
 
         CommissionPolicy policy;
         if (dto.getPolicyId() != null) {
@@ -102,9 +107,7 @@ public class CommissionPolicyServiceImpl implements CommissionPolicyService {
 
     @Override
     public void togglePolicyStatus(Long policyId, boolean isActive, Long currentUserId) {
-        if (currentUserId == null || !userRepository.hasActiveAdminRole(currentUserId)) {
-            throw new org.springframework.security.access.AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền thay đổi trạng thái chính sách hoa hồng");
-        }
+        requireCommissionPermission(currentUserId, "Bạn không có quyền thay đổi trạng thái chính sách hoa hồng");
         CommissionPolicy policy = getPolicyById(policyId);
         policy.setIsActive(isActive);
         commissionPolicyRepository.save(policy);
@@ -117,9 +120,7 @@ public class CommissionPolicyServiceImpl implements CommissionPolicyService {
 
     @Override
     public void deletePolicy(Long policyId, Long currentUserId) {
-        if (currentUserId == null || !userRepository.hasActiveAdminRole(currentUserId)) {
-            throw new org.springframework.security.access.AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền xóa chính sách hoa hồng");
-        }
+        requireCommissionPermission(currentUserId, "Bạn không có quyền xóa chính sách hoa hồng");
         commissionPolicyRepository.deleteById(policyId);
     }
 }

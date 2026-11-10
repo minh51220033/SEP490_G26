@@ -62,6 +62,7 @@ public class ReceptionMembershipController {
         }
         boolean isAuthorized = (u.getUserId() != null && (
                 userRepository.hasActiveAdminRole(u.getUserId())
+                || userRepository.hasActivePermission(u.getUserId(), "RECEPTION_MEMBERSHIPS")
                 || userRepository.hasActivePermission(u.getUserId(), "PATIENT_PROFILE_MANAGE")
                 || userRepository.hasActivePermission(u.getUserId(), "CUSTOMER_CARE_MANAGE")
         ));
