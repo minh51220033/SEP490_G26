@@ -224,9 +224,10 @@
         const urlParams = new URLSearchParams(location.search);
         dateInput.value = urlParams.get('date') || today();
         branches(branch, options, true);
-        const branchParam = urlParams.get('branchId');
-        if (branchParam && options.branches.some(b => String(b.id) === branchParam)) {
-            branch.value = branchParam;
+        const branchParam = urlParams.get('branchId') ||
+            document.getElementById('reception-content-area')?.getAttribute('data-current-branch-id');
+        if (branchParam && options.branches.some(b => String(b.id) === String(branchParam))) {
+            branch.value = String(branchParam);
         }
 
         let currentScope = 'ALL'; // ALL | CURRENT | CHECKED_IN | NO_SHOW | CANCELLED
@@ -624,8 +625,7 @@
             syncSessionButtons(e.target.value);
             applyFiltersAndRender();
         });
-        $('advFilterService')?.addEventListener('change', () => applyFiltersAndRender());
-        $('advFilterMedicalAlert')?.addEventListener('change', () => applyFiltersAndRender());
+        $('advFilterPriorityGroup')?.addEventListener('change', () => applyFiltersAndRender());
 
         $('advFilterDateOp')?.addEventListener('change', async (e) => {
             const val = e.target.value;
@@ -696,7 +696,46 @@
             if ($('kpiCompleted')) $('kpiCompleted').textContent = completedCount;
             if ($('kpiNoShow')) $('kpiNoShow').textContent = noShowCount;
             if ($('kpiCancelled')) $('kpiCancelled').textContent = cancelledCount;
+
+            // Kiểm tra & hiển thị Banner cảnh báo + Chuông thông báo cho Lễ tân
+            checkDoctorLeaveCancelledAlert(list);
         }
+
+        function checkDoctorLeaveCancelledAlert(list) {
+            const leaveCancelled = (list || []).filter(a =>
+                a.status === 'CANCELLED' && (
+                    (a.cancelReason && a.cancelReason.toLowerCase().includes('nghỉ phép')) ||
+                    (a.reason && a.reason.toLowerCase().includes('nghỉ phép'))
+                )
+            );
+            const banner = $('doctorLeaveAlertBanner');
+            const countEl = $('leaveAlertCount');
+
+            if (leaveCancelled.length > 0) {
+                if (banner) {
+                    banner.classList.remove('d-none');
+                    banner.classList.add('d-flex');
+                }
+                if (countEl) countEl.textContent = leaveCancelled.length;
+            } else {
+                if (banner) {
+                    banner.classList.remove('d-flex');
+                    banner.classList.add('d-none');
+                }
+            }
+        }
+
+        $('btnCloseLeaveAlert')?.addEventListener('click', () => {
+            $('doctorLeaveAlertBanner')?.classList.add('d-none');
+            $('doctorLeaveAlertBanner')?.classList.remove('d-flex');
+        });
+
+        $('btnFilterLeaveCancelled')?.addEventListener('click', () => {
+            currentKpiFilter = 'CANCELLED';
+            if ($('advFilterStatus')) $('advFilterStatus').value = 'CANCELLED';
+            applyFiltersAndRender();
+            document.querySelector('.dv-main-table')?.scrollIntoView({ behavior: 'smooth' });
+        });
 
         // Active Filter Tags management
         function updateActiveFilterTags(activeTags) {
@@ -744,8 +783,7 @@
             syncSessionButtons('');
             if ($('advFilterDoctor')) $('advFilterDoctor').value = '';
             if ($('advFilterStatus')) $('advFilterStatus').value = '';
-            if ($('advFilterService')) $('advFilterService').value = '';
-            if ($('advFilterMedicalAlert')) $('advFilterMedicalAlert').value = '';
+            if ($('advFilterPriorityGroup')) $('advFilterPriorityGroup').value = '';
             if (doctor) doctor.value = '';
             if (searchInput) searchInput.value = '';
             updateClearSearchVisibility();
@@ -866,42 +904,39 @@
                 });
             }
 
-            // 6. Medical Alert & Special Group Filter
-            const advAlert = $('advFilterMedicalAlert')?.value;
-            if (advAlert === 'HAS_ALERT') {
-                list = list.filter(a => {
-                    const str = `${a.symptoms || ''} ${a.serviceName || ''}`.toLowerCase();
-                    return /dị ứng|tiền sử|huyết áp|tim mạch|tiểu đường|kháng sinh|lidocaine|hen suyễn/.test(str);
-                });
-                activeTags.push({
-                    label: 'Cảnh báo',
-                    value: 'Có lưu ý y tế / Dị ứng',
-                    onRemove: () => {
-                        if ($('advFilterMedicalAlert')) $('advFilterMedicalAlert').value = '';
-                    }
-                });
-            } else if (advAlert === 'MINOR') {
+            // 6. Bộ lọc Đối tượng ưu tiên hàng chờ
+            const advPriority = $('advFilterPriorityGroup')?.value;
+            if (advPriority) {
                 list = list.filter(a => {
                     const age = calculateAge(a.patientDob);
-                    return age !== null && age < 18;
+                    const noteStr = `${a.internalNote || ''} ${a.notes || ''} ${a.note || ''} ${a.symptoms || ''}`.toLowerCase();
+                    const isElderly = (age !== null && age >= 65) || /cao tuổi|65\+|người già/.test(noteStr);
+                    const isChild = (age !== null && age <= 6) || /trẻ nhỏ|trẻ em/.test(noteStr);
+                    const isPregnant = /mang thai|có thai|bà bầu|thai phụ/.test(noteStr);
+                    const isDisabled = /khuyết tật|tàn tật|đi lại khó khăn/.test(noteStr);
+                    const isEmergency = /cấp cứu|đau cấp|khẩn cấp/.test(noteStr);
+
+                    if (advPriority === 'ALL_PRIORITY') return isElderly || isChild || isPregnant || isDisabled || isEmergency || noteStr.includes('ưu tiên');
+                    if (advPriority === 'ELDERLY') return isElderly;
+                    if (advPriority === 'CHILD') return isChild;
+                    if (advPriority === 'PREGNANT') return isPregnant;
+                    if (advPriority === 'DISABLED') return isDisabled;
+                    if (advPriority === 'EMERGENCY') return isEmergency;
+                    return true;
                 });
+                const labels = {
+                    ALL_PRIORITY: 'Tất cả đối tượng ưu tiên',
+                    ELDERLY: 'Người cao tuổi (≥ 65 tuổi)',
+                    CHILD: 'Trẻ nhỏ (≤ 6 tuổi)',
+                    PREGNANT: 'Phụ nữ có thai',
+                    DISABLED: 'Người khuyết tật',
+                    EMERGENCY: 'Cấp cứu / Đau cấp'
+                };
                 activeTags.push({
-                    label: 'Nhóm BN',
-                    value: 'Dưới 18 tuổi',
+                    label: 'Ưu tiên',
+                    value: labels[advPriority] || advPriority,
                     onRemove: () => {
-                        if ($('advFilterMedicalAlert')) $('advFilterMedicalAlert').value = '';
-                    }
-                });
-            } else if (advAlert === 'FOLLOW_UP') {
-                list = list.filter(a => {
-                    const str = `${a.serviceName || ''} ${a.symptoms || ''} ${a.code || ''}`.toLowerCase();
-                    return a.rescheduleCount > 0 || str.includes('tái khám') || str.startsWith('tk');
-                });
-                activeTags.push({
-                    label: 'Phân loại',
-                    value: 'Lịch tái khám',
-                    onRemove: () => {
-                        if ($('advFilterMedicalAlert')) $('advFilterMedicalAlert').value = '';
+                        if ($('advFilterPriorityGroup')) $('advFilterPriorityGroup').value = '';
                     }
                 });
             }
@@ -983,24 +1018,22 @@
                 tdIndex.textContent = index + 1;
                 tr.appendChild(tdIndex);
 
-                // 2. Ca & Giờ hẹn (Hiển thị rõ Ca Sáng / Chiều / Tối + Giờ dự kiến hoặc Linh động)
+                // 2. Ca & Giờ hẹn (Sắp xếp 2 dòng rõ ràng, không icon, không đè chữ)
                 const tdTime = document.createElement('td');
                 tdTime.className = 'dentalsoft-time-col';
                 const sessKey = resolveAppointmentSession(a);
-                const sessMeta = sessionBadgeInfo[sessKey] || sessionBadgeInfo.MORNING;
+                const sessLabel = sessKey === 'MORNING' ? 'Ca Sáng' : (sessKey === 'EVENING' ? 'Ca Tối' : 'Ca Chiều');
                 const timeStr = a.expectedTime ? a.expectedTime.slice(0, 5) : 'Linh động';
                 const parts = (a.date || '').split('-');
                 const dateFormatted = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : a.date;
                 tdTime.innerHTML = `
-                    <div>
-                        <span class="apt-session-tag ${sessMeta.cls}">
-                            <i class="bi ${sessMeta.icon}"></i>${sessMeta.label}
+                    <div class="mb-1">
+                        <span class="apt-session-tag">
+                            ${sessLabel}
                         </span>
                     </div>
-                    <div class="d-flex align-items-center gap-1 mt-0.5">
-                        <span class="time-val">${escapeHtml(timeStr)}</span>
-                        <span class="date-val">· ${escapeHtml(dateFormatted)}</span>
-                    </div>
+                    <div class="fw-bold text-dark font-monospace" style="font-size: 13.5px; line-height: 1.2;">${escapeHtml(timeStr)}</div>
+                    <div class="small text-muted" style="font-size: 11px; margin-top: 2px;">${escapeHtml(dateFormatted)}</div>
                 `;
                 tr.appendChild(tdTime);
 
@@ -1059,10 +1092,19 @@
                 }
                 tr.appendChild(tdPhone);
 
-                // 6. Nội dung / Dịch vụ
+                // 6. Nội dung / Dịch vụ & Ghi chú nội bộ (Hiển thị xuyên suốt)
                 const tdService = document.createElement('td');
-                tdService.className = 'text-dark fw-medium';
-                tdService.textContent = a.serviceName || a.symptoms || 'Khám tổng quát';
+                tdService.className = 'text-dark';
+                const serviceTitle = escapeHtml(a.serviceName || a.symptoms || 'Khám tổng quát');
+                const noteContent = a.internalNote || a.note || a.notes || '';
+                let noteHtml = '';
+                if (noteContent && noteContent.trim()) {
+                    noteHtml = `<div class="small text-muted mt-1 d-flex align-items-center gap-1.5" style="font-size: 11.5px; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                        <i class="bi bi-journal-text text-primary"></i>
+                        <span class="text-truncate" title="${escapeHtml(noteContent)}">${escapeHtml(noteContent)}</span>
+                    </div>`;
+                }
+                tdService.innerHTML = `<div class="fw-medium">${serviceTitle}</div>${noteHtml}`;
                 tr.appendChild(tdService);
 
                 // 7. Bác sĩ phụ trách (Bỏ hoàn toàn nhãn [Vắng] gây hiểu nhầm)
@@ -1363,11 +1405,59 @@
             });
         });
 
-        // Minor guardian toggle based on DOB
+        // Tự động nhận diện đối tượng ưu tiên dựa trên Ngày sinh (DOB)
+        function updatePriorityFromDob(dobString) {
+            const prioritySelect = $('modalPriorityType');
+            if (!dobString || !prioritySelect) return;
+            const birthDate = new Date(dobString);
+            const now = new Date();
+            let age = now.getFullYear() - birthDate.getFullYear();
+            const m = now.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && now.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            if (age >= 65) {
+                prioritySelect.value = 'ELDERLY';
+                syncPriorityNote('Người cao tuổi (' + age + ' tuổi)');
+            } else if (age <= 6 && age >= 0) {
+                prioritySelect.value = 'CHILD';
+                syncPriorityNote('Trẻ nhỏ (' + age + ' tuổi)');
+            } else {
+                if (prioritySelect.value === 'ELDERLY' || prioritySelect.value === 'CHILD') {
+                    prioritySelect.value = '';
+                }
+            }
+        }
+
+        function syncPriorityNote(label) {
+            const noteInput = $('modalInternalNote');
+            if (!noteInput) return;
+            let current = noteInput.value.trim();
+            // Xóa tag ưu tiên cũ nếu có
+            current = current.replace(/\[ƯU TIÊN:.*?\]\s*/gi, '').trim();
+            if (label) {
+                noteInput.value = `[ƯU TIÊN: ${label}] ${current}`.trim();
+            } else {
+                noteInput.value = current;
+            }
+        }
+
+        $('modalPriorityType')?.addEventListener('change', (e) => {
+            const val = e.target.value;
+            if (val === 'PREGNANT') syncPriorityNote('Phụ nữ có thai');
+            else if (val === 'DISABLED') syncPriorityNote('Người khuyết tật');
+            else if (val === 'EMERGENCY') syncPriorityNote('Cấp cứu / Đau cấp tính');
+            else if (val === 'OTHER') syncPriorityNote('Ưu tiên đặc biệt');
+            else if (!val) syncPriorityNote('');
+        });
+
+        // Minor guardian toggle & Priority auto-detect based on DOB
         $('modalPatientDob')?.addEventListener('change', (e) => {
             const val = e.target.value;
             const guardianContainer = $('modalGuardianContainer');
-            if (!val || !guardianContainer) return;
+            if (!val) return;
+            updatePriorityFromDob(val);
+            if (!guardianContainer) return;
             const birthDate = new Date(val);
             const now = new Date();
             let age = now.getFullYear() - birthDate.getFullYear();
@@ -1475,15 +1565,17 @@
             }
             patientSearchTimer = setTimeout(async () => {
                 try {
-                    const patientBranchId = $('modalBranchId')?.value || branch.value;
-                    if (!patientBranchId) {
-                        resultsBox.innerHTML = '<div class="p-2 text-muted small">Vui lòng chọn chi nhánh trước khi tìm khách hàng.</div>';
-                        resultsBox.style.display = 'block';
-                        return;
+                    let patientBranchId = $('modalBranchId')?.value || $('filterBranch')?.value || '';
+                    if (!patientBranchId && options?.branches?.length) {
+                        patientBranchId = String(options.branches[0].id);
+                        if ($('modalBranchId')) $('modalBranchId').value = patientBranchId;
                     }
-                    const patients = await request(`/patients?branchId=${encodeURIComponent(patientBranchId)}&query=${encodeURIComponent(query)}`);
+                    const url = patientBranchId
+                        ? `/patients?branchId=${encodeURIComponent(patientBranchId)}&query=${encodeURIComponent(query)}`
+                        : `/patients?query=${encodeURIComponent(query)}`;
+                    const patients = await request(url);
                     resultsBox.replaceChildren();
-                    if (!patients.length) {
+                    if (!patients || !patients.length) {
                         resultsBox.innerHTML = '<div class="p-2 text-muted small">Không tìm thấy khách hàng cũ. Bạn có thể nhập thông tin khách mới bên dưới.</div>';
                     } else {
                         patients.forEach(p => {
@@ -1500,13 +1592,17 @@
                                 $('selectedPatientChip').style.display = 'flex';
                                 if ($('newPatientFieldsContainer')) $('newPatientFieldsContainer').style.display = 'none';
                                 resultsBox.style.display = 'none';
+                                if (p.dob) {
+                                    updatePriorityFromDob(p.dob);
+                                }
                             });
                             resultsBox.appendChild(item);
                         });
                     }
                     resultsBox.style.display = 'block';
                 } catch (err) {
-                    resultsBox.style.display = 'none';
+                    resultsBox.innerHTML = '<div class="p-2 text-muted small">Không tìm thấy hồ sơ hoặc lỗi kết nối. Bạn có thể nhập khách mới bên dưới.</div>';
+                    resultsBox.style.display = 'block';
                 }
             }, 250);
         });
@@ -2022,9 +2118,11 @@
                     };
                     const badgeInfo = sessBadgeMap[sessKey] || { text: 'Sáng', cls: 'morning', full: 'Ca Sáng' };
 
+                    const statusMeta = getStatusMeta(a.status);
                     event.innerHTML = `
-                        <span class="cal-session-badge ${badgeInfo.cls}">${badgeInfo.text}</span>
-                        <span class="text-truncate fw-medium">${escapeHtml(a.patientName || a.patientCode)}</span>
+                        <span class="cal-session-badge">${badgeInfo.text}</span>
+                        <span class="text-truncate fw-medium flex-grow-1">${escapeHtml(a.patientName || a.patientCode)}</span>
+                        <span class="badge ms-1" style="font-size: 9.5px; padding: 1.5px 5px; border-radius: 4px; background: rgba(0,0,0,0.08); font-weight: 600;">${statusMeta.label}</span>
                     `;
                     event.title = `${a.patientName || a.patientCode} · ${badgeInfo.full} · ${a.doctorName || 'Chưa chỉ định BS'}${a.serviceName ? ' · ' + a.serviceName : ''}`;
                     event.addEventListener('click', () => openQuickStatusModal(a));
@@ -2206,6 +2304,11 @@
             if (branchParam && options.branches.some(b => String(b.id) === branchParam)) $('branchId').value = branchParam;
             const dateParam = new URLSearchParams(location.search).get('date');
             if (dateParam && dateParam >= today()) $('appointmentDate').value = dateParam;
+            const queryParam = new URLSearchParams(location.search).get('query');
+            if (queryParam) {
+                $('patientSearch').value = queryParam;
+                setTimeout(() => findPatient().catch(e => error(e.message)), 150);
+            }
         }
 
         let patientSeq = 0, availabilitySeq = 0, available = false;

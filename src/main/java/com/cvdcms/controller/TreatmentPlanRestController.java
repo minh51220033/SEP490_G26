@@ -236,9 +236,14 @@ public class TreatmentPlanRestController {
             BigDecimal qty = item.getQuantity() != null ? item.getQuantity() : BigDecimal.ONE;
             BigDecimal finalPrice = unitPrice.multiply(qty);
 
+            String stepDisplayName = item.getStepName() != null && !item.getStepName().isBlank()
+                    ? item.getStepName()
+                    : (item.getService() != null ? item.getService().getServiceName() : "Bước thủ thuật");
+
             PerformedServiceRequestDTO req = PerformedServiceRequestDTO.builder()
                     .visitId(visitId)
                     .serviceId(item.getService().getServiceId())
+                    .stepName(stepDisplayName)
                     .toothNumbers(item.getToothNumbers())
                     .quantity(qty)
                     .unitPrice(unitPrice)
@@ -247,7 +252,7 @@ public class TreatmentPlanRestController {
                     .doctorId(docId)
                     .assistantId(assistantId)
                     .planItemId(itemId)
-                                        .clinicalNotes("Từ KHDT: " + (item.getStage() != null && item.getStage().getStageName() != null ? item.getStage().getStageName() : (item.getPlan() != null ? item.getPlan().getPlanCode() : "")))
+                    .clinicalNotes("Từ KHDT: " + stepDisplayName + (item.getStage() != null ? " (" + item.getStage().getStageName() + ")" : ""))
                     .build();
 
             PerformedServiceResponseDTO ps = performedServiceService.createPerformedService(req);

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head('Quản lý Tạm Ứng Lương - FT32')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head('Quản lý Tạm Ứng Lương')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
     <link rel="stylesheet" th:href="@{/css/expense-income.css}">
 </head>
@@ -11,7 +11,7 @@
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
     <div class="app-main">
-        <header th:replace="~{fragments/header :: appTopbar('Chi phí & Thu nhập')}"></header>
+        <header th:replace="~{fragments/header :: appTopbar('Tài chính')}"></header>
 
         <main class="app-content finance-page expense-income-page">
             <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
@@ -31,7 +31,7 @@
                 <!-- Subhead & Thao tác chính -->
                 <div class="expense-income-subhead">
                     <div>
-                        <h2 class="expense-income-subhead__title">Tạm Ứng Lương Nhân Viên (FT32)</h2>
+                        <h2 class="expense-income-subhead__title">Tạm Ứng Lương Nhân Viên</h2>
                         <p class="expense-income-subhead__desc">Theo dõi yêu cầu tạm ứng, phê duyệt, giải ngân (tự động tạo phiếu chi vận hành) và quản lý khấu trừ khi chạy bảng lương.</p>
                     </div>
                     <div class="d-flex gap-2">
@@ -41,9 +41,15 @@
                     </div>
                 </div>
 
-                <!-- Bộ lọc gọn gàng (Ảnh 2) -->
-                <div class="fin-card mb-4">
+                <!-- Bộ lọc gọn gàng -->
+                <div class="fin-card fin-filter-container mb-3">
                     <form th:action="@{/payroll/advances}" method="get" class="fin-filter-bar">
+                        <div class="fin-form-group fin-search-group" style="flex: 2; min-width: 220px;">
+                            <i class="bi bi-search search-icon"></i>
+                            <input type="text" id="keyword" name="keyword" class="fin-input"
+                                   placeholder="Tìm kiếm mã phiếu, lý do tạm ứng..." th:value="${keyword}">
+                        </div>
+
                         <div class="fin-form-group">
                             <label for="branchSelect">Chi nhánh</label>
                             <select id="branchSelect" name="branchId" class="fin-select">
@@ -72,12 +78,6 @@
                             </select>
                         </div>
 
-                        <div class="fin-form-group" style="flex: 2; min-width: 200px;">
-                            <label for="keyword">Từ khóa tìm kiếm</label>
-                            <input type="text" id="keyword" name="keyword" class="fin-input"
-                                   placeholder="Mã phiếu, lý do tạm ứng..." th:value="${keyword}">
-                        </div>
-
                         <div class="d-flex gap-2 align-items-end">
                             <button type="submit" class="fin-btn fin-btn-primary"><i class="bi bi-search"></i> Lọc</button>
                             <a th:href="@{/payroll/advances}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-counterclockwise"></i> Đặt lại</a>
@@ -86,7 +86,14 @@
                 </div>
 
                 <!-- Bảng danh sách tạm ứng -->
-                <div class="fin-card">
+                <div class="fin-card fin-table-card p-0 mb-4">
+                    <div class="fin-grid-topbar d-flex justify-content-between align-items-center">
+                        <div class="fin-grid-info">
+                            Hiển thị <span class="fw-bold" th:text="${advances.numberOfElements}">0</span> / <span th:text="${advances.totalElements}">0</span> phiếu tạm ứng
+                            <span class="text-muted" th:if="${keyword != null and !keyword.isEmpty()}" th:text="' &bull; Từ khóa: ' + ${keyword}"></span>
+                        </div>
+                        <div></div>
+                    </div>
                     <div class="table-responsive">
                         <table class="fin-table" data-enhanced-table="ft32-payroll-advances">
                             <thead>
@@ -181,24 +188,31 @@
                         </table>
                     </div>
 
-                    <!-- Phân trang -->
-                    <div th:if="${advances.totalPages > 1}" class="fin-pagination mt-4 d-flex justify-content-between align-items-center">
-                        <span class="text-muted small">
-                            Hiển thị trang <b th:text="${advances.number + 1}"></b> / <span th:text="${advances.totalPages}"></span>
-                        </span>
-                        <ul class="pagination pagination-sm mb-0">
-                            <li class="page-item" th:classappend="${advances.first} ? 'disabled'">
-                                <a class="page-link" th:href="@{/payroll/advances(branchId=${selectedBranchId}, status=${selectedStatus}, staffId=${selectedStaffId}, keyword=${keyword}, page=${advances.number - 1})}">&laquo;</a>
-                            </li>
-                            <li class="page-item" th:each="p : ${#numbers.sequence(0, advances.totalPages - 1)}"
-                                th:classappend="${p == advances.number} ? 'active'">
-                                <a class="page-link" th:href="@{/payroll/advances(branchId=${selectedBranchId}, status=${selectedStatus}, staffId=${selectedStaffId}, keyword=${keyword}, page=${p})}"
-                                   th:text="${p + 1}"></a>
-                            </li>
-                            <li class="page-item" th:classappend="${advances.last} ? 'disabled'">
-                                <a class="page-link" th:href="@{/payroll/advances(branchId=${selectedBranchId}, status=${selectedStatus}, staffId=${selectedStaffId}, keyword=${keyword}, page=${advances.number + 1})}">&raquo;</a>
-                            </li>
-                        </ul>
+                    <!-- Phân trang MISA -->
+                    <div class="misa-pagination-footer" th:if="${advances.totalElements > 0}">
+                        <div class="misa-total-count">
+                            Tổng số: <strong th:text="${advances.totalElements}">0</strong> bản ghi
+                        </div>
+                        <div class="misa-pagination-controls" th:if="${advances.totalPages > 1}">
+                            <div class="misa-page-size-selector">
+                                <span>Số dòng/trang:</span>
+                                <span class="fw-semibold text-dark" th:text="${advances.size}">10</span>
+                            </div>
+                            <div class="misa-page-index-info">
+                                <span th:text="${(advances.number * advances.size) + 1}">1</span> - 
+                                <span th:text="${(advances.number + 1) * advances.size > advances.totalElements ? advances.totalElements : (advances.number + 1) * advances.size}">10</span>
+                            </div>
+                            <div class="misa-nav-buttons">
+                                <a th:href="@{/payroll/advances(branchId=${selectedBranchId}, status=${selectedStatus}, staffId=${selectedStaffId}, keyword=${keyword}, page=0)}"
+                                   class="misa-nav-btn" th:classappend="${advances.first} ? 'disabled'" title="Trang đầu">&laquo;</a>
+                                <a th:href="@{/payroll/advances(branchId=${selectedBranchId}, status=${selectedStatus}, staffId=${selectedStaffId}, keyword=${keyword}, page=${advances.number - 1})}"
+                                   class="misa-nav-btn" th:classappend="${advances.first} ? 'disabled'" title="Trang trước">&lsaquo;</a>
+                                <a th:href="@{/payroll/advances(branchId=${selectedBranchId}, status=${selectedStatus}, staffId=${selectedStaffId}, keyword=${keyword}, page=${advances.number + 1})}"
+                                   class="misa-nav-btn" th:classappend="${advances.last} ? 'disabled'" title="Trang sau">&rsaquo;</a>
+                                <a th:href="@{/payroll/advances(branchId=${selectedBranchId}, status=${selectedStatus}, staffId=${selectedStaffId}, keyword=${keyword}, page=${advances.totalPages - 1})}"
+                                   class="misa-nav-btn" th:classappend="${advances.last} ? 'disabled'" title="Trang cuối">&raquo;</a>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -282,7 +296,7 @@
                                         </select>
                                     </div>
                                     <div class="alert alert-warning py-2 small mb-0">
-                                        <i class="bi bi-info-circle me-1"></i> Khi chi tiền, hệ thống sẽ tự động tạo một phiếu chi vào Chi phí vận hành (FT25). Số tiền này sẽ được cấn trừ dần trong các kỳ tính lương tiếp theo.
+                                        <i class="bi bi-info-circle me-1"></i> Khi chi tiền, hệ thống sẽ tự động tạo một phiếu chi vào Chi phí vận hành. Số tiền này sẽ được cấn trừ dần trong các kỳ tính lương tiếp theo.
                                     </div>
                                 </div>
                                 <div class="modal-footer">

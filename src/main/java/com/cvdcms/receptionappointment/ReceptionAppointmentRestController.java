@@ -27,7 +27,7 @@ public class ReceptionAppointmentRestController {
     }
     @GetMapping("/patients")
     public List<ReceptionAppointmentService.PatientOption> patients(HttpSession session,
-            @RequestParam Long branchId, @RequestParam String query) {
+            @RequestParam(required = false) Long branchId, @RequestParam String query) {
         return appointments.searchPatients(session, branchId, query);
     }
     @GetMapping("/availability")
@@ -59,6 +59,10 @@ public class ReceptionAppointmentRestController {
     public ReceptionAppointmentService.Dashboard dashboard(HttpSession session,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) Long branchId, @RequestParam(required = false) Long doctorId) {
+        if (session != null) {
+            if (branchId != null) session.setAttribute("currentBranchId", branchId);
+            if (date != null) session.setAttribute("currentWorkflowDay", date);
+        }
         return appointments.dashboard(session, date, branchId, doctorId);
     }
     @GetMapping("/calendar")

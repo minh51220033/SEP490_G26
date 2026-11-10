@@ -436,6 +436,16 @@ public class PublicBookingRestController {
     }
 
     private PatientProfile createPatientProfileForUser(User user, String fullName, String cleanPhone) {
+        List<PatientProfile> existing = patientProfileRepository.findByPhoneNumber(cleanPhone);
+        for (PatientProfile p : existing) {
+            if (p.getUser() == null) {
+                p.setUser(user);
+                if (p.getFullName() == null || p.getFullName().isBlank()) {
+                    p.setFullName(fullName != null && !fullName.isBlank() ? fullName : "Khách hàng");
+                }
+                return patientProfileRepository.save(p);
+            }
+        }
         PatientProfile p = new PatientProfile();
         p.setUser(user);
         p.setFullName(fullName != null && !fullName.isBlank() ? fullName : "Khách hàng");

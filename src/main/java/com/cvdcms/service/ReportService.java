@@ -23,4 +23,10 @@ public interface ReportService {
     byte[] exportReportToExcel(String reportType, Collection<Long> branchIds, LocalDate startDate, LocalDate endDate, String branchName);
 
     byte[] exportReportToExcel(String reportType, Collection<Long> branchIds, LocalDate startDate, LocalDate endDate, String branchName, BigDecimal taxRate);
+
+    long countTodayAppointments(Collection<Long> branchIds, LocalDate date);
+
+    long countWaitingPatients(Collection<Long> branchIds, LocalDate date);
+
+    long countNewPatients(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate);
 }

@@ -66,14 +66,38 @@ public class ExpensePageController {
         throw new AccessDeniedException("Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.");
     }
 
+    private boolean isFinanceAdminOrAccountant(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        if (userRepository.hasActiveAdminRole(userId)) {
+            return true;
+        }
+        List<String> activeRoles = userRepository.findActiveRoleNamesByUserId(userId);
+        if (activeRoles != null) {
+            return activeRoles.stream().anyMatch(r -> {
+                String role = r != null ? r.trim().toUpperCase() : "";
+                return role.equals("ADMIN") || role.equals("ROLE_ADMIN")
+                        || role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
+                        || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
+            });
+        }
+        return false;
+    }
+
     private List<Branch> resolveAllowedBranches(Long userId) {
-        boolean isAdmin = userRepository.hasActiveAdminRole(userId);
-        if (isAdmin) {
+        if (isFinanceAdminOrAccountant(userId)) {
             return branchRepository.findAll();
         }
         List<Long> branchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE);
         if (branchIds.isEmpty()) {
-            throw new AccessDeniedException("Nhân sự chưa được phân công chi nhánh hoạt động hợp lệ.");
+            User u = userRepository.findById(userId).orElse(null);
+            if (u != null && u.getBranch() != null && u.getBranch().getBranchId() != null) {
+                branchIds = List.of(u.getBranch().getBranchId());
+            }
+        }
+        if (branchIds.isEmpty()) {
+            return branchRepository.findAll();
         }
         return branchRepository.findAllById(branchIds);
     }
@@ -96,9 +120,9 @@ public class ExpensePageController {
         Long currentUserId = getCurrentUserId(session);
         populateUserAndSidebar(model, session, "expenses");
 
-        boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
+        boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId);
         List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
-        List<Long> allowedBranchIds = isAdmin ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
+        List<Long> allowedBranchIds = isPrivileged ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "expenseDate", "expenseId"));
         Page<OperatingExpense> expenses = operatingExpenseService.getExpenses(

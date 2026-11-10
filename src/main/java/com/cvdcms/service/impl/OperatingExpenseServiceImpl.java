@@ -182,6 +182,23 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
     }
 
     @Override
+    public void cancelAutomatedPayrollExpense(Long periodId, String reason, Long currentUserId) {
+        if (periodId == null) {
+            return;
+        }
+        operatingExpenseRepository.findByPayrollPeriod_PeriodId(periodId).ifPresent(expense -> {
+            if (!Boolean.TRUE.equals(expense.getIsCancelled())) {
+                expense.setIsCancelled(true);
+                expense.setCancelledReason(reason != null ? reason.trim() : "Hủy phiếu chi do bảng lương bị từ chối/hủy");
+                User currentUser = currentUserId != null ? userRepository.findById(currentUserId).orElse(null) : null;
+                expense.setCancelledBy(currentUser);
+                expense.setCancelledAt(LocalDateTime.now());
+                operatingExpenseRepository.save(expense);
+            }
+        });
+    }
+
+    @Override
     public OperatingExpense updateManualExpense(Long expenseId, OperatingExpenseRequestDTO dto, String editReason, Long currentUserId) {
         if (currentUserId == null) {
             throw new AccessDeniedException("Người dùng chưa đăng nhập");
@@ -345,7 +362,11 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
         boolean hasAssignment = staffBranchAssignmentRepository.hasActiveUserAssignment(
                 currentUserId, branchId, AssignmentStatus.ACTIVE);
         if (!hasAssignment) {
-            throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh này");
+            boolean isMultiBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(currentUserId, AssignmentStatus.ACTIVE).isEmpty()
+                    && userRepository.findById(currentUserId).map(u -> u.getBranch() == null || branchId.equals(u.getBranch().getBranchId())).orElse(false);
+            if (!isMultiBranch) {
+                throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh này");
+            }
         }
     }
 }

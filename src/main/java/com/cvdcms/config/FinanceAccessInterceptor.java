@@ -1,12 +1,15 @@
 package com.cvdcms.config;
 
+import com.cvdcms.entity.Branch;
 import com.cvdcms.entity.User;
 import com.cvdcms.entity.enums.AssignmentStatus;
+import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.StaffBranchAssignmentRepository;
 import com.cvdcms.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -18,6 +21,7 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
 
     private final UserRepository userRepository;
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
+    private BranchRepository branchRepository;
 
     public FinanceAccessInterceptor(
             UserRepository userRepository,
@@ -25,6 +29,11 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
     ) {
         this.userRepository = userRepository;
         this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
+    }
+
+    @Autowired(required = false)
+    public void setBranchRepository(BranchRepository branchRepository) {
+        this.branchRepository = branchRepository;
     }
 
     @Override
@@ -84,22 +93,60 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
         boolean hasFinancePermission = userRepository.hasActivePermission(userId, "INVOICE_VIEW")
                 || userRepository.hasActivePermission(userId, "INVOICE_CREATE")
                 || userRepository.hasActivePermission(userId, "PAYMENT_COLLECT")
-                || userRepository.hasActivePermission(userId, "REFUND_MANAGE");
-        boolean isFinanceRole = isAdmin || hasFinancePermission;
+                || userRepository.hasActivePermission(userId, "REFUND_MANAGE")
+                || userRepository.hasActivePermission(userId, "FINANCE_DASHBOARD")
+                || userRepository.hasActivePermission(userId, "FINANCE_DEBT")
+                || userRepository.hasActivePermission(userId, "FINANCE_DEPOSIT")
+                || userRepository.hasActivePermission(userId, "FINANCE_EXPENSES")
+                || userRepository.hasActivePermission(userId, "FINANCE_PAYROLL")
+                || userRepository.hasActivePermission(userId, "FINANCE_PAYROLL_ADVANCES")
+                || userRepository.hasActivePermission(userId, "FINANCE_COMMISSION_CONFIG")
+                || userRepository.hasActivePermission(userId, "FINANCE_OWNER_DISTRIBUTIONS");
+        boolean isKeToan = false;
+        if (session != null) {
+            Object rolesObj = session.getAttribute("roleNames");
+            if (rolesObj instanceof java.util.Collection<?> col) {
+                isKeToan = col.stream()
+                        .filter(java.util.Objects::nonNull)
+                        .map(Object::toString)
+                        .anyMatch(r -> {
+                            String role = r != null ? r.trim().toUpperCase() : "";
+                            return role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
+                                    || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
+                        });
+            }
+        }
+        if (!isKeToan) {
+            List<String> userRoles = userRepository.findActiveRoleNamesByUserId(userId);
+            if (userRoles != null) {
+                isKeToan = userRoles.stream().anyMatch(r -> {
+                    String role = r != null ? r.trim().toUpperCase() : "";
+                    return role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
+                            || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
+                });
+            }
+        }
+        boolean isFinanceRole = isAdmin || isKeToan || hasFinancePermission || userRepository.hasActiveFinanceRole(userId);
 
         if (!isFinanceRole) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập phân hệ Tài chính & Kế toán.");
             return false;
         }
 
-        // 4. Kiểm tra phân công chi nhánh cho non-admin (Kế toán viên / nhân sự được cấp quyền tài chính)
-        if (isAdmin) {
+        // 4. Admin và Kế toán có toàn quyền xem và quản lý tài chính toàn bộ hệ thống
+        if (isAdmin || isKeToan) {
             request.setAttribute("isFinanceAdmin", Boolean.TRUE);
+            return true;
         } else {
             List<Long> activeBranchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE);
             if ((activeBranchIds == null || activeBranchIds.isEmpty())
                     && dbUser.getBranch() != null && dbUser.getBranch().getBranchId() != null) {
                 activeBranchIds = List.of(dbUser.getBranch().getBranchId());
+            }
+            if ((activeBranchIds == null || activeBranchIds.isEmpty()) && branchRepository != null) {
+                activeBranchIds = branchRepository.findByIsActiveTrueOrderByBranchNameAsc().stream()
+                        .map(Branch::getBranchId)
+                        .toList();
             }
             if (activeBranchIds == null || activeBranchIds.isEmpty()) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản nhân viên chưa được phân công chi nhánh làm việc hợp lệ.");
@@ -108,13 +155,15 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
             request.setAttribute("isFinanceAdmin", Boolean.FALSE);
             request.setAttribute("currentUserActiveBranchIds", activeBranchIds);
 
-            // Chặn kế toán can thiệp cấu hình hoa hồng hoặc duyệt/từ chối tạm ứng
-            if (uri.contains("/payroll/commission-config")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên (Admin) mới có quyền truy cập hoặc chỉnh sửa cấu hình hoa hồng.");
+            // Chặn kế toán can thiệp cấu hình hoa hồng hoặc duyệt/từ chối tạm ứng nếu chưa được cấp quyền
+            if ((uri.contains("/payroll/commission-config") || uri.contains("/payroll/config"))
+                    && !userRepository.hasActivePermission(userId, "FINANCE_COMMISSION_CONFIG")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên hoặc nhân sự được cấp quyền mới có thể chỉnh sửa cấu hình hoa hồng.");
                 return false;
             }
-            if (uri.matches(".*/payroll/advances/\\d+/(approve|reject).*")) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên (Admin) mới có quyền phê duyệt hoặc từ chối tạm ứng lương.");
+            if (uri.matches(".*/payroll/advances/\\d+/(approve|reject).*")
+                    && !userRepository.hasActivePermission(userId, "FINANCE_PAYROLL_ADVANCES")) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Quản trị viên hoặc nhân sự được cấp quyền mới có thể duyệt tạm ứng lương.");
                 return false;
             }
 

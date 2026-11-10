@@ -1,14 +1,24 @@
 package com.cvdcms.controller;
 
 import com.cvdcms.DTO.UserRegisterDTO;
+import com.cvdcms.DTO.report.FinancialReportDTO;
+import com.cvdcms.DTO.report.OperationalReportDTO;
+import com.cvdcms.DTO.report.ReportDashboardDTO;
+import com.cvdcms.DTO.report.ReportFilterDTO;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.TokenType;
+import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.RoleRepository;
 import com.cvdcms.repository.StaffProfileRepository;
 import com.cvdcms.repository.TokenRepository;
 import com.cvdcms.repository.UserRepository;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.service.EmailService;
+import com.cvdcms.service.ReportService;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Collection;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -50,6 +60,12 @@ public class UserController {
 
     @Autowired
     private StaffProfileRepository staffProfileRepository;
+
+    @Autowired(required = false)
+    private ReportService reportService;
+
+    @Autowired(required = false)
+    private BranchRepository branchRepository;
 
     @Autowired(required = false)
     private com.cvdcms.service.CustomerPortalService customerPortalService;
@@ -143,11 +159,8 @@ public class UserController {
         for (String r : roleNames) {
             if (r == null) continue;
             String norm = r.trim().toUpperCase(Locale.ROOT);
-            if ("ADMIN".equals(norm) || "ROLE_ADMIN".equals(norm)
-                    || "BAC_SI".equals(norm) || "ROLE_BAC_SI".equals(norm)
-                    || "LE_TAN".equals(norm) || "ROLE_LE_TAN".equals(norm)
-                    || "QUAN_LY_KHO".equals(norm) || "ROLE_QUAN_LY_KHO".equals(norm)
-                    || "KE_TOAN".equals(norm) || "ROLE_KE_TOAN".equals(norm)) {
+            if (!"BENH_NHAN".equals(norm) && !"ROLE_BENH_NHAN".equals(norm)
+                    && !"PATIENT".equals(norm) && !"ROLE_PATIENT".equals(norm)) {
                 return true;
             }
         }
@@ -279,7 +292,16 @@ public class UserController {
 
 
     @GetMapping("/home")
-    public String home(@RequestParam(value = "view", required = false) String view, HttpSession session, Model model) {
+    public String home(
+            @RequestParam(value = "view", required = false) String view,
+            @RequestParam(value = "branchId", required = false) Long branchId,
+            @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(value = "taxRate", required = false, defaultValue = "20") BigDecimal taxRate,
+            @RequestParam(value = "tab", required = false, defaultValue = "overview") String tab,
+            HttpSession session,
+            Model model
+    ) {
         if (session == null || !(session.getAttribute("loggedInUser") instanceof User)) {
             return populateCustomerPortalHome(model);
         }
@@ -332,14 +354,21 @@ public class UserController {
         // 4. Tên hiển thị mặc định là username
         String displayName = user.getUsername();
 
-        // 5. Khởi tạo giá trị mặc định cho hồ sơ và cơ sở
+        // 5. Khởi tạo giá trị mặc định cho hồ sơ và cơ sở (ưu tiên context GlobalBranchControllerAdvice / session)
         model.addAttribute("defaultPatientProfile", null);
-        String currentBranchName = user.getBranch() != null && user.getBranch().getBranchName() != null
-                ? user.getBranch().getBranchName()
-                : "Chưa xác định cơ sở";
-        String currentBranchAddress = user.getBranch() != null && user.getBranch().getAddress() != null
-                ? user.getBranch().getAddress()
-                : "";
+        Object adviceBranchName = model.getAttribute("currentBranchName");
+        String currentBranchName = (adviceBranchName instanceof String bn && !bn.isBlank())
+                ? bn
+                : (session.getAttribute("currentBranchName") instanceof String sbn && !sbn.isBlank()
+                    ? sbn
+                    : (user.getBranch() != null && user.getBranch().getBranchName() != null ? user.getBranch().getBranchName() : (isAdmin ? "Toàn hệ thống" : "Chưa xác định cơ sở")));
+
+        Object adviceBranchAddress = model.getAttribute("currentBranchAddress");
+        String currentBranchAddress = (adviceBranchAddress instanceof String ba && !ba.isBlank())
+                ? ba
+                : (session.getAttribute("currentBranchAddress") instanceof String sba && !sba.isBlank()
+                    ? sba
+                    : (user.getBranch() != null && user.getBranch().getAddress() != null ? user.getBranch().getAddress() : ""));
 
         // 6. Nếu là nhân sự/bác sĩ/admin có hồ sơ nhân sự, ưu tiên lấy tên nhân sự
         StaffProfile staffProfile = staffProfileRepository.findByUser_UserId(user.getUserId()).orElse(null);
@@ -365,18 +394,14 @@ public class UserController {
                 displayName = defaultProfile.getFullName();
             }
 
-            // Lấy cơ sở ưu tiên từ hồ sơ mặc định
+            // Lấy cơ sở ưu tiên từ hồ sơ mặc định nếu người dùng chưa chọn cơ sở cụ thể
             Branch branch = defaultProfile.getPreferredBranch();
 
-            if (branch != null) {
-
-                if (branch.getBranchName() != null
-                        && !branch.getBranchName().isBlank()) {
+            if (branch != null && adviceBranchName == null) {
+                if (branch.getBranchName() != null && !branch.getBranchName().isBlank()) {
                     currentBranchName = branch.getBranchName();
                 }
-
-                if (branch.getAddress() != null
-                        && !branch.getAddress().isBlank()) {
+                if (branch.getAddress() != null && !branch.getAddress().isBlank()) {
                     currentBranchAddress = branch.getAddress();
                 }
             }
@@ -387,11 +412,94 @@ public class UserController {
         model.addAttribute("currentBranchAddress", currentBranchAddress);
         session.setAttribute("displayName", displayName);
         session.setAttribute("currentBranchName", currentBranchName);
+        session.setAttribute("currentBranchAddress", currentBranchAddress);
 
         if (!hasStaffRole(roleNames) || "portal".equalsIgnoreCase(view)) {
             return populateCustomerPortalHome(model);
         }
+
+        if (isAdmin) {
+            populateAdminDashboard(model, session, branchId, startDate, endDate, taxRate, tab);
+        }
+
         return "user/home";
+    }
+
+    private void populateAdminDashboard(
+            Model model,
+            HttpSession session,
+            Long branchId,
+            LocalDate startDate,
+            LocalDate endDate,
+            BigDecimal taxRate,
+            String tab
+    ) {
+        model.addAttribute("activeMenu", "home");
+        if (reportService == null) {
+            return;
+        }
+
+        Long effectiveBranchId = branchId;
+        if (effectiveBranchId == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid) {
+                effectiveBranchId = sid;
+            }
+        }
+
+        List<Branch> allowedBranches = branchRepository != null
+                ? branchRepository.findByIsActiveTrueOrderByBranchNameAsc()
+                : List.of();
+
+        Collection<Long> resolvedBranchIds = (effectiveBranchId != null && effectiveBranchId > 0)
+                ? List.of(effectiveBranchId)
+                : null;
+
+        LocalDate safeEnd = (endDate != null) ? endDate : LocalDate.now();
+        LocalDate safeStart = (startDate != null) ? startDate : safeEnd.withDayOfMonth(1);
+        if (safeStart.isAfter(safeEnd)) {
+            safeStart = safeEnd.withDayOfMonth(1);
+            model.addAttribute("warningMessage", "Ngày bắt đầu không được lớn hơn ngày kết thúc. Hệ thống đã tự động điều chỉnh về đầu tháng.");
+        }
+
+        BigDecimal safeTaxRate = (taxRate != null && taxRate.compareTo(BigDecimal.ZERO) >= 0) ? taxRate : BigDecimal.valueOf(20);
+        String branchDisplayName = resolveBranchDisplayName(effectiveBranchId, allowedBranches);
+
+        ReportDashboardDTO dashboard = reportService.getDashboardReport(resolvedBranchIds, safeStart, safeEnd, branchDisplayName, safeTaxRate);
+        FinancialReportDTO financial = reportService.getFinancialReport(resolvedBranchIds, safeStart, safeEnd, safeTaxRate);
+        OperationalReportDTO operational = reportService.getOperationalReport(resolvedBranchIds, safeStart, safeEnd);
+
+        long todayAppointments = reportService.countTodayAppointments(resolvedBranchIds, LocalDate.now());
+        long waitingPatients = reportService.countWaitingPatients(resolvedBranchIds, LocalDate.now());
+
+        ReportFilterDTO filter = new ReportFilterDTO();
+        filter.setBranchId(effectiveBranchId);
+        filter.setStartDate(safeStart);
+        filter.setEndDate(safeEnd);
+        filter.setTaxRate(safeTaxRate);
+        filter.setTab(tab != null && !tab.isBlank() ? tab : "overview");
+
+        model.addAttribute("filter", filter);
+        model.addAttribute("dashboard", dashboard);
+        model.addAttribute("financial", financial);
+        model.addAttribute("operational", operational);
+        model.addAttribute("branches", allowedBranches);
+        model.addAttribute("selectedBranchId", effectiveBranchId);
+        model.addAttribute("branchDisplayName", branchDisplayName);
+        model.addAttribute("activeTab", filter.getTab());
+        model.addAttribute("todayAppointments", todayAppointments);
+        model.addAttribute("waitingPatients", waitingPatients);
+    }
+
+    private String resolveBranchDisplayName(Long branchId, List<Branch> allowedBranches) {
+        if (branchId != null && branchId > 0 && allowedBranches != null) {
+            return allowedBranches.stream()
+                    .filter(b -> b.getBranchId().equals(branchId))
+                    .map(Branch::getBranchName)
+                    .findFirst()
+                    .orElse("Chi nhánh " + branchId);
+        }
+        return "Toàn bộ hệ thống";
     }
 
     // =====================================================
@@ -801,6 +909,22 @@ public class UserController {
 
         user = userRepository.save(user);
 
+        // Tự động tìm kiếm và liên kết hồ sơ bệnh nhân đã được tạo trước đó tại quầy lễ tân (dựa theo Số điện thoại)
+        boolean hasLinkedProfile = false;
+        if (phoneNumber != null && !phoneNumber.isBlank() && patientProfileRepository != null) {
+            List<PatientProfile> unlinkedProfiles = patientProfileRepository.findByPhoneNumber(phoneNumber);
+            for (PatientProfile profile : unlinkedProfiles) {
+                if (profile.getUser() == null) {
+                    profile.setUser(user);
+                    if (!hasLinkedProfile && (profile.getIsDefault() == null || !profile.getIsDefault())) {
+                        profile.setIsDefault(true);
+                    }
+                    patientProfileRepository.save(profile);
+                    hasLinkedProfile = true;
+                }
+            }
+        }
+
         // =============================================
         // ĐĂNG NHẬP NGAY SAU KHI ĐĂNG KÝ
         // =============================================
@@ -820,6 +944,14 @@ public class UserController {
                 "permissionCodes",
                 userRepository.findActivePermissionCodesByUserId(user.getUserId())
         );
+
+        if (hasLinkedProfile) {
+            session.setAttribute(
+                    "notification",
+                    "Đăng ký tài khoản thành công! Hồ sơ khám bệnh tại phòng khám của bạn đã được tự động liên kết."
+            );
+            return "redirect:/home";
+        }
 
         session.setAttribute(
                 "notification",

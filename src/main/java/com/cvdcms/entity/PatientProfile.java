@@ -19,6 +19,14 @@ import java.util.concurrent.ThreadLocalRandom;
                 @UniqueConstraint(
                         name = "uk_patient_code",
                         columnNames = "patient_code"
+                ),
+                @UniqueConstraint(
+                        name = "uk_patient_phone",
+                        columnNames = "phone_number"
+                ),
+                @UniqueConstraint(
+                        name = "uk_patient_id_card",
+                        columnNames = "id_card_number"
                 )
         }
 )

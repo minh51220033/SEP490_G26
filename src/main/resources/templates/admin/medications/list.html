@@ -13,16 +13,22 @@
     <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục')}"></header>
 
     <main class="app-content">
+      <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
       <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
 
-      <!-- BREADCRUMB -->
-      <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb mb-0">
-          <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
-          <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
-          <li class="breadcrumb-item active" aria-current="page">Danh mục thuốc</li>
-        </ol>
-      </nav>
+      <!-- BREADCRUMB & BỘ CHỌN CƠ SỞ PHÍA TRÊN CÙNG -->
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Danh mục thuốc</li>
+          </ol>
+        </nav>
+        <div class="d-flex align-items-center gap-2">
+          <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+        </div>
+      </div>
 
       <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
       <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('medications')}"></nav>
@@ -67,36 +73,63 @@
               </button>
               <a th:href="@{/admin/medications}" class="btn btn-outline-secondary ms-1">Bỏ lọc</a>
             </div>
-            <div class="col-12 col-md-auto ms-md-auto text-end">
+            <div class="col-12 col-md-auto ms-md-auto d-flex align-items-center justify-content-end gap-2">
                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCreate">
                  <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm thuốc mới
-                </button>
+               </button>
             </div>
           </div>
         </form>
       </section>
 
         <!-- BẢNG DANH SÁCH -->
-      <section class="panel p-0 mt-0">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0" id="tblMedications" data-enhanced-table="admin-medications">
-            <thead class="table-light">
+      <!-- BẢNG DỮ LIỆU THUỐC (ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS) -->
+      <div class="dv-grid-card">
+        <div class="dv-grid-topbar">
+          <div class="d-flex align-items-center gap-2">
+            <span class="fw-bold text-dark fs-6">Danh mục thuốc &amp; Dược phẩm</span>
+            <span class="badge bg-primary-subtle text-primary rounded-pill fw-bold" th:text="|Tổng ${totalItems ?: #lists.size(medications)}|">Tổng 0</span>
+          </div>
+          <div class="small text-muted">
+            <i class="bi bi-info-circle me-1 text-primary"></i> Cuộn ngang để xem đầy đủ cột · Cột Thao tác được ghim cố định
+          </div>
+        </div>
+
+        <div class="dv-table-scroll-container">
+          <table class="dv-amis-table align-middle mb-0" id="tblMedications" data-enhanced-table="admin-medications">
+            <thead>
               <tr>
-                <th data-column-key="code" data-pinned="true" style="min-width:130px">Mã thuốc</th>
-                <th data-column-key="name" style="min-width:180px">Tên thuốc</th>
-                <th data-column-key="activeIngredient" style="min-width:160px">Hoạt chất</th>
-                <th data-column-key="unit" style="min-width:90px">Đơn vị</th>
-                <th data-column-key="usage" style="min-width:200px">Hướng dẫn sử dụng</th>
-                <th data-column-key="status" style="min-width:120px" class="text-center">Trạng thái</th>
-                <th data-column-key="actions" data-column-action="true" style="min-width:140px" class="text-center">Thao tác</th>
+                <th data-column-key="code" data-pinned="true" style="min-width:130px">
+                  <div class="dv-th-inner"><span>Mã thuốc</span></div>
+                </th>
+                <th data-column-key="name" style="min-width:180px">
+                  <div class="dv-th-inner"><span>Tên thuốc</span></div>
+                </th>
+                <th data-column-key="activeIngredient" style="min-width:160px">
+                  <div class="dv-th-inner"><span>Hoạt chất</span></div>
+                </th>
+                <th data-column-key="unit" style="min-width:90px">
+                  <div class="dv-th-inner"><span>Đơn vị</span></div>
+                </th>
+                <th data-column-key="usage" style="min-width:200px">
+                  <div class="dv-th-inner"><span>Hướng dẫn sử dụng</span></div>
+                </th>
+                <th data-column-key="status" style="min-width:120px" class="text-center">
+                  <div class="dv-th-inner justify-content-center"><span>Trạng thái</span></div>
+                </th>
+                <th data-column-key="actions" data-column-action="true" style="min-width:140px" class="text-center">
+                  <div class="dv-th-inner justify-content-center"><span>Thao tác</span></div>
+                </th>
               </tr>
             </thead>
             <tbody>
               <tr th:if="${medications.isEmpty()}">
                 <td colspan="7" class="text-center text-muted py-4">Không có thuốc nào.</td>
               </tr>
-              <tr th:each="med : ${medications}">
-                <td data-column-key="code" class="fw-semibold" th:text="${med.drugCode}">TH001</td>
+              <tr th:each="med : ${medications}" class="dv-data-row">
+                <td data-column-key="code">
+                  <span class="dv-code-pill" th:text="${med.drugCode}">TH001</span>
+                </td>
                 <td data-column-key="name" th:text="${med.drugName}">Amoxicillin</td>
                 <td data-column-key="activeIngredient" th:text="${med.activeIngredient ?: '—'}">Amoxicillin trihydrate</td>
                 <td data-column-key="unit" th:text="${med.unit}">Viên</td>
@@ -145,29 +178,70 @@
           </table>
         </div>
 
-        <!-- PHÂN TRANG SERVER-SIDE -->
-        <div th:if="${totalPages != null and totalPages > 1}" class="p-3 border-top d-flex flex-wrap justify-content-between align-items-center gap-2">
-          <div class="text-muted small">
-            Hiển thị <strong th:text="${medications.size()}">0</strong> / <strong th:text="${totalItems}">0</strong> thuốc
-            (Trang <strong th:text="${currentPage + 1}">1</strong>/<strong th:text="${totalPages}">1</strong>)
+        <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+        <div class="misa-pagination-footer">
+          <!-- Bên trái: Tổng số -->
+          <div class="misa-pagination-left">
+            Tổng số: <strong th:text="${totalItems ?: #lists.size(medications)}">0</strong>
           </div>
-          <nav aria-label="Phân trang danh mục thuốc">
-            <ul class="pagination pagination-sm mb-0">
-              <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
-                <a class="page-link" th:href="@{/admin/medications(page=${currentPage - 1}, size=${size}, q=${keyword}, active=${selectedActive})}">Trước</a>
-              </li>
-              <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
-                  th:classappend="${i == currentPage} ? 'active'">
-                <a class="page-link" th:href="@{/admin/medications(page=${i}, size=${size}, q=${keyword}, active=${selectedActive})}" th:text="${i + 1}">1</a>
-              </li>
-              <li class="page-item" th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">
-                <a class="page-link" th:href="@{/admin/medications(page=${currentPage + 1}, size=${size}, q=${keyword}, active=${selectedActive})}">Sau</a>
-              </li>
-            </ul>
-          </nav>
+          <!-- Bên phải: Số dòng/trang + Range + 4 Nút điều hướng -->
+          <div class="misa-pagination-right">
+            <!-- Dropdown chọn số dòng/trang -->
+            <div class="misa-page-size-wrapper">
+              <span>Số dòng/trang</span>
+              <select class="form-select form-select-sm misa-page-size-select"
+                      aria-label="Số dòng trên mỗi trang"
+                      onchange="location.href = this.value;">
+                <option th:value="@{/admin/medications(page=0, size=10, q=${keyword}, active=${selectedActive})}"
+                        th:selected="${size == 10}">10</option>
+                <option th:value="@{/admin/medications(page=0, size=15, q=${keyword}, active=${selectedActive})}"
+                        th:selected="${size == 15}">15</option>
+                <option th:value="@{/admin/medications(page=0, size=30, q=${keyword}, active=${selectedActive})}"
+                        th:selected="${size == 30}">30</option>
+                <option th:value="@{/admin/medications(page=0, size=50, q=${keyword}, active=${selectedActive})}"
+                        th:selected="${size == 50}">50</option>
+              </select>
+            </div>
+            <!-- Khoảng hiển thị bản ghi (Ví dụ: 1 - 10) -->
+            <div class="misa-page-range">
+              <span th:text="${(totalItems == null or totalItems == 0) ? 0 : (currentPage * size + 1)}">0</span> - 
+              <span th:text="${(totalItems == null or totalItems == 0) ? 0 : ((currentPage + 1) * size > totalItems ? totalItems : ((currentPage + 1) * size))}">0</span>
+            </div>
+            <!-- Cụm 4 nút phân trang (|< < > >|) -->
+            <div class="d-flex align-items-center gap-1">
+              <!-- Trang đầu -->
+              <a th:href="@{/admin/medications(page=0, size=${size}, q=${keyword}, active=${selectedActive})}"
+                 class="misa-nav-btn"
+                 th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                 title="Trang đầu">
+                <i class="bi bi-chevron-bar-left"></i>
+              </a>
+              <!-- Trang trước -->
+              <a th:href="@{/admin/medications(page=${currentPage - 1}, size=${size}, q=${keyword}, active=${selectedActive})}"
+                 class="misa-nav-btn"
+                 th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                 title="Trang trước">
+                <i class="bi bi-chevron-left"></i>
+              </a>
+              <!-- Trang sau -->
+              <a th:href="@{/admin/medications(page=${currentPage + 1}, size=${size}, q=${keyword}, active=${selectedActive})}"
+                 class="misa-nav-btn"
+                 th:classappend="${currentPage + 1 >= totalPages or totalPages == 0} ? 'disabled' : ''"
+                 title="Trang sau">
+                <i class="bi bi-chevron-right"></i>
+              </a>
+              <!-- Trang cuối -->
+              <a th:href="@{/admin/medications(page=${totalPages > 0 ? totalPages - 1 : 0}, size=${size}, q=${keyword}, active=${selectedActive})}"
+                 class="misa-nav-btn"
+                 th:classappend="${currentPage + 1 >= totalPages or totalPages == 0} ? 'disabled' : ''"
+                 title="Trang cuối">
+                <i class="bi bi-chevron-bar-right"></i>
+              </a>
+            </div>
+          </div>
         </div>
 
-      </section><!-- /panel -->
+      </div><!-- /dv-grid-card -->
 
     </main><!-- /app-content -->
   </div><!-- /app-main -->
@@ -240,7 +314,8 @@
 ════════════════════════════════════════════════════════════ -->
 <div class="modal fade" id="modalEdit" tabindex="-1" aria-labelledby="modalEditLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
-    <form id="formEdit" method="post" class="modal-content needs-validation" novalidate>
+    <form id="formEdit" th:action="@{/admin/medications/0/update}" method="post" class="modal-content needs-validation" novalidate>
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
       <div class="modal-header">
         <h5 class="modal-title" id="modalEditLabel">
           <i class="bi bi-pencil-square me-1"></i> Chỉnh sửa thuốc

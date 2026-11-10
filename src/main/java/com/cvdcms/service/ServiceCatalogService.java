@@ -44,6 +44,8 @@ public interface ServiceCatalogService {
 
     List<Service> searchServices(String keyword, Long categoryId, ServiceStatus status);
 
+    org.springframework.data.domain.Page<Service> searchServices(String keyword, Long categoryId, ServiceStatus status, org.springframework.data.domain.Pageable pageable);
+
     List<Service> getServicesByCategory(Long categoryId);
 
     Service getServiceById(Long serviceId);

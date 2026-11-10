@@ -242,9 +242,16 @@ public class PromotionServiceImpl implements PromotionService {
             PatientProfile patient = patientProfileRepository.findById(profileId)
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bệnh nhân ID: " + profileId));
 
-            // Kiểm tra điều kiện hạng nếu promo có quy định hạng
+            // Kiểm tra điều kiện hạng nếu promo có quy định hạng (so sánh theo minTotalSpent)
             if (promo.getApplicableTier() != null) {
-                if (patient.getMembershipTier() == null || patient.getMembershipTier().getDisplayOrder() < promo.getApplicableTier().getDisplayOrder()) {
+                BigDecimal patientMinSpent = (patient.getMembershipTier() != null && patient.getMembershipTier().getMinTotalSpent() != null)
+                        ? patient.getMembershipTier().getMinTotalSpent()
+                        : null;
+                BigDecimal promoMinSpent = promo.getApplicableTier().getMinTotalSpent() != null
+                        ? promo.getApplicableTier().getMinTotalSpent()
+                        : BigDecimal.ZERO;
+
+                if (patientMinSpent == null || patientMinSpent.compareTo(promoMinSpent) < 0) {
                     throw new IllegalArgumentException("Bệnh nhân " + patient.getFullName() + " (" + patient.getPatientCode() + ") chưa đạt hạng " + promo.getApplicableTier().getTierName() + ".");
                 }
             }
@@ -333,12 +340,18 @@ public class PromotionServiceImpl implements PromotionService {
             throw new IllegalStateException("Giá trị hóa đơn chưa đạt mức tối thiểu " + promo.getMinBillAmount() + " đ để áp dụng ưu đãi này.");
         }
 
-        // Kiểm tra điều kiện hạng thành viên FT19
+        // Kiểm tra điều kiện hạng thành viên FT19 (so sánh theo minTotalSpent)
         if (promo.getApplicableTier() != null) {
             if (patient == null || patient.getMembershipTier() == null) {
                 throw new IllegalStateException("Chương trình yêu cầu hạng thành viên từ " + promo.getApplicableTier().getTierName() + " trở lên.");
             }
-            if (patient.getMembershipTier().getDisplayOrder() < promo.getApplicableTier().getDisplayOrder()) {
+            BigDecimal patientMinSpent = patient.getMembershipTier().getMinTotalSpent() != null
+                    ? patient.getMembershipTier().getMinTotalSpent()
+                    : BigDecimal.ZERO;
+            BigDecimal promoMinSpent = promo.getApplicableTier().getMinTotalSpent() != null
+                    ? promo.getApplicableTier().getMinTotalSpent()
+                    : BigDecimal.ZERO;
+            if (patientMinSpent.compareTo(promoMinSpent) < 0) {
                 throw new IllegalStateException("Chương trình chỉ áp dụng cho bệnh nhân từ hạng " + promo.getApplicableTier().getTierName() + " trở lên (Hạng hiện tại: " + patient.getMembershipTier().getTierName() + ").");
             }
         }

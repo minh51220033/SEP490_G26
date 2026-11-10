@@ -15,16 +15,90 @@
     <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục')}"></header>
 
     <main class="app-content">
+      <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
       <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
 
-      <!-- BREADCRUMB -->
-      <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb mb-0">
-          <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
-          <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
-          <li class="breadcrumb-item active" aria-current="page">Danh mục dịch vụ</li>
-        </ol>
-      </nav>
+      <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN QUẢN LÝ CƠ SỞ -->
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+            <i class="bi bi-tags-fill"></i>
+          </div>
+          <div>
+            <h1 class="dv-page-title mb-0">Quản lý danh mục dịch vụ</h1>
+            <p class="dv-page-subtitle">Quản lý danh mục kỹ thuật, bảng giá dịch vụ điều trị và phân loại chuyên khoa</p>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+          <a th:href="@{/admin/services}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+            <i class="bi bi-arrow-clockwise"></i> Làm mới
+          </a>
+          <button type="button" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createServiceModal" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+            <i class="bi bi-plus-lg"></i> Thêm mới dịch vụ
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 THẺ KPI TỔNG QUAN -->
+      <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-sm-6">
+          <a th:href="@{/admin/services(categoryId=${selectedCategoryId})}" class="text-decoration-none">
+            <div class="dv-kpi-card" style="--kpi-accent: #0284c7;" th:classappend="${selectedStatus == null} ? 'active-kpi' : ''">
+              <div>
+                <div class="dv-kpi-num" th:text="${totalServicesCount ?: #lists.size(services)}">0</div>
+                <div class="dv-kpi-label">Tổng số dịch vụ</div>
+                <div class="dv-kpi-sub">Toàn bộ danh mục kỹ thuật</div>
+              </div>
+              <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                <i class="bi bi-tags-fill"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+          <a th:href="@{/admin/services(status='ACTIVE',categoryId=${selectedCategoryId})}" class="text-decoration-none">
+            <div class="dv-kpi-card" style="--kpi-accent: #10b981;" th:classappend="${selectedStatus != null and selectedStatus.name() == 'ACTIVE'} ? 'active-kpi' : ''">
+              <div>
+                <div class="dv-kpi-num text-success" th:text="${activeServicesCount ?: 0}">0</div>
+                <div class="dv-kpi-label">Đang sử dụng</div>
+                <div class="dv-kpi-sub">Sẵn sàng chỉ định điều trị</div>
+              </div>
+              <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                <i class="bi bi-check2-circle"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+          <a th:href="@{/admin/services/categories}" class="text-decoration-none">
+            <div class="dv-kpi-card" style="--kpi-accent: #6366f1;">
+              <div>
+                <div class="dv-kpi-num" style="color: #4f46e5;" th:text="${totalCategoriesCount ?: #lists.size(categories)}">0</div>
+                <div class="dv-kpi-label">Nhóm dịch vụ</div>
+                <div class="dv-kpi-sub">Phân nhóm chuyên khoa &amp; kỹ thuật</div>
+              </div>
+              <div class="dv-kpi-icon" style="background: #e0e7ff; color: #4f46e5;">
+                <i class="bi bi-grid-3x3-gap-fill"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+          <a th:href="@{/admin/services(status='INACTIVE',categoryId=${selectedCategoryId})}" class="text-decoration-none">
+            <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;" th:classappend="${selectedStatus != null and selectedStatus.name() == 'INACTIVE'} ? 'active-kpi' : ''">
+              <div>
+                <div class="dv-kpi-num text-warning" th:text="${inactiveServicesCount ?: 0}">0</div>
+                <div class="dv-kpi-label">Ngừng sử dụng</div>
+                <div class="dv-kpi-sub">Tạm ngưng cung cấp cho bệnh nhân</div>
+              </div>
+              <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                <i class="bi bi-pause-circle-fill"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
 
       <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
       <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('services')}"></nav>
@@ -45,9 +119,12 @@
       <!-- DANH SÁCH DỊCH VỤ -->
       <section class="panel catalog-filter-panel p-0 mb-3">
         <!-- LỌC THEO NHÓM -->
-        <form th:action="@{/admin/services}"
+        <form id="filterForm"
+              th:action="@{/admin/services}"
               method="get"
               class="p-3 border-bottom">
+          <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
+          <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
 
           <div class="row g-2 align-items-end">
 
@@ -111,40 +188,54 @@
               </a>
             </div>
 
-            <!-- 5. Nút Thêm dịch vụ (đặt phía bên phải) -->
-            <div class="col-12 col-md-auto ms-md-auto text-end">
-              <button type="button"
-                      class="btn btn-primary"
-                      data-bs-toggle="modal"
-                      data-bs-target="#createServiceModal">
-                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
-                Thêm dịch vụ
-              </button>
-            </div>
-
           </div>
         </form>
       </section>
 
-      <section class="panel p-0 mt-0">
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0" data-enhanced-table="ft02-services">
+      <!-- BẢNG DỮ LIỆU DỊCH VỤ (ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS) -->
+      <div class="dv-grid-card">
+        <div class="dv-grid-topbar">
+          <div class="d-flex align-items-center gap-2">
+            <span class="fw-bold text-dark fs-6">Danh sách dịch vụ</span>
+            <span class="badge bg-primary-subtle text-primary rounded-pill fw-bold" th:text="|Tổng ${totalItems ?: #lists.size(services)}|">Tổng 0</span>
+          </div>
+          <div class="small text-muted">
+            <i class="bi bi-info-circle me-1 text-primary"></i> Cuộn ngang để xem đầy đủ cột · Cột Thao tác được ghim cố định
+          </div>
+        </div>
 
-            <thead class="table-light">
+        <div class="dv-table-scroll-container">
+          <table class="dv-amis-table align-middle mb-0" data-enhanced-table="ft02-services">
+
+            <thead>
             <tr>
-              <th scope="col" data-column-key="service" data-column-required="true" data-column-pinned="true">Dịch vụ</th>
-              <th scope="col" data-column-key="category">Nhóm</th>
-              <th scope="col" data-column-key="type">Loại</th>
-              <th scope="col" class="text-end" data-column-key="base_price">Đơn giá</th>
-              <th scope="col" class="text-end" data-column-key="surcharge">Phụ phí</th>
-              <th scope="col" data-column-key="status">Trạng thái</th>
-              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true" style="min-width: 150px;">Thao tác</th>
+              <th scope="col" data-column-key="service" data-column-required="true" data-column-pinned="true">
+                <div class="dv-th-inner"><span>Dịch vụ</span></div>
+              </th>
+              <th scope="col" data-column-key="category">
+                <div class="dv-th-inner"><span>Nhóm</span></div>
+              </th>
+              <th scope="col" data-column-key="type">
+                <div class="dv-th-inner"><span>Loại</span></div>
+              </th>
+              <th scope="col" class="text-end" data-column-key="base_price">
+                <div class="dv-th-inner justify-content-end"><span>Đơn giá</span></div>
+              </th>
+              <th scope="col" class="text-end" data-column-key="surcharge">
+                <div class="dv-th-inner justify-content-end"><span>Phụ phí</span></div>
+              </th>
+              <th scope="col" data-column-key="status">
+                <div class="dv-th-inner"><span>Trạng thái</span></div>
+              </th>
+              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true" style="min-width: 150px;">
+                <div class="dv-th-inner justify-content-end"><span>Thao tác</span></div>
+              </th>
             </tr>
             </thead>
 
             <tbody>
 
-            <tr th:each="service : ${services}">
+            <tr th:each="service : ${services}" class="dv-data-row">
 
               <td data-column-key="service">
                 <div class="d-flex align-items-center gap-3">
@@ -323,14 +414,63 @@
           </table>
         </div>
 
-        <div class="p-3 border-top text-muted small">
-          <span>
-            Tổng số dịch vụ:
-            <strong th:text="${#lists.size(services)}">0</strong>
-          </span>
+        <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
+        <div class="misa-pagination-footer">
+          <!-- Bên trái: Tổng số -->
+          <div class="misa-pagination-left">
+            Tổng số: <strong th:text="${totalItems}">0</strong>
+          </div>
+          <!-- Bên phải: Số dòng/trang + Range + 4 Nút điều hướng -->
+          <div class="misa-pagination-right">
+            <!-- Dropdown chọn số dòng/trang -->
+            <div class="misa-page-size-wrapper">
+              <span>Số dòng/trang</span>
+              <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" aria-label="Số dòng trên mỗi trang">
+                <option value="10" th:selected="${pageSize == 10}">10</option>
+                <option value="25" th:selected="${pageSize == 25}">25</option>
+                <option value="50" th:selected="${pageSize == 50}">50</option>
+                <option value="100" th:selected="${pageSize == 100}">100</option>
+              </select>
+            </div>
+            <!-- Khoảng hiển thị bản ghi (Ví dụ: 1 - 10) -->
+            <div class="misa-page-range">
+              <span th:text="${fromItem}">0</span> - <span th:text="${toItem}">0</span>
+            </div>
+            <!-- Cụm 4 nút phân trang (|< < > >|) -->
+            <div class="d-flex align-items-center gap-1">
+              <!-- 1. Về trang đầu -->
+              <a th:href="@{/admin/services(page=0, size=${pageSize}, q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus})}"
+                 class="misa-nav-btn"
+                 th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                 title="Trang đầu">
+                <i class="bi bi-chevron-bar-left"></i>
+              </a>
+              <!-- 2. Trang trước -->
+              <a th:href="@{/admin/services(page=${currentPage - 1}, size=${pageSize}, q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus})}"
+                 class="misa-nav-btn"
+                 th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                 title="Trang trước">
+                <i class="bi bi-chevron-left"></i>
+              </a>
+              <!-- 3. Trang sau -->
+              <a th:href="@{/admin/services(page=${currentPage + 1}, size=${pageSize}, q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus})}"
+                 class="misa-nav-btn"
+                 th:classappend="${currentPage >= totalPages - 1 or totalPages == 0} ? 'disabled' : ''"
+                 title="Trang sau">
+                <i class="bi bi-chevron-right"></i>
+              </a>
+              <!-- 4. Đến trang cuối -->
+              <a th:href="@{/admin/services(page=${totalPages > 0 ? totalPages - 1 : 0}, size=${pageSize}, q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus})}"
+                 class="misa-nav-btn"
+                 th:classappend="${currentPage >= totalPages - 1 or totalPages == 0} ? 'disabled' : ''"
+                 title="Trang cuối">
+                <i class="bi bi-chevron-bar-right"></i>
+              </a>
+            </div>
+          </div>
         </div>
 
-      </section>
+      </div> <!-- /dv-grid-card -->
     </main>
   </div>
 </div>
@@ -349,6 +489,27 @@
                 }
               });
             });
+
+    const pageSizeSelect = document.getElementById('pageSizeSelect');
+    const filterForm = document.getElementById('filterForm');
+    const pageSizeInput = document.getElementById('pageSizeInput');
+    const pageIndexInput = document.getElementById('pageIndexInput');
+    if (filterForm) {
+      filterForm.addEventListener('submit', function () {
+        if (pageIndexInput) {
+          pageIndexInput.value = '0';
+        }
+      });
+    }
+    if (pageSizeSelect && filterForm && pageSizeInput) {
+      pageSizeSelect.addEventListener('change', function () {
+        pageSizeInput.value = this.value;
+        if (pageIndexInput) {
+          pageIndexInput.value = '0';
+        }
+        filterForm.submit();
+      });
+    }
   });
 </script>
 

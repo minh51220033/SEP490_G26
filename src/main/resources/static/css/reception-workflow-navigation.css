@@ -1,17 +1,121 @@
-/* Smooth in-place navigation for the four reception workflow screens. */
-#reception-content-area.reception-content-enter {
-    animation: reception-content-fade-in 180ms ease-out both;
+/* =========================================================================
+   UNIFIED RECEPTION WORKFLOW STEPPER PILLS (100% ĐỒNG NHẤT GIỮA 4 MÀN HÌNH)
+   Thiết kế chuẩn Enterprise DentalSoft & MISA AMIS Hospital
+   Triệt tiêu hoàn toàn hiện tượng rung giật font / subpixel jitter trên Windows/Chrome
+   ========================================================================= */
+
+[data-reception-stepper] {
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    border-radius: 14px !important;
+    padding: 8px 14px !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+    user-select: none !important;
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
 
-@keyframes reception-content-fade-in {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
+[data-reception-stepper] .reception-step-pill,
+[data-reception-stepper] a.btn,
+[data-reception-stepper] span.btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 14px !important;
+    border-radius: 999px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: normal !important;
+    white-space: nowrap !important;
+    text-decoration: none !important;
+    box-sizing: border-box !important;
+    font-family: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    text-rendering: optimizeLegibility !important;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
 }
 
-[data-reception-stepper] a[aria-current="step"] {
-    pointer-events: none;
+/* Trạng thái Tab Chưa chọn (Inactive) */
+[data-reception-stepper] a.reception-step-pill,
+[data-reception-stepper] a.btn {
+    background-color: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+    box-shadow: none !important;
+    cursor: pointer !important;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    #reception-content-area.reception-content-enter { animation: none; }
+[data-reception-stepper] a.reception-step-pill:hover,
+[data-reception-stepper] a.btn:hover {
+    background-color: #f0f9ff !important;
+    border-color: #0284c7 !important;
+    color: #0284c7 !important;
+}
+
+/* Số thứ tự tròn bên trong Tab Chưa chọn */
+[data-reception-stepper] a.reception-step-pill .badge,
+[data-reception-stepper] a.btn .badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    background-color: #64748b !important;
+    color: #ffffff !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    line-height: 20px !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    font-family: 'Be Vietnam Pro', 'Inter', system-ui, sans-serif !important;
+    transition: background-color 0.15s ease !important;
+}
+
+[data-reception-stepper] a.reception-step-pill:hover .badge,
+[data-reception-stepper] a.btn:hover .badge {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+}
+
+/* Trạng thái Tab Đang chọn (Active) */
+[data-reception-stepper] span.reception-step-pill.is-active,
+[data-reception-stepper] span.btn {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+    border: 1px solid #0284c7 !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.24) !important;
+    cursor: default !important;
+}
+
+/* Số thứ tự tròn bên trong Tab Đang chọn */
+[data-reception-stepper] span.reception-step-pill.is-active .badge,
+[data-reception-stepper] span.btn .badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    background-color: #ffffff !important;
+    color: #0284c7 !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    line-height: 20px !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+    font-family: 'Be Vietnam Pro', 'Inter', system-ui, sans-serif !important;
 }

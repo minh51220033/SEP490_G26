@@ -177,6 +177,12 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                             throw new IllegalArgumentException("Hệ thống chưa có danh mục dịch vụ điều trị nào để gắn vào kế hoạch.");
                         }
                         item.setService(service);
+                        String stepName = (itemReq.getStepName() != null && !itemReq.getStepName().trim().isEmpty())
+                                ? itemReq.getStepName().trim()
+                                : ((itemReq.getCustomServiceName() != null && !itemReq.getCustomServiceName().trim().isEmpty())
+                                    ? itemReq.getCustomServiceName().trim()
+                                    : (service != null ? service.getServiceName() : "Bước thủ thuật"));
+                        item.setStepName(stepName);
 
                         item.setToothNumbers(itemReq.getToothNumbers());
                         BigDecimal qty = (itemReq.getQuantity() != null && itemReq.getQuantity().compareTo(BigDecimal.ZERO) > 0) 
@@ -215,6 +221,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         plan.setTotalEstimatedCost(overallCost);
         plan.setFinalEstimatedCost(request.getFinalEstimatedCost() != null && request.getFinalEstimatedCost().compareTo(BigDecimal.ZERO) > 0 
                 ? request.getFinalEstimatedCost() : overallCost);
+
+        // Nút Lưu Kế hoạch điều trị tự động kích hoạt logic chuyển kế toán
+        plan.setSentToAccounting(true);
+        plan.setSentToAccountingAt(LocalDateTime.now());
 
         TreatmentPlan saved = treatmentPlanRepository.save(plan);
         log.info("Created TreatmentPlan ID: {}, Code: {}", saved.getPlanId(), saved.getPlanCode());
@@ -450,6 +460,8 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
 
         int totalStages = (p.getStages() != null) ? p.getStages().size() : 0;
         int completedStages = 0;
+        int totalItems = 0;
+        int completedItems = 0;
 
         List<TreatmentPlanStageResponseDTO> stageDTOs = new ArrayList<>();
         if (p.getStages() != null) {
@@ -462,6 +474,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 List<TreatmentPlanItemResponseDTO> itemDTOs = new ArrayList<>();
                 if (s.getItems() != null) {
                     for (TreatmentPlanItem it : s.getItems()) {
+                        totalItems++;
+                        if (it.getStatus() == TreatmentPlanItemStatus.COMPLETED) {
+                            completedItems++;
+                        }
                         com.cvdcms.entity.Service svc = it.getService();
                         BigDecimal estPrice = (it.getEstimatedPrice() != null && it.getEstimatedPrice().compareTo(BigDecimal.ZERO) > 0)
                                 ? it.getEstimatedPrice()
@@ -475,6 +491,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                                 .serviceId(svc != null ? svc.getServiceId() : null)
                                 .serviceCode(svc != null ? svc.getServiceCode() : null)
                                 .serviceName(svc != null ? svc.getServiceName() : "Dịch vụ nha khoa")
+                                .stepName(it.getStepName() != null && !it.getStepName().isBlank() ? it.getStepName() : (svc != null ? svc.getServiceName() : "Bước thủ thuật"))
                                 .categoryName(svc != null && svc.getCategory() != null ? svc.getCategory().getCategoryName() : null)
                                 .unit(svc != null ? svc.getUnit() : "Lần")
                                 .toothNumbers(it.getToothNumbers())
@@ -511,10 +528,15 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             }
         }
 
-        int progressPercent = (totalStages > 0) ? (completedStages * 100 / totalStages) : 0;
+        int progressPercent = 0;
+        if (totalItems > 0) {
+            progressPercent = (completedItems * 100) / totalItems;
+        } else if (totalStages > 0) {
+            progressPercent = (completedStages * 100) / totalStages;
+        }
         TreatmentPlanStatus planStatus = p.getStatus() != null ? p.getStatus() : TreatmentPlanStatus.DRAFT;
         if (totalStages > 0 && completedStages < totalStages && planStatus == TreatmentPlanStatus.COMPLETED) {
-            planStatus = (completedStages > 0) ? TreatmentPlanStatus.IN_PROGRESS : TreatmentPlanStatus.ACCEPTED;
+            planStatus = (completedStages > 0 || completedItems > 0) ? TreatmentPlanStatus.IN_PROGRESS : TreatmentPlanStatus.ACCEPTED;
         }
 
         return TreatmentPlanResponseDTO.builder()
@@ -543,6 +565,8 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 .createdAt(p.getCreatedAt() != null ? p.getCreatedAt().format(DATE_TIME_FORMATTER) : null)
                 .totalStages(totalStages)
                 .completedStages(completedStages)
+                .totalItems(totalItems)
+                .completedItems(completedItems)
                 .progressPercent(progressPercent)
                 .stages(stageDTOs)
                 .build();

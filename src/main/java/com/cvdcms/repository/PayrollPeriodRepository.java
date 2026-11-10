@@ -66,4 +66,19 @@ public interface PayrollPeriodRepository extends JpaRepository<PayrollPeriod, Lo
             @Param("endMonth") Integer endMonth,
             @Param("endYear") Integer endYear
     );
+
+    @Query("""
+        SELECT COALESCE(SUM(p.totalInsuranceEmployer), 0) FROM PayrollPeriod p
+        WHERE (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
+          AND p.status = 'PAID'
+          AND ((p.year > :startYear OR (p.year = :startYear AND p.month >= :startMonth))
+           AND (p.year < :endYear OR (p.year = :endYear AND p.month <= :endMonth)))
+    """)
+    BigDecimal sumPaidEmployerInsurance(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startMonth") Integer startMonth,
+            @Param("startYear") Integer startYear,
+            @Param("endMonth") Integer endMonth,
+            @Param("endYear") Integer endYear
+    );
 }

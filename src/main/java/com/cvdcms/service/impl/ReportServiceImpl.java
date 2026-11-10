@@ -48,6 +48,7 @@ public class ReportServiceImpl implements ReportService {
     private final AppointmentRepository appointmentRepository;
     private final TaxCalculationService taxCalculationService;
     private final PayrollPeriodRepository payrollPeriodRepository;
+    private final PatientProfileRepository patientProfileRepository;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -68,6 +69,7 @@ public class ReportServiceImpl implements ReportService {
                 visitRepository,
                 appointmentRepository,
                 new TaxCalculationServiceImpl(null, null),
+                null,
                 null
         );
     }
@@ -81,7 +83,8 @@ public class ReportServiceImpl implements ReportService {
             VisitRepository visitRepository,
             AppointmentRepository appointmentRepository,
             TaxCalculationService taxCalculationService,
-            PayrollPeriodRepository payrollPeriodRepository
+            PayrollPeriodRepository payrollPeriodRepository,
+            PatientProfileRepository patientProfileRepository
     ) {
         this.invoiceRepository = invoiceRepository;
         this.paymentRepository = paymentRepository;
@@ -91,6 +94,7 @@ public class ReportServiceImpl implements ReportService {
         this.appointmentRepository = appointmentRepository;
         this.taxCalculationService = taxCalculationService;
         this.payrollPeriodRepository = payrollPeriodRepository;
+        this.patientProfileRepository = patientProfileRepository;
     }
 
     @Override
@@ -126,8 +130,16 @@ public class ReportServiceImpl implements ReportService {
             }
         }
 
-        // 3. Chi phí vận hành & Chênh lệch thu chi vận hành
+        // 3. Chi phí vận hành & Chênh lệch thu chi vận hành (gồm chi phí vận hành + BHXH 21.5% phần DN chịu từ các kỳ lương đã chi trả)
         BigDecimal totalExpense = toBigDecimal(operatingExpenseRepository.sumActiveExpenses(branchIds, startDate, endDate));
+        if (payrollPeriodRepository != null) {
+            BigDecimal employerInsurance = toBigDecimal(payrollPeriodRepository.sumPaidEmployerInsurance(
+                    branchIds,
+                    startDate.getMonthValue(), startDate.getYear(),
+                    endDate.getMonthValue(), endDate.getYear()
+            ));
+            totalExpense = totalExpense.add(employerInsurance);
+        }
         dto.setTotalExpenseAmount(totalExpense);
         dto.setOperatingMargin(netRealRevenue.subtract(dto.getTotalExpenseAmount()));
 
@@ -175,7 +187,34 @@ public class ReportServiceImpl implements ReportService {
         // 5. Thống kê theo ngày (cho biểu đồ xu hướng)
         dto.setDailyStats(buildDailyStats(branchIds, startDate, endDate));
 
+        // 6. Bệnh nhân mới trong kỳ
+        dto.setNewPatientsCount(countNewPatients(branchIds, startDate, endDate));
+
         return dto;
+    }
+
+    @Override
+    public long countTodayAppointments(Collection<Long> branchIds, LocalDate date) {
+        if (date == null) date = LocalDate.now();
+        return appointmentRepository.countActiveAppointmentsByBranchesAndDate(branchIds, date);
+    }
+
+    @Override
+    public long countWaitingPatients(Collection<Long> branchIds, LocalDate date) {
+        if (date == null) date = LocalDate.now();
+        LocalDateTime start = date.atStartOfDay();
+        LocalDateTime end = date.atTime(LocalTime.MAX);
+        return visitRepository.countWaitingVisitsByBranchesAndDate(branchIds, start, end);
+    }
+
+    @Override
+    public long countNewPatients(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate) {
+        if (patientProfileRepository == null) {
+            return 0L;
+        }
+        LocalDateTime startDt = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime endDt = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
+        return patientProfileRepository.countNewPatientsByBranchesAndPeriod(branchIds, startDt, endDt);
     }
 
     private void applyDashboardTaxCalculation(ReportDashboardDTO dto, Collection<Long> branchIds, LocalDate targetDate, BigDecimal requestedTaxRate) {
@@ -268,11 +307,19 @@ public class ReportServiceImpl implements ReportService {
                 .add(dto.getPosCardAmount()).add(dto.getNewDepositAmount());
         dto.setTotalCollected(grossCollected);
 
-        // 3. Hoàn tiền & Chi phí
+        // 3. Hoàn tiền & Chi phí (gồm chi phí vận hành + BHXH 21.5% phần DN chịu từ các kỳ lương đã chi trả)
         dto.setTotalRefundAmount(toBigDecimal(refundRepository.sumRefundAmountByBranches(branchIds, startDt, endDt)));
         dto.setNetRevenue(grossCollected.subtract(dto.getTotalRefundAmount()).max(BigDecimal.ZERO));
 
         BigDecimal activeExpenses = toBigDecimal(operatingExpenseRepository.sumActiveExpenses(branchIds, startDate, endDate));
+        if (payrollPeriodRepository != null) {
+            BigDecimal employerInsurance = toBigDecimal(payrollPeriodRepository.sumPaidEmployerInsurance(
+                    branchIds,
+                    startDate.getMonthValue(), startDate.getYear(),
+                    endDate.getMonthValue(), endDate.getYear()
+            ));
+            activeExpenses = activeExpenses.add(employerInsurance);
+        }
         dto.setOperatingExpenses(activeExpenses);
         dto.setOperatingMargin(dto.getNetRevenue().subtract(dto.getOperatingExpenses()));
 

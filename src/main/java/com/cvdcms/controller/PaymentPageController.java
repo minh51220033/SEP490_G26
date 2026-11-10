@@ -116,26 +116,55 @@ public class PaymentPageController {
         throw new AccessDeniedException("Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.");
     }
 
+    private boolean isFinanceAdminOrAccountant(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        if (userRepository.hasActiveAdminRole(userId)) {
+            return true;
+        }
+        List<String> activeRoles = userRepository.findActiveRoleNamesByUserId(userId);
+        if (activeRoles != null) {
+            return activeRoles.stream().anyMatch(r -> {
+                String role = r != null ? r.trim().toUpperCase() : "";
+                return role.equals("ADMIN") || role.equals("ROLE_ADMIN")
+                        || role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
+                        || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
+            });
+        }
+        return false;
+    }
+
     private List<Branch> resolveAllowedBranches(Long userId) {
-        boolean isAdmin = userRepository.hasActiveAdminRole(userId);
-        if (isAdmin) {
+        if (isFinanceAdminOrAccountant(userId)) {
             return branchRepository.findAll();
         }
         List<Long> branchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE);
         if (branchIds.isEmpty()) {
-            throw new AccessDeniedException("Nhân sự chưa được phân công chi nhánh hoạt động hợp lệ.");
+            User u = userRepository.findById(userId).orElse(null);
+            if (u != null && u.getBranch() != null && u.getBranch().getBranchId() != null) {
+                branchIds = List.of(u.getBranch().getBranchId());
+            }
+        }
+        if (branchIds.isEmpty()) {
+            return branchRepository.findAll();
         }
         return branchRepository.findAllById(branchIds);
     }
 
     private Long resolveBranchId(Long requestedBranchId, Long userId) {
-        boolean isAdmin = userRepository.hasActiveAdminRole(userId);
-        if (isAdmin) {
+        if (isFinanceAdminOrAccountant(userId)) {
             return requestedBranchId;
         }
         List<Long> activeBranchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE);
         if (activeBranchIds.isEmpty()) {
-            throw new AccessDeniedException("Tài khoản chưa được phân công chi nhánh hợp lệ.");
+            User u = userRepository.findById(userId).orElse(null);
+            if (u != null && u.getBranch() != null && u.getBranch().getBranchId() != null) {
+                activeBranchIds = List.of(u.getBranch().getBranchId());
+            }
+        }
+        if (activeBranchIds.isEmpty()) {
+            return requestedBranchId;
         }
         if (requestedBranchId == null) {
             return activeBranchIds.get(0);
@@ -643,6 +672,12 @@ public class PaymentPageController {
     @GetMapping("/deposits")
     public String listDeposits(
             @RequestParam(required = false) Long profileId,
+            @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
             Model model,
             HttpSession session
     ) {
@@ -650,6 +685,40 @@ public class PaymentPageController {
         populateUserAndSidebar(model, session, "deposits");
         List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
         model.addAttribute("branches", allowedBranches);
+
+        Long effectiveBranchId = resolveBranchId(branchId, currentUserId);
+
+        LocalDateTime startDt = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime endDt = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "paidAt"));
+        Page<Payment> depositPage = paymentService.getPayments(
+                effectiveBranchId,
+                PaymentType.ADVANCE_DEPOSIT,
+                null,
+                keyword,
+                startDt,
+                endDt,
+                pageable
+        );
+
+        long totalItems = depositPage.getTotalElements();
+        long fromItem = totalItems == 0 ? 0 : (long) page * size + 1;
+        long toItem = Math.min((long) (page + 1) * size, totalItems);
+
+        model.addAttribute("deposits", depositPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("pageSize", size);
+        model.addAttribute("totalPages", depositPage.getTotalPages());
+        model.addAttribute("totalElements", totalItems);
+        model.addAttribute("totalItems", totalItems);
+        model.addAttribute("fromItem", fromItem);
+        model.addAttribute("toItem", toItem);
+
+        model.addAttribute("selectedBranchId", effectiveBranchId);
+        model.addAttribute("keyword", keyword);
+        model.addAttribute("startDate", startDate);
+        model.addAttribute("endDate", endDate);
 
         if (profileId != null) {
             patientProfileRepository.findById(profileId).ifPresent(p -> {

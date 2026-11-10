@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.LockModeType;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -67,4 +68,35 @@ public interface PatientProfileRepository extends JpaRepository<PatientProfile, 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM PatientProfile p WHERE p.profileId = :profileId")
     Optional<PatientProfile> findByIdForUpdate(@Param("profileId") Long profileId);
+
+    @Query("""
+        SELECT p FROM PatientProfile p
+        LEFT JOIN FETCH p.membershipTier t
+        LEFT JOIN FETCH p.preferredBranch b
+        WHERE LOWER(p.status) = 'active'
+          AND (:branchId IS NULL OR b.branchId = :branchId)
+          AND (
+              :keyword IS NULL OR :keyword = ''
+              OR LOWER(p.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(p.patientCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR p.phoneNumber LIKE CONCAT('%', :keyword, '%')
+          )
+        ORDER BY p.profileId DESC
+    """)
+    List<PatientProfile> searchActivePatientsForLoyalty(
+            @Param("keyword") String keyword,
+            @Param("branchId") Long branchId
+    );
+
+    @Query("""
+        SELECT COUNT(p) FROM PatientProfile p
+        WHERE (:branchIds IS NULL OR p.preferredBranch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR p.createdAt >= :startDate)
+          AND (:endDate IS NULL OR p.createdAt <= :endDate)
+    """)
+    long countNewPatientsByBranchesAndPeriod(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate
+    );
 }

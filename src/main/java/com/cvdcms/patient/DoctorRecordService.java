@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -73,7 +74,7 @@ public class DoctorRecordService {
         this.auditRepository = auditRepository;
     }
 
-    private Long extractUserId(HttpSession session) {
+    public Long extractUserId(HttpSession session) {
         if (session == null) return null;
         Object principal = session.getAttribute("loggedInUser");
         if (principal instanceof User current) {
@@ -104,6 +105,21 @@ public class DoctorRecordService {
                 .orElse(false);
     }
 
+    public boolean isDoctor(HttpSession session) {
+        if (session == null) return false;
+        Long userId = extractUserId(session);
+        if (userId == null) return false;
+        if (users.hasActivePermission(userId, "MEDICAL_RECORD_VIEW")) {
+            return true;
+        }
+        return users.findById(userId)
+                .map(u -> u.getRoles() != null && u.getRoles().stream()
+                        .anyMatch(role -> Boolean.TRUE.equals(role.getIsActive())
+                                && ("BAC_SI".equalsIgnoreCase(role.getRoleName())
+                                    || "ROLE_BAC_SI".equalsIgnoreCase(role.getRoleName()))))
+                .orElse(false);
+    }
+
     private Set<Long> branches(HttpSession session) {
         Long userId = extractUserId(session);
         if (userId == null)
@@ -113,14 +129,16 @@ public class DoctorRecordService {
         if (!Boolean.TRUE.equals(user.getIsActive()) || !"ACTIVE".equalsIgnoreCase(user.getStatus()))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
 
-        boolean admin = user.getRoles() != null && user.getRoles().stream()
-                .anyMatch(role -> Boolean.TRUE.equals(role.getIsActive())
-                        && ("ADMIN".equalsIgnoreCase(role.getRoleName())
-                            || "ROLE_ADMIN".equalsIgnoreCase(role.getRoleName())));
-        boolean doctor = user.getRoles() != null && user.getRoles().stream()
-                .anyMatch(role -> Boolean.TRUE.equals(role.getIsActive())
-                        && ("BAC_SI".equalsIgnoreCase(role.getRoleName())
-                            || "ROLE_BAC_SI".equalsIgnoreCase(role.getRoleName())));
+        boolean admin = users.hasActiveAdminRole(user.getUserId())
+                || (user.getRoles() != null && user.getRoles().stream()
+                    .anyMatch(role -> Boolean.TRUE.equals(role.getIsActive())
+                            && ("ADMIN".equalsIgnoreCase(role.getRoleName())
+                                || "ROLE_ADMIN".equalsIgnoreCase(role.getRoleName()))));
+        boolean doctor = users.hasActivePermission(user.getUserId(), "MEDICAL_RECORD_VIEW")
+                || (user.getRoles() != null && user.getRoles().stream()
+                    .anyMatch(role -> Boolean.TRUE.equals(role.getIsActive())
+                            && ("BAC_SI".equalsIgnoreCase(role.getRoleName())
+                                || "ROLE_BAC_SI".equalsIgnoreCase(role.getRoleName()))));
 
         if (!admin && !doctor)
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -136,6 +154,11 @@ public class DoctorRecordService {
         Set<Long> branchIds = new HashSet<>(assignments.findActiveBranchIdsByUserId(
                 user.getUserId(), AssignmentStatus.ACTIVE));
         if (user.getBranch() != null) branchIds.add(user.getBranch().getBranchId());
+        if (branchIds.isEmpty()) {
+            branchRepository.findByIsActiveTrueOrderByBranchNameAsc().forEach(b -> {
+                if (b.getBranchId() != null) branchIds.add(b.getBranchId());
+            });
+        }
         if (branchIds.isEmpty()) throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                 "Tài khoản bác sĩ chưa được phân chi nhánh.");
         return branchIds;
@@ -259,6 +282,29 @@ public class DoctorRecordService {
             HttpSession session, Long patientId, Long documentId) {
         get(session, patientId);
         return documentStorage.download(patientId, documentId);
+    }
+
+    @Transactional
+    public PatientDocumentView uploadDocument(HttpSession session, Long patientId, DocumentType type, MultipartFile file) {
+        Long userId = extractUserId(session);
+        if (userId == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        User user = users.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        get(session, patientId);
+        PatientDocumentView saved = documentStorage.upload(patientId, user, type, file);
+        if (auditRepository != null) {
+            PatientProfile profile = profiles.findById(patientId).orElse(null);
+            Branch branch = profile != null ? profile.getPreferredBranch() : null;
+            SystemAuditLog log = new SystemAuditLog();
+            log.setUser(user);
+            log.setBranch(branch);
+            log.setAction("UPLOAD_PATIENT_DOCUMENT");
+            log.setEntityTable("patient_profiles");
+            log.setEntityId(patientId);
+            log.setCreatedAt(LocalDateTime.now());
+            log.setNewValuesJson("{\"documentId\":" + saved.id() + ",\"type\":\"" + saved.type().name() + "\",\"name\":\"" + saved.name() + "\"}");
+            auditRepository.save(log);
+        }
+        return saved;
     }
 
     public List<TreatmentTimelineItem> treatmentTimeline(HttpSession session, Long id) {

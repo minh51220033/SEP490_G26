@@ -66,7 +66,11 @@ public class InvoiceRestController {
                 .orElseThrow(() -> new AccessDeniedException("Tài khoản chưa được liên kết với nhân sự."));
         boolean hasAssignment = staffBranchAssignmentRepository.hasActiveAssignment(staff.getStaffId(), branchId, AssignmentStatus.ACTIVE);
         if (!hasAssignment) {
-            throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh ID: " + branchId);
+            boolean isMultiBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE).isEmpty()
+                    && userRepository.findById(userId).map(u -> u.getBranch() == null || branchId.equals(u.getBranch().getBranchId())).orElse(false);
+            if (!isMultiBranch) {
+                throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh ID: " + branchId);
+            }
         }
     }
 

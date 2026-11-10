@@ -220,4 +220,105 @@ class DispatchServiceTest {
         DispatchService.Board board = service.board(session, 1L);
         assertTrue(board.doctors().isEmpty(), "Bác sĩ không có ca làm việc không được hiển thị trên bảng điều phối");
     }
+
+    @Test
+    void testCompleteDispatchAndIssueTicket_Success() {
+        permitted();
+        when(visits.findById(7L)).thenReturn(Optional.of(visit));
+        when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor));
+        when(schedules.working(eq(3L), eq(1L), any(), any())).thenReturn(1L);
+        when(doctors.findById(3L)).thenReturn(Optional.of(doctor));
+
+        Room room = new Room();
+        room.setRoomId(5L);
+        room.setBranch(branch);
+        room.setRoomName("Phòng 101");
+        room.setStatus(RoomStatus.ACTIVE);
+
+        DentalChair chair = new DentalChair();
+        chair.setChairId(6L);
+        chair.setBranch(branch);
+        chair.setRoom(room);
+        chair.setChairName("Ghế 01");
+        chair.setStatus(ChairStatus.AVAILABLE);
+
+        when(chairs.findById(6L)).thenReturn(Optional.of(chair));
+        when(rooms.findById(5L)).thenReturn(Optional.of(room));
+        when(tickets.findByVisitVisitIdAndQueueType(7L, QueueType.EXAM)).thenReturn(Optional.empty());
+        when(tickets.maxNumber(eq(1L), any(), eq(QueueType.EXAM), eq(false))).thenReturn(0);
+
+        QueueTicket issued = service.completeDispatchAndIssueTicket(session, 1L, 7L, 3L, 5L, 6L, false, null, "Bệnh nhân cần khám nhẹ nhàng");
+
+        assertNotNull(issued);
+        assertSame(doctor, visit.getPrimaryDoctor());
+        assertEquals(5L, visit.getRoomId());
+        assertEquals(6L, visit.getChairId());
+        assertTrue(issued.getDisplayNumber().matches("^(P-)?\\d{2,}$"), "QueueTicket phải theo chuẩn 01, 02 hoặc P-01");
+        assertEquals("01", issued.getDisplayNumber());
+        assertEquals(VisitStatus.WAITING, visit.getStatus(), "VisitStatus phải giữ nguyên là WAITING/WAITING_RESULT, KHÔNG đổi thành COMPLETED");
+        assertNotEquals(VisitStatus.COMPLETED, visit.getStatus());
+        verify(visits, atLeastOnce()).save(visit);
+        verify(tickets).saveAndFlush(issued);
+    }
+
+    @Test
+    void testCompleteDispatchAndIssueTicket_RollbackOnTicketFailure() {
+        permitted();
+        when(visits.findById(7L)).thenReturn(Optional.of(visit));
+        when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor));
+        when(schedules.working(eq(3L), eq(1L), any(), any())).thenReturn(1L);
+        when(doctors.findById(3L)).thenReturn(Optional.of(doctor));
+
+        Room room = new Room();
+        room.setRoomId(5L);
+        room.setBranch(branch);
+        room.setStatus(RoomStatus.ACTIVE);
+
+        DentalChair chair = new DentalChair();
+        chair.setChairId(6L);
+        chair.setBranch(branch);
+        chair.setRoom(room);
+        chair.setStatus(ChairStatus.AVAILABLE);
+
+        when(chairs.findById(6L)).thenReturn(Optional.of(chair));
+        when(rooms.findById(5L)).thenReturn(Optional.of(room));
+        when(tickets.findByVisitVisitIdAndQueueType(7L, QueueType.EXAM)).thenReturn(Optional.empty());
+        when(tickets.maxNumber(eq(1L), any(), eq(QueueType.EXAM), eq(false))).thenReturn(999);
+
+        assertThrows(ResponseStatusException.class, () ->
+                service.completeDispatchAndIssueTicket(session, 1L, 7L, 3L, 5L, 6L, false, null, "Ghi chú thử nghiệm"));
+
+        assertNull(visit.getPrimaryDoctor(), "Khi cấp số lỗi, toàn bộ giao dịch phải rollback và bác sĩ không bị gán dở dang");
+        assertNull(visit.getRoomId(), "Phòng không bị lưu dở dang sau khi rollback");
+        assertNull(visit.getChairId(), "Ghế không bị lưu dở dang sau khi rollback");
+        assertEquals(VisitStatus.WAITING, visit.getStatus());
+    }
+
+    @Test
+    void reissuingCancelledTicketWithPriorityReallocatesTicketAndDisplayNumber() {
+        permitted();
+        visit.setPrimaryDoctor(doctor);
+        visit.setStatus(VisitStatus.WAITING);
+
+        QueueTicket cancelledTicket = new QueueTicket();
+        cancelledTicket.setTicketId(99L);
+        cancelledTicket.setVisit(visit);
+        cancelledTicket.setBranch(branch);
+        cancelledTicket.setStatus(QueueStatus.CANCELLED);
+        cancelledTicket.setIsPriority(false);
+        cancelledTicket.setTicketNumber(1);
+        cancelledTicket.setDisplayNumber("01");
+
+        when(tickets.findByVisitVisitIdAndQueueType(7L, QueueType.EXAM)).thenReturn(Optional.of(cancelledTicket));
+        when(tickets.maxNumber(eq(1L), any(), eq(QueueType.EXAM), eq(true))).thenReturn(5);
+
+        QueueTicket reissued = service.issue(session, 1L, 7L, true, "Ưu tiên cấp cứu đột xuất");
+
+        assertSame(cancelledTicket, reissued, "Phải tái sử dụng đúng bản ghi thực thể để không vi phạm uk_ft09_visit_queue");
+        assertEquals(QueueStatus.WAITING, reissued.getStatus());
+        assertTrue(reissued.getIsPriority());
+        assertEquals(6, reissued.getTicketNumber());
+        assertEquals("P-06", reissued.getDisplayNumber(), "Display number phải có prefix P- và số thứ tự mới");
+        verify(tickets).saveAndFlush(cancelledTicket);
+    }
 }

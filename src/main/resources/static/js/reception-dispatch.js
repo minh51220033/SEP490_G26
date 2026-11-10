@@ -1,216 +1,519 @@
 (() => {
-function initialiseDispatch() {
-    const content = document.getElementById('reception-content-area');
-    if (!content || content.dataset.dispatchInitialised === 'true') return;
-    content.dataset.dispatchInitialised = 'true';
+    function openModalSafe(modalEl) {
+        if (!modalEl) return;
+        if (typeof window.bootstrap !== 'undefined' && window.bootstrap.Modal) {
+            window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            return;
+        }
+        modalEl.classList.add('show');
+        modalEl.style.display = 'block';
+        modalEl.removeAttribute('aria-hidden');
+        document.body.classList.add('modal-open');
+    }
+
+    function closeModalSafe(modalEl) {
+        if (!modalEl) return;
+        if (typeof window.bootstrap !== 'undefined' && window.bootstrap.Modal) {
+            const inst = window.bootstrap.Modal.getInstance(modalEl);
+            if (inst) inst.hide();
+        }
+        modalEl.classList.remove('show');
+        modalEl.style.display = 'none';
+        modalEl.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+    }
+
+    function openDrawerSafe(drawerEl) {
+        if (!drawerEl) return;
+        if (drawerEl.classList.contains('modal')) {
+            openModalSafe(drawerEl);
+            return;
+        }
+        if (typeof window.bootstrap !== 'undefined' && window.bootstrap.Offcanvas) {
+            window.bootstrap.Offcanvas.getOrCreateInstance(drawerEl).show();
+            return;
+        }
+        drawerEl.classList.add('show');
+        drawerEl.style.visibility = 'visible';
+    }
+
     function normalize(str) {
         return (str || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'd').trim();
     }
 
-    // 1. Search Filter across Grid, Kanban cards, and Ticket Table
-    const search = document.getElementById('visitSearch');
-    const cards = document.querySelectorAll('.dispatch-visit-card[data-search]');
-    const kanbanCards = document.querySelectorAll('.kanban-card-item[data-search]');
-    const ticketRows = document.querySelectorAll('.dispatch-table tbody tr[data-search]');
-
-    if (search) {
-        search.addEventListener('input', () => {
-            const raw = search.value.trim();
-            const query = normalize(raw);
-            cards.forEach(card => {
-                const text = normalize(card.dataset.search || card.textContent);
-                card.hidden = Boolean(query) && !text.includes(query);
-            });
-            kanbanCards.forEach(card => {
-                const text = normalize(card.dataset.search || card.textContent);
-                card.style.display = (Boolean(query) && !text.includes(query)) ? 'none' : '';
-            });
-            ticketRows.forEach(row => {
-                const text = normalize(row.dataset.search || row.textContent);
-                row.hidden = Boolean(query) && !text.includes(query);
-            });
-        });
-    }
-
-    // 2. View Mode Switcher (Kanban vs Grid)
-    const btnKanban = document.getElementById('btnViewKanban');
-    const btnGrid = document.getElementById('btnViewGrid');
-    const kanbanSection = document.getElementById('viewKanbanSection');
-    const gridSection = document.getElementById('viewGridSection');
-
-    if (btnKanban && btnGrid && kanbanSection && gridSection) {
-        btnKanban.addEventListener('click', () => {
-            btnKanban.classList.add('btn-primary', 'active');
-            btnKanban.classList.remove('btn-outline-secondary');
-            btnGrid.classList.remove('btn-primary', 'active');
-            btnGrid.classList.add('btn-outline-secondary');
-            kanbanSection.style.display = '';
-            gridSection.style.display = 'none';
-        });
-
-        btnGrid.addEventListener('click', () => {
-            btnGrid.classList.add('btn-primary', 'active');
-            btnGrid.classList.remove('btn-outline-secondary');
-            btnKanban.classList.remove('btn-primary', 'active');
-            btnKanban.classList.add('btn-outline-secondary');
-            kanbanSection.style.display = 'none';
-            gridSection.style.display = '';
-        });
-    }
-
-    // 3. Ticket Table Filter by Doctor
-    const filter = document.getElementById('queueDoctor');
-    if (filter) {
-        const rows = document.querySelectorAll('.dispatch-table tbody tr[data-doctor]');
-        const doctors = new Map();
-        rows.forEach(row => {
-            const docId = row.dataset.doctor;
-            const docName = row.dataset.doctorName;
-            if (docId && docName && docName !== 'Chưa phân bác sĩ') {
-                doctors.set(docId, docName);
-            }
-        });
-        [...doctors.entries()].sort((a, b) => a[1].localeCompare(b[1], 'vi')).forEach(([id, name]) => {
-            filter.add(new Option(name, id));
-        });
-        filter.addEventListener('change', () => {
-            rows.forEach(row => {
-                row.hidden = Boolean(filter.value) && row.dataset.doctor !== filter.value;
-            });
-        });
-    }
-
-    // 4. SCR-08.2: Popup Phân công / Đổi Bác sĩ & Ghế khám
-    const assignModalEl = document.getElementById('dispatchAssignModal');
-    let assignModal = null;
-    if (assignModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-        assignModal = bootstrap.Modal.getOrCreateInstance(assignModalEl);
-    }
-    function closeFallbackModal() {
-        if (assignModal || !assignModalEl) return;
-        assignModalEl.classList.remove('show');
-        assignModalEl.style.display = 'none';
-        assignModalEl.setAttribute('aria-hidden', 'true');
-    }
-    if (assignModalEl) {
-        assignModalEl.querySelectorAll('[data-bs-dismiss="modal"]').forEach(button =>
-            button.addEventListener('click', closeFallbackModal));
-        assignModalEl.addEventListener('click', event => {
-            if (event.target === assignModalEl) closeFallbackModal();
-        });
-        document.addEventListener('keydown', event => {
-            if (event.key === 'Escape') closeFallbackModal();
-        });
-    }
-
-    const modalForm = document.getElementById('modalAssignForm');
-    const modalPatientName = document.getElementById('modalPatientName');
-    const modalPatientCode = document.getElementById('modalPatientCode');
-    const modalVisitCode = document.getElementById('modalVisitCode');
-    const modalSymptoms = document.getElementById('modalSymptoms');
-    const modalDoctorAdvice = document.getElementById('modalDoctorAdvice');
-    const modalDoctorSelect = document.getElementById('modalDoctorSelect');
-    const modalRoomSelect = document.getElementById('modalRoomSelect');
-    const modalChairSelect = document.getElementById('modalChairSelect');
-    const modalReasonInput = document.getElementById('modalReasonInput');
-
-    // Filter chair options according to selected room
-    function filterChairsForRoom(selectedRoomId) {
-        if (!modalChairSelect) return;
-        const options = modalChairSelect.querySelectorAll('option[data-room]');
-        options.forEach(opt => {
-            const roomMatch = !selectedRoomId || opt.dataset.room === selectedRoomId;
-            opt.hidden = !roomMatch;
-            opt.disabled = !roomMatch;
-        });
-        const currentSelectedOpt = modalChairSelect.options[modalChairSelect.selectedIndex];
-        if (currentSelectedOpt && currentSelectedOpt.dataset.room && selectedRoomId && currentSelectedOpt.dataset.room !== selectedRoomId) {
-            modalChairSelect.value = '';
+    function renderActiveKeywordChip(keyword) {
+        const container = document.getElementById('dispatchActiveFilterChips');
+        if (!container) return;
+        const existing = container.querySelector('.filter-chip[data-filter-type="keyword"]');
+        if (!keyword) {
+            if (existing) existing.remove();
+            return;
+        }
+        if (existing) {
+            const strong = existing.querySelector('strong');
+            if (strong) strong.textContent = keyword;
+        } else {
+            const chip = document.createElement('span');
+            chip.className = 'badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1.5 d-inline-flex align-items-center gap-1.5 filter-chip';
+            chip.dataset.filterType = 'keyword';
+            chip.innerHTML = `<span>Từ khóa: <strong></strong></span><button type="button" class="btn-close btn-remove-chip" data-filter-type="keyword" style="font-size: 9px;" aria-label="Xóa lọc từ khóa"></button>`;
+            chip.querySelector('strong').textContent = keyword;
+            container.appendChild(chip);
         }
     }
 
-    if (modalRoomSelect) {
-        modalRoomSelect.addEventListener('change', () => {
-            filterChairsForRoom(modalRoomSelect.value);
+    function applyDispatchSearch(rawKeyword) {
+        const searchInput = document.getElementById('visitSearch');
+        const btnClearSearch = document.getElementById('btnClearSearch');
+        const tableRows = document.querySelectorAll('.dispatch-table-row');
+        const kanbanCards = document.querySelectorAll('.kanban-card-item');
+        const raw = (rawKeyword !== undefined ? rawKeyword : (searchInput ? searchInput.value : '')).trim();
+        const query = normalize(raw);
+
+        if (searchInput && searchInput.value !== raw) {
+            searchInput.value = raw;
+        }
+        if (btnClearSearch) {
+            btnClearSearch.classList.toggle('d-none', raw.length === 0);
+        }
+        tableRows.forEach(row => {
+            const text = normalize(row.dataset.search || row.textContent);
+            row.hidden = Boolean(query) && !text.includes(query);
         });
+        kanbanCards.forEach(card => {
+            const text = normalize(card.dataset.search || card.textContent);
+            card.style.display = (Boolean(query) && !text.includes(query)) ? 'none' : '';
+        });
+        renderActiveKeywordChip(raw);
     }
 
-    document.querySelectorAll('.btn-open-assign').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const visitId = btn.dataset.visitId;
-            const visitCode = btn.dataset.visitCode;
-            const patientName = btn.dataset.patientName;
-            const patientCode = btn.dataset.patientCode;
-            const symptoms = btn.dataset.symptoms;
-            const requestedDoctor = btn.dataset.requestedDoctor;
-            const requestedDoctorName = btn.dataset.requestedDoctorName;
-            const currentDoctor = btn.dataset.currentDoctor;
-            const currentRoom = btn.dataset.currentRoom;
-            const currentChair = btn.dataset.currentChair;
+    function handleOpenAssign(btn) {
+        const assignModalEl = document.getElementById('dispatchAssignModal');
+        const modalAssignForm = document.getElementById('modalAssignForm');
+        const modalPatientName = document.getElementById('modalPatientName');
+        const modalPatientCode = document.getElementById('modalPatientCode');
+        const modalVisitCode = document.getElementById('modalVisitCode');
+        const modalSymptoms = document.getElementById('modalSymptoms');
+        const modalDoctorAdvice = document.getElementById('modalDoctorAdvice');
+        const modalDoctorSelect = document.getElementById('modalDoctorSelect');
+        const modalRoomSelect = document.getElementById('modalRoomSelect');
+        const modalChairSelect = document.getElementById('modalChairSelect');
+        const modalReasonInput = document.getElementById('modalReasonInput');
+        const modalNoteInput = document.getElementById('modalNoteInput');
+        const modalPriorityCheckbox = document.getElementById('modalPriorityCheckbox');
+        const modalIssueTicketCheckbox = document.getElementById('modalIssueTicketCheckbox');
 
-            if (modalForm) {
-                modalForm.action = '/reception/dispatch/' + encodeURIComponent(visitId) + '/assign';
-            }
-            if (modalPatientName) modalPatientName.textContent = patientName || 'Bệnh nhân';
-            if (modalVisitCode) modalVisitCode.textContent = visitCode || '';
-            if (modalPatientCode) modalPatientCode.textContent = 'Mã BN: ' + (patientCode || '—');
-            if (modalSymptoms) modalSymptoms.textContent = 'Triệu chứng: ' + (symptoms || 'Khám tổng quát');
+        const visitId = btn.dataset.visitId;
+        const visitCode = btn.dataset.visitCode;
+        const patientName = btn.dataset.patientName;
+        const patientCode = btn.dataset.patientCode;
+        const symptoms = btn.dataset.symptoms;
+        const isEmergency = btn.dataset.isEmergency === 'true';
+        const requestedDoctor = btn.dataset.requestedDoctor;
+        const requestedDoctorName = btn.dataset.requestedDoctorName;
+        const currentDoctor = btn.dataset.currentDoctor;
+        const currentRoom = btn.dataset.currentRoom;
+        const currentChair = btn.dataset.currentChair;
 
-            if (modalDoctorAdvice) {
-                modalDoctorAdvice.replaceChildren();
-                if (requestedDoctor && requestedDoctorName) {
-                    modalDoctorAdvice.className = 'p-2.5 rounded-3 small mb-3 border bg-primary-subtle text-primary border-primary-subtle';
-                    const icon = document.createElement('i');
-                    icon.className = 'bi bi-star-fill text-warning me-1.5';
-                    const strong = document.createElement('strong');
-                    strong.textContent = 'Khách yêu cầu đích danh: ';
-                    const docSpan = document.createElement('span');
-                    docSpan.className = 'fw-bold';
-                    docSpan.textContent = requestedDoctorName;
-                    const br = document.createElement('br');
-                    const note = document.createElement('span');
-                    note.className = 'text-muted';
-                    note.style.fontSize = '11px';
-                    note.textContent = ' (Được giữ trong hàng chờ của bác sĩ này trừ khi có lý do đổi)';
-                    modalDoctorAdvice.append(icon, strong, docSpan, br, note);
-                } else {
-                    modalDoctorAdvice.className = 'p-2.5 rounded-3 small mb-3 border bg-success-subtle text-success border-success-subtle';
-                    const icon = document.createElement('i');
-                    icon.className = 'bi bi-shuffle me-1.5';
-                    const strong = document.createElement('strong');
-                    strong.textContent = 'Không yêu cầu đích danh: ';
-                    const text = document.createTextNode('Hệ thống sẽ tự động gán vào bác sĩ đang có ít người chờ nhất tại ca trực hiện tại.');
-                    modalDoctorAdvice.append(icon, strong, text);
+        if (modalAssignForm) modalAssignForm.action = `/reception/dispatch/${visitId}/assign`;
+        if (modalPatientName) modalPatientName.textContent = patientName || '';
+        if (modalPatientCode) modalPatientCode.textContent = `Mã BN: ${patientCode || '—'}`;
+        if (modalVisitCode) modalVisitCode.textContent = visitCode || '';
+        if (modalSymptoms) modalSymptoms.textContent = `Triệu chứng ban đầu: ${symptoms || '—'}`;
+        if (modalReasonInput) modalReasonInput.value = '';
+        if (modalNoteInput) modalNoteInput.value = '';
+        if (modalRoomSelect) modalRoomSelect.value = currentRoom || '';
+        if (modalChairSelect) modalChairSelect.value = currentChair || '';
+        if (modalPriorityCheckbox) modalPriorityCheckbox.checked = isEmergency;
+        if (modalIssueTicketCheckbox) modalIssueTicketCheckbox.checked = true;
+
+        if (modalDoctorSelect) {
+            if (currentDoctor) {
+                modalDoctorSelect.value = currentDoctor;
+                if (modalDoctorAdvice) {
+                    modalDoctorAdvice.classList.remove('d-none');
+                    modalDoctorAdvice.className = 'dispatch-modal-advice bg-primary-subtle text-primary border-primary-subtle';
+                    modalDoctorAdvice.innerHTML = `<i class="bi bi-info-circle-fill me-1"></i> Bác sĩ hiện tại đang phân công. Có thể chọn lại bác sĩ khác nếu cần điều phối lại.`;
+                }
+            } else if (isEmergency) {
+                let bestDoc = '';
+                let minWait = 9999;
+                Array.from(modalDoctorSelect.options).forEach(opt => {
+                    if (!opt.value || opt.disabled) return;
+                    const w = parseInt(opt.dataset.waiting || '0', 10);
+                    if (w < minWait) {
+                        minWait = w;
+                        bestDoc = opt.value;
+                    }
+                });
+                modalDoctorSelect.value = bestDoc;
+                if (modalDoctorAdvice) {
+                    modalDoctorAdvice.classList.remove('d-none');
+                    modalDoctorAdvice.className = 'dispatch-modal-advice bg-danger-subtle text-danger-emphasis border-danger-subtle';
+                    modalDoctorAdvice.innerHTML = `<i class="bi bi-lightning-charge-fill text-danger me-1"></i> <strong>Ca cấp cứu:</strong> Hệ thống tự động gợi ý Bác sĩ trực khả dụng để ưu tiên cấp cứu ngay.`;
+                }
+            } else if (requestedDoctor) {
+                modalDoctorSelect.value = requestedDoctor;
+                if (modalDoctorAdvice) {
+                    modalDoctorAdvice.classList.remove('d-none');
+                    modalDoctorAdvice.className = 'dispatch-modal-advice bg-warning-subtle text-warning-emphasis border-warning-subtle';
+                    modalDoctorAdvice.innerHTML = `<i class="bi bi-star-fill text-warning me-1"></i> <strong>Bác sĩ yêu cầu từ lịch hẹn:</strong> ${requestedDoctorName || 'Đích danh'}. Giữ nguyên theo nguyện vọng của bệnh nhân.`;
+                }
+            } else {
+                let bestDoc = '';
+                let minWait = 9999;
+                Array.from(modalDoctorSelect.options).forEach(opt => {
+                    if (!opt.value || opt.disabled) return;
+                    const w = parseInt(opt.dataset.waiting || '0', 10);
+                    if (w < minWait) {
+                        minWait = w;
+                        bestDoc = opt.value;
+                    }
+                });
+                modalDoctorSelect.value = bestDoc;
+                const selectedOpt = modalDoctorSelect.options[modalDoctorSelect.selectedIndex];
+                const docText = selectedOpt ? selectedOpt.text : '';
+                if (modalDoctorAdvice) {
+                    modalDoctorAdvice.classList.remove('d-none');
+                    modalDoctorAdvice.className = 'dispatch-modal-advice bg-success-subtle text-success-emphasis border-success-subtle';
+                    modalDoctorAdvice.innerHTML = `<i class="bi bi-shuffle me-1"></i> <strong>Cân bằng tải:</strong> Gợi ý phân vào Bác sĩ đang ít người chờ nhất (${docText}).`;
                 }
             }
+        }
 
-            if (modalDoctorSelect) {
-                if (currentDoctor) {
-                    modalDoctorSelect.value = currentDoctor;
-                } else if (requestedDoctor) {
-                    modalDoctorSelect.value = requestedDoctor;
-                } else {
-                    modalDoctorSelect.value = ''; // Auto-assign least waiting
+        // Lọc ghế theo phòng nếu có phòng được chọn
+        if (modalRoomSelect && modalChairSelect) {
+            const filterChairs = () => {
+                const selRoom = modalRoomSelect.value;
+                Array.from(modalChairSelect.options).forEach(opt => {
+                    if (!opt.value) return;
+                    const optRoom = opt.dataset.room;
+                    if (!selRoom || !optRoom || optRoom === selRoom) {
+                        opt.hidden = false;
+                        opt.disabled = false;
+                    } else {
+                        opt.hidden = true;
+                        opt.disabled = true;
+                    }
+                });
+            };
+            modalRoomSelect.onchange = filterChairs;
+            filterChairs();
+        }
+
+        openModalSafe(assignModalEl);
+    }
+
+    function handleOpenTransfer(btn) {
+        const transferModalEl = document.getElementById('dispatchTransferModal');
+        const modalTransferForm = document.getElementById('modalTransferForm');
+        const modalTransferPatientName = document.getElementById('modalTransferPatientName');
+        const modalTransferVisitCode = document.getElementById('modalTransferVisitCode');
+        const modalTransferCurrentDoctor = document.getElementById('modalTransferCurrentDoctor');
+        const modalTransferDoctorSelect = document.getElementById('modalTransferDoctorSelect');
+        const modalTransferReasonInput = document.getElementById('modalTransferReasonInput');
+
+        const visitId = btn.dataset.visitId;
+        const visitCode = btn.dataset.visitCode;
+        const patientName = btn.dataset.patientName;
+        const currentDoctor = btn.dataset.currentDoctor;
+        const currentDoctorName = btn.dataset.currentDoctorName;
+
+        if (modalTransferForm) modalTransferForm.action = `/reception/dispatch/${visitId}/assign`;
+        if (modalTransferPatientName) modalTransferPatientName.textContent = patientName || '';
+        if (modalTransferVisitCode) modalTransferVisitCode.textContent = visitCode || '';
+        if (modalTransferCurrentDoctor) {
+            modalTransferCurrentDoctor.innerHTML = `Bác sĩ hiện tại: <strong class="text-dark">${currentDoctorName || 'Chưa rõ'}</strong>`;
+        }
+
+        if (modalTransferDoctorSelect) {
+            modalTransferDoctorSelect.value = '';
+            Array.from(modalTransferDoctorSelect.options).forEach(opt => {
+                if (opt.value && opt.value === currentDoctor) {
+                    opt.disabled = true;
+                    opt.hidden = true;
+                } else if (opt.value) {
+                    const waiting = parseInt(opt.dataset.waiting || '0', 10);
+                    if (waiting >= 8) {
+                        opt.disabled = true;
+                    } else {
+                        opt.disabled = false;
+                        opt.hidden = false;
+                    }
+                }
+            });
+        }
+
+        if (modalTransferReasonInput) {
+            modalTransferReasonInput.value = '';
+        }
+
+        openModalSafe(transferModalEl);
+    }
+
+    function handleOpenK80PrintModal(btn) {
+        const k80ModalEl = document.getElementById('k80TicketModal');
+        const ticketNumber = btn.dataset.ticketNumber || '01';
+        const patientName = btn.dataset.patientName || '—';
+        const patientCode = btn.dataset.patientCode || '—';
+        const doctorName = btn.dataset.doctorName || 'Theo điều phối';
+        const rawRoom = btn.dataset.roomName || 'Phòng khám Nha khoa';
+        const chairName = btn.dataset.chairName || 'Ghế tiêu chuẩn';
+        const issuedTime = btn.dataset.issuedTime || new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const isEmergency = btn.dataset.isEmergency === 'true';
+        const isPriority = btn.dataset.isPriority === 'true' || String(ticketNumber).startsWith('P-');
+
+        const roomDisplay = rawRoom.startsWith('Phòng khám:') ? rawRoom : `Phòng khám: ${rawRoom}`;
+
+        const numEl = document.getElementById('k80TicketNumber');
+        const roomEl = document.getElementById('k80RoomDisplay');
+        const pCodeEl = document.getElementById('k80PatientCode');
+        const pNameEl = document.getElementById('k80PatientName');
+        const docEl = document.getElementById('k80DoctorName');
+        const chairEl = document.getElementById('k80ChairName');
+        const timeEl = document.getElementById('k80IssuedTime');
+        const footerRoomEl = document.getElementById('k80FooterRoom');
+        const priBadgeEl = document.getElementById('k80PriorityBadge');
+
+        if (numEl) numEl.textContent = ticketNumber;
+        if (roomEl) roomEl.textContent = roomDisplay;
+        if (pCodeEl) pCodeEl.textContent = patientCode;
+        if (pNameEl) pNameEl.textContent = patientName;
+        if (docEl) docEl.textContent = doctorName;
+        if (chairEl) chairEl.textContent = chairName;
+        if (timeEl) timeEl.textContent = issuedTime;
+        if (footerRoomEl) footerRoomEl.textContent = rawRoom;
+
+        if (priBadgeEl) {
+            if (isEmergency) {
+                priBadgeEl.className = 'badge bg-danger text-white fw-bold mb-2';
+                priBadgeEl.textContent = 'CA CẤP CỨU - ƯU TIÊN SỐ 1';
+            } else if (isPriority) {
+                priBadgeEl.className = 'badge bg-warning text-dark fw-bold mb-2';
+                priBadgeEl.textContent = 'KHÁCH HÀNG ƯU TIÊN (P)';
+            } else {
+                priBadgeEl.className = 'd-none';
+            }
+        }
+
+        openModalSafe(k80ModalEl);
+    }
+
+    function printK80ReceiptInPlace() {
+        const printable = document.getElementById('k80PrintableArea');
+        if (!printable) return;
+        let iframe = document.getElementById('k80HiddenPrintFrame');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = 'k80HiddenPrintFrame';
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            document.body.appendChild(iframe);
+        }
+        const doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>In phiếu K80</title>
+            <style>
+                @page { size: 80mm auto; margin: 2mm; }
+                body { font-family: Arial, sans-serif; width: 74mm; margin: 0 auto; padding: 4px; text-align: center; color: #000; }
+                table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+                td { padding: 3px 0; }
+            </style>
+        </head><body>${printable.innerHTML}</body></html>`);
+        doc.close();
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+    }
+
+    function handleOpenRowDrawer(row) {
+        const drawerEl = document.getElementById('receptionDetailDrawer');
+        if (!drawerEl) return;
+        const setTxt = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val || '—';
+        };
+        setTxt('drawerVisitCode', row.dataset.visitCode);
+        setTxt('drawerPatientName', row.dataset.patientName);
+        setTxt('drawerPatientCode', row.dataset.patientCode);
+        setTxt('drawerPhone', row.dataset.phone);
+        setTxt('drawerTicketNumber', row.dataset.ticketNumber);
+        setTxt('drawerDoctorName', row.dataset.doctorName);
+        const roomName = row.dataset.roomName || 'Phòng khám Nha khoa';
+        const chairName = row.dataset.chairName || 'Ghế tiêu chuẩn';
+        setTxt('drawerRoomChair', `Phòng khám: ${roomName} - ${chairName}`);
+        setTxt('drawerCheckInTime', row.dataset.checkinTime);
+        setTxt('drawerSymptoms', row.dataset.symptoms);
+        openDrawerSafe(drawerEl);
+    }
+
+    function initialiseDispatch() {
+        const content = document.getElementById('reception-content-area');
+        if (!content) return;
+        if (content.dataset.dispatchInitialised === 'true') return;
+        content.dataset.dispatchInitialised = 'true';
+
+        if (typeof window.setupUniversalEnterpriseTable === 'function') {
+            window.setupUniversalEnterpriseTable();
+        }
+
+        const searchInput = document.getElementById('visitSearch');
+        const btnClearSearch = document.getElementById('btnClearSearch');
+
+        // Chuyển đổi chế độ xem Kanban vs Bảng dữ liệu
+        const btnViewKanban = document.getElementById('btnViewKanban');
+        const btnViewGrid = document.getElementById('btnViewGrid');
+        const viewKanbanSection = document.getElementById('viewKanbanSection');
+        const viewGridSection = document.getElementById('viewGridSection');
+
+        if (btnViewKanban && btnViewGrid && viewKanbanSection && viewGridSection) {
+            btnViewKanban.addEventListener('click', (e) => {
+                e.preventDefault();
+                btnViewKanban.classList.add('active');
+                btnViewGrid.classList.remove('active');
+                viewKanbanSection.style.display = 'block';
+                viewGridSection.style.display = 'none';
+            });
+
+            btnViewGrid.addEventListener('click', (e) => {
+                e.preventDefault();
+                btnViewGrid.classList.add('active');
+                btnViewKanban.classList.remove('active');
+                viewKanbanSection.style.display = 'none';
+                viewGridSection.style.display = 'block';
+            });
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                applyDispatchSearch(searchInput.value);
+            });
+
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const filterKeywordInput = document.getElementById('filterKeywordInput');
+                    const filterForm = document.getElementById('filterForm');
+                    if (filterKeywordInput && filterForm) {
+                        filterKeywordInput.value = searchInput.value.trim();
+                        filterForm.submit();
+                    }
+                }
+            });
+        }
+
+        if (btnClearSearch && searchInput) {
+            btnClearSearch.addEventListener('click', () => {
+                applyDispatchSearch('');
+                const filterKeywordInput = document.getElementById('filterKeywordInput');
+                const filterForm = document.getElementById('filterForm');
+                if (filterKeywordInput && filterForm && filterKeywordInput.value) {
+                    filterKeywordInput.value = '';
+                    filterForm.submit();
+                }
+            });
+        }
+
+        const modalTransferForm = document.getElementById('modalTransferForm');
+        const modalTransferReasonInput = document.getElementById('modalTransferReasonInput');
+        if (modalTransferForm && modalTransferReasonInput) {
+            modalTransferForm.addEventListener('submit', (e) => {
+                const reason = modalTransferReasonInput.value.trim();
+                if (reason.length < 10) {
+                    e.preventDefault();
+                    alert('Vui lòng ghi rõ lý do chuyển bác sĩ (ít nhất 10 ký tự) để phục vụ kiểm toán hệ thống.');
+                    modalTransferReasonInput.focus();
+                }
+            });
+        }
+
+        // MISA AMIS Pagination handler
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+        const filterForm = document.getElementById('filterForm');
+        const pageSizeInput = document.getElementById('pageSizeInput');
+        const pageIndexInput = document.getElementById('pageIndexInput');
+        if (filterForm) {
+            filterForm.addEventListener('submit', function () {
+                if (pageIndexInput) {
+                    pageIndexInput.value = '0';
+                }
+            });
+        }
+        if (pageSizeSelect && filterForm && pageSizeInput) {
+            pageSizeSelect.addEventListener('change', function () {
+                pageSizeInput.value = this.value;
+                if (pageIndexInput) {
+                    pageIndexInput.value = '0';
+                }
+                filterForm.submit();
+            });
+        }
+    }
+
+    // Event delegation toàn cục cho toàn bộ nút thao tác, modal, chip lọc và click hàng mở Drawer
+    document.addEventListener('click', (e) => {
+        const btnAssign = e.target.closest('.btn-open-assign');
+        if (btnAssign) {
+            handleOpenAssign(btnAssign);
+            return;
+        }
+
+        const btnTransfer = e.target.closest('.btn-open-transfer');
+        if (btnTransfer) {
+            handleOpenTransfer(btnTransfer);
+            return;
+        }
+
+        const btnPrintK80 = e.target.closest('.btn-print-k80');
+        if (btnPrintK80) {
+            handleOpenK80PrintModal(btnPrintK80);
+            return;
+        }
+
+        const btnPrintNow = e.target.closest('#btnPrintK80Now');
+        if (btnPrintNow) {
+            e.preventDefault();
+            printK80ReceiptInPlace();
+            return;
+        }
+
+        const btnRemoveChip = e.target.closest('.btn-remove-chip');
+        if (btnRemoveChip) {
+            e.preventDefault();
+            const filterType = btnRemoveChip.dataset.filterType || 'keyword';
+            if (filterType === 'keyword') {
+                applyDispatchSearch('');
+                const filterKeywordInput = document.getElementById('filterKeywordInput');
+                const filterForm = document.getElementById('filterForm');
+                if (filterKeywordInput && filterForm && filterKeywordInput.value) {
+                    filterKeywordInput.value = '';
+                    filterForm.submit();
                 }
             }
+            return;
+        }
 
-            if (modalRoomSelect) modalRoomSelect.value = currentRoom || '';
-            filterChairsForRoom(currentRoom || '');
-            if (modalChairSelect) modalChairSelect.value = currentChair || '';
-            if (modalReasonInput) modalReasonInput.value = '';
+        const btnClose = e.target.closest('[data-bs-dismiss="modal"]');
+        if (btnClose) {
+            const modal = btnClose.closest('.modal');
+            if (modal) closeModalSafe(modal);
+            return;
+        }
 
-            if (assignModal) {
-                assignModal.show();
-            } else if (assignModalEl) {
-                assignModalEl.classList.add('show');
-                assignModalEl.style.display = 'block';
-                assignModalEl.setAttribute('aria-hidden', 'false');
-            }
-        });
+        // Click vào hàng (trừ checkbox / button / link / action cell) mở Drawer chi tiết tiếp đón
+        const row = e.target.closest('.dispatch-table-row, .reception-history-row');
+        if (row && !e.target.closest('button, a, input, select, textarea, label, form, .dv-actions-cell-always, .dv-floating-actions-bar')) {
+            handleOpenRowDrawer(row);
+        }
     });
-}
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialiseDispatch, {once: true});
-else initialiseDispatch();
-document.addEventListener('reception:content-loaded', initialiseDispatch);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialiseDispatch);
+    } else {
+        initialiseDispatch();
+    }
+    document.addEventListener('reception:content-loaded', initialiseDispatch);
 })();

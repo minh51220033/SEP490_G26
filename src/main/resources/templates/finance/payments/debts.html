@@ -12,7 +12,7 @@
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 
     <div class="app-main">
-        <header th:replace="~{fragments/header :: appTopbar('Thu ngân')}"></header>
+        <header th:replace="~{fragments/header :: appTopbar('Tài chính')}"></header>
 
         <main class="app-content finance-page cashier-page">
             <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
@@ -37,42 +37,53 @@
                     </div>
                 </div>
 
-            <!-- Filter Bar -->
-            <div class="fin-card">
+            <!-- Filter Bar Chuẩn MISA / Daily-Visits -->
+            <div class="fin-card fin-filter-container">
                 <form th:action="@{/payments/debts}" method="get" class="fin-filter-bar">
+                    <!-- Ô tìm kiếm lớn có icon bên trái -->
+                    <div class="fin-form-group fin-search-group">
+                        <i class="bi bi-search search-lead-icon"></i>
+                        <input type="text" id="keyword" name="keyword" class="fin-input"
+                               placeholder="Tìm kiếm Bệnh nhân nợ theo Mã BN, Họ tên, Số điện thoại..." th:value="${keyword}">
+                    </div>
+
+                    <!-- Cơ sở điều trị -->
                     <div class="fin-form-group">
-                        <label for="branchSelect">Cơ sở điều trị</label>
-                        <select id="branchSelect" name="branchId" class="fin-select">
+                        <select id="branchSelect" name="branchId" class="fin-select" title="Cơ sở điều trị">
                             <option value="">-- Tất cả cơ sở --</option>
                             <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
                                     th:selected="${b.branchId == selectedBranchId}"></option>
                         </select>
                     </div>
 
+                    <!-- Trạng thái nợ -->
                     <div class="fin-form-group">
-                        <label for="statusSelect">Trạng thái nợ</label>
-                        <select id="statusSelect" name="paymentStatus" class="fin-select">
+                        <select id="statusSelect" name="paymentStatus" class="fin-select" title="Trạng thái nợ">
                             <option value="">-- Tất cả còn nợ (Chưa trả / 1 phần) --</option>
                             <option value="UNPAID" th:selected="${selectedPaymentStatus != null and selectedPaymentStatus.name() == 'UNPAID'}">Chưa thanh toán (UNPAID)</option>
                             <option value="PARTIAL" th:selected="${selectedPaymentStatus != null and selectedPaymentStatus.name() == 'PARTIAL'}">Trả một phần (PARTIAL)</option>
                         </select>
                     </div>
 
-                    <div class="fin-form-group" style="flex: 3; min-width: 250px;">
-                        <label for="keyword">Tìm kiếm Bệnh nhân nợ</label>
-                        <input type="text" id="keyword" name="keyword" class="fin-input"
-                               placeholder="Nhập Mã BN, Họ tên, Số điện thoại..." th:value="${keyword}">
-                    </div>
-
-                    <div class="d-flex gap-2 align-items-end">
+                    <!-- Nút thao tác lọc -->
+                    <div class="d-flex gap-2 align-items-center ms-auto">
                         <button type="submit" class="fin-btn fin-btn-primary"><i class="bi bi-search"></i> Tìm kiếm</button>
-                        <a th:href="@{/payments/debts}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-clockwise"></i> Đặt lại</a>
+                        <a th:href="@{/payments/debts}" class="fin-btn fin-btn-outline" title="Đặt lại bộ lọc"><i class="bi bi-arrow-clockwise"></i> Đặt lại</a>
                     </div>
                 </form>
             </div>
 
             <!-- Table Card -->
-            <div class="fin-card p-0">
+            <div class="fin-card fin-table-card p-0">
+                <!-- Thanh thông tin trên bảng chuẩn daily-visits -->
+                <div class="fin-grid-topbar">
+                    <div class="fin-topbar-left">
+                        Hiển thị <span class="text-primary fw-bolder" th:text="${patientDebts != null ? patientDebts.size() : 0}">0</span> hồ sơ công nợ
+                        <span class="text-muted mx-1">•</span>
+                        <span class="text-secondary fw-semibold">Theo dõi viện phí tồn đọng</span>
+                    </div>
+                </div>
+
                 <div class="fin-table-wrapper">
                     <table class="fin-table" data-enhanced-table="ft24-debts">
                         <thead>
@@ -107,7 +118,7 @@
                                 <strong class="text-primary" th:text="${d.patientCode}">BN000101</strong>
                             </td>
                             <td data-column-key="patient_name">
-                                <a th:href="@{/payments/patient/{id}(id=${d.profileId})}" class="fw-bold text-primary" th:text="${d.fullName}" title="Xem Chi tiết công nợ &amp; Dashboard tài chính (SCR-24.2)">Nguyễn Văn An</a>
+                                <a th:href="@{/payments/patient/{id}(id=${d.profileId})}" class="fw-bold text-dark text-decoration-none patient-name" th:text="${d.fullName}" title="Xem Chi tiết công nợ &amp; Dashboard tài chính (SCR-24.2)">Nguyễn Văn An</a>
                             </td>
                             <td data-column-key="phone" th:text="${d.phoneNumber}">0987654321</td>
                             <td data-column-key="unpaid_count" class="text-center">
@@ -146,23 +157,34 @@
                     </table>
                 </div>
 
-                <!-- Pagination -->
-                <div th:if="${totalPages > 1}" class="p-3 d-flex justify-content-between align-items-center border-top">
-                    <span class="text-muted small" th:text="'Hiển thị ' + ${patientDebts.size()} + ' / ' + ${totalElements} + ' bệnh nhân còn nợ'"></span>
-                    <nav aria-label="Phân trang">
-                        <ul class="pagination pagination-sm m-0">
-                            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
-                                <a class="page-link" th:href="@{/payments/debts(page=${currentPage - 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}">Trước</a>
-                            </li>
-                            <li th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
-                                class="page-item" th:classappend="${i == currentPage} ? 'active' : ''">
-                                <a class="page-link" th:href="@{/payments/debts(page=${i}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}" th:text="${i + 1}">1</a>
-                            </li>
-                            <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">
-                                <a class="page-link" th:href="@{/payments/debts(page=${currentPage + 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}">Sau</a>
-                            </li>
-                        </ul>
-                    </nav>
+                <!-- Pagination MISA -->
+                <div th:if="${totalPages > 1}" class="misa-pagination-footer">
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong th:text="${totalElements}">0</strong> bệnh nhân còn nợ
+                    </div>
+                    <div class="misa-pagination-right">
+                        <div class="misa-page-range">
+                            Trang <span th:text="${currentPage + 1}">1</span> / <span th:text="${totalPages}">1</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <a class="misa-nav-btn" th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                               th:href="@{/payments/debts(page=0, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}" title="Trang đầu">
+                                <i class="bi bi-chevron-bar-left"></i>
+                            </a>
+                            <a class="misa-nav-btn" th:classappend="${currentPage == 0} ? 'disabled' : ''"
+                               th:href="@{/payments/debts(page=${currentPage - 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}" title="Trang trước">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                            <a class="misa-nav-btn" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''"
+                               th:href="@{/payments/debts(page=${currentPage + 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}" title="Trang sau">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                            <a class="misa-nav-btn" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''"
+                               th:href="@{/payments/debts(page=${totalPages - 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}" title="Trang cuối">
+                                <i class="bi bi-chevron-bar-right"></i>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
             <template id="debtCollectionTemplate">

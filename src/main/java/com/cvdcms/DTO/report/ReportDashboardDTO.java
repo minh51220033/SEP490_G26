@@ -29,6 +29,7 @@ public class ReportDashboardDTO {
     private Long cancelledVisits = 0L;
     private Long inProgressVisits = 0L;
     private Double completionRate = 0.0;
+    private Long newPatientsCount = 0L;
 
     private BigDecimal totalExpenseAmount = BigDecimal.ZERO;
     private BigDecimal totalRefundAmount = BigDecimal.ZERO;

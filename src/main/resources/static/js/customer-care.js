@@ -203,6 +203,11 @@
             Object.entries(groupCounts).forEach(([grp, cnt]) => {
                 const badgeEl = $(`badge_${grp}`);
                 if (badgeEl) badgeEl.textContent = Number(cnt || 0);
+                const optEl = $(`opt_tab_${grp}`);
+                if (optEl) {
+                    const baseLabel = optEl.dataset.label || optEl.textContent.split("(")[0].trim();
+                    optEl.textContent = `${baseLabel} (${cnt || 0})`;
+                }
             });
         } catch {
             setKpiError("Không tải được thống kê CSKH");
@@ -466,17 +471,17 @@
     // =========================================================================
     // CẤU HÌNH CỘT BẢNG CSKH & COLUMN CUSTOMIZER (THEO CHUẨN CV-DCMS ENTERPRISE)
     // =========================================================================
-    const CC_COLUMNS_KEY = "cvdcms_cc_table_columns_v3";
+    const CC_COLUMNS_KEY = "cvdcms_cc_table_columns_v5";
     const DEFAULT_CC_COLUMNS = [
         { id: "taskCode", title: "Mã CV", width: 120, visible: true, required: true },
-        { id: "patient", title: "Bệnh nhân", width: 210, visible: true, required: true },
-        { id: "careGroup", title: "Phân nhóm & Hồ sơ", width: 210, visible: true },
+        { id: "patient", title: "Bệnh nhân", width: 220, visible: true, required: true },
+        { id: "careGroup", title: "Phân nhóm & Nguồn", width: 200, visible: true },
         { id: "due", title: "Hạn / Gọi lại", width: 150, visible: true },
         { id: "notes", title: "Chẩn đoán & Lời dặn", width: 280, visible: true },
-        { id: "staff", title: "Phụ trách", width: 150, visible: true },
-        { id: "interaction", title: "Tương tác gần nhất", width: 165, visible: true },
-        { id: "status", title: "Trạng thái", width: 145, visible: true },
-        { id: "actions", title: "Thao tác", width: 255, visible: true, required: true }
+        { id: "staff", title: "Phụ trách", width: 160, visible: true },
+        { id: "interaction", title: "Tương tác gần nhất", width: 170, visible: true },
+        { id: "status", title: "Trạng thái", width: 140, visible: true },
+        { id: "actions", title: "Thao tác", width: 330, visible: true, required: true }
     ];
 
     let ccColumns = loadCcColumns();
@@ -487,6 +492,10 @@
             if (raw) {
                 const parsed = JSON.parse(raw);
                 if (Array.isArray(parsed) && parsed.length === DEFAULT_CC_COLUMNS.length) {
+                    const actCol = parsed.find(c => c.id === "actions");
+                    if (actCol && (!actCol.width || actCol.width < 330)) {
+                        actCol.width = 330;
+                    }
                     return parsed;
                 }
             }
@@ -505,18 +514,24 @@
         if (!theadTr) return;
         theadTr.innerHTML = "";
 
-        ccColumns.forEach((col, idx) => {
-            if (!col.visible) return;
+        const visibleCols = ccColumns.filter(c => c.visible);
+        visibleCols.forEach((col, idx) => {
             const th = document.createElement("th");
             th.style.width = col.width + "px";
+            th.style.minWidth = col.width + "px";
             th.innerHTML = `
-                <div class="d-flex align-items-center justify-content-between">
+                <div class="dv-th-inner">
                     <span class="cell-ellipsis" title="${col.title}">${col.title}</span>
                 </div>
                 <span class="col-resizer" data-col-index="${idx}"></span>
             `;
             theadTr.appendChild(th);
         });
+
+        // Track Thao tác nổi bám mép phải khi cuộn ngang (chuẩn 100% /doctor/daily-visits)
+        const trackTh = document.createElement("th");
+        trackTh.className = "dv-floating-actions-track";
+        theadTr.appendChild(trackTh);
 
         setupCcColResizers();
     }
@@ -702,7 +717,7 @@
         renderCcTableHeader();
         const visibleCols = ccColumns.filter(c => c.visible);
         const tbody = $("tasksTableBody");
-        tbody.innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">Đang tải danh sách công việc CSKH...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${visibleCols.length + 1}" class="empty">Đang tải danh sách công việc CSKH...</td></tr>`;
 
         if (state.tasksAbortController) {
             state.tasksAbortController.abort();
@@ -830,51 +845,79 @@
                             </td>
                         `);
                     } else if (col.id === "actions") {
+                        const actBtns = `
+                            <button type="button" class="btn btn-primary btn-sm fw-bold px-2.5 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ" style="font-size:12px;background:linear-gradient(135deg, #0284c7, #2563eb);border:none;">
+                                <i class="bi bi-pencil-square"></i> Ghi KQ
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn" style="font-size:12px;">
+                                <i class="bi bi-arrow-up-right-circle"></i> Chuyển BS
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân" style="font-size:12px;">
+                                <i class="bi bi-clock-history"></i> Lịch sử
+                            </button>
+                            ${(t.status === "ESCALATED_TO_DOCTOR" || t.escalatedToDoctorId) && (state.careRole === "BAC_SI" || state.careRole === "ADMIN") ? `
+                                <button type="button" class="btn btn-danger btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn" style="font-size:12px;">
+                                    <i class="bi bi-chat-dots-fill"></i> Phản hồi
+                                </button>
+                            ` : ""}
+                            <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1 rounded-2 shadow-xs" data-edit-task="${t.taskId}" title="Sửa / Phân công lại" style="font-size:12px;">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        `;
                         cells.push(`
-<<<<<<< Updated upstream
-                            <td style="width:${col.width}px;">
-                                <div class="row-actions">
-=======
-                            <td class="col-actions-pinned dv-col-pinned-right text-center" style="width:${col.width}px;min-width:${col.width}px;">
-                                <div class="row-actions dv-actions-cell-always">
->>>>>>> Stashed changes
-                                    <button type="button" class="btn-primary-custom button-sm" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ">
-                                        Ghi KQ
-                                    </button>
-                                    <button type="button" class="btn-secondary-custom button-sm text-danger" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn">
-                                        Chuyển BS
-                                    </button>
-                                    <button type="button" class="btn-secondary-custom button-sm" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân">
-                                        Lịch sử
-                                    </button>
-                                    ${(t.status === "ESCALATED_TO_DOCTOR" || t.escalatedToDoctorId) && (state.careRole === "BAC_SI" || state.careRole === "ADMIN") ? `
-                                        <button type="button" class="button-danger button-sm" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn">
-                                            Phản hồi
-                                        </button>
-                                    ` : ""}
-                                    <button type="button" class="btn-secondary-custom button-sm" data-edit-task="${t.taskId}" title="Sửa / Phân công lại">
-                                        Sửa
-                                    </button>
+                            <td class="text-center" style="width:${col.width}px;min-width:${col.width}px;">
+                                <div class="d-flex align-items-center justify-content-center gap-1.5 flex-wrap" onclick="event.stopPropagation()">
+                                    ${actBtns}
                                 </div>
                             </td>
                         `);
                     }
                 });
-<<<<<<< Updated upstream
-                return `<tr>${cells.join("")}</tr>`;
-=======
+
+                // Cụm nút nổi bám mép phải viewport khi hover dòng (chuẩn 100% theo /doctor/daily-visits)
+                const floatingBarHtml = `
+                    <td class="dv-floating-actions-track">
+                        <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
+                            <button type="button" class="btn btn-primary btn-sm fw-bold px-2.5 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ" style="font-size:12px;background:linear-gradient(135deg, #0284c7, #2563eb);border:none;">
+                                <i class="bi bi-pencil-square"></i> Ghi KQ
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn" style="font-size:12px;">
+                                <i class="bi bi-arrow-up-right-circle"></i> Chuyển BS
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân" style="font-size:12px;">
+                                <i class="bi bi-clock-history"></i> Lịch sử
+                            </button>
+                            ${(t.status === "ESCALATED_TO_DOCTOR" || t.escalatedToDoctorId) && (state.careRole === "BAC_SI" || state.careRole === "ADMIN") ? `
+                                <button type="button" class="btn btn-danger btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn" style="font-size:12px;">
+                                    <i class="bi bi-chat-dots-fill"></i> Phản hồi
+                                </button>
+                            ` : ""}
+                            <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1 rounded-2 shadow-xs" data-edit-task="${t.taskId}" title="Sửa / Phân công lại" style="font-size:12px;">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                cells.push(floatingBarHtml);
 
                 return `<tr class="dv-data-row">${cells.join("")}</tr>`;
->>>>>>> Stashed changes
             }).join("");
 
             renderCcPagination(totalElements, page, state.totalPages);
         } catch (err) {
             if (err.name === "AbortError") return;
-            tbody.innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">${escapeHtml(err.message)}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${visibleCols.length + 1}" class="empty">${escapeHtml(err.message)}</td></tr>`;
             showMessage(err.message, "error");
         }
     }
+
+    window.toggleCcAdvFilter = function() {
+        const panel = $("advFilterPanel");
+        const btn = $("btnToggleAdvFilter");
+        if (!panel) return;
+        panel.classList.toggle("show");
+        if (btn) btn.classList.toggle("is-open", panel.classList.contains("show"));
+    };
 
     // =========================================================================
     // 4. MODAL LẬP LỊCH / PHÂN CÔNG CHĂM SÓC & TỰ ĐỘNG TỔNG HỢP (SCR-44.3)
@@ -1411,14 +1454,22 @@
 
     function switchTab(tab) {
         state.activeTab = tab;
+        const tabSelect = $("filterTabGroup");
+        if (tabSelect && tabSelect.value !== tab) {
+            tabSelect.value = tab;
+        }
         document.querySelectorAll(".tab").forEach(btn => {
             btn.classList.toggle("active", btn.dataset.tab === tab);
         });
 
         const isHistory = tab === "HISTORY";
         if ($("tasksPanel")) $("tasksPanel").hidden = isHistory;
-        if ($("filterToolbarSection")) $("filterToolbarSection").hidden = isHistory;
         if ($("historyPanel")) $("historyPanel").hidden = !isHistory;
+
+        // Ẩn/hiện bộ lọc chi tiết công việc khi chuyển sang tab Lịch sử BN
+        document.querySelectorAll(".task-filter-field").forEach(el => {
+            el.style.display = isHistory ? "none" : "";
+        });
 
         if (!isHistory) {
             const meta = TAB_META[tab] || TAB_META.ALL;
@@ -1436,6 +1487,11 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+        safeOn("filterTabGroup", "change", () => {
+            if ($("filterStatus")) $("filterStatus").value = "";
+            switchTab($("filterTabGroup").value);
+        });
+
         document.querySelectorAll(".tab").forEach(btn => {
             btn.addEventListener("click", () => {
                 if ($("filterStatus")) $("filterStatus").value = "";
@@ -1564,41 +1620,37 @@
             }
         });
 
-        // Delegated actions in tables (Sử dụng cả capture phase để không bao giờ bị chặn click)
-        async function handleTableActionClick(e) {
+        // Delegated actions in tables
+        // Dùng capture phase: wrapper nút có onclick="event.stopPropagation()" (chặn click mở dòng) sẽ chặn bubble lên body
+        document.body.addEventListener("click", async (e) => {
             const recordBtn = e.target.closest("[data-record-interaction]");
             if (recordBtn) {
-                e.preventDefault();
                 await openInteractionModal(recordBtn.dataset.recordInteraction);
                 return;
             }
 
             const escalateBtn = e.target.closest("[data-escalate-task]");
             if (escalateBtn) {
-                e.preventDefault();
                 await openEscalateModal(escalateBtn.dataset.escalateTask);
                 return;
             }
 
             const docRespBtn = e.target.closest("[data-doctor-response]");
             if (docRespBtn) {
-                e.preventDefault();
                 await openDoctorResponseModal(docRespBtn.dataset.doctorResponse);
                 return;
             }
 
             const histBtn = e.target.closest("[data-view-history]");
             if (histBtn) {
-                e.preventDefault();
                 const profileId = histBtn.dataset.viewHistory;
-                if ($("historyPatientSelect")) $("historyPatientSelect").value = String(profileId);
+                $("historyPatientSelect").value = String(profileId);
                 switchTab("HISTORY");
                 return;
             }
 
             const editBtn = e.target.closest("[data-edit-task]");
             if (editBtn) {
-                e.preventDefault();
                 try {
                     const t = await request(`/api/customer-care/tasks/${editBtn.dataset.editTask}`);
                     openTaskFormModal(t);
@@ -1606,12 +1658,7 @@
                     showMessage(err.message, "error");
                 }
             }
-        }
-
-        document.addEventListener("click", handleTableActionClick, true);
-        if ($("tasksTableWrapper")) {
-            $("tasksTableWrapper").addEventListener("click", handleTableActionClick);
-        }
+        }, true);
 
         loadBranchesAndInit();
     });

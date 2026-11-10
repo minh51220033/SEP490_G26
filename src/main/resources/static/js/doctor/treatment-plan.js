@@ -220,13 +220,29 @@ function renderPlanInlineRoadmapHtml(plan) {
                 else if (st.status === 'IN_PROGRESS') cardClass += ' is-in-progress';
                 else cardClass += ' is-pending';
 
-                const completedBadgeHtml = st.completedAt
-                    ? `<span class="badge px-2.5 py-1.5 rounded-pill bg-success-subtle text-success border border-success" id="stage-completed-badge-${st.stageId}">
-                           <i class="bi bi-clock-history me-1"></i><span>Ngày làm: ${st.completedAt}</span>
-                       </span>`
-                    : `<span class="badge px-2.5 py-1.5 rounded-pill bg-light text-secondary border" id="stage-completed-badge-${st.stageId}">
-                           <i class="bi bi-clock-history me-1"></i><span>Chưa thực hiện</span>
-                       </span>`;
+                const totalItemsInStage = (st.items && st.items.length) || 0;
+                const doneItemsInStage = (st.items && st.items.filter(i => i.status === 'COMPLETED').length) || 0;
+
+                let completedBadgeHtml = '';
+                if (st.status === 'COMPLETED' || (totalItemsInStage > 0 && doneItemsInStage === totalItemsInStage)) {
+                    completedBadgeHtml = `
+                        <span class="badge px-2.5 py-1.5 rounded-pill bg-success-subtle text-success border border-success" id="stage-completed-badge-${st.stageId}">
+                            <i class="bi bi-check2-circle me-1"></i><span>${st.completedAt ? 'Hoàn thành: ' + st.completedAt : 'Đã hoàn thành'}</span>
+                        </span>
+                    `;
+                } else if (doneItemsInStage > 0 || st.status === 'IN_PROGRESS') {
+                    completedBadgeHtml = `
+                        <span class="badge px-2.5 py-1.5 rounded-pill bg-primary-subtle text-primary border border-primary" id="stage-completed-badge-${st.stageId}">
+                            <i class="bi bi-arrow-repeat me-1"></i><span>Tiến độ: ${doneItemsInStage}/${totalItemsInStage} bước</span>
+                        </span>
+                    `;
+                } else {
+                    completedBadgeHtml = `
+                        <span class="badge px-2.5 py-1.5 rounded-pill bg-light text-secondary border" id="stage-completed-badge-${st.stageId}">
+                            <i class="bi bi-clock-history me-1"></i><span>Chưa thực hiện</span>
+                        </span>
+                    `;
+                }
 
                 const expectedEnd = st.expectedEndDate || plan.expectedEndDate || '---';
 
@@ -290,8 +306,8 @@ function renderPlanInlineRoadmapHtml(plan) {
                             <tr id="item-row-${it.planItemId}">
                                 <td class="text-center text-muted">${idx + 1}</td>
                                 <td>
-                                    <strong class="text-dark">${it.serviceName}</strong>
-                                    ${it.categoryName ? `<span class="badge bg-light text-muted border ms-1" style="font-size: 10px;">${it.categoryName}</span>` : ''}
+                                    <strong class="text-dark">${it.stepName || it.serviceName}</strong>
+                                    ${(it.stepName && it.stepName !== it.serviceName) ? `<span class="badge bg-light text-primary border ms-1" style="font-size: 10px;">${it.serviceName}</span>` : (it.categoryName ? `<span class="badge bg-light text-muted border ms-1" style="font-size: 10px;">${it.categoryName}</span>` : '')}
                                 </td>
                                 <td class="text-center">${toothBadge}</td>
                                 <td class="text-center">
@@ -418,7 +434,7 @@ function renderPlanInlineRoadmapHtml(plan) {
                         <strong>${plan.expectedEndDate || '---'}</strong>
                     </span>
                     <span class="badge bg-light text-primary border px-2.5 py-1.5 rounded-pill fw-bold" id="plan-progress-badge-${plan.planId}">
-                        ${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)
+                        ${plan.totalItems ? `${plan.completedItems}/${plan.totalItems} bước (${plan.progressPercent}%)` : `${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)`}
                     </span>
                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 shadow-xs d-inline-flex align-items-center gap-1 ms-1"
                             onclick="toggleAllCoursesInPlan(${plan.planId})"
@@ -436,6 +452,227 @@ function renderPlanInlineRoadmapHtml(plan) {
     `;
 }
 
+function escapePlanHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+/**
+ * Render tiến độ thực hiện theo từng Chẩn đoán độc lập (1 chẩn đoán 1 bảng)
+ * Dành cho tab Dịch vụ thực hiện (#tab-performed-services)
+ */
+function renderDiagnosisProgressTables() {
+    const container = document.getElementById('diagnosisProgressContainer');
+    if (!container) return;
+
+    const plans = (window.INITIAL_TREATMENT_PLANS || []).filter(p => p && p.status !== 'CANCELLED');
+    if (!plans || plans.length === 0) {
+        container.innerHTML = '<div class="text-center py-4 text-muted fst-italic">Bệnh nhân chưa có kế hoạch hoặc chẩn đoán điều trị nào.</div>';
+        return;
+    }
+
+    let allDiagnosisCardsHtml = '';
+    let totalServicesDoneAcrossAll = 0;
+
+    plans.forEach(plan => {
+        const courses = groupStagesIntoCourses(plan.stages || [], plan);
+        if (!courses || courses.length === 0) return;
+
+        let planTotalSteps = 0;
+        let planDoneSteps = 0;
+        let coursesHtml = '';
+
+        courses.forEach(course => {
+            // 1. Tính toán tiến độ của riêng chẩn đoán / quá trình này
+            let totalSteps = 0;
+            let doneSteps = 0;
+
+            if (course.stages && course.stages.length > 0) {
+                course.stages.forEach(st => {
+                    if (st.items && st.items.length > 0) {
+                        st.items.forEach(it => {
+                            totalSteps++;
+                            planTotalSteps++;
+                            if (it.status === 'COMPLETED') {
+                                doneSteps++;
+                                planDoneSteps++;
+                                totalServicesDoneAcrossAll++;
+                            }
+                        });
+                    }
+                });
+            }
+
+            // 2. Phân tích courseTitle để lấy CĐ prefix, ICD code và tên chẩn đoán sạch đẹp
+            let rawTitle = (course.courseTitle || '').trim();
+            let cdPrefix = '';
+            let icdCode = '';
+            let diagName = rawTitle;
+
+            const cdMatch = diagName.match(/^\[(CĐ\s*#?\d+)\]\s*(.*)$/i);
+            if (cdMatch) {
+                cdPrefix = cdMatch[1].toUpperCase().replace(/\s+/g, ' ');
+                diagName = cdMatch[2].trim();
+            }
+
+            const icdMatch = diagName.match(/\[([A-Z]\d{2}(?:\.\d+)?)\]\s*(.*)/i);
+            if (icdMatch) {
+                icdCode = icdMatch[1];
+                diagName = icdMatch[2].trim();
+            }
+
+            if (!diagName && plan.planName) {
+                diagName = plan.planName;
+            }
+
+            // 3. Render các hàng của bảng trực tiếp
+            let tbodyRowsHtml = '';
+            const multipleStages = course.stages && course.stages.length > 1;
+
+            if (!course.stages || course.stages.length === 0 || totalSteps === 0) {
+                tbodyRowsHtml = '<tr><td colspan="6" class="text-center text-muted fst-italic py-3">Chẩn đoán này chưa có bước thực hiện nào.</td></tr>';
+            } else {
+                let globalItemIdx = 0;
+                course.stages.forEach((stage, sIdx) => {
+                    const stageItems = stage.items || [];
+                    const stageTotalCnt = stageItems.length;
+                    const stageDoneCnt = stageItems.filter(i => i.status === 'COMPLETED').length;
+                    const stageIsAllDone = stageTotalCnt > 0 && stageDoneCnt === stageTotalCnt;
+
+                    // Nếu có nhiều giai đoạn trong cùng chẩn đoán, hiển thị 1 dòng tiêu đề phân chia giai đoạn nhẹ nhàng
+                    if (multipleStages) {
+                        tbodyRowsHtml += `
+                            <tr class="table-light" style="border-top: 1.5px solid #e2e8f0;">
+                                <td colspan="6" class="py-2 px-3 fw-bold text-dark" style="font-size: 13px;">
+                                    <span class="badge bg-dark rounded-pill me-2" style="font-size: 11px;">Giai đoạn ${stage.internalOrder || (sIdx + 1)}</span>
+                                    <span>${escapePlanHtml(stage.cleanStageName || stage.stageName)}</span>
+                                    <span class="badge rounded-pill ms-2 ${stageIsAllDone ? 'bg-success-subtle text-success border border-success' : (stageDoneCnt > 0 ? 'bg-primary-subtle text-primary border border-primary' : 'bg-light text-secondary border')}">
+                                        ${stageDoneCnt}/${stageTotalCnt} bước đã làm
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                    }
+
+                    stageItems.forEach((item) => {
+                        globalItemIdx++;
+                        const isDone = item.status === 'COMPLETED';
+
+                        let toothBadge = '<span class="text-muted">-</span>';
+                        if (item.toothNumbers) {
+                            const tn = String(item.toothNumbers).trim();
+                            if (tn.toLowerCase().includes('toàn hàm') || tn.toLowerCase().includes('toan ham')) {
+                                toothBadge = '<span class="badge bg-info-subtle text-info border">Toàn hàm</span>';
+                            } else {
+                                const cleanNum = tn.startsWith('R-') || tn.startsWith('R') ? tn : `R-${tn}`;
+                                toothBadge = `<span class="badge bg-primary-subtle text-primary border">${escapePlanHtml(cleanNum)}</span>`;
+                            }
+                        }
+
+                        const qtyDisplay = (item.quantity != null && Number(item.quantity) % 1 === 0)
+                            ? Number(item.quantity)
+                            : (item.quantity || 1);
+
+                        const completedAtHtml = (isDone && item.completedAt)
+                            ? `<span class="text-success fw-semibold">${escapePlanHtml(item.completedAt)}</span>`
+                            : '<span class="text-muted">---</span>';
+
+                        const statusBadgeHtml = isDone
+                            ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1.5 fw-bold"><i class="bi bi-check2-circle me-1"></i>Đã làm</span>'
+                            : '<span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1.5 fw-semibold"><i class="bi bi-clock me-1"></i>Chưa làm</span>';
+
+                        tbodyRowsHtml += `
+                            <tr class="${isDone ? 'ps-step-done' : 'ps-step-todo'}">
+                                <td class="text-center text-muted">${globalItemIdx}</td>
+                                <td>
+                                    <i class="bi ${isDone ? 'bi-check-circle-fill text-success' : 'bi-circle text-secondary'} me-1"></i>
+                                    <strong class="ps-step-name">${escapePlanHtml(item.stepName || item.serviceName)}</strong>
+                                    ${(item.serviceName && item.stepName && item.stepName !== item.serviceName) ? `<span class="badge bg-light text-primary border ms-1" style="font-size: 10px;">${escapePlanHtml(item.serviceName)}</span>` : ''}
+                                </td>
+                                <td class="text-center">${toothBadge}</td>
+                                <td class="text-center fw-bold">${qtyDisplay}</td>
+                                <td class="text-center small">${completedAtHtml}</td>
+                                <td class="text-center">${statusBadgeHtml}</td>
+                            </tr>
+                        `;
+                    });
+                });
+            }
+
+            // Mỗi chẩn đoán là 1 bảng riêng biệt bên trong Kế hoạch điều trị
+            coursesHtml += `
+                <div class="border rounded-3 overflow-hidden bg-white shadow-xs">
+                    <div class="p-2.5 px-3 bg-light border-bottom d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            ${cdPrefix ? `<span class="badge bg-primary text-white rounded-pill px-2.5 py-1 fw-bold" style="font-size: 11.5px;">${escapePlanHtml(cdPrefix)}</span>` : ''}
+                            <strong class="text-dark" style="font-size: 13.5px;">Chẩn đoán: ${escapePlanHtml(diagName)}</strong>
+                            ${icdCode ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5"><i class="bi bi-clipboard2-pulse me-1"></i>[${escapePlanHtml(icdCode)}]</span>` : ''}
+                        </div>
+                        <span class="badge rounded-pill px-2.5 py-1 ${doneSteps > 0 && doneSteps === totalSteps ? 'bg-success-subtle text-success border border-success' : (doneSteps > 0 ? 'bg-primary-subtle text-primary border border-primary' : 'bg-light text-secondary border')}">
+                            <i class="bi ${doneSteps > 0 && doneSteps === totalSteps ? 'bi-check2-circle' : 'bi-clock'} me-1"></i>
+                            <span>${doneSteps}/${totalSteps} bước đã làm</span>
+                        </span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0" style="font-size: 13px;">
+                            <thead class="table-light">
+                            <tr>
+                                <th style="width: 45px;" class="text-center">#</th>
+                                <th>Bước thực hiện / Dịch vụ</th>
+                                <th style="width: 110px;" class="text-center">Vị trí răng</th>
+                                <th style="width: 90px;" class="text-center">Số lượng</th>
+                                <th style="width: 160px;" class="text-center">Ngày thực hiện</th>
+                                <th style="width: 130px;" class="text-center">Trạng thái</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                                ${tbodyRowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        });
+
+        const planPct = planTotalSteps > 0 ? Math.round((planDoneSteps / planTotalSteps) * 100) : 0;
+
+        // Cùng 1 Kế hoạch điều trị thì gom chung vào 1 khối (ps-plan-card), bên trong chứa các bảng chẩn đoán tương ứng
+        allDiagnosisCardsHtml += `
+            <div class="ps-plan-card">
+                <div class="ps-plan-head d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="badge bg-dark rounded-pill px-2.5 py-1.5">${escapePlanHtml(plan.planCode || 'KHDT')}</span>
+                        <strong class="text-dark" style="font-size: 14.5px;">${escapePlanHtml(plan.planName)}</strong>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="small text-secondary fw-semibold">${planDoneSteps}/${planTotalSteps} bước đã làm</span>
+                        <div class="progress" style="width: 110px; height: 6px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: ${planPct}%"></div>
+                        </div>
+                        <strong class="text-success small">${planPct}%</strong>
+                    </div>
+                </div>
+                <div class="p-3 bg-white d-flex flex-column gap-3">
+                    ${coursesHtml}
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = allDiagnosisCardsHtml || '<div class="text-center py-4 text-muted fst-italic">Chưa có giai đoạn điều trị nào được thiết lập.</div>';
+
+    const totalBadge = document.getElementById('psTotalServicesDoneBadge');
+    if (totalBadge) {
+        totalBadge.innerText = `${totalServicesDoneAcrossAll} dịch vụ đã làm`;
+    }
+}
+window.renderDiagnosisProgressTables = renderDiagnosisProgressTables;
+
 /**
  * Khởi tạo render tất cả các khối lộ trình từ cache window.INITIAL_TREATMENT_PLANS
  */
@@ -449,6 +686,7 @@ function initAllPlanRoadmaps() {
             }
         });
     }
+    renderDiagnosisProgressTables();
 }
 
 if (document.readyState === 'loading') {
@@ -529,7 +767,9 @@ function updatePlanInlineView(plan) {
     if (parentRow) {
         const progBadge = document.getElementById(`plan-progress-badge-${plan.planId}`);
         if (progBadge) {
-            progBadge.innerText = `${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)`;
+            progBadge.innerText = (plan.totalItems && plan.totalItems > 0)
+                ? `${plan.completedItems}/${plan.totalItems} bước (${plan.progressPercent}%)`
+                : `${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)`;
         }
         const progPercent = document.getElementById(`plan-progress-bar-${plan.planId}`);
         if (progPercent && plan.progressPercent !== undefined) {
@@ -541,8 +781,10 @@ function updatePlanInlineView(plan) {
             progPercentText.innerText = `${plan.progressPercent}%`;
         }
         const stageCountText = document.getElementById(`plan-stages-text-${plan.planId}`);
-        if (stageCountText && plan.totalStages !== undefined) {
-            stageCountText.innerText = `${plan.completedStages}/${plan.totalStages} giai đoạn`;
+        if (stageCountText) {
+            stageCountText.innerText = (plan.totalItems && plan.totalItems > 0)
+                ? `${plan.completedItems}/${plan.totalItems} bước`
+                : `${plan.completedStages}/${plan.totalStages} giai đoạn`;
         }
 
         const statusCell = document.getElementById(`plan-status-cell-${plan.planId}`);
@@ -553,6 +795,10 @@ function updatePlanInlineView(plan) {
                 btn.innerHTML = `<span>${plan.statusDisplayName}</span>`;
             }
         }
+    }
+
+    if (typeof renderDiagnosisProgressTables === 'function') {
+        renderDiagnosisProgressTables();
     }
 }
 
@@ -680,6 +926,11 @@ function revertPlanItemStatus(planItemId) {
         showToast('Đã hoàn tác bước thủ thuật về Chưa làm!');
         if (result.data) {
             updatePlanInlineView(result.data);
+        }
+        // Xóa ngay dòng dịch vụ tương ứng khỏi bảng Dịch vụ thực hiện tại ghế
+        document.querySelectorAll(`tr[data-plan-item-id="${planItemId}"]`).forEach(el => el.remove());
+        if (typeof recalcPerformedTableTotals === 'function') {
+            recalcPerformedTableTotals();
         }
     })
     .catch(err => {
