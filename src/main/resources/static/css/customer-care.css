@@ -813,6 +813,74 @@ textarea:focus {
     font-size: 12px !important;
 }
 
+<<<<<<< Updated upstream
+=======
+/* =========================================================================
+   CỘT THAO TÁC GHIM CỐ ĐỊNH & THANH THAO TÁC NỔI CHUẨN /doctor/daily-visits
+   ========================================================================= */
+.cc-tasks-table th.col-actions-pinned,
+.cc-tasks-table td.col-actions-pinned,
+.cc-tasks-table th.dv-col-pinned-right,
+.cc-tasks-table td.dv-col-pinned-right {
+    position: sticky !important;
+    right: 0 !important;
+    z-index: 18 !important;
+    background: #ffffff !important;
+    border-left: 1.5px solid #cbd5e1 !important;
+    box-shadow: -8px 0 16px -4px rgba(15, 23, 42, 0.08);
+    min-width: 380px !important;
+    width: 380px !important;
+    text-align: center;
+    padding: 8px 12px !important;
+}
+
+.cc-tasks-table thead th.col-actions-pinned,
+.cc-tasks-table thead th.dv-col-pinned-right {
+    top: 0 !important;
+    z-index: 28 !important;
+    background: #f1f5f9 !important;
+    color: #0369a1 !important;
+}
+
+.cc-tasks-table tbody tr:hover td.col-actions-pinned,
+.cc-tasks-table tbody tr:hover td.dv-col-pinned-right,
+.cc-tasks-table tbody tr.dv-data-row:hover td.col-actions-pinned,
+.cc-tasks-table tbody tr.dv-data-row:hover td.dv-col-pinned-right {
+    background: #f0f9ff !important;
+}
+
+/* Cột thao tác cố định bên phải (Clean, không dùng track nổi đè kép) */
+.cc-tasks-table th.dv-floating-actions-track,
+.cc-tasks-table td.dv-floating-actions-track,
+.cc-tasks-table .dv-floating-actions-bar {
+    display: none !important;
+}
+
+.cc-tasks-table .dv-actions-cell-always,
+#ccTasksTable .dv-actions-cell-always {
+    display: inline-flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
+.cc-tasks-table tbody tr:hover .dv-actions-cell-always,
+.cc-tasks-table tbody tr.dv-data-row:hover .dv-actions-cell-always,
+.cc-tasks-table tbody tr.is-row-hovered .dv-actions-cell-always,
+#ccTasksTable tbody tr:hover .dv-actions-cell-always,
+#ccTasksTable tbody tr.dv-data-row:hover .dv-actions-cell-always,
+#ccTasksTable tbody tr.is-row-hovered .dv-actions-cell-always {
+    display: inline-flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+}
+
+>>>>>>> Stashed changes
 /* 8. THANH PHÂN TRANG CỐ ĐỊNH CHÂN TRANG (ĐỒNG BỘ DOCTOR/DAILY-VISITS) */
 .table-pagination-footer {
     flex-shrink: 0;

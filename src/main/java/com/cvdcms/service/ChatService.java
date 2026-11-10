@@ -19,6 +19,8 @@ public interface ChatService {
 
     String GREETING_MESSAGE = "Xin chào! Bạn cần chúng tôi hỗ trợ điều gì?";
     String FIRST_MESSAGE_SYSTEM_NOTICE = "Cảm ơn bạn đã liên hệ! Tin nhắn của bạn đã được gửi đến đội ngũ nhân viên tại cơ sở. Vui lòng chờ trong giây lát, chúng tôi sẽ phản hồi sớm nhất có thể.";
+    String RECALLED_MESSAGE_PLACEHOLDER = "Tin nhắn đã được thu hồi";
+    long EDIT_RECALL_WINDOW_MINUTES = 10L;
 
     String resolvePrimaryRoleCode(Long userId);
 
@@ -71,4 +73,14 @@ public interface ChatService {
     ChatMessageDTO sendMessage(Long currentUserId, ChatSendRequestDTO request);
 
     Map<String, Object> markConversationAsRead(Long currentUserId, Long conversationId);
+
+    long getTotalUnreadCount(Long currentUserId);
+
+    ChatMessageDTO editMessage(Long currentUserId, Long messageId, String newMessageText);
+
+    ChatMessageDTO recallMessage(Long currentUserId, Long messageId);
+
+    Map<String, Object> deleteMessageForUser(Long currentUserId, Long messageId);
+
+    Map<String, Object> deleteConversationForUser(Long currentUserId, Long conversationId);
 }

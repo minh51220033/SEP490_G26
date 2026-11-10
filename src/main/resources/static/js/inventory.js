@@ -349,7 +349,6 @@
         try {
             const list = await request("/api/materials/active");
             state.activeMaterials = Array.isArray(list) ? list : [];
-            refreshMaterialSelectsInForms();
         } catch {
             state.activeMaterials = [];
         }
@@ -758,62 +757,51 @@
     // 3. TAB PHIẾU NHẬP KHO (UPLOAD HÓA ĐƠN, THANH TOÁN, KÝ ĐIỆN TỬ, LỊCH SỬ, PDF)
     // =========================================================================
 
-    function buildMaterialOptionsHtml(selectedId = "", customList = null) {
-        const sourceList = Array.isArray(customList) ? customList : state.activeMaterials;
-        if (!sourceList.length && !selectedId) {
-            return '<option value="">-- Không tìm thấy vật tư phù hợp --</option>';
-        }
-        // Luôn bảo toàn vật tư đang được chọn ở dòng hiện tại ngay cả khi từ khóa tìm kiếm mới không chứa nó
-        const merged = [...sourceList];
-        if (selectedId && !merged.some(m => String(m.materialId) === String(selectedId))) {
-            const existing = state.activeMaterials.find(m => String(m.materialId) === String(selectedId));
-            if (existing) merged.unshift(existing);
-        }
-        return '<option value="">-- Chọn vật tư --</option>' +
-            merged.map(m => {
-                const sel = String(m.materialId) === String(selectedId) ? "selected" : "";
-                return `<option value="${escapeHtml(m.materialId)}" data-unit="${escapeHtml(m.unit)}" ${sel}>${escapeHtml(m.materialCode)} - ${escapeHtml(m.materialName)} (${escapeHtml(m.unit)})</option>`;
-            }).join("");
-    }
+    function reindexAndUpdateVoucherRows(formType) {
+        const isReceipt = formType === "receipt";
+        const isTransfer = formType === "transfer";
+        const tbodyId = isReceipt ? "receiptItems" : (isTransfer ? "transferItems" : "issueItems");
+        const rowSelector = isReceipt ? ".receipt-item-row" : (isTransfer ? ".transfer-item-row" : ".issue-item-row");
+        const matInputSelector = isReceipt ? ".material-id" : (isTransfer ? ".transfer-material-id" : ".issue-material-id");
+        const countElId = isReceipt ? "receiptSelectedCount" : (isTransfer ? "transferSelectedCount" : "issueSelectedCount");
+        const colSpan = isReceipt ? 10 : 9;
+        const emptyText = isReceipt
+            ? 'Chưa có vật tư nào trong phiếu nhập. Nhấn nút <strong>"+ Chọn vật tư"</strong> ở góc phải phía trên để chọn vật tư từ danh mục.'
+            : (isTransfer
+                ? 'Chưa có vật tư nào trong phiếu điều chuyển. Nhấn nút <strong>"+ Chọn vật tư"</strong> để chọn vật tư cần điều chuyển.'
+                : 'Chưa có vật tư nào trong phiếu xuất. Nhấn nút <strong>"+ Chọn vật tư"</strong> để chọn vật tư cần xuất kho.');
 
-    function bindSearchableMaterialSelect(searchInput, selectEl) {
-        if (!searchInput || !selectEl) return;
-        const performSearch = debounce(async () => {
-            const kw = searchInput.value.trim();
-            const currentVal = selectEl.value;
-            if (!kw) {
-                selectEl.innerHTML = buildMaterialOptionsHtml(currentVal, state.activeMaterials);
-                return;
+        const tbody = $(tbodyId);
+        if (!tbody) return;
+
+        const itemRows = Array.from(tbody.querySelectorAll(rowSelector));
+        const emptyRow = tbody.querySelector(".voucher-empty-row");
+
+        if (itemRows.length === 0) {
+            if (!emptyRow) {
+                tbody.innerHTML = `<tr class="voucher-empty-row"><td colspan="${colSpan}"><i class="bi bi-inbox me-1"></i>${emptyText}</td></tr>`;
             }
-            try {
-                const res = await request(`/api/materials?keyword=${encodeURIComponent(kw)}&active=true&page=0&size=30`);
-                const items = Array.isArray(res?.content) ? res.content : [];
-                items.forEach(item => {
-                    if (!state.activeMaterials.some(m => m.materialId === item.materialId)) {
-                        state.activeMaterials.push(item);
-                    }
-                });
-                selectEl.innerHTML = buildMaterialOptionsHtml(currentVal, items);
-            } catch {
-                const filtered = state.activeMaterials.filter(m =>
-                    `${m.materialCode} ${m.materialName}`.toLowerCase().includes(kw.toLowerCase())
-                );
-                selectEl.innerHTML = buildMaterialOptionsHtml(currentVal, filtered);
+            const countEl = $(countElId);
+            if (countEl) countEl.textContent = "0";
+            return;
+        }
+
+        if (emptyRow) {
+            emptyRow.remove();
+        }
+
+        const distinctMatIds = new Set();
+        itemRows.forEach((tr, idx) => {
+            const sttCell = tr.querySelector(".row-stt");
+            if (sttCell) sttCell.textContent = String(idx + 1);
+            const matIdVal = Number(tr.querySelector(matInputSelector)?.value || tr.dataset.materialId);
+            if (matIdVal > 0) {
+                distinctMatIds.add(matIdVal);
             }
-        }, 300);
-
-        searchInput.addEventListener("input", performSearch);
-    }
-
-    function refreshMaterialSelectsInForms() {
-        document.querySelectorAll(".receipt-item-row .material-id").forEach(sel => {
-            const currentVal = sel.value;
-            sel.innerHTML = buildMaterialOptionsHtml(currentVal);
         });
-        document.querySelectorAll(".issue-item-row .issue-material-id, .transfer-item-row .transfer-material-id").forEach(sel => {
-            const currentVal = sel.value;
-            sel.innerHTML = buildMaterialOptionsHtml(currentVal);
-        });
+
+        const countEl = $(countElId);
+        if (countEl) countEl.textContent = String(distinctMatIds.size);
     }
 
     async function handleInvoiceFileUpload(file) {
@@ -883,55 +871,67 @@
         }
     }
 
-    function addReceiptRow() {
+    function addReceiptRow(materialObj, afterRow = null) {
+        if (!materialObj || !materialObj.materialId) return null;
+        const tbody = $("receiptItems");
+        if (!tbody) return null;
+
+        const emptyRow = tbody.querySelector(".voucher-empty-row");
+        if (emptyRow) emptyRow.remove();
+
+        const mid = Number(materialObj.materialId);
         const tr = document.createElement("tr");
         tr.className = "receipt-item-row";
+        tr.dataset.materialId = String(mid);
         tr.innerHTML = `
+            <td class="row-stt" style="text-align:center; font-weight:700; color:#64748b;">1</td>
             <td>
-                <div class="mat-picker-wrap">
-                    <input type="search" class="mat-search-input" placeholder="Gõ mã / tên để lọc nhanh vật tư..." aria-label="Tìm vật tư">
-                    <select class="material-id" required aria-label="Chọn vật tư">
-                        ${buildMaterialOptionsHtml()}
-                    </select>
-                </div>
+                <input type="hidden" class="material-id" value="${escapeHtml(mid)}">
+                <span class="voucher-mat-code-badge">${escapeHtml(materialObj.materialCode || "—")}</span>
             </td>
-            <td class="mat-unit-cell">—</td>
+            <td>
+                <div class="voucher-mat-name">${escapeHtml(materialObj.materialName || "—")}</div>
+                ${materialObj.category ? `<div class="voucher-mat-sub">${escapeHtml(materialObj.category)}</div>` : ""}
+            </td>
+            <td style="text-align:center;"><span class="voucher-mat-unit">${escapeHtml(materialObj.unit || "—")}</span></td>
             <td><input class="batch-number" maxlength="50" pattern="^[A-Za-z0-9._/-]{2,50}$" title="Số lô từ 2-50 ký tự (chữ, số, -, _, ., /)" required placeholder="VD: LO-2026-01" aria-label="Số lô"></td>
             <td><input class="expiry-date" type="date" required aria-label="Hạn sử dụng"></td>
             <td><input class="quantity" type="number" min="1" step="1" inputmode="numeric" required value="1" aria-label="Số lượng"></td>
             <td><input class="unit-price" type="number" min="0" step="1" inputmode="numeric" required value="0" aria-label="Đơn giá"></td>
-            <td class="line-total">0 ₫</td>
-            <td><button class="remove-row" type="button" title="Xóa dòng" aria-label="Xóa dòng">×</button></td>`;
-        $("receiptItems").appendChild(tr);
+            <td class="line-total fw-bold" style="text-align:right;">0 ₫</td>
+            <td style="text-align:center;">
+                <div class="voucher-row-actions">
+                    <button class="add-batch-row-btn" type="button" title="Thêm lô nhập khác cho vật tư này"><i class="bi bi-layers-half"></i>+ Lô</button>
+                    <button class="remove-row" type="button" title="Xóa dòng vật tư" aria-label="Xóa dòng">×</button>
+                </div>
+            </td>`;
 
-        const searchInput = tr.querySelector(".mat-search-input");
-        const matSelect = tr.querySelector(".material-id");
-        bindSearchableMaterialSelect(searchInput, matSelect);
-
-        matSelect.addEventListener("change", () => {
-            const opt = matSelect.options[matSelect.selectedIndex];
-            tr.querySelector(".mat-unit-cell").textContent = opt?.dataset?.unit || "—";
-        });
+        if (afterRow && afterRow.parentNode === tbody) {
+            afterRow.insertAdjacentElement("afterend", tr);
+        } else {
+            tbody.appendChild(tr);
+        }
 
         tr.querySelectorAll(".quantity, .unit-price").forEach(input => input.addEventListener("input", calculateReceiptTotal));
-        tr.querySelector(".remove-row").addEventListener("click", () => {
-            const allRows = document.querySelectorAll(".receipt-item-row");
-            if (allRows.length > 1) {
-                tr.remove();
-            } else {
-                searchInput.value = "";
-                matSelect.innerHTML = buildMaterialOptionsHtml("");
-                matSelect.value = "";
-                tr.querySelector(".mat-unit-cell").textContent = "—";
-                tr.querySelector(".batch-number").value = "";
-                tr.querySelector(".expiry-date").value = "";
-                tr.querySelector(".quantity").value = "1";
-                tr.querySelector(".unit-price").value = "0";
-                showMessage("Phiếu nhập cần ít nhất 1 dòng vật tư. Đã làm mới dòng hiện tại.", "info");
+
+        tr.querySelector(".add-batch-row-btn").addEventListener("click", () => {
+            const newBatchRow = addReceiptRow(materialObj, tr);
+            if (newBatchRow) {
+                const batchInput = newBatchRow.querySelector(".batch-number");
+                if (batchInput) batchInput.focus();
             }
+            showMessage(`Đã thêm dòng nhập lô mới cho vật tư "${materialObj.materialName}". Vui lòng nhập số lô khác.`, "info");
+        });
+
+        tr.querySelector(".remove-row").addEventListener("click", () => {
+            tr.remove();
+            reindexAndUpdateVoucherRows("receipt");
             calculateReceiptTotal();
         });
+
+        reindexAndUpdateVoucherRows("receipt");
         calculateReceiptTotal();
+        return tr;
     }
 
     function resetReceiptForm() {
@@ -944,7 +944,7 @@
         if ($("receiptPaymentMethod")) $("receiptPaymentMethod").value = "BANK_TRANSFER";
         if ($("receiptPaymentRefNo")) $("receiptPaymentRefNo").value = "";
         if ($("receiptResult")) $("receiptResult").hidden = true;
-        addReceiptRow();
+        reindexAndUpdateVoucherRows("receipt");
         calculateReceiptTotal();
     }
 
@@ -1000,6 +1000,10 @@
         }
 
         const rows = [...document.querySelectorAll(".receipt-item-row")];
+        if (!rows.length) {
+            showMessage("Phiếu nhập kho chưa có vật tư nào. Vui lòng nhấn '+ Chọn vật tư' để thêm vật tư vào phiếu.", "warning");
+            return;
+        }
         const items = rows.map(row => ({
             materialId: Number(row.querySelector(".material-id").value),
             batchNumber: row.querySelector(".batch-number").value.trim().toUpperCase(),
@@ -1318,75 +1322,69 @@
             .reduce((sum, b) => sum + Number(b.quantityRemaining || 0), 0);
     }
 
-    function addIssueOrTransferRow(containerId, isTransfer = false) {
+    function addIssueOrTransferRow(containerId, isTransfer = false, materialObj = null) {
+        if (!materialObj || !materialObj.materialId) return null;
         const tbody = $(containerId);
-        if (!tbody) return;
+        if (!tbody) return null;
+
+        const emptyRow = tbody.querySelector(".voucher-empty-row");
+        if (emptyRow) emptyRow.remove();
+
+        const mid = Number(materialObj.materialId);
         const tr = document.createElement("tr");
         tr.className = isTransfer ? "transfer-item-row" : "issue-item-row";
+        tr.dataset.materialId = String(mid);
         const matClass = isTransfer ? "transfer-material-id" : "issue-material-id";
 
         tr.innerHTML = `
+            <td class="row-stt" style="text-align:center; font-weight:700; color:#64748b;">1</td>
             <td>
-                <div class="mat-picker-wrap">
-                    <input type="search" class="mat-search-input" placeholder="Gõ mã / tên để lọc nhanh vật tư..." aria-label="Tìm vật tư">
-                    <select class="${matClass}" required aria-label="Chọn vật tư">
-                        ${buildMaterialOptionsHtml()}
-                    </select>
-                </div>
+                <input type="hidden" class="${matClass}" value="${escapeHtml(mid)}">
+                <span class="voucher-mat-code-badge">${escapeHtml(materialObj.materialCode || "—")}</span>
             </td>
+            <td>
+                <div class="voucher-mat-name">${escapeHtml(materialObj.materialName || "—")}</div>
+                ${materialObj.category ? `<div class="voucher-mat-sub">${escapeHtml(materialObj.category)}</div>` : ""}
+            </td>
+            <td style="text-align:center;"><span class="voucher-mat-unit">${escapeHtml(materialObj.unit || "—")}</span></td>
             <td>
                 <select class="batch-id" aria-label="Chọn lô xuất">
                     <option value="">-- Tự động theo FEFO (Hạn gần nhất trước) --</option>
                 </select>
             </td>
-            <td class="avail-stock">0</td>
+            <td class="avail-stock" style="text-align:right;">0</td>
             <td><input class="quantity" type="number" min="1" step="1" inputmode="numeric" required value="1" aria-label="Số lượng"></td>
             <td><input class="item-notes" maxlength="255" placeholder="Ghi chú dòng (tùy chọn)"></td>
-            <td><button class="remove-row" type="button" title="Xóa dòng">×</button></td>
+            <td style="text-align:center;"><button class="remove-row" type="button" title="Xóa dòng">×</button></td>
         `;
         tbody.appendChild(tr);
 
-        const searchInput = tr.querySelector(".mat-search-input");
-        const matSelect = tr.querySelector(`.${matClass}`);
         const batchSelect = tr.querySelector(".batch-id");
         const availCell = tr.querySelector(".avail-stock");
 
-        bindSearchableMaterialSelect(searchInput, matSelect);
-
         const updateRowAvailability = () => {
-            const matId = Number(matSelect.value) || null;
             const allowExpired = !isTransfer && $("issueType")?.value === "DISCARD_EXPIRED";
             const currentBatch = batchSelect.value;
-            batchSelect.innerHTML = buildBatchOptionsForMaterial(matId, allowExpired);
+            batchSelect.innerHTML = buildBatchOptionsForMaterial(mid, allowExpired);
             if (currentBatch && [...batchSelect.options].some(o => o.value === currentBatch)) {
                 batchSelect.value = currentBatch;
             }
-            const avail = computeAvailableForMaterial(matId, batchSelect.value, allowExpired);
+            const avail = computeAvailableForMaterial(mid, batchSelect.value, allowExpired);
             availCell.textContent = fmtQty(avail);
             availCell.className = `avail-stock ${avail > 0 ? "stock-good" : "stock-low"}`;
         };
 
-        matSelect.addEventListener("change", () => {
-            batchSelect.value = "";
-            updateRowAvailability();
-        });
+        tr._updateRowAvailability = updateRowAvailability;
         batchSelect.addEventListener("change", updateRowAvailability);
+        updateRowAvailability();
 
         tr.querySelector(".remove-row").addEventListener("click", () => {
-            if (tbody.querySelectorAll("tr").length > 1) {
-                tr.remove();
-            } else {
-                searchInput.value = "";
-                matSelect.innerHTML = buildMaterialOptionsHtml("");
-                matSelect.value = "";
-                batchSelect.innerHTML = '<option value="">-- Tự động theo FEFO (Hạn gần nhất trước) --</option>';
-                availCell.textContent = "0";
-                availCell.className = "avail-stock";
-                tr.querySelector(".quantity").value = "1";
-                tr.querySelector(".item-notes").value = "";
-                showMessage("Phiếu cần ít nhất 1 dòng vật tư. Đã làm mới dòng hiện tại.", "info");
-            }
+            tr.remove();
+            reindexAndUpdateVoucherRows(isTransfer ? "transfer" : "issue");
         });
+
+        reindexAndUpdateVoucherRows(isTransfer ? "transfer" : "issue");
+        return tr;
     }
 
     function resetIssueForm() {
@@ -1394,7 +1392,8 @@
         $("issueDate").value = new Date().toISOString().slice(0, 10);
         $("issueItems").innerHTML = "";
         clearDraftSignature("issue");
-        addIssueOrTransferRow("issueItems", false);
+        syncIssueReasonVisibility();
+        reindexAndUpdateVoucherRows("issue");
     }
 
     function resetTransferForm() {
@@ -1403,13 +1402,30 @@
         populateDestinationBranches();
         $("transferItems").innerHTML = "";
         clearDraftSignature("transfer");
-        addIssueOrTransferRow("transferItems", true);
+        reindexAndUpdateVoucherRows("transfer");
+    }
+
+    function syncIssueReasonVisibility() {
+        const typeEl = $("issueType");
+        const wrapEl = $("issueReasonFieldWrap");
+        const inputEl = $("issueReason");
+        const errEl = $("issueReasonError");
+        if (!typeEl || !wrapEl || !inputEl) return;
+        const isOther = typeEl.value === "OTHER";
+        wrapEl.hidden = !isOther;
+        inputEl.required = isOther;
+        if (!isOther) {
+            inputEl.value = "";
+            if (errEl) errEl.hidden = true;
+        }
     }
 
     function refreshIssueAndTransferRows() {
+        syncIssueReasonVisibility();
         document.querySelectorAll(".issue-item-row, .transfer-item-row").forEach(tr => {
-            const matSelect = tr.querySelector("select");
-            if (matSelect) matSelect.dispatchEvent(new Event("change"));
+            if (typeof tr._updateRowAvailability === "function") {
+                tr._updateRowAvailability();
+            }
         });
     }
 
@@ -1418,6 +1434,10 @@
         if (!requireBranch()) return;
         const button = $("submitIssue");
         const rows = [...document.querySelectorAll(".issue-item-row")];
+        if (!rows.length) {
+            showMessage("Phiếu xuất kho chưa có vật tư nào. Vui lòng nhấn '+ Chọn vật tư' để thêm vật tư cần xuất.", "warning");
+            return;
+        }
         const items = rows.map(row => ({
             materialId: Number(row.querySelector(".issue-material-id").value),
             batchId: row.querySelector(".batch-id").value ? Number(row.querySelector(".batch-id").value) : null,
@@ -1456,9 +1476,21 @@
             }
         }
 
+        const selectedIssueType = $("issueType").value;
+        const rawIssueReason = $("issueReason") ? $("issueReason").value.trim() : "";
+        if (selectedIssueType === "OTHER") {
+            if (!rawIssueReason) {
+                if ($("issueReasonError")) $("issueReasonError").hidden = false;
+                showMessage("Vui lòng nhập lý do xuất kho khi chọn Mục đích khác.", "warning");
+                $("issueReason")?.focus();
+                return;
+            }
+            if ($("issueReasonError")) $("issueReasonError").hidden = true;
+        }
         const payload = {
             branchId: Number(state.branchId),
-            issueType: $("issueType").value,
+            issueType: selectedIssueType,
+            issueReason: selectedIssueType === "OTHER" ? rawIssueReason : null,
             issueDate: $("issueDate").value,
             notes: $("issueNotes").value.trim() || null,
             signatureData: $("issueSignatureData")?.value || null,
@@ -1497,6 +1529,10 @@
         }
         const button = $("submitTransfer");
         const rows = [...document.querySelectorAll(".transfer-item-row")];
+        if (!rows.length) {
+            showMessage("Phiếu điều chuyển chưa có vật tư nào. Vui lòng nhấn '+ Chọn vật tư' để thêm vật tư cần điều chuyển.", "warning");
+            return;
+        }
         const items = rows.map(row => ({
             materialId: Number(row.querySelector(".transfer-material-id").value),
             batchId: row.querySelector(".batch-id").value ? Number(row.querySelector(".batch-id").value) : null,
@@ -1567,8 +1603,10 @@
 
             $("issueHistoryTable").innerHTML = rows.length ? rows.map(si => {
                 const isDiscard = si.issueType === "DISCARD_EXPIRED";
-                const typeLabel = isDiscard ? "Xuất hủy hết hạn" : "Xuất sử dụng nội bộ";
-                const typeCls = isDiscard ? "status-danger" : "status-info";
+                const isOther = si.issueType === "OTHER";
+                const typeLabel = isDiscard ? "Xuất hủy hết hạn" : (isOther ? "Mục đích khác" : "Xuất sử dụng nội bộ");
+                const typeCls = isDiscard ? "status-danger" : (isOther ? "status-warning" : "status-info");
+                const noteOrReasonHtml = (isOther && si.issueReason) ? `<div><strong>Lý do:</strong> ${escapeHtml(si.issueReason)}</div>${si.notes ? `<div class="text-muted small">${escapeHtml(si.notes)}</div>` : ""}` : escapeHtml(si.notes || "—");
                 return `<tr>
                     <td class="code">${escapeHtml(si.issueCode)}</td>
                     <td>${escapeHtml(si.issueDate)}</td>
@@ -1577,7 +1615,7 @@
                     <td><strong>${escapeHtml(fmtQty(si.totalQuantity))}</strong> (${escapeHtml(si.itemCount)} dòng)</td>
                     <td>${money(si.totalEstimatedValue)}</td>
                     <td>${renderSignatureCell(si.signatureUrl, si.signedByName, si.issueId, "issue")}</td>
-                    <td>${escapeHtml(si.notes || "—")}</td>
+                    <td>${noteOrReasonHtml}</td>
                     <td>
                         <div class="row-actions">
                             <button type="button" class="button button-secondary button-sm" data-view-issue="${si.issueId}">Chi tiết</button>
@@ -1690,7 +1728,8 @@
                 <div class="detail-meta-grid">
                     <div class="detail-meta-item"><span>Mã phiếu</span><strong>${escapeHtml(si.issueCode)}</strong></div>
                     <div class="detail-meta-item"><span>Ngày lập</span><strong>${escapeHtml(si.issueDate)}</strong></div>
-                    <div class="detail-meta-item"><span>Loại giao dịch</span><strong>${escapeHtml(si.issueType)}</strong></div>
+                    <div class="detail-meta-item"><span>Loại giao dịch</span><strong>${escapeHtml(si.issueType === "TRANSFER" ? "Điều chuyển liên chi nhánh" : (si.issueType === "DISCARD_EXPIRED" ? "Xuất hủy vật tư hết hạn" : (si.issueType === "OTHER" ? "Mục đích khác" : "Xuất sử dụng nội bộ")))}</strong></div>
+                    ${si.issueReason ? `<div class="detail-meta-item"><span>Lý do xuất kho</span><strong>${escapeHtml(si.issueReason)}</strong></div>` : ""}
                     <div class="detail-meta-item"><span>Chi nhánh xuất</span><strong>${escapeHtml(si.branchName)}</strong></div>
                     ${isTransfer ? `<div class="detail-meta-item"><span>Chi nhánh nhận</span><strong>${escapeHtml(si.destinationBranchName || "—")}</strong></div>` : ""}
                     <div class="detail-meta-item"><span>Người lập phiếu</span><strong>${escapeHtml(si.issuerName || "—")}</strong></div>
@@ -2476,9 +2515,9 @@
 
         initSignatureCanvas();
         initInventorySectionCollapse();
-        addReceiptRow();
-        addIssueOrTransferRow("issueItems", false);
-        addIssueOrTransferRow("transferItems", true);
+        reindexAndUpdateVoucherRows("receipt");
+        reindexAndUpdateVoucherRows("issue");
+        reindexAndUpdateVoucherRows("transfer");
 
         document.querySelectorAll(".tab").forEach(button =>
             button.addEventListener("click", () => switchTab(button.dataset.tab))
@@ -2622,10 +2661,385 @@
         safeOn("paymentHistoryNext", "click", () => { if (state.paymentsPage < state.paymentsTotalPages - 1) loadPaymentHistory(state.paymentsPage + 1); });
         safeOn("paymentHistoryLast", "click", () => { if (state.paymentsTotalPages > 0) loadPaymentHistory(state.paymentsTotalPages - 1); });
 
-        // Add row, Reset & Form submits
-        safeOn("addReceiptItem", "click", addReceiptRow);
-        safeOn("addIssueItem", "click", () => addIssueOrTransferRow("issueItems", false));
-        safeOn("addTransferItem", "click", () => addIssueOrTransferRow("transferItems", true));
+        // =========================================================================
+        // MODAL TÌM KIẾM & CHỌN NHIỀU VẬT TƯ KHO (NHẬP / XUẤT / ĐIỀU CHUYỂN)
+        // =========================================================================
+        const pickerState = {
+            targetFormType: "receipt",
+            keyword: "",
+            category: "ALL",
+            stockFilter: "ALL",
+            page: 0,
+            size: 20,
+            hasMore: false,
+            totalElements: 0,
+            items: [],
+            selectedMap: new Map(),
+            existingMaterialIds: new Set(),
+            abortController: null,
+            requestSeq: 0
+        };
+
+        function getExistingMaterialIdsInForm(formType) {
+            const containerSelector = formType === "receipt"
+                ? "#receiptItems .receipt-item-row .material-id"
+                : (formType === "transfer"
+                    ? "#transferItems .transfer-item-row .transfer-material-id"
+                    : "#issueItems .issue-item-row .issue-material-id");
+            const ids = new Set();
+            document.querySelectorAll(containerSelector).forEach(el => {
+                const val = Number(el.value);
+                if (val && val > 0) {
+                    ids.add(val);
+                }
+            });
+            return ids;
+        }
+
+        function syncPickerExistingMaterials() {
+            pickerState.existingMaterialIds = getExistingMaterialIdsInForm(pickerState.targetFormType);
+            for (const existingId of pickerState.existingMaterialIds) {
+                if (pickerState.selectedMap.has(existingId)) {
+                    pickerState.selectedMap.delete(existingId);
+                }
+            }
+        }
+
+        function updateMaterialPickerSelectedCounter() {
+            syncPickerExistingMaterials();
+            const countEl = $("matPickerSelectedCount");
+            if (countEl) {
+                countEl.textContent = String(pickerState.selectedMap.size);
+            }
+            const confirmBtn = $("confirmMaterialPickerBtn");
+            if (confirmBtn) {
+                confirmBtn.disabled = pickerState.selectedMap.size === 0;
+            }
+        }
+
+        function openMaterialPickerModal(targetFormType) {
+            if (!requireBranch()) return;
+            pickerState.targetFormType = targetFormType || "receipt";
+            pickerState.keyword = "";
+            pickerState.category = "ALL";
+            pickerState.page = 0;
+            pickerState.items = [];
+            pickerState.selectedMap.clear();
+            syncPickerExistingMaterials();
+
+            if ($("matPickerKeywordInput")) $("matPickerKeywordInput").value = "";
+            if ($("matPickerCategorySelect")) $("matPickerCategorySelect").value = "ALL";
+
+            let defaultFilter = "ALL";
+            let titleText = "Chọn vật tư nhập kho";
+            let subText = "Tìm kiếm theo mã, tên, nhóm vật tư và chọn một hoặc nhiều vật tư để đưa vào Phiếu nhập kho";
+
+            if (targetFormType === "issue") {
+                const isDiscard = $("issueType")?.value === "DISCARD_EXPIRED";
+                defaultFilter = isDiscard ? "EXPIRED_ONLY" : "AVAILABLE_STOCK";
+                titleText = "Chọn vật tư xuất kho";
+                subText = isDiscard
+                    ? "Hiển thị ưu tiên các vật tư có lô hết hạn cần xuất hủy tại cơ sở"
+                    : "Tìm kiếm và chọn một hoặc nhiều vật tư còn tồn khả dụng để đưa vào Phiếu xuất kho";
+            } else if (targetFormType === "transfer") {
+                defaultFilter = "AVAILABLE_STOCK";
+                titleText = "Chọn vật tư điều chuyển kho";
+                subText = "Tìm kiếm và chọn một hoặc nhiều vật tư còn hạn sử dụng để điều chuyển sang chi nhánh đích";
+            }
+
+            pickerState.stockFilter = defaultFilter;
+            if ($("matPickerStockFilterSelect")) $("matPickerStockFilterSelect").value = defaultFilter;
+            if ($("materialPickerModalTitle")) {
+                $("materialPickerModalTitle").innerHTML = `<i class="bi bi-box-seam-fill me-2 text-primary"></i>${escapeHtml(titleText)}`;
+            }
+            if ($("materialPickerModalSubtitle")) {
+                $("materialPickerModalSubtitle").textContent = subText;
+            }
+
+            updateMaterialPickerSelectedCounter();
+            if ($("materialPickerModal")) {
+                $("materialPickerModal").hidden = false;
+            }
+            if ($("matPickerKeywordInput")) {
+                $("matPickerKeywordInput").focus();
+            }
+            loadMaterialPickerItems(false);
+        }
+
+        function closeMaterialPickerModal() {
+            if ($("materialPickerModal")) {
+                $("materialPickerModal").hidden = true;
+            }
+        }
+
+        async function loadMaterialPickerItems(append = false) {
+            if (!state.branchId) return;
+            const tbody = $("matPickerTableBody");
+            if (!tbody) return;
+
+            if (!append) {
+                pickerState.page = 0;
+                pickerState.items = [];
+                tbody.innerHTML = '<tr><td colspan="7" class="empty">Đang tải danh sách vật tư...</td></tr>';
+            }
+
+            if (pickerState.abortController) {
+                try { pickerState.abortController.abort(); } catch (e) {}
+            }
+            const abortController = new AbortController();
+            pickerState.abortController = abortController;
+            const seq = ++pickerState.requestSeq;
+
+            const params = new URLSearchParams({
+                branchId: String(state.branchId),
+                stockFilter: pickerState.stockFilter || "ALL",
+                page: String(pickerState.page),
+                size: String(pickerState.size)
+            });
+            if (pickerState.keyword && pickerState.keyword.trim() !== "") {
+                params.set("keyword", pickerState.keyword.trim());
+            }
+            if (pickerState.category && pickerState.category !== "ALL") {
+                params.set("category", pickerState.category);
+            }
+
+            try {
+                const data = await request(`/api/inventory/picker-materials?${params.toString()}`, {
+                    signal: abortController.signal
+                });
+                if (seq !== pickerState.requestSeq) return;
+
+                const pageContent = Array.isArray(data?.content) ? data.content : [];
+                pickerState.items = append ? pickerState.items.concat(pageContent) : pageContent;
+                pickerState.hasMore = Boolean(data?.hasMore);
+                pickerState.totalElements = Number(data?.totalElements || pickerState.items.length);
+
+                const catSelect = $("matPickerCategorySelect");
+                if (catSelect && Array.isArray(data?.categories)) {
+                    const currentCat = pickerState.category || "ALL";
+                    catSelect.innerHTML = '<option value="ALL">Tất cả nhóm vật tư</option>' +
+                        data.categories.map(c => `<option value="${escapeHtml(c)}" ${c === currentCat ? "selected" : ""}>${escapeHtml(c)}</option>`).join("");
+                }
+
+                renderMaterialPickerTable();
+            } catch (err) {
+                if (err && err.name === "AbortError") return;
+                if (seq !== pickerState.requestSeq) return;
+                tbody.innerHTML = `<tr><td colspan="7" class="empty text-danger">${escapeHtml(err.message || "Không thể tải danh sách vật tư.")}</td></tr>`;
+            }
+        }
+
+        function renderMaterialPickerTable() {
+            const tbody = $("matPickerTableBody");
+            if (!tbody) return;
+
+            syncPickerExistingMaterials();
+
+            if ($("matPickerTotalInfo")) {
+                const existingCount = pickerState.existingMaterialIds.size;
+                const extraNote = existingCount > 0 ? ` · Đã có trong phiếu: ${existingCount}` : "";
+                $("matPickerTotalInfo").textContent = `Hiển thị ${pickerState.items.length} / ${pickerState.totalElements} vật tư${extraNote}`;
+            }
+            if ($("matPickerLoadMoreWrap")) {
+                $("matPickerLoadMoreWrap").hidden = !pickerState.hasMore;
+            }
+
+            if (!pickerState.items.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="empty">Không tìm thấy vật tư nào phù hợp với điều kiện lọc.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = pickerState.items.map(m => {
+                const mid = Number(m.materialId);
+                const isAlreadyInVoucher = pickerState.existingMaterialIds.has(mid);
+                const isNewlySelected = !isAlreadyInVoucher && pickerState.selectedMap.has(mid);
+                const curStock = Number(m.currentStock || 0);
+                const availStock = Number(m.availableStock || 0);
+                const expStock = Number(m.expiredStock || 0);
+                const minThresh = Number(m.minStockThreshold || 0);
+                const isLow = curStock <= minThresh;
+
+                let batchInfoHtml = '<span class="text-muted small">Chưa có lô tồn</span>';
+                if (availStock > 0 && m.nearestExpiryDate) {
+                    batchInfoHtml = `<span class="status status-good">Khả dụng: ${escapeHtml(fmtQty(availStock))} · HSD: ${escapeHtml(m.nearestExpiryDate)}</span>`;
+                } else if (expStock > 0) {
+                    batchInfoHtml = `<span class="status status-danger">Lô hết hạn: ${escapeHtml(fmtQty(expStock))}</span>`;
+                }
+
+                const stateBadgeHtml = isAlreadyInVoucher
+                    ? '<span class="mat-picker-in-voucher-badge" title="Vật tư này đã có trong bảng chi tiết của phiếu"><i class="bi bi-check2-all"></i>Đã có trong phiếu</span>'
+                    : (isNewlySelected
+                        ? '<span class="mat-picker-selected-tag"><i class="bi bi-check-lg"></i>Đã chọn</span>'
+                        : "");
+
+                const rowClass = isAlreadyInVoucher
+                    ? "is-already-in-voucher"
+                    : (isNewlySelected ? "is-selected" : "");
+
+                return `
+                    <tr class="mat-picker-row ${rowClass}" data-picker-mat-id="${mid}" data-already-in-voucher="${isAlreadyInVoucher ? "true" : "false"}">
+                        <td style="text-align:center;">
+                            <input type="checkbox" class="mat-picker-checkbox" data-picker-check="${mid}"
+                                   ${(isAlreadyInVoucher || isNewlySelected) ? "checked" : ""}
+                                   ${isAlreadyInVoucher ? 'disabled title="Vật tư này đã có trong phiếu"' : ""}>
+                        </td>
+                        <td class="code">${escapeHtml(m.materialCode)}</td>
+                        <td>
+                            <strong>${escapeHtml(m.materialName)}</strong>
+                            ${stateBadgeHtml}
+                        </td>
+                        <td>${escapeHtml(m.category || "—")}</td>
+                        <td>${escapeHtml(m.unit || "—")}</td>
+                        <td style="text-align:right;" class="${curStock <= 0 ? "stock-low" : (isLow ? "stock-low" : "stock-good")} fw-bold">
+                            ${escapeHtml(fmtQty(curStock))}
+                        </td>
+                        <td>${batchInfoHtml}</td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        function togglePickerMaterialSelection(materialId, forceState = null) {
+            const mid = Number(materialId);
+            syncPickerExistingMaterials();
+            if (pickerState.existingMaterialIds.has(mid)) {
+                showMessage("Vật tư này đã có trong phiếu, không thể chọn trùng.", "info");
+                renderMaterialPickerTable();
+                return;
+            }
+            const itemObj = pickerState.items.find(m => Number(m.materialId) === mid) || pickerState.selectedMap.get(mid);
+            if (!itemObj) return;
+
+            const shouldSelect = forceState !== null ? Boolean(forceState) : !pickerState.selectedMap.has(mid);
+            if (shouldSelect) {
+                pickerState.selectedMap.set(mid, itemObj);
+            } else {
+                pickerState.selectedMap.delete(mid);
+            }
+            updateMaterialPickerSelectedCounter();
+            renderMaterialPickerTable();
+        }
+
+        // Fallback backward-compatibility safe no-op
+        window.refreshMaterialSelectsInForms = function() {};
+
+        function confirmMaterialPickerSelection() {
+            syncPickerExistingMaterials();
+            const selectedItems = Array.from(pickerState.selectedMap.values())
+                .filter(item => !pickerState.existingMaterialIds.has(Number(item.materialId)));
+            if (!selectedItems.length) {
+                showMessage("Vui lòng chọn ít nhất 1 vật tư chưa có trong phiếu để thêm.", "warning");
+                return;
+            }
+
+            selectedItems.forEach(item => {
+                if (!state.activeMaterials.some(m => Number(m.materialId) === Number(item.materialId))) {
+                    state.activeMaterials.push({
+                        materialId: item.materialId,
+                        materialCode: item.materialCode,
+                        materialName: item.materialName,
+                        category: item.category,
+                        unit: item.unit,
+                        minStockThreshold: item.minStockThreshold,
+                        isActive: true
+                    });
+                }
+            });
+
+            const formType = pickerState.targetFormType;
+            let addedCount = 0;
+            const currentVoucherMatIds = getExistingMaterialIdsInForm(formType);
+            let firstAddedRow = null;
+
+            for (const mat of selectedItems) {
+                const midNum = Number(mat.materialId);
+                if (currentVoucherMatIds.has(midNum)) {
+                    continue;
+                }
+
+                let newRow = null;
+                if (formType === "receipt") {
+                    newRow = addReceiptRow(mat);
+                } else if (formType === "transfer") {
+                    newRow = addIssueOrTransferRow("transferItems", true, mat);
+                } else {
+                    newRow = addIssueOrTransferRow("issueItems", false, mat);
+                }
+
+                if (newRow) {
+                    if (!firstAddedRow) firstAddedRow = newRow;
+                    currentVoucherMatIds.add(midNum);
+                    addedCount++;
+                }
+            }
+
+            if (formType === "receipt") {
+                calculateReceiptTotal();
+            }
+            reindexAndUpdateVoucherRows(formType);
+
+            closeMaterialPickerModal();
+            if (firstAddedRow) {
+                const focusTarget = firstAddedRow.querySelector(".batch-number, .quantity");
+                if (focusTarget) focusTarget.focus();
+            }
+            if (addedCount > 0) {
+                showMessage(`Đã thêm ${addedCount} vật tư vào bảng chi tiết của phiếu.`, "success");
+            }
+        }
+
+        safeOn("openReceiptMaterialPickerBtn", "click", () => openMaterialPickerModal("receipt"));
+        safeOn("openIssueMaterialPickerBtn", "click", () => openMaterialPickerModal("issue"));
+        safeOn("openTransferMaterialPickerBtn", "click", () => openMaterialPickerModal("transfer"));
+        safeOn("closeMaterialPickerModalBtn", "click", closeMaterialPickerModal);
+        safeOn("cancelMaterialPickerModalBtn", "click", closeMaterialPickerModal);
+        safeOn("confirmMaterialPickerBtn", "click", confirmMaterialPickerSelection);
+
+        const debouncedPickerSearch = debounce(() => {
+            pickerState.keyword = $("matPickerKeywordInput")?.value || "";
+            loadMaterialPickerItems(false);
+        }, 300);
+        safeOn("matPickerKeywordInput", "input", debouncedPickerSearch);
+        safeOn("matPickerCategorySelect", "change", (e) => {
+            pickerState.category = e.target.value || "ALL";
+            loadMaterialPickerItems(false);
+        });
+        safeOn("matPickerStockFilterSelect", "change", (e) => {
+            pickerState.stockFilter = e.target.value || "ALL";
+            loadMaterialPickerItems(false);
+        });
+        safeOn("matPickerLoadMoreBtn", "click", () => {
+            pickerState.page += 1;
+            loadMaterialPickerItems(true);
+        });
+        safeOn("matPickerSelectAllPageBtn", "click", () => {
+            syncPickerExistingMaterials();
+            pickerState.items.forEach(m => {
+                const mid = Number(m.materialId);
+                if (!pickerState.existingMaterialIds.has(mid)) {
+                    pickerState.selectedMap.set(mid, m);
+                }
+            });
+            updateMaterialPickerSelectedCounter();
+            renderMaterialPickerTable();
+        });
+        safeOn("matPickerClearSelectionBtn", "click", () => {
+            pickerState.selectedMap.clear();
+            updateMaterialPickerSelectedCounter();
+            renderMaterialPickerTable();
+        });
+        if ($("matPickerTableBody")) {
+            $("matPickerTableBody").addEventListener("click", (e) => {
+                const row = e.target.closest("[data-picker-mat-id]");
+                if (!row) return;
+                const mid = Number(row.getAttribute("data-picker-mat-id"));
+                if (e.target.matches("[data-picker-check]")) {
+                    togglePickerMaterialSelection(mid, e.target.checked);
+                } else {
+                    togglePickerMaterialSelection(mid);
+                }
+            });
+        }
 
         safeOn("resetReceiptBtn", "click", resetReceiptForm);
         safeOn("resetIssueBtn", "click", resetIssueForm);
@@ -2665,7 +3079,7 @@
         safeOn("closeDetailModalBtn", "click", () => { $("detailModal").hidden = true; });
         $("closeDetailModalFooterBtn")?.addEventListener("click", () => { $("detailModal").hidden = true; });
 
-        ["materialModal", "paymentModal", "quickSupplierModal", "detailModal", "signatureModal", "imageLightboxModal"].forEach(modalId => {
+        ["materialModal", "paymentModal", "quickSupplierModal", "detailModal", "signatureModal", "imageLightboxModal", "materialPickerModal"].forEach(modalId => {
             const modalEl = $(modalId);
             if (modalEl) {
                 modalEl.addEventListener("click", (e) => {
@@ -2676,7 +3090,7 @@
 
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape") {
-                ["materialModal", "paymentModal", "quickSupplierModal", "detailModal", "signatureModal", "imageLightboxModal"].forEach(modalId => {
+                ["materialModal", "paymentModal", "quickSupplierModal", "detailModal", "signatureModal", "imageLightboxModal", "materialPickerModal"].forEach(modalId => {
                     const modalEl = $(modalId);
                     if (modalEl && !modalEl.hidden) modalEl.hidden = true;
                 });

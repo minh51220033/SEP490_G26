@@ -831,8 +831,13 @@
                         `);
                     } else if (col.id === "actions") {
                         cells.push(`
+<<<<<<< Updated upstream
                             <td style="width:${col.width}px;">
                                 <div class="row-actions">
+=======
+                            <td class="col-actions-pinned dv-col-pinned-right text-center" style="width:${col.width}px;min-width:${col.width}px;">
+                                <div class="row-actions dv-actions-cell-always">
+>>>>>>> Stashed changes
                                     <button type="button" class="btn-primary-custom button-sm" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ">
                                         Ghi KQ
                                     </button>
@@ -855,7 +860,12 @@
                         `);
                     }
                 });
+<<<<<<< Updated upstream
                 return `<tr>${cells.join("")}</tr>`;
+=======
+
+                return `<tr class="dv-data-row">${cells.join("")}</tr>`;
+>>>>>>> Stashed changes
             }).join("");
 
             renderCcPagination(totalElements, page, state.totalPages);
@@ -1554,36 +1564,41 @@
             }
         });
 
-        // Delegated actions in tables
-        document.body.addEventListener("click", async (e) => {
+        // Delegated actions in tables (Sử dụng cả capture phase để không bao giờ bị chặn click)
+        async function handleTableActionClick(e) {
             const recordBtn = e.target.closest("[data-record-interaction]");
             if (recordBtn) {
+                e.preventDefault();
                 await openInteractionModal(recordBtn.dataset.recordInteraction);
                 return;
             }
 
             const escalateBtn = e.target.closest("[data-escalate-task]");
             if (escalateBtn) {
+                e.preventDefault();
                 await openEscalateModal(escalateBtn.dataset.escalateTask);
                 return;
             }
 
             const docRespBtn = e.target.closest("[data-doctor-response]");
             if (docRespBtn) {
+                e.preventDefault();
                 await openDoctorResponseModal(docRespBtn.dataset.doctorResponse);
                 return;
             }
 
             const histBtn = e.target.closest("[data-view-history]");
             if (histBtn) {
+                e.preventDefault();
                 const profileId = histBtn.dataset.viewHistory;
-                $("historyPatientSelect").value = String(profileId);
+                if ($("historyPatientSelect")) $("historyPatientSelect").value = String(profileId);
                 switchTab("HISTORY");
                 return;
             }
 
             const editBtn = e.target.closest("[data-edit-task]");
             if (editBtn) {
+                e.preventDefault();
                 try {
                     const t = await request(`/api/customer-care/tasks/${editBtn.dataset.editTask}`);
                     openTaskFormModal(t);
@@ -1591,7 +1606,12 @@
                     showMessage(err.message, "error");
                 }
             }
-        });
+        }
+
+        document.addEventListener("click", handleTableActionClick, true);
+        if ($("tasksTableWrapper")) {
+            $("tasksTableWrapper").addEventListener("click", handleTableActionClick);
+        }
 
         loadBranchesAndInit();
     });

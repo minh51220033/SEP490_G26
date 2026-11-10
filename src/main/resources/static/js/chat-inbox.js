@@ -1,15 +1,21 @@
 /**
  * CV-DCMS — Quản lý Hộp thư Tin nhắn Realtime theo Cơ sở (/chat)
- * Quy tắc phân quyền:
+ * Quy tắc phân quyền & Nghiệp vụ nâng cấp:
  * 1. Chỉ Admin mới được xem tin nhắn của tất cả các cơ sở; các role khác được phân ở cơ sở nào chỉ xem được tin nhắn ở cơ sở đó.
  * 2. Người nhận được tin nhắn của Bệnh nhân để phản hồi chỉ gồm: Lễ tân (LE_TAN), Bác sĩ (BAC_SI) cùng cơ sở và Admin (ADMIN).
- * 3. Các vai trò ngoài Bệnh nhân có thể tìm kiếm các tài khoản trong cùng cơ sở để chủ động gửi tin nhắn.
+ * 3. Trạng thái Đã đọc / Chưa đọc độc lập tuyệt đối theo từng tài khoản (User).
+ * 4. Đồng bộ tự động Badge số lượng chưa đọc tại Sidebar ("Tin nhắn trực tuyến") và trên biểu tượng Tài khoản (User Icon).
+ * 5. Hỗ trợ Chỉnh sửa tin nhắn (trong 10 phút), Thu hồi tin nhắn với mọi người (trong 10 phút),
+ *    Xóa từng tin nhắn ở phía tôi và Xóa toàn bộ cuộc trò chuyện ở phía tôi.
  */
 (function () {
     'use strict';
 
     const rootEl = document.getElementById('chatInboxApp');
     if (!rootEl) return;
+
+    const RECALLED_TEXT = 'Tin nhắn đã được thu hồi';
+    const TEN_MINUTES_MS = 10 * 60 * 1000;
 
     const state = {
         currentUserId: Number(rootEl.dataset.userId || 0),
@@ -35,6 +41,7 @@
         activeConversationMeta: null,
         activeMessages: [],
         knownMessageIds: new Set(),
+        editingMessageId: null,
 
         // Modal tìm kiếm tài khoản người nhận trong cùng cơ sở
         recipientKeyword: '',
@@ -82,6 +89,7 @@
     const elActiveModeBadge = document.getElementById('chatActiveModeBadge');
     const elActiveRightBadge = document.getElementById('chatActiveRightBadge');
     const elActiveSubInfo = document.getElementById('chatActiveSubInfo');
+    const elDeleteConvSelfBtn = document.getElementById('chatDeleteConvSelfBtn');
     const elMainMessages = document.getElementById('chatMainMessages');
     const elMainComposer = document.getElementById('chatMainComposer');
     const elReplyInput = document.getElementById('chatReplyInput');
@@ -117,6 +125,52 @@
         } catch (e) {
             return '';
         }
+    }
+
+    function canUserEditOrRecall(msg) {
+        if (!msg || !msg.messageId || msg.isRecalled) return false;
+        if (Number(msg.senderId) !== Number(state.currentUserId)) return false;
+        if (msg.canEditOrRecall === false) return false;
+        if (msg.sentAt) {
+            const sentMs = new Date(msg.sentAt).getTime();
+            if (!isNaN(sentMs) && (Date.now() - sentMs) > TEN_MINUTES_MS) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function syncGlobalUnreadBadges(explicitCount) {
+        if (typeof explicitCount === 'number' && !isNaN(explicitCount)) {
+            if (typeof window.updateGlobalChatUnreadBadges === 'function') {
+                window.updateGlobalChatUnreadBadges(explicitCount);
+            } else {
+                const safeCount = Math.max(0, explicitCount);
+                const display = safeCount > 99 ? '99+' : String(safeCount);
+                document.querySelectorAll('[data-chat-unread-badge]').forEach((el) => {
+                    if (safeCount > 0) {
+                        el.textContent = display;
+                        el.hidden = false;
+                    } else {
+                        el.textContent = '0';
+                        el.hidden = true;
+                    }
+                });
+            }
+            return;
+        }
+        if (typeof window.refreshGlobalChatUnreadCount === 'function') {
+            window.refreshGlobalChatUnreadCount();
+            return;
+        }
+        fetch('/api/chat/unread-count', { headers: { 'Accept': 'application/json' } })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => {
+                if (d && d.authenticated && typeof d.totalUnreadCount === 'number') {
+                    syncGlobalUnreadBadges(d.totalUnreadCount);
+                }
+            })
+            .catch(() => {});
     }
 
     function setWsStatus(connected) {
@@ -392,6 +446,7 @@
 
             renderConversationList();
             renderPagination();
+            syncGlobalUnreadBadges();
 
             if (preserveActiveSelection && !state.activeConversationId && state.conversations.length > 0) {
                 selectConversation(state.conversations[0].conversationId);
@@ -516,6 +571,7 @@
 
     async function selectConversation(conversationId) {
         state.activeConversationId = Number(conversationId);
+        state.editingMessageId = null;
         renderConversationList();
 
         try {
@@ -584,10 +640,10 @@
         }
         if (elActiveRightBadge) {
             if (isDirect) {
-                elActiveRightBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle';
+                elActiveRightBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle d-none d-md-inline-flex align-items-center';
                 elActiveRightBadge.innerHTML = '<i class="bi bi-person-check-fill me-1"></i>Trò chuyện trực tiếp cùng cơ sở';
             } else {
-                elActiveRightBadge.className = 'badge bg-success-subtle text-success border border-success-subtle';
+                elActiveRightBadge.className = 'badge bg-success-subtle text-success border border-success-subtle d-none d-md-inline-flex align-items-center';
                 elActiveRightBadge.innerHTML = '<i class="bi bi-people-fill me-1"></i>Lễ tân, Bác sĩ cơ sở &amp; Admin tiếp nhận';
             }
         }
@@ -643,20 +699,229 @@
             const senderRoleCode = msg.senderRoleCode || 'BENH_NHAN';
             const senderRoleLabel = msg.senderRoleLabel || 'Bệnh nhân';
 
+            const isRecalled = Boolean(msg.isRecalled);
+            const isEdited = Boolean(msg.isEdited) && !isRecalled;
+            const isEditingThis = state.editingMessageId && Number(state.editingMessageId) === Number(msg.messageId);
+
+            const displayText = isRecalled ? RECALLED_TEXT : (msg.messageText || '');
+            const bubbleClass = isRecalled
+                ? 'chat-msg-bubble chat-msg-bubble--recalled'
+                : 'chat-msg-bubble';
+
+            let bodyHtml;
+            if (isEditingThis) {
+                bodyHtml = `
+                    <div class="chat-msg-bubble">
+                        <div class="chat-inline-edit-box">
+                            <textarea class="chat-inline-edit-textarea" data-inbox-edit-input="${escapeHtml(msg.messageId)}">${escapeHtml(msg.messageText || '')}</textarea>
+                            <div class="chat-inline-edit-actions">
+                                <button type="button" class="chat-inline-edit-btn chat-inline-edit-btn--cancel" data-inbox-msg-action="cancel-edit" data-msg-id="${escapeHtml(msg.messageId)}">Hủy</button>
+                                <button type="button" class="chat-inline-edit-btn chat-inline-edit-btn--save" data-inbox-msg-action="save-edit" data-msg-id="${escapeHtml(msg.messageId)}">Lưu</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                bodyHtml = `<div class="${bubbleClass}">${escapeHtml(displayText)}</div>`;
+            }
+
+            const editedTagHtml = isEdited
+                ? `<span class="chat-msg-edited-tag">(Đã chỉnh sửa)</span>`
+                : '';
+
+            const allowEditRecall = canUserEditOrRecall(msg);
+            let actionsHtml = '';
+            if (msg.messageId && !isEditingThis) {
+                const editBtn = allowEditRecall
+                    ? `<button type="button" class="chat-msg-action-btn" data-inbox-msg-action="edit" data-msg-id="${escapeHtml(msg.messageId)}" title="Chỉnh sửa tin nhắn (trong 10 phút)">
+                           <i class="bi bi-pencil"></i><span>Sửa</span>
+                       </button>`
+                    : '';
+                const recallBtn = allowEditRecall
+                    ? `<button type="button" class="chat-msg-action-btn chat-msg-action-btn--danger" data-inbox-msg-action="recall" data-msg-id="${escapeHtml(msg.messageId)}" title="Thu hồi tin nhắn đối với mọi người (trong 10 phút)">
+                           <i class="bi bi-arrow-counterclockwise"></i><span>Thu hồi</span>
+                       </button>`
+                    : '';
+                const deleteSelfBtn = `<button type="button" class="chat-msg-action-btn chat-msg-action-btn--danger" data-inbox-msg-action="delete-self" data-msg-id="${escapeHtml(msg.messageId)}" title="Xóa tin nhắn này ở phía tài khoản của tôi">
+                        <i class="bi bi-trash3"></i><span>Xóa ở phía tôi</span>
+                    </button>`;
+                actionsHtml = `<div class="chat-msg-actions">${editBtn}${recallBtn}${deleteSelfBtn}</div>`;
+            }
+
             html += `
                 <div class="${rowClass}" data-message-id="${escapeHtml(msg.messageId || '')}">
                     <div class="chat-msg-sender">
                         <span>${escapeHtml(senderName)}</span>
                         <span class="chat-role-badge chat-role-badge--${escapeHtml(senderRoleCode)}">${escapeHtml(senderRoleLabel)}</span>
                     </div>
-                    <div class="chat-msg-bubble">${escapeHtml(msg.messageText)}</div>
-                    <div class="chat-msg-time">${escapeHtml(formatTime(msg.sentAt))}</div>
+                    ${bodyHtml}
+                    <div class="chat-msg-time">${editedTagHtml}${escapeHtml(formatTime(msg.sentAt))}</div>
+                    ${actionsHtml}
                 </div>
             `;
         }
 
         elMainMessages.innerHTML = html;
-        elMainMessages.scrollTop = elMainMessages.scrollHeight;
+        if (!state.editingMessageId) {
+            elMainMessages.scrollTop = elMainMessages.scrollHeight;
+        }
+    }
+
+    async function handleInboxMessageActionClick(e) {
+        const btn = e.target.closest('[data-inbox-msg-action]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-inbox-msg-action');
+        const messageId = Number(btn.getAttribute('data-msg-id'));
+        if (!messageId) return;
+
+        if (action === 'edit') {
+            const targetMsg = state.activeMessages.find((m) => Number(m.messageId) === messageId);
+            if (!canUserEditOrRecall(targetMsg)) {
+                alert('Tin nhắn đã quá thời hạn 10 phút hoặc không thể chỉnh sửa.');
+                renderActiveMessages();
+                return;
+            }
+            state.editingMessageId = messageId;
+            renderActiveMessages();
+            const textarea = document.querySelector(`[data-inbox-edit-input="${messageId}"]`);
+            if (textarea) {
+                textarea.focus();
+                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            }
+        } else if (action === 'cancel-edit') {
+            state.editingMessageId = null;
+            renderActiveMessages();
+        } else if (action === 'save-edit') {
+            const textarea = document.querySelector(`[data-inbox-edit-input="${messageId}"]`);
+            const newText = textarea ? textarea.value.trim() : '';
+            if (!newText) {
+                alert('Nội dung tin nhắn chỉnh sửa không được để trống.');
+                return;
+            }
+            await submitEditMessage(messageId, newText);
+        } else if (action === 'recall') {
+            const targetMsg = state.activeMessages.find((m) => Number(m.messageId) === messageId);
+            if (!canUserEditOrRecall(targetMsg)) {
+                alert('Tin nhắn đã quá thời hạn 10 phút hoặc không thể thu hồi.');
+                renderActiveMessages();
+                return;
+            }
+            if (!window.confirm('Bạn có chắc chắn muốn thu hồi tin nhắn này đối với tất cả mọi người không?')) {
+                return;
+            }
+            await submitRecallMessage(messageId);
+        } else if (action === 'delete-self') {
+            if (!window.confirm('Xóa tin nhắn này ở phía tài khoản của bạn? (Các tài khoản khác vẫn nhìn thấy bình thường)')) {
+                return;
+            }
+            await submitDeleteMessageForSelf(messageId);
+        }
+    }
+
+    async function submitEditMessage(messageId, newText) {
+        try {
+            const resp = await fetch(`/api/chat/messages/${encodeURIComponent(messageId)}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ messageText: newText })
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+                throw new Error(data.message || 'Không thể chỉnh sửa tin nhắn.');
+            }
+            state.editingMessageId = null;
+            applyActiveMessageMutation(data);
+            fetchConversations(false);
+        } catch (err) {
+            alert(err.message || 'Chỉnh sửa tin nhắn thất bại.');
+        }
+    }
+
+    async function submitRecallMessage(messageId) {
+        try {
+            const resp = await fetch(`/api/chat/messages/${encodeURIComponent(messageId)}/recall`, {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' }
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+                throw new Error(data.message || 'Không thể thu hồi tin nhắn.');
+            }
+            state.editingMessageId = null;
+            applyActiveMessageMutation(data);
+            fetchConversations(false);
+        } catch (err) {
+            alert(err.message || 'Thu hồi tin nhắn thất bại.');
+        }
+    }
+
+    async function submitDeleteMessageForSelf(messageId) {
+        try {
+            const resp = await fetch(`/api/chat/messages/${encodeURIComponent(messageId)}/self`, {
+                method: 'DELETE',
+                headers: { 'Accept': 'application/json' }
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+                throw new Error(data.message || 'Không thể xóa tin nhắn ở phía bạn.');
+            }
+            state.activeMessages = state.activeMessages.filter((m) => Number(m.messageId) !== Number(messageId));
+            state.knownMessageIds.delete(Number(messageId));
+            renderActiveMessages();
+            if (typeof data.totalUnreadCount === 'number') {
+                syncGlobalUnreadBadges(data.totalUnreadCount);
+            }
+            fetchConversations(false);
+        } catch (err) {
+            alert(err.message || 'Xóa tin nhắn thất bại.');
+        }
+    }
+
+    async function handleDeleteConversationForSelf() {
+        if (!state.activeConversationId) return;
+        if (!window.confirm('Bạn có chắc chắn muốn xóa toàn bộ cuộc trò chuyện này ở phía tài khoản của bạn không? (Các tài khoản khác vẫn giữ nguyên lịch sử)')) {
+            return;
+        }
+        const deletedConvId = state.activeConversationId;
+        try {
+            const resp = await fetch(`/api/chat/conversations/${encodeURIComponent(deletedConvId)}/self`, {
+                method: 'DELETE',
+                headers: { 'Accept': 'application/json' }
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+                throw new Error(data.message || 'Không thể xóa cuộc trò chuyện ở phía bạn.');
+            }
+
+            state.activeConversationId = null;
+            state.activeConversationMeta = null;
+            state.activeMessages = [];
+            state.knownMessageIds.clear();
+            state.editingMessageId = null;
+
+            if (elActiveHeader) elActiveHeader.hidden = true;
+            if (elMainComposer) elMainComposer.hidden = true;
+            renderActiveMessages();
+
+            if (typeof data.totalUnreadCount === 'number') {
+                syncGlobalUnreadBadges(data.totalUnreadCount);
+            }
+            await fetchConversations(false);
+        } catch (err) {
+            alert(err.message || 'Xóa cuộc trò chuyện thất bại.');
+        }
+    }
+
+    function applyActiveMessageMutation(updatedMsg) {
+        if (!updatedMsg || !updatedMsg.messageId) return;
+        const idx = state.activeMessages.findIndex((m) => Number(m.messageId) === Number(updatedMsg.messageId));
+        if (idx >= 0) {
+            state.activeMessages[idx] = Object.assign({}, state.activeMessages[idx], updatedMsg);
+            renderActiveMessages();
+        }
     }
 
     async function markConversationRead(conversationId) {
@@ -667,10 +932,18 @@
             renderConversationList();
         }
         try {
-            await fetch(`/api/chat/conversations/${encodeURIComponent(conversationId)}/read`, {
+            const resp = await fetch(`/api/chat/conversations/${encodeURIComponent(conversationId)}/read`, {
                 method: 'POST',
                 headers: { 'Accept': 'application/json' }
             });
+            if (resp.ok) {
+                const data = await resp.json().catch(() => ({}));
+                if (typeof data.totalUnreadCount === 'number') {
+                    syncGlobalUnreadBadges(data.totalUnreadCount);
+                } else {
+                    syncGlobalUnreadBadges();
+                }
+            }
         } catch (e) {
             // Bỏ qua lỗi mạng tạm thời
         }
@@ -731,6 +1004,14 @@
     function handleIncomingRealtimeMessage(msg) {
         if (!msg || !msg.conversationId) return;
 
+        if (msg.eventType === 'EDIT' || msg.eventType === 'RECALL') {
+            if (Number(msg.conversationId) === Number(state.activeConversationId)) {
+                applyActiveMessageMutation(msg);
+            }
+            fetchConversations(false);
+            return;
+        }
+
         if (Number(msg.conversationId) === Number(state.activeConversationId)) {
             if (!msg.messageId || !state.knownMessageIds.has(Number(msg.messageId))) {
                 if (msg.messageId) {
@@ -738,6 +1019,8 @@
                 }
                 state.activeMessages.push(msg);
                 renderActiveMessages();
+            } else {
+                applyActiveMessageMutation(msg);
             }
             if (Number(msg.senderId) !== state.currentUserId) {
                 markConversationRead(msg.conversationId);
@@ -751,7 +1034,6 @@
         if (typeof window.SockJS === 'undefined' || typeof window.Stomp === 'undefined') {
             return;
         }
-        // Giới hạn transport an toàn hỗ trợ CORS / Origin header (loại trừ JSONP lỗi thời gây cảnh báo phía máy chủ)
         const socket = new window.SockJS('/ws-chat', null, {
             transports: ['websocket', 'xhr-streaming', 'xhr-polling']
         });
@@ -772,7 +1054,6 @@
                 }
                 state.reconnectAttempts = 0;
 
-                // Đăng ký hàng đợi cá nhân để luôn nhận được tin nhắn 1-1 trực tiếp
                 stomp.subscribe('/user/queue/chat/messages', function (frame) {
                     try {
                         const msg = JSON.parse(frame.body);
@@ -792,7 +1073,6 @@
                         }
                     });
                 } else if (state.canHandlePatients) {
-                    // Chỉ Lễ tân (LE_TAN) và Bác sĩ (BAC_SI) mới đăng ký kênh hộp thư Bệnh nhân của cơ sở được phân công
                     const branchOptions = elBranchFilter ? Array.from(elBranchFilter.options) : [];
                     const subscribedBranchIds = new Set();
                     for (const opt of branchOptions) {
@@ -848,6 +1128,13 @@
                 closeRecipientModal();
             }
         });
+    }
+
+    if (elDeleteConvSelfBtn) {
+        elDeleteConvSelfBtn.addEventListener('click', handleDeleteConversationForSelf);
+    }
+    if (elMainMessages) {
+        elMainMessages.addEventListener('click', handleInboxMessageActionClick);
     }
 
     if (elRecipientSearchInput) {
