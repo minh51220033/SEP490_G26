@@ -109,6 +109,9 @@ public class DoctorRecordService {
         if (session == null) return false;
         Long userId = extractUserId(session);
         if (userId == null) return false;
+        if (users.hasActivePermission(userId, "MEDICAL_RECORD_VIEW")) {
+            return true;
+        }
         return users.findById(userId)
                 .map(u -> u.getRoles() != null && u.getRoles().stream()
                         .anyMatch(role -> Boolean.TRUE.equals(role.getIsActive())
@@ -126,14 +129,16 @@ public class DoctorRecordService {
         if (!Boolean.TRUE.equals(user.getIsActive()) || !"ACTIVE".equalsIgnoreCase(user.getStatus()))
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
 
-        boolean admin = user.getRoles() != null && user.getRoles().stream()
-                .anyMatch(role -> Boolean.TRUE.equals(role.getIsActive())
-                        && ("ADMIN".equalsIgnoreCase(role.getRoleName())
-                            || "ROLE_ADMIN".equalsIgnoreCase(role.getRoleName())));
-        boolean doctor = user.getRoles() != null && user.getRoles().stream()
-                .anyMatch(role -> Boolean.TRUE.equals(role.getIsActive())
-                        && ("BAC_SI".equalsIgnoreCase(role.getRoleName())
-                            || "ROLE_BAC_SI".equalsIgnoreCase(role.getRoleName())));
+        boolean admin = users.hasActiveAdminRole(user.getUserId())
+                || (user.getRoles() != null && user.getRoles().stream()
+                    .anyMatch(role -> Boolean.TRUE.equals(role.getIsActive())
+                            && ("ADMIN".equalsIgnoreCase(role.getRoleName())
+                                || "ROLE_ADMIN".equalsIgnoreCase(role.getRoleName()))));
+        boolean doctor = users.hasActivePermission(user.getUserId(), "MEDICAL_RECORD_VIEW")
+                || (user.getRoles() != null && user.getRoles().stream()
+                    .anyMatch(role -> Boolean.TRUE.equals(role.getIsActive())
+                            && ("BAC_SI".equalsIgnoreCase(role.getRoleName())
+                                || "ROLE_BAC_SI".equalsIgnoreCase(role.getRoleName()))));
 
         if (!admin && !doctor)
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -149,6 +154,11 @@ public class DoctorRecordService {
         Set<Long> branchIds = new HashSet<>(assignments.findActiveBranchIdsByUserId(
                 user.getUserId(), AssignmentStatus.ACTIVE));
         if (user.getBranch() != null) branchIds.add(user.getBranch().getBranchId());
+        if (branchIds.isEmpty()) {
+            branchRepository.findByIsActiveTrueOrderByBranchNameAsc().forEach(b -> {
+                if (b.getBranchId() != null) branchIds.add(b.getBranchId());
+            });
+        }
         if (branchIds.isEmpty()) throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                 "Tài khoản bác sĩ chưa được phân chi nhánh.");
         return branchIds;

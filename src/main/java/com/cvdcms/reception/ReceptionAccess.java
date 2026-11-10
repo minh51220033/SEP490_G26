@@ -41,10 +41,12 @@ public class ReceptionAccess {
         if (!admin && !hasPermission) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản không có quyền tiếp đón & check-in.");
         }
-        List<Long> branchIds = admin ? List.of() : assignments.activeReceptionBranchIds(user.getUserId(), LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")));
-        if (!admin && branchIds.isEmpty() && user.getBranch() != null && user.getBranch().getBranchId() != null) {
-            branchIds = List.of(user.getBranch().getBranchId());
+        List<Long> assignedIds = admin ? List.of() : assignments.activeReceptionBranchIds(user.getUserId(), LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")));
+        java.util.Set<Long> merged = new java.util.LinkedHashSet<>(assignedIds);
+        if (!admin && user.getBranch() != null && user.getBranch().getBranchId() != null) {
+            merged.add(user.getBranch().getBranchId());
         }
+        List<Long> branchIds = new java.util.ArrayList<>(merged);
         if (!admin && branchIds.isEmpty()) {
             return new Scope(user, true, true, List.of());
         }

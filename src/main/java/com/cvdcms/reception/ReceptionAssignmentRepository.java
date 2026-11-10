@@ -9,7 +9,6 @@ public interface ReceptionAssignmentRepository extends JpaRepository<StaffBranch
             SELECT DISTINCT a.branch.branchId FROM StaffBranchAssignment a
             WHERE a.staff.user.userId = :userId AND a.staff.status = com.cvdcms.entity.enums.StaffStatus.ACTIVE
             AND a.status = com.cvdcms.entity.enums.AssignmentStatus.ACTIVE AND a.role.isActive = true
-            AND UPPER(a.role.roleName) IN ('LE_TAN', 'ROLE_LE_TAN')
             AND a.startDate <= :day AND (a.endDate IS NULL OR a.endDate >= :day) ORDER BY a.branch.branchId""")
     List<Long> activeReceptionBranchIds(@Param("userId") Long userId, @Param("day") java.time.LocalDate day);
 }
