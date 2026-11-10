@@ -27,6 +27,7 @@ public interface StockIssueRepository extends JpaRepository<StockIssue, Long> {
                   AND (:excludeTransfer = FALSE OR si.issueType <> com.cvdcms.entity.enums.StockIssueType.TRANSFER)
                   AND (:keyword IS NULL
                        OR LOWER(si.issueCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                       OR LOWER(COALESCE(si.issueReason, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(COALESCE(si.notes, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(iss.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')))
                   AND (:fromDate IS NULL OR si.issueDate >= :fromDate)
@@ -42,6 +43,7 @@ public interface StockIssueRepository extends JpaRepository<StockIssue, Long> {
                   AND (:excludeTransfer = FALSE OR si.issueType <> com.cvdcms.entity.enums.StockIssueType.TRANSFER)
                   AND (:keyword IS NULL
                        OR LOWER(si.issueCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                       OR LOWER(COALESCE(si.issueReason, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(COALESCE(si.notes, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(iss.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')))
                   AND (:fromDate IS NULL OR si.issueDate >= :fromDate)

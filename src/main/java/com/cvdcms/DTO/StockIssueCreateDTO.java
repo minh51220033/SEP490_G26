@@ -11,7 +11,8 @@ import java.util.List;
 @Setter
 public class StockIssueCreateDTO {
     private Long branchId;
-    private String issueType; // INTERNAL_USE, DISCARD_EXPIRED, TRANSFER
+    private String issueType; // INTERNAL_USE, DISCARD_EXPIRED, TRANSFER, OTHER
+    private String issueReason;
     private Long destinationBranchId;
     private LocalDate issueDate;
     private String notes;

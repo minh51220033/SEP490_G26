@@ -70,6 +70,13 @@
                 <i class="bi bi-chat-dots" aria-hidden="true"></i><span class="side-link__label">Tin nhắn trực
                     tuyến</span>
             </a>
+        <!-- Tin nhắn realtime theo cơ sở: nhân viên cơ sở & admin -->
+        <a th:if="${isAdmin or (permissionCodes != null and !#lists.isEmpty(permissionCodes))}"
+           th:href="@{/chat}" class="side-link"
+           th:classappend="${activeMenu == 'chat'} ? 'is-active' : ''"
+           title="Hộp thư tin nhắn trực tuyến theo cơ sở">
+            <i class="bi bi-chat-dots" aria-hidden="true"></i><span class="side-link__label">Tin nhắn trực tuyến</span><span id="sidebarChatUnreadBadge" data-chat-unread-badge class="side-link__badge" th:hidden="${chatUnreadCount == null or chatUnreadCount <= 0}" th:text="${chatUnreadCount != null and chatUnreadCount > 99 ? '99+' : (chatUnreadCount ?: 0)}">0</span>
+        </a>
 
             <!-- ============ NGHIỆP VỤ (accordion) ============ -->
             <p class="app-sidebar__section">Nghiệp vụ</p>
@@ -177,21 +184,21 @@
                 th:classappend="${activeMenu == 'inventory' or activeMenu == 'suppliers'} ? 'is-open' : ''">
                 <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
                     aria-controls="sgInventory">
-                    <i class="bi bi-box-seam" aria-hidden="true"></i>
-                    <span class="side-group__label">Kho &amp; Vật tư</span>
-                    <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
-                </button>
-                <div class="side-group__panel" id="sgInventory">
-                    <div class="side-group__inner">
-                        <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'INVENTORY_STOCK') or #lists.contains(permissionCodes, 'INVENTORY_BATCHES') or #lists.contains(permissionCodes, 'INVENTORY_RECEIPT') or #lists.contains(permissionCodes, 'INVENTORY_ISSUE') or #lists.contains(permissionCodes, 'INVENTORY_TRANSFER') or #lists.contains(permissionCodes, 'INVENTORY_MATERIALS') or #lists.contains(permissionCodes, 'INVENTORY_CATEGORIES') or #lists.contains(permissionCodes, 'SUPPLIER_MANAGE')))}"
-                            th:href="@{/inventory}" class="side-link side-sublink"
-                            th:classappend="${activeMenu == 'inventory'} ? 'is-active' : ''">
-                            <i class="bi bi-boxes" aria-hidden="true"></i><span class="side-link__label">Quản lý kho vật
-                                tư</span>
-                        </a>
-                    </div>
+                <i class="bi bi-box-seam" aria-hidden="true"></i>
+                <span class="side-group__label">Kho &amp; Vật tư</span>
+                <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
+            </button>
+            <div class="side-group__panel" id="sgInventory">
+                <div class="side-group__inner">
+                    <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'INVENTORY_STOCK'))}"
+                       th:href="@{/inventory}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'inventory'} ? 'is-active' : ''">
+                        <i class="bi bi-boxes" aria-hidden="true"></i><span
+                            class="side-link__label">Quản lý kho vật tư</span>
+                    </a>
                 </div>
             </div>
+        </div>
 
             <!-- TÀI CHÍNH (FT21, FT22, FT24, FT25, FT32) -->
             <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'FINANCE_DEBT') or #lists.contains(permissionCodes, 'FINANCE_DEPOSIT') or #lists.contains(permissionCodes, 'REFUND_MANAGE') or #lists.contains(permissionCodes, 'FINANCE_EXPENSES') or #lists.contains(permissionCodes, 'FINANCE_PAYROLL') or #lists.contains(permissionCodes, 'FINANCE_PAYROLL_ADVANCES') or #lists.contains(permissionCodes, 'FINANCE_COMMISSION_CONFIG') or #lists.contains(permissionCodes, 'FINANCE_OWNER_DISTRIBUTIONS') or #lists.contains(permissionCodes, 'INVOICE_VIEW')))}"

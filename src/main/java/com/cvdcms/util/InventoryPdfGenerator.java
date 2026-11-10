@@ -220,7 +220,7 @@ public final class InventoryPdfGenerator {
             infoY += 36;
             drawLabelValue(g, "Ghi chú:", safe(issue.getNotes()), col1X, infoY);
         } else {
-            drawLabelValue(g, "Ghi chú:", safe(issue.getNotes()), col2X, infoY);
+            drawLabelValue(g, "Lý do / Ghi chú:", (issue.getIssueReason() != null && !issue.getIssueReason().isBlank()) ? truncate(issue.getIssueReason() + (issue.getNotes() != null && !issue.getNotes().isBlank() ? " | " + issue.getNotes() : ""), 42) : safe(issue.getNotes()), col2X, infoY);
         }
 
         y += infoBoxHeight + 28;
@@ -581,7 +581,7 @@ public final class InventoryPdfGenerator {
         if (issueType == null) return "Xuất sử dụng nội bộ";
         return switch (issueType.toUpperCase(Locale.ROOT)) {
             case "TRANSFER" -> "Điều chuyển liên chi nhánh";
-            case "DISCARD_EXPIRED" -> "Xuất hủy hàng hết hạn";
+            case "DISCARD_EXPIRED" -> "Xuất hủy hàng hết hạn"; case "OTHER" -> "Mục đích khác";
             default -> "Xuất sử dụng nội bộ";
         };
     }
