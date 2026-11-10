@@ -28,7 +28,7 @@
                     <a th:href="@{/reception/queue(branchId=${board.branchId})}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
                         <i class="bi bi-arrow-clockwise"></i> Làm mới
                     </a>
-                    <a th:href="@{/reception/queue/tv(branchId=${board.branchId})}" target="_blank" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                    <a th:href="@{/reception/queue/tv/{id}(id=${board.branchId})}" target="_blank" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
                         <i class="bi bi-tv"></i> Mở TV phòng chờ
                     </a>
                 </div>
@@ -71,29 +71,30 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <!-- 3. Khối Kanban Hàng chờ gọi số (Đã xóa phần Toolbar Ảnh 5 & Bảng hàng chờ, giữ Kanban) -->
-            <section class="queue-kanban-card-wrapper mb-3">
-                <div class="queue-kanban-header">
-                    <div class="d-flex align-items-center gap-2.5">
-                        <h2 class="h6 fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                            <i class="bi bi-kanban text-primary"></i>
-                            <span>Kanban hàng chờ gọi số</span>
-                        </h2>
-                        <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-bold"
-                              th:text="|${#lists.size(board.tickets)} số khám|">0 số khám</span>
+            <!-- 3. Thanh Tiêu đề & Màn hình gọi số TV -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 bg-white p-3.5 rounded-4 border shadow-sm">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 20px;">
+                        <i class="bi bi-kanban"></i>
                     </div>
-
-                    <a class="btn btn-sm btn-outline-primary rounded-3 px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-2 bg-white"
-                       th:href="@{/reception/queue/tv/{id}(id=${board.branchId})}" target="_blank" rel="noopener">
-                        <i class="bi bi-display"></i><span>Màn hình gọi số</span>
-                    </a>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <h2 class="h6 fw-bold text-dark mb-0 fs-5">Hàng chờ gọi số khám</h2>
+                            <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-bold"
+                                  th:text="|${#lists.size(board.tickets)} số khám|">0 số khám</span>
+                        </div>
+                        <small class="text-muted">Phân theo từng Bác sĩ phụ trách đang có bệnh nhân tiếp nhận hôm nay</small>
+                    </div>
                 </div>
 
-                <div class="queue-kanban-body">
-                    <!-- Dynamic Rows Container (Doctor Calling Bar + Kanban 5 Lanes) -->
-                    <div id="queueRows" th:replace="~{reception/queue-rows :: rows}"></div>
-                </div>
-            </section>
+                <a class="btn btn-sm btn-outline-primary rounded-pill px-3.5 py-2 fw-semibold d-inline-flex align-items-center gap-2 bg-white shadow-sm"
+                   th:href="@{/reception/queue/tv/{id}(id=${board.branchId})}" target="_blank" rel="noopener">
+                    <i class="bi bi-display"></i><span>Màn hình gọi số TV</span>
+                </a>
+            </div>
+
+            <!-- Dynamic Rows Container (Mỗi Bác sĩ 1 Kanban riêng biệt) -->
+            <div id="queueRows" th:replace="~{reception/queue-rows :: rows}"></div>
 
         </main>
     </div>
@@ -149,6 +150,18 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Thông báo góc dưới màn hình khi Gọi lại (không nhảy lên đầu) -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1090;">
+    <div id="queueRecallToast" class="toast align-items-center text-bg-primary border-0 shadow-lg rounded-3" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body fw-semibold d-flex align-items-center gap-2" id="queueRecallToastMsg">
+                <i class="bi bi-megaphone-fill"></i><span>Đã gọi lại số khám thành công.</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     </div>
 </div>
