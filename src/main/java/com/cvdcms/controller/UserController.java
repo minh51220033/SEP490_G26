@@ -912,6 +912,22 @@ public class UserController {
 
         user = userRepository.save(user);
 
+        // Tự động tìm kiếm và liên kết hồ sơ bệnh nhân đã được tạo trước đó tại quầy lễ tân (dựa theo Số điện thoại)
+        boolean hasLinkedProfile = false;
+        if (phoneNumber != null && !phoneNumber.isBlank() && patientProfileRepository != null) {
+            List<PatientProfile> unlinkedProfiles = patientProfileRepository.findByPhoneNumber(phoneNumber);
+            for (PatientProfile profile : unlinkedProfiles) {
+                if (profile.getUser() == null) {
+                    profile.setUser(user);
+                    if (!hasLinkedProfile && (profile.getIsDefault() == null || !profile.getIsDefault())) {
+                        profile.setIsDefault(true);
+                    }
+                    patientProfileRepository.save(profile);
+                    hasLinkedProfile = true;
+                }
+            }
+        }
+
         // =============================================
         // ĐĂNG NHẬP NGAY SAU KHI ĐĂNG KÝ
         // =============================================
@@ -931,6 +947,14 @@ public class UserController {
                 "permissionCodes",
                 userRepository.findActivePermissionCodesByUserId(user.getUserId())
         );
+
+        if (hasLinkedProfile) {
+            session.setAttribute(
+                    "notification",
+                    "Đăng ký tài khoản thành công! Hồ sơ khám bệnh tại phòng khám của bạn đã được tự động liên kết."
+            );
+            return "redirect:/home";
+        }
 
         session.setAttribute(
                 "notification",

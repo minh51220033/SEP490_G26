@@ -57,13 +57,14 @@ public class QueueWorkflowController {
         model.addAttribute("callableDoctorIds", callableDoctorIds);
         model.addAttribute("nextTicketIds", Set.copyOf(nextByDoctor.values()));
         model.addAttribute("lanes", List.of(QueueStatus.WAITING, QueueStatus.CALLED,
-                QueueStatus.IN_SERVICE, QueueStatus.PAUSED, QueueStatus.DONE));
+                QueueStatus.IN_SERVICE, QueueStatus.DONE));
         model.addAttribute("laneCounts", board.tickets().stream()
                 .collect(Collectors.groupingBy(t -> t.getStatus(), Collectors.counting())));
     }
     @PostMapping("/{id}/{action}")
-    public String change(@PathVariable Long id, @PathVariable QueueWorkflowService.Action action,
+    public Object change(@PathVariable Long id, @PathVariable QueueWorkflowService.Action action,
             @RequestParam Long branchId, @RequestParam(required = false) Long chairId, @RequestParam(required = false) String reason,
+            @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
             HttpSession session, RedirectAttributes flash) {
         try {
             service.transition(session, id, action, chairId, reason);
@@ -76,8 +77,14 @@ public class QueueWorkflowController {
                 case START -> "Đã bắt đầu khám.";
                 case DONE -> "Đã hoàn tất số khám.";
             };
+            if ("XMLHttpRequest".equalsIgnoreCase(requestedWith)) {
+                return org.springframework.http.ResponseEntity.ok(java.util.Map.of("success", true, "notice", notice));
+            }
             flash.addFlashAttribute("notice", notice);
         } catch (ResponseStatusException ex) {
+            if ("XMLHttpRequest".equalsIgnoreCase(requestedWith)) {
+                return org.springframework.http.ResponseEntity.status(ex.getStatusCode()).body(java.util.Map.of("success", false, "error", ex.getReason()));
+            }
             flash.addFlashAttribute("error", ex.getReason());
         }
         return "redirect:/reception/queue?branchId=" + branchId;
@@ -93,16 +100,32 @@ public class QueueWorkflowController {
         }
         return "redirect:/reception/queue?branchId=" + branchId;
     }
-    @GetMapping("/tv/{branchId}")
-    public String tv(@PathVariable Long branchId, Model model) {
-        model.addAttribute("branchId", branchId);
-        model.addAttribute("board", service.publicBoard(branchId));
-        model.addAttribute("queueList", service.publicQueueList(branchId));
+    @GetMapping({"/tv", "/tv/{branchId}"})
+    public String tv(@PathVariable(required = false) Long branchId,
+                     @RequestParam(required = false) Long branchIdParam,
+                     HttpSession session, Model model) {
+        Long targetBranchId = branchId != null ? branchId : branchIdParam;
+        if (targetBranchId == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid) targetBranchId = sid;
+        }
+        if (targetBranchId == null) targetBranchId = 1L;
+        model.addAttribute("branchId", targetBranchId);
+        model.addAttribute("board", service.publicBoard(targetBranchId));
+        model.addAttribute("queueList", service.publicQueueList(targetBranchId));
         return "reception/queue-tv";
     }
-    @GetMapping("/tv/{branchId}/data")
+    @GetMapping({"/tv/data", "/tv/{branchId}/data"})
     @ResponseBody
-    public QueueWorkflowService.PublicBoard tvData(@PathVariable Long branchId) {
-        return service.publicBoard(branchId);
+    public QueueWorkflowService.PublicBoard tvData(@PathVariable(required = false) Long branchId,
+                                                   @RequestParam(required = false) Long branchIdParam,
+                                                   HttpSession session) {
+        Long targetBranchId = branchId != null ? branchId : branchIdParam;
+        if (targetBranchId == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid) targetBranchId = sid;
+        }
+        if (targetBranchId == null) targetBranchId = 1L;
+        return service.publicBoard(targetBranchId);
     }
 }

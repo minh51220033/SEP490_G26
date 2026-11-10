@@ -55,7 +55,7 @@
             </nav>
 
             <!-- 2. FLASH SUCCESS NOTIFICATION ACTION BAR -->
-            <div th:if="${notice}" class="alert alert-success d-flex flex-wrap align-items-center justify-content-between gap-3 shadow-sm rounded-4 p-3 mb-3 border-0 bg-success-subtle text-success-emphasis">
+            <div th:if="${notice}" class="alert alert-success alert-dismissible fade show d-flex align-items-center justify-content-between gap-3 shadow-sm rounded-4 p-3 mb-3 border-0 bg-success-subtle text-success-emphasis" role="alert">
                 <div class="d-flex align-items-center gap-3">
                     <div class="flash-icon bg-success text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; font-size: 18px;">
                         <i class="bi bi-check2"></i>
@@ -67,17 +67,7 @@
                         <strong class="d-block fs-6" th:text="${notice}"></strong>
                     </div>
                 </div>
-                <div th:if="${checkedInVisitId != null}" class="d-flex flex-wrap align-items-center gap-2">
-                    <a th:href="@{/reception/dispatch(branchId=${dashboard.branchId})}" class="btn btn-primary fw-bold shadow-sm d-inline-flex align-items-center gap-1.5" title="Chuyển sang bàn điều phối phân ghế và cấp số">
-                        <i class="bi bi-diagram-3-fill"></i><span>Chuyển điều phối ghế</span>
-                    </a>
-                    <a th:href="@{/reception/queue(branchId=${dashboard.branchId})}" class="btn btn-outline-primary bg-white fw-bold shadow-sm d-inline-flex align-items-center gap-1.5" title="Xem danh sách hàng chờ gọi số">
-                        <i class="bi bi-list-ol"></i><span>Hàng chờ gọi số</span>
-                    </a>
-                    <a th:href="@{/doctor/examination/{id}/treatment(id=${checkedInVisitId})}" class="btn btn-outline-secondary bg-white fw-bold shadow-sm d-inline-flex align-items-center gap-1.5" title="Vào thẳng bàn khám của Bác sĩ">
-                        <i class="bi bi-stethoscope"></i><span>Vào khám ngay</span>
-                    </a>
-                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
             <!-- Flash Error Alert -->
@@ -454,13 +444,9 @@
                         <!-- Gợi ý khi chưa chọn hồ sơ -->
                         <div id="walkInEmptyHint" class="p-3 text-center rounded-3 bg-light border border-dashed mb-3"
                              th:classappend="${!#lists.isEmpty(dashboard.matches)} ? ' d-none' : ''">
-                            <div class="small text-muted d-flex flex-wrap align-items-center justify-content-center gap-1.5">
+                            <div class="small text-muted d-flex align-items-center justify-content-center gap-1.5">
                                 <i class="bi bi-info-circle text-primary"></i>
-                                <span>Nhập tên hoặc SĐT vào ô tìm kiếm phía trên để chọn nhanh hồ sơ bệnh nhân, hoặc</span>
-                                <button type="button" class="btn btn-link p-0 fw-bold text-primary text-decoration-none btn-open-quick-create-patient"
-                                        data-bs-toggle="modal" data-bs-target="#addPatientModal">
-                                    + Tạo hồ sơ bệnh nhân mới
-                                </button>
+                                <span>Gõ Họ tên, Số điện thoại hoặc CCCD vào ô tìm kiếm ở trên để chọn hồ sơ, hoặc nhấn nút <strong>+ Tạo hồ sơ bệnh nhân mới</strong> nếu là khách đến lần đầu.</span>
                             </div>
                         </div>
 

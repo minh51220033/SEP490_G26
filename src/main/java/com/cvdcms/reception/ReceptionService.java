@@ -132,8 +132,12 @@ public class ReceptionService {
 
         Visit visit = newVisit(patient, branch, emergency ? VisitType.EMERGENCY : VisitType.APPOINTMENT, appointmentId,
                 symptoms(symptoms, appointment.getInitialSymptoms()));
-        if (priority || emergency) {
-            visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] " + visit.getNotes());
+        String combinedNotes = (priority || emergency) ? "[ƯU TIÊN] " : "";
+        if (appointment.getNotes() != null && !appointment.getNotes().isBlank()) {
+            combinedNotes += appointment.getNotes().trim();
+        }
+        if (!combinedNotes.isBlank()) {
+            visit.setNotes(visit.getNotes() == null ? combinedNotes : combinedNotes + " · " + visit.getNotes());
         }
         visits.saveAndFlush(visit);
         if (appointment.getDoctor() != null) {
@@ -222,8 +226,12 @@ public class ReceptionService {
 
         Visit visit = newVisit(patient, branch, emergency ? VisitType.EMERGENCY : VisitType.APPOINTMENT, appointmentId,
                 symptoms(symptoms, appointment.getInitialSymptoms()));
-        if (priority || emergency) {
-            visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] " + visit.getNotes());
+        String combinedNotes = (priority || emergency) ? "[ƯU TIÊN] " : "";
+        if (appointment.getNotes() != null && !appointment.getNotes().isBlank()) {
+            combinedNotes += appointment.getNotes().trim();
+        }
+        if (!combinedNotes.isBlank()) {
+            visit.setNotes(visit.getNotes() == null ? combinedNotes : combinedNotes + " · " + visit.getNotes());
         }
         visits.saveAndFlush(visit);
         if (appointment.getDoctor() != null) {

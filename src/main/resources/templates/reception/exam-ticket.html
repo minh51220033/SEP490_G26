@@ -168,8 +168,12 @@
             .ticket-header { background: #0284c7; }
             .action-toolbar .btn { border-radius: 8px; }
         }
-        /* PRINT STYLES - THERMAL POS 80mm OR CLEAN PRINT */
+        /* PRINT STYLES - CHUẨN KHỔ GIẤY A6 PORTRAIT (105mm x 148mm) */
         @media print {
+            @page {
+                size: A6 portrait;
+                margin: 6mm;
+            }
             body {
                 background: #ffffff !important;
                 padding: 0 !important;
@@ -179,7 +183,7 @@
             }
             .ticket-wrapper {
                 max-width: 100% !important;
-                width: 76mm !important;
+                width: 100% !important;
                 margin: 0 auto !important;
             }
             .ticket-card {
@@ -383,7 +387,7 @@
             renderCode39(visitCode, svgEl);
         }
         const urlParams = new URLSearchParams(window.location.search);
-        const shouldPrint = /*[[${autoPrint}]]*/ false || urlParams.get('print') === 'true';
+        const shouldPrint = /*[[${autoPrint}]]*/ false || urlParams.get('print') === 'true' || urlParams.get('autoPrint') === 'true' || true;
         if (shouldPrint) {
             setTimeout(function() {
                 window.print();

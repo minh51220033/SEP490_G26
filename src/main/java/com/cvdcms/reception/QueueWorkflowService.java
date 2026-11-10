@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -23,15 +24,16 @@ public class QueueWorkflowService {
     private final DispatchVisitRepository visits;
     private final DispatchRoomRepository rooms;
     private final DispatchChairRepository chairs;
+    private final DispatchDoctorRepository doctors;
     private final ReceptionAuditRepository audits;
     private final ClinicalExaminationBootstrapService examinations;
 
     public QueueWorkflowService(ReceptionAccess access, DispatchBranchRepository branches,
             QueueWorkflowRepository tickets, DispatchVisitRepository visits, DispatchRoomRepository rooms,
-            DispatchChairRepository chairs, ReceptionAuditRepository audits,
+            DispatchChairRepository chairs, DispatchDoctorRepository doctors, ReceptionAuditRepository audits,
             ClinicalExaminationBootstrapService examinations) {
         this.access = access; this.branches = branches; this.tickets = tickets; this.visits = visits;
-        this.rooms = rooms; this.chairs = chairs; this.audits = audits; this.examinations = examinations;
+        this.rooms = rooms; this.chairs = chairs; this.doctors = doctors; this.audits = audits; this.examinations = examinations;
     }
 
     @Transactional(readOnly = true)
@@ -65,17 +67,35 @@ public class QueueWorkflowService {
         if (day == null) day = LocalDate.now(ZONE);
         List<QueueTicket> rows = ordered(id, day);
         Map<Long, DoctorQueue> doctorQueues = new LinkedHashMap<>();
+
+        // CHỈ hiển thị Bác sĩ nào ĐANG CÓ BỆNH NHÂN trong ngày (có vé khám hoặc lượt khám phân công)
+        LocalDateTime startOfDay = day.atStartOfDay();
+        LocalDateTime endOfDay = day.plusDays(1).atStartOfDay();
+        for (Visit v : visits.today(id, startOfDay, endOfDay)) {
+            if (v.getPrimaryDoctor() != null) {
+                StaffProfile doc = v.getPrimaryDoctor();
+                doctorQueues.putIfAbsent(doc.getStaffId(), new DoctorQueue(doc.getStaffId(), doc.getFullName(), 0, 0));
+            }
+        }
         for (QueueTicket ticket : rows) {
-            StaffProfile doctor = ticket.getVisit().getPrimaryDoctor();
+            StaffProfile doctor = ticket.getVisit() != null ? ticket.getVisit().getPrimaryDoctor() : null;
+            if (doctor == null) continue;
+            doctorQueues.putIfAbsent(doctor.getStaffId(), new DoctorQueue(doctor.getStaffId(), doctor.getFullName(), 0, 0));
+        }
+
+        // Tính toán số lượng đang chờ và đã gọi cho các bác sĩ đang có bệnh nhân
+        for (QueueTicket ticket : rows) {
+            StaffProfile doctor = ticket.getVisit() != null ? ticket.getVisit().getPrimaryDoctor() : null;
             if (doctor == null) continue;
             DoctorQueue previous = doctorQueues.get(doctor.getStaffId());
-            if (previous == null) {
-                previous = new DoctorQueue(doctor.getStaffId(), doctor.getFullName(), 0, 0);
+            long waitingCount = (ticket.getStatus() == QueueStatus.WAITING
+                    && isWaitingOrResult(ticket.getVisit())) ? 1 : 0;
+            long calledCount = (ticket.getStatus() == QueueStatus.CALLED) ? 1 : 0;
+            if (previous != null) {
+                doctorQueues.put(doctor.getStaffId(), new DoctorQueue(previous.id(), previous.name(),
+                        previous.waiting() + waitingCount,
+                        previous.called() + calledCount));
             }
-            doctorQueues.put(doctor.getStaffId(), new DoctorQueue(previous.id(), previous.name(),
-                    previous.waiting() + (ticket.getStatus() == QueueStatus.WAITING
-                            && ticket.getVisit().getStatus() == VisitStatus.WAITING ? 1 : 0),
-                    previous.called() + (ticket.getStatus() == QueueStatus.CALLED ? 1 : 0)));
         }
         List<DentalChair> chairsList = chairs.findByBranchBranchIdOrderByChairCode(id);
         Map<Long, String> roomLookup = rooms.findAll().stream()
@@ -94,8 +114,49 @@ public class QueueWorkflowService {
             roomNames.put(vId, rName != null ? rName : (rId != null ? "Phòng " + rId : "Chưa phân phòng"));
             chairNames.put(vId, cName != null ? cName : (cId != null ? "Ghế " + cId : "Chưa xếp ghế"));
         }
-        return new Board(id, choices, rows, doctorQueues.values().stream()
-                .sorted(Comparator.comparing(DoctorQueue::name)).toList(),
+
+        List<DoctorQueue> sortedDoctors = doctorQueues.values().stream()
+                .sorted(Comparator.comparing(DoctorQueue::name)).toList();
+
+        List<DoctorBoard> doctorBoards = new ArrayList<>();
+        for (DoctorQueue dq : sortedDoctors) {
+            Map<QueueStatus, List<QueueTicket>> lanesMap = new LinkedHashMap<>();
+            lanesMap.put(QueueStatus.WAITING, new ArrayList<>());
+            lanesMap.put(QueueStatus.CALLED, new ArrayList<>());
+            lanesMap.put(QueueStatus.IN_SERVICE, new ArrayList<>());
+            lanesMap.put(QueueStatus.DONE, new ArrayList<>());
+
+            for (QueueTicket t : rows) {
+                if (t.getVisit() != null && t.getVisit().getPrimaryDoctor() != null
+                        && dq.id().equals(t.getVisit().getPrimaryDoctor().getStaffId())) {
+                    List<QueueTicket> list = lanesMap.get(t.getStatus());
+                    if (list != null) {
+                        list.add(t);
+                    }
+                }
+            }
+            doctorBoards.add(new DoctorBoard(dq.id(), dq.name(), dq.waiting(), dq.called(), lanesMap));
+        }
+
+        List<QueueTicket> unassignedTickets = rows.stream()
+                .filter(t -> t.getVisit() == null || t.getVisit().getPrimaryDoctor() == null)
+                .toList();
+        if (!unassignedTickets.isEmpty()) {
+            Map<QueueStatus, List<QueueTicket>> unassignedLanes = new LinkedHashMap<>();
+            unassignedLanes.put(QueueStatus.WAITING, new ArrayList<>());
+            unassignedLanes.put(QueueStatus.CALLED, new ArrayList<>());
+            unassignedLanes.put(QueueStatus.IN_SERVICE, new ArrayList<>());
+            unassignedLanes.put(QueueStatus.DONE, new ArrayList<>());
+            for (QueueTicket t : unassignedTickets) {
+                List<QueueTicket> list = unassignedLanes.get(t.getStatus());
+                if (list != null) {
+                    list.add(t);
+                }
+            }
+            doctorBoards.add(new DoctorBoard(null, "Chưa phân công bác sĩ", 0, 0, unassignedLanes));
+        }
+
+        return new Board(id, choices, rows, sortedDoctors, doctorBoards,
                 chairsList, roomNames, chairNames);
     }
 
@@ -171,19 +232,46 @@ public class QueueWorkflowService {
 
     private List<PublicQueueRow> buildPublicQueueList(List<QueueTicket> all) {
         List<PublicQueueRow> rows = new ArrayList<>();
+        Map<Long, String> roomLookup = rooms.findAll().stream()
+                .collect(Collectors.toMap(Room::getRoomId, Room::getRoomName, (a, b) -> a));
+        Map<Long, String> chairLookup = chairs.findAll().stream()
+                .collect(Collectors.toMap(DentalChair::getChairId, DentalChair::getChairName, (a, b) -> a));
+
+        List<QueueTicket> active = all.stream()
+                .filter(t -> t.getStatus() != QueueStatus.CANCELLED && t.getStatus() != QueueStatus.DONE)
+                .sorted(Comparator.comparingInt((QueueTicket t) -> {
+                    if (t.getStatus() == QueueStatus.CALLED) return 0;
+                    if (t.getStatus() == QueueStatus.IN_SERVICE) return 1;
+                    return 2;
+                }).thenComparing(waitingOrder()))
+                .toList();
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         int stt = 1;
-        for (QueueTicket t : all) {
-            if (t.getStatus() == QueueStatus.CANCELLED || t.getStatus() == QueueStatus.DONE) continue;
+        for (QueueTicket t : active) {
             PatientProfile p = t.getVisit() != null ? t.getVisit().getPatientProfile() : null;
             int idx = stt++;
+            String dob = (p != null && p.getDob() != null) ? p.getDob().format(dtf) : "—";
+            Long rId = t.getVisit() != null ? t.getVisit().getRoomId() : null;
+            Long cId = t.getVisit() != null ? t.getVisit().getChairId() : null;
+            String rawRoom = rId != null ? roomLookup.getOrDefault(rId, "Phòng " + rId) : "";
+            String rawChair = cId != null ? chairLookup.getOrDefault(cId, "Ghế " + cId) : "";
+            String doc = doctorName(t);
+
+            boolean isCallingOrExam = (t.getStatus() == QueueStatus.CALLED || t.getStatus() == QueueStatus.IN_SERVICE);
+            String displayRoom = isCallingOrExam ? (rawRoom.isEmpty() ? "Phòng chỉ định" : rawRoom) : "—";
+            String displayChair = isCallingOrExam ? (rawChair.isEmpty() ? "Ghế điều trị" : rawChair) : "—";
+
             rows.add(new PublicQueueRow(
                     idx,
-                    idx,
                     t.getDisplayNumber(),
-                    p != null && p.getPatientCode() != null ? p.getPatientCode() : "—",
-                    p != null && p.getFullName() != null ? maskName(p.getFullName()) : "—",
-                    p != null && p.getPhoneNumber() != null ? maskPhone(p.getPhoneNumber()) : "—",
-                    t.getStatus() != null ? t.getStatus().name() : "WAITING"
+                    p != null && p.getFullName() != null ? p.getFullName() : "—",
+                    dob,
+                    displayRoom,
+                    displayChair,
+                    doc,
+                    t.getStatus() != null ? t.getStatus().name() : "WAITING",
+                    isCallingOrExam
             ));
         }
         return rows;
@@ -293,7 +381,9 @@ public class QueueWorkflowService {
                 ticket.setIsEmergency(true); ticket.setIsPriority(true); ticket.setPriorityScore(100); ticket.setPriorityReason(reason.trim());
                 visit.setVisitType(VisitType.EMERGENCY);
                 visits.save(visit);
-                ticket.setStatus(QueueStatus.WAITING);
+                // Ca cấp cứu chuyển thẳng sang ĐANG GỌI (bàn giao cấp cứu) để Bác sĩ tiếp nhận ngay lập tức
+                ticket.setStatus(QueueStatus.CALLED);
+                ticket.setCalledAt(LocalDateTime.now(ZONE));
                 if (before == QueueStatus.PAUSED) ticket.setResumedAt(LocalDateTime.now(ZONE));
             }
             case PRIORITIZE -> {
@@ -434,14 +524,16 @@ public class QueueWorkflowService {
     private ResponseStatusException error(HttpStatus code, String reason) { return new ResponseStatusException(code, reason); }
     public enum Action { CALL, PAUSE, RESUME, PRIORITIZE, EMERGENCY, START, DONE }
     public record DoctorQueue(Long id, String name, long waiting, long called) { }
+    public record DoctorBoard(Long doctorId, String doctorName, long waiting, long called,
+                              Map<QueueStatus, List<QueueTicket>> lanes) { }
     public record Board(Long branchId, List<Branch> branches, List<QueueTicket> tickets,
-                        List<DoctorQueue> doctors, List<DentalChair> chairs,
-                        Map<Long, String> roomNames, Map<Long, String> chairNames) {
+                        List<DoctorQueue> doctors, List<DoctorBoard> doctorBoards,
+                        List<DentalChair> chairs, Map<Long, String> roomNames, Map<Long, String> chairNames) {
         public Board(Long branchId, List<Branch> branches, List<QueueTicket> tickets, List<DoctorQueue> doctors, List<DentalChair> chairs) {
-            this(branchId, branches, tickets, doctors, chairs, Map.of(), Map.of());
+            this(branchId, branches, tickets, doctors, List.of(), chairs, Map.of(), Map.of());
         }
         public Board(Long branchId, List<Branch> branches, List<QueueTicket> tickets, List<DoctorQueue> doctors) {
-            this(branchId, branches, tickets, doctors, List.of(), Map.of(), Map.of());
+            this(branchId, branches, tickets, doctors, List.of(), List.of(), Map.of(), Map.of());
         }
     }
     public record PublicNumber(Long ticketId, String number, String doctor, String room, String chair, Long callTime) {
@@ -459,10 +551,16 @@ public class QueueWorkflowService {
             this(branch, called, serving, next, waiting, List.of());
         }
     }
-    public record PublicQueueRow(int stt, int orderIndex, String ticketNumber, String patientCode,
-                                 String patientName, String phoneNumber, String status) {
-        public PublicQueueRow(int stt, String ticketNumber, String patientCode, String patientName, String phoneNumber) {
-            this(stt, stt, ticketNumber, patientCode, patientName, phoneNumber, "WAITING");
-        }
+    public record PublicQueueRow(
+            int stt,
+            String ticketNumber,
+            String patientName,
+            String dob,
+            String roomName,
+            String chairName,
+            String doctorName,
+            String status,
+            boolean isCallingOrExam
+    ) {
     }
 }

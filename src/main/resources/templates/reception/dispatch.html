@@ -69,20 +69,11 @@
     </div>
   </div>
   <div class="d-flex flex-wrap align-items-center gap-2">
-    <button th:if="${issuedTicketNumber != null}" type="button"
-            class="btn btn-sm btn-primary fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm btn-print-k80"
-            data-bs-toggle="modal" data-bs-target="#k80TicketModal"
-            th:attr="data-ticket-number=${issuedTicketNumber},
-                     data-patient-name=${issuedPatientName},
-                     data-patient-code=${issuedPatientCode},
-                     data-doctor-name=${issuedDoctorName},
-                     data-room-name=${issuedRoomName},
-                     data-chair-name=${issuedChairName},
-                     data-visit-code=${issuedVisitCode},
-                     data-is-emergency=${issuedIsEmergency},
-                     data-is-priority=${issuedIsPriority}">
-      <i class="bi bi-printer-fill"></i><span>In phiếu K80 ngay</span>
-    </button>
+    <a th:if="${issuedTicketId != null}"
+       th:href="@{/reception/dispatch/tickets/{id}(id=${issuedTicketId}, autoPrint=true)}" target="_blank"
+       class="btn btn-sm btn-primary fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm text-decoration-none">
+      <i class="bi bi-printer-fill"></i><span>In phiếu A6 ngay</span>
+    </a>
   </div>
 </div>
 <div class="alert alert-danger shadow-sm rounded-4 p-3 mb-3 border-0" role="alert" th:if="${error}" th:text="${error}"></div>
@@ -306,25 +297,14 @@
                     <span>Đổi BS</span>
                   </button>
 
-                  <!-- Nút In phiếu K80 (nếu đã có số) -->
-                  <button th:if="${board.issued[v.visitId] != null}"
-                          type="button"
-                          class="dv-equal-btn-primary btn-print-k80"
-                          data-bs-toggle="modal" data-bs-target="#k80TicketModal"
-                          th:attr="data-ticket-id=${board.ticketIds[v.visitId]},
-                                   data-ticket-number=${board.issued[v.visitId]},
-                                   data-patient-name=${v.patientProfile.fullName},
-                                   data-patient-code=${v.patientProfile.patientCode},
-                                   data-doctor-name=${doc.name},
-                                   data-room-name=${board.roomNames[v.visitId]},
-                                   data-chair-name=${board.chairNames[v.visitId]},
-                                   data-visit-code=${v.visitCode},
-                                   data-issued-time=${#temporals.format(v.checkInAt, 'HH:mm dd/MM/yyyy')},
-                                   data-is-emergency=${v.visitType.name() == 'EMERGENCY'},
-                                   data-is-priority=${board.issued[v.visitId].startsWith('P-')}">
+                  <!-- Nút In phiếu A6 trực tiếp 1-chạm -->
+                  <a th:if="${board.issued[v.visitId] != null and board.ticketIds[v.visitId] != null}"
+                     th:href="@{/reception/dispatch/tickets/{id}(id=${board.ticketIds[v.visitId]}, autoPrint=true)}"
+                     target="_blank"
+                     class="dv-equal-btn-primary text-decoration-none">
                     <i class="bi bi-printer-fill"></i>
                     <span>In phiếu</span>
-                  </button>
+                  </a>
 
                   <!-- Nút Cấp số (dự phòng nếu chưa có số) -->
                   <form th:if="${board.issued[v.visitId] == null}"
@@ -358,24 +338,26 @@
                     <span>Đổi BS</span>
                   </button>
 
-                  <button th:if="${board.issued[v.visitId] != null}"
-                          type="button"
-                          class="dv-equal-btn-primary btn-print-k80"
-                          data-bs-toggle="modal" data-bs-target="#k80TicketModal"
-                          th:attr="data-ticket-id=${board.ticketIds[v.visitId]},
-                                   data-ticket-number=${board.issued[v.visitId]},
-                                   data-patient-name=${v.patientProfile.fullName},
-                                   data-patient-code=${v.patientProfile.patientCode},
-                                   data-doctor-name=${doc.name},
-                                   data-room-name=${board.roomNames[v.visitId]},
-                                   data-chair-name=${board.chairNames[v.visitId]},
-                                   data-visit-code=${v.visitCode},
-                                   data-issued-time=${#temporals.format(v.checkInAt, 'HH:mm dd/MM/yyyy')},
-                                   data-is-emergency=${v.visitType.name() == 'EMERGENCY'},
-                                   data-is-priority=${board.issued[v.visitId].startsWith('P-')}">
+                  <a th:if="${board.issued[v.visitId] != null and board.ticketIds[v.visitId] != null}"
+                     th:href="@{/reception/dispatch/tickets/{id}(id=${board.ticketIds[v.visitId]}, autoPrint=true)}"
+                     target="_blank"
+                     class="dv-equal-btn-primary text-decoration-none">
                     <i class="bi bi-printer-fill"></i>
                     <span>In phiếu</span>
-                  </button>
+                  </a>
+
+                  <!-- Nút Cấp số nổi khi Hover (nếu chưa có số) -->
+                  <form th:if="${board.issued[v.visitId] == null}"
+                        th:action="@{/reception/dispatch/{id}/ticket(id=${v.visitId})}" method="post" class="d-inline mb-0">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <input type="hidden" name="branchId" th:value="${board.branchId}">
+                    <input type="hidden" name="priority" th:value="${v.visitType.name() == 'EMERGENCY' or v.status.name() == 'WAITING_RESULT'}">
+                    <input type="hidden" name="reason" th:value="${v.status.name() == 'WAITING_RESULT' ? 'Bệnh nhân quay lại sau cận lâm sàng chờ đọc kết quả' : 'Cấp số khám tại bàn điều phối'}">
+                    <button type="submit" class="dv-equal-btn-primary">
+                      <i class="bi bi-ticket-perforated"></i>
+                      <span>Cấp số</span>
+                    </button>
+                  </form>
                 </div>
               </td>
             </tr>
