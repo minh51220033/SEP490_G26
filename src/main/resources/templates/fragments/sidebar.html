@@ -70,7 +70,7 @@
            th:href="@{/chat}" class="side-link"
            th:classappend="${activeMenu == 'chat'} ? 'is-active' : ''"
            title="Hộp thư tin nhắn trực tuyến theo cơ sở">
-            <i class="bi bi-chat-dots" aria-hidden="true"></i><span class="side-link__label">Tin nhắn trực tuyến</span>
+            <i class="bi bi-chat-dots" aria-hidden="true"></i><span class="side-link__label">Tin nhắn trực tuyến</span><span id="sidebarChatUnreadBadge" data-chat-unread-badge class="side-link__badge" th:hidden="${chatUnreadCount == null or chatUnreadCount <= 0}" th:text="${chatUnreadCount != null and chatUnreadCount > 99 ? '99+' : (chatUnreadCount ?: 0)}">0</span>
         </a>
 
         <!-- ============ NGHIỆP VỤ (accordion) ============ -->
@@ -211,6 +211,12 @@
                        th:classappend="${activeMenu == 'inventory'} ? 'is-active' : ''">
                         <i class="bi bi-boxes" aria-hidden="true"></i><span
                             class="side-link__label">Quản lý kho vật tư</span>
+                    </a>
+                    <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'SUPPLIER_MANAGE') or #lists.contains(permissionCodes, 'INVENTORY_STOCK'))) or (roleNames != null and (#lists.contains(roleNames, 'QUAN_LY_KHO') or #lists.contains(roleNames, 'ROLE_QUAN_LY_KHO')))}"
+                       th:href="@{/suppliers}" class="side-link side-sublink"
+                       th:classappend="${activeMenu == 'suppliers'} ? 'is-active' : ''">
+                        <i class="bi bi-truck" aria-hidden="true"></i><span
+                            class="side-link__label">Quản lý nhà cung cấp</span>
                     </a>
                 </div>
             </div>
@@ -498,6 +504,7 @@
                 </span>
 
                 <!-- Icon cài đặt / Tùy chọn tài khoản (trực quan theo ảnh minh họa) -->
+                <span id="sidebarUserUnreadBadge" data-chat-unread-badge class="user-card__unread-badge" th:hidden="${chatUnreadCount == null or chatUnreadCount <= 0}" th:text="${chatUnreadCount != null and chatUnreadCount > 99 ? '99+' : (chatUnreadCount ?: 0)}" title="Tin nhắn chưa đọc">0</span>
                 <span class="icon-button user-card__gear" aria-hidden="true" title="Tùy chọn tài khoản">
                     <i class="bi bi-person-gear"></i>
                 </span>

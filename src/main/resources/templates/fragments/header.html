@@ -152,6 +152,7 @@
                                 <span class="cp-user-pill__name"
                                       th:text="${displayName != null and !#strings.isEmpty(displayName)
                                               ? displayName : session.loggedInUser.username}">Bệnh nhân</span>
+                                <span data-chat-unread-badge class="cp-user-unread-badge" th:hidden="${chatUnreadCount == null or chatUnreadCount <= 0}" th:text="${chatUnreadCount != null and chatUnreadCount > 99 ? '99+' : (chatUnreadCount ?: 0)}" title="Tin nhắn chưa đọc">0</span>
                                 <i class="bi bi-chevron-down small text-muted" aria-hidden="true"></i>
                             </button>
 
@@ -200,6 +201,7 @@
                                 <span class="cp-user-pill__name"
                                       th:text="${displayName != null and !#strings.isEmpty(displayName)
                                               ? displayName : session.loggedInUser.username}">Nhân viên</span>
+                                <span data-chat-unread-badge class="cp-user-unread-badge" th:hidden="${chatUnreadCount == null or chatUnreadCount <= 0}" th:text="${chatUnreadCount != null and chatUnreadCount > 99 ? '99+' : (chatUnreadCount ?: 0)}" title="Tin nhắn chưa đọc">0</span>
                                 <i class="bi bi-chevron-down small text-muted" aria-hidden="true"></i>
                             </button>
 

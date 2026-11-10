@@ -953,3 +953,207 @@
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(37, 99, 235, 0.15);
 }
+
+
+/* --------------------------------------------------------------------------
+   5. UNREAD BADGES (SIDEBAR & USER ACCOUNT ICON) + MESSAGE ACTIONS & EDIT/RECALL
+   -------------------------------------------------------------------------- */
+.side-link__badge {
+    margin-left: auto;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+    flex-shrink: 0;
+}
+
+.side-link__badge[hidden],
+.user-card__unread-badge[hidden],
+.cp-user-unread-badge[hidden] {
+    display: none !important;
+}
+
+.user-card__unread-badge {
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 10.5px;
+    font-weight: 800;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35);
+    flex-shrink: 0;
+    margin-right: 2px;
+}
+
+.cp-user-unread-badge {
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 10.5px;
+    font-weight: 800;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: 0 2px 5px rgba(239, 68, 68, 0.35);
+    flex-shrink: 0;
+}
+
+/* Message actions toolbar (Edit / Recall / Delete for self) */
+.chat-msg-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 3px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    flex-wrap: wrap;
+}
+
+.chat-msg-row:hover .chat-msg-actions,
+.chat-msg-row:focus-within .chat-msg-actions {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .chat-msg-actions {
+        opacity: 0.9;
+    }
+}
+
+.chat-msg-action-btn {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    border-radius: 6px;
+    padding: 2px 7px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.3;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.chat-msg-action-btn:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #93c5fd;
+}
+
+.chat-msg-action-btn--danger:hover {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fca5a5;
+}
+
+/* Recalled message bubble */
+.chat-msg-bubble--recalled {
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+    border: 1px dashed #cbd5e1 !important;
+    font-style: italic;
+    box-shadow: none !important;
+}
+
+/* Edited tag next to timestamp */
+.chat-msg-edited-tag {
+    font-size: 10.5px;
+    font-style: italic;
+    opacity: 0.85;
+    margin-right: 4px;
+}
+
+/* Inline edit box inside message bubble */
+.chat-inline-edit-box {
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 210px;
+}
+
+.chat-inline-edit-textarea {
+    width: 100%;
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 13px;
+    color: #0f172a;
+    background: #ffffff;
+    resize: vertical;
+    min-height: 54px;
+}
+
+.chat-inline-edit-textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.chat-inline-edit-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.chat-inline-edit-btn {
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.chat-inline-edit-btn--save {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.chat-inline-edit-btn--save:hover {
+    background: #1d4ed8;
+}
+
+.chat-inline-edit-btn--cancel {
+    background: #f1f5f9;
+    color: #334155;
+    border-color: #cbd5e1;
+}
+
+.chat-inline-edit-btn--cancel:hover {
+    background: #e2e8f0;
+}
+
+/* Simplified Patient Chat View */
+.chat-msg-row--patient-view {
+    gap: 3px;
+}
+
+.chat-msg-row--patient-view .chat-msg-bubble {
+    padding: 9px 13px;
+    border-radius: 16px;
+    font-size: 13.5px;
+    line-height: 1.48;
+}

@@ -52,7 +52,7 @@ class CustomerPortalServiceBeanTest {
         CustomerPortalService stubService = new DummyCustomerPortalService();
 
         ObjectProvider<CustomerPortalService> provider = new SimpleObjectProvider<>(stubService);
-        GlobalModelAttributesAdvice advice = new GlobalModelAttributesAdvice(null, provider, null, null);
+        GlobalModelAttributesAdvice advice = new GlobalModelAttributesAdvice(null, provider, null, null, null);
 
         assertDoesNotThrow(() -> {
             List<Service> services = advice.populateFooterServices();
@@ -79,7 +79,7 @@ class CustomerPortalServiceBeanTest {
     @DisplayName("4. GlobalModelAttributesAdvice an toàn fail-safe ngay cả khi CustomerPortalService chưa sẵn sàng (null)")
     void testGlobalModelAttributesAdviceNullSafety() {
         ObjectProvider<CustomerPortalService> provider = new SimpleObjectProvider<>(null);
-        GlobalModelAttributesAdvice advice = new GlobalModelAttributesAdvice(null, provider, null, null);
+        GlobalModelAttributesAdvice advice = new GlobalModelAttributesAdvice(null, provider, null, null, null);
 
         assertDoesNotThrow(() -> {
             List<Service> services = advice.populateFooterServices();

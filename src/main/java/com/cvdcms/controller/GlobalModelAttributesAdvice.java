@@ -7,6 +7,11 @@ import com.cvdcms.entity.ServiceCategory;
 import com.cvdcms.entity.User;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.repository.UserRepository;
+<<<<<<< Updated upstream
+=======
+import com.cvdcms.service.BranchService;
+import com.cvdcms.service.ChatService;
+>>>>>>> Stashed changes
 import com.cvdcms.service.CustomerPortalService;
 import com.cvdcms.service.ServiceCatalogService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,8 +28,15 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
+<<<<<<< Updated upstream
  * Cung cấp các thuộc tính chung cho các trang Thymeleaf có sử dụng sidebar hoặc Customer Portal Header/Footer.
  * Đảm bảo isAdmin, roleNames, permissionCodes, displayName, publicBranches, footerServices luôn có giá trị an toàn.
+=======
+ * Cung cấp các thuộc tính chung cho các trang Thymeleaf có sử dụng sidebar hoặc
+ * Customer Portal Header/Footer.
+ * Đảm bảo isAdmin, roleNames, permissionCodes, displayName, publicBranches,
+ * footerServices, chatUnreadCount luôn có giá trị an toàn.
+>>>>>>> Stashed changes
  */
 @ControllerAdvice
 public class GlobalModelAttributesAdvice {
@@ -41,6 +53,9 @@ public class GlobalModelAttributesAdvice {
     private final ObjectProvider<CustomerPortalService> customerPortalServiceProvider;
     private final ObjectProvider<ServiceCatalogService> serviceCatalogServiceProvider;
     private final ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider;
+
+    @Autowired(required = false)
+    private ObjectProvider<ChatService> chatServiceProvider;
 
     public GlobalModelAttributesAdvice(UserRepository userRepository) {
         this(userRepository, null, null, null);
@@ -59,6 +74,32 @@ public class GlobalModelAttributesAdvice {
         this.patientProfileRepositoryProvider = patientProfileRepositoryProvider;
     }
 
+<<<<<<< Updated upstream
+=======
+    public GlobalModelAttributesAdvice(
+            UserRepository userRepository,
+            ObjectProvider<CustomerPortalService> customerPortalServiceProvider,
+            ObjectProvider<ServiceCatalogService> serviceCatalogServiceProvider,
+            ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider,
+            Object branchServiceProvider) {
+        this(userRepository, customerPortalServiceProvider, serviceCatalogServiceProvider, patientProfileRepositoryProvider);
+    }
+
+    @ModelAttribute("chatUnreadCount")
+    public long populateChatUnreadCount(HttpSession session) {
+        if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)
+                || user.getUserId() == null || chatServiceProvider == null) {
+            return 0L;
+        }
+        try {
+            ChatService chatService = chatServiceProvider.getIfAvailable();
+            return chatService != null ? chatService.getTotalUnreadCount(user.getUserId()) : 0L;
+        } catch (Exception ignored) {
+            return 0L;
+        }
+    }
+
+>>>>>>> Stashed changes
     @ModelAttribute("roleNames")
     public List<String> populateRoleNames(HttpServletRequest request, HttpSession session) {
         // 1. Lấy từ request attribute (do FeaturePermissionInterceptor đồng bộ)

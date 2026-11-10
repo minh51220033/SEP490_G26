@@ -329,22 +329,27 @@
                             <div class="receipt-items-heading">
                                 <div>
                                     <h3 class="fs-6 fw-bold text-dark mb-0">Chi tiết vật tư nhập kho</h3>
-                                    <small style="color:#64748b;">Gõ từ khóa vào ô lọc nhanh trong từng dòng để tìm vật tư theo mã hoặc tên.</small>
+                                    <small style="color:#64748b;">Chọn vật tư từ danh mục, sau đó nhập thông tin lô và số lượng.</small>
                                 </div>
-                                <button type="button" id="addReceiptItem" class="btn-secondary-custom button-sm">+ Thêm dòng vật tư</button>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="voucher-selected-count-badge" id="receiptSelectedCountBadge">Đã chọn: <strong id="receiptSelectedCount">0</strong> vật tư</span>
+                                    <button type="button" id="openReceiptMaterialPickerBtn" class="btn-primary-custom button-sm"><i class="bi bi-plus-lg me-1"></i>Chọn vật tư</button>
+                                </div>
                             </div>
-                            <div class="table-wrap mb-3 border rounded-3 overflow-auto" style="max-height: 260px;">
-                                <table class="receipt-table cv-table">
+                            <div class="table-wrap mb-3 border rounded-3 overflow-auto" style="max-height: 320px;">
+                                <table class="receipt-table voucher-detail-table cv-table">
                                     <thead>
                                     <tr>
-                                        <th style="min-width:240px">Vật tư <span class="required">*</span></th>
-                                        <th style="min-width:75px">Đơn vị</th>
-                                        <th style="min-width:120px">Số lô <span class="required">*</span></th>
-                                        <th style="min-width:130px">Hạn dùng <span class="required">*</span></th>
-                                        <th style="min-width:95px">Số lượng <span class="required">*</span></th>
-                                        <th style="min-width:125px">Đơn giá (VNĐ) <span class="required">*</span></th>
-                                        <th style="min-width:120px">Thành tiền</th>
-                                        <th style="width:40px"></th>
+                                        <th style="width:48px; text-align:center;">STT</th>
+                                        <th style="width:125px;">Mã vật tư</th>
+                                        <th style="min-width:210px;">Tên vật tư</th>
+                                        <th style="width:85px; text-align:center;">Đơn vị</th>
+                                        <th style="width:145px;">Số lô <span class="required">*</span></th>
+                                        <th style="width:140px;">Hạn dùng <span class="required">*</span></th>
+                                        <th style="width:105px;">Số lượng <span class="required">*</span></th>
+                                        <th style="width:135px;">Đơn giá (VNĐ) <span class="required">*</span></th>
+                                        <th style="width:130px; text-align:right;">Thành tiền</th>
+                                        <th style="width:95px; text-align:center;">Thao tác</th>
                                     </tr>
                                     </thead>
                                     <tbody id="receiptItems"></tbody>
@@ -516,11 +521,17 @@
                                     <select id="issueType" required>
                                         <option value="INTERNAL_USE">Xuất sử dụng nội bộ (Phòng khám / Điều trị)</option>
                                         <option value="DISCARD_EXPIRED">Xuất hủy vật tư hết hạn / hỏng</option>
+                                        <option value="OTHER">Mục đích khác</option>
                                     </select>
                                 </div>
                                 <div class="field">
                                     <label for="issueDate">Ngày xuất kho <span class="required">*</span></label>
                                     <input id="issueDate" type="date" required>
+                                </div>
+                                <div class="field full-width" id="issueReasonFieldWrap" hidden>
+                                    <label for="issueReason">Lý do xuất kho <span class="required">*</span></label>
+                                    <input id="issueReason" type="text" maxlength="255" placeholder="Nhập lý do xuất kho cụ thể (bắt buộc khi chọn Mục đích khác)...">
+                                    <small id="issueReasonError" class="text-danger fw-semibold mt-1" hidden>Vui lòng nhập lý do xuất kho khi chọn Mục đích khác.</small>
                                 </div>
                                 <div class="field full-width">
                                     <label for="issueNotes">Ghi chú phiếu xuất</label>
@@ -528,19 +539,28 @@
                                 </div>
                             </div>
                             <div class="receipt-items-heading">
-                                <h3 class="fs-6 fw-bold text-dark mb-0">Danh sách vật tư xuất kho</h3>
-                                <button type="button" id="addIssueItem" class="btn-secondary-custom button-sm">+ Thêm dòng xuất</button>
+                                <div>
+                                    <h3 class="fs-6 fw-bold text-dark mb-0">Chi tiết vật tư xuất kho</h3>
+                                    <small style="color:#64748b;">Chọn vật tư từ danh mục, sau đó chọn lô xuất (hoặc tự động FEFO) và nhập số lượng.</small>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="voucher-selected-count-badge" id="issueSelectedCountBadge">Đã chọn: <strong id="issueSelectedCount">0</strong> vật tư</span>
+                                    <button type="button" id="openIssueMaterialPickerBtn" class="btn-primary-custom button-sm"><i class="bi bi-plus-lg me-1"></i>Chọn vật tư</button>
+                                </div>
                             </div>
-                            <div class="table-wrap mb-3 border rounded-3 overflow-auto" style="max-height: 260px;">
-                                <table class="receipt-table cv-table">
+                            <div class="table-wrap mb-3 border rounded-3 overflow-auto" style="max-height: 320px;">
+                                <table class="receipt-table voucher-detail-table cv-table">
                                     <thead>
                                     <tr>
-                                        <th style="min-width:240px">Vật tư <span class="required">*</span></th>
-                                        <th style="min-width:240px">Lô xuất (Mặc định tự động FEFO)</th>
-                                        <th style="min-width:105px">Tồn khả dụng</th>
-                                        <th style="min-width:115px">Số lượng xuất <span class="required">*</span></th>
-                                        <th style="min-width:150px">Ghi chú dòng</th>
-                                        <th style="width:40px"></th>
+                                        <th style="width:48px; text-align:center;">STT</th>
+                                        <th style="width:125px;">Mã vật tư</th>
+                                        <th style="min-width:200px;">Tên vật tư</th>
+                                        <th style="width:85px; text-align:center;">Đơn vị</th>
+                                        <th style="min-width:230px;">Lô xuất (Mặc định tự động FEFO)</th>
+                                        <th style="width:110px; text-align:right;">Tồn khả dụng</th>
+                                        <th style="width:115px;">Số lượng <span class="required">*</span></th>
+                                        <th style="min-width:150px;">Ghi chú dòng</th>
+                                        <th style="width:65px; text-align:center;">Thao tác</th>
                                     </tr>
                                     </thead>
                                     <tbody id="issueItems"></tbody>
@@ -588,6 +608,7 @@
                                                 <option value="">Tất cả loại xuất</option>
                                                 <option value="INTERNAL_USE">Xuất nội bộ</option>
                                                 <option value="DISCARD_EXPIRED">Xuất hủy hết hạn</option>
+                                                <option value="OTHER">Mục đích khác</option>
                                             </select>
                                         </div>
                                         <div class="field">
@@ -697,19 +718,28 @@
                                 </div>
                             </div>
                             <div class="receipt-items-heading">
-                                <h3 class="fs-6 fw-bold text-dark mb-0">Vật tư điều chuyển</h3>
-                                <button type="button" id="addTransferItem" class="btn-secondary-custom button-sm">+ Thêm dòng điều chuyển</button>
+                                <div>
+                                    <h3 class="fs-6 fw-bold text-dark mb-0">Chi tiết vật tư điều chuyển</h3>
+                                    <small style="color:#64748b;">Chọn vật tư từ danh mục, sau đó chọn lô điều chuyển (hoặc tự động FEFO) và nhập số lượng.</small>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="voucher-selected-count-badge" id="transferSelectedCountBadge">Đã chọn: <strong id="transferSelectedCount">0</strong> vật tư</span>
+                                    <button type="button" id="openTransferMaterialPickerBtn" class="btn-primary-custom button-sm"><i class="bi bi-plus-lg me-1"></i>Chọn vật tư</button>
+                                </div>
                             </div>
-                            <div class="table-wrap mb-3 border rounded-3 overflow-auto" style="max-height: 260px;">
-                                <table class="receipt-table cv-table">
+                            <div class="table-wrap mb-3 border rounded-3 overflow-auto" style="max-height: 320px;">
+                                <table class="receipt-table voucher-detail-table cv-table">
                                     <thead>
                                     <tr>
-                                        <th style="min-width:240px">Vật tư <span class="required">*</span></th>
-                                        <th style="min-width:240px">Lô điều chuyển (FEFO hoặc chọn lô)</th>
-                                        <th style="min-width:105px">Tồn khả dụng</th>
-                                        <th style="min-width:115px">SL chuyển <span class="required">*</span></th>
-                                        <th style="min-width:150px">Ghi chú dòng</th>
-                                        <th style="width:40px"></th>
+                                        <th style="width:48px; text-align:center;">STT</th>
+                                        <th style="width:125px;">Mã vật tư</th>
+                                        <th style="min-width:200px;">Tên vật tư</th>
+                                        <th style="width:85px; text-align:center;">Đơn vị</th>
+                                        <th style="min-width:230px;">Lô điều chuyển (FEFO hoặc chọn lô)</th>
+                                        <th style="width:110px; text-align:right;">Tồn khả dụng</th>
+                                        <th style="width:115px;">SL chuyển <span class="required">*</span></th>
+                                        <th style="min-width:150px;">Ghi chú dòng</th>
+                                        <th style="width:65px; text-align:center;">Thao tác</th>
                                     </tr>
                                     </thead>
                                     <tbody id="transferItems"></tbody>
@@ -1319,6 +1349,97 @@
     </div>
 </div>
 
-<script th:src="@{/js/inventory.js(v='20261106-ui')}" defer></script>
+<!-- ==========================================
+     MODAL 7: TÌM KIẾM & CHỌN NHIỀU VẬT TƯ KHO (NHẬP / XUẤT / ĐIỀU CHUYỂN)
+     ========================================== -->
+<div id="materialPickerModal" class="modal-backdrop" hidden>
+    <div class="modal-card modal-card-wide mat-picker-modal-card" role="dialog" aria-modal="true" aria-labelledby="materialPickerModalTitle">
+        <div class="modal-header mat-picker-header">
+            <div>
+                <h3 id="materialPickerModalTitle" class="mb-0"><i class="bi bi-box-seam-fill me-2 text-primary"></i>Chọn vật tư kho</h3>
+                <p id="materialPickerModalSubtitle" class="mb-0 text-muted" style="font-size:12.5px; margin-top:2px;">
+                    Tìm kiếm theo mã, tên, nhóm vật tư và chọn một hoặc nhiều vật tư để đưa vào phiếu
+                </p>
+            </div>
+            <button type="button" class="close-btn" id="closeMaterialPickerModalBtn" aria-label="Đóng">×</button>
+        </div>
+
+        <div class="mat-picker-toolbar">
+            <div class="mat-picker-search-wrap">
+                <i class="bi bi-search mat-picker-search-icon"></i>
+                <input type="search" id="matPickerKeywordInput" class="mat-picker-search-input"
+                       placeholder="Nhập mã vật tư, tên vật tư, nhóm vật tư hoặc đơn vị tính..." autocomplete="off">
+            </div>
+            <div class="mat-picker-filters-row">
+                <div class="mat-picker-filter-col">
+                    <label for="matPickerCategorySelect">Nhóm vật tư</label>
+                    <select id="matPickerCategorySelect">
+                        <option value="ALL">Tất cả nhóm vật tư</option>
+                    </select>
+                </div>
+                <div class="mat-picker-filter-col">
+                    <label for="matPickerStockFilterSelect">Trạng thái tồn kho</label>
+                    <select id="matPickerStockFilterSelect">
+                        <option value="ALL">Tất cả vật tư đang hoạt động</option>
+                        <option value="AVAILABLE_STOCK">Còn tồn khả dụng (chưa hết hạn)</option>
+                        <option value="IN_STOCK">Còn tồn trong kho (&gt; 0)</option>
+                        <option value="LOW_STOCK">Sắp hết / Chạm ngưỡng cảnh báo</option>
+                        <option value="EXPIRED_ONLY">Có lô đã hết hạn cần xuất hủy</option>
+                    </select>
+                </div>
+                <div class="mat-picker-filter-actions">
+                    <button type="button" id="matPickerSelectAllPageBtn" class="btn-secondary-custom button-sm" title="Chọn tất cả vật tư đang hiển thị">
+                        Chọn trang này
+                    </button>
+                    <button type="button" id="matPickerClearSelectionBtn" class="button-danger-outline button-sm" title="Bỏ chọn toàn bộ vật tư">
+                        Bỏ chọn tất cả
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="mat-picker-list-wrap">
+            <table class="cv-table mat-picker-table">
+                <thead>
+                <tr>
+                    <th style="width:44px; text-align:center;">Chọn</th>
+                    <th style="width:120px;">Mã VT</th>
+                    <th style="min-width:220px;">Tên vật tư</th>
+                    <th style="width:150px;">Nhóm vật tư</th>
+                    <th style="width:85px;">Đơn vị</th>
+                    <th style="width:115px; text-align:right;">Tồn hiện tại</th>
+                    <th style="width:155px;">Lô / Hạn dùng gần nhất</th>
+                </tr>
+                </thead>
+                <tbody id="matPickerTableBody">
+                <tr><td colspan="7" class="empty">Đang tải danh sách vật tư...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="matPickerLoadMoreWrap" class="text-center py-2 border-top bg-light" hidden>
+            <button type="button" id="matPickerLoadMoreBtn" class="btn-secondary-custom button-sm">
+                <i class="bi bi-arrow-down-circle me-1"></i>Tải thêm vật tư
+            </button>
+        </div>
+
+        <div class="modal-actions mat-picker-footer">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="mat-picker-selected-badge">
+                    Đã chọn: <strong id="matPickerSelectedCount">0</strong> vật tư
+                </span>
+                <span id="matPickerTotalInfo" class="text-muted" style="font-size:12px;"></span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn-secondary-custom" id="cancelMaterialPickerModalBtn">Đóng / Hủy</button>
+                <button type="button" class="btn-primary-custom" id="confirmMaterialPickerBtn">
+                    <i class="bi bi-check2-circle me-1"></i>Thêm vật tư đã chọn
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/inventory.js(v='20261109-v4')}" defer></script>
 </body>
 </html>

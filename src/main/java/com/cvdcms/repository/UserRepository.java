@@ -335,10 +335,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
       AND u.isActive = TRUE
       AND r.isActive = TRUE
       AND (
-          UPPER(r.roleName) IN ('ADMIN', 'ROLE_ADMIN')
+          UPPER(r.roleName) IN ('ADMIN', 'ROLE_ADMIN', 'QUAN_LY_KHO', 'ROLE_QUAN_LY_KHO')
           OR (
               (UPPER(COALESCE(p.module, '')) = 'INVENTORY'
-               OR UPPER(COALESCE(p.permissionCode, '')) IN ('INVENTORY_VIEW', 'INVENTORY_MANAGE', 'SUPPLIER_MANAGE'))
+               OR UPPER(COALESCE(p.permissionCode, '')) IN ('INVENTORY_STOCK', 'INVENTORY_VIEW', 'INVENTORY_MANAGE', 'SUPPLIER_MANAGE'))
               AND (COALESCE(u.customPermissionsEnabled, FALSE) = FALSE OR cp = p)
           )
       )
