@@ -299,6 +299,20 @@ public class DispatchService {
         }
         StaffProfile doctor = doctors.findById(doctorId).orElseThrow(() -> fail(HttpStatus.NOT_FOUND, "Không tìm thấy bác sĩ."));
         Long effectiveRoom = roomId;
+        if (chairId == null) {
+            // Tự động tìm ghế khả dụng đầu tiên tại chi nhánh (ưu tiên thuộc phòng đã chọn nếu có)
+            List<DentalChair> branchChairs = chairs.findByBranchBranchIdOrderByChairCode(branchId);
+            for (DentalChair c : branchChairs) {
+                if (c.getStatus() == ChairStatus.AVAILABLE && c.getRoom() != null
+                        && c.getRoom().getStatus() == RoomStatus.ACTIVE
+                        && (effectiveRoom == null || effectiveRoom.equals(c.getRoom().getRoomId()))
+                        && visits.occupiedChair(c.getChairId(), visitId, Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0) {
+                    chairId = c.getChairId();
+                    effectiveRoom = c.getRoom().getRoomId();
+                    break;
+                }
+            }
+        }
         if (chairId != null) {
             DentalChair chair = chairs.findById(chairId).orElseThrow(() -> fail(HttpStatus.NOT_FOUND, "Không tìm thấy ghế."));
             if (!chair.getBranch().getBranchId().equals(branchId) || chair.getRoom() == null
@@ -414,6 +428,22 @@ public class DispatchService {
             throw fail(HttpStatus.BAD_REQUEST, "Cấp số ưu tiên cần ghi lý do từ 10 đến 255 ký tự.");
         }
 
+        // Tự động tìm và gán ghế khả dụng nếu ca khám chưa có ghế hoặc phòng
+        if (visit.getChairId() == null || visit.getRoomId() == null) {
+            List<DentalChair> branchChairs = chairs.findByBranchBranchIdOrderByChairCode(branchId);
+            for (DentalChair c : branchChairs) {
+                if (c.getStatus() == ChairStatus.AVAILABLE && c.getRoom() != null
+                        && c.getRoom().getStatus() == RoomStatus.ACTIVE
+                        && (visit.getRoomId() == null || visit.getRoomId().equals(c.getRoom().getRoomId()))
+                        && visits.occupiedChair(c.getChairId(), visit.getVisitId(), Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0) {
+                    visit.setChairId(c.getChairId());
+                    visit.setRoomId(c.getRoom().getRoomId());
+                    visits.save(visit);
+                    break;
+                }
+            }
+        }
+
         QueueTicket ticket = existing.filter(t -> t.getStatus() == QueueStatus.CANCELLED).orElseGet(QueueTicket::new);
         int next = tickets.maxNumber(branchId, day, QueueType.EXAM, priority) + 1;
         if (next > 999) throw fail(HttpStatus.CONFLICT, "Đã hết dải số trong ngày.");
@@ -423,13 +453,19 @@ public class DispatchService {
         ticket.setQueueType(QueueType.EXAM);
         ticket.setTicketNumber(next);
         ticket.setDisplayNumber((priority ? "P-" : "") + String.format("%02d", next));
-        ticket.setStatus(QueueStatus.WAITING);
+        // Ca cấp cứu chuyển thẳng sang CALLED (Đang gọi/bàn giao) thay vì phải ngồi chờ
+        if (emergency) {
+            ticket.setStatus(QueueStatus.CALLED);
+            ticket.setCalledAt(LocalDateTime.now(ZONE));
+        } else {
+            ticket.setStatus(QueueStatus.WAITING);
+            ticket.setCalledAt(null);
+        }
         ticket.setIsPriority(priority);
         ticket.setIsEmergency(emergency);
         ticket.setPriorityScore(emergency ? 100 : priority ? 50 : 0);
         ticket.setPriorityReason(emergency ? emergencyReason : priority ? priorityReason : null);
         ticket.setIssuedAt(LocalDateTime.now(ZONE));
-        ticket.setCalledAt(null);
         ticket.setPausedAt(null);
         ticket.setResumedAt(null);
         ticket.setCompletedAt(null);

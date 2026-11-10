@@ -3,244 +3,461 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Màn hình Gọi số - Hàng chờ khám bệnh | CV-DCMS</title>
+  <title>Màn hình Gọi số Khám bệnh | CV-DCMS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@700;800&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link rel="stylesheet" th:href="@{/css/reception-queue-tv.css}">
   <style>
-    .tv-table-panel {
-      margin-top: 14px;
-      background: var(--tv-panel-bg, rgba(13, 33, 56, 0.92));
-      border: 1px solid var(--tv-panel-border, #1a4269);
-      border-radius: 14px;
-      padding: 16px 20px;
+    :root {
+      --tv-bg: #f8fafc;
+      --tv-card-bg: #ffffff;
+      --tv-border: #e2e8f0;
+      --tv-text-main: #0f172a;
+      --tv-text-muted: #64748b;
+      --tv-primary: #0284c7;
+      --tv-primary-bg: #eff6ff;
+      --tv-highlight-row: #e0f2fe;
+      --tv-highlight-border: #0284c7;
+      --tv-success: #16a34a;
     }
-    .tv-table-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--tv-text-primary, #f8fafc);
-      margin-bottom: 12px;
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--tv-bg);
+      color: var(--tv-text-main);
+      font-family: 'Inter', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      overflow-x: hidden;
+    }
+
+    .tv-wrapper {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: clamp(16px, 1.8vw, 32px);
+      gap: 16px;
+    }
+
+    /* ================= HEADER ================= */
+    .tv-header {
+      background: var(--tv-card-bg);
+      border: 1.5px solid var(--tv-border);
+      border-radius: 16px;
+      padding: 16px 28px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: space-between;
+      gap: 20px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
     }
-    .tv-basic-table-wrap {
-      width: 100%;
-      border-radius: 8px;
+
+    .tv-brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .tv-logo {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 26px;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+    }
+
+    .tv-brand-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--tv-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .tv-branch-name {
+      font-size: clamp(20px, 1.8vw, 28px);
+      font-weight: 800;
+      color: var(--tv-text-main);
+      margin-top: 2px;
+    }
+
+    /* Clock */
+    .tv-clock {
+      text-align: center;
+      padding: 6px 20px;
+      background: #f1f5f9;
+      border: 1px solid var(--tv-border);
+      border-radius: 12px;
+    }
+
+    .tv-clock-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(20px, 1.8vw, 28px);
+      font-weight: 800;
+      color: var(--tv-primary);
+      letter-spacing: 1px;
+      line-height: 1.1;
+    }
+
+    .tv-clock-date {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--tv-text-muted);
+      margin-top: 2px;
+    }
+
+    /* Actions */
+    .tv-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tv-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 999px;
+      padding: 8px 18px;
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid var(--tv-border);
+      background: #ffffff;
+      color: var(--tv-text-main);
+      transition: all 0.15s ease;
+      outline: none;
+    }
+
+    .tv-btn:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    .tv-sound-btn.is-active {
+      background: var(--tv-primary);
+      color: #ffffff;
+      border-color: var(--tv-primary);
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+    }
+
+    .tv-live-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 16px;
+      border-radius: 999px;
+      background: #ecfdf5;
+      color: var(--tv-success);
+      border: 1px solid #a7f3d0;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .tv-live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--tv-success);
+      animation: pulseDot 2s infinite;
+    }
+
+    @keyframes pulseDot {
+      0% { transform: scale(0.9); opacity: 0.7; }
+      50% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.7; }
+    }
+
+    /* ================= MAIN TABLE LIST ================= */
+    .tv-main-card {
+      flex: 1;
+      background: var(--tv-card-bg);
+      border: 1.5px solid var(--tv-border);
+      border-radius: 16px;
+      padding: 0;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+      display: flex;
+      flex-direction: column;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.08);
     }
-    table.tv-basic-table {
+
+    .tv-table-container {
+      width: 100%;
+      overflow-x: auto;
+      flex: 1;
+    }
+
+    table.tv-table {
       width: 100%;
       border-collapse: collapse;
-      background: rgba(16, 42, 69, 0.6);
+      text-align: left;
     }
-    table.tv-basic-table thead th {
-      background: rgba(10, 26, 46, 0.9);
-      color: #94a3b8;
-      font-size: 12px;
+
+    table.tv-table thead th {
+      background: #f8fafc;
+      color: #475569;
+      font-size: clamp(13px, 1vw, 16px);
       font-weight: 700;
       text-transform: uppercase;
-      padding: 10px 14px;
-      text-align: center;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      letter-spacing: 0.5px;
+      padding: clamp(14px, 1.2vw, 20px) 18px;
+      border-bottom: 2px solid var(--tv-border);
+      white-space: nowrap;
     }
-    table.tv-basic-table tbody td {
-      padding: 11px 14px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      font-size: 14px;
-      color: #f8fafc;
-      text-align: center;
+
+    table.tv-table tbody td {
+      padding: clamp(14px, 1.2vw, 22px) 18px;
+      border-bottom: 1px solid var(--tv-border);
+      font-size: clamp(16px, 1.3vw, 22px);
+      color: var(--tv-text-main);
+      vertical-align: middle;
+      transition: background-color 0.2s ease;
     }
-    table.tv-basic-table tbody tr.is-called-row {
-      background: rgba(2, 132, 199, 0.2);
-      font-weight: 600;
+
+    /* Row hover & alternating */
+    table.tv-table tbody tr:hover td {
+      background-color: #f8fafc;
     }
-    .tv-ticket-pill {
-      display: inline-block;
-      padding: 2px 10px;
-      border-radius: 6px;
-      background: rgba(2, 132, 199, 0.25);
-      border: 1px solid #0284c7;
-      font-family: monospace;
-      font-size: 15px;
+
+    /* Hàng đang được gọi hoặc đang khám: IN ĐẬM, NỔI BẬT */
+    table.tv-table tbody tr.tv-row-active td {
+      background-color: var(--tv-highlight-row) !important;
+      font-weight: 800 !important;
+      color: #034f75 !important;
+      border-top: 2px solid var(--tv-highlight-border);
+      border-bottom: 2px solid var(--tv-highlight-border);
+    }
+
+    table.tv-table tbody tr.tv-row-active td.cell-room,
+    table.tv-table tbody tr.tv-row-active td.cell-chair {
+      color: #0284c7 !important;
+      font-weight: 900 !important;
+    }
+
+    /* Thẻ Số thứ tự */
+    .tv-badge-stt {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 54px;
+      height: 38px;
+      padding: 0 12px;
+      border-radius: 8px;
+      background: #f1f5f9;
+      color: var(--tv-text-main);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 800;
+      font-size: clamp(16px, 1.3vw, 22px);
+      border: 1px solid #cbd5e1;
+    }
+
+    tr.tv-row-active .tv-badge-stt {
+      background: #0284c7 !important;
+      color: #ffffff !important;
+      border-color: #0284c7 !important;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+      animation: pulseActive 1.8s infinite;
+    }
+
+    @keyframes pulseActive {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .tv-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 13px;
       font-weight: 700;
-      color: #38bdf8;
+      margin-left: 10px;
+      vertical-align: middle;
     }
-    .tv-code-pill {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.08);
-      font-family: monospace;
-      font-size: 12.5px;
+
+    .tv-status-badge.calling {
+      background: #fef3c7;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+
+    .tv-status-badge.examining {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+
+    .cell-center {
+      text-align: center;
+    }
+
+    .cell-dash {
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    .tv-empty-box {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--tv-text-muted);
+    }
+
+    .tv-empty-box i {
+      font-size: 48px;
       color: #cbd5e1;
+      display: block;
+      margin-bottom: 12px;
     }
-    .tv-empty-row {
-      padding: 24px 16px !important;
-      color: #94a3b8 !important;
-      font-size: 13.5px !important;
+
+    /* ================= FOOTER TICKER ================= */
+    .tv-footer {
+      background: var(--tv-card-bg);
+      border: 1.5px solid var(--tv-border);
+      border-radius: 14px;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    }
+
+    .tv-footer-tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 8px;
+      background: var(--tv-primary-bg);
+      color: var(--tv-primary);
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .tv-footer-marquee {
+      flex: 1;
+      font-size: 14.5px;
+      color: var(--tv-text-main);
+      font-weight: 500;
     }
   </style>
 </head>
 <body th:attr="data-branch=${branchId}">
-<div class="tv-container">
+<div class="tv-wrapper">
 
   <!-- ================= TOP HEADER ================= -->
   <header class="tv-header">
     <div class="tv-brand">
-      <div class="tv-logo-box">
-        <i class="bi bi-hospital fs-2"></i>
+      <div class="tv-logo">
+        <i class="bi bi-hospital"></i>
       </div>
       <div>
-        <span class="tv-brand-sub">HỆ THỐNG GỌI SỐ THỨ TỰ TỰ ĐỘNG · NHA KHOA CV-DCMS</span>
-        <h1 id="branch" class="tv-branch-name" th:text="${board.branch}">Cơ sở Quận 1</h1>
+        <div class="tv-brand-title">Hệ thống gọi số khám bệnh tự động</div>
+        <div id="branch" class="tv-branch-name" th:text="${board.branch}">Cơ sở Quận 1</div>
       </div>
     </div>
 
-    <!-- Digital Clock -->
-    <div class="tv-clock-box">
+    <!-- Clock -->
+    <div class="tv-clock">
       <div id="tvClockTime" class="tv-clock-time">00:00:00</div>
       <div id="tvClockDate" class="tv-clock-date">Đang cập nhật...</div>
     </div>
 
-    <!-- Top Actions: Sound & Live status & Fullscreen -->
-    <div class="tv-header-actions">
-      <button id="soundToggle" class="tv-pill-btn tv-sound-btn" type="button" title="Bật hoặc tắt âm thanh đọc số" aria-pressed="false">
-        <span id="soundIcon" class="me-1">🔈</span>
+    <!-- Actions -->
+    <div class="tv-actions">
+      <button id="soundToggle" class="tv-btn tv-sound-btn" type="button" title="Bật hoặc tắt âm thanh đọc số">
+        <i id="soundIcon" class="bi bi-volume-mute-fill"></i>
         <span id="soundText">Bật âm thanh</span>
       </button>
 
-      <button id="fullscreenToggle" class="tv-pill-btn tv-fullscreen-btn" type="button" title="Bật/thoát chế độ toàn màn hình">
-        <i class="bi bi-arrows-fullscreen me-1"></i><span>Toàn màn hình</span>
+      <button id="fullscreenToggle" class="tv-btn" type="button" title="Bật toàn màn hình">
+        <i class="bi bi-arrows-fullscreen"></i>
+        <span>Toàn màn hình</span>
       </button>
 
-      <div class="tv-live-badge">
-        <span class="live-dot"></span>
+      <div class="tv-live-pill">
+        <span class="tv-live-dot"></span>
         <span>TRỰC TIẾP</span>
       </div>
     </div>
   </header>
 
-  <!-- ================= 3-COLUMN MAIN GRID ================= -->
-  <main class="tv-grid">
-
-    <!-- CỘT 1: ĐANG GỌI VÀO KHÁM (LÀN CHÍNH - RỘNG NHẤT) -->
-    <section class="tv-panel tv-panel-calling">
-      <div class="tv-panel-header">
-        <div class="d-flex align-items-center gap-2">
-          <i class="bi bi-megaphone-fill text-primary fs-4"></i>
-          <h2 class="tv-panel-title">ĐANG GỌI VÀO KHÁM</h2>
-        </div>
-        <span class="tv-badge tv-badge-calling animate-pulse"><i class="bi bi-broadcast me-1"></i>PHÁT LOA</span>
-      </div>
-
-      <div id="called" class="called-list" aria-live="assertive">
-        <div class="tv-empty-calling">
-          <i class="bi bi-bell-slash fs-1 d-block mb-2 opacity-50"></i>
-          <strong>Chưa có số được gọi</strong>
-          <span>Quý khách vui lòng chú ý lắng nghe loa và theo dõi màn hình khi đến lượt.</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- CỘT 2: ĐANG CHỜ & SỐ TIẾP THEO -->
-    <section class="tv-panel tv-panel-waiting">
-      <div class="tv-subpanel-waiting mb-4">
-        <div class="tv-panel-header mb-2">
-          <div class="d-flex align-items-center gap-2">
-            <i class="bi bi-hourglass-split text-warning fs-4"></i>
-            <h2 class="tv-panel-title">ĐANG CHỜ</h2>
-          </div>
-          <span class="badge-waiting-tag">Sảnh tiếp đón</span>
-        </div>
-        <div class="waiting-display">
-          <strong id="waiting" class="waiting-number" th:text="${board.waiting}">0</strong>
-          <span class="waiting-unit">bệnh nhân đang chờ</span>
-        </div>
-      </div>
-
-      <div class="tv-subpanel-next">
-        <div class="tv-panel-header mb-2">
-          <div class="d-flex align-items-center gap-2">
-            <i class="bi bi-card-list text-info fs-4"></i>
-            <h2 class="tv-panel-title">SỐ TIẾP THEO (CHUẨN BỊ)</h2>
-          </div>
-        </div>
-        <div id="next" class="next-list" aria-live="polite">
-          <div class="text-muted text-center py-3">—</div>
-        </div>
-        <small class="text-muted d-block mt-2 text-center" style="font-size: 13px;">
-          <i class="bi bi-info-circle me-1"></i>Quý khách có số trên vui lòng chuẩn bị sẵn sàng
-        </small>
-      </div>
-    </section>
-
-    <!-- CỘT 3: ĐANG KHÁM TẠI GHẾ -->
-    <section class="tv-panel tv-panel-serving">
-      <div class="tv-panel-header mb-3">
-        <div class="d-flex align-items-center gap-2">
-          <i class="bi bi-heart-pulse-fill text-success fs-4"></i>
-          <h2 class="tv-panel-title">ĐANG KHÁM TẠI GHẾ</h2>
-        </div>
-        <span class="badge-serving-tag">Phòng khám</span>
-      </div>
-
-      <div id="serving" class="serving-list">
-        <div class="text-muted text-center py-4">—</div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- ================= DETAILED QUEUE LIST TABLE ================= -->
-  <section class="tv-table-panel">
-    <div class="tv-table-title">
-      <i class="bi bi-card-checklist text-primary"></i>
-      <span>Danh sách điều phối hàng chờ tại sảnh</span>
-    </div>
-    <div class="tv-basic-table-wrap">
-      <table class="tv-basic-table" id="tvBasicListTable">
+  <!-- ================= MAIN TABLE (6 CỘT TỐI GIẢN CHUẨN YÊU CẦU) ================= -->
+  <main class="tv-main-card">
+    <div class="tv-table-container">
+      <table class="tv-table" id="tvListTable">
         <thead>
           <tr>
-            <th style="width: 100px;">Thứ tự</th>
-            <th style="width: 130px;">Số phiếu</th>
-            <th style="width: 150px;">Mã bệnh nhân</th>
+            <th class="cell-center" style="width: 130px;">STT / Số</th>
             <th>Tên bệnh nhân</th>
-            <th style="width: 170px;">Số điện thoại</th>
+            <th class="cell-center" style="width: 170px;">Ngày sinh</th>
+            <th class="cell-center" style="width: 220px;">Phòng khám</th>
+            <th class="cell-center" style="width: 200px;">Ghế nha</th>
+            <th style="width: 280px;">Bác sĩ khám</th>
           </tr>
         </thead>
         <tbody>
+          <!-- Dynamic / Server-rendered rows -->
           <tr th:each="row : ${board.queueList}"
-              th:classappend="${row.status == 'CALLED'} ? 'is-called-row' : ''">
-            <td th:text="${row.orderIndex}">1</td>
-            <td>
-              <span class="tv-ticket-pill" th:text="${row.ticketNumber}">01</span>
+              th:classappend="${row.isCallingOrExam ? 'tv-row-active' : ''}">
+            <td class="cell-center">
+              <span class="tv-badge-stt" th:text="${row.ticketNumber}">01</span>
             </td>
             <td>
-              <span class="tv-code-pill" th:text="${row.patientCode}">BN001</span>
+              <span class="tv-patient-name" th:text="${row.patientName}">Nguyễn Văn A</span>
+              <span th:if="${row.status == 'CALLED'}" class="tv-status-badge calling">
+                <i class="bi bi-megaphone-fill me-1"></i>Đang gọi
+              </span>
+              <span th:if="${row.status == 'IN_SERVICE'}" class="tv-status-badge examining">
+                <i class="bi bi-heart-pulse-fill me-1"></i>Đang khám
+              </span>
             </td>
-            <td class="fw-semibold" th:text="${row.patientName}">Nguyễn Văn A</td>
-            <td th:text="${row.phoneNumber}">0901234567</td>
+            <td class="cell-center" th:text="${row.dob}">01/01/1990</td>
+            <td class="cell-center cell-room" th:text="${row.isCallingOrExam ? row.roomName : '—'}">Phòng 101</td>
+            <td class="cell-center cell-chair" th:text="${row.isCallingOrExam ? row.chairName : '—'}">Ghế 01</td>
+            <td th:text="${row.doctorName}">BS. Lê Hoàng Nam</td>
           </tr>
-          <tr th:if="${board.queueList == null or #lists.isEmpty(board.queueList)}">
-            <td colspan="5" class="tv-empty-row">Chưa có bệnh nhân trong danh sách gọi số.</td>
+
+          <!-- Empty state row -->
+          <tr th:if="${board.queueList == null or #lists.isEmpty(board.queueList)}" id="tvEmptyRow">
+            <td colspan="6">
+              <div class="tv-empty-box">
+                <i class="bi bi-person-lines-fill"></i>
+                <div style="font-size: 18px; font-weight: 700; color: #475569;">Hiện tại chưa có bệnh nhân trong hàng chờ gọi số</div>
+                <div style="font-size: 14px; margin-top: 4px;">Quý khách vui lòng liên hệ quầy Tiếp đón &amp; Lễ tân để nhận phiếu thứ tự.</div>
+              </div>
+            </td>
           </tr>
         </tbody>
       </table>
     </div>
-  </section>
+  </main>
 
   <!-- ================= BOTTOM NOTICE TICKER ================= -->
-  <footer class="tv-footer-ticker">
-    <div class="ticker-badge">
-      <i class="bi bi-volume-up-fill me-1"></i> THÔNG BÁO SẢNH
+  <footer class="tv-footer">
+    <div class="tv-footer-tag">
+      <i class="bi bi-info-circle-fill"></i>
+      <span>LƯU Ý</span>
     </div>
-    <div class="ticker-content">
+    <div class="tv-footer-marquee">
       <marquee behavior="scroll" direction="left" scrollamount="6">
-        Chào mừng Quý khách đến với Phòng khám Nha khoa CV-DCMS · Quý khách vui lòng giữ phiếu thứ tự, chú ý lắng nghe số gọi trên loa và theo dõi vị trí phòng/ghế nha hiển thị trên màn hình · Nếu cần hỗ trợ đổi lịch hoặc tư vấn, xin vui lòng liên hệ trực tiếp Bàn tiếp đón lễ tân · Chúc Quý khách một buổi thăm khám an tâm và thoải mái!
+        Chào mừng Quý khách đến với Nha khoa Cường Việt · Quý khách vui lòng theo dõi số thứ tự và vị trí Phòng / Ghế điều trị hiển thị trên màn hình · Khi đến lượt, xin vui lòng di chuyển vào đúng phòng khám được chỉ định · Xin cảm ơn!
       </marquee>
     </div>
   </footer>
