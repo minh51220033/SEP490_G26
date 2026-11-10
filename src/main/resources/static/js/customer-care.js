@@ -471,17 +471,17 @@
     // =========================================================================
     // CẤU HÌNH CỘT BẢNG CSKH & COLUMN CUSTOMIZER (THEO CHUẨN CV-DCMS ENTERPRISE)
     // =========================================================================
-    const CC_COLUMNS_KEY = "cvdcms_cc_table_columns_v4";
+    const CC_COLUMNS_KEY = "cvdcms_cc_table_columns_v5";
     const DEFAULT_CC_COLUMNS = [
         { id: "taskCode", title: "Mã CV", width: 120, visible: true, required: true },
-        { id: "patient", title: "Bệnh nhân", width: 210, visible: true, required: true },
-        { id: "careGroup", title: "Phân nhóm & Hồ sơ", width: 210, visible: true },
+        { id: "patient", title: "Bệnh nhân", width: 220, visible: true, required: true },
+        { id: "careGroup", title: "Phân nhóm & Nguồn", width: 200, visible: true },
         { id: "due", title: "Hạn / Gọi lại", width: 150, visible: true },
         { id: "notes", title: "Chẩn đoán & Lời dặn", width: 280, visible: true },
-        { id: "staff", title: "Phụ trách", width: 150, visible: true },
-        { id: "interaction", title: "Tương tác gần nhất", width: 165, visible: true },
-        { id: "status", title: "Trạng thái", width: 145, visible: true },
-        { id: "actions", title: "Thao tác", width: 380, visible: true, required: true }
+        { id: "staff", title: "Phụ trách", width: 160, visible: true },
+        { id: "interaction", title: "Tương tác gần nhất", width: 170, visible: true },
+        { id: "status", title: "Trạng thái", width: 140, visible: true },
+        { id: "actions", title: "Thao tác", width: 330, visible: true, required: true }
     ];
 
     let ccColumns = loadCcColumns();
@@ -493,8 +493,8 @@
                 const parsed = JSON.parse(raw);
                 if (Array.isArray(parsed) && parsed.length === DEFAULT_CC_COLUMNS.length) {
                     const actCol = parsed.find(c => c.id === "actions");
-                    if (actCol && (!actCol.width || actCol.width < 380)) {
-                        actCol.width = 380;
+                    if (actCol && (!actCol.width || actCol.width < 330)) {
+                        actCol.width = 330;
                     }
                     return parsed;
                 }
@@ -514,16 +514,13 @@
         if (!theadTr) return;
         theadTr.innerHTML = "";
 
-        ccColumns.forEach((col, idx) => {
-            if (!col.visible) return;
+        const visibleCols = ccColumns.filter(c => c.visible);
+        visibleCols.forEach((col, idx) => {
             const th = document.createElement("th");
             th.style.width = col.width + "px";
             th.style.minWidth = col.width + "px";
-            if (col.id === "actions") {
-                th.classList.add("col-actions-pinned", "dv-col-pinned-right");
-            }
             th.innerHTML = `
-                <div class="d-flex align-items-center justify-content-between">
+                <div class="dv-th-inner">
                     <span class="cell-ellipsis" title="${col.title}">${col.title}</span>
                 </div>
                 <span class="col-resizer" data-col-index="${idx}"></span>
@@ -531,7 +528,7 @@
             theadTr.appendChild(th);
         });
 
-        // Track Thao tác nổi bám mép phải khi cuộn ngang (chuẩn /doctor/daily-visits)
+        // Track Thao tác nổi bám mép phải khi cuộn ngang (chuẩn 100% /doctor/daily-visits)
         const trackTh = document.createElement("th");
         trackTh.className = "dv-floating-actions-track";
         theadTr.appendChild(trackTh);
@@ -750,7 +747,7 @@
             if ($("tasksTotalBadge")) $("tasksTotalBadge").textContent = `${totalElements} công việc`;
 
             if (!rows.length) {
-                tbody.innerHTML = `<tr><td colspan="${visibleCols.length + 1}" class="empty">Không có công việc CSKH nào phù hợp với bộ lọc hiện tại.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">Không có công việc CSKH nào phù hợp với bộ lọc hiện tại.</td></tr>`;
                 renderCcPagination(0, 0, 0);
                 return;
             }
@@ -848,26 +845,29 @@
                             </td>
                         `);
                     } else if (col.id === "actions") {
+                        const actBtns = `
+                            <button type="button" class="btn btn-primary btn-sm fw-bold px-2.5 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ" style="font-size:12px;background:linear-gradient(135deg, #0284c7, #2563eb);border:none;">
+                                <i class="bi bi-pencil-square"></i> Ghi KQ
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn" style="font-size:12px;">
+                                <i class="bi bi-arrow-up-right-circle"></i> Chuyển BS
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân" style="font-size:12px;">
+                                <i class="bi bi-clock-history"></i> Lịch sử
+                            </button>
+                            ${(t.status === "ESCALATED_TO_DOCTOR" || t.escalatedToDoctorId) && (state.careRole === "BAC_SI" || state.careRole === "ADMIN") ? `
+                                <button type="button" class="btn btn-danger btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn" style="font-size:12px;">
+                                    <i class="bi bi-chat-dots-fill"></i> Phản hồi
+                                </button>
+                            ` : ""}
+                            <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1 rounded-2 shadow-xs" data-edit-task="${t.taskId}" title="Sửa / Phân công lại" style="font-size:12px;">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        `;
                         cells.push(`
-                            <td class="col-actions-pinned dv-col-pinned-right text-center" style="width:${col.width}px;min-width:${col.width}px;">
-                                <div class="row-actions dv-actions-cell-always" onclick="event.stopPropagation()">
-                                    <button type="button" class="btn-primary-custom button-sm" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ">
-                                        Ghi KQ
-                                    </button>
-                                    <button type="button" class="btn-secondary-custom button-sm text-danger" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn">
-                                        Chuyển BS
-                                    </button>
-                                    <button type="button" class="btn-secondary-custom button-sm" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân">
-                                        Lịch sử
-                                    </button>
-                                    ${(t.status === "ESCALATED_TO_DOCTOR" || t.escalatedToDoctorId) && (state.careRole === "BAC_SI" || state.careRole === "ADMIN") ? `
-                                        <button type="button" class="button-danger button-sm" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn">
-                                            Phản hồi
-                                        </button>
-                                    ` : ""}
-                                    <button type="button" class="btn-secondary-custom button-sm" data-edit-task="${t.taskId}" title="Sửa / Phân công lại">
-                                        Sửa
-                                    </button>
+                            <td class="text-center" style="width:${col.width}px;min-width:${col.width}px;">
+                                <div class="d-flex align-items-center justify-content-center gap-1.5 flex-wrap" onclick="event.stopPropagation()">
+                                    ${actBtns}
                                 </div>
                             </td>
                         `);
@@ -878,27 +878,28 @@
                 const floatingBarHtml = `
                     <td class="dv-floating-actions-track">
                         <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
-                            <button type="button" class="btn-primary-custom button-sm" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ">
-                                Ghi KQ
+                            <button type="button" class="btn btn-primary btn-sm fw-bold px-2.5 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ" style="font-size:12px;background:linear-gradient(135deg, #0284c7, #2563eb);border:none;">
+                                <i class="bi bi-pencil-square"></i> Ghi KQ
                             </button>
-                            <button type="button" class="btn-secondary-custom button-sm text-danger" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn">
-                                Chuyển BS
+                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn" style="font-size:12px;">
+                                <i class="bi bi-arrow-up-right-circle"></i> Chuyển BS
                             </button>
-                            <button type="button" class="btn-secondary-custom button-sm" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân">
-                                Lịch sử
+                            <button type="button" class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân" style="font-size:12px;">
+                                <i class="bi bi-clock-history"></i> Lịch sử
                             </button>
                             ${(t.status === "ESCALATED_TO_DOCTOR" || t.escalatedToDoctorId) && (state.careRole === "BAC_SI" || state.careRole === "ADMIN") ? `
-                                <button type="button" class="button-danger button-sm" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn">
-                                    Phản hồi
+                                <button type="button" class="btn btn-danger btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn" style="font-size:12px;">
+                                    <i class="bi bi-chat-dots-fill"></i> Phản hồi
                                 </button>
                             ` : ""}
-                            <button type="button" class="btn-secondary-custom button-sm" data-edit-task="${t.taskId}" title="Sửa / Phân công lại">
-                                Sửa
+                            <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1 rounded-2 shadow-xs" data-edit-task="${t.taskId}" title="Sửa / Phân công lại" style="font-size:12px;">
+                                <i class="bi bi-pencil"></i>
                             </button>
                         </div>
                     </td>
                 `;
                 cells.push(floatingBarHtml);
+
                 return `<tr class="dv-data-row">${cells.join("")}</tr>`;
             }).join("");
 
@@ -909,6 +910,14 @@
             showMessage(err.message, "error");
         }
     }
+
+    window.toggleCcAdvFilter = function() {
+        const panel = $("advFilterPanel");
+        const btn = $("btnToggleAdvFilter");
+        if (!panel) return;
+        panel.classList.toggle("show");
+        if (btn) btn.classList.toggle("is-open", panel.classList.contains("show"));
+    };
 
     // =========================================================================
     // 4. MODAL LẬP LỊCH / PHÂN CÔNG CHĂM SÓC & TỰ ĐỘNG TỔNG HỢP (SCR-44.3)
