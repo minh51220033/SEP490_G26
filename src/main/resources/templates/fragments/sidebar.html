@@ -321,14 +321,14 @@
                 </button>
                 <div class="side-group__panel" id="sgPersonal">
                     <div class="side-group__inner">
-                        <!-- GỘP CHẤM CÔNG & LỊCH TRỰC CÁ NHÂN THÀNH 1 THANH DUY NHẤT -->
+                        <!-- GỘP LỊCH LÀM VIỆC & CHẤM CÔNG CÁ NHÂN THÀNH 1 TAB DUY NHẤT -->
                         <a th:if="${permissionCodes != null and (#lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') or #lists.contains(permissionCodes, 'SCHEDULE_MY'))}"
                             th:href="@{${#lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') ? '/attendance/my' : '/schedules/my'}}"
                             class="side-link side-sublink"
                             th:classappend="${activeMenu == 'my-attendance' or activeMenu == 'my-schedule'} ? 'is-active' : ''"
-                            title="Chấm công và lịch trực cá nhân">
-                            <i class="bi bi-fingerprint" aria-hidden="true"></i><span class="side-link__label">Chấm công
-                                &amp; Ca trực</span>
+                            title="Lịch làm việc và chấm công của tôi">
+                            <i class="bi bi-calendar-check" aria-hidden="true"></i><span class="side-link__label">Lịch
+                                trực &amp; Chấm công</span>
                         </a>
                         <!-- Đơn xin nghỉ / Khóa lịch (SCR-33.5 - Dành riêng cho Bác sĩ theo FT42 & Matrix 4.4) -->
                         <a th:if="${permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS')}"
