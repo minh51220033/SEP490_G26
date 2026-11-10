@@ -509,29 +509,23 @@
                             </select>
                         </div>
 
-                        <!-- Hàng 2 -->
-                        <div class="col-md-4 col-sm-6">
-                            <label for="advFilterService" class="form-label small fw-semibold text-secondary mb-1">
-                                <i class="bi bi-heart-pulse me-1 text-primary"></i>Nhóm dịch vụ hẹn
+                        <!-- Hàng 2: Bỏ nhóm dịch vụ, tập trung vào Đối tượng ưu tiên hàng chờ -->
+                        <div class="col-md-6 col-sm-6">
+                            <label for="advFilterPriorityGroup" class="form-label small fw-semibold text-secondary mb-1">
+                                <i class="bi bi-star-fill me-1 text-warning"></i>Đối tượng ưu tiên hàng chờ
                             </label>
-                            <select id="advFilterService" class="form-select form-select-sm rounded-3">
-                                <option value="">-- Tất cả Nhóm dịch vụ --</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-4 col-sm-6">
-                            <label for="advFilterMedicalAlert" class="form-label small fw-semibold text-secondary mb-1">
-                                <i class="bi bi-shield-exclamation me-1 text-danger"></i>Cảnh báo y tế &amp; Nhóm BN
-                            </label>
-                            <select id="advFilterMedicalAlert" class="form-select form-select-sm rounded-3">
+                            <select id="advFilterPriorityGroup" class="form-select form-select-sm rounded-3">
                                 <option value="">-- Tất cả bệnh nhân --</option>
-                                <option value="HAS_ALERT">Có cảnh báo y tế / Dị ứng thuốc</option>
-                                <option value="MINOR">Bệnh nhân dưới 18 tuổi (Có giám hộ)</option>
-                                <option value="FOLLOW_UP">Lịch hẹn tái khám chuyên khoa</option>
+                                <option value="ALL_PRIORITY">Tất cả đối tượng ưu tiên</option>
+                                <option value="ELDERLY">Người cao tuổi (≥ 65 tuổi)</option>
+                                <option value="CHILD">Trẻ nhỏ (≤ 6 tuổi)</option>
+                                <option value="PREGNANT">Phụ nữ có thai</option>
+                                <option value="DISABLED">Người khuyết tật / Đi lại khó khăn</option>
+                                <option value="EMERGENCY">Cấp cứu / Đau cấp tính</option>
                             </select>
                         </div>
 
-                        <div class="col-md-4 col-sm-12">
+                        <div class="col-md-6 col-sm-6">
                             <label class="form-label small fw-semibold text-secondary mb-1">
                                 <i class="bi bi-grid-3x3-gap me-1 text-primary"></i>Chế độ hiển thị
                             </label>
@@ -1227,6 +1221,24 @@
                                                 <textarea id="modalSymptoms" class="form-control rounded-3 py-2 px-3"
                                                     rows="2" placeholder="Cạo vôi, trám răng, điều trị tuỷ..."
                                                     required></textarea>
+                                            </div>
+
+                                            <!-- Đối tượng ưu tiên hàng chờ (Tự động nhận diện hoặc chọn nhanh) -->
+                                            <div class="mb-3">
+                                                <label for="modalPriorityType"
+                                                    class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">
+                                                    <i class="bi bi-star-fill text-warning me-1"></i>ĐỐI TƯỢNG ƯU TIÊN HÀNG CHỜ
+                                                </label>
+                                                <select id="modalPriorityType"
+                                                    class="form-select form-select-sm py-2 rounded-3">
+                                                    <option value="">-- Không ưu tiên (Khám thường) --</option>
+                                                    <option value="ELDERLY">⭐ Người cao tuổi (≥ 65 tuổi) - Tự động ưu tiên</option>
+                                                    <option value="CHILD">⭐ Trẻ nhỏ (≤ 6 tuổi) - Tự động ưu tiên</option>
+                                                    <option value="PREGNANT">⭐ Phụ nữ có thai</option>
+                                                    <option value="DISABLED">⭐ Người khuyết tật / Đi lại khó khăn</option>
+                                                    <option value="EMERGENCY">🚨 Cấp cứu / Đau cấp tính</option>
+                                                    <option value="OTHER">Ưu tiên đặc biệt khác</option>
+                                                </select>
                                             </div>
 
                                             <!-- Ghi chú nội bộ -->
