@@ -58,18 +58,27 @@ public class AdminBankAccountController {
         this.userRepository = userRepository;
     }
 
+    private boolean hasBankAccountAccess(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        return userRepository.hasActiveAdminRole(userId)
+                || userRepository.hasActivePermission(userId, "BRANCH_MANAGE")
+                || userRepository.hasActivePermission(userId, "ACCOUNT_MANAGE");
+    }
+
     private void checkAdminAccess(HttpSession session, Model model) {
         if (session == null || !(session.getAttribute("loggedInUser") instanceof User u) || u.getUserId() == null) {
             throw new AccessDeniedException("Vui lòng đăng nhập để tiếp tục.");
         }
-        if (!userRepository.hasActiveAdminRole(u.getUserId())) {
-            throw new AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền cấu hình tài khoản ngân hàng nhận tiền theo chi nhánh.");
+        if (!hasBankAccountAccess(u.getUserId())) {
+            throw new AccessDeniedException("Tài khoản không có quyền cấu hình tài khoản ngân hàng nhận tiền theo chi nhánh.");
         }
         model.addAttribute("activeMenu", "bank-accounts");
         model.addAttribute("roleNames", session.getAttribute("roleNames"));
         model.addAttribute("displayName", session.getAttribute("displayName"));
         model.addAttribute("loggedInUser", session.getAttribute("loggedInUser"));
-        model.addAttribute("isAdmin", true);
+        model.addAttribute("isAdmin", userRepository.hasActiveAdminRole(u.getUserId()));
     }
 
     private Long getCurrentUserId(HttpSession session) {
@@ -115,8 +124,8 @@ public class AdminBankAccountController {
     ) {
         try {
             Long currentUserId = getCurrentUserId(session);
-            if (!userRepository.hasActiveAdminRole(currentUserId)) {
-                throw new AccessDeniedException("Chỉ Quản trị viên mới có quyền thêm tài khoản ngân hàng.");
+            if (!hasBankAccountAccess(currentUserId)) {
+                throw new AccessDeniedException("Tài khoản không có quyền thao tác tài khoản ngân hàng.");
             }
 
             branchBankAccountService.createAccount(dto, currentUserId, getClientIp(request));
@@ -137,8 +146,8 @@ public class AdminBankAccountController {
     ) {
         try {
             Long currentUserId = getCurrentUserId(session);
-            if (!userRepository.hasActiveAdminRole(currentUserId)) {
-                throw new AccessDeniedException("Chỉ Quản trị viên mới có quyền sửa tài khoản ngân hàng.");
+            if (!hasBankAccountAccess(currentUserId)) {
+                throw new AccessDeniedException("Tài khoản không có quyền sửa tài khoản ngân hàng.");
             }
 
             branchBankAccountService.updateAccount(id, dto, currentUserId, getClientIp(request));
@@ -160,8 +169,8 @@ public class AdminBankAccountController {
     ) {
         try {
             Long currentUserId = getCurrentUserId(session);
-            if (!userRepository.hasActiveAdminRole(currentUserId)) {
-                throw new AccessDeniedException("Chỉ Quản trị viên mới có quyền thay đổi trạng thái tài khoản ngân hàng.");
+            if (!hasBankAccountAccess(currentUserId)) {
+                throw new AccessDeniedException("Tài khoản không có quyền thay đổi trạng thái tài khoản ngân hàng.");
             }
 
             branchBankAccountService.toggleAccountStatus(id, active, currentUserId, getClientIp(request));
@@ -183,8 +192,8 @@ public class AdminBankAccountController {
     ) {
         try {
             Long currentUserId = getCurrentUserId(session);
-            if (!userRepository.hasActiveAdminRole(currentUserId)) {
-                throw new AccessDeniedException("Chỉ Quản trị viên mới có quyền đặt tài khoản mặc định.");
+            if (!hasBankAccountAccess(currentUserId)) {
+                throw new AccessDeniedException("Tài khoản không có quyền đặt tài khoản mặc định.");
             }
 
             branchBankAccountService.setDefaultAccount(id, currentUserId, getClientIp(request));
@@ -205,8 +214,8 @@ public class AdminBankAccountController {
     ) {
         try {
             Long currentUserId = getCurrentUserId(session);
-            if (!userRepository.hasActiveAdminRole(currentUserId)) {
-                throw new AccessDeniedException("Chỉ Quản trị viên mới có quyền xóa tài khoản.");
+            if (!hasBankAccountAccess(currentUserId)) {
+                throw new AccessDeniedException("Tài khoản không có quyền xóa tài khoản.");
             }
 
             branchBankAccountService.deleteAccount(id, currentUserId, getClientIp(request));

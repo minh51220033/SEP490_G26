@@ -90,9 +90,9 @@ public class OwnerDistributionServiceImpl implements OwnerDistributionService {
             branch = branchRepository.findById(dto.getBranchId())
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chi nhánh: " + dto.getBranchId()));
         } else {
-            // Không truyền branchId = Đề xuất toàn hệ thống -> Chỉ Quản trị viên (Admin) mới có quyền
-            if (!isAdmin) {
-                throw new AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền lập đề xuất phân chia lợi nhuận toàn hệ thống");
+            // Không truyền branchId = Đề xuất toàn hệ thống -> Admin hoặc tài khoản được cấp FINANCE_OWNER_DISTRIBUTIONS
+            if (!isAdmin && !userRepository.hasActivePermission(currentUserId, "FINANCE_OWNER_DISTRIBUTIONS")) {
+                throw new AccessDeniedException("Bạn không có quyền lập đề xuất phân chia lợi nhuận toàn hệ thống");
             }
         }
 
@@ -187,8 +187,9 @@ public class OwnerDistributionServiceImpl implements OwnerDistributionService {
 
     @Override
     public OwnerDistribution approveDistribution(Long distributionId, Long currentUserId) {
-        if (currentUserId == null || !userRepository.hasActiveAdminRole(currentUserId)) {
-            throw new AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền phê duyệt phân chia lợi nhuận");
+        if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
+                && !userRepository.hasActivePermission(currentUserId, "FINANCE_OWNER_DISTRIBUTIONS"))) {
+            throw new AccessDeniedException("Bạn không có quyền phê duyệt phân chia lợi nhuận");
         }
 
         OwnerDistribution distribution = getDistributionDetail(distributionId);
@@ -214,8 +215,9 @@ public class OwnerDistributionServiceImpl implements OwnerDistributionService {
 
     @Override
     public OwnerDistribution rejectDistribution(Long distributionId, String reason, Long currentUserId) {
-        if (currentUserId == null || !userRepository.hasActiveAdminRole(currentUserId)) {
-            throw new AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền từ chối phê duyệt phân chia lợi nhuận");
+        if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
+                && !userRepository.hasActivePermission(currentUserId, "FINANCE_OWNER_DISTRIBUTIONS"))) {
+            throw new AccessDeniedException("Bạn không có quyền từ chối phê duyệt phân chia lợi nhuận");
         }
 
         OwnerDistribution distribution = getDistributionDetail(distributionId);
@@ -231,8 +233,9 @@ public class OwnerDistributionServiceImpl implements OwnerDistributionService {
 
     @Override
     public OwnerDistribution payDistribution(Long distributionId, RefundMethod paymentMethod, String paymentReference, Long currentUserId) {
-        if (currentUserId == null || !userRepository.hasActiveAdminRole(currentUserId)) {
-            throw new AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền xác nhận chi trả lợi nhuận");
+        if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
+                && !userRepository.hasActivePermission(currentUserId, "FINANCE_OWNER_DISTRIBUTIONS"))) {
+            throw new AccessDeniedException("Bạn không có quyền xác nhận chi trả lợi nhuận");
         }
 
         OwnerDistribution distribution = getDistributionDetail(distributionId);

@@ -42,11 +42,12 @@ public class EmrAccess {
         if (!Boolean.TRUE.equals(user.getIsActive()) || !"ACTIVE".equalsIgnoreCase(user.getStatus())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản đã bị khóa.");
         }
-        boolean admin = hasRole(user, "ADMIN", "ROLE_ADMIN");
-        boolean doctor = hasRole(user, "BAC_SI", "ROLE_BAC_SI");
+        boolean admin = hasRole(user, "ADMIN", "ROLE_ADMIN") || users.hasActiveAdminRole(user.getUserId());
+        boolean doctor = hasRole(user, "BAC_SI", "ROLE_BAC_SI")
+                || users.hasActivePermission(user.getUserId(), "MEDICAL_RECORD_VIEW");
         if (!admin && !doctor) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Chỉ quản trị viên và bác sĩ được truy cập module bệnh án điện tử.");
+                    "Tài khoản không có quyền truy cập module bệnh án điện tử.");
         }
         Set<Long> branchIds = new HashSet<>(assignments.findActiveBranchIdsByUserId(
                 user.getUserId(), AssignmentStatus.ACTIVE));

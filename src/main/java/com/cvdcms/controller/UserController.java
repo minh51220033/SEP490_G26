@@ -159,11 +159,8 @@ public class UserController {
         for (String r : roleNames) {
             if (r == null) continue;
             String norm = r.trim().toUpperCase(Locale.ROOT);
-            if ("ADMIN".equals(norm) || "ROLE_ADMIN".equals(norm)
-                    || "BAC_SI".equals(norm) || "ROLE_BAC_SI".equals(norm)
-                    || "LE_TAN".equals(norm) || "ROLE_LE_TAN".equals(norm)
-                    || "QUAN_LY_KHO".equals(norm) || "ROLE_QUAN_LY_KHO".equals(norm)
-                    || "KE_TOAN".equals(norm) || "ROLE_KE_TOAN".equals(norm)) {
+            if (!"BENH_NHAN".equals(norm) && !"ROLE_BENH_NHAN".equals(norm)
+                    && !"PATIENT".equals(norm) && !"ROLE_PATIENT".equals(norm)) {
                 return true;
             }
         }

@@ -135,15 +135,35 @@
 
             <!-- 3. THANH 8 TABS CHỨC NĂNG QUẢN LÝ KHO (SEGMENTED PILLS) -->
             <nav class="tabs" aria-label="Chức năng quản lý kho">
-                <button class="tab active" type="button" data-tab="inventory">Tồn kho</button>
-                <button class="tab" type="button" data-tab="batches">Lô &amp; Hạn dùng</button>
-                <button class="tab" type="button" data-tab="receipt">Phiếu nhập kho</button>
-                <button class="tab" type="button" data-tab="issue">Phiếu xuất kho</button>
-                <button class="tab" type="button" data-tab="transfer">Điều chuyển kho</button>
-                <button class="tab" type="button" data-tab="materials">Danh mục vật tư</button>
-                <button class="tab" type="button" data-tab="categories">Nhóm vật tư</button>
-                <button class="tab" type="button" data-tab="supplier-payments">NCC &amp; Công nợ</button>
+                <button class="tab active" type="button" data-tab="inventory"
+                        th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'INVENTORY_STOCK'))}">Tồn kho</button>
+                <button class="tab" type="button" data-tab="batches"
+                        th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'INVENTORY_BATCHES'))}">Lô &amp; Hạn dùng</button>
+                <button class="tab" type="button" data-tab="receipt"
+                        th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'INVENTORY_RECEIPT'))}">Phiếu nhập kho</button>
+                <button class="tab" type="button" data-tab="issue"
+                        th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'INVENTORY_ISSUE'))}">Phiếu xuất kho</button>
+                <button class="tab" type="button" data-tab="transfer"
+                        th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'INVENTORY_TRANSFER'))}">Điều chuyển kho</button>
+                <button class="tab" type="button" data-tab="materials"
+                        th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'INVENTORY_MATERIALS'))}">Danh mục vật tư</button>
+                <button class="tab" type="button" data-tab="categories"
+                        th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'INVENTORY_CATEGORIES'))}">Nhóm vật tư</button>
+                <button class="tab" type="button" data-tab="supplier-payments"
+                        th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'SUPPLIER_MANAGE'))}">NCC &amp; Công nợ</button>
             </nav>
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    setTimeout(function () {
+                        var nav = document.querySelector('nav.tabs[aria-label="Chức năng quản lý kho"]');
+                        if (!nav) return;
+                        if (!nav.querySelector('.tab.active')) {
+                            var firstTab = nav.querySelector('.tab');
+                            if (firstTab) firstTab.click();
+                        }
+                    }, 0);
+                });
+            </script>
 
             <!-- ==========================================
                  TAB 1: TỒN KHO CHI NHÁNH

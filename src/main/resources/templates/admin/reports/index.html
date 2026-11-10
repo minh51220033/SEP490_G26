@@ -211,26 +211,34 @@
 
             <!-- TAB NAVIGATION DẠNG THẺ RIÊNG BIỆT (PILL CARDS) -->
             <div class="d-flex flex-wrap gap-2 mb-4" id="reportTabs" role="tablist">
-                <button class="report-tab-pill" th:classappend="${activeTab == 'overview' ? 'active' : ''}"
+                <button class="report-tab-pill"
+                        th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_REPORTS'))}"
+                        th:classappend="${activeTab == 'overview' ? 'active' : ''}"
                         id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview-pane" type="button" role="tab"
                         onclick="switchReportTab('overview')">
                     <i class="bi bi-speedometer2 text-primary me-1"></i> Tổng quan điều hành
                     <span class="badge rounded-pill bg-light text-secondary border ms-1">29.1</span>
                 </button>
-                <button class="report-tab-pill" th:classappend="${activeTab == 'financial' ? 'active' : ''}"
+                <button class="report-tab-pill"
+                        th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'REPORT_FINANCIAL'))}"
+                        th:classappend="${activeTab == 'financial' ? 'active' : ''}"
                         id="financial-tab" data-bs-toggle="tab" data-bs-target="#financial-pane" type="button" role="tab"
                         onclick="switchReportTab('financial')">
                     <i class="bi bi-cash-stack text-success me-1"></i> Báo cáo Tài chính & Dòng tiền
                     <span class="badge rounded-pill bg-light text-secondary border ms-1">29.2</span>
                 </button>
-                <button class="report-tab-pill" th:classappend="${activeTab == 'debts' ? 'active' : ''}"
+                <button class="report-tab-pill"
+                        th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'REPORT_DEBTS'))}"
+                        th:classappend="${activeTab == 'debts' ? 'active' : ''}"
                         id="debts-tab" data-bs-toggle="tab" data-bs-target="#debts-pane" type="button" role="tab"
                         onclick="switchReportTab('debts')">
                     <i class="bi bi-receipt-cutoff text-danger me-1"></i> Công nợ Bệnh nhân
                     <span class="badge rounded-pill bg-danger text-white ms-1"
                           th:text="${#lists.size(financial.patientDebts)}">0</span>
                 </button>
-                <button class="report-tab-pill" th:classappend="${activeTab == 'operational' ? 'active' : ''}"
+                <button class="report-tab-pill"
+                        th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'REPORT_OPERATIONAL'))}"
+                        th:classappend="${activeTab == 'operational' ? 'active' : ''}"
                         id="operational-tab" data-bs-toggle="tab" data-bs-target="#operational-pane" type="button" role="tab"
                         onclick="switchReportTab('operational')">
                     <i class="bi bi-people text-info me-1"></i> Vận hành & Nguồn khách
@@ -238,6 +246,15 @@
                           th:text="${operational.totalVisits} + ' lượt'">0 lượt</span>
                 </button>
             </div>
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    var tabs = document.getElementById('reportTabs');
+                    if (tabs && !tabs.querySelector('.report-tab-pill.active')) {
+                        var firstTab = tabs.querySelector('.report-tab-pill');
+                        if (firstTab) firstTab.click();
+                    }
+                });
+            </script>
 
             <!-- TAB CONTENT -->
             <div class="tab-content" id="reportTabContent">

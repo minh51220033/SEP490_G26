@@ -333,6 +333,166 @@
                     color: #0369a1;
                 }
 
+                /* =========================================================================
+                   TÙY BIẾN CỘT & GHIM CỘT (COLUMN CUSTOMIZER POPOVER)
+                   ========================================================================= */
+                .dv-col-customizer-wrapper {
+                    position: relative;
+                }
+                .dv-col-popover {
+                    position: absolute;
+                    right: 0;
+                    top: calc(100% + 8px);
+                    width: 360px;
+                    background: #ffffff;
+                    border: 1.5px solid #cbd5e1;
+                    border-radius: 16px;
+                    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16);
+                    z-index: 100;
+                    display: none;
+                    overflow: hidden;
+                }
+                .dv-col-popover.show {
+                    display: block;
+                    animation: dvFadeSlideDown 0.18s ease-out;
+                }
+                .dv-col-item {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 10px 14px;
+                    border-bottom: 1px solid #f1f5f9;
+                    background: #ffffff;
+                    transition: background 0.15s;
+                    cursor: grab;
+                }
+                .dv-col-item:hover {
+                    background: #f8fafc;
+                }
+                .dv-col-item.dragging {
+                    opacity: 0.5;
+                    background: #e0f2fe;
+                }
+                .dv-col-order-btn {
+                    border: 1px solid #e2e8f0;
+                    background: #f8fafc;
+                    color: #475569;
+                    width: 26px;
+                    height: 26px;
+                    border-radius: 6px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                    cursor: pointer;
+                }
+                .dv-col-order-btn:hover {
+                    background: #e2e8f0;
+                    color: #0f172a;
+                }
+                .dv-pin-btn {
+                    border: none;
+                    background: transparent;
+                    color: #94a3b8;
+                    width: 26px;
+                    height: 26px;
+                    border-radius: 6px;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 13px;
+                    cursor: pointer;
+                }
+                .dv-pin-btn:hover {
+                    background: #cbd5e1;
+                    color: #0f172a;
+                }
+                .dv-pin-btn.is-pinned {
+                    color: #0284c7;
+                    background: #e0f2fe;
+                }
+
+                /* =========================================================================
+                   CO GIÃN CHIỀU RỘNG CỘT (COLUMN RESIZER)
+                   ========================================================================= */
+                .dv-amis-table thead th {
+                    position: relative;
+                }
+                .dv-col-resizer {
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    width: 8px;
+                    height: 100%;
+                    cursor: col-resize;
+                    user-select: none;
+                    z-index: 30;
+                }
+                .dv-col-resizer:hover, .dv-col-resizer.is-resizing {
+                    background: #0284c7;
+                    width: 4px;
+                }
+                /* =========================================================================
+                   NÚT GHIM CỘT NGAY TRÊN THANH TIÊU ĐỀ (HEADER TH)
+                   ========================================================================= */
+                .dv-th-inner {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 6px;
+                    width: 100%;
+                }
+
+                /* =========================================================================
+                   HOVER FLOATING ACTIONS BAR (NÚT NỔI DI CHUYỂN THEO MÀN HÌNH CHUẨN DAILY VISITS)
+                   ========================================================================= */
+                .dv-floating-actions-track {
+                    position: sticky !important;
+                    right: 0 !important;
+                    width: 0 !important;
+                    min-width: 0 !important;
+                    max-width: 0 !important;
+                    height: 0 !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    border: none !important;
+                    overflow: visible !important;
+                    z-index: 25;
+                    background: transparent !important;
+                }
+
+                .dv-floating-actions-bar {
+                    position: absolute;
+                    right: 0;
+                    top: 50%;
+                    transform: translateY(-50%) translateX(10px);
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 16px 8px 36px;
+                    background: linear-gradient(90deg, rgba(240, 249, 255, 0) 0%, rgba(240, 249, 255, 0.96) 20%, #f0f9ff 100%);
+                    opacity: 0;
+                    visibility: hidden;
+                    pointer-events: none;
+                    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+                    white-space: nowrap;
+                    z-index: 30;
+                }
+
+                /* Rê chuột vào dòng: Nổi thanh thao tác nhanh ở mép phải màn hình */
+                .dv-amis-table tbody tr.dv-data-row:hover .dv-floating-actions-bar {
+                    opacity: 1;
+                    visibility: visible;
+                    transform: translateY(-50%) translateX(0);
+                    pointer-events: auto;
+                }
+
+                body.is-table-resizing,
+                body.is-table-resizing * {
+                    cursor: col-resize !important;
+                    user-select: none !important;
+                }
+
                 .dv-amis-table tbody tr.dv-data-row {
                     transition: background-color 0.12s ease;
                 }
@@ -625,25 +785,25 @@
                 }
             </style>
 
-            <!-- BREADCRUMB -->
-            <nav aria-label="breadcrumb" class="mb-2">
-                <ol class="breadcrumb mb-0" style="font-size: 13.5px;">
-                    <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
-                    <li class="breadcrumb-item active" aria-current="page" th:text="${sidebarMenu == 'doctor-records' ? 'Quản lý khách hàng' : 'Quản lý khách hàng'}">Quản lý khách hàng</li>
-                </ol>
-            </nav>
-
-            <!-- SUB-HEADER TITLE -->
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                <div>
-                    <h1 class="dv-page-title">
-                        <i class="bi bi-people-fill text-primary fs-3"></i>
-                        <span th:text="${sidebarMenu == 'doctor-records' ? 'Quản Lý Hồ Sơ Khách Hàng' : 'Danh Sách Hồ Sơ Bệnh Nhân'}">Danh Sách Hồ Sơ Bệnh Nhân</span>
-                    </h1>
-                </div>
+            <!-- BREADCRUMB & BỘ CHỌN CƠ SỞ PHÍA TRÊN CÙNG -->
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0" style="font-size: 13.5px;">
+                        <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+                        <li class="breadcrumb-item active" aria-current="page" th:text="${sidebarMenu == 'doctor-records' ? 'Quản lý khách hàng' : 'Quản lý khách hàng'}">Quản lý khách hàng</li>
+                    </ol>
+                </nav>
                 <div class="d-flex align-items-center gap-2">
                     <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                 </div>
+            </div>
+
+            <!-- SUB-HEADER TITLE -->
+            <div class="mb-3">
+                <h1 class="dv-page-title">
+                    <i class="bi bi-people-fill text-primary fs-3"></i>
+                    <span th:text="${sidebarMenu == 'doctor-records' ? 'Quản Lý Hồ Sơ Khách Hàng' : 'Danh Sách Hồ Sơ Bệnh Nhân'}">Danh Sách Hồ Sơ Bệnh Nhân</span>
+                </h1>
             </div>
 
             <!-- TOOLBAR CARD (CHUẨN DAILY-VISITS.HTML & AMIS) -->
@@ -759,41 +919,153 @@
                         <span class="fw-bold text-dark fs-6">Danh sách bản ghi</span>
                         <span class="badge bg-primary-subtle text-primary rounded-pill fw-bold" th:text="|Tổng ${patients.totalElements}|">Tổng 0</span>
                     </div>
-                    <div class="small text-muted">
-                        <i class="bi bi-info-circle me-1 text-primary"></i> Cuộn ngang để xem đầy đủ cột · Cột Họ tên &amp; Thao tác được ghim cố định
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="small text-muted me-2 d-none d-md-inline-block">
+                            <i class="bi bi-info-circle me-1 text-primary"></i> Cuộn ngang để xem đầy đủ cột · Cột Họ tên &amp; Thao tác được ghim cố định
+                        </div>
+                        <!-- Nút Tùy biến cột & Ghim cột chuẩn daily-visits -->
+                        <div class="dv-col-customizer-wrapper" id="colCustomizerWrapper">
+                            <button type="button"
+                                class="btn btn-white bg-white border fw-bold px-3 py-1.5 rounded-3 d-inline-flex align-items-center gap-2 shadow-xs"
+                                style="font-size: 13.5px; border-color: #cbd5e1 !important; color: #0f172a;"
+                                onclick="toggleColumnCustomizer(event)">
+                                <i class="bi bi-layout-three-columns text-primary"></i>
+                                <span>Tùy biến cột</span>
+                                <span class="badge bg-primary-subtle text-primary rounded-pill"
+                                    id="pinnedColCountBadge">1 ghim</span>
+                            </button>
+
+                            <!-- Popover Tùy biến cột chuẩn MISA AMIS -->
+                            <div class="dv-col-popover" id="colCustomizerPopover" onclick="event.stopPropagation()">
+                                <div class="p-3 bg-light border-bottom d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <div class="fw-bold text-dark" style="font-size: 14.5px;">
+                                            <i class="bi bi-sliders text-primary me-1"></i>Tùy chỉnh cột hiển thị
+                                        </div>
+                                        <div class="text-muted" style="font-size: 11.5px;">Ẩn/hiện, kéo thả đổi thứ tự hoặc bấm 📌 để ghim cột</div>
+                                    </div>
+                                    <button type="button"
+                                        class="btn btn-sm btn-link text-primary fw-bold text-decoration-none p-0"
+                                        onclick="resetDefaultColumns()">
+                                        Mặc định
+                                    </button>
+                                </div>
+                                <div id="colCustomizerList" style="max-height: 340px; overflow-y: auto;">
+                                    <!-- Render động bằng JS -->
+                                </div>
+                                <div class="p-2.5 bg-light border-top text-end">
+                                    <button type="button" class="btn btn-primary btn-sm px-3 fw-bold rounded-pill"
+                                        onclick="closeColumnCustomizer()">
+                                        Hoàn tất
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="dv-table-scroll-container">
-                    <table class="dv-amis-table align-middle">
+                    <table class="dv-amis-table align-middle" id="patientsTable">
                         <thead>
-                            <tr>
-                                <th class="text-center" style="width: 50px;">TT</th>
-                                <th style="width: 120px;">Mã BN</th>
+                            <tr id="patientsTableHeaderRow">
+                                <th class="text-center" data-col="tt" style="width: 50px;">
+                                    <div class="dv-th-inner">
+                                        <span>TT</span>
+                                        <button type="button" class="dv-pin-btn" title="Ghim cột TT" onclick="togglePinColumn('tt')">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                    </div>
+                                    <span class="dv-col-resizer"></span>
+                                </th>
+                                <th data-col="code" style="width: 120px;">
+                                    <div class="dv-th-inner">
+                                        <span>Mã BN</span>
+                                        <button type="button" class="dv-pin-btn" title="Ghim cột Mã BN" onclick="togglePinColumn('code')">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                    </div>
+                                    <span class="dv-col-resizer"></span>
+                                </th>
                                 <!-- GHIM CỘT HỌ VÀ TÊN (STICKY LEFT) -->
-                                <th class="dv-col-pinned-left" style="min-width: 250px;">Họ và tên bệnh nhân</th>
-                                <th class="text-center" style="width: 60px;">G.T</th>
-                                <th class="text-center" style="width: 90px;">Năm sinh</th>
-                                <th style="width: 130px;">Điện thoại</th>
-                                <th class="text-center" style="width: 140px;">Thanh toán</th>
-                                <th style="width: 140px;">Nguồn</th>
-                                <th class="text-center" style="width: 130px;">Trạng thái</th>
-                                <!-- GHIM CỘT THAO TÁC (STICKY RIGHT) -->
-                                <th class="dv-col-pinned-right text-center" style="width: 140px;">Thao tác</th>
+                                <th class="dv-col-pinned-left" data-col="fullName" style="min-width: 250px;">
+                                    <div class="dv-th-inner">
+                                        <span>Họ và tên bệnh nhân</span>
+                                        <button type="button" class="dv-pin-btn is-pinned" title="Bỏ ghim cột Họ tên" onclick="togglePinColumn('fullName')">
+                                            <i class="bi bi-pin-angle-fill"></i>
+                                        </button>
+                                    </div>
+                                    <span class="dv-col-resizer"></span>
+                                </th>
+                                <th class="text-center" data-col="gender" style="width: 65px;">
+                                    <div class="dv-th-inner">
+                                        <span>G.T</span>
+                                        <button type="button" class="dv-pin-btn" title="Ghim cột Giới tính" onclick="togglePinColumn('gender')">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                    </div>
+                                    <span class="dv-col-resizer"></span>
+                                </th>
+                                <th class="text-center" data-col="birthYear" style="width: 90px;">
+                                    <div class="dv-th-inner">
+                                        <span>Năm sinh</span>
+                                        <button type="button" class="dv-pin-btn" title="Ghim cột Năm sinh" onclick="togglePinColumn('birthYear')">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                    </div>
+                                    <span class="dv-col-resizer"></span>
+                                </th>
+                                <th data-col="phone" style="width: 130px;">
+                                    <div class="dv-th-inner">
+                                        <span>Điện thoại</span>
+                                        <button type="button" class="dv-pin-btn" title="Ghim cột Điện thoại" onclick="togglePinColumn('phone')">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                    </div>
+                                    <span class="dv-col-resizer"></span>
+                                </th>
+                                <th class="text-center" data-col="payment" style="width: 140px;">
+                                    <div class="dv-th-inner">
+                                        <span>Thanh toán</span>
+                                        <button type="button" class="dv-pin-btn" title="Ghim cột Thanh toán" onclick="togglePinColumn('payment')">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                    </div>
+                                    <span class="dv-col-resizer"></span>
+                                </th>
+                                <th data-col="source" style="width: 140px;">
+                                    <div class="dv-th-inner">
+                                        <span>Nguồn</span>
+                                        <button type="button" class="dv-pin-btn" title="Ghim cột Nguồn" onclick="togglePinColumn('source')">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                    </div>
+                                    <span class="dv-col-resizer"></span>
+                                </th>
+                                <th class="text-center" data-col="status" style="width: 130px;">
+                                    <div class="dv-th-inner">
+                                        <span>Trạng thái</span>
+                                        <button type="button" class="dv-pin-btn" title="Ghim cột Trạng thái" onclick="togglePinColumn('status')">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                    </div>
+                                    <span class="dv-col-resizer"></span>
+                                </th>
+                                <!-- HOVER FLOATING ACTIONS TRACK (NỔI DI CHUYỂN CHUẨN DAILY-VISITS) -->
+                                <th class="dv-floating-actions-track" data-col="actions"></th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr th:each="patient, stat : ${patients.content}" class="dv-data-row" th:id="|patient-row-${patient.id}|">
                                 <!-- 1. TT -->
-                                <td class="text-center text-muted fw-semibold" th:text="${currentPage * pageSize + stat.count}">1</td>
+                                <td class="text-center text-muted fw-semibold" data-col="tt" th:text="${currentPage * pageSize + stat.count}">1</td>
 
                                 <!-- 2. MÃ BN -->
-                                <td>
+                                <td data-col="code">
                                     <span class="dv-code-pill" th:text="${patient.code}">BN123456</span>
                                 </td>
 
                                 <!-- 3. HỌ VÀ TÊN (STICKY LEFT) -->
-                                <td class="dv-col-pinned-left">
+                                <td class="dv-col-pinned-left" data-col="fullName">
                                     <div class="dv-patient-cell">
                                         <div class="dv-patient-avatar" th:text="${patient.fullName != null and !patient.fullName.isBlank() ? patient.fullName.substring(0, 1).toUpperCase() : 'B'}">V</div>
                                         <div>
@@ -804,22 +1076,22 @@
                                 </td>
 
                                 <!-- 4. G.T -->
-                                <td class="text-center">
+                                <td class="text-center" data-col="gender">
                                     <span th:if="${patient.gender == 'Nữ' or patient.gender == 'Female'}" class="gender-pill female" title="Nữ">N</span>
                                     <span th:unless="${patient.gender == 'Nữ' or patient.gender == 'Female'}" class="gender-pill male" title="Nam">M</span>
                                 </td>
 
                                 <!-- 5. NĂM SINH -->
-                                <td class="text-center text-dark fw-bold" th:text="${patient.birthYear != null ? patient.birthYear : (patient.dob != null ? patient.dob.year : '—')}">1990</td>
+                                <td class="text-center text-dark fw-bold" data-col="birthYear" th:text="${patient.birthYear != null ? patient.birthYear : (patient.dob != null ? patient.dob.year : '—')}">1990</td>
 
                                 <!-- 6. ĐIỆN THOẠI -->
-                                <td>
+                                <td data-col="phone">
                                     <a th:if="${patient.phoneNumber != null}" th:href="${'tel:' + patient.phoneNumber}" class="text-decoration-none fw-bold" style="color: #0284c7;" th:text="${patient.phoneNumber}">0912345678</a>
                                     <span th:unless="${patient.phoneNumber != null}" class="text-muted">—</span>
                                 </td>
 
                                 <!-- 7. THANH TOÁN (SỬA LỖI CÚ PHÁP THYMELEAF BẰNG TH:SWITCH ĐẢM BẢO DUY NHẤT 1 BADGE) -->
-                                <td class="text-center" th:switch="${patient.paymentStatus}">
+                                <td class="text-center" data-col="payment" th:switch="${patient.paymentStatus}">
                                     <span th:case="'Chưa TT hết'" class="badge-payment warning">
                                         <i class="bi bi-exclamation-circle-fill"></i> Chưa TT hết
                                     </span>
@@ -832,7 +1104,7 @@
                                 </td>
 
                                 <!-- 8. NGUỒN KHÁCH HÀNG (SỬA LỖI CÚ PHÁP THYMELEAF BẰNG TH:SWITCH ĐẢM BẢO DUY NHẤT 1 BADGE NHẬN DIỆN) -->
-                                <td th:switch="${patient.customerSourceDisplay}">
+                                <td data-col="source" th:switch="${patient.customerSourceDisplay}">
                                     <span th:case="'Facebook'" class="source-tag facebook">
                                         <i class="bi bi-facebook"></i> Facebook
                                     </span>
@@ -851,7 +1123,7 @@
                                 </td>
 
                                 <!-- 9. TRẠNG THÁI -->
-                                <td class="text-center">
+                                <td class="text-center" data-col="status">
                                     <span th:if="${patient.status == 'ACTIVE' or patient.status == null}" class="badge-status active">
                                         <span class="rounded-circle d-inline-block bg-success" style="width: 6px; height: 6px;"></span>
                                         Hoạt động
@@ -862,45 +1134,47 @@
                                     </span>
                                 </td>
 
-                                <!-- 10. THAO TÁC CHUẨN ĐỒNG BỘ DAILY VISITS (STICKY RIGHT) -->
-                                <td class="dv-col-pinned-right">
-                                    <div class="dv-action-btn-group">
-                                        <!-- Xem chi tiết hồ sơ -->
-                                        <a th:href="${recordBasePath + '/' + patient.id}"
-                                           class="dv-equal-btn-secondary"
-                                           title="Xem hồ sơ bệnh nhân toàn diện &amp; bệnh sử">
-                                            <i class="bi bi-person-vcard text-secondary"></i>
-                                            <span>Xem hồ sơ</span>
-                                        </a>
+                                <!-- 10. THAO TÁC NỔI DI CHUYỂN CHUẨN DAILY VISITS (STICKY RIGHT FLOATING) -->
+                                <td class="dv-floating-actions-track" data-col="actions">
+                                    <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
+                                        <div class="dv-action-btn-group">
+                                            <!-- Xem chi tiết hồ sơ -->
+                                            <a th:href="${recordBasePath + '/' + patient.id}"
+                                               class="dv-equal-btn-secondary"
+                                               title="Xem hồ sơ bệnh nhân toàn diện &amp; bệnh sử">
+                                                <i class="bi bi-person-vcard text-secondary"></i>
+                                                <span>Xem hồ sơ</span>
+                                            </a>
 
-                                        <!-- Chỉnh sửa hồ sơ -->
-                                        <button type="button"
-                                                class="dv-equal-btn-secondary"
-                                                title="Chỉnh sửa thông tin &amp; nguồn tiếp nhận"
-                                                th:data-id="${patient.id}"
-                                                th:data-code="${patient.code}"
-                                                th:data-name="${patient.fullName}"
-                                                th:data-phone="${patient.phoneNumber}"
-                                                th:data-dob="${patient.dob}"
-                                                th:data-gender="${patient.gender}"
-                                                th:data-address="${patient.address}"
-                                                th:data-source="${patient.customerSourceDisplay}"
-                                                th:data-status="${patient.status}"
-                                                onclick="openEditPatientModal(this)">
-                                            <i class="bi bi-pencil text-primary"></i>
-                                            <span>Sửa</span>
-                                        </button>
+                                            <!-- Chỉnh sửa hồ sơ -->
+                                            <button type="button"
+                                                    class="dv-equal-btn-secondary"
+                                                    title="Chỉnh sửa thông tin &amp; nguồn tiếp nhận"
+                                                    th:data-id="${patient.id}"
+                                                    th:data-code="${patient.code}"
+                                                    th:data-name="${patient.fullName}"
+                                                    th:data-phone="${patient.phoneNumber}"
+                                                    th:data-dob="${patient.dob}"
+                                                    th:data-gender="${patient.gender}"
+                                                    th:data-address="${patient.address}"
+                                                    th:data-source="${patient.customerSourceDisplay}"
+                                                    th:data-status="${patient.status}"
+                                                    onclick="openEditPatientModal(this)">
+                                                <i class="bi bi-pencil text-primary"></i>
+                                                <span>Sửa</span>
+                                            </button>
 
-                                        <!-- Xóa / Lưu trữ mềm -->
-                                        <button type="button"
-                                                class="dv-btn-crud dv-btn-crud-delete"
-                                                title="Lưu trữ / Xóa mềm hồ sơ bệnh nhân"
-                                                th:data-id="${patient.id}"
-                                                th:data-code="${patient.code}"
-                                                th:data-name="${patient.fullName}"
-                                                onclick="openDeletePatientModal(this)">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                            <!-- Xóa / Lưu trữ mềm -->
+                                            <button type="button"
+                                                    class="dv-btn-crud dv-btn-crud-delete"
+                                                    title="Lưu trữ / Xóa mềm hồ sơ bệnh nhân"
+                                                    th:data-id="${patient.id}"
+                                                    th:data-code="${patient.code}"
+                                                    th:data-name="${patient.fullName}"
+                                                    onclick="openDeletePatientModal(this)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -1464,6 +1738,330 @@
                 btn.innerHTML = '<i class="bi bi-archive-fill me-1"></i> Xác nhận Lưu trữ';
             }
         }
+    }
+
+    /* =========================================================================
+       TÙY BIẾN CỘT & CO GIÃN CỘT (RESIZABLE & CUSTOMIZABLE COLUMNS)
+       ========================================================================= */
+    const PATIENT_COLUMNS_STORAGE_KEY = 'cvdcms_patient_table_columns_v1';
+    const DEFAULT_PATIENT_COLUMNS = [
+        { id: 'tt', label: 'TT', width: 50, visible: true, pinned: false },
+        { id: 'code', label: 'Mã BN', width: 120, visible: true, pinned: false },
+        { id: 'fullName', label: 'Họ và tên bệnh nhân', width: 250, visible: true, pinned: 'left' },
+        { id: 'gender', label: 'G.T', width: 65, visible: true, pinned: false },
+        { id: 'birthYear', label: 'Năm sinh', width: 90, visible: true, pinned: false },
+        { id: 'phone', label: 'Điện thoại', width: 130, visible: true, pinned: false },
+        { id: 'payment', label: 'Thanh toán', width: 140, visible: true, pinned: false },
+        { id: 'source', label: 'Nguồn', width: 140, visible: true, pinned: false },
+        { id: 'status', label: 'Trạng thái', width: 130, visible: true, pinned: false },
+        { id: 'actions', label: 'Thao tác', width: 140, visible: true, pinned: 'right' }
+    ];
+
+    let patientColumnConfig = loadPatientColumnConfig();
+    let draggedColIndex = null;
+
+    function loadPatientColumnConfig() {
+        try {
+            const raw = localStorage.getItem(PATIENT_COLUMNS_STORAGE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    const merged = [];
+                    parsed.forEach(c => {
+                        const def = DEFAULT_PATIENT_COLUMNS.find(d => d.id === c.id);
+                        if (def) merged.push({ ...def, ...c });
+                    });
+                    DEFAULT_PATIENT_COLUMNS.forEach(def => {
+                        if (!merged.some(m => m.id === def.id)) merged.push({ ...def });
+                    });
+                    return merged;
+                }
+            }
+        } catch (e) {
+            console.error('Error loading patient column config', e);
+        }
+        return JSON.parse(JSON.stringify(DEFAULT_PATIENT_COLUMNS));
+    }
+
+    function savePatientColumnConfig() {
+        try {
+            localStorage.setItem(PATIENT_COLUMNS_STORAGE_KEY, JSON.stringify(patientColumnConfig));
+        } catch (e) {
+            console.error('Error saving patient column config', e);
+        }
+    }
+
+    function applyPatientColumnsToDOM() {
+        const table = document.getElementById('patientsTable');
+        if (!table) return;
+
+        const theadTr = table.querySelector('thead tr');
+        if (!theadTr) return;
+
+        const thMap = new Map();
+        theadTr.querySelectorAll('th').forEach(th => {
+            const colId = th.getAttribute('data-col');
+            if (colId) thMap.set(colId, th);
+        });
+
+        let currentLeftOffset = 0;
+        let pinnedCount = 0;
+
+        patientColumnConfig.forEach(col => {
+            const th = thMap.get(col.id);
+            if (!th) return;
+
+            theadTr.appendChild(th);
+            th.style.display = col.visible ? '' : 'none';
+
+            if (col.id !== 'actions' && col.width) {
+                th.style.width = col.width + 'px';
+                th.style.minWidth = (col.id === 'fullName' ? Math.max(col.width, 220) : col.width) + 'px';
+            }
+
+            // Đồng bộ trạng thái nút ghim trên header th
+            const pinBtn = th.querySelector('.dv-pin-btn');
+            if (pinBtn) {
+                const isPinned = col.pinned === true || col.pinned === 'left';
+                pinBtn.className = `dv-pin-btn ${isPinned ? 'is-pinned' : ''}`;
+                pinBtn.title = isPinned ? 'Bỏ ghim cột này' : 'Ghim cột này cố định bên trái khi cuộn ngang';
+                const icon = pinBtn.querySelector('i');
+                if (icon) {
+                    icon.className = `bi ${isPinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}`;
+                }
+            }
+
+            if (col.pinned === true || col.pinned === 'left') {
+                th.classList.add('dv-col-pinned-left');
+                th.style.left = currentLeftOffset + 'px';
+                if (col.visible) {
+                    currentLeftOffset += (col.width || th.offsetWidth || 100);
+                    pinnedCount++;
+                }
+            } else if (col.pinned !== 'right') {
+                th.classList.remove('dv-col-pinned-left');
+                th.style.left = '';
+            }
+        });
+
+        const tbody = table.querySelector('tbody');
+        if (tbody) {
+            tbody.querySelectorAll('tr.dv-data-row').forEach(tr => {
+                const tdMap = new Map();
+                tr.querySelectorAll('td').forEach(td => {
+                    const colId = td.getAttribute('data-col');
+                    if (colId) tdMap.set(colId, td);
+                });
+
+                let tdLeftOffset = 0;
+                patientColumnConfig.forEach(col => {
+                    const td = tdMap.get(col.id);
+                    if (!td) return;
+
+                    tr.appendChild(td);
+                    td.style.display = col.visible ? '' : 'none';
+                    if (col.width) {
+                        td.style.width = col.width + 'px';
+                    }
+
+                    if (col.pinned === true || col.pinned === 'left') {
+                        td.classList.add('dv-col-pinned-left');
+                        td.style.left = tdLeftOffset + 'px';
+                        if (col.visible) {
+                            tdLeftOffset += (col.width || td.offsetWidth || 100);
+                        }
+                    } else if (col.pinned !== 'right') {
+                        td.classList.remove('dv-col-pinned-left');
+                        td.style.left = '';
+                    }
+                });
+            });
+        }
+
+        const pinnedBadge = document.getElementById('pinnedColCountBadge');
+        if (pinnedBadge) {
+            pinnedBadge.innerText = `${pinnedCount} ghim`;
+        }
+    }
+
+    function setupColResizers() {
+        const table = document.getElementById('patientsTable');
+        if (!table) return;
+
+        table.querySelectorAll('thead th .dv-col-resizer').forEach(resizer => {
+            resizer.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const th = this.closest('th');
+                const colId = th.getAttribute('data-col');
+                const col = patientColumnConfig.find(c => c.id === colId);
+                if (!col) return;
+
+                document.body.classList.add('is-table-resizing');
+                this.classList.add('is-resizing');
+
+                const startX = e.pageX;
+                const startWidth = th.offsetWidth;
+
+                const onMouseMove = (moveEvent) => {
+                    const diff = moveEvent.pageX - startX;
+                    const minWidth = (col.id === 'tt' || col.id === 'gender') ? 45 : 80;
+                    const newWidth = Math.max(minWidth, startWidth + diff);
+
+                    th.style.width = newWidth + 'px';
+                    th.style.minWidth = newWidth + 'px';
+                    col.width = newWidth;
+
+                    const tds = table.querySelectorAll(`tbody td[data-col="${colId}"]`);
+                    tds.forEach(td => {
+                        td.style.width = newWidth + 'px';
+                    });
+                };
+
+                const onMouseUp = () => {
+                    document.body.classList.remove('is-table-resizing');
+                    resizer.classList.remove('is-resizing');
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+
+                    savePatientColumnConfig();
+                    applyPatientColumnsToDOM();
+                };
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        });
+    }
+
+    function toggleColumnCustomizer(event) {
+        if (event) event.stopPropagation();
+        const pop = document.getElementById('colCustomizerPopover');
+        if (!pop) return;
+        const isShown = pop.classList.contains('show');
+        if (isShown) {
+            pop.classList.remove('show');
+        } else {
+            renderColumnCustomizerList();
+            pop.classList.add('show');
+        }
+    }
+
+    function closeColumnCustomizer() {
+        const pop = document.getElementById('colCustomizerPopover');
+        if (pop) pop.classList.remove('show');
+    }
+
+    function toggleColumnVisibility(colId, visible) {
+        const col = patientColumnConfig.find(c => c.id === colId);
+        if (!col) return;
+        col.visible = visible;
+        savePatientColumnConfig();
+        applyPatientColumnsToDOM();
+    }
+
+    function togglePinColumn(colId) {
+        const col = patientColumnConfig.find(c => c.id === colId);
+        if (!col) return;
+        col.pinned = (col.pinned === true || col.pinned === 'left') ? false : 'left';
+        savePatientColumnConfig();
+        renderColumnCustomizerList();
+        applyPatientColumnsToDOM();
+    }
+
+    function moveColumnOrder(idx, delta) {
+        const targetIdx = idx + delta;
+        if (targetIdx < 0 || targetIdx >= patientColumnConfig.length) return;
+        const temp = patientColumnConfig[idx];
+        patientColumnConfig[idx] = patientColumnConfig[targetIdx];
+        patientColumnConfig[targetIdx] = temp;
+        savePatientColumnConfig();
+        renderColumnCustomizerList();
+        applyPatientColumnsToDOM();
+    }
+
+    function resetDefaultColumns() {
+        patientColumnConfig = JSON.parse(JSON.stringify(DEFAULT_PATIENT_COLUMNS));
+        savePatientColumnConfig();
+        renderColumnCustomizerList();
+        applyPatientColumnsToDOM();
+    }
+
+    function renderColumnCustomizerList() {
+        const container = document.getElementById('colCustomizerList');
+        if (!container) return;
+
+        let html = '';
+        patientColumnConfig.forEach((col, idx) => {
+            const isActions = col.id === 'actions';
+            html += `
+                <div class="dv-col-item"
+                     ${!isActions ? `draggable="true" ondragstart="onColDragStart(event, ${idx})" ondragover="onColDragOver(event)" ondrop="onColDrop(event, ${idx})"` : ''}>
+                    <div class="d-flex align-items-center gap-2.5">
+                        <i class="bi ${!isActions ? 'bi-grip-vertical text-muted' : 'bi-lock-fill text-primary'}" style="${!isActions ? 'cursor: grab;' : ''}"></i>
+                        <input type="checkbox" class="form-check-input mt-0"
+                               style="width: 17px; height: 17px; cursor: pointer;"
+                               ${col.visible ? 'checked' : ''}
+                               ${isActions ? 'disabled checked' : ''}
+                               onchange="toggleColumnVisibility('${col.id}', this.checked)">
+                        <span class="fw-bold text-dark" style="font-size: 13.5px;">${col.label} ${isActions ? '<span class="badge bg-primary-subtle text-primary ms-1" style="font-size: 10px;">Cuối bảng</span>' : ''}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        ${!isActions ? `
+                            <button type="button"
+                                    class="dv-pin-btn ${(col.pinned === true || col.pinned === 'left') ? 'is-pinned' : ''}"
+                                    title="${(col.pinned === true || col.pinned === 'left') ? 'Đang ghim cố định trái (Bấm để bỏ ghim)' : 'Ghim cột này cố định bên trái'}"
+                                    onclick="togglePinColumn('${col.id}')">
+                                <i class="bi ${(col.pinned === true || col.pinned === 'left') ? 'bi-pin-angle-fill' : 'bi-pin-angle'}"></i>
+                            </button>
+                            <button type="button" class="dv-col-order-btn" title="Đưa cột lên trước" onclick="moveColumnOrder(${idx}, -1)" ${idx === 0 ? 'disabled' : ''}>
+                                <i class="bi bi-arrow-up"></i>
+                            </button>
+                            <button type="button" class="dv-col-order-btn" title="Đưa cột xuống sau" onclick="moveColumnOrder(${idx}, 1)" ${idx === patientColumnConfig.length - 1 ? 'disabled' : ''}>
+                                <i class="bi bi-arrow-down"></i>
+                            </button>
+                        ` : '<span class="badge bg-light text-secondary border px-2 py-1" style="font-size: 11px;">Cố định</span>'}
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    function onColDragStart(e, idx) {
+        draggedColIndex = idx;
+        e.currentTarget.classList.add('dragging');
+    }
+    function onColDragOver(e) {
+        e.preventDefault();
+    }
+    function onColDrop(e, dropIdx) {
+        e.preventDefault();
+        if (draggedColIndex === null || draggedColIndex === dropIdx) return;
+        const moved = patientColumnConfig.splice(draggedColIndex, 1)[0];
+        patientColumnConfig.splice(dropIdx, 0, moved);
+        draggedColIndex = null;
+        savePatientColumnConfig();
+        renderColumnCustomizerList();
+        applyPatientColumnsToDOM();
+    }
+
+    document.addEventListener('click', function (e) {
+        const wrap = document.getElementById('colCustomizerWrapper');
+        if (wrap && !wrap.contains(e.target)) {
+            closeColumnCustomizer();
+        }
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            applyPatientColumnsToDOM();
+            setupColResizers();
+        });
+    } else {
+        applyPatientColumnsToDOM();
+        setupColResizers();
     }
 </script>
 </body>
