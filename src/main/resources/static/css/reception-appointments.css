@@ -740,33 +740,28 @@ a.btn-action-icon {
 .apt-status-badge.status-cancelled .status-dot { background: #ef4444; }
 
 /* Session Badge inside Table Time Column */
+.apt-session-tag,
+.apt-session-tag.morning,
+.apt-session-tag.afternoon,
+.apt-session-tag.evening,
+.cal-session-badge,
+.cal-session-badge.morning,
+.cal-session-badge.afternoon,
+.cal-session-badge.evening {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
 .apt-session-tag {
     display: inline-flex;
     align-items: center;
     gap: 4px;
     font-size: 11px;
-    font-weight: 600;
-    padding: 2px 7px;
+    font-weight: 700;
+    padding: 2.5px 8px;
     border-radius: 6px;
-    margin-bottom: 3px;
-}
-
-.apt-session-tag.morning {
-    background: #fffbeb;
-    color: #b45309;
-    border: 1px solid #fde68a;
-}
-
-.apt-session-tag.afternoon {
-    background: #fff7ed;
-    color: #c2410c;
-    border: 1px solid #fed7aa;
-}
-
-.apt-session-tag.evening {
-    background: #eff6ff;
-    color: #1d4ed8;
-    border: 1px solid #bfdbfe;
+    margin-bottom: 2px;
 }
 
 /* Date Group Row for Week / Month List View */
@@ -901,21 +896,42 @@ a.btn-action-icon {
     box-shadow: 0 2px 6px rgba(2, 132, 199, 0.12);
 }
 
-.appointment-day .calendar-event[data-status="CHECKED_IN"],
-.appointment-day .calendar-event[data-status="COMPLETED"] {
-    border-left-color: #10b981;
-}
-
 .appointment-day .calendar-event[data-status="PENDING"] {
-    border-left-color: #f59e0b;
+    border-left: 3.5px solid #d97706 !important;
+    background: #fffbeb !important;
+    color: #92400e !important;
 }
 
-.appointment-day .calendar-event[data-status="CANCELLED"] {
-    border-left-color: #ef4444;
+.appointment-day .calendar-event[data-status="CONFIRMED"] {
+    border-left: 3.5px solid #0284c7 !important;
+    background: #f0f9ff !important;
+    color: #0369a1 !important;
 }
 
+.appointment-day .calendar-event[data-status="CHECKED_IN"],
+.appointment-day .calendar-event[data-status="ARRIVED"] {
+    border-left: 3.5px solid #16a34a !important;
+    background: #f0fdf4 !important;
+    color: #15803d !important;
+}
+
+.appointment-day .calendar-event[data-status="IN_PROGRESS"] {
+    border-left: 3.5px solid #7c3aed !important;
+    background: #f5f3ff !important;
+    color: #6d28d9 !important;
+}
+
+.appointment-day .calendar-event[data-status="COMPLETED"] {
+    border-left: 3.5px solid #475569 !important;
+    background: #f8fafc !important;
+    color: #334155 !important;
+}
+
+.appointment-day .calendar-event[data-status="CANCELLED"],
 .appointment-day .calendar-event[data-status="NO_SHOW"] {
-    border-left-color: #64748b;
+    border-left: 3.5px solid #dc2626 !important;
+    background: #fef2f2 !important;
+    color: #b91c1c !important;
 }
 
 .cal-quick-add {

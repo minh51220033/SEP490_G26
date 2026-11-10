@@ -253,6 +253,13 @@
     <main class="app-content">
         <div class="pe-wrap">
 
+            <!-- BREADCRUMB PHÂN CẤP -->
+            <nav class="dv-breadcrumb mb-2" aria-label="Đường dẫn phân cấp">
+                <a th:href="@{/}">Trang chủ</a> /
+                <a th:href="@{/profile}">Hồ sơ cá nhân</a> /
+                <span>Chỉnh sửa thông tin</span>
+            </nav>
+
             <!-- Thông báo thành công / lỗi -->
             <div th:if="${success != null}" class="alert alert-success d-flex align-items-center justify-content-between mb-3 shadow-sm" role="alert" style="border-radius:10px;">
                 <div class="d-flex align-items-center gap-2">

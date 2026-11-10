@@ -80,6 +80,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // Bảo vệ phân hệ Tài chính FT21 & FT22, FT24, FT25, FT32 (cả Web UI và REST API)
         registry.addInterceptor(financeAccessInterceptor)
                 .addPathPatterns(
+                        "/finance", "/finance/**",
                         "/invoices", "/invoices/**",
                         "/payments", "/payments/**",
                         "/expenses", "/expenses/**",

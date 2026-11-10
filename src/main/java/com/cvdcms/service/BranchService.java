@@ -3,17 +3,31 @@ package com.cvdcms.service;
 import com.cvdcms.DTO.BranchConfigDTO;
 import com.cvdcms.DTO.ManagerOptionDTO;
 import com.cvdcms.entity.Branch;
+import com.cvdcms.entity.DentalChair;
+import com.cvdcms.entity.StaffBranchAssignment;
 import com.cvdcms.entity.StaffProfile;
+import com.cvdcms.entity.StaffSchedule;
 import com.cvdcms.entity.User;
+import com.cvdcms.entity.enums.AppointmentStatus;
+import com.cvdcms.entity.enums.AssignmentStatus;
+import com.cvdcms.entity.enums.ChairStatus;
+import com.cvdcms.entity.enums.ScheduleStatus;
+import com.cvdcms.repository.AppointmentRepository;
 import com.cvdcms.repository.BranchRepository;
+import com.cvdcms.repository.DentalChairRepository;
+import com.cvdcms.repository.StaffBranchAssignmentRepository;
 import com.cvdcms.repository.StaffProfileRepository;
+import com.cvdcms.repository.StaffScheduleRepository;
 import com.cvdcms.repository.UserRepository;
 import com.cvdcms.repository.WorkShiftRepository;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -26,17 +40,29 @@ public class BranchService {
     private final UserRepository userRepository;
     private final StaffProfileRepository staffProfileRepository;
     private final WorkShiftRepository workShiftRepository;
+    private final AppointmentRepository appointmentRepository;
+    private final DentalChairRepository dentalChairRepository;
+    private final StaffScheduleRepository staffScheduleRepository;
+    private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
 
     // Constructor injection: Spring tự truyền Repository vào Service.
     public BranchService(
             BranchRepository branchRepository,
             UserRepository userRepository,
             StaffProfileRepository staffProfileRepository,
-            WorkShiftRepository workShiftRepository) {
+            WorkShiftRepository workShiftRepository,
+            AppointmentRepository appointmentRepository,
+            DentalChairRepository dentalChairRepository,
+            StaffScheduleRepository staffScheduleRepository,
+            StaffBranchAssignmentRepository staffBranchAssignmentRepository) {
         this.branchRepository = branchRepository;
         this.userRepository = userRepository;
         this.staffProfileRepository = staffProfileRepository;
         this.workShiftRepository = workShiftRepository;
+        this.appointmentRepository = appointmentRepository;
+        this.dentalChairRepository = dentalChairRepository;
+        this.staffScheduleRepository = staffScheduleRepository;
+        this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
     }
 
     // Danh sách tài khoản có thể đảm nhiệm vai trò Quản lý / Trưởng chi nhánh kèm Họ tên & Chức danh.
@@ -162,12 +188,47 @@ public class BranchService {
     }
 
     // Ngừng hoạt động chi nhánh thay vì xóa vật lý.
-    // Cách này tránh làm mất dữ liệu tham chiếu từ hồ sơ hoặc lịch hẹn.
+    // Xử lý tự động: Chặn nếu còn lịch hẹn dở dang, bảo trì ghế nha, hủy ca trực tương lai.
     @Transactional
     public void deactivateBranch(Long branchId) {
         Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chi nhánh."));
 
+        LocalDate today = LocalDate.now();
+
+        // 1. Kiểm tra Lịch hẹn dở dang: Chặn đóng chi nhánh nếu còn lịch hẹn tương lai hoặc trong ngày chưa hoàn thành
+        List<AppointmentStatus> pendingStatuses = List.of(
+                AppointmentStatus.PENDING,
+                AppointmentStatus.CONFIRMED,
+                AppointmentStatus.CHECKED_IN
+        );
+        long pendingAppointments = appointmentRepository.countPendingAppointmentsByBranch(branchId, today, pendingStatuses);
+        if (pendingAppointments > 0) {
+            throw new IllegalStateException("Không thể ngừng hoạt động: Chi nhánh \"" + branch.getBranchName()
+                    + "\" hiện còn " + pendingAppointments + " lịch hẹn chưa hoàn thành (chờ khám hoặc đang tiếp đón). "
+                    + "Vui lòng yêu cầu Lễ tân hủy hoặc dời lịch hẹn trước khi đóng cơ sở!");
+        }
+
+        // 2. Tự động vô hiệu hóa toàn bộ ghế nha thuộc chi nhánh (chuyển sang trạng thái MAINTENANCE)
+        List<DentalChair> chairs = dentalChairRepository.findByBranchBranchIdOrderByChairCodeAsc(branchId);
+        for (DentalChair chair : chairs) {
+            if (chair.getStatus() != ChairStatus.MAINTENANCE) {
+                chair.setStatus(ChairStatus.MAINTENANCE);
+            }
+        }
+        dentalChairRepository.saveAll(chairs);
+
+        // 3. Tự động hủy các ca trực tương lai đã xếp (từ ngày mai trở đi)
+        List<StaffSchedule> futureSchedules = staffScheduleRepository.findByBranchAndWorkDateGreaterThanEqualAndStatus(
+                branchId, today.plusDays(1), ScheduleStatus.SCHEDULED);
+        for (StaffSchedule schedule : futureSchedules) {
+            schedule.setStatus(ScheduleStatus.CANCELLED);
+            String note = schedule.getNote();
+            schedule.setNote((note != null && !note.isBlank() ? note + " - " : "") + "[Hệ thống: Chi nhánh tạm ngừng hoạt động]");
+        }
+        staffScheduleRepository.saveAll(futureSchedules);
+
+        // 4. Cập nhật ngừng hoạt động cơ sở
         branch.setIsActive(false);
         branchRepository.save(branch);
     }
@@ -177,6 +238,31 @@ public class BranchService {
     public void activateBranch(Long branchId) {
         Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chi nhánh."));
+
+        // Khôi phục lại trạng thái ghế nha sang AVAILABLE (nếu đang ở trạng thái MAINTENANCE)
+        List<DentalChair> chairs = dentalChairRepository.findByBranchBranchIdOrderByChairCodeAsc(branchId);
+        for (DentalChair chair : chairs) {
+            if (chair.getStatus() == ChairStatus.MAINTENANCE) {
+                chair.setStatus(ChairStatus.AVAILABLE);
+            }
+        }
+        dentalChairRepository.saveAll(chairs);
+
+        // Khôi phục lại các ca trực tương lai bị hủy do tạm ngừng chi nhánh
+        LocalDate today = LocalDate.now();
+        List<StaffSchedule> cancelledSchedules = staffScheduleRepository.findByBranchAndWorkDateGreaterThanEqualAndStatus(
+                branchId, today, ScheduleStatus.CANCELLED);
+        for (StaffSchedule schedule : cancelledSchedules) {
+            String note = schedule.getNote();
+            if (note != null && note.contains("[Hệ thống: Chi nhánh tạm ngừng hoạt động]")) {
+                schedule.setStatus(ScheduleStatus.SCHEDULED);
+                String cleanNote = note.replace("[Hệ thống: Chi nhánh tạm ngừng hoạt động]", "")
+                        .replace(" - ", "")
+                        .trim();
+                schedule.setNote(cleanNote.isBlank() ? null : cleanNote);
+            }
+        }
+        staffScheduleRepository.saveAll(cancelledSchedules);
 
         branch.setIsActive(true);
         branchRepository.save(branch);
@@ -319,9 +405,74 @@ public class BranchService {
             );
         }
 
-        return branchRepository.findAccessibleBranchesByUserId(userId);
+        List<Branch> branches = branchRepository.findAccessibleBranchesByUserId(userId);
+        if ((branches == null || branches.isEmpty())
+                && (userRepository.hasActiveAdminRole(userId) || userRepository.hasActiveSupplierManagementRole(userId))) {
+            return getUserAccessibleBranches(userId);
+        }
+        return branches != null ? branches : Collections.emptyList();
     }
 
+
+    /**
+     * Lấy danh sách chi nhánh người dùng được phép truy cập cho toàn hệ thống (Branch Switcher).
+     * - ADMIN: toàn bộ các cơ sở đang hoạt động.
+     * - Bác sĩ / Nhân viên: các cơ sở được phân công ACTIVE hoặc cơ sở trực thuộc của tài khoản.
+     */
+    @Transactional(readOnly = true)
+    public List<Branch> getUserAccessibleBranches(Long userId) {
+        if (userId == null || userId <= 0) {
+            return Collections.emptyList();
+        }
+        if (userRepository.hasActiveAdminRole(userId)) {
+            return branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
+        }
+
+        List<Branch> allActive = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
+        Map<Long, Branch> branchMap = new LinkedHashMap<>();
+
+        StaffProfile profile = staffProfileRepository.findByUser_UserId(userId).orElse(null);
+        if (profile != null) {
+            List<StaffBranchAssignment> assignments = staffBranchAssignmentRepository.findByStaffId(profile.getStaffId());
+            if (assignments != null) {
+                for (StaffBranchAssignment a : assignments) {
+                    if ((a.getStatus() == null || a.getStatus() == AssignmentStatus.ACTIVE)
+                            && a.getBranch() != null
+                            && Boolean.TRUE.equals(a.getBranch().getIsActive())) {
+                        branchMap.put(a.getBranch().getBranchId(), a.getBranch());
+                    }
+                }
+            }
+        }
+
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null && user.getBranch() != null && Boolean.TRUE.equals(user.getBranch().getIsActive())) {
+            branchMap.putIfAbsent(user.getBranch().getBranchId(), user.getBranch());
+        }
+
+        if (branchMap.isEmpty() && !allActive.isEmpty()) {
+            for (Branch b : allActive) {
+                branchMap.put(b.getBranchId(), b);
+            }
+        }
+
+        return new ArrayList<>(branchMap.values());
+    }
+
+    /**
+     * Kiểm tra tài khoản có được phép truy cập/chuyển sang cơ sở cụ thể hay không.
+     */
+    @Transactional(readOnly = true)
+    public boolean canUserAccessBranch(Long userId, Long branchId) {
+        if (userId == null || branchId == null) {
+            return false;
+        }
+        if (userRepository.hasActiveAdminRole(userId)) {
+            return true;
+        }
+        return getUserAccessibleBranches(userId).stream()
+                .anyMatch(b -> b.getBranchId().equals(branchId));
+    }
 
     /**
      * Kiểm tra xem chi nhánh có thể xóa an toàn khi tạo nhầm hay không.

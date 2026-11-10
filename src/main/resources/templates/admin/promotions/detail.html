@@ -107,7 +107,7 @@
                     </div>
                     <div class="col-md-4">
                         <div class="p-3 bg-light rounded border">
-                            <span class="text-muted small d-block">Hạng thành viên yêu cầu (FT19):</span>
+                            <span class="text-muted small d-block">Hạng thành viên yêu cầu:</span>
                             <strong class="text-warning" th:if="${promo.applicableTier != null}"
                                     th:text="'Từ hạng ' + ${promo.applicableTier.tierName} + ' trở lên'">Vàng</strong>
                             <strong th:unless="${promo.applicableTier != null}">Mọi hạng thành viên</strong>
@@ -248,5 +248,6 @@
         </div>
     </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

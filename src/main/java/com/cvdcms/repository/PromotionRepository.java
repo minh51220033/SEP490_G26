@@ -19,6 +19,8 @@ public interface PromotionRepository extends JpaRepository<Promotion, Long> {
 
     boolean existsByPromoCodeAndPromotionIdNot(String promoCode, Long promotionId);
 
+    boolean existsByApplicableService_ServiceId(Long serviceId);
+
     List<Promotion> findAllByOrderByStartDateDesc();
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)

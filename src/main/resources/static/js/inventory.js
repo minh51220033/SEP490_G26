@@ -308,17 +308,20 @@
                 select.appendChild(option);
             });
 
+            const currentBranchIdAttr = Number(document.body?.dataset?.currentBranchId || 0);
+            const preferredBranch = branches.find(b => Number(b.branchId) === currentBranchIdAttr) || branches[0];
+
             if (state.branchSelectionAllowed) {
                 select.disabled = false;
                 $("fixedBranch").hidden = true;
-                select.value = String(branches[0].branchId);
+                select.value = String(preferredBranch.branchId);
             } else {
                 select.disabled = true;
                 $("fixedBranch").hidden = false;
                 $("fixedBranchName").textContent = branches.length === 1
                     ? branches[0].branchName
-                    : `${branches[0].branchName} (chi nhánh được phân công)`;
-                select.value = String(branches[0].branchId);
+                    : `${preferredBranch.branchName} (chi nhánh được phân công)`;
+                select.value = String(preferredBranch.branchId);
             }
 
             state.branchId = Number(select.value);
@@ -2397,15 +2400,17 @@
             button.classList.toggle("active", button.dataset.tab === tab)
         );
 
-        if (tab === "receipt") loadReceiptHistory(0);
-        if (tab === "issue") loadIssueHistory(0);
-        if (tab === "transfer") loadTransferHistory(0);
+        if (state.branchId) {
+            if (tab === "receipt") loadReceiptHistory(0);
+            if (tab === "issue") loadIssueHistory(0);
+            if (tab === "transfer") loadTransferHistory(0);
+            if (tab === "supplier-payments") {
+                loadSupplierDebts();
+                loadPaymentHistory(0);
+            }
+        }
         if (tab === "materials") loadMaterialsTable(0);
         if (tab === "categories") loadCategoriesTable();
-        if (tab === "supplier-payments") {
-            loadSupplierDebts();
-            loadPaymentHistory(0);
-        }
 
         const appView = document.querySelector('.inventory-app-view');
         if (appView) {
@@ -3234,6 +3239,12 @@
             await refreshBranchData();
             showMessage("Đã làm mới dữ liệu kho.", "success");
         });
+
+        const nav = document.querySelector('nav.tabs[aria-label="Chức năng quản lý kho"]');
+        const initialTab = nav?.querySelector('.tab.active') || nav?.querySelector('.tab');
+        if (initialTab && initialTab.dataset.tab) {
+            switchTab(initialTab.dataset.tab);
+        }
 
         loadBranches();
     });

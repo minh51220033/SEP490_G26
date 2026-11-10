@@ -31,10 +31,7 @@
                 <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <!-- BREADCRUMB CHUẨN ĐỒNG BỘ -->
-            <nav class="dv-breadcrumb mb-2">
-                <a th:href="@{/}">Trang chủ</a> / <span>Quản lý nhân sự</span> / <span>Duyệt yêu cầu nghỉ phép Bác sĩ</span>
-            </nav>
+
 
             <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS -->
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
@@ -48,11 +45,15 @@
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
+                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                     <a th:href="@{/admin/leave-requests}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
                         <i class="bi bi-arrow-clockwise"></i> Làm mới
                     </a>
                 </div>
             </div>
+
+            <!-- THANH TAB NGANG PHÂN HỆ NHÂN SỰ (Chuẩn DentalSoft) -->
+            <nav th:replace="~{fragments/hr_tabs :: hrTabs('leaves')}"></nav>
 
             <!-- 4 THẺ KPI TỔNG QUAN (Đồng bộ chuẩn /doctor/daily-visits) -->
             <div class="row g-3 mb-4">
@@ -159,6 +160,9 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
+                        <!-- BỘ CHỌN CƠ SỞ CHUẨN DENTALSOFT INLINE -->
+                        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+
                         <a th:href="@{/admin/schedules}" class="btn btn-secondary-custom btn-vua text-primary">
                             <i class="bi bi-calendar-range me-1"></i> Bảng phân ca tuần
                         </a>
@@ -672,13 +676,13 @@
                 </div>
 
                 <!-- SCR-42.5: DANH SÁCH LỊCH HẸN BỆNH NHÂN BỊ ẢNH HƯỞNG -->
-                <div class="card border border-warning-subtle rounded-3 mb-3 overflow-hidden">
-                    <div class="card-header bg-warning-subtle py-2 px-3 d-flex align-items-center justify-content-between">
+                <div class="card rounded-3 mb-3 overflow-hidden" style="border: 1px solid #bfdbfe !important;">
+                    <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between" style="background: #eff6ff !important; border-bottom: 1px solid #bfdbfe !important;">
                         <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-people-fill text-warning fs-5"></i>
+                            <i class="bi bi-people-fill text-primary fs-5"></i>
                             <span class="fw-bold text-dark small">Lịch hẹn bệnh nhân bị ảnh hưởng</span>
                         </div>
-                        <span id="mAffectedBadge" class="badge bg-warning text-dark">Đang kiểm tra...</span>
+                        <span id="mAffectedBadge" class="badge bg-primary text-white">Đang kiểm tra...</span>
                     </div>
                     <div class="card-body p-0">
                         <div id="mAffectedLoading" class="text-center py-3 text-muted small">
@@ -694,7 +698,7 @@
                         <div id="mAffectedTableWrapper" style="display: none; max-height: 200px; overflow-y: auto;">
                             <div class="p-2 bg-danger-subtle text-danger small border-bottom">
                                 <i class="bi bi-info-circle-fill me-1"></i>
-                                <strong>Thông báo Lễ tân (FT05):</strong> Cần liên hệ đổi lịch hoặc phân bổ bác sĩ khác cho các bệnh nhân sau:
+                                <strong>Thông báo Lễ tân:</strong> Cần liên hệ đổi lịch hoặc phân bổ bác sĩ khác cho các bệnh nhân sau:
                             </div>
                             <table class="table table-sm table-striped align-middle mb-0" style="font-size: 0.8rem;">
                                 <thead class="table-light">
@@ -747,7 +751,7 @@
                     <button type="button" class="btn btn-outline-danger btn-vua px-3" id="btnReject">
                         <i class="bi bi-x-circle me-1"></i> Từ chối
                     </button>
-                    <button type="button" class="btn btn-success btn-vua px-3" id="btnApprove">
+                    <button type="button" class="btn btn-primary btn-vua px-3" id="btnApprove">
                         <i class="bi bi-check-circle-fill me-1"></i> Phê duyệt &amp; Khóa lịch
                     </button>
                 </div>
@@ -755,6 +759,12 @@
         </div>
     </div>
 </div>
+
+<!-- Form ẩn gửi yêu cầu Phê duyệt / Từ chối mang theo CSRF Token chuẩn Thymeleaf -->
+<form id="leaveActionForm" method="post" style="display: none;">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+    <input type="hidden" name="reviewNote" id="leaveActionReviewNote" value="" />
+</form>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -1347,28 +1357,23 @@
                     return;
                 }
 
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/admin/leave-requests/' + currentLeaveId + '/approve';
-
-                const noteInput = document.createElement('input');
-                noteInput.type = 'hidden';
-                noteInput.name = 'reviewNote';
-                noteInput.value = reviewNoteInput.value;
-                form.appendChild(noteInput);
-
-                document.body.appendChild(form);
-                form.submit();
+                const actionForm = document.getElementById('leaveActionForm');
+                const actionNote = document.getElementById('leaveActionReviewNote');
+                if (actionForm && actionNote) {
+                    actionForm.action = '/admin/leave-requests/' + currentLeaveId + '/approve';
+                    actionNote.value = reviewNoteInput ? reviewNoteInput.value : '';
+                    actionForm.submit();
+                }
             });
         }
 
         if (btnReject) {
             btnReject.addEventListener('click', function () {
                 if (!currentLeaveId) return;
-                const note = reviewNoteInput.value.trim();
+                const note = reviewNoteInput ? reviewNoteInput.value.trim() : '';
                 if (!note) {
                     alert('Vui lòng nhập lý do từ chối vào ô Ghi chú phản hồi.');
-                    reviewNoteInput.focus();
+                    if (reviewNoteInput) reviewNoteInput.focus();
                     return;
                 }
 
@@ -1376,18 +1381,13 @@
                     return;
                 }
 
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/admin/leave-requests/' + currentLeaveId + '/reject';
-
-                const noteInput = document.createElement('input');
-                noteInput.type = 'hidden';
-                noteInput.name = 'reviewNote';
-                noteInput.value = note;
-                form.appendChild(noteInput);
-
-                document.body.appendChild(form);
-                form.submit();
+                const actionForm = document.getElementById('leaveActionForm');
+                const actionNote = document.getElementById('leaveActionReviewNote');
+                if (actionForm && actionNote) {
+                    actionForm.action = '/admin/leave-requests/' + currentLeaveId + '/reject';
+                    actionNote.value = note;
+                    actionForm.submit();
+                }
             });
         }
 

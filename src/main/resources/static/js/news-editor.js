@@ -4,6 +4,9 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!form) return;
 
     const uploadUrl = form.dataset.uploadUrl || "/admin/news/upload/image";
+    const csrfToken = document.querySelector('meta[name="_csrf"]')?.content ||
+                      document.querySelector('input[name="_csrf"]')?.value || '';
+    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content || 'X-CSRF-TOKEN';
 
     // 1. ẢNH ĐẠI DIỆN
     const fileInput = document.getElementById("thumbnailFile");
@@ -32,7 +35,12 @@ document.addEventListener("DOMContentLoaded", function () {
         const formData = new FormData();
         formData.append("upload", file);
 
-        fetch(uploadUrl, { method: "POST", body: formData })
+        const fetchHeaders = {};
+        if (csrfToken && csrfHeader) {
+            fetchHeaders[csrfHeader] = csrfToken;
+        }
+
+        fetch(uploadUrl, { method: "POST", headers: fetchHeaders, body: formData })
             .then(res => res.ok ? res.json() : res.json().then(err => { throw err; }))
             .then(data => {
                 if (data.url) {
@@ -120,7 +128,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 ]
             },
             table: { contentToolbar: ["tableColumn", "tableRow", "mergeTableCells"] },
-            simpleUpload: { uploadUrl: uploadUrl },
+            simpleUpload: {
+                uploadUrl: uploadUrl,
+                headers: (csrfToken && csrfHeader) ? { [csrfHeader]: csrfToken } : {}
+            },
             placeholder: "Nhập nội dung bài viết. Bạn có thể kéo thả ảnh trực tiếp vào đây...",
             initialData: contentTextarea.value || ""
         })

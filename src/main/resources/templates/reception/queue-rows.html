@@ -3,221 +3,171 @@
 <body>
 <div th:fragment="rows" id="queueRows">
 
-    <!-- Doctor Call Bar -->
-    <div class="queue-doctors mb-3" th:if="${!#lists.isEmpty(board.doctors)}">
-        <article class="queue-doctor" th:each="d : ${board.doctors}" th:attr="data-doctor=${d.id}">
-            <div class="queue-doctor-name">
-                <span class="queue-avatar"><i class="bi bi-person-badge-fill"></i></span>
-                <div>
-                    <strong th:text="${d.name}">BS. Lê Hoàng Nam</strong>
-                    <small class="text-muted" th:text="|${d.waiting} đang chờ · ${d.called} đã gọi|">0 đang chờ · 0 đã gọi</small>
-                </div>
-            </div>
-            <form th:action="@{/reception/queue/doctors/{id}/call-next(id=${d.id})}" method="post" class="m-0">
-                <input type="hidden" name="branchId" th:value="${board.branchId}">
-                <button class="btn btn-primary btn-sm fw-semibold shadow-sm" th:disabled="${d.waiting == 0 or d.called > 0}" type="submit">
-                    <i class="bi bi-megaphone-fill me-1"></i>Gọi số tiếp theo
-                </button>
-            </form>
-        </article>
-    </div>
-
     <!-- Empty state -->
     <div class="queue-empty py-5 text-center bg-white rounded-4 border shadow-sm my-3" th:if="${#lists.isEmpty(board.tickets)}">
         <i class="bi bi-people display-4 text-primary opacity-50 d-block mb-2"></i>
         <h5 class="fw-bold text-dark mb-1">Chưa có số khám trong ngày</h5>
-        <p class="text-muted small mb-3">Bệnh nhân sau khi được điều phối và cấp số sẽ tự động xuất hiện trong hàng chờ này.</p>
-        <a class="btn btn-primary btn-sm px-3 py-1.5 shadow-sm" th:href="@{/reception/dispatch(branchId=${board.branchId})}">
-            <i class="bi bi-diagram-3 me-1"></i> Sang Bàn điều phối ghế nha
+        <p class="text-muted small mb-3">Bệnh nhân sau khi được tiếp đón, phân ghế và cấp số sẽ tự động xuất hiện trong hàng chờ này.</p>
+        <a class="btn btn-primary btn-sm px-3.5 py-2 shadow-sm d-inline-flex align-items-center gap-1.5" th:href="@{/reception/dispatch(branchId=${board.branchId})}">
+            <i class="bi bi-diagram-3"></i><span>Sang Bàn điều phối ghế nha</span>
         </a>
     </div>
 
-    <!-- 5-Column Kanban Board -->
-    <div class="queue-kanban" th:unless="${#lists.isEmpty(board.tickets)}">
-        <section class="queue-lane" th:each="lane : ${lanes}" th:classappend="|lane-${lane.name().toLowerCase()}|">
-            <div class="queue-lane-head">
-                <div class="d-flex align-items-center gap-1.5">
-                    <i class="bi" th:classappend="${lane.name() == 'WAITING' ? 'bi-hourglass-split text-warning' : (lane.name() == 'CALLED' ? 'bi-megaphone-fill text-primary' : (lane.name() == 'IN_SERVICE' ? 'bi-heart-pulse-fill text-success' : (lane.name() == 'PAUSED' ? 'bi-pause-circle-fill text-secondary' : 'bi-check-circle-fill text-success')))}"></i>
-                    <h2 class="h6 fw-bold mb-0" th:text="${lane.name() == 'WAITING' ? 'Đang chờ' : lane.name() == 'CALLED' ? 'Đang gọi' : lane.name() == 'IN_SERVICE' ? 'Đang khám' : lane.name() == 'PAUSED' ? 'Tạm dừng' : 'Hoàn tất'}">Đang chờ</h2>
+    <!-- 1. KANBAN RIÊNG CHO TỪNG BÁC SĨ (Mỗi bác sĩ 1 khối Kanban riêng biệt) -->
+    <div class="queue-doctor-section mb-4" th:each="db : ${board.doctorBoards}" th:attr="data-doctor=${db.doctorId}">
+        <!-- Header Bác sĩ + Nút gọi số tiếp theo -->
+        <div class="d-flex align-items-center justify-content-between p-3 bg-white rounded-3 border mb-3 shadow-sm flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2.5">
+                <span class="queue-avatar" th:classappend="${db.doctorId == null ? ' bg-warning-subtle text-warning' : ''}">
+                    <i class="bi" th:classappend="${db.doctorId == null ? 'bi-question-circle-fill' : 'bi-person-badge-fill'}"></i>
+                </span>
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark" th:text="${db.doctorName}">BS. Lê Hoàng Nam</h5>
+                    <small class="text-muted" th:if="${db.doctorId != null}" th:text="|${db.waiting} đang chờ · ${db.called} đã gọi|">0 đang chờ · 0 đã gọi</small>
+                    <small class="text-muted" th:if="${db.doctorId == null}">Các ca chưa gán bác sĩ phụ trách</small>
                 </div>
-                <span class="badge rounded-pill bg-white text-dark border fw-bold" th:text="${laneCounts.get(lane) ?: 0}">0</span>
             </div>
+            <form th:if="${db.doctorId != null}" th:action="@{/reception/queue/doctors/{id}/call-next(id=${db.doctorId})}" method="post" class="m-0">
+                <input type="hidden" name="branchId" th:value="${board.branchId}">
+                <button class="btn btn-primary btn-sm fw-bold shadow-sm d-inline-flex align-items-center gap-1.5" th:disabled="${db.waiting == 0 or db.called > 0}" type="submit">
+                    <i class="bi bi-megaphone-fill"></i><span>Gọi số tiếp theo</span>
+                </button>
+            </form>
+        </div>
 
-            <!-- Ticket Cards in this lane -->
-            <div class="queue-lane-body">
-                <article class="queue-card" th:each="t : ${board.tickets}" th:if="${t.status == lane}" th:attr="data-doctor=${t.visit.primaryDoctor == null ? '' : t.visit.primaryDoctor.staffId}" th:classappend="${t.isEmergency ? ' is-emergency-card' : ''}">
-                    <!-- Card Top: Number & Badges -->
-                    <div class="queue-card-top d-flex align-items-center justify-content-between mb-2">
-                        <strong class="queue-number" th:text="${t.displayNumber}">01</strong>
-                        <div class="d-flex flex-wrap gap-1 align-items-center">
-                            <span class="badge bg-danger text-white animate-pulse" th:if="${t.isEmergency}"><i class="bi bi-lightning-fill me-0.5"></i>Cấp cứu</span>
-                            <span class="badge bg-warning text-dark fw-bold" th:if="${!t.isEmergency and t.priorityScore != null and t.priorityScore >= 50}"><i class="bi bi-star-fill me-0.5"></i>Ưu tiên</span>
-                            <span class="badge bg-secondary-subtle text-secondary" th:if="${t.visit.patientProfile.dob != null and T(java.time.Period).between(t.visit.patientProfile.dob, T(java.time.LocalDate).now()).years >= 65}">65+ tuổi</span>
-                            <span class="badge bg-secondary-subtle text-secondary" th:if="${t.visit.patientProfile.dob != null and T(java.time.Period).between(t.visit.patientProfile.dob, T(java.time.LocalDate).now()).years <= 6}">Trẻ nhỏ</span>
+        <!-- 4 Làn Kanban của Bác sĩ này (Dàn đều 100% chiều ngang) -->
+        <div class="queue-kanban">
+            <section class="queue-lane" th:each="lane : ${lanes}" th:classappend="|lane-${lane.name().toLowerCase()}|">
+                <div class="queue-lane-head">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi" th:classappend="${lane.name() == 'WAITING' ? 'bi-hourglass-split text-warning' : (lane.name() == 'CALLED' ? 'bi-megaphone-fill text-primary' : (lane.name() == 'IN_SERVICE' ? 'bi-heart-pulse-fill text-success' : 'bi-check-circle-fill text-success'))}"></i>
+                        <h2 class="h6 fw-bold mb-0" th:text="${lane.name() == 'WAITING' ? 'Đang chờ' : lane.name() == 'CALLED' ? 'Đang gọi' : lane.name() == 'IN_SERVICE' ? 'Đang khám' : 'Hoàn tất'}">Đang chờ</h2>
+                    </div>
+                    <span class="badge rounded-pill bg-white text-dark border fw-bold"
+                          th:text="${db.lanes.get(lane) != null ? #lists.size(db.lanes.get(lane)) : 0}">0</span>
+                </div>
+
+                <!-- Thẻ vé của Bác sĩ trong làn này -->
+                <div class="queue-lane-body">
+                    <article class="queue-card" th:each="t : ${db.lanes.get(lane)}"
+                             th:attr="data-doctor=${db.doctorId}"
+                             th:classappend="${t.isEmergency ? ' is-emergency-card' : ''}">
+                        <div class="queue-card-main">
+                            <!-- Card Top: Number & Badges -->
+                            <div class="queue-card-top d-flex align-items-center justify-content-between mb-2">
+                                <div class="ticket-token-wrapper justify-content-start">
+                                    <span th:if="${t.isEmergency}" class="ticket-badge-pill is-emergency">
+                                        <span class="ticket-num" th:text="${t.displayNumber}">P-01</span>
+                                        <span class="ticket-tag">Cấp cứu</span>
+                                    </span>
+                                    <span th:if="${!t.isEmergency and t.priorityScore != null and t.priorityScore >= 50}" class="ticket-badge-pill is-priority">
+                                        <span class="ticket-num" th:text="${t.displayNumber}">P-xx</span>
+                                        <span class="ticket-tag">Ưu tiên</span>
+                                    </span>
+                                    <span th:if="${!t.isEmergency and (t.priorityScore == null or t.priorityScore < 50)}" class="ticket-badge-pill is-normal">
+                                        <span class="ticket-num" th:text="${t.displayNumber}">01</span>
+                                    </span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-1 align-items-center">
+                                    <span class="badge bg-secondary-subtle text-secondary" th:if="${t.visit.patientProfile.dob != null and T(java.time.Period).between(t.visit.patientProfile.dob, T(java.time.LocalDate).now()).years >= 65}">65+ tuổi</span>
+                                    <span class="badge bg-secondary-subtle text-secondary" th:if="${t.visit.patientProfile.dob != null and T(java.time.Period).between(t.visit.patientProfile.dob, T(java.time.LocalDate).now()).years <= 6}">Trẻ nhỏ</span>
+                                </div>
+                            </div>
+
+                            <!-- Patient identity -->
+                            <strong class="queue-patient text-dark fw-bold d-block text-truncate" th:text="${t.visit.patientProfile.fullName}">Nguyễn Văn A</strong>
+                            <div class="d-flex align-items-center gap-1.5 small text-muted mb-2">
+                                <span class="badge bg-light text-dark border font-monospace" th:text="${t.visit.patientProfile.patientCode}">BN001</span>
+                            </div>
+
+                            <!-- Notes -->
+                            <div class="queue-state-note p-1.5 rounded-2 small mb-2 bg-light border text-secondary" th:if="${t.status.name() == 'PAUSED' and t.pauseReason != null}">
+                                <i class="bi bi-pause-circle text-warning"></i><strong class="text-dark">Lý do:</strong> <span th:text="${t.pauseReason}"></span>
+                            </div>
+                            <div class="queue-state-note p-1.5 rounded-2 small mb-2 bg-warning-subtle text-warning-emphasis border border-warning-subtle" th:if="${t.priorityScore != null and t.priorityScore >= 50 and t.priorityReason != null}">
+                                <i class="bi bi-star-fill text-warning"></i><strong class="text-dark">Lý do ưu tiên:</strong> <span th:text="${t.priorityReason}"></span>
+                            </div>
+
+                            <!-- Location Info -->
+                            <div class="queue-card-info small p-2 rounded-2 bg-light border mb-2">
+                                <div class="text-muted d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-geo-alt text-primary"></i>
+                                    <span th:text="|${board.roomNames != null and board.roomNames[t.visit.visitId] != null ? board.roomNames[t.visit.visitId] : (t.visit.roomId != null ? 'Phòng ' + t.visit.roomId : '—')} · ${board.chairNames != null and board.chairNames[t.visit.visitId] != null ? board.chairNames[t.visit.visitId] : (t.visit.chairId != null ? 'Ghế ' + t.visit.chairId : '—')}|">Phòng 101 · Ghế 01</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Patient identity -->
-                    <strong class="queue-patient text-dark fw-bold d-block" th:text="${t.visit.patientProfile.fullName}">Nguyễn Văn A</strong>
-                    <div class="d-flex align-items-center gap-2 small text-muted mb-1">
-                        <span class="font-monospace" th:text="${t.visit.visitCode}">V12345</span>
-                        <span>&middot;</span>
-                        <span class="font-monospace" th:text="${t.visit.patientProfile.patientCode}">BN001</span>
-                    </div>
+                        <!-- Card Actions -->
+                        <div class="queue-card-actions">
+                            <!-- WAITING ACTIONS -->
+                            <th:block th:if="${t.status.name() == 'WAITING'}">
+                                <form th:if="${nextTicketIds.contains(t.ticketId) and t.visit.primaryDoctor != null and callableDoctorIds.contains(t.visit.primaryDoctor.staffId)}"
+                                      th:action="@{/reception/queue/{id}/CALL(id=${t.ticketId})}" method="post" class="m-0">
+                                    <input type="hidden" name="branchId" th:value="${board.branchId}">
+                                    <button class="btn btn-primary btn-sm fw-bold shadow-sm d-inline-flex align-items-center gap-1.5" type="submit">
+                                        <i class="bi bi-megaphone-fill"></i><span>Gọi số</span>
+                                    </button>
+                                </form>
 
-                    <!-- Notes -->
-                    <div class="queue-state-note p-1.5 rounded-2 small mb-2 bg-light border text-secondary" th:if="${t.status.name() == 'PAUSED' and t.pauseReason != null}">
-                        <i class="bi bi-pause-circle me-1 text-warning"></i><strong class="text-dark">Lý do:</strong> <span th:text="${t.pauseReason}"></span>
-                    </div>
-                    <div class="queue-state-note p-1.5 rounded-2 small mb-2 bg-warning-subtle text-warning-emphasis border border-warning-subtle" th:if="${t.priorityScore != null and t.priorityScore >= 50 and t.priorityReason != null}">
-                        <i class="bi bi-star-fill me-1 text-warning"></i><strong class="text-dark">Lý do ưu tiên:</strong> <span th:text="${t.priorityReason}"></span>
-                    </div>
+                                <button th:if="${t.visit.primaryDoctor != null and callableDoctorIds.contains(t.visit.primaryDoctor.staffId) and !nextTicketIds.contains(t.ticketId)}"
+                                        type="button" class="btn btn-outline-primary btn-sm btn-queue-action fw-semibold d-inline-flex align-items-center gap-1.5"
+                                        data-action="CALL" data-title="Gọi vượt thứ tự"
+                                        th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit.patientProfile.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit.visitCode}">
+                                    <i class="bi bi-megaphone"></i><span>Gọi vượt</span>
+                                </button>
 
-                    <!-- Doctor & Location Info -->
-                    <div class="queue-card-info small p-2 rounded-2 bg-light border mb-2">
-                        <div class="mb-1 text-truncate">
-                            <i class="bi bi-person-badge text-primary me-1"></i>
-                            <span class="fw-semibold text-dark" th:text="${t.visit.primaryDoctor != null ? t.visit.primaryDoctor.fullName : 'Chưa phân bác sĩ'}">BS. Lê Hoàng Nam</span>
+                                <button th:if="${!t.isEmergency}" type="button" class="btn btn-outline-danger btn-sm btn-queue-action"
+                                        data-action="EMERGENCY" data-title="Kích hoạt cấp cứu"
+                                        th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit.patientProfile.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit.visitCode}"
+                                        title="Chuyển sang ca cấp cứu">
+                                    <i class="bi bi-lightning-fill"></i>
+                                </button>
+
+                                <button th:if="${!t.isEmergency and (t.priorityScore == null or t.priorityScore < 50)}"
+                                        type="button" class="btn btn-outline-warning btn-sm btn-queue-action text-dark"
+                                        data-action="PRIORITIZE" data-title="Áp dụng ưu tiên phục vụ"
+                                        th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit.patientProfile.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit.visitCode}"
+                                        title="Ưu tiên người già / trẻ em">
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                </button>
+                            </th:block>
+
+                            <!-- CALLED ACTIONS -->
+                            <th:block th:if="${t.status.name() == 'CALLED'}">
+                                <span th:if="${t.isEmergency}" class="badge bg-danger text-white py-1.5 px-3 rounded-pill d-inline-flex align-items-center gap-1.5 shadow-sm">
+                                    <i class="bi bi-lightning-fill"></i><span>Đang bàn giao cấp cứu</span>
+                                </span>
+                                <form th:if="${!t.isEmergency}" th:action="@{/reception/queue/{id}/CALL(id=${t.ticketId})}" method="post" class="m-0">
+                                    <input type="hidden" name="branchId" th:value="${board.branchId}">
+                                    <button class="btn btn-outline-primary btn-sm fw-semibold d-inline-flex align-items-center gap-1.5" type="submit" title="Nhắc lại thông báo">
+                                        <i class="bi bi-megaphone"></i><span>Gọi lại</span>
+                                    </button>
+                                </form>
+                            </th:block>
+
+                            <!-- IN_SERVICE ACTIONS -->
+                            <th:block th:if="${t.status.name() == 'IN_SERVICE'}">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle py-1.5 px-2.5 rounded-pill d-inline-flex align-items-center gap-1.5">
+                                    <i class="bi bi-heart-pulse-fill"></i><span>Bác sĩ đang khám</span>
+                                </span>
+                                <a th:href="@{/doctor/examination/{id}/treatment(id=${t.visit.visitId})}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1.5" target="_blank" title="Xem ca khám">
+                                    <i class="bi bi-box-arrow-up-right"></i><span>Xem ca khám</span>
+                                </a>
+                            </th:block>
+
+                            <!-- DONE STATE -->
+                            <th:block th:if="${t.status.name() == 'DONE'}">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2.5 small d-inline-flex align-items-center gap-1.5">
+                                    <i class="bi bi-check2"></i><span>Đã hoàn tất</span>
+                                </span>
+                            </th:block>
                         </div>
-                        <div class="text-muted">
-                            <i class="bi bi-geo-alt text-primary me-1"></i>
-                            <span th:text="|Phòng ${t.visit.roomId ?: '—'} · Ghế ${t.visit.chairId ?: '—'}|">Phòng 101 · Ghế 01</span>
-                        </div>
-                    </div>
-
-                    <!-- Card Actions by Lane -->
-                    <div class="queue-card-actions d-flex flex-wrap gap-1.5 align-items-center mt-2 pt-2 border-top">
-
-                        <!-- === WAITING ACTIONS === -->
-                        <th:block th:if="${t.status.name() == 'WAITING'}">
-                            <!-- Direct Call if it's the next ticket -->
-                            <form th:if="${nextTicketIds.contains(t.ticketId) and t.visit.primaryDoctor != null and callableDoctorIds.contains(t.visit.primaryDoctor.staffId)}"
-                                  th:action="@{/reception/queue/{id}/CALL(id=${t.ticketId})}" method="post" class="m-0">
-                                <input type="hidden" name="branchId" th:value="${board.branchId}">
-                                <button class="btn btn-primary btn-sm fw-bold shadow-sm" type="submit">
-                                    <i class="bi bi-megaphone-fill me-1"></i>Gọi số
-                                </button>
-                            </form>
-
-                            <!-- Out-of-order Call button -->
-                            <button th:if="${t.visit.primaryDoctor != null and callableDoctorIds.contains(t.visit.primaryDoctor.staffId) and !nextTicketIds.contains(t.ticketId)}"
-                                    type="button" class="btn btn-outline-primary btn-sm btn-queue-action fw-semibold"
-                                    data-action="CALL" data-title="Gọi vượt thứ tự"
-                                    th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit.patientProfile.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit.visitCode}">
-                                <i class="bi bi-megaphone me-1"></i>Gọi vượt
-                            </button>
-
-                            <!-- Doctor busy badge -->
-                            <span th:if="${t.visit.primaryDoctor != null and !callableDoctorIds.contains(t.visit.primaryDoctor.staffId)}"
-                                  class="badge bg-secondary-subtle text-secondary py-1 px-2" title="Bác sĩ này đang có ca gọi khám chưa hoàn tất">
-                                <i class="bi bi-hourglass-split me-0.5"></i>BS đang bận
-                            </span>
-
-                            <!-- Doctor not assigned link -->
-                            <a th:if="${t.visit.primaryDoctor == null}" th:href="@{/reception/dispatch(branchId=${board.branchId})}"
-                               class="btn btn-xs btn-outline-info text-dark fw-semibold" title="Phân công bác sĩ trước khi gọi số">
-                                <i class="bi bi-diagram-3 me-0.5 text-primary"></i>Gán BS
-                            </a>
-
-                            <!-- Pause button -->
-                            <button type="button" class="btn btn-outline-secondary btn-sm btn-queue-action"
-                                    data-action="PAUSE" data-title="Tạm dừng số khám"
-                                    th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit.patientProfile.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit.visitCode}"
-                                    title="Tạm dừng ca khám nếu bệnh nhân tạm vắng mặt">
-                                <i class="bi bi-pause-fill"></i>Tạm dừng
-                            </button>
-
-                            <!-- Emergency button -->
-                            <button th:if="${!t.isEmergency}" type="button" class="btn btn-outline-danger btn-sm btn-queue-action"
-                                    data-action="EMERGENCY" data-title="Kích hoạt cấp cứu"
-                                    th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit.patientProfile.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit.visitCode}"
-                                    title="Chuyển sang ca cấp cứu">
-                                <i class="bi bi-lightning-fill"></i>
-                            </button>
-
-                            <!-- Prioritize button -->
-                            <button th:if="${!t.isEmergency and (t.priorityScore == null or t.priorityScore < 50)}"
-                                    type="button" class="btn btn-outline-warning btn-sm btn-queue-action text-dark"
-                                    data-action="PRIORITIZE" data-title="Áp dụng ưu tiên phục vụ"
-                                    th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit.patientProfile.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit.visitCode}"
-                                    title="Ưu tiên người già / trẻ em">
-                                <i class="bi bi-star-fill text-warning"></i>
-                            </button>
-                        </th:block>
-
-                        <!-- === CALLED ACTIONS === -->
-                        <th:block th:if="${t.status.name() == 'CALLED'}">
-                            <form th:action="@{/reception/queue/{id}/CALL(id=${t.ticketId})}" method="post" class="m-0">
-                                <input type="hidden" name="branchId" th:value="${board.branchId}">
-                                <button class="btn btn-outline-primary btn-sm fw-semibold" type="submit" title="Nhắc lại thông báo gọi số trên màn hình TV sảnh chờ">
-                                    <i class="bi bi-megaphone me-1"></i>Gọi lại
-                                </button>
-                            </form>
-                            <form th:action="@{/reception/queue/{id}/START(id=${t.ticketId})}" method="post" class="m-0 d-flex align-items-center gap-1">
-                                <input type="hidden" name="branchId" th:value="${board.branchId}">
-                                <select th:if="${!#lists.isEmpty(board.chairs)}" name="chairId" class="form-select form-select-sm d-inline-block w-auto" style="font-size: 11px;" title="Đổi ghế nếu ghế dự kiến bị chiếm">
-                                    <option th:each="c : ${board.chairs}" th:if="${c.status.name() == 'AVAILABLE' and (t.visit.roomId == null or c.room == null or c.room.roomId == t.visit.roomId)}" th:value="${c.chairId}" th:selected="${c.chairId == t.visit.chairId}" th:text="|${c.chairName}${c.chairId == t.visit.chairId ? ' (dự kiến)' : ''}|"></option>
-                                </select>
-                                <button class="btn btn-success btn-sm fw-bold shadow-sm" type="submit" th:disabled="${t.visit.roomId == null or t.visit.chairId == null}">
-                                    <i class="bi bi-play-circle-fill me-1"></i>Bắt đầu khám
-                                </button>
-                            </form>
-                            <a class="btn btn-outline-warning btn-sm" th:if="${t.visit.roomId == null or t.visit.chairId == null}" th:href="@{/reception/dispatch(branchId=${board.branchId})}">
-                                <i class="bi bi-diagram-3 me-1"></i>Phân phòng/ghế
-                            </a>
-                            <button type="button" class="btn btn-outline-secondary btn-sm btn-queue-action"
-                                    data-action="PAUSE" data-title="Tạm dừng số khám"
-                                    th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit.patientProfile.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit.visitCode}"
-                                    title="Tạm dừng nếu gọi không thấy bệnh nhân">
-                                <i class="bi bi-pause-fill"></i>Tạm dừng
-                            </button>
-                        </th:block>
-
-                        <!-- === IN_SERVICE ACTIONS === -->
-                        <th:block th:if="${t.status.name() == 'IN_SERVICE'}">
-                            <form th:action="@{/reception/queue/{id}/DONE(id=${t.ticketId})}" method="post" class="m-0">
-                                <input type="hidden" name="branchId" th:value="${board.branchId}">
-                                <button class="btn btn-outline-success btn-sm fw-semibold" type="submit"
-                                        th:disabled="${t.visit.status.name() != 'WAITING_PARACLINICAL' and t.visit.status.name() != 'WAITING_RESULT' and t.visit.status.name() != 'WAITING_PAYMENT' and t.visit.status.name() != 'COMPLETED'}"
-                                        th:title="${t.visit.status.name() == 'IN_EXAM' or t.visit.status.name() == 'IN_TREATMENT' ? 'Chỉ hoàn tất khi bệnh nhân đã rời ghế khám' : 'Hoàn tất số khám'}">
-                                    <i class="bi bi-check2-circle me-1"></i>Hoàn tất số
-                                </button>
-                            </form>
-                            <a th:href="@{/doctor/examination/{id}/treatment(id=${t.visit.visitId})}" class="btn btn-xs btn-outline-primary" target="_blank" title="Xem ca khám">
-                                <i class="bi bi-box-arrow-up-right me-0.5"></i>Xem ca khám
-                            </a>
-                        </th:block>
-
-                        <!-- === PAUSED ACTIONS === -->
-                        <th:block th:if="${t.status.name() == 'PAUSED'}">
-                            <form th:action="@{/reception/queue/{id}/RESUME(id=${t.ticketId})}" method="post" class="m-0">
-                                <input type="hidden" name="branchId" th:value="${board.branchId}">
-                                <button class="btn btn-primary btn-sm fw-semibold shadow-sm" type="submit">
-                                    <i class="bi bi-arrow-repeat me-1"></i>Tiếp tục chờ
-                                </button>
-                            </form>
-                            <button th:if="${!t.isEmergency}" type="button" class="btn btn-outline-danger btn-sm btn-queue-action"
-                                    data-action="EMERGENCY" data-title="Chuyển cấp cứu"
-                                    th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit.patientProfile.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit.visitCode}">
-                                <i class="bi bi-lightning-fill me-0.5"></i>Cấp cứu
-                            </button>
-                        </th:block>
-
-                        <!-- === DONE STATE === -->
-                        <th:block th:if="${t.status.name() == 'DONE'}">
-                            <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2 small">
-                                <i class="bi bi-check2 me-1"></i>Đã hoàn tất
-                            </span>
-                        </th:block>
-
-                    </div>
-                    <small class="queue-state-note text-muted d-block mt-1" th:if="${t.status.name() == 'IN_SERVICE' and (t.visit.status.name() == 'IN_EXAM' or t.visit.status.name() == 'IN_TREATMENT')}">
-                        <i class="bi bi-info-circle me-1"></i>Đang khám tại ghế · Hoàn tất sau khi BN rời ghế.
-                    </small>
-                </article>
-            </div>
-        </section>
+                    </article>
+                </div>
+            </section>
+        </div>
     </div>
+
 </div>
 </body>
 </html>

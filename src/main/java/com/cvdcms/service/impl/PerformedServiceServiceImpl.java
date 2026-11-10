@@ -133,6 +133,18 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         ps.setPatientProfile(visit.getPatientProfile());
         ps.setBranch(visit.getBranch());
         ps.setService(service);
+
+        String stepName = requestDTO.getStepName();
+        if (stepName == null && requestDTO.getPlanItemId() != null) {
+            stepName = treatmentPlanItemRepository.findById(requestDTO.getPlanItemId())
+                    .map(it -> it.getStepName() != null ? it.getStepName() : (it.getService() != null ? it.getService().getServiceName() : null))
+                    .orElse(null);
+        }
+        if (stepName == null && service != null) {
+            stepName = service.getServiceName();
+        }
+        ps.setStepName(stepName);
+
         ps.setToothNumbers(requestDTO.getToothNumbers());
         ps.setQuantity(qty);
         ps.setUnitPrice(unitPrice);
@@ -193,6 +205,11 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         log.info("Cancelling/Deleting performed service with id={}", performedId);
         PerformedService ps = performedServiceRepository.findById(performedId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ thực hiện với ID: " + performedId));
+
+        // Dịch vụ đã thực hiện tại ghế (đã hoàn thành / đồng bộ kế toán) không được phép xóa
+        if (ps.getStatus() == PerformedServiceStatus.COMPLETED) {
+            throw new IllegalStateException("Dịch vụ đã thực hiện tại ghế (đã đồng bộ sang kế toán), không được phép hủy hoặc xóa.");
+        }
 
         // Quy tắc BR-EMR-02: Khóa bất biến
         if (ps.getVisit() != null &&
@@ -305,6 +322,7 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .serviceId(ps.getService() != null ? ps.getService().getServiceId() : null)
                 .serviceCode(ps.getService() != null ? ps.getService().getServiceCode() : "")
                 .serviceName(ps.getService() != null ? ps.getService().getServiceName() : "")
+                .stepName(ps.getStepName() != null && !ps.getStepName().isBlank() ? ps.getStepName() : (ps.getService() != null ? ps.getService().getServiceName() : ""))
                 .categoryName(ps.getService() != null && ps.getService().getCategory() != null ? ps.getService().getCategory().getCategoryName() : "")
                 .unit(ps.getService() != null ? ps.getService().getUnit() : "Lần")
                 .toothNumbers(ps.getToothNumbers())

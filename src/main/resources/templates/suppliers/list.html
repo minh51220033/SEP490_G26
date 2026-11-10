@@ -31,7 +31,8 @@
                     </p>
                 </div>
 
-                <div class="header-actions">
+                <div class="header-actions d-flex align-items-center gap-2">
+                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                     <a th:href="@{/home}" class="btn btn-secondary">← Trang chủ</a>
                     <a th:href="@{/inventory}" class="btn btn-secondary">Quản lý kho</a>
                     <button id="addBtn" type="button" class="btn btn-primary">
@@ -273,6 +274,7 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 <script th:src="@{/js/suppliers.js}" defer></script>
 </body>
 </html>

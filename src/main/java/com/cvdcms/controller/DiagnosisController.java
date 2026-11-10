@@ -9,10 +9,7 @@ import com.cvdcms.DTO.PrescriptionItemResponseDTO;
 import com.cvdcms.DTO.PrescriptionResponseDTO;
 import com.cvdcms.DTO.ServiceDTO;
 import com.cvdcms.entity.*;
-import com.cvdcms.entity.enums.AssignmentStatus;
-import com.cvdcms.entity.enums.DiagnosisType;
-import com.cvdcms.entity.enums.VisitStatus;
-import com.cvdcms.entity.enums.VisitType;
+import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
 import com.cvdcms.DTO.TreatmentPlanResponseDTO;
 import com.cvdcms.service.DiagnosisService;
@@ -66,11 +63,18 @@ public class DiagnosisController {
     private final CustomerCareInteractionRepository customerCareInteractionRepository;
     private final CustomerCareTaskRepository customerCareTaskRepository;
     private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+    private final com.cvdcms.service.ClinicalWorkflowService clinicalWorkflowService;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.ClinicalQueueTicketRepository clinicalQueueTicketRepository;
 
     public void setDoctorCoverGrantRepository(com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository) {
         this.doctorCoverGrantRepository = doctorCoverGrantRepository;
+    }
+
+    public void setClinicalQueueTicketRepository(com.cvdcms.repository.ClinicalQueueTicketRepository clinicalQueueTicketRepository) {
+        this.clinicalQueueTicketRepository = clinicalQueueTicketRepository;
     }
 
     private User getLoggedInUser(jakarta.servlet.http.HttpSession session) {
@@ -353,6 +357,28 @@ public class DiagnosisController {
                                 "). Bác sĩ chỉ được phép tác động vào các ca khám tại cơ sở đang làm việc (" + assignedBranchFullName + ")!");
                 return "redirect:/doctor/daily-visits";
             }
+
+            // Tự động chuyển vé từ CALLED/WAITING sang IN_SERVICE và lượt khám sang IN_EXAM khi Bác sĩ bắt đầu ca khám
+            boolean statusChanged = false;
+            if (visit.getStatus() == VisitStatus.WAITING || visit.getStatus() == VisitStatus.WAITING_RESULT) {
+                visit.setStatus(VisitStatus.IN_EXAM);
+                statusChanged = true;
+            }
+            if (clinicalQueueTicketRepository != null) {
+                List<QueueTicket> activeTickets = clinicalQueueTicketRepository.findByVisitVisitIdAndQueueType(visitId, QueueType.EXAM);
+                for (QueueTicket t : activeTickets) {
+                    if (t.getStatus() == QueueStatus.CALLED || t.getStatus() == QueueStatus.WAITING) {
+                        t.setStatus(QueueStatus.IN_SERVICE);
+                        if (t.getCalledAt() == null) {
+                            t.setCalledAt(LocalDateTime.now());
+                        }
+                        clinicalQueueTicketRepository.save(t);
+                    }
+                }
+            }
+            if (statusChanged) {
+                visitRepository.save(visit);
+            }
         }
 
         List<DiagnosisResponseDTO> diagnoses = diagnosisService.getDiagnosesByVisitId(visitId);
@@ -602,6 +628,16 @@ public class DiagnosisController {
         model.addAttribute("activeServices", activeServices);
         model.addAttribute("doctors", doctors);
         model.addAttribute("allVisits", allVisits);
+
+        List<com.cvdcms.DTO.WorkflowTemplateResponseDTO> workflowTemplates = (clinicalWorkflowService != null)
+                ? clinicalWorkflowService.getAllTemplates()
+                : List.of();
+        model.addAttribute("workflowTemplates", workflowTemplates);
+        String workflowTemplatesJson = "[]";
+        try {
+            workflowTemplatesJson = new ObjectMapper().writeValueAsString(workflowTemplates);
+        } catch (Exception ignored) {}
+        model.addAttribute("workflowTemplatesJson", workflowTemplatesJson);
 
         String activeServicesJson = "[]";
         try {

@@ -7,21 +7,15 @@
 <!-- Frontend Fragment: doctor/fragments/labo-tab.html                         -->
 <!-- ========================================================================= -->
 <div th:fragment="laboTab">
-    <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden bg-white">
+    <div class="card border shadow-sm rounded-3 mb-4 overflow-hidden bg-white">
         <!-- HEADER -->
-        <div class="card-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
-            <div class="d-flex align-items-center gap-2.5">
-                <div class="p-2 rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center shadow-xs" style="width: 40px; height: 40px;">
-                    <i class="bi bi-box-seam-fill fs-5"></i>
-                </div>
-                <div>
-                    <div class="d-flex align-items-center gap-2">
-                        <h5 class="mb-0 fw-bold text-dark fs-6">Đặt xưởng Labo &amp; Mẫu xét nghiệm gửi ngoài</h5>
-                        <span class="badge bg-primary text-white rounded-pill px-2.5 py-0.5 small" id="laboOrdersCountBadge"
-                              th:text="${laboOrders != null ? #lists.size(laboOrders) : 0} + ' phiếu'">0 phiếu</span>
-                    </div>
-                    <span class="text-secondary small">Quản lý phiếu gửi răng sứ, máng chỉnh nha, mẫu máu xét nghiệm &amp; lưu trữ ảnh chụp giấy kết quả</span>
-                </div>
+        <div class="card-header df-tab-content-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
+            <div class="df-tab-title-standard">
+                <i class="bi bi-box-seam"></i>
+                <span>ĐẶT XƯỞNG LABO &amp; MẪU XÉT NGHIỆM</span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-0.5 small ms-1" id="laboOrdersCountBadge"
+                      th:text="${laboOrders != null ? #lists.size(laboOrders) : 0} + ' phiếu'" style="text-transform: none; letter-spacing: normal;">0 phiếu</span>
+                <span class="df-tab-subtitle-text d-none d-lg-inline">(Răng sứ, máng chỉnh nha &amp; xét nghiệm)</span>
             </div>
 
             <div class="d-flex align-items-center gap-2">

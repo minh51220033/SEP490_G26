@@ -9,25 +9,14 @@
     <!-- Thiết kế theo tiêu chuẩn Dental SaaS CRM & EMR hàng đầu              -->
     <!-- ===================================================================== -->
     <div th:fragment="patientCareTab">
-        <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden bg-white" id="doctorCareTabCard">
+        <div class="card border shadow-sm rounded-3 mb-4 overflow-hidden bg-white" id="doctorCareTabCard">
             <!-- Header Panel -->
-            <div class="card-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-3 p-3.5 border-bottom"
-                style="border-color: #f1f5f9 !important;">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="p-2.5 rounded-3 text-white d-flex align-items-center justify-content-center shadow-sm"
-                        style="width: 42px; height: 42px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
-                        <i class="bi bi-heart-pulse-fill fs-5"></i>
-                    </div>
-                    <div>
-                        <div class="d-flex align-items-center gap-2">
-                            <h5 class="mb-0 fw-bold text-dark fs-6" style="letter-spacing: -0.01em;">Chăm sóc bệnh nhân sau điều trị (CSKH)</h5>
-                            <span
-                                class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5"
-                                style="font-size: 11px;">Hậu phẫu &amp; Tái khám</span>
-                        </div>
-                        <span class="text-secondary small" style="font-size: 12.5px;">Nhật ký gọi điện hỏi thăm, tình
-                            trạng hồi phục vết thương, tuân thủ dùng thuốc &amp; phản hồi chuyên môn</span>
-                    </div>
+            <div class="card-header df-tab-content-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
+                <div class="df-tab-title-standard">
+                    <i class="bi bi-heart-pulse"></i>
+                    <span>CHĂM SÓC BỆNH NHÂN SAU ĐIỀU TRỊ</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-0.5 ms-1" style="font-size: 11px; text-transform: none; letter-spacing: normal;">Hậu phẫu &amp; Tái khám</span>
+                    <span class="df-tab-subtitle-text d-none d-lg-inline">(Nhật ký gọi thăm, hồi phục &amp; tuân thủ)</span>
                 </div>
                 <div class="d-flex align-items-center flex-wrap gap-2">
                     <!-- NÚT GHI NHẬN CUỘC GỌI / CSKH HOÀN CHỈNH -->

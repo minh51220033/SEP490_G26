@@ -53,7 +53,9 @@ public class AdminMembershipTierController {
             return "redirect:/login";
         }
         boolean isAdmin = userRepository.hasActiveAdminRole(loggedInUser.getUserId());
-        if (!isAdmin && !userRepository.hasActivePermission(loggedInUser.getUserId(), "CATALOG_MANAGE")) {
+        if (!isAdmin
+                && !userRepository.hasActivePermission(loggedInUser.getUserId(), "CATALOG_MEMBERSHIP_TIERS")
+                && !userRepository.hasActivePermission(loggedInUser.getUserId(), "CATALOG_MANAGE")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền quản lý hạng thành viên và quy tắc tích điểm.");
         }
         return null;

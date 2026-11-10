@@ -48,6 +48,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
         LEFT JOIN FETCH i.branch b
         LEFT JOIN FETCH i.cashier c
         LEFT JOIN FETCH i.visit v
+        LEFT JOIN FETCH v.primaryDoctor pd
         WHERE i.invoiceId = :invoiceId
     """)
     Optional<Invoice> findWithDetailsById(@Param("invoiceId") Long invoiceId);

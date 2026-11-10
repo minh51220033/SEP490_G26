@@ -151,6 +151,57 @@
     $all(".side-link.is-active").forEach(function (link) { link.setAttribute("aria-current", "page"); });
 
     /* =============================================================
+       SIDEBAR SCROLL RESTORATION & SYNC
+       Bảo toàn vị trí cuộn của sidebar khi chuyển trang, chống giật / nhảy lên đầu trang
+       ============================================================= */
+    (function initSidebarScroll() {
+        var nav = document.querySelector(".app-sidebar__nav");
+        if (!nav) return;
+
+        var SCROLL_KEY = "cvdcms.sidebar.navScrollTop";
+
+        function saveScroll() {
+            try {
+                sessionStorage.setItem(SCROLL_KEY, String(nav.scrollTop));
+            } catch (e) {}
+        }
+
+        function restoreScroll() {
+            try {
+                var saved = sessionStorage.getItem(SCROLL_KEY);
+                if (saved !== null) {
+                    nav.scrollTop = parseInt(saved, 10) || 0;
+                }
+                var active = nav.querySelector(".side-link.is-active");
+                if (active) {
+                    var navRect = nav.getBoundingClientRect();
+                    var actRect = active.getBoundingClientRect();
+                    if (actRect.top < navRect.top || actRect.bottom > navRect.bottom) {
+                        var target = active.offsetTop - (nav.clientHeight / 2) + (active.clientHeight / 2);
+                        nav.scrollTop = Math.max(0, target);
+                        saveScroll();
+                    }
+                }
+            } catch (e) {}
+        }
+
+        var scrollTimer = null;
+        nav.addEventListener("scroll", function () {
+            if (scrollTimer) clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(saveScroll, 50);
+        }, { passive: true });
+
+        document.addEventListener("click", function (e) {
+            var link = e.target.closest(".app-sidebar a");
+            if (link) saveScroll();
+        }, true);
+
+        window.addEventListener("beforeunload", saveScroll);
+        window.addEventListener("pageshow", restoreScroll);
+        restoreScroll();
+    })();
+
+    /* =============================================================
        2. ACCORDION (nhóm menu con)
        ============================================================= */
     function setGroupOpen(group, open) {
@@ -645,4 +696,55 @@
             document.body.style.removeProperty("padding-right");
         }
     });
+
+    /* =============================================================
+       11. GLOBAL INLINE BRANCH SWITCHER (CHUẨN DENTALSOFT)
+       ============================================================= */
+    window.switchAppBranchContext = function (branchId) {
+        var url = '/api/branches/switch-context?branchId=' + encodeURIComponent(branchId || '');
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        }).then(function (res) {
+            return res.json();
+        }).then(function (data) {
+            if (data && data.success) {
+                var filterForm = document.getElementById('leaveFilterForm') ||
+                                 document.getElementById('filterForm') ||
+                                 document.getElementById('auditFilterForm') ||
+                                 document.querySelector('form.filter-form') ||
+                                 document.querySelector('form.df-clinic-toolbar-form');
+                var branchInput = filterForm ? (filterForm.querySelector('input[name="branchId"]') || filterForm.querySelector('select[name="branchId"]')) : null;
+                if (filterForm && branchInput) {
+                    branchInput.value = branchId || '';
+                    var pageInput = filterForm.querySelector('input[name="page"]');
+                    if (pageInput) pageInput.value = '0';
+                    filterForm.submit();
+                } else {
+                    var currentUrl = new URL(window.location.href);
+                    if (branchId) {
+                        currentUrl.searchParams.set('branchId', branchId);
+                    } else {
+                        currentUrl.searchParams.delete('branchId');
+                    }
+                    currentUrl.searchParams.set('page', '0');
+                    window.location.href = currentUrl.toString();
+                }
+            } else {
+                alert(data && data.message ? data.message : 'Không thể chuyển cơ sở');
+            }
+        }).catch(function () {
+            var currentUrl = new URL(window.location.href);
+            if (branchId) {
+                currentUrl.searchParams.set('branchId', branchId);
+            } else {
+                currentUrl.searchParams.delete('branchId');
+            }
+            currentUrl.searchParams.set('page', '0');
+            window.location.href = currentUrl.toString();
+        });
+    };
 })();

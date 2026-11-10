@@ -19,6 +19,7 @@ public class PerformedServiceResponseDTO {
     private Long serviceId;
     private String serviceCode;
     private String serviceName;
+    private String stepName;
     private String categoryName;
     private String unit;
     private String toothNumbers;

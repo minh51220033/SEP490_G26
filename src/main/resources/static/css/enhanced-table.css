@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ============================================================================
  * CV-DCMS ENHANCED TABLE SYSTEM (Thư viện bảng tương tác cao cấp)
  * Phạm vi: Chỉ kích hoạt trên các bảng có thuộc tính [data-enhanced-table]
@@ -42,6 +42,10 @@
     cursor: pointer;
     transition: all 0.15s ease-in-out;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.enhanced-custom-toggle-btn {
+    margin-left: auto;
 }
 
 .enhanced-toolbar-btn:hover {
@@ -100,16 +104,19 @@ table[data-enhanced-table] thead th {
     white-space: nowrap;
     user-select: none;
     vertical-align: middle;
+    text-align: center;
 }
 
 /* NỘI DUNG TIÊU ĐỀ */
 .enhanced-th-content {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-    width: calc(100% - 16px);
+    width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-align: center;
 }
 
 /* NÚT GHIM TRÊN TIÊU ĐỀ */

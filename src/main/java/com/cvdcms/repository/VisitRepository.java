@@ -113,6 +113,18 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
     );
 
     @Query("""
+        SELECT COUNT(v) FROM Visit v
+        WHERE (:branchIds IS NULL OR v.branch.branchId IN :branchIds)
+          AND v.status = com.cvdcms.entity.enums.VisitStatus.WAITING
+          AND v.checkInAt >= :startOfDay AND v.checkInAt <= :endOfDay
+    """)
+    long countWaitingVisitsByBranchesAndDate(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startOfDay") java.time.LocalDateTime startOfDay,
+            @Param("endOfDay") java.time.LocalDateTime endOfDay
+    );
+
+    @Query("""
         SELECT v.status, COUNT(v)
         FROM Visit v
         WHERE (:branchIds IS NULL OR v.branch.branchId IN :branchIds)

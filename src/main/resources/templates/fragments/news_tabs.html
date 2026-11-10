@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    THANH TAB NGANG CHO PHÂN HỆ QUẢN LÝ TIN TỨC & TRUYỀN THÔNG
+    Kiểu dáng Compact Pill Buttons chuẩn DentalSoft (Đồng bộ Quản lý nhân sự & Tài khoản)
+    active: 'news' | 'comments'
+-->
+<nav th:fragment="newsTabs(active)" class="news-tabs-nav" aria-label="Phân hệ Quản lý tin tức">
+    <style>
+        .news-tabs-nav {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .news-tabs-list {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .news-tab-item {
+            display: inline-flex;
+        }
+
+        .news-tab-btn {
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+            color: #374151;
+            font-weight: 500;
+            font-size: 13px;
+            padding: 5px 12px;
+            background: #ffffff;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1.4;
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .news-tab-btn:hover {
+            border-color: #9ca3af;
+            background: #f9fafb;
+            color: #111827;
+        }
+
+        .news-tab-btn.active {
+            border-color: #2563eb !important;
+            color: #2563eb !important;
+            background: #eff6ff !important;
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+        }
+
+        .news-tab-btn i {
+            font-size: 14px;
+        }
+    </style>
+    <ul class="news-tabs-list" id="newsTabsList">
+        <!-- 1. Bài viết tin tức -->
+        <li class="news-tab-item"
+            th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_NEWS'))}">
+            <a th:href="@{/admin/news}"
+               class="news-tab-btn"
+               th:classappend="${active == 'news'} ? 'active' : ''">
+                <i class="bi bi-file-earmark-richtext" aria-hidden="true"></i>
+                <span>Bài viết tin tức</span>
+            </a>
+        </li>
+
+        <!-- 2. Kiểm duyệt bình luận -->
+        <li class="news-tab-item"
+            th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'NEWS_COMMENTS_MODERATE') or #lists.contains(permissionCodes, 'CATALOG_NEWS')))}">
+            <a th:href="@{/admin/comments}"
+               class="news-tab-btn"
+               th:classappend="${active == 'comments'} ? 'active' : ''">
+                <i class="bi bi-chat-square-dots" aria-hidden="true"></i>
+                <span>Kiểm duyệt bình luận</span>
+            </a>
+        </li>
+    </ul>
+
+    <script>
+        (function () {
+            const prefetched = new Set();
+            function prefetch(url) {
+                if (!url || prefetched.has(url) || url.startsWith('#') || url.startsWith('javascript:')) return;
+                prefetched.add(url);
+                const l = document.createElement('link');
+                l.rel = 'prefetch';
+                l.href = url;
+                l.as = 'document';
+                document.head.appendChild(l);
+            }
+
+            document.querySelectorAll('.news-tab-btn').forEach(function (btn) {
+                const href = btn.getAttribute('href');
+                btn.addEventListener('mouseenter', function () { prefetch(href); }, { passive: true });
+                btn.addEventListener('touchstart', function () { prefetch(href); }, { passive: true });
+                btn.addEventListener('click', function (e) {
+                    if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+                    document.querySelectorAll('.news-tab-btn').forEach(function (b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                });
+            });
+        })();
+    </script>
+</nav>
+</body>
+</html>

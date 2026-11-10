@@ -15,7 +15,216 @@
         <header th:replace="~{fragments/header :: appTopbar('Vai trò & Phân quyền mở rộng')}"></header>
 
         <main class="app-content">
+            <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
+            <link rel="stylesheet" th:href="@{/css/staff.css}">
             <link rel="stylesheet" th:href="@{/css/account.css}">
+            <style>
+                /* Danh sách vai trò bên trái */
+                .role-selector-card {
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                    border: 1.5px solid #e2e8f0 !important;
+                }
+                .role-selector-card:hover {
+                    border-color: #93c5fd !important;
+                    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.08);
+                    transform: translateY(-1px);
+                }
+                .role-selector-card.is-selected {
+                    border-color: #2563eb !important;
+                    background-color: #eff6ff !important;
+                    box-shadow: 0 3px 12px rgba(37, 99, 235, 0.12);
+                }
+                .role-selector-card.is-inactive {
+                    opacity: 0.58;
+                    filter: grayscale(0.35);
+                    background-color: #f8fafc !important;
+                }
+                .role-selector-card.is-inactive:hover {
+                    opacity: 0.85;
+                }
+
+                /* Bảng ma trận phân quyền liền khối */
+                .misa-unified-matrix {
+                    border: 1px solid #cbd5e1;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    background: #ffffff;
+                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+                }
+                .misa-matrix-row-item {
+                    border-bottom: 1px solid #e2e8f0;
+                    background: #ffffff;
+                }
+                .misa-matrix-row-item:last-child {
+                    border-bottom: none;
+                }
+
+                /* Cấp bậc cha - con rõ ràng */
+                .misa-feature-tree-header {
+                    background: #f8fafc !important;
+                    transition: background-color 0.15s ease;
+                    min-height: 54px;
+                }
+                .misa-feature-tree-header:hover {
+                    background: #eff6ff !important;
+                }
+                .misa-feature-tree-group:not(.is-collapsed) .misa-feature-tree-header {
+                    background: #f1f5f9 !important;
+                    border-bottom: 1px solid #cbd5e1;
+                }
+                .misa-single-menu-row {
+                    background: #ffffff !important;
+                    transition: background-color 0.15s ease;
+                    min-height: 54px;
+                }
+                .misa-single-menu-row:hover {
+                    background: #eff6ff !important;
+                }
+                .misa-single-menu-row.is-granted {
+                    background: #f8fafc !important;
+                }
+
+                .misa-feature-tree-group.is-collapsed .misa-subtabs-body {
+                    display: none !important;
+                }
+                .misa-feature-tree-group.is-collapsed .misa-tree-chevron i {
+                    transform: rotate(-90deg);
+                }
+                .misa-tree-chevron i {
+                    display: inline-block;
+                    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+
+                .misa-subtabs-body {
+                    background: #f8fafc;
+                }
+                .misa-subtab-row {
+                    background: #ffffff;
+                    transition: all 0.15s ease;
+                    min-height: 44px;
+                    position: relative;
+                }
+                .misa-subtab-row:hover {
+                    background-color: #eff6ff !important;
+                    border-color: #93c5fd !important;
+                }
+                .misa-subtab-row.is-granted {
+                    background-color: #ffffff !important;
+                    border-color: #bfdbfe !important;
+                }
+
+                /* Đường dẫn ngang nhẹ nối từ tên quyền tới toggle để dò dòng dễ hơn */
+                .misa-row-guide {
+                    flex: 1 1 auto;
+                    height: 1px;
+                    border-bottom: 1px dashed #e2e8f0;
+                    margin: 0 12px;
+                    min-width: 16px;
+                }
+                .misa-feature-tree-header:hover .misa-row-guide,
+                .misa-single-menu-row:hover .misa-row-guide,
+                .misa-subtab-row:hover .misa-row-guide {
+                    border-bottom-color: #93c5fd;
+                }
+
+                /* Toggle Switch tương phản rõ rệt */
+                .misa-menu-switch,
+                .misa-group-master-switch {
+                    width: 2.65em !important;
+                    height: 1.38em !important;
+                    cursor: pointer;
+                    background-color: #cbd5e1 !important;
+                    border-color: #94a3b8 !important;
+                    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23ffffff'/%3e%3c/svg%3e") !important;
+                    transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+                }
+                .misa-menu-switch:checked,
+                .misa-group-master-switch:checked {
+                    background-color: #2563eb !important;
+                    border-color: #1d4ed8 !important;
+                }
+                .misa-group-master-switch:indeterminate {
+                    background-color: #60a5fa !important;
+                    border-color: #3b82f6 !important;
+                }
+                .misa-menu-switch:disabled,
+                .misa-group-master-switch:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+
+                /* Chỉ hiện badge khi ĐÃ CẤP hoặc MỘT PHẦN, ẩn hoàn toàn chữ 'Chưa cấp' gây nhiễu */
+                .misa-switch-badge {
+                    min-width: 78px;
+                    text-align: center;
+                    font-size: 0.72rem;
+                    font-weight: 600;
+                    padding: 2px 8px;
+                    border-radius: 999px;
+                }
+                .misa-switch-badge.state-denied {
+                    display: none !important;
+                }
+                .misa-switch-badge.state-granted {
+                    background-color: #dcfce7;
+                    color: #15803d;
+                    border: 1px solid #bbf7d0;
+                }
+                .misa-switch-badge.state-partial {
+                    background-color: #dbeafe;
+                    color: #1d4ed8;
+                    border: 1px solid #bfdbfe;
+                }
+
+                /* Mini progress bar tiến độ nhóm cha */
+                .misa-mini-progress {
+                    width: 48px;
+                    height: 6px;
+                    background: #e2e8f0;
+                    border-radius: 999px;
+                    overflow: hidden;
+                    display: inline-block;
+                    vertical-align: middle;
+                }
+                .misa-mini-progress-bar {
+                    height: 100%;
+                    border-radius: 999px;
+                    background: #94a3b8;
+                    transition: width 0.2s ease, background-color 0.2s ease;
+                }
+
+                /* Filter bar */
+                .misa-filter-chips {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                }
+                .misa-filter-chip {
+                    border: 1px solid #cbd5e1;
+                    background: #ffffff;
+                    color: #475569;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    padding: 5px 13px;
+                    border-radius: 999px;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                }
+                .misa-filter-chip:hover {
+                    background: #f1f5f9;
+                    color: #0f172a;
+                }
+                .misa-filter-chip.is-active {
+                    background: #2563eb;
+                    border-color: #2563eb;
+                    color: #ffffff;
+                }
+                .misa-filtered-hidden {
+                    display: none !important;
+                }
+            </style>
 
             <!-- THÔNG BÁO THÀNH CÔNG -->
             <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
@@ -31,28 +240,32 @@
                 <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <!-- TIÊU ĐỀ & KIẾN TRÚC PHÂN QUYỀN -->
-            <section class="panel mb-4">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN DANH SÁCH TÀI KHOẢN -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
                     <div>
-                        <h2 class="panel__title fs-4 mb-1">
-                            <i class="bi bi-shield-check text-primary me-2"></i>Quản lý Vai trò &amp; Phân quyền
-                        </h2>
-                        <p class="panel__subtitle mb-0">
-                            Phân quyền đồng bộ trực tiếp 1:1 với từng mục trên <strong>thanh điều hướng (Sidebar)</strong>
-                            (<strong th:text="${totalPermissionsCount}">41</strong> quyền nghiệp vụ độc lập).
+                        <h1 class="dv-page-title mb-0">Quản lý Vai trò &amp; Phân quyền</h1>
+                        <p class="dv-page-subtitle">
+                            Phân quyền đồng bộ trực tiếp 1:1 với từng mục trên thanh điều hướng (Sidebar)
+                            (<strong th:text="${totalPermissionsCount}">61</strong> quyền nghiệp vụ độc lập)
                         </p>
                     </div>
-                    <div class="d-flex gap-2">
-                        <a th:href="@{/accounts}" class="btn btn-outline-secondary">
-                            <i class="bi bi-people me-1"></i> Quản lý tài khoản
-                        </a>
-                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createRoleModal">
-                            <i class="bi bi-plus-circle me-1"></i> Thêm vai trò mới
-                        </button>
-                    </div>
                 </div>
-            </section>
+                <div class="d-flex align-items-center gap-2">
+                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                    <button type="button" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                            style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;"
+                            data-bs-toggle="modal" data-bs-target="#createRoleModal">
+                        <i class="bi bi-plus-lg"></i> Thêm vai trò mới
+                    </button>
+                </div>
+            </div>
+
+            <!-- THANH TAB NGANG PHÂN HỆ TÀI KHOẢN & BẢO MẬT -->
+            <nav th:replace="~{fragments/account_tabs :: accountTabs('roles')}"></nav>
 
             <div class="row g-4">
 
@@ -68,38 +281,34 @@
                             </div>
                         </div>
 
-                        <div class="d-flex flex-column gap-3">
+                        <div class="d-flex flex-column" style="gap: 12px;">
                             <div th:each="r : ${roles}"
-                                 class="p-3 rounded-3 border transition"
-                                 th:classappend="${selectedRole != null and selectedRole.roleId == r.roleId} ? 'border-primary bg-primary bg-opacity-10' : 'bg-white'">
-                                <div class="d-flex justify-content-between align-items-start gap-2">
-                                    <div>
+                                 th:with="permCount=${r.permissions != null ? #sets.size(r.permissions) : 0},
+                                          totalCount=${totalPermissionsCount != null and totalPermissionsCount > 0 ? totalPermissionsCount : 61},
+                                          pct=${(permCount * 100) / totalCount},
+                                          isSelected=${selectedRole != null and selectedRole.roleId == r.roleId}"
+                                 th:attr="data-href=@{/accounts/roles(editRoleId=${r.roleId})}"
+                                 onclick="window.location.href=this.getAttribute('data-href')"
+                                 class="role-selector-card p-3 rounded-3 bg-white"
+                                 th:classappend="${(isSelected ? ' is-selected' : '') + (!r.isActive ? ' is-inactive' : '')}">
+                                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                    <div class="min-w-0">
                                         <div class="d-flex align-items-center flex-wrap gap-2">
                                             <strong class="fs-6 text-dark" th:text="${r.displayName != null ? r.displayName : r.roleName}">Tên vai trò</strong>
                                             <span th:if="${r.isActive}" class="status-pill status-pill--active">Hoạt động</span>
                                             <span th:unless="${r.isActive}" class="status-pill status-pill--locked">Ngừng</span>
                                         </div>
-
-                                        <div class="d-flex flex-wrap gap-3 small text-muted">
-                                            <span>
-                                                <i class="bi bi-key-fill text-warning me-1"></i>
-                                                <strong th:text="${r.permissions != null ? #sets.size(r.permissions) : 0}">0</strong> / <span th:text="${totalPermissionsCount}">22</span> quyền
-                                            </span>
-                                            <span>
-                                                <i class="bi bi-people-fill text-primary me-1"></i>
-                                                <strong th:text="${userCountByRoleId[r.roleId] != null ? userCountByRoleId[r.roleId] : 0}">0</strong> tài khoản
-                                            </span>
+                                        <div class="small text-muted mt-1">
+                                            <i class="bi bi-people-fill text-primary me-1"></i>
+                                            <strong th:text="${userCountByRoleId[r.roleId] != null ? userCountByRoleId[r.roleId] : 0}">0</strong> tài khoản
                                         </div>
                                     </div>
 
-                                    <div class="d-flex flex-column gap-1 flex-shrink-0">
-                                        <a th:href="@{/accounts/roles(editRoleId=${r.roleId})}"
-                                           class="btn btn-sm"
-                                           th:classappend="${selectedRole != null and selectedRole.roleId == r.roleId} ? 'btn-primary' : 'btn-outline-primary'">
-                                            <i class="bi bi-sliders me-1"></i>Cấu hình
-                                        </a>
+                                    <div class="d-flex align-items-center gap-1 flex-shrink-0" onclick="event.stopPropagation()">
+                                        <span th:if="${isSelected}" class="badge bg-primary text-white rounded-pill px-2 py-1" style="font-size: 0.72rem;">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Đang chọn
+                                        </span>
                                         <th:block th:if="${!r.isSystem}">
-                                            <!-- Nút Tạm ngưng: CHỈ HIỆN KHI VAI TRÒ ĐANG CÓ TÀI KHOẢN (userCount > 0) -->
                                             <form th:if="${userCountByRoleId[r.roleId] != null and userCountByRoleId[r.roleId] > 0 and r.isActive}"
                                                   th:action="@{/accounts/roles/{id}/toggle-status(id=${r.roleId})}"
                                                   method="post"
@@ -107,12 +316,11 @@
                                                            data-is-active=${r.isActive},
                                                            data-user-count=${userCountByRoleId[r.roleId]}"
                                                   onsubmit="return confirmToggleRole(this);">
-                                                <button type="submit" class="btn btn-sm btn-outline-warning w-100" title="Tạm ngưng vai trò này">
+                                                <button type="submit" class="btn btn-sm btn-outline-warning py-0 px-2" title="Tạm ngưng vai trò này">
                                                     Tạm ngưng
                                                 </button>
                                             </form>
 
-                                            <!-- Nút Kích hoạt: HIỆN KHI VAI TRÒ ĐANG BỊ TẠM NGƯNG -->
                                             <form th:if="${!r.isActive}"
                                                   th:action="@{/accounts/roles/{id}/toggle-status(id=${r.roleId})}"
                                                   method="post"
@@ -120,23 +328,36 @@
                                                            data-is-active=${r.isActive},
                                                            data-user-count=${userCountByRoleId[r.roleId] != null ? userCountByRoleId[r.roleId] : 0}"
                                                   onsubmit="return confirmToggleRole(this);">
-                                                <button type="submit" class="btn btn-sm btn-outline-success w-100" title="Kích hoạt lại vai trò này">
+                                                <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2" title="Kích hoạt lại vai trò này">
                                                     Kích hoạt
                                                 </button>
                                             </form>
 
-                                            <!-- Nút Xóa: CHỈ HIỆN KHI VAI TRÒ CHƯA CÓ TÀI KHOẢN NÀO (0 tài khoản) -->
                                             <form th:if="${userCountByRoleId[r.roleId] == null or userCountByRoleId[r.roleId] == 0}"
                                                   th:action="@{/accounts/roles/{id}/delete(id=${r.roleId})}"
                                                   method="post"
                                                   th:attr="data-role-name=${r.displayName != null ? r.displayName : r.roleName}"
                                                   onsubmit="return confirmDeleteRole(this);">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger w-100" title="Xóa vĩnh viễn vai trò này khỏi hệ thống">
-                                                    <i class="bi bi-trash3 me-1"></i>Xóa
+                                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" title="Xóa vĩnh viễn vai trò này khỏi hệ thống">
+                                                    <i class="bi bi-trash3"></i>
                                                 </button>
                                             </form>
                                         </th:block>
                                     </div>
+                                </div>
+
+                                <!-- Thanh tiến độ số lượng quyền -->
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress flex-grow-1" style="height: 6px; background: #e2e8f0; border-radius: 99px;">
+                                        <div class="progress-bar"
+                                             role="progressbar"
+                                             th:style="|width: ${pct}%; border-radius: 99px;|"
+                                             th:classappend="${pct == 100} ? 'bg-success' : (${pct > 0} ? 'bg-primary' : 'bg-secondary')"
+                                             th:attr="aria-valuenow=${permCount},aria-valuemin=0,aria-valuemax=${totalCount}"></div>
+                                    </div>
+                                    <span class="small fw-semibold text-secondary text-nowrap" style="font-size: 0.75rem;">
+                                        <span th:text="${permCount}">0</span>/<span th:text="${totalCount}">61</span> quyền
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -153,6 +374,9 @@
                                         <i class="bi bi-shield-lock-fill text-primary me-2"></i>Phân quyền:
                                         <span class="text-primary fw-bold" th:text="${selectedRole.displayName != null ? selectedRole.displayName : selectedRole.roleName}">Vai trò</span>
                                     </h4>
+                                    <span id="mainSelectedCountBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 text-nowrap"
+                                          th:attr="data-total-perms=${totalPermissionsCount}"
+                                          th:text="|${selectedPermissionIds.size()} / ${totalPermissionsCount} quyền|">0 / 61 quyền</span>
                                     <button type="button" class="btn btn-sm btn-link text-decoration-none py-0 px-1 text-muted"
                                             th:if="${selectedRoleEditable}"
                                             onclick="toggleRoleInfoEdit()"
@@ -165,9 +389,6 @@
                                 </p>
                             </div>
                             <div class="d-flex align-items-center gap-2 flex-nowrap">
-                                <span id="mainSelectedCountBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 text-nowrap"
-                                      th:attr="data-total-perms=${totalPermissionsCount}"
-                                      th:text="|${isAdminRole ? totalPermissionsCount : selectedPermissionIds.size()} / ${totalPermissionsCount} quyền|">0 / 41 quyền</span>
                                 <th:block th:if="${selectedRoleEditable}">
                                     <button type="button" class="btn btn-sm btn-outline-primary text-nowrap" onclick="toggleContainerPermissions('mainRoleMatrixContainer', true)">
                                         <i class="bi bi-check2-all me-1"></i>Cho phép tất cả
@@ -179,15 +400,32 @@
                                 <div class="btn-group btn-group-sm text-nowrap" role="group">
                                     <button type="button" class="btn btn-outline-secondary"
                                             onclick="toggleAllModules('mainRoleMatrixContainer', false)"
-                                            title="Thu gọn tất cả phân hệ">
+                                            title="Thu gọn tất cả nhóm tab con">
                                         <i class="bi bi-arrows-collapse me-1"></i>Thu gọn
                                     </button>
                                     <button type="button" class="btn btn-outline-secondary"
                                             onclick="toggleAllModules('mainRoleMatrixContainer', true)"
-                                            title="Mở rộng tất cả phân hệ">
+                                            title="Mở rộng tất cả nhóm tab con">
                                         <i class="bi bi-arrows-expand me-1"></i>Mở rộng
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- THANH TÌM KIẾM & LỌC QUYỀN NHANH -->
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                            <div class="position-relative flex-grow-1" style="max-width: 340px;">
+                                <i class="bi bi-search position-absolute text-muted" style="left: 11px; top: 50%; transform: translateY(-50%); font-size: 0.85rem;"></i>
+                                <input type="search"
+                                       class="form-control form-control-sm ps-4 misa-perm-search"
+                                       style="padding-left: 32px !important; border-radius: 8px;"
+                                       placeholder="Tìm menu hoặc tên quyền..."
+                                       oninput="filterRoleMatrix('mainRoleMatrixContainer')">
+                            </div>
+                            <div class="misa-filter-chips" role="group" aria-label="Lọc trạng thái quyền">
+                                <button type="button" class="misa-filter-chip is-active" data-filter="ALL" onclick="setMatrixFilterChip('mainRoleMatrixContainer', 'ALL', this)">Tất cả</button>
+                                <button type="button" class="misa-filter-chip" data-filter="GRANTED" onclick="setMatrixFilterChip('mainRoleMatrixContainer', 'GRANTED', this)">Đã cấp</button>
+                                <button type="button" class="misa-filter-chip" data-filter="DENIED" onclick="setMatrixFilterChip('mainRoleMatrixContainer', 'DENIED', this)">Chưa cấp</button>
                             </div>
                         </div>
 
@@ -233,82 +471,133 @@
 
 
 
-                            <!-- DANH SÁCH PHÂN HỆ & CHỨC NĂNG SIDEBAR (PHONG CÁCH MISA) -->
-                            <div class="d-flex flex-column gap-3 mb-4">
-                                <div th:each="moduleSec : ${misaModules}"
-                                     class="misa-module-section"
-                                     th:attr="data-module-key=${moduleSec.moduleKey}">
+                            <!-- DANH SÁCH MENU SIDEBAR & TAB NGHIỆP VỤ (ĐỒNG BỘ PHẲNG MỊN) -->
+                            <div class="misa-unified-matrix mb-4" id="mainSidebarList">
+                                <th:block th:each="grp : ${sidebarGroups}">
 
-                                    <!-- HEADER PHÂN HỆ (BẤM ĐỂ GOM / XỔ) -->
-                                    <div class="misa-module-header" onclick="toggleModuleCollapse(this.closest('.misa-module-section'))" title="Bấm để gom gọn hoặc xổ toạc phân hệ này">
-                                        <div class="misa-module-title">
-                                            <i class="bi bi-chevron-down misa-module-chevron me-1"></i>
-                                            <i class="bi text-primary" th:classappend="${moduleSec.moduleIcon}"></i>
-                                            <span th:text="${moduleSec.moduleTitle}">Tên phân hệ</span>
-                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-0 ms-2 misa-module-counter"
-                                                  style="font-size: 0.72rem; font-weight: 600;"
-                                                  th:text="|0 / ${moduleSec.groups.size()}|">0 / 7</span>
-                                        </div>
-                                        <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
-                                            <label class="d-inline-flex align-items-center gap-2 small fw-semibold text-secondary m-0"
-                                                   style="cursor: pointer;">
-                                                <input type="checkbox"
-                                                       class="form-check-input m-0 misa-module-master-check"
-                                                       th:disabled="${!selectedRoleEditable}">
-                                                <span>Chọn cả phân hệ</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <!-- THÂN PHÂN HỆ (CÁC DÒNG CHỨC NĂNG) -->
-                                    <div class="misa-module-body">
-                                        <!-- CÁC DÒNG CHỨC NĂNG (KHỚP 100% VỚI MENU TRÊN SIDEBAR) -->
-                                        <div th:each="grp : ${moduleSec.groups}"
-                                             class="misa-feature-row"
-                                             th:with="isRowChecked=${!grp.actions.isEmpty() and (isAdminRole ? true : selectedPermissionIds.contains(grp.actions[0].permissionId))}"
-                                             th:classappend="${isRowChecked ? 'is-granted' : ''}">
-                                            <div class="misa-feature-info">
-                                                <div class="misa-feature-name">
-                                                    <span class="misa-feature-icon">
-                                                        <i class="bi" th:classappend="${grp.iconClass}"></i>
-                                                    </span>
-                                                    <span th:text="${grp.groupTitle}">Tên chức năng trên Sidebar</span>
+                                    <!-- 1. MENU CÓ TAB NGANG CON -->
+                                    <div th:if="${grp.hasSubTabs}"
+                                         class="misa-feature-tree-group misa-matrix-row-item is-collapsed"
+                                         th:attr="data-group-key=${grp.groupKey},data-search-text=${#strings.toLowerCase(grp.groupTitle)}">
+                                        <div class="misa-feature-tree-header py-2 px-3 d-flex align-items-center justify-content-between"
+                                             style="cursor: pointer; user-select: none;"
+                                             onclick="toggleSubTabsDropdown(this.closest('.misa-feature-tree-group'))"
+                                             th:title="${grp.groupDescription}">
+                                            <div class="d-flex align-items-center gap-2 flex-shrink-0 min-w-0">
+                                                <span class="misa-tree-chevron text-muted d-flex align-items-center justify-content-center flex-shrink-0" style="width: 20px; height: 20px;">
+                                                    <i class="bi bi-chevron-down fs-6"></i>
+                                                </span>
+                                                <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                                                     style="width: 34px; height: 34px; background: #eff6ff; color: #2563eb;">
+                                                    <i class="bi fs-6" th:classappend="${grp.iconClass}"></i>
                                                 </div>
-                                                <p class="small text-muted mb-2 mt-1" th:text="${grp.groupDescription}">Mô tả chức năng...</p>
-                                                <div class="misa-sidebar-tags">
-                                                    <span class="text-muted" style="font-size: 0.72rem;">Menu Sidebar:</span>
-                                                    <span class="misa-sidebar-tag">
-                                                        <i class="bi bi-layout-sidebar-inset text-primary"></i>
-                                                        <span th:text="${grp.sidebarBadge}">Mục menu</span>
+                                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                    <span class="fw-bold text-dark text-nowrap" style="font-size: 0.94rem;" th:text="${grp.groupTitle}">Tên Menu</span>
+                                                    <span class="misa-mini-progress" title="Tỷ lệ tab được cấp">
+                                                        <span class="misa-mini-progress-bar d-block" style="width: 0%;"></span>
                                                     </span>
+                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-1 misa-subtabs-counter"
+                                                          style="font-size: 0.75rem;"
+                                                          th:text="|0 / ${grp.subTabs.size()}|">0 / 3</span>
                                                 </div>
                                             </div>
-
-                                            <!-- CÔNG TẮC BẬT/TẮT CHỨC NĂNG PHẲNG THEO MENU SIDEBAR -->
-                                            <div class="misa-feature-toggle">
-                                                <input type="checkbox"
-                                                       th:each="act : ${grp.actions}"
-                                                       class="d-none misa-action-check"
-                                                       name="permissionIds"
-                                                       th:value="${act.permissionId}"
-                                                       th:attr="data-code=${act.permissionCode}"
-                                                       th:checked="${isAdminRole ? true : selectedPermissionIds.contains(act.permissionId)}"
-                                                       th:disabled="${!selectedRoleEditable}">
-
-                                                <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                            <span class="misa-row-guide d-none d-sm-block"></span>
+                                            <div class="d-flex align-items-center gap-2 flex-shrink-0" onclick="event.stopPropagation()">
+                                                <span class="misa-switch-badge state-denied misa-group-status-badge">Chưa cấp</span>
+                                                <div class="form-check form-switch m-0 p-0 d-flex align-items-center" title="Bật / tắt toàn bộ tab trong menu này">
                                                     <input type="checkbox"
-                                                           class="form-check-input misa-menu-switch"
+                                                           class="form-check-input misa-group-master-switch m-0"
                                                            role="switch"
-                                                           th:checked="${isRowChecked}"
-                                                           th:disabled="${!selectedRoleEditable}">
-                                                    <span class="misa-switch-badge"
-                                                          th:classappend="${isRowChecked ? 'state-granted' : 'state-denied'}"
-                                                          th:text="${isRowChecked ? 'Được phép' : 'Chưa cấp'}">Chưa cấp</span>
+                                                           th:disabled="${!selectedRoleEditable}"
+                                                           onchange="toggleGroupMasterSwitch(this)">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- THÂN DROPDOWN TAB CON (CÂY PHÂN CẤP) -->
+                                        <div class="misa-subtabs-body ps-4 pe-3 py-2">
+                                            <div class="d-flex flex-column gap-2 ps-3 border-start border-2 border-primary-subtle">
+                                                <div th:each="tab : ${grp.subTabs}"
+                                                     class="misa-subtab-row misa-feature-row p-2 px-3 rounded-2 border d-flex align-items-center justify-content-between bg-white"
+                                                     th:with="isTabChecked=${!tab.actions.isEmpty() and selectedPermissionIds.contains(tab.actions[0].permissionId)}"
+                                                     th:classappend="${isTabChecked ? 'is-granted' : ''}"
+                                                     th:attr="data-search-text=${#strings.toLowerCase(tab.tabTitle)}">
+                                                    <div class="d-flex align-items-center gap-2 flex-shrink-0 min-w-0" th:title="${tab.tabDescription}">
+                                                        <i class="bi text-primary fs-6 flex-shrink-0" th:classappend="${tab.iconClass}"></i>
+                                                        <span class="fw-semibold text-dark text-nowrap" style="font-size: 0.88rem;" th:text="${tab.tabTitle}">Tên Tab</span>
+                                                        <i class="bi bi-info-circle text-muted opacity-50" style="font-size: 0.8rem;" th:title="${tab.tabDescription}"></i>
+                                                    </div>
+                                                    <span class="misa-row-guide d-none d-sm-block"></span>
+                                                    <div class="misa-feature-toggle d-flex align-items-center gap-2 flex-shrink-0">
+                                                        <input type="checkbox"
+                                                               th:each="act : ${tab.actions}"
+                                                               class="d-none misa-action-check"
+                                                               name="permissionIds"
+                                                               th:value="${act.permissionId}"
+                                                               th:attr="data-code=${act.permissionCode}"
+                                                               th:checked="${selectedPermissionIds.contains(act.permissionId)}"
+                                                               th:disabled="${!selectedRoleEditable}">
+                                                        <span class="misa-switch-badge"
+                                                              th:classappend="${isTabChecked ? 'state-granted' : 'state-denied'}"
+                                                              th:text="${isTabChecked ? 'Được phép' : 'Chưa cấp'}">Chưa cấp</span>
+                                                        <div class="form-check form-switch m-0 p-0 d-flex align-items-center">
+                                                            <input type="checkbox"
+                                                                   class="form-check-input misa-menu-switch m-0"
+                                                                   role="switch"
+                                                                   th:checked="${isTabChecked}"
+                                                                   th:disabled="${!selectedRoleEditable}">
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+
+                                    <!-- 2. MENU ĐƠN LẺ (KHÔNG CÓ TAB CON) -->
+                                    <div th:unless="${grp.hasSubTabs}"
+                                         class="misa-feature-row misa-single-menu-row misa-matrix-row-item py-2 px-3 d-flex align-items-center justify-content-between"
+                                         th:with="isRowChecked=${!grp.actions.isEmpty() and selectedPermissionIds.contains(grp.actions[0].permissionId)}"
+                                         th:classappend="${isRowChecked ? 'is-granted' : ''}"
+                                         th:attr="data-search-text=${#strings.toLowerCase(grp.groupTitle)}"
+                                         th:title="${grp.groupDescription}">
+                                        <div class="d-flex align-items-center gap-2 flex-shrink-0 min-w-0">
+                                            <span class="text-muted opacity-50 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 20px; height: 20px;">
+                                                <i class="bi bi-dot fs-5"></i>
+                                            </span>
+                                            <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                                                 style="width: 34px; height: 34px; background: #eff6ff; color: #2563eb;">
+                                                <i class="bi fs-6" th:classappend="${grp.iconClass}"></i>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <span class="fw-bold text-dark text-nowrap" style="font-size: 0.94rem;" th:text="${grp.groupTitle}">Tên Menu</span>
+                                                <span class="badge bg-light text-muted border rounded-pill px-2 py-1 fw-normal" style="font-size: 0.72rem;">Menu đơn</span>
+                                                <i class="bi bi-info-circle text-muted opacity-50" style="font-size: 0.8rem;" th:title="${grp.groupDescription}"></i>
+                                            </div>
+                                        </div>
+                                        <span class="misa-row-guide d-none d-sm-block"></span>
+                                        <div class="misa-feature-toggle d-flex align-items-center gap-2 flex-shrink-0">
+                                            <input type="checkbox"
+                                                   th:each="act : ${grp.actions}"
+                                                   class="d-none misa-action-check"
+                                                   name="permissionIds"
+                                                   th:value="${act.permissionId}"
+                                                   th:attr="data-code=${act.permissionCode}"
+                                                   th:checked="${selectedPermissionIds.contains(act.permissionId)}"
+                                                   th:disabled="${!selectedRoleEditable}">
+                                            <span class="misa-switch-badge"
+                                                  th:classappend="${isRowChecked ? 'state-granted' : 'state-denied'}"
+                                                  th:text="${isRowChecked ? 'Được phép' : 'Chưa cấp'}">Chưa cấp</span>
+                                            <div class="form-check form-switch m-0 p-0 d-flex align-items-center">
+                                                <input type="checkbox"
+                                                       class="form-check-input misa-menu-switch m-0"
+                                                       role="switch"
+                                                       th:checked="${isRowChecked}"
+                                                       th:disabled="${!selectedRoleEditable}">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </th:block>
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center pt-3 border-top" th:if="${selectedRoleEditable}">
@@ -360,91 +649,169 @@
                 </div>
 
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-                        <h6 class="fw-bold mb-0">
-                            <i class="bi bi-sliders text-primary me-1"></i>Phân quyền chức năng theo Sidebar:
-                        </h6>
                         <div class="d-flex align-items-center gap-2">
-                            <span id="modalSelectedCountBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1" th:attr="data-total-perms=${totalPermissionsCount}">0 / 41 quyền</span>
+                            <h6 class="fw-bold mb-0">
+                                <i class="bi bi-sliders text-primary me-1"></i>Phân quyền chức năng theo Sidebar:
+                            </h6>
+                            <span id="modalSelectedCountBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1" th:attr="data-total-perms=${totalPermissionsCount}">0 / 61 quyền</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
                             <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleContainerPermissions('modalRoleMatrixContainer', true)">
-                                Cho phép tất cả
+                                <i class="bi bi-check2-all me-1"></i>Cho phép tất cả
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleContainerPermissions('modalRoleMatrixContainer', false)">
-                                Bỏ chọn hết
+                                Bỏ chọn
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleAllModules('modalRoleMatrixContainer', false)" title="Gom gọn tất cả phân hệ">
-                                <i class="bi bi-arrows-collapse"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleAllModules('modalRoleMatrixContainer', true)" title="Xổ toạc tất cả phân hệ">
-                                <i class="bi bi-arrows-expand"></i>
-                            </button>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-secondary" onclick="toggleAllModules('modalRoleMatrixContainer', false)" title="Thu gọn tất cả">
+                                    <i class="bi bi-arrows-collapse me-1"></i>Thu gọn
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="toggleAllModules('modalRoleMatrixContainer', true)" title="Mở rộng tất cả">
+                                    <i class="bi bi-arrows-expand me-1"></i>Mở rộng
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="d-flex flex-column gap-3">
-                        <div th:each="moduleSec : ${misaModules}" class="misa-module-section" th:attr="data-module-key=${moduleSec.moduleKey}">
-                            <div class="misa-module-header" onclick="toggleModuleCollapse(this.closest('.misa-module-section'))" title="Bấm để gom gọn hoặc xổ toạc phân hệ này">
-                                <div class="misa-module-title">
-                                    <i class="bi bi-chevron-down misa-module-chevron me-1"></i>
-                                    <i class="bi text-primary" th:classappend="${moduleSec.moduleIcon}"></i>
-                                    <span th:text="${moduleSec.moduleTitle}">Tên phân hệ</span>
-                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-0 ms-2 misa-module-counter"
-                                          style="font-size: 0.72rem; font-weight: 600;"
-                                          th:text="|0 / ${moduleSec.groups.size()}|">0 / 7</span>
-                                </div>
-                                <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
-                                    <label class="d-inline-flex align-items-center gap-2 small fw-semibold text-secondary m-0" style="cursor: pointer;">
-                                        <input type="checkbox" class="form-check-input m-0 misa-module-master-check">
-                                        <span>Chọn cả phân hệ</span>
-                                    </label>
-                                </div>
-                            </div>
+                    <!-- THANH TÌM KIẾM & LỌC QUYỀN NHANH TRONG MODAL -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                        <div class="position-relative flex-grow-1" style="max-width: 340px;">
+                            <i class="bi bi-search position-absolute text-muted" style="left: 11px; top: 50%; transform: translateY(-50%); font-size: 0.85rem;"></i>
+                            <input type="search"
+                                   class="form-control form-control-sm ps-4 misa-perm-search"
+                                   style="padding-left: 32px !important; border-radius: 8px;"
+                                   placeholder="Tìm menu hoặc tên quyền..."
+                                   oninput="filterRoleMatrix('modalRoleMatrixContainer')">
+                        </div>
+                        <div class="misa-filter-chips" role="group" aria-label="Lọc trạng thái quyền">
+                            <button type="button" class="misa-filter-chip is-active" data-filter="ALL" onclick="setMatrixFilterChip('modalRoleMatrixContainer', 'ALL', this)">Tất cả</button>
+                            <button type="button" class="misa-filter-chip" data-filter="GRANTED" onclick="setMatrixFilterChip('modalRoleMatrixContainer', 'GRANTED', this)">Đã cấp</button>
+                            <button type="button" class="misa-filter-chip" data-filter="DENIED" onclick="setMatrixFilterChip('modalRoleMatrixContainer', 'DENIED', this)">Chưa cấp</button>
+                        </div>
+                    </div>
 
-                            <div class="misa-module-body">
-                                <div th:each="grp : ${moduleSec.groups}"
-                                     class="misa-feature-row"
-                                     th:with="isRowChecked=${!grp.actions.isEmpty() and grp.actions[0].permissionCode == 'SCHEDULE_MY'}"
-                                     th:classappend="${isRowChecked ? 'is-granted' : ''}">
-                                    <div class="misa-feature-info">
-                                        <div class="misa-feature-name">
-                                            <span class="misa-feature-icon">
-                                                <i class="bi" th:classappend="${grp.iconClass}"></i>
-                                            </span>
-                                            <span class="fw-semibold text-dark" th:text="${grp.groupTitle}">Tên chức năng</span>
+                    <!-- DANH SÁCH MENU SIDEBAR & TAB CON TRONG MODAL (ĐỒNG BỘ PHẲNG MỊN) -->
+                    <div class="misa-unified-matrix mb-3" id="modalSidebarList">
+                        <th:block th:each="grp : ${sidebarGroups}">
+
+                            <!-- 1. MENU CÓ TAB NGANG CON -->
+                            <div th:if="${grp.hasSubTabs}"
+                                 class="misa-feature-tree-group misa-matrix-row-item is-collapsed"
+                                 th:attr="data-group-key=${grp.groupKey},data-search-text=${#strings.toLowerCase(grp.groupTitle)}">
+                                <div class="misa-feature-tree-header py-2 px-3 d-flex align-items-center justify-content-between"
+                                     style="cursor: pointer; user-select: none;"
+                                     onclick="toggleSubTabsDropdown(this.closest('.misa-feature-tree-group'))"
+                                     th:title="${grp.groupDescription}">
+                                    <div class="d-flex align-items-center gap-2 flex-shrink-0 min-w-0">
+                                        <span class="misa-tree-chevron text-muted d-flex align-items-center justify-content-center flex-shrink-0" style="width: 20px; height: 20px;">
+                                            <i class="bi bi-chevron-down fs-6"></i>
+                                        </span>
+                                        <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                                             style="width: 34px; height: 34px; background: #eff6ff; color: #2563eb;">
+                                            <i class="bi fs-6" th:classappend="${grp.iconClass}"></i>
                                         </div>
-                                        <p class="small text-muted mb-2 mt-1" th:text="${grp.groupDescription}">Mô tả chức năng...</p>
-                                        <div class="misa-sidebar-tags">
-                                            <span class="text-muted" style="font-size: 0.72rem;">Menu Sidebar:</span>
-                                            <span class="misa-sidebar-tag">
-                                                <i class="bi bi-layout-sidebar-inset text-primary"></i>
-                                                <span th:text="${grp.sidebarBadge}">Mục menu</span>
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 0.94rem;" th:text="${grp.groupTitle}">Tên Menu</span>
+                                            <span class="misa-mini-progress" title="Tỷ lệ tab được cấp">
+                                                <span class="misa-mini-progress-bar d-block" style="width: 0%;"></span>
                                             </span>
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-1 misa-subtabs-counter"
+                                                  style="font-size: 0.75rem;"
+                                                  th:text="|0 / ${grp.subTabs.size()}|">0 / 3</span>
                                         </div>
                                     </div>
-
-                                    <div class="misa-feature-toggle">
-                                        <input type="checkbox"
-                                               th:each="act : ${grp.actions}"
-                                               class="d-none misa-action-check"
-                                               name="permissionIds"
-                                               th:value="${act.permissionId}"
-                                               th:attr="data-code=${act.permissionCode}"
-                                               th:checked="${act.permissionCode == 'SCHEDULE_MY'}">
-
-                                        <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                    <span class="misa-row-guide d-none d-sm-block"></span>
+                                    <div class="d-flex align-items-center gap-2 flex-shrink-0" onclick="event.stopPropagation()">
+                                        <span class="misa-switch-badge state-denied misa-group-status-badge">Chưa cấp</span>
+                                        <div class="form-check form-switch m-0 p-0 d-flex align-items-center" title="Bật / tắt toàn bộ tab trong menu này">
                                             <input type="checkbox"
-                                                   class="form-check-input misa-menu-switch"
+                                                   class="form-check-input misa-group-master-switch m-0"
                                                    role="switch"
-                                                   th:checked="${isRowChecked}">
-                                            <span class="misa-switch-badge"
-                                                  th:classappend="${isRowChecked ? 'state-granted' : 'state-denied'}"
-                                                  th:text="${isRowChecked ? 'Được phép' : 'Chưa cấp'}">Chưa cấp</span>
+                                                   onchange="toggleGroupMasterSwitch(this)">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="misa-subtabs-body ps-4 pe-3 py-2">
+                                    <div class="d-flex flex-column gap-2 ps-3 border-start border-2 border-primary-subtle">
+                                        <div th:each="tab : ${grp.subTabs}"
+                                             class="misa-subtab-row misa-feature-row p-2 px-3 rounded-2 border d-flex align-items-center justify-content-between bg-white"
+                                             th:with="isTabChecked=${!tab.actions.isEmpty() and tab.actions[0].permissionCode == 'SCHEDULE_MY'}"
+                                             th:classappend="${isTabChecked ? 'is-granted' : ''}"
+                                             th:attr="data-search-text=${#strings.toLowerCase(tab.tabTitle)}">
+                                            <div class="d-flex align-items-center gap-2 flex-shrink-0 min-w-0" th:title="${tab.tabDescription}">
+                                                <i class="bi text-primary fs-6 flex-shrink-0" th:classappend="${tab.iconClass}"></i>
+                                                <span class="fw-semibold text-dark text-nowrap" style="font-size: 0.88rem;" th:text="${tab.tabTitle}">Tên Tab</span>
+                                                <i class="bi bi-info-circle text-muted opacity-50" style="font-size: 0.8rem;" th:title="${tab.tabDescription}"></i>
+                                            </div>
+                                            <span class="misa-row-guide d-none d-sm-block"></span>
+                                            <div class="misa-feature-toggle d-flex align-items-center gap-2 flex-shrink-0">
+                                                <input type="checkbox"
+                                                       th:each="act : ${tab.actions}"
+                                                       class="d-none misa-action-check"
+                                                       name="permissionIds"
+                                                       th:value="${act.permissionId}"
+                                                       th:attr="data-code=${act.permissionCode}"
+                                                       th:checked="${act.permissionCode == 'SCHEDULE_MY'}">
+                                                <span class="misa-switch-badge"
+                                                      th:classappend="${isTabChecked ? 'state-granted' : 'state-denied'}"
+                                                      th:text="${isTabChecked ? 'Được phép' : 'Chưa cấp'}">Chưa cấp</span>
+                                                <div class="form-check form-switch m-0 p-0 d-flex align-items-center">
+                                                    <input type="checkbox"
+                                                           class="form-check-input misa-menu-switch m-0"
+                                                           role="switch"
+                                                           th:checked="${isTabChecked}">
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
+
+                            <!-- 2. MENU ĐƠN LẺ (KHÔNG CÓ TAB CON) -->
+                            <div th:unless="${grp.hasSubTabs}"
+                                 class="misa-feature-row misa-single-menu-row misa-matrix-row-item py-2 px-3 d-flex align-items-center justify-content-between"
+                                 th:with="isRowChecked=${!grp.actions.isEmpty() and grp.actions[0].permissionCode == 'SCHEDULE_MY'}"
+                                 th:classappend="${isRowChecked ? 'is-granted' : ''}"
+                                 th:attr="data-search-text=${#strings.toLowerCase(grp.groupTitle)}"
+                                 th:title="${grp.groupDescription}">
+                                <div class="d-flex align-items-center gap-2 flex-shrink-0 min-w-0">
+                                    <span class="text-muted opacity-50 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 20px; height: 20px;">
+                                        <i class="bi bi-dot fs-5"></i>
+                                    </span>
+                                    <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+                                         style="width: 34px; height: 34px; background: #eff6ff; color: #2563eb;">
+                                        <i class="bi fs-6" th:classappend="${grp.iconClass}"></i>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="fw-bold text-dark text-nowrap" style="font-size: 0.94rem;" th:text="${grp.groupTitle}">Tên Menu</span>
+                                        <span class="badge bg-light text-muted border rounded-pill px-2 py-1 fw-normal" style="font-size: 0.72rem;">Menu đơn</span>
+                                        <i class="bi bi-info-circle text-muted opacity-50" style="font-size: 0.8rem;" th:title="${grp.groupDescription}"></i>
+                                    </div>
+                                </div>
+                                <span class="misa-row-guide d-none d-sm-block"></span>
+                                <div class="misa-feature-toggle d-flex align-items-center gap-2 flex-shrink-0">
+                                    <input type="checkbox"
+                                           th:each="act : ${grp.actions}"
+                                           class="d-none misa-action-check"
+                                           name="permissionIds"
+                                           th:value="${act.permissionId}"
+                                           th:attr="data-code=${act.permissionCode}"
+                                           th:checked="${act.permissionCode == 'SCHEDULE_MY'}">
+                                    <span class="misa-switch-badge"
+                                          th:classappend="${isRowChecked ? 'state-granted' : 'state-denied'}"
+                                          th:text="${isRowChecked ? 'Được phép' : 'Chưa cấp'}">Chưa cấp</span>
+                                    <div class="form-check form-switch m-0 p-0 d-flex align-items-center">
+                                        <input type="checkbox"
+                                               class="form-check-input misa-menu-switch m-0"
+                                               role="switch"
+                                               th:checked="${isRowChecked}">
+                                    </div>
+                                </div>
+                            </div>
+
+                        </th:block>
+                    </div></div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
                     <button type="submit" class="btn btn-primary px-4">
@@ -468,6 +835,167 @@
      * Nếu có bất kỳ action nào được tích -> Switch bật ON và hiện badge "Được phép".
      * Nếu không có action nào được tích -> Switch tắt OFF và hiện badge "Chưa cấp".
      */
+    function toggleSubTabsDropdown(groupEl) {
+        if (!groupEl) return;
+        groupEl.classList.toggle('is-collapsed');
+    }
+
+    function toggleGroupMasterSwitch(masterSwitch) {
+        var groupEl = masterSwitch.closest('.misa-feature-tree-group');
+        var container = masterSwitch.closest('#mainRoleMatrixContainer, #modalRoleMatrixContainer');
+        if (!groupEl) return;
+        var isChecked = masterSwitch.checked;
+
+        groupEl.querySelectorAll('.misa-action-check:not(:disabled)').forEach(function (cb) {
+            cb.checked = isChecked;
+        });
+
+        groupEl.querySelectorAll('.misa-feature-row').forEach(function (r) {
+            syncMisaRowState(r, false);
+        });
+
+        syncGroupMasterState(groupEl);
+        if (container) syncContainerCounter(container);
+    }
+
+    function syncGroupMasterState(groupEl) {
+        if (!groupEl) return;
+        var masterSwitch = groupEl.querySelector('.misa-group-master-switch');
+        var statusBadge = groupEl.querySelector('.misa-group-status-badge');
+        var counterBadge = groupEl.querySelector('.misa-subtabs-counter');
+        var progressBar = groupEl.querySelector('.misa-mini-progress-bar');
+        var rows = groupEl.querySelectorAll('.misa-subtab-row');
+        if (!rows.length) return;
+
+        var activeRows = Array.from(rows).filter(function (r) {
+            var sw = r.querySelector('.misa-menu-switch');
+            return sw && sw.checked;
+        });
+
+        var pct = Math.round((activeRows.length * 100) / rows.length);
+
+        if (masterSwitch) {
+            if (activeRows.length === rows.length) {
+                masterSwitch.checked = true;
+                masterSwitch.indeterminate = false;
+            } else if (activeRows.length === 0) {
+                masterSwitch.checked = false;
+                masterSwitch.indeterminate = false;
+            } else {
+                masterSwitch.checked = false;
+                masterSwitch.indeterminate = true;
+            }
+        }
+
+        if (progressBar) {
+            progressBar.style.width = pct + '%';
+            progressBar.style.backgroundColor = (activeRows.length === rows.length)
+                ? '#16a34a'
+                : (activeRows.length > 0 ? '#2563eb' : '#cbd5e1');
+        }
+
+        if (statusBadge) {
+            if (activeRows.length === rows.length) {
+                statusBadge.textContent = 'Được phép';
+                statusBadge.className = 'misa-switch-badge state-granted misa-group-status-badge';
+            } else if (activeRows.length > 0) {
+                statusBadge.textContent = 'Một phần';
+                statusBadge.className = 'misa-switch-badge state-partial misa-group-status-badge';
+            } else {
+                statusBadge.textContent = 'Chưa cấp';
+                statusBadge.className = 'misa-switch-badge state-denied misa-group-status-badge';
+            }
+        }
+
+        if (counterBadge) {
+            counterBadge.innerHTML = '<strong>' + activeRows.length + '</strong> / ' + rows.length;
+            if (activeRows.length === rows.length) {
+                counterBadge.className = 'badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 misa-subtabs-counter';
+            } else if (activeRows.length > 0) {
+                counterBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1 misa-subtabs-counter';
+            } else {
+                counterBadge.className = 'badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-1 misa-subtabs-counter';
+            }
+        }
+    }
+
+    function toggleAllModulesAuto(containerId, btn) {
+        var expanded = btn.getAttribute('data-expanded') === 'true';
+        var nextState = !expanded;
+        toggleAllModules(containerId, nextState);
+        btn.setAttribute('data-expanded', String(nextState));
+        btn.innerHTML = nextState
+            ? '<i class="bi bi-arrows-collapse me-1"></i><span>Thu gọn</span>'
+            : '<i class="bi bi-arrows-expand me-1"></i><span>Mở rộng</span>';
+    }
+
+    function setMatrixFilterChip(containerId, filterMode, chipBtn) {
+        var container = document.getElementById(containerId);
+        if (!container) return;
+        container.querySelectorAll('.misa-filter-chip').forEach(function (c) {
+            c.classList.remove('is-active');
+        });
+        if (chipBtn) chipBtn.classList.add('is-active');
+        container.setAttribute('data-status-filter', filterMode);
+        filterRoleMatrix(containerId);
+    }
+
+    function filterRoleMatrix(containerId) {
+        var container = document.getElementById(containerId);
+        if (!container) return;
+        var searchInput = container.querySelector('.misa-perm-search');
+        var q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+        var mode = container.getAttribute('data-status-filter') || 'ALL';
+
+        container.querySelectorAll('.misa-matrix-row-item').forEach(function (item) {
+            if (item.classList.contains('misa-feature-tree-group')) {
+                var groupText = (item.getAttribute('data-search-text') || '').toLowerCase();
+                var subRows = item.querySelectorAll('.misa-subtab-row');
+                var visibleSubs = 0;
+
+                subRows.forEach(function (sub) {
+                    var subText = (sub.getAttribute('data-search-text') || '').toLowerCase();
+                    var sw = sub.querySelector('.misa-menu-switch');
+                    var isGranted = sw && sw.checked;
+
+                    var matchText = !q || groupText.indexOf(q) !== -1 || subText.indexOf(q) !== -1;
+                    var matchMode = mode === 'ALL'
+                        || (mode === 'GRANTED' && isGranted)
+                        || (mode === 'DENIED' && !isGranted);
+
+                    if (matchText && matchMode) {
+                        sub.classList.remove('misa-filtered-hidden');
+                        visibleSubs++;
+                    } else {
+                        sub.classList.add('misa-filtered-hidden');
+                    }
+                });
+
+                if (visibleSubs > 0) {
+                    item.classList.remove('misa-filtered-hidden');
+                    if (q || mode !== 'ALL') {
+                        item.classList.remove('is-collapsed');
+                    }
+                } else {
+                    item.classList.add('misa-filtered-hidden');
+                }
+            } else {
+                var rowText = (item.getAttribute('data-search-text') || '').toLowerCase();
+                var rowSw = item.querySelector('.misa-menu-switch');
+                var rowGranted = rowSw && rowSw.checked;
+                var rowMatchText = !q || rowText.indexOf(q) !== -1;
+                var rowMatchMode = mode === 'ALL'
+                    || (mode === 'GRANTED' && rowGranted)
+                    || (mode === 'DENIED' && !rowGranted);
+                if (rowMatchText && rowMatchMode) {
+                    item.classList.remove('misa-filtered-hidden');
+                } else {
+                    item.classList.add('misa-filtered-hidden');
+                }
+            }
+        });
+    }
+
     function syncMisaRowState(row) {
         var actions = Array.from(row.querySelectorAll('.misa-action-check'));
         var menuSwitch = row.querySelector('.misa-menu-switch');
@@ -522,11 +1050,11 @@
     function toggleAllModules(containerId, expand) {
         var container = document.getElementById(containerId);
         if (!container) return;
-        container.querySelectorAll('.misa-module-section').forEach(function (sec) {
+        container.querySelectorAll('.misa-feature-tree-group').forEach(function (grp) {
             if (expand) {
-                sec.classList.remove('is-collapsed');
+                grp.classList.remove('is-collapsed');
             } else {
-                sec.classList.add('is-collapsed');
+                grp.classList.add('is-collapsed');
             }
         });
     }
@@ -602,8 +1130,11 @@
     function refreshAllMisaStates(container) {
         if (!container) return;
         container.querySelectorAll('.misa-feature-row').forEach(syncMisaRowState);
-        container.querySelectorAll('.misa-module-section').forEach(syncMisaModuleState);
+        container.querySelectorAll('.misa-feature-tree-group').forEach(syncGroupMasterState);
         syncContainerCounter(container);
+        if (container.id) {
+            filterRoleMatrix(container.id);
+        }
     }
 
     function toggleContainerPermissions(containerId, checked) {
@@ -612,6 +1143,13 @@
         container.querySelectorAll('.misa-action-check:not(:disabled)').forEach(function (cb) {
             cb.checked = checked;
         });
+        // Tự động đưa bộ lọc về "Tất cả" để không bị ẩn nhóm sau khi Cho phép tất cả / Bỏ chọn
+        var allChip = container.querySelector('.misa-filter-chip[data-filter="ALL"]');
+        if (allChip) {
+            container.querySelectorAll('.misa-filter-chip').forEach(function (c) { c.classList.remove('is-active'); });
+            allChip.classList.add('is-active');
+            container.setAttribute('data-status-filter', 'ALL');
+        }
         refreshAllMisaStates(container);
     }
 
@@ -642,7 +1180,7 @@
         document.querySelectorAll('.misa-menu-switch').forEach(function (sw) {
             sw.addEventListener('change', function () {
                 var row = sw.closest('.misa-feature-row');
-                var modSec = sw.closest('.misa-module-section');
+                var groupEl = sw.closest('.misa-feature-tree-group');
                 var container = sw.closest('#mainRoleMatrixContainer, #modalRoleMatrixContainer');
                 if (!row) return;
 
@@ -652,7 +1190,7 @@
                 });
 
                 syncMisaRowState(row);
-                if (modSec) syncMisaModuleState(modSec);
+                if (groupEl) syncGroupMasterState(groupEl);
                 if (container) syncContainerCounter(container);
             });
         });
@@ -676,6 +1214,29 @@
 
         refreshAllMisaStates(document.getElementById('mainRoleMatrixContainer'));
         refreshAllMisaStates(document.getElementById('modalRoleMatrixContainer'));
+
+        // Tự động sinh mã vai trò từ Tên hiển thị vai trò
+        var newRoleDisplayName = document.getElementById('newRoleDisplayName');
+        var newRoleName = document.getElementById('newRoleName');
+        if (newRoleDisplayName && newRoleName) {
+            newRoleDisplayName.addEventListener('input', function () {
+                if (!newRoleName.dataset.userEdited) {
+                    var val = this.value || '';
+                    var slug = val.normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .replace(/[đĐ]/g, 'd')
+                        .replace(/[^a-zA-Z0-9\s_-]/g, '')
+                        .trim()
+                        .replace(/[\s-]+/g, '_')
+                        .toUpperCase();
+                    newRoleName.value = slug;
+                }
+            });
+            newRoleName.addEventListener('input', function () {
+                this.dataset.userEdited = 'true';
+            });
+        }
+    });
 
     /**
      * Xác nhận khi xóa vĩnh viễn vai trò
@@ -704,29 +1265,6 @@
             return confirm('Bạn có chắc chắn muốn kích hoạt lại vai trò "' + roleName + '"?');
         }
     }
-
-    // Tự động sinh mã vai trò từ Tên hiển thị vai trò
-        var newRoleDisplayName = document.getElementById('newRoleDisplayName');
-        var newRoleName = document.getElementById('newRoleName');
-        if (newRoleDisplayName && newRoleName) {
-            newRoleDisplayName.addEventListener('input', function () {
-                if (!newRoleName.dataset.userEdited) {
-                    var val = this.value || '';
-                    var slug = val.normalize('NFD')
-                        .replace(/[\u0300-\u036f]/g, '')
-                        .replace(/[đĐ]/g, 'd')
-                        .replace(/[^a-zA-Z0-9\s_-]/g, '')
-                        .trim()
-                        .replace(/[\s-]+/g, '_')
-                        .toUpperCase();
-                    newRoleName.value = slug;
-                }
-            });
-            newRoleName.addEventListener('input', function () {
-                this.dataset.userEdited = 'true';
-            });
-        }
-    });
 </script>
 </body>
 </html>

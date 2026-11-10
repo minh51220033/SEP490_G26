@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head(${period.periodName} + ' - FT32')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head(${period.periodName})}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
 </head>
 <body class="app-body fin-brand-theme">
@@ -164,10 +164,13 @@
             </div>
 
             <!-- Payroll Items Table (SCR-32.2) -->
-            <div class="fin-card">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-people-fill text-primary me-2"></i>Danh sách bảng lương nhân sự (<span th:text="${items.size()}"></span> nhân viên)</h5>
-                    <span class="text-muted small">Cơ chế: Lương cố định tháng + Phụ cấp. Chấm công tham khảo hiển thị.</span>
+            <div class="fin-card fin-table-card p-0 mb-4">
+                <div class="fin-grid-topbar d-flex justify-content-between align-items-center">
+                    <div class="fin-grid-info">
+                        Hiển thị <span class="fw-bold" th:text="${items != null ? items.size() : 0}">0</span> nhân viên trong bảng lương
+                        <span class="text-muted">&bull; Cơ chế: Lương cố định tháng + Phụ cấp. Chấm công tham khảo</span>
+                    </div>
+                    <div></div>
                 </div>
 
                 <div class="table-responsive">
@@ -267,6 +270,13 @@
                         </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Phân trang MISA -->
+                <div class="misa-pagination-footer" th:if="${items != null and !items.isEmpty()}">
+                    <div class="misa-total-count">
+                        Tổng số: <strong th:text="${items.size()}">0</strong> nhân viên
+                    </div>
                 </div>
             </div>
         </main>
@@ -437,12 +447,12 @@
                     <div class="mb-3">
                         <label for="payReference" class="form-label">Mã giao dịch / Số tham chiếu ngân hàng</label>
                         <input type="text" id="payReference" name="paymentReference" class="form-control"
-                               placeholder="Ví dụ: FT2026103001">
+                               placeholder="Ví dụ: GD2026103001">
                     </div>
 
                     <div class="alert alert-warning py-2 small mb-0">
                         <i class="bi bi-info-circle me-1"></i>
-                        Khi bấm xác nhận, các đơn tạm ứng sẽ được tất toán tự động và hệ thống sẽ tự động tạo một phiếu chi chi phí vận hành (FT25) duy nhất cho bảng lương này.
+                        Khi bấm xác nhận, các đơn tạm ứng sẽ được tất toán tự động và hệ thống sẽ tự động tạo một phiếu chi chi phí vận hành duy nhất cho bảng lương này.
                     </div>
                 </div>
                 <div class="modal-footer">

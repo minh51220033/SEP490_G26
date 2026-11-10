@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    THANH TAB NGANG CHO PHÂN HỆ QUẢN LÝ NHÂN SỰ
+    Kiểu dáng Compact Pill Buttons chuẩn DentalSoft (Đồng bộ phân hệ Chi phí & Thu nhập)
+    Điều hướng chuẩn 100%, bảo toàn CSS và chống xung đột giật màn hình
+    active: 'staffs' | 'schedules' | 'attendance' | 'leaves'
+-->
+<nav th:fragment="hrTabs(active)" class="hr-tabs-nav" aria-label="Phân hệ Quản lý nhân sự">
+    <style>
+        .hr-tabs-nav {
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .hr-tabs-list {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .hr-tab-item {
+            display: inline-flex;
+        }
+
+        .hr-tab-btn {
+            border: 1px solid #d1d5db;
+            border-radius: 5px;
+            color: #374151;
+            font-weight: 500;
+            font-size: 13px;
+            padding: 5px 12px;
+            background: #ffffff;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1.4;
+            cursor: pointer;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .hr-tab-btn:hover {
+            border-color: #9ca3af;
+            background: #f9fafb;
+            color: #111827;
+        }
+
+        .hr-tab-btn.active {
+            border-color: #2563eb !important;
+            color: #2563eb !important;
+            background: #eff6ff !important;
+            font-weight: 600;
+            box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+        }
+
+        .hr-tab-btn i {
+            font-size: 14px;
+        }
+    </style>
+    <ul class="hr-tabs-list" id="hrTabsList">
+        <!-- 1. Hồ sơ nhân sự -->
+        <li class="hr-tab-item"
+            th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'STAFF_MANAGE'))}">
+            <a th:href="@{/admin/staffs}"
+               class="hr-tab-btn"
+               th:classappend="${active == 'staffs'} ? 'active' : ''">
+                <i class="bi bi-person-badge" aria-hidden="true"></i>
+                <span>Hồ sơ nhân sự</span>
+            </a>
+        </li>
+
+        <!-- 2. Phân ca làm việc -->
+        <li class="hr-tab-item"
+            th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'SCHEDULE_MANAGE'))}">
+            <a th:href="@{/admin/schedules}"
+               class="hr-tab-btn"
+               th:classappend="${active == 'schedules'} ? 'active' : ''">
+                <i class="bi bi-calendar-range" aria-hidden="true"></i>
+                <span>Phân ca làm việc</span>
+            </a>
+        </li>
+
+        <!-- 3. Chấm công chi nhánh -->
+        <li class="hr-tab-item"
+            th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'HR_BRANCH_ATTENDANCE'))}">
+            <a th:href="@{/admin/attendance}"
+               class="hr-tab-btn"
+               th:classappend="${active == 'attendance'} ? 'active' : ''">
+                <i class="bi bi-fingerprint" aria-hidden="true"></i>
+                <span>Chấm công chi nhánh</span>
+            </a>
+        </li>
+
+        <!-- 4. Duyệt nghỉ phép -->
+        <li class="hr-tab-item"
+            th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_APPROVE'))}">
+            <a th:href="@{/admin/leave-requests}"
+               class="hr-tab-btn"
+               th:classappend="${active == 'leaves'} ? 'active' : ''">
+                <i class="bi bi-calendar-check" aria-hidden="true"></i>
+                <span>Duyệt nghỉ phép</span>
+            </a>
+        </li>
+    </ul>
+
+    <script>
+        (function () {
+            const prefetched = new Set();
+            function prefetch(url) {
+                if (!url || prefetched.has(url) || url.startsWith('#') || url.startsWith('javascript:')) return;
+                prefetched.add(url);
+                const l = document.createElement('link');
+                l.rel = 'prefetch';
+                l.href = url;
+                l.as = 'document';
+                document.head.appendChild(l);
+            }
+
+            document.querySelectorAll('.hr-tab-btn').forEach(function (btn) {
+                const href = btn.getAttribute('href');
+                btn.addEventListener('mouseenter', function () { prefetch(href); }, { passive: true });
+                btn.addEventListener('touchstart', function () { prefetch(href); }, { passive: true });
+                btn.addEventListener('click', function (e) {
+                    if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+                    document.querySelectorAll('.hr-tab-btn').forEach(function (b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                });
+            });
+        })();
+    </script>
+</nav>
+</body>
+</html>

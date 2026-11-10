@@ -6,6 +6,7 @@ import com.cvdcms.DTO.PitCalculationResult;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
+import com.cvdcms.repository.ServiceCommissionRepository;
 import com.cvdcms.service.PayrollService;
 import com.cvdcms.service.TaxCalculationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -283,8 +284,21 @@ public class PayrollServiceImpl implements PayrollService {
             item.setDeductionAmount(deduction);
             item.setNote(note);
 
-            // Hoa hồng bác sĩ: Mặc định không kích hoạt (0đ)
-            item.setTotalCommission(BigDecimal.ZERO);
+            // Hoa hồng bác sĩ / nhân viên theo dịch vụ thực hiện trong kỳ
+            BigDecimal commission = BigDecimal.ZERO;
+            if (serviceCommissionRepository != null) {
+                LocalDateTime startDateTime = periodStartDate.atStartOfDay();
+                LocalDateTime endDateTime = periodEndDate.atTime(java.time.LocalTime.MAX);
+                commission = serviceCommissionRepository.sumUnpaidCommissionsForStaffInPeriod(
+                        staff.getStaffId(),
+                        startDateTime,
+                        endDateTime
+                );
+                if (commission == null) {
+                    commission = BigDecimal.ZERO;
+                }
+            }
+            item.setTotalCommission(commission);
 
             // Thu nhập Gross = Lương cơ bản + Phụ cấp + Thưởng + Hoa hồng
             BigDecimal grossSalary = base.add(allowance).add(bonus).add(item.getTotalCommission());
@@ -347,6 +361,21 @@ public class PayrollServiceImpl implements PayrollService {
                 alloc.setPayrollItem(savedItem != null ? savedItem : item);
                 salaryAdvanceAllocationRepository.save(alloc);
             }
+
+            if (serviceCommissionRepository != null && item.getTotalCommission().compareTo(BigDecimal.ZERO) > 0) {
+                LocalDateTime startDateTime = periodStartDate.atStartOfDay();
+                LocalDateTime endDateTime = periodEndDate.atTime(java.time.LocalTime.MAX);
+                List<ServiceCommission> unpaidComms = serviceCommissionRepository.findUnpaidCommissionsForStaffInPeriod(
+                        staff.getStaffId(),
+                        CommissionStatus.PENDING,
+                        startDateTime,
+                        endDateTime
+                );
+                for (ServiceCommission c : unpaidComms) {
+                    c.setPayrollItem(savedItem != null ? savedItem : item);
+                    serviceCommissionRepository.save(c);
+                }
+            }
         }
 
         recalculatePeriodTotals(period.getPeriodId());
@@ -368,6 +397,9 @@ public class PayrollServiceImpl implements PayrollService {
         );
         if (activeAdvances == null) {
             activeAdvances = Collections.emptyList();
+        } else {
+            activeAdvances = new ArrayList<>(activeAdvances);
+            activeAdvances.sort(java.util.Comparator.comparing(SalaryAdvance::getAdvanceId));
         }
 
         BigDecimal availableSalary = netSalary;
@@ -537,6 +569,7 @@ public class PayrollServiceImpl implements PayrollService {
         // Xóa các allocation giữ chỗ cũ của dòng lương này để tính toán lại
         List<SalaryAdvanceAllocation> oldAllocations = salaryAdvanceAllocationRepository.findByPayrollItem_ItemId(itemId);
         salaryAdvanceAllocationRepository.deleteAll(oldAllocations);
+        salaryAdvanceAllocationRepository.flush();
 
         BigDecimal allocatedAdvance = reserveAdvanceAllocationsForItem(item, netSalary);
         item.setAdvanceAllocatedAmount(allocatedAdvance);
@@ -564,8 +597,12 @@ public class PayrollServiceImpl implements PayrollService {
             preserved.put(old.getStaff().getStaffId(), new ManualAdjustment(old.getBonusAmount(), old.getDeductionAmount(), old.getNote()));
         }
 
+        if (serviceCommissionRepository != null) {
+            serviceCommissionRepository.unbindCommissionsFromPeriod(periodId);
+        }
         salaryAdvanceAllocationRepository.deleteByPeriodId(periodId);
         payrollItemRepository.deleteByPayrollPeriod_PeriodId(periodId);
+        payrollPeriodRepository.flush();
         populatePeriodItems(period, preserved);
 
         return payrollPeriodRepository.findById(periodId).orElseThrow();
@@ -595,8 +632,9 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     public PayrollPeriod approvePeriod(Long periodId, Long currentUserId) {
-        if (currentUserId == null || !userRepository.hasActiveAdminRole(currentUserId)) {
-            throw new AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền phê duyệt bảng lương");
+        if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
+                && !userRepository.hasActivePermission(currentUserId, "FINANCE_PAYROLL"))) {
+            throw new AccessDeniedException("Bạn không có quyền phê duyệt bảng lương");
         }
 
         PayrollPeriod period = payrollPeriodRepository.findByIdForUpdate(periodId)
@@ -618,8 +656,9 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     public PayrollPeriod rejectPeriod(Long periodId, String reason, Long currentUserId) {
-        if (currentUserId == null || !userRepository.hasActiveAdminRole(currentUserId)) {
-            throw new AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền từ chối duyệt bảng lương");
+        if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
+                && !userRepository.hasActivePermission(currentUserId, "FINANCE_PAYROLL"))) {
+            throw new AccessDeniedException("Bạn không có quyền từ chối duyệt bảng lương");
         }
 
         PayrollPeriod period = payrollPeriodRepository.findByIdForUpdate(periodId)
@@ -637,6 +676,17 @@ public class PayrollServiceImpl implements PayrollService {
         period.setApprovedBy(null);
         period.setApprovedAt(null);
         period.setRejectionReason(reason != null ? reason.trim() : "Quản trị viên từ chối phê duyệt");
+
+        operatingExpenseRepository.findByPayrollPeriod_PeriodId(periodId).ifPresent(expense -> {
+            if (!Boolean.TRUE.equals(expense.getIsCancelled())) {
+                expense.setIsCancelled(true);
+                expense.setCancelledReason("Hủy phiếu chi do bảng lương bị từ chối/hủy");
+                User canceller = currentUserId != null ? userRepository.findById(currentUserId).orElse(null) : null;
+                expense.setCancelledBy(canceller);
+                expense.setCancelledAt(LocalDateTime.now());
+                operatingExpenseRepository.save(expense);
+            }
+        });
 
         return payrollPeriodRepository.save(period);
     }
@@ -832,6 +882,10 @@ public class PayrollServiceImpl implements PayrollService {
             }
         }
 
+        if (serviceCommissionRepository != null) {
+            serviceCommissionRepository.markCommissionsAsPaidForPeriod(periodId);
+        }
+
         return savedPeriod;
     }
 
@@ -840,6 +894,21 @@ public class PayrollServiceImpl implements PayrollService {
         PayrollPeriod period = getPeriodDetail(periodId, currentUserId);
         if (period.getStatus() != PayrollStatus.DRAFT) {
             throw new IllegalStateException("Chỉ có thể xóa kỳ lương ở trạng thái Nháp (DRAFT)");
+        }
+
+        operatingExpenseRepository.findByPayrollPeriod_PeriodId(periodId).ifPresent(expense -> {
+            if (!Boolean.TRUE.equals(expense.getIsCancelled())) {
+                expense.setIsCancelled(true);
+                expense.setCancelledReason("Hủy phiếu chi do xóa bảng lương nháp");
+                User canceller = currentUserId != null ? userRepository.findById(currentUserId).orElse(null) : null;
+                expense.setCancelledBy(canceller);
+                expense.setCancelledAt(LocalDateTime.now());
+                operatingExpenseRepository.save(expense);
+            }
+        });
+
+        if (serviceCommissionRepository != null) {
+            serviceCommissionRepository.unbindCommissionsFromPeriod(periodId);
         }
 
         salaryAdvanceAllocationRepository.deleteByPeriodId(periodId);
@@ -857,7 +926,11 @@ public class PayrollServiceImpl implements PayrollService {
         boolean hasAssignment = staffBranchAssignmentRepository.hasActiveUserAssignment(
                 currentUserId, branchId, AssignmentStatus.ACTIVE);
         if (!hasAssignment) {
-            throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh này");
+            boolean isMultiBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(currentUserId, AssignmentStatus.ACTIVE).isEmpty()
+                    && userRepository.findById(currentUserId).map(u -> u.getBranch() == null || branchId.equals(u.getBranch().getBranchId())).orElse(false);
+            if (!isMultiBranch) {
+                throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh này");
+            }
         }
     }
 }

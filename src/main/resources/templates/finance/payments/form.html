@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head('Ghi nhận thanh toán & Lập phiếu thu (SCR-22.2) - FT22')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head('Ghi nhận thanh toán & Lập phiếu thu')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
 </head>
 <body class="app-body fin-brand-theme">
@@ -98,7 +98,7 @@
                             <div class="mb-3">
                                 <label for="transactionRef" class="form-label">Mã giao dịch ngân hàng thực tế (do kế toán đối soát)</label>
                                 <input type="text" id="transactionRef" name="transactionRef" class="form-control"
-                                       placeholder="VD: FT241024889988, VCB-9922 (Nhập sau khi khách đã chuyển khoản)...">
+                                       placeholder="VD: GD241024889988, VCB-9922 (Nhập sau khi khách đã chuyển khoản)...">
                             </div>
 
                             <!-- Ghi chú -->

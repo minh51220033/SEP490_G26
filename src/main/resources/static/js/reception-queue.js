@@ -72,7 +72,55 @@ function initialiseQueue() {
         }
     };
 
+    function showRecallToast(msg) {
+        const toastEl = document.getElementById('queueRecallToast');
+        const msgEl = document.getElementById('queueRecallToastMsg');
+        if (msgEl) msgEl.innerHTML = `<i class="bi bi-megaphone-fill me-1.5"></i> <span>${msg}</span>`;
+        if (toastEl && window.bootstrap?.Toast) {
+            const toast = window.bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3500 });
+            toast.show();
+        }
+    }
+
+    function bindRecallActions() {
+        document.querySelectorAll('form[action*="/CALL"]').forEach(form => {
+            if (form.dataset.boundRecall === 'true') return;
+            form.dataset.boundRecall = 'true';
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = form.querySelector('button[type="submit"]');
+                const origHtml = btn ? btn.innerHTML : '';
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang gọi...';
+                }
+                try {
+                    await fetch(form.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams(new FormData(form))
+                    });
+                    const card = form.closest('.queue-card');
+                    const patientName = card ? card.querySelector('.queue-patient')?.textContent.trim() : '';
+                    const ticketNum = card ? card.querySelector('.ticket-num')?.textContent.trim() : '';
+                    showRecallToast(`Đã nhắc gọi số ${ticketNum || ''} cho bệnh nhân ${patientName || ''}.`);
+                } catch (_) {
+                    showRecallToast('Đã phát tín hiệu gọi lại số khám thành công.');
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = origHtml;
+                    }
+                }
+            });
+        });
+    }
+
     function bindQueueActions() {
+        bindRecallActions();
         document.querySelectorAll('.btn-queue-action').forEach(btn => {
             btn.onclick = (e) => {
                 e.preventDefault();
@@ -149,7 +197,38 @@ function initialiseQueue() {
         filter.addEventListener('change', applyFilter);
     }
 
+    function updateQueueViews() {
+        const btnTable = document.getElementById('btnViewQueueTable');
+        const isTable = btnTable && btnTable.classList.contains('active');
+        const tableSec = document.getElementById('viewQueueTableSection');
+        const kanbanSec = document.getElementById('viewQueueKanbanSection');
+        if (tableSec && kanbanSec) {
+            tableSec.style.display = isTable ? '' : 'none';
+            kanbanSec.style.display = isTable ? 'none' : '';
+        }
+    }
+
+    const btnTable = document.getElementById('btnViewQueueTable');
+    const btnKanban = document.getElementById('btnViewQueueKanban');
+    if (btnTable && btnKanban) {
+        btnTable.addEventListener('click', () => {
+            btnTable.classList.add('btn-primary', 'active');
+            btnTable.classList.remove('btn-outline-secondary');
+            btnKanban.classList.remove('btn-primary', 'active');
+            btnKanban.classList.add('btn-outline-secondary');
+            updateQueueViews();
+        });
+        btnKanban.addEventListener('click', () => {
+            btnKanban.classList.add('btn-primary', 'active');
+            btnKanban.classList.remove('btn-outline-secondary');
+            btnTable.classList.remove('btn-primary', 'active');
+            btnTable.classList.add('btn-outline-secondary');
+            updateQueueViews();
+        });
+    }
+
     bindQueueActions();
+    updateQueueViews();
 
     async function refresh() {
         if (board.querySelector('details[open]') || board.contains(document.activeElement) || document.querySelector('.modal.show')) {
@@ -166,6 +245,7 @@ function initialiseQueue() {
                 board = fresh;
                 applyFilter();
                 bindQueueActions();
+                updateQueueViews();
             }
         } catch (_) {
             return;

@@ -7,11 +7,7 @@ import com.cvdcms.entity.ServiceCategory;
 import com.cvdcms.entity.User;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.repository.UserRepository;
-<<<<<<< Updated upstream
-=======
 import com.cvdcms.service.BranchService;
-import com.cvdcms.service.ChatService;
->>>>>>> Stashed changes
 import com.cvdcms.service.CustomerPortalService;
 import com.cvdcms.service.ServiceCatalogService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,15 +24,10 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
-<<<<<<< Updated upstream
- * Cung cấp các thuộc tính chung cho các trang Thymeleaf có sử dụng sidebar hoặc Customer Portal Header/Footer.
- * Đảm bảo isAdmin, roleNames, permissionCodes, displayName, publicBranches, footerServices luôn có giá trị an toàn.
-=======
  * Cung cấp các thuộc tính chung cho các trang Thymeleaf có sử dụng sidebar hoặc
  * Customer Portal Header/Footer.
  * Đảm bảo isAdmin, roleNames, permissionCodes, displayName, publicBranches,
- * footerServices, chatUnreadCount luôn có giá trị an toàn.
->>>>>>> Stashed changes
+ * footerServices luôn có giá trị an toàn.
  */
 @ControllerAdvice
 public class GlobalModelAttributesAdvice {
@@ -46,16 +37,12 @@ public class GlobalModelAttributesAdvice {
             "BAC_SI", "ROLE_BAC_SI",
             "LE_TAN", "ROLE_LE_TAN",
             "QUAN_LY_KHO", "ROLE_QUAN_LY_KHO",
-            "KE_TOAN", "ROLE_KE_TOAN"
-    );
+            "KE_TOAN", "ROLE_KE_TOAN");
 
     private final UserRepository userRepository;
     private final ObjectProvider<CustomerPortalService> customerPortalServiceProvider;
     private final ObjectProvider<ServiceCatalogService> serviceCatalogServiceProvider;
     private final ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider;
-
-    @Autowired(required = false)
-    private ObjectProvider<ChatService> chatServiceProvider;
 
     public GlobalModelAttributesAdvice(UserRepository userRepository) {
         this(userRepository, null, null, null);
@@ -66,16 +53,13 @@ public class GlobalModelAttributesAdvice {
             UserRepository userRepository,
             ObjectProvider<CustomerPortalService> customerPortalServiceProvider,
             ObjectProvider<ServiceCatalogService> serviceCatalogServiceProvider,
-            ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider
-    ) {
+            ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider) {
         this.userRepository = userRepository;
         this.customerPortalServiceProvider = customerPortalServiceProvider;
         this.serviceCatalogServiceProvider = serviceCatalogServiceProvider;
         this.patientProfileRepositoryProvider = patientProfileRepositoryProvider;
     }
 
-<<<<<<< Updated upstream
-=======
     public GlobalModelAttributesAdvice(
             UserRepository userRepository,
             ObjectProvider<CustomerPortalService> customerPortalServiceProvider,
@@ -85,21 +69,6 @@ public class GlobalModelAttributesAdvice {
         this(userRepository, customerPortalServiceProvider, serviceCatalogServiceProvider, patientProfileRepositoryProvider);
     }
 
-    @ModelAttribute("chatUnreadCount")
-    public long populateChatUnreadCount(HttpSession session) {
-        if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)
-                || user.getUserId() == null || chatServiceProvider == null) {
-            return 0L;
-        }
-        try {
-            ChatService chatService = chatServiceProvider.getIfAvailable();
-            return chatService != null ? chatService.getTotalUnreadCount(user.getUserId()) : 0L;
-        } catch (Exception ignored) {
-            return 0L;
-        }
-    }
-
->>>>>>> Stashed changes
     @ModelAttribute("roleNames")
     public List<String> populateRoleNames(HttpServletRequest request, HttpSession session) {
         // 1. Lấy từ request attribute (do FeaturePermissionInterceptor đồng bộ)
@@ -192,7 +161,10 @@ public class GlobalModelAttributesAdvice {
     public boolean populateIsStaffUser(HttpServletRequest request, HttpSession session) {
         List<String> roles = populateRoleNames(request, session);
         for (String r : roles) {
-            if (r != null && STAFF_ROLE_CODES.contains(r.trim().toUpperCase(Locale.ROOT))) {
+            if (r == null || r.isBlank()) continue;
+            String norm = r.trim().toUpperCase(Locale.ROOT);
+            if (!"BENH_NHAN".equals(norm) && !"ROLE_BENH_NHAN".equals(norm)
+                    && !"PATIENT".equals(norm) && !"ROLE_PATIENT".equals(norm)) {
                 return true;
             }
         }
@@ -221,7 +193,8 @@ public class GlobalModelAttributesAdvice {
 
     @ModelAttribute("defaultPatientProfile")
     public PatientProfile populateDefaultPatientProfile(HttpSession session) {
-        if (session == null || !(session.getAttribute("loggedInUser") instanceof User user) || user.getUserId() == null) {
+        if (session == null || !(session.getAttribute("loggedInUser") instanceof User user)
+                || user.getUserId() == null) {
             return null;
         }
         PatientProfileRepository repo = patientProfileRepositoryProvider != null
@@ -270,12 +243,31 @@ public class GlobalModelAttributesAdvice {
             User user = userRepository.findById(sessionUser.getUserId()).orElse(sessionUser);
             if (user.getBranch() != null) {
                 Branch b = user.getBranch();
-                return (b.getBranchCode() != null && !b.getBranchCode().isBlank() ? b.getBranchCode() + " - " : "") + b.getBranchName();
+                String name = (b.getBranchCode() != null && !b.getBranchCode().isBlank() ? b.getBranchCode() + " - " : "") + b.getBranchName();
+                if (Boolean.FALSE.equals(b.getIsActive())) {
+                    name += " [Tạm ngừng hoạt động]";
+                }
+                return name;
             }
         }
         return null;
     }
 
+    @ModelAttribute("inactiveBranchWarning")
+    public String populateInactiveBranchWarning(HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
+            User user = userRepository.findById(sessionUser.getUserId()).orElse(sessionUser);
+            if (user.getBranch() != null && Boolean.FALSE.equals(user.getBranch().getIsActive())) {
+                Branch b = user.getBranch();
+                String bName = (b.getBranchName() != null ? b.getBranchName() : "hiện tại");
+                return "Cơ sở \"" + bName + "\" hiện đang tạm ngừng hoạt động. Một số tác vụ tiếp đón và chấm công tại đây sẽ bị hạn chế.";
+            }
+        }
+        return null;
+    }
     @ModelAttribute("systemNotice")
     public String populateSystemNotice(HttpSession session) {
         if (session == null) {
@@ -308,13 +300,16 @@ public class GlobalModelAttributesAdvice {
             return null;
         }
         List<Branch> activeBranches = populatePublicBranches();
-        // 1. Nếu người dùng đã đăng nhập: ưu tiên cơ sở ưu tiên của hồ sơ bệnh nhân hoặc cơ sở của tài khoản
+        // 1. Nếu người dùng đã đăng nhập: ưu tiên cơ sở ưu tiên của hồ sơ bệnh nhân
+        // hoặc cơ sở của tài khoản
         if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
             PatientProfile pp = populateDefaultPatientProfile(session);
-            if (pp != null && pp.getPreferredBranch() != null && Boolean.TRUE.equals(pp.getPreferredBranch().getIsActive())) {
+            if (pp != null && pp.getPreferredBranch() != null
+                    && Boolean.TRUE.equals(pp.getPreferredBranch().getIsActive())) {
                 return pp.getPreferredBranch();
             }
-            User user = userRepository != null ? userRepository.findById(sessionUser.getUserId()).orElse(sessionUser) : sessionUser;
+            User user = userRepository != null ? userRepository.findById(sessionUser.getUserId()).orElse(sessionUser)
+                    : sessionUser;
             if (user != null && user.getBranch() != null && Boolean.TRUE.equals(user.getBranch().getIsActive())) {
                 return user.getBranch();
             }

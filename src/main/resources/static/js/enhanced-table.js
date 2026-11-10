@@ -337,11 +337,23 @@
 
         /* 5. Tạo thanh công cụ trên bảng với nút "Tùy chỉnh cột" */
         renderToolbar() {
-            let toolbar = this.container.querySelector('.enhanced-table-toolbar');
+            // Kiểm tra xem vùng thẻ cha có sẵn thanh topbar (.fin-grid-topbar hoặc .dv-grid-topbar) không
+            let hostCard = this.container.closest('.fin-card, .staff-table-card, .patient-table-card, .card') || this.container.parentElement;
+            let existingTopbar = hostCard ? hostCard.querySelector('.fin-grid-topbar, .dv-grid-topbar') : null;
+
+            let toolbar = existingTopbar;
             if (!toolbar) {
-                toolbar = document.createElement('div');
-                toolbar.className = 'enhanced-table-toolbar';
-                this.container.insertBefore(toolbar, this.wrapper);
+                toolbar = this.container.querySelector('.enhanced-table-toolbar');
+                if (!toolbar) {
+                    toolbar = document.createElement('div');
+                    toolbar.className = 'enhanced-table-toolbar';
+                    this.container.insertBefore(toolbar, this.wrapper);
+                }
+            } else {
+                const oldToolbar = this.container.querySelector('.enhanced-table-toolbar');
+                if (oldToolbar && oldToolbar !== existingTopbar) {
+                    oldToolbar.remove();
+                }
             }
             this.toolbar = toolbar;
 
@@ -350,10 +362,16 @@
             if (!customBtn) {
                 customBtn = document.createElement('button');
                 customBtn.type = 'button';
-                customBtn.className = 'enhanced-toolbar-btn enhanced-custom-toggle-btn';
-                customBtn.innerHTML = '<i class="bi bi-gear-wide-connected text-primary"></i> <span>Tùy chỉnh cột</span>';
+                customBtn.className = 'enhanced-toolbar-btn enhanced-custom-toggle-btn ms-auto';
+                customBtn.innerHTML = '<i class="bi bi-layout-three-columns text-primary"></i> <span>Tùy chỉnh cột</span>';
                 customBtn.title = 'Ẩn / hiện cột, đổi thứ tự và ghim cột';
-                this.toolbar.appendChild(customBtn);
+
+                const rightSlot = this.toolbar.querySelector('.fin-topbar-right');
+                if (rightSlot) {
+                    rightSlot.appendChild(customBtn);
+                } else {
+                    this.toolbar.appendChild(customBtn);
+                }
             }
             this.customBtn = customBtn;
 

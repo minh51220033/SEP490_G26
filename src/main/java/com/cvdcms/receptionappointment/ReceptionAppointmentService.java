@@ -155,7 +155,9 @@ public class ReceptionAppointmentService {
     public Options options(HttpSession session) {
         PatientAccess.Scope scope = access.require(session);
         List<Branch> allowed = scope.admin() ? branches.findByIsActiveTrueOrderByBranchNameAsc()
-                : branches.findById(scope.branchId()).filter(b -> Boolean.TRUE.equals(b.getIsActive())).stream().toList();
+                : (scope.branchIds() != null && !scope.branchIds().isEmpty()
+                        ? branches.findAllById(scope.branchIds()).stream().filter(b -> Boolean.TRUE.equals(b.getIsActive())).toList()
+                        : branches.findById(scope.branchId()).filter(b -> Boolean.TRUE.equals(b.getIsActive())).stream().toList());
         List<BranchOption> branchOptions = allowed.stream().map(b -> new BranchOption(b.getBranchId(), b.getBranchName())).toList();
         List<ServiceOption> serviceOptions = services.findByStatusOrderByCategory_DisplayOrderAscServiceNameAsc(ServiceStatus.ACTIVE)
                 .stream().filter(s -> Boolean.TRUE.equals(s.getCategory().getIsActive()))
@@ -167,9 +169,13 @@ public class ReceptionAppointmentService {
     @Transactional(readOnly = true)
     public List<PatientOption> searchPatients(HttpSession session, Long branchId, String query) {
         PatientAccess.Scope scope = access.require(session);
-        requireBranch(scope, branchId);
+        if (branchId != null) {
+            try {
+                requireBranch(scope, branchId);
+            } catch (Exception ignored) {}
+        }
         if (query == null || query.trim().length() < 2) return List.of();
-        return patients.search(branchId, query.trim()).stream().limit(20)
+        return patients.search(query.trim()).stream().limit(20)
                 .map(p -> new PatientOption(p.getProfileId(), p.getPatientCode(), p.getFullName(), p.getPhoneNumber()))
                 .toList();
     }
@@ -216,7 +222,14 @@ public class ReceptionAppointmentService {
     public Dashboard dashboard(HttpSession session, LocalDate date, Long branchId, Long doctorId) {
         PatientAccess.Scope scope = access.require(session);
         if (date == null) date = LocalDate.now(ReceptionAppointmentRules.ZONE);
-        Long effectiveBranch = scopedBranch(scope, branchId);
+        Long targetBranch = branchId;
+        if (targetBranch == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid && scope.permits(sid)) {
+                targetBranch = sid;
+            }
+        }
+        Long effectiveBranch = scopedBranch(scope, targetBranch);
         List<AppointmentView> list = appointments.findInRange(date, date, effectiveBranch, doctorId, null)
                 .stream().map(this::view).toList();
         return new Dashboard(date, list.size(), count(list, AppointmentStatus.PENDING),
@@ -230,15 +243,29 @@ public class ReceptionAppointmentService {
         PatientAccess.Scope scope = access.require(session);
         if (start == null || end == null || end.isBefore(start) || end.isAfter(start.plusDays(42)))
             throw bad("Khoảng xem lịch không hợp lệ hoặc vượt quá 43 ngày.");
-        return appointments.findInRange(start, end, scopedBranch(scope, branchId), doctorId, status)
+        Long targetBranch = branchId;
+        if (targetBranch == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid && scope.permits(sid)) {
+                targetBranch = sid;
+            }
+        }
+        return appointments.findInRange(start, end, scopedBranch(scope, targetBranch), doctorId, status)
                 .stream().map(this::view).toList();
     }
 
     @Transactional(readOnly = true)
     public List<AppointmentView> noShows(HttpSession session, Long branchId) {
         PatientAccess.Scope scope = access.require(session);
+        Long targetBranch = branchId;
+        if (targetBranch == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid && scope.permits(sid)) {
+                targetBranch = sid;
+            }
+        }
         LocalDate today = LocalDate.now(ReceptionAppointmentRules.ZONE);
-        return appointments.findInRange(today.minusDays(7), today, scopedBranch(scope, branchId), null,
+        return appointments.findInRange(today.minusDays(7), today, scopedBranch(scope, targetBranch), null,
                         AppointmentStatus.NO_SHOW).stream().map(this::view).toList();
     }
 
@@ -256,7 +283,7 @@ public class ReceptionAppointmentService {
         Branch branch = lockBranch(scope, request.branchId());
         PatientProfile profile;
         if (request.profileId() != null) {
-            profile = patients.findBookable(request.profileId(), branch.getBranchId())
+            profile = patients.findBookable(request.profileId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hồ sơ không thuộc phạm vi chi nhánh."));
         } else if (request.patientName() != null && !request.patientName().isBlank()) {
             String name = request.patientName().trim();

@@ -18,8 +18,8 @@
                     <i class="bi bi-list-check fs-5"></i>
                 </div>
                 <div>
-                    <h4 class="mb-0 fw-bold text-dark fs-6">Tiến độ &amp; Thực hiện Quy trình Khám – Điều trị (FT43)</h4>
-                    <span class="text-secondary small">Khởi chạy quy trình theo mẫu (FT34), cập nhật từng bước, tạm dừng chuyển cận lâm sàng &amp; lưu lịch sử</span>
+                    <h4 class="mb-0 fw-bold text-dark fs-6">Tiến độ &amp; Thực hiện Quy trình Khám – Điều trị</h4>
+                    <span class="text-secondary small">Khởi chạy quy trình theo mẫu, cập nhật từng bước, tạm dừng chuyển cận lâm sàng &amp; lưu lịch sử</span>
                 </div>
                 <span class="badge bg-primary-subtle text-primary border border-primary ms-2" id="ft43ExecCountBadge">
                     0 quy trình
@@ -28,14 +28,14 @@
 
             <div class="d-flex align-items-center flex-wrap gap-2">
                 <button type="button" class="df-btn-white-plan" onclick="switchMainTab('tab-performed-services')"
-                        title="Chuyển sang Dịch vụ thực hiện tại ghế (FT16)">
+                        title="Chuyển sang Dịch vụ thực hiện tại ghế">
                     <i class="bi bi-tools text-primary"></i>
-                    <span>Dịch vụ thực hiện (FT16)</span>
+                    <span>Dịch vụ thực hiện</span>
                 </button>
                 <a th:href="@{/doctor/workflows}" target="_blank" class="df-btn-white-plan text-decoration-none"
-                   title="Mở trang cấu hình mẫu quy trình chuẩn (FT34)">
+                   title="Mở trang cấu hình mẫu quy trình chuẩn">
                     <i class="bi bi-sliders text-secondary"></i>
-                    <span>Mẫu quy trình (FT34)</span>
+                    <span>Mẫu quy trình</span>
                 </a>
                 <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold"
                         onclick="window.FT43 && window.FT43.reload()">
@@ -51,7 +51,7 @@
                     <div class="d-flex align-items-start gap-2 small text-secondary">
                         <i class="bi bi-info-circle-fill text-primary mt-0.5"></i>
                         <div>
-                            <strong class="text-dark">Quy tắc vận hành (UC-13):</strong>
+                            <strong class="text-dark">Quy tắc vận hành:</strong>
                             Các bước được thực hiện tuần tự theo phiên bản mẫu đã áp dụng cho lượt khám. Bước <em>Tùy chọn</em> có thể bỏ qua; quy trình <em>Ngắt quãng (INTERRUPTIBLE)</em> cho phép tạm dừng khi bệnh nhân đi chụp X-Quang/Xét nghiệm; bước <em>Cận lâm sàng</em> chỉ hoàn tất khi chỉ định ở tab Khám bệnh đã có kết quả.
                         </div>
                     </div>

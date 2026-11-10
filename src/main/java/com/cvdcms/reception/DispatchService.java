@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class DispatchService {
+    public static final int MAX_DOCTOR_QUEUE_LIMIT = 8;
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private final ReceptionAccess access;
     private final DispatchVisitRepository visits;
@@ -52,7 +53,7 @@ public class DispatchService {
         this(access, visits, doctors, schedules, rooms, chairs, tickets, branches, audits, appointments, examinations, new ObjectMapper());
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public Board board(HttpSession session, Long requestedBranch) {
         var scope = access.require(session);
         List<Branch> options = branches.findAll().stream()
@@ -62,12 +63,47 @@ public class DispatchService {
         Long branchId = requestedBranch == null ? options.get(0).getBranchId() : requestedBranch;
         checkBranch(session, branchId);
         LocalDate day = LocalDate.now(ZONE);
+        LocalTime now = LocalTime.now(ZONE);
         List<Visit> dayVisits = visits.today(branchId, day.atStartOfDay(), day.plusDays(1).atStartOfDay());
-        List<StaffProfile> eligible = doctors.eligible(branchId, day);
-        List<StaffProfile> availableDoctors = eligible.stream()
-                .filter(d -> schedules.working(d.getStaffId(), branchId, day, LocalTime.now(ZONE)) > 0).toList();
-        List<DoctorOption> doctorRows = availableDoctors.stream()
-                .map(d -> new DoctorOption(d.getStaffId(), d.getFullName(), load(d.getStaffId(), branchId, day, -1L)))
+        List<StaffSchedule> todaySchedules = schedules.findTodaySchedules(branchId, day);
+        Map<Long, LocalTime> shiftStarts = new HashMap<>();
+        Map<Long, List<StaffSchedule>> doctorSchedules = todaySchedules.stream()
+                .filter(s -> s.getStaff() != null && s.getShift() != null && s.getShift().getStartTime() != null)
+                .collect(Collectors.groupingBy(s -> s.getStaff().getStaffId()));
+        for (Map.Entry<Long, List<StaffSchedule>> entry : doctorSchedules.entrySet()) {
+            List<StaffSchedule> list = entry.getValue();
+            StaffSchedule active = list.stream()
+                    .filter(s -> {
+                        LocalTime st = s.getShift().getStartTime();
+                        LocalTime et = s.getShift().getEndTime();
+                        return st != null && et != null && !now.isBefore(st) && !now.isAfter(et);
+                    })
+                    .findFirst()
+                    .orElseGet(() -> list.stream()
+                            .filter(s -> s.getShift().getStartTime() != null && s.getShift().getStartTime().isAfter(now))
+                            .min(Comparator.comparing(s -> s.getShift().getStartTime()))
+                            .orElse(list.get(0)));
+            if (active != null && active.getShift() != null && active.getShift().getStartTime() != null) {
+                shiftStarts.put(entry.getKey(), active.getShift().getStartTime());
+            }
+        }
+        List<StaffProfile> availableDoctors = findAvailableDoctors(branchId, day, now);
+        Map<Long, StaffProfile> doctorMap = new LinkedHashMap<>();
+        for (StaffProfile d : availableDoctors) {
+            doctorMap.put(d.getStaffId(), d);
+        }
+        for (Visit v : dayVisits) {
+            if (isWaitingDispatchVisit(v) && v.getPrimaryDoctor() != null) {
+                doctorMap.putIfAbsent(v.getPrimaryDoctor().getStaffId(), v.getPrimaryDoctor());
+            }
+        }
+        List<DoctorOption> doctorRows = doctorMap.values().stream()
+                .map(d -> {
+                    long w = load(d.getStaffId(), branchId, day, -1L);
+                    LocalTime st = shiftStarts.get(d.getStaffId());
+                    String stStr = st != null ? st.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) : null;
+                    return new DoctorOption(d.getStaffId(), d.getFullName(), w, w >= MAX_DOCTOR_QUEUE_LIMIT, stStr, MAX_DOCTOR_QUEUE_LIMIT);
+                })
                 .sorted(Comparator.comparingLong(DoctorOption::waiting).thenComparing(DoctorOption::name)).toList();
         Map<Long, DoctorRequest> requests = new HashMap<>();
         List<Long> appointmentIds = dayVisits.stream().map(Visit::getAppointmentId).filter(Objects::nonNull).distinct().toList();
@@ -76,28 +112,135 @@ public class DispatchService {
                     new DoctorRequest(a.getDoctor().getStaffId(), a.getDoctor().getFullName(),
                             doctorRows.stream().anyMatch(d -> d.id().equals(a.getDoctor().getStaffId()))));
         });
-        List<QueueTicket> dayTickets = tickets.board(branchId, day, QueueType.EXAM);
+        List<QueueTicket> dayTickets = new ArrayList<>(tickets.board(branchId, day, QueueType.EXAM));
         Map<Long, String> issued = new HashMap<>();
-        dayTickets.forEach(t -> issued.put(t.getVisit().getVisitId(), t.getDisplayNumber()));
-        List<TicketRow> queue = dayTickets.stream().map(this::ticketRow).toList();
+        Map<Long, Long> ticketIds = new HashMap<>();
+        dayTickets.forEach(t -> {
+            if (t.getVisit() != null) {
+                issued.put(t.getVisit().getVisitId(), t.getDisplayNumber());
+                ticketIds.put(t.getVisit().getVisitId(), t.getTicketId());
+            }
+        });
 
-        // FT08 Priority sorting:
-        // 1. Emergency first
-        // 2. Paraclinical return (WAITING_RESULT) second
-        // 3. Priority ticket (P-xx) third
-        // 4. Chronological check-in time
-        List<Visit> sortedVisits = new ArrayList<>(dayVisits);
-        sortedVisits.sort(Comparator.comparing((Visit v) -> v.getVisitType() == VisitType.EMERGENCY ? 0 : 1)
-                .thenComparing((Visit v) -> v.getStatus() == VisitStatus.WAITING_RESULT ? 0 : 1)
-                .thenComparing((Visit v) -> {
-                    String num = issued.get(v.getVisitId());
-                    return num != null && num.startsWith("P-") ? 0 : 1;
-                })
-                .thenComparing(Visit::getCheckInAt));
+        List<TicketRow> queue = dayTickets.stream().map(this::ticketRow).toList();
+        List<Room> activeRooms = rooms.findByBranchBranchIdAndStatusOrderByRoomCode(branchId, RoomStatus.ACTIVE);
+        List<DentalChair> branchChairs = chairs.findByBranchBranchIdOrderByChairCode(branchId);
+
+        Map<Long, String> roomLookup = new HashMap<>();
+        for (Room r : activeRooms) {
+            roomLookup.put(r.getRoomId(), r.getRoomName());
+        }
+        Map<Long, String> chairLookup = new HashMap<>();
+        Map<Long, String> chairRoomLookup = new HashMap<>();
+        for (DentalChair c : branchChairs) {
+            chairLookup.put(c.getChairId(), c.getChairName());
+            if (c.getRoom() != null && c.getRoom().getRoomName() != null) {
+                chairRoomLookup.put(c.getChairId(), c.getRoom().getRoomName());
+            }
+        }
+        String defaultRoomName = !activeRooms.isEmpty() ? activeRooms.get(0).getRoomName() : "Phòng khám Nha khoa";
+
+        // Chỉ giữ lại các lượt khám đang chờ điều phối (WAITING / WAITING_RESULT),
+        // loại bỏ IN_EXAM, IN_TREATMENT, COMPLETED, WAITING_PAYMENT, CANCELLED khỏi bảng điều phối.
+        // Đẩy các bệnh nhân vãng lai / chưa xếp hàng (primaryDoctor == null) xuống cuối danh sách.
+        List<Visit> sortedVisits = dayVisits.stream()
+                .filter(Board::isWaitingDispatchVisit)
+                .sorted(Comparator.comparing((Visit v) -> v.getPrimaryDoctor() == null ? 1 : 0)
+                        .thenComparing((Visit v) -> v.getVisitType() == VisitType.EMERGENCY ? 0 : 1)
+                        .thenComparing((Visit v) -> v.getStatus() == VisitStatus.WAITING_RESULT ? 0 : 1)
+                        .thenComparing((Visit v) -> {
+                            String num = issued.get(v.getVisitId());
+                            boolean isPriority = (num != null && num.startsWith("P-"))
+                                    || (v.getNotes() != null && v.getNotes().contains("ƯU TIÊN"));
+                            return isPriority ? 0 : 1;
+                        })
+                        .thenComparing(Visit::getCheckInAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(Visit::getVisitId, Comparator.nullsLast(Comparator.naturalOrder())))
+                .toList();
+
+        // Tính toán thứ tự vào khám cụ thể theo từng bác sĩ (Doctor Queue Order) & Map Phòng/Ghế
+        Map<Long, DoctorQueueInfo> queueInfo = new HashMap<>();
+        Map<Long, Integer> doctorWaitingCounter = new HashMap<>();
+        Map<Long, String> visitRoomNames = new HashMap<>();
+        Map<Long, String> visitChairNames = new HashMap<>();
+
+        for (Visit v : sortedVisits) {
+            String rName = v.getRoomId() != null ? roomLookup.get(v.getRoomId()) : null;
+            if (rName == null && v.getChairId() != null) {
+                rName = chairRoomLookup.get(v.getChairId());
+            }
+            visitRoomNames.put(v.getVisitId(), rName != null ? rName : "Chưa xếp phòng");
+
+            String cName = v.getChairId() != null ? chairLookup.get(v.getChairId()) : null;
+            visitChairNames.put(v.getVisitId(), cName != null ? cName : "Chưa xếp ghế");
+
+            if (v.getPrimaryDoctor() == null) {
+                queueInfo.put(v.getVisitId(), new DoctorQueueInfo(-1, "Chưa xếp hàng", "badge bg-warning-subtle text-warning-emphasis border border-warning-subtle", "Chưa phân BS"));
+            } else {
+                String docName = v.getPrimaryDoctor().getFullName();
+                int pos = doctorWaitingCounter.merge(v.getPrimaryDoctor().getStaffId(), 1, Integer::sum);
+                boolean isEmergency = v.getVisitType() == VisitType.EMERGENCY;
+                boolean isPriority = (issued.get(v.getVisitId()) != null && issued.get(v.getVisitId()).startsWith("P-"))
+                        || (v.getNotes() != null && v.getNotes().contains("ƯU TIÊN"))
+                        || v.getStatus() == VisitStatus.WAITING_RESULT;
+                if (isEmergency) {
+                    queueInfo.put(v.getVisitId(), new DoctorQueueInfo(pos, "Cấp cứu (#" + pos + ")", "badge bg-danger text-white fw-bold", docName));
+                } else if (isPriority) {
+                    queueInfo.put(v.getVisitId(), new DoctorQueueInfo(pos, "Ưu tiên (#" + pos + ")", "badge bg-warning text-dark fw-bold", docName));
+                } else if (pos == 1) {
+                    queueInfo.put(v.getVisitId(), new DoctorQueueInfo(pos, "Chờ #1 (Tiếp theo)", "badge bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold", docName));
+                } else {
+                    queueInfo.put(v.getVisitId(), new DoctorQueueInfo(pos, "Chờ #" + pos, "badge bg-light text-secondary border", docName));
+                }
+            }
+        }
 
         return new Board(branchId, options, sortedVisits, doctorRows,
-                rooms.findByBranchBranchIdAndStatusOrderByRoomCode(branchId, RoomStatus.ACTIVE),
-                chairs.findByBranchBranchIdOrderByChairCode(branchId), queue, day, requests, issued);
+                activeRooms, branchChairs, queue, day, requests, issued,
+                sortedVisits.stream().filter(v -> v.getPrimaryDoctor() == null && Board.isWaitingDispatchVisit(v)).toList(),
+                Board.buildDoctorVisits(sortedVisits, doctorRows),
+                Board.buildHandedOverVisits(sortedVisits, doctorRows),
+                queueInfo, ticketIds, visitRoomNames, visitChairNames);
+    }
+
+    @Transactional
+    public QueueTicket completeDispatchAndIssueTicket(HttpSession session, Long branchId, Long visitId,
+            Long doctorId, Long roomId, Long chairId, boolean priority, String reason, String note) {
+        Visit existing = visits.findById(visitId).orElse(null);
+        StaffProfile prevDoctor = existing != null ? existing.getPrimaryDoctor() : null;
+        Long prevRoom = existing != null ? existing.getRoomId() : null;
+        Long prevChair = existing != null ? existing.getChairId() : null;
+        String prevNotes = existing != null ? existing.getNotes() : null;
+        VisitStatus prevStatus = existing != null ? existing.getStatus() : null;
+
+        try {
+            assign(session, branchId, visitId, doctorId, roomId, chairId, reason, note);
+            QueueTicket ticket = issue(session, branchId, visitId, priority, reason);
+            Visit target = ticket != null && ticket.getVisit() != null ? ticket.getVisit() : visits.findById(visitId).orElse(existing);
+            if (target != null && target.getStatus() != VisitStatus.WAITING && target.getStatus() != VisitStatus.WAITING_RESULT) {
+                target.setStatus(VisitStatus.WAITING);
+                visits.save(target);
+            }
+            return ticket;
+        } catch (RuntimeException ex) {
+            Visit target = visits.findById(visitId).orElse(existing);
+            if (target != null) {
+                target.setPrimaryDoctor(prevDoctor);
+                target.setRoomId(prevRoom);
+                target.setChairId(prevChair);
+                target.setNotes(prevNotes);
+                if (prevStatus != null) {
+                    target.setStatus(prevStatus);
+                }
+            }
+            throw ex;
+        }
+    }
+
+    @Transactional
+    public QueueTicket completeDispatchAndIssueTicket(HttpSession session, Long branchId, Long visitId,
+            Long doctorId, Long roomId, Long chairId, boolean priority, String reason) {
+        return completeDispatchAndIssueTicket(session, branchId, visitId, doctorId, roomId, chairId, priority, reason, null);
     }
 
     @Transactional
@@ -109,38 +252,67 @@ public class DispatchService {
             throw fail(HttpStatus.CONFLICT, "Chỉ phân công lượt khám đang chờ hoặc chờ kết quả cận lâm sàng.");
         LocalDate today = LocalDate.now(ZONE);
         LocalTime now = LocalTime.now(ZONE);
-        List<StaffProfile> eligible = doctors.eligible(branchId, today);
-        List<StaffProfile> available = eligible.stream()
-                .filter(d -> schedules.working(d.getStaffId(), branchId, today, now) > 0).toList();
+        List<StaffProfile> available = findAvailableDoctors(branchId, today, now);
         if (available.isEmpty()) {
-            throw fail(HttpStatus.CONFLICT, "Chi nhánh hiện không có bác sĩ nào đang trong ca trực để tiếp nhận khám.");
+            throw fail(HttpStatus.CONFLICT, "Chi nhánh hiện không có bác sĩ nào đang trong ca trực tiếp nhận khám.");
         }
         Long requestedDoctor = requestedDoctor(visit);
+        boolean isEmergency = visit.getVisitType() == VisitType.EMERGENCY;
         if (doctorId == null) {
-            if (requestedDoctor != null && available.stream().anyMatch(d -> d.getStaffId().equals(requestedDoctor))) {
+            if (isEmergency) {
+                doctorId = findEmergencyDoctor(available, branchId, today, visitId);
+            } else if (requestedDoctor != null && available.stream().anyMatch(d -> d.getStaffId().equals(requestedDoctor))) {
                 doctorId = requestedDoctor;
             } else {
                 doctorId = available.stream()
                         .min(Comparator.comparingLong((StaffProfile d) -> load(d.getStaffId(), branchId, today, visitId))
                                 .thenComparing(StaffProfile::getStaffId))
                         .map(StaffProfile::getStaffId)
-                        .orElseThrow(() -> fail(HttpStatus.CONFLICT, "Không có bác sĩ đang trực để tự phân công."));
+                        .orElseThrow(() -> fail(HttpStatus.CONFLICT, "Không có bác sĩ khả dụng để tự phân công."));
             }
         }
         final Long selectedDoctor = doctorId;
         if (available.stream().noneMatch(d -> d.getStaffId().equals(selectedDoctor)))
-            throw fail(HttpStatus.CONFLICT, "Bác sĩ không có phân công và ca làm việc hiện tại ở chi nhánh.");
+            throw fail(HttpStatus.CONFLICT, "Bác sĩ không có phân công hoặc ca làm việc hợp lệ tại chi nhánh.");
         Long previousDoctor = visit.getPrimaryDoctor() == null ? null : visit.getPrimaryDoctor().getStaffId();
         boolean overridesRequest = requestedDoctor != null && !requestedDoctor.equals(doctorId);
         boolean transfersQueue = previousDoctor != null && !previousDoctor.equals(doctorId);
         if (transfersQueue && tickets.findByVisitVisitIdAndQueueType(visitId, QueueType.EXAM)
                 .filter(t -> t.getStatus() != QueueStatus.WAITING && t.getStatus() != QueueStatus.PAUSED).isPresent())
             throw fail(HttpStatus.CONFLICT, "Số đã được gọi hoặc đang phục vụ; không thể chuyển bác sĩ tại bàn điều phối.");
+
+        // Ràng buộc chống quá tải khi phân công hoặc chuyển bác sĩ
+        if (selectedDoctor != null && (previousDoctor == null || transfersQueue)) {
+            long targetLoad = load(selectedDoctor, branchId, today, visitId);
+            if (targetLoad >= MAX_DOCTOR_QUEUE_LIMIT) {
+                StaffProfile targetDoc = doctors.findById(selectedDoctor).orElse(null);
+                String docName = targetDoc != null ? targetDoc.getFullName() : "này";
+                throw fail(HttpStatus.CONFLICT, "Bác sĩ " + docName
+                        + " hiện đang có " + targetLoad + " bệnh nhân chờ, đã đạt giới hạn tiếp nhận tối đa trong ca ("
+                        + MAX_DOCTOR_QUEUE_LIMIT + " lượt). Vui lòng chọn bác sĩ khác để tránh quá tải.");
+            }
+        }
+
         String normalizedReason = reason == null ? "" : reason.trim();
-        if ((overridesRequest || transfersQueue) && (normalizedReason.length() < 10 || normalizedReason.length() > 255))
+        if ((overridesRequest || transfersQueue) && (normalizedReason.length() < 10 || normalizedReason.length() > 255)) {
             throw fail(HttpStatus.BAD_REQUEST, "Đổi bác sĩ yêu cầu hoặc chuyển hàng chờ cần lý do từ 10 đến 255 ký tự.");
+        }
         StaffProfile doctor = doctors.findById(doctorId).orElseThrow(() -> fail(HttpStatus.NOT_FOUND, "Không tìm thấy bác sĩ."));
         Long effectiveRoom = roomId;
+        if (chairId == null) {
+            // Tự động tìm ghế khả dụng đầu tiên tại chi nhánh (ưu tiên thuộc phòng đã chọn nếu có)
+            List<DentalChair> branchChairs = chairs.findByBranchBranchIdOrderByChairCode(branchId);
+            for (DentalChair c : branchChairs) {
+                if (c.getStatus() == ChairStatus.AVAILABLE && c.getRoom() != null
+                        && c.getRoom().getStatus() == RoomStatus.ACTIVE
+                        && (effectiveRoom == null || effectiveRoom.equals(c.getRoom().getRoomId()))
+                        && visits.occupiedChair(c.getChairId(), visitId, Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0) {
+                    chairId = c.getChairId();
+                    effectiveRoom = c.getRoom().getRoomId();
+                    break;
+                }
+            }
+        }
         if (chairId != null) {
             DentalChair chair = chairs.findById(chairId).orElseThrow(() -> fail(HttpStatus.NOT_FOUND, "Không tìm thấy ghế."));
             if (!chair.getBranch().getBranchId().equals(branchId) || chair.getRoom() == null
@@ -171,6 +343,27 @@ public class DispatchService {
                         + (normalizedReason.isEmpty() ? "" : ",reason=" + normalizedReason));
     }
 
+    @Transactional
+    public void assign(HttpSession session, Long branchId, Long visitId, Long doctorId, Long roomId, Long chairId,
+            String reason, String note) {
+        assign(session, branchId, visitId, doctorId, roomId, chairId, reason);
+        if (note != null && !note.trim().isEmpty()) {
+            Visit v = visits.findById(visitId).orElse(null);
+            if (v != null) {
+                String existing = v.getNotes();
+                String trimmed = note.trim();
+                if (existing != null && !existing.isBlank()) {
+                    if (!existing.contains(trimmed)) {
+                        v.setNotes(existing + " | Dặn dò BS: " + trimmed);
+                    }
+                } else {
+                    v.setNotes("Dặn dò BS: " + trimmed);
+                }
+                visits.save(v);
+            }
+        }
+    }
+
     private Long requestedDoctor(Visit visit) {
         if (visit.getAppointmentId() == null) return null;
         Appointment appointment = appointments.findById(visit.getAppointmentId())
@@ -196,40 +389,86 @@ public class DispatchService {
         if (!visit.getCheckInAt().toLocalDate().equals(day)) throw fail(HttpStatus.CONFLICT, "Chỉ cấp số trong ngày check-in.");
 
         var existing = tickets.findByVisitVisitIdAndQueueType(visitId, QueueType.EXAM);
-        if (existing.isPresent() && existing.get().getStatus() != QueueStatus.DONE) {
-            return existing.get();
+        if (existing.isPresent()) {
+            QueueTicket old = existing.get();
+            if (old.getStatus() != QueueStatus.DONE && old.getStatus() != QueueStatus.CANCELLED) {
+                return old;
+            }
         }
 
         boolean emergency = visit.getVisitType() == VisitType.EMERGENCY;
         boolean returningParaclinical = visit.getStatus() == VisitStatus.WAITING_RESULT;
-        if (returningParaclinical) {
+        boolean notePriority = visit.getNotes() != null && visit.getNotes().contains("ƯU TIÊN");
+        boolean agePriority = false;
+        if (visit.getPatientProfile() != null && visit.getPatientProfile().getDob() != null) {
+            int age = Period.between(visit.getPatientProfile().getDob(), day).getYears();
+            if (age >= 65 || age <= 6) {
+                agePriority = true;
+            }
+        }
+        boolean autoPriority = emergency || returningParaclinical || notePriority || agePriority;
+        if (autoPriority) {
             priority = true;
         }
-        if (emergency && !priority) throw fail(HttpStatus.BAD_REQUEST, "Ca cấp cứu phải dùng số ưu tiên.");
         String priorityReason = reason == null ? "" : reason.trim();
         if (returningParaclinical && priorityReason.isEmpty()) {
             priorityReason = "Bệnh nhân quay lại sau cận lâm sàng chờ đọc kết quả";
         }
-        if (priority && !emergency && priorityReason.isEmpty()) {
-            priorityReason = "Bệnh nhân ưu tiên theo chỉ định tiếp đón";
+        if ((notePriority || agePriority) && priorityReason.isEmpty()) {
+            priorityReason = "Bệnh nhân thuộc diện ưu tiên khám theo chỉ định tiếp đón";
         }
         String emergencyReason = visit.getInitialSymptoms() == null ? "" : visit.getInitialSymptoms().trim();
         if (emergency && (emergencyReason.length() < 10 || emergencyReason.length() > 255)) {
             emergencyReason = priorityReason;
         }
-        if (emergency && (emergencyReason.length() < 10 || emergencyReason.length() > 255))
-            throw fail(HttpStatus.BAD_REQUEST, "Ca cấp cứu cần lý do từ 10 đến 255 ký tự.");
-        if (priority && !emergency && priorityReason.length() < 10)
-            throw fail(HttpStatus.BAD_REQUEST, "Cần ghi lý do ưu tiên tối thiểu 10 ký tự.");
-        if (priorityReason.length() > 255) throw fail(HttpStatus.BAD_REQUEST, "Lý do ưu tiên tối đa 255 ký tự.");
+        if (emergency && (emergencyReason.length() < 10 || emergencyReason.length() > 255)) {
+            throw fail(HttpStatus.BAD_REQUEST, "Ca cấp cứu cần mô tả triệu chứng hoặc lý do ưu tiên từ 10 đến 255 ký tự.");
+        }
+        if (priority && !emergency && (priorityReason.length() < 10 || priorityReason.length() > 255)) {
+            throw fail(HttpStatus.BAD_REQUEST, "Cấp số ưu tiên cần ghi lý do từ 10 đến 255 ký tự.");
+        }
+
+        // Tự động tìm và gán ghế khả dụng nếu ca khám chưa có ghế hoặc phòng
+        if (visit.getChairId() == null || visit.getRoomId() == null) {
+            List<DentalChair> branchChairs = chairs.findByBranchBranchIdOrderByChairCode(branchId);
+            for (DentalChair c : branchChairs) {
+                if (c.getStatus() == ChairStatus.AVAILABLE && c.getRoom() != null
+                        && c.getRoom().getStatus() == RoomStatus.ACTIVE
+                        && (visit.getRoomId() == null || visit.getRoomId().equals(c.getRoom().getRoomId()))
+                        && visits.occupiedChair(c.getChairId(), visit.getVisitId(), Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0) {
+                    visit.setChairId(c.getChairId());
+                    visit.setRoomId(c.getRoom().getRoomId());
+                    visits.save(visit);
+                    break;
+                }
+            }
+        }
+
+        QueueTicket ticket = existing.filter(t -> t.getStatus() == QueueStatus.CANCELLED).orElseGet(QueueTicket::new);
         int next = tickets.maxNumber(branchId, day, QueueType.EXAM, priority) + 1;
         if (next > 999) throw fail(HttpStatus.CONFLICT, "Đã hết dải số trong ngày.");
-        QueueTicket ticket = new QueueTicket();
-        ticket.setVisit(visit); ticket.setBranch(branch); ticket.setQueueDate(day); ticket.setQueueType(QueueType.EXAM);
-        ticket.setIsPriority(priority); ticket.setIsEmergency(emergency); ticket.setPriorityScore(emergency ? 100 : priority ? 50 : 0);
+        ticket.setVisit(visit);
+        ticket.setBranch(branch);
+        ticket.setQueueDate(day);
+        ticket.setQueueType(QueueType.EXAM);
+        ticket.setTicketNumber(next);
+        ticket.setDisplayNumber((priority ? "P-" : "") + String.format("%02d", next));
+        // Ca cấp cứu chuyển thẳng sang CALLED (Đang gọi/bàn giao) thay vì phải ngồi chờ
+        if (emergency) {
+            ticket.setStatus(QueueStatus.CALLED);
+            ticket.setCalledAt(LocalDateTime.now(ZONE));
+        } else {
+            ticket.setStatus(QueueStatus.WAITING);
+            ticket.setCalledAt(null);
+        }
+        ticket.setIsPriority(priority);
+        ticket.setIsEmergency(emergency);
+        ticket.setPriorityScore(emergency ? 100 : priority ? 50 : 0);
         ticket.setPriorityReason(emergency ? emergencyReason : priority ? priorityReason : null);
-        ticket.setTicketNumber(next); ticket.setDisplayNumber((priority ? "P-" : "") + String.format("%02d", next));
-        ticket.setStatus(QueueStatus.WAITING);
+        ticket.setIssuedAt(LocalDateTime.now(ZONE));
+        ticket.setPausedAt(null);
+        ticket.setResumedAt(null);
+        ticket.setCompletedAt(null);
         tickets.saveAndFlush(ticket);
         audit(session, visit, "ISSUE_EXAM_TICKET", null, ticket.getDisplayNumber());
         return ticket;
@@ -246,8 +485,8 @@ public class DispatchService {
     public ExamTicketPrintView printView(HttpSession session, Long id) {
         QueueTicket ticket = ticket(session, id);
         Visit visit = ticket.getVisit();
-        String roomName = visit.getRoomId() == null ? null : rooms.findById(visit.getRoomId()).map(Room::getRoomName).orElse(null);
-        String chairName = visit.getChairId() == null ? null : chairs.findById(visit.getChairId()).map(DentalChair::getChairName).orElse(null);
+        String roomName = visit.getRoomId() == null ? "Chờ phân phòng" : rooms.findById(visit.getRoomId()).map(Room::getRoomName).orElse("Chờ phân phòng");
+        String chairName = visit.getChairId() == null ? "Chờ phân ghế" : chairs.findById(visit.getChairId()).map(DentalChair::getChairName).orElse("Chờ phân ghế");
         return new ExamTicketPrintView(ticket.getBranch().getPhone(), roomName, chairName);
     }
 
@@ -298,8 +537,48 @@ public class DispatchService {
                 t.getVisit().getPrimaryDoctor() == null ? "Chưa gán" : t.getVisit().getPrimaryDoctor().getFullName(),
                 t.getStatus(), t.getIsPriority(), t.getIsEmergency());
     }
+    private List<StaffProfile> findAvailableDoctors(Long branchId, LocalDate day, LocalTime now) {
+        List<StaffProfile> eligible = doctors.eligible(branchId, day);
+        if (eligible.isEmpty()) return List.of();
+        List<StaffProfile> workingNow = eligible.stream()
+                .filter(d -> schedules.working(d.getStaffId(), branchId, day, now) > 0).toList();
+        if (!workingNow.isEmpty()) {
+            return workingNow;
+        }
+        return eligible.stream()
+                .filter(d -> schedules.scheduledToday(d.getStaffId(), branchId, day) > 0).toList();
+    }
+
+    private Long findEmergencyDoctor(List<StaffProfile> available, Long branchId, LocalDate day, Long visitId) {
+        List<StaffSchedule> todayShifts = schedules.findTodaySchedules(branchId, day);
+        Map<Long, LocalTime> startTimes = new HashMap<>();
+        for (StaffSchedule s : todayShifts) {
+            if (s.getStaff() != null && s.getShift() != null && s.getShift().getStartTime() != null) {
+                startTimes.putIfAbsent(s.getStaff().getStaffId(), s.getShift().getStartTime());
+            }
+        }
+        return available.stream()
+                .min(Comparator.comparing((StaffProfile d) -> startTimes.getOrDefault(d.getStaffId(), LocalTime.MAX))
+                        .thenComparingLong(d -> load(d.getStaffId(), branchId, day, visitId))
+                        .thenComparing(StaffProfile::getStaffId))
+                .map(StaffProfile::getStaffId)
+                .orElse(null);
+    }
+
+    public static boolean isWaitingDispatchVisit(Visit v) {
+        return v != null && (v.getStatus() == VisitStatus.WAITING || v.getStatus() == VisitStatus.WAITING_RESULT);
+    }
+
     private ResponseStatusException fail(HttpStatus s, String m) { return new ResponseStatusException(s, m); }
-    public record DoctorOption(Long id, String name, long waiting) {}
+    public record DoctorOption(Long id, String name, long waiting, boolean isFull, String shiftStart, int maxLimit) {
+        public DoctorOption(Long id, String name, long waiting, boolean isFull, String shiftStart) {
+            this(id, name, waiting, isFull, shiftStart, MAX_DOCTOR_QUEUE_LIMIT);
+        }
+        public DoctorOption(Long id, String name, long waiting) {
+            this(id, name, waiting, waiting >= MAX_DOCTOR_QUEUE_LIMIT, null, MAX_DOCTOR_QUEUE_LIMIT);
+        }
+    }
+    public record DoctorQueueInfo(int position, String label, String badgeClass, String doctorName) {}
     public record DoctorRequest(Long id, String name, boolean available) {}
     public record TicketRow(Long ticketId, Long visitId, String number, String patient, String patientCode,
                             Long doctorId, String doctorName, QueueStatus status, Boolean priority, Boolean emergency) {
@@ -310,38 +589,43 @@ public class DispatchService {
                         List<Room> rooms, List<DentalChair> chairs, List<TicketRow> queue, LocalDate day,
                         Map<Long, DoctorRequest> requests, Map<Long, String> issued,
                         List<Visit> unassignedVisits, Map<Long, List<Visit>> doctorVisits,
-                        List<Visit> handedOverVisits) {
+                        List<Visit> handedOverVisits, Map<Long, DoctorQueueInfo> queueInfo,
+                        Map<Long, Long> ticketIds, Map<Long, String> roomNames, Map<Long, String> chairNames) {
         public List<TicketRow> getTickets() { return queue(); }
         public List<TicketRow> tickets() { return queue(); }
+        public int maxDoctorQueueLimit() { return MAX_DOCTOR_QUEUE_LIMIT; }
+        public int getMaxDoctorQueueLimit() { return MAX_DOCTOR_QUEUE_LIMIT; }
 
         public Board(Long branchId, List<Branch> branches, List<Visit> visits, List<DoctorOption> doctors,
                      List<Room> rooms, List<DentalChair> chairs, List<TicketRow> queue, LocalDate day,
                      Map<Long, DoctorRequest> requests, Map<Long, String> issued,
-                     List<Visit> unassignedVisits, Map<Long, List<Visit>> doctorVisits) {
+                     Map<Long, DoctorQueueInfo> queueInfo) {
             this(branchId, branches, visits, doctors, rooms, chairs, queue, day, requests, issued,
-                    unassignedVisits, doctorVisits, buildHandedOverVisits(visits, doctors));
+                    visits.stream().filter(v -> v.getPrimaryDoctor() == null && isWaitingDispatchVisit(v)).toList(),
+                    buildDoctorVisits(visits, doctors),
+                    buildHandedOverVisits(visits, doctors),
+                    queueInfo, Map.of(), Map.of(), Map.of());
         }
 
         public Board(Long branchId, List<Branch> branches, List<Visit> visits, List<DoctorOption> doctors,
                      List<Room> rooms, List<DentalChair> chairs, List<TicketRow> queue, LocalDate day,
                      Map<Long, DoctorRequest> requests, Map<Long, String> issued) {
             this(branchId, branches, visits, doctors, rooms, chairs, queue, day, requests, issued,
-                    visits.stream().filter(v -> v.getPrimaryDoctor() == null && isActiveVisit(v)).toList(),
+                    visits.stream().filter(v -> v.getPrimaryDoctor() == null && isWaitingDispatchVisit(v)).toList(),
                     buildDoctorVisits(visits, doctors),
-                    buildHandedOverVisits(visits, doctors));
+                    buildHandedOverVisits(visits, doctors),
+                    Map.of(), Map.of(), Map.of(), Map.of());
         }
 
-        private static boolean isActiveVisit(Visit v) {
-            return v != null && v.getStatus() != VisitStatus.COMPLETED
-                    && v.getStatus() != VisitStatus.CANCELLED
-                    && v.getStatus() != VisitStatus.WAITING_PAYMENT;
+        public static boolean isWaitingDispatchVisit(Visit v) {
+            return DispatchService.isWaitingDispatchVisit(v);
         }
 
         private static List<Visit> buildHandedOverVisits(List<Visit> visits, List<DoctorOption> doctors) {
             Set<Long> onDuty = doctors.stream().map(DoctorOption::id).collect(Collectors.toSet());
             return visits.stream()
                     .filter(v -> v.getPrimaryDoctor() != null && !onDuty.contains(v.getPrimaryDoctor().getStaffId()))
-                    .filter(Board::isActiveVisit)
+                    .filter(Board::isWaitingDispatchVisit)
                     .toList();
         }
 
@@ -350,7 +634,7 @@ public class DispatchService {
             for (DoctorOption doc : doctors) {
                 map.put(doc.id(), visits.stream()
                         .filter(v -> v.getPrimaryDoctor() != null && doc.id().equals(v.getPrimaryDoctor().getStaffId()))
-                        .filter(Board::isActiveVisit)
+                        .filter(Board::isWaitingDispatchVisit)
                         .toList());
             }
             return map;

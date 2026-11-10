@@ -327,7 +327,7 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        return allActive.isEmpty() ? List.of() : List.of(allActive.get(0));
+        return allActive;
     }
 
     private List<PatientProfile> loadPatientProfilesForUser(Long userId) {

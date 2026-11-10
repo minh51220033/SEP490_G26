@@ -102,26 +102,55 @@ public class InvoicePageController {
         throw new AccessDeniedException("Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.");
     }
 
+    private boolean isFinanceAdminOrAccountant(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        if (userRepository.hasActiveAdminRole(userId)) {
+            return true;
+        }
+        List<String> activeRoles = userRepository.findActiveRoleNamesByUserId(userId);
+        if (activeRoles != null) {
+            return activeRoles.stream().anyMatch(r -> {
+                String role = r != null ? r.trim().toUpperCase() : "";
+                return role.equals("ADMIN") || role.equals("ROLE_ADMIN")
+                        || role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
+                        || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
+            });
+        }
+        return false;
+    }
+
     private List<Branch> resolveAllowedBranches(Long userId) {
-        boolean isAdmin = userRepository.hasActiveAdminRole(userId);
-        if (isAdmin) {
+        if (isFinanceAdminOrAccountant(userId)) {
             return branchRepository.findAll();
         }
         List<Long> branchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE);
         if (branchIds.isEmpty()) {
-            throw new AccessDeniedException("Nhân sự chưa được phân công chi nhánh hoạt động hợp lệ.");
+            User u = userRepository.findById(userId).orElse(null);
+            if (u != null && u.getBranch() != null && u.getBranch().getBranchId() != null) {
+                branchIds = List.of(u.getBranch().getBranchId());
+            }
+        }
+        if (branchIds.isEmpty()) {
+            return branchRepository.findAll();
         }
         return branchRepository.findAllById(branchIds);
     }
 
     private Long resolveBranchId(Long requestedBranchId, Long userId) {
-        boolean isAdmin = userRepository.hasActiveAdminRole(userId);
-        if (isAdmin) {
+        if (isFinanceAdminOrAccountant(userId)) {
             return requestedBranchId;
         }
         List<Long> activeBranchIds = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE);
         if (activeBranchIds.isEmpty()) {
-            throw new AccessDeniedException("Tài khoản chưa được phân công chi nhánh hợp lệ.");
+            User u = userRepository.findById(userId).orElse(null);
+            if (u != null && u.getBranch() != null && u.getBranch().getBranchId() != null) {
+                activeBranchIds = List.of(u.getBranch().getBranchId());
+            }
+        }
+        if (activeBranchIds.isEmpty()) {
+            return requestedBranchId;
         }
         if (requestedBranchId == null) {
             // Không cho người dùng bỏ branchId để xem mọi chi nhánh ngoài quyền -> mặc định về chi nhánh được phân công
@@ -200,7 +229,7 @@ public class InvoicePageController {
         if (visitId != null) {
             visitRepository.findWithDetailsById(visitId).ifPresent(visit -> {
                 // Kiểm tra phân công chi nhánh của lượt khám
-                resolveBranchId(visit.getBranch().getBranchId(), currentUserId);
+                resolveBranchId(visit.getBranch() != null ? visit.getBranch().getBranchId() : null, currentUserId);
 
                 model.addAttribute("selectedVisit", visit);
                 model.addAttribute("selectedPatient", visit.getPatientProfile());
@@ -294,7 +323,7 @@ public class InvoicePageController {
         Prescription prescription = prescriptionRepository.findByIdWithDetails(prescriptionId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn thuốc ID: " + prescriptionId));
 
-        resolveBranchId(prescription.getBranch().getBranchId(), currentUserId);
+        resolveBranchId(prescription.getBranch() != null ? prescription.getBranch().getBranchId() : null, currentUserId);
 
         if (prescription.getStatus() == PrescriptionStatus.CANCELLED) {
             throw new IllegalStateException("Đơn thuốc này đã bị hủy, không thể lập hóa đơn thuốc.");
@@ -365,7 +394,8 @@ public class InvoicePageController {
         populateUserAndSidebar(model, session);
 
         Invoice invoice = invoiceService.getInvoiceWithDetails(id);
-        resolveBranchId(invoice.getBranch().getBranchId(), currentUserId);
+        Long branchId = (invoice.getBranch() != null) ? invoice.getBranch().getBranchId() : null;
+        resolveBranchId(branchId, currentUserId);
 
         List<Payment> payments = paymentService.getPaymentsByInvoiceId(id);
         List<Refund> refunds = refundService.getRefundsByInvoiceId(id);
@@ -397,7 +427,8 @@ public class InvoicePageController {
         populateUserAndSidebar(model, session);
 
         Invoice invoice = invoiceService.getInvoiceWithDetails(id);
-        resolveBranchId(invoice.getBranch().getBranchId(), currentUserId);
+        Long branchId = (invoice.getBranch() != null) ? invoice.getBranch().getBranchId() : null;
+        resolveBranchId(branchId, currentUserId);
 
         List<Payment> payments = paymentService.getPaymentsByInvoiceId(id);
 
@@ -425,7 +456,8 @@ public class InvoicePageController {
         populateUserAndSidebar(model, session);
 
         Invoice invoice = invoiceService.getInvoiceWithDetails(id);
-        resolveBranchId(invoice.getBranch().getBranchId(), currentUserId);
+        Long branchId = (invoice.getBranch() != null) ? invoice.getBranch().getBranchId() : null;
+        resolveBranchId(branchId, currentUserId);
 
         List<InvoiceAuditLog> auditLogs = invoiceService.getInvoiceAuditLogs(id);
 

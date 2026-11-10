@@ -227,17 +227,7 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
 
     @Override
     public void ensureModificationCutoff(Appointment appointment, AppointmentActorType actorType) {
-        if (actorType != AppointmentActorType.PATIENT) return;
-        if (appointment.getPreferredSession() == null
-                || appointment.getPreferredSession() == PreferredSession.ANY) {
-            throw conflict("Lịch hẹn chưa có buổi khám cụ thể. Vui lòng liên hệ lễ tân.");
-        }
-        LocalDateTime deadline = LocalDateTime.of(appointment.getAppointmentDate(),
-                (appointment.getExpectedTime() != null ? appointment.getExpectedTime()
-                        : sessionRange(appointment.getBranch(), appointment.getPreferredSession()).end()).minusHours(2));
-        if (!LocalDateTime.now(CLINIC_ZONE).isBefore(deadline)) {
-            throw conflict("Đã qua hạn tự đổi hoặc hủy. Vui lòng liên hệ lễ tân.");
-        }
+        // Cho phép bệnh nhân hủy, sửa lịch hẹn linh hoạt như bên lễ tân, không áp dụng giới hạn thời gian trước 2 tiếng
     }
 
     private String invalidSession(Branch branch, LocalDate date, PreferredSession session,
@@ -264,11 +254,9 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
                 || branch.getClosingTime().isBefore(range.end())) {
             return "Chi nhánh không mở cửa trong buổi được chọn.";
         }
-        LocalTime cutoff = actorType == AppointmentActorType.PATIENT
-                ? range.end().minusHours(2) : range.end();
-        if (date.equals(today) && !LocalTime.now(CLINIC_ZONE).isBefore(cutoff)) {
-            return actorType == AppointmentActorType.PATIENT
-                    ? "Đã qua hạn đặt lịch cho buổi này." : "Buổi khám đã kết thúc.";
+        // Đồng bộ linh hoạt như bên lễ tân: Chỉ từ chối khi buổi khám trong ngày đã hoàn toàn kết thúc
+        if (date.equals(today) && !LocalTime.now(CLINIC_ZONE).isBefore(range.end())) {
+            return "Buổi khám trong ngày đã kết thúc.";
         }
         return null;
     }

@@ -84,6 +84,11 @@ public class ReceptionService {
     }
 
     public VisitResult checkInAppointment(HttpSession session, Long appointmentId, String symptoms, String requestKey) {
+        return checkInAppointment(session, appointmentId, symptoms, requestKey, false, false);
+    }
+
+    public VisitResult checkInAppointment(HttpSession session, Long appointmentId, String symptoms, String requestKey,
+                                         boolean priority, boolean emergency) {
         requireKey(requestKey);
         Appointment reference = appointments.findById(appointmentId)
                 .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy lịch hẹn."));
@@ -103,7 +108,13 @@ public class ReceptionService {
         Visit existing = visits.findByAppointmentId(appointmentId).orElse(null);
         if (existing != null && existing.getStatus() != VisitStatus.CANCELLED) return result(existing);
 
-        if (keys.findByRequestKey(requestKey).isPresent()) {
+        var prior = keys.findByRequestKey(requestKey);
+        if (prior.isPresent()) {
+            Visit priorVisit = prior.get().getVisit();
+            if (priorVisit != null && appointmentId.equals(priorVisit.getAppointmentId())
+                    && priorVisit.getStatus() != VisitStatus.CANCELLED) {
+                return result(priorVisit);
+            }
             throw error(HttpStatus.CONFLICT, "Mã yêu cầu check-in đã dùng cho lượt khám khác.");
         }
 
@@ -119,24 +130,18 @@ public class ReceptionService {
 
         rejectActiveVisit(patient);
 
-        Visit visit = newVisit(patient, branch, VisitType.APPOINTMENT, appointmentId,
+        Visit visit = newVisit(patient, branch, emergency ? VisitType.EMERGENCY : VisitType.APPOINTMENT, appointmentId,
                 symptoms(symptoms, appointment.getInitialSymptoms()));
+        if (priority || emergency) {
+            visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] · " + visit.getNotes());
+        }
         visits.saveAndFlush(visit);
-        if (clinicalExamRepository != null && appointment.getDoctor() != null) {
-            try {
-                visit.setPrimaryDoctor(appointment.getDoctor());
-                visits.saveAndFlush(visit);
-                if (clinicalExamRepository.findByVisit_VisitId(visit.getVisitId()).isEmpty()) {
-                    ClinicalExamination exam = new ClinicalExamination();
-                    exam.setVisit(visit);
-                    exam.setPatientProfile(patient);
-                    exam.setDoctor(appointment.getDoctor());
-                    exam.setChiefComplaint(visit.getInitialSymptoms() != null && !visit.getInitialSymptoms().isBlank()
-                            ? visit.getInitialSymptoms() : "Tiếp nhận khám nha khoa");
-                    exam.setExamTime(LocalDateTime.now());
-                    clinicalExamRepository.save(exam);
-                }
-            } catch (Exception ignored) {}
+        if (appointment.getDoctor() != null) {
+            visit.setPrimaryDoctor(appointment.getDoctor());
+            visits.saveAndFlush(visit);
+            if (examinations != null) {
+                examinations.ensureForAssignedVisit(visit.getVisitId());
+            }
         }
         storeKey(requestKey, visit);
 
@@ -145,13 +150,19 @@ public class ReceptionService {
         Long actorId = access.require(session).user().getUserId();
         recordHistory(appointment, actorId, "CHECK_IN", oldSnapshot, snapshot(appointment), "Check-in tiếp đón tại phòng khám");
 
-        audit(session, branch, "CHECK_IN_APPOINTMENT", visit,
+        audit(session, branch, emergency ? "CHECK_IN_EMERGENCY_APPOINTMENT" : "CHECK_IN_APPOINTMENT", visit,
                 Map.of("appointmentId", appointmentId, "profileId", patient.getProfileId(),
-                        "appointmentStatusBefore", before, "visitStatus", "WAITING"));
+                        "appointmentStatusBefore", before, "visitStatus", "WAITING",
+                        "priority", priority, "emergency", emergency));
         return result(visit);
     }
 
     public VisitResult confirmAndCheckIn(HttpSession session, Long appointmentId, String symptoms, String requestKey) {
+        return confirmAndCheckIn(session, appointmentId, symptoms, requestKey, false, false);
+    }
+
+    public VisitResult confirmAndCheckIn(HttpSession session, Long appointmentId, String symptoms, String requestKey,
+                                        boolean priority, boolean emergency) {
         requireKey(requestKey);
         Appointment reference = appointments.findById(appointmentId)
                 .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy lịch hẹn."));
@@ -209,32 +220,27 @@ public class ReceptionService {
         recordHistory(appointment, actorId, "CHECK_IN", confirmedSnapshot, snapshot(appointment),
                 "Tiếp đón và tạo lượt khám sau khi xác nhận");
 
-        Visit visit = newVisit(patient, branch, VisitType.APPOINTMENT, appointmentId,
+        Visit visit = newVisit(patient, branch, emergency ? VisitType.EMERGENCY : VisitType.APPOINTMENT, appointmentId,
                 symptoms(symptoms, appointment.getInitialSymptoms()));
+        if (priority || emergency) {
+            visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] · " + visit.getNotes());
+        }
         visits.saveAndFlush(visit);
-        if (clinicalExamRepository != null && appointment.getDoctor() != null) {
-            try {
-                visit.setPrimaryDoctor(appointment.getDoctor());
-                visits.saveAndFlush(visit);
-                if (clinicalExamRepository.findByVisit_VisitId(visit.getVisitId()).isEmpty()) {
-                    ClinicalExamination exam = new ClinicalExamination();
-                    exam.setVisit(visit);
-                    exam.setPatientProfile(patient);
-                    exam.setDoctor(appointment.getDoctor());
-                    exam.setChiefComplaint(visit.getInitialSymptoms() != null && !visit.getInitialSymptoms().isBlank()
-                            ? visit.getInitialSymptoms() : "Tiếp nhận khám nha khoa");
-                    exam.setExamTime(LocalDateTime.now());
-                    clinicalExamRepository.save(exam);
-                }
-            } catch (Exception ignored) {}
+        if (appointment.getDoctor() != null) {
+            visit.setPrimaryDoctor(appointment.getDoctor());
+            visits.saveAndFlush(visit);
+            if (examinations != null) {
+                examinations.ensureForAssignedVisit(visit.getVisitId());
+            }
         }
         storeKey(requestKey, visit);
 
         appointments.save(appointment);
 
-        audit(session, branch, "CONFIRM_AND_CHECK_IN", visit,
+        audit(session, branch, emergency ? "CONFIRM_AND_CHECK_IN_EMERGENCY" : "CONFIRM_AND_CHECK_IN", visit,
                 Map.of("appointmentId", appointmentId, "profileId", patient.getProfileId(),
-                        "appointmentStatusBefore", initialStatus, "visitStatus", "WAITING"));
+                        "appointmentStatusBefore", initialStatus, "visitStatus", "WAITING",
+                        "priority", priority, "emergency", emergency));
         return result(visit);
     }
 
@@ -255,8 +261,8 @@ public class ReceptionService {
 
         Visit visit = visits.findByAppointmentId(appointmentId).orElse(null);
         if (visit != null) {
-            if (visit.getStatus() != VisitStatus.WAITING) {
-                throw error(HttpStatus.CONFLICT, "Lượt khám đã bắt đầu khám hoặc hoàn thành, không thể hoàn tác tiếp đón.");
+            if (!canRevertVisit(visit)) {
+                throw error(HttpStatus.CONFLICT, "Lượt khám đã được chuyển sang điều phối ghế / cấp số hàng chờ hoặc đang khám, không thể hoàn tác tại bước tiếp đón.");
             }
             visit.setStatus(VisitStatus.CANCELLED);
             visit.setAppointmentId(null);
@@ -293,8 +299,34 @@ public class ReceptionService {
         return visit != null ? result(visit) : new VisitResult(appointment.getAppointmentId(), appointment.getAppointmentCode(), patient.getFullName(), branch.getBranchName(), VisitType.APPOINTMENT, VisitStatus.CANCELLED, appointment.getCreatedAt());
     }
 
+    @Transactional
+    public void updateAppointmentNote(HttpSession session, Long appointmentId, String note) {
+        Appointment reference = appointments.findById(appointmentId)
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy lịch hẹn."));
+        allowedBranch(session, reference.getBranch().getBranchId());
+
+        Appointment appointment = appointments.lockById(appointmentId)
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy lịch hẹn."));
+
+        if (appointment.getStatus() == AppointmentStatus.CHECKED_IN) {
+            throw error(HttpStatus.CONFLICT, "Lịch hẹn đã tiếp đón không thể sửa chú thích trực tiếp ở đây.");
+        }
+
+        String trimmed = note != null ? note.trim() : "";
+        if (trimmed.length() > 500) {
+            throw error(HttpStatus.BAD_REQUEST, "Chú thích tối đa 500 ký tự.");
+        }
+        appointment.setInitialSymptoms(trimmed);
+        appointments.save(appointment);
+    }
+
     public VisitResult checkInWalkIn(HttpSession session, Long branchId, Long profileId,
                                     String symptoms, boolean emergency, String requestKey) {
+        return checkInWalkIn(session, branchId, profileId, symptoms, emergency, false, requestKey);
+    }
+
+    public VisitResult checkInWalkIn(HttpSession session, Long branchId, Long profileId,
+                                    String symptoms, boolean emergency, boolean priority, String requestKey) {
         requireKey(requestKey);
         Branch branch = allowedBranch(session, branchId);
         lockBranchForBooking(branchId);
@@ -318,29 +350,46 @@ public class ReceptionService {
 
         // Walk-in / Emergency does NOT create or mutate any Appointment
         Visit visit = newVisit(patient, branch, emergency ? VisitType.EMERGENCY : VisitType.WALK_IN, null, initialSymptoms);
+        if (priority || emergency) {
+            visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] " + visit.getNotes());
+        }
         visits.saveAndFlush(visit);
         storeKey(requestKey, visit);
 
         audit(session, branch, emergency ? "CHECK_IN_EMERGENCY" : "CHECK_IN_WALK_IN", visit,
                 Map.of("profileId", profileId, "visitStatus", "WAITING", "visitType", visit.getVisitType().name(),
-                        "initialSymptoms", initialSymptoms));
+                        "initialSymptoms", initialSymptoms, "priority", priority, "emergency", emergency));
         return result(visit);
     }
 
     @Transactional(readOnly = true)
     public Dashboard dashboard(HttpSession session, Long requestedBranchId, String query) {
+        return dashboard(session, requestedBranchId, query, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Dashboard dashboard(HttpSession session, Long requestedBranchId, String query, LocalDate requestedDay) {
         var scope = access.require(session);
         List<Branch> options = branches.findByIsActiveTrueOrderByBranchNameAsc().stream()
                 .filter(b -> scope.permits(b.getBranchId())).toList();
         if (options.isEmpty()) {
             throw error(HttpStatus.FORBIDDEN, "Không có chi nhánh tiếp đón đang hoạt động.");
         }
-        Long branchId = requestedBranchId == null ? options.get(0).getBranchId() : requestedBranchId;
+        Long branchId = requestedBranchId;
+        if (branchId == null && session != null) {
+            Object sId = session.getAttribute("currentBranchId");
+            if (sId instanceof Long sid && options.stream().anyMatch(b -> b.getBranchId().equals(sid))) {
+                branchId = sid;
+            }
+        }
+        if (branchId == null) {
+            branchId = options.get(0).getBranchId();
+        }
+        if (session != null) {
+            session.setAttribute("currentBranchId", branchId);
+        }
         Branch branch = allowedBranch(session, branchId);
-        LocalDate day = today();
-        List<AppointmentRow> appointmentRows = appointments.forDay(branchId, day,
-                List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN))
-                .stream().map(this::appointmentRow).toList();
+        LocalDate day = (requestedDay == null) ? today() : requestedDay;
         Map<Long, QueueTicket> ticketMap = new HashMap<>();
         if (tickets != null) {
             try {
@@ -351,12 +400,39 @@ public class ReceptionService {
                 });
             } catch (Exception ignored) {}
         }
-        List<VisitRow> visitRows = visits.forDay(branchId, day.atStartOfDay(), day.plusDays(1).atStartOfDay())
-                .stream().map(v -> visitRow(v, ticketMap)).toList();
+        List<Visit> dayVisits = visits.forDay(branchId, day.atStartOfDay(), day.plusDays(1).atStartOfDay());
+        Map<Long, Visit> visitByAppointmentId = new HashMap<>();
+        for (Visit v : dayVisits) {
+            if (v.getAppointmentId() != null && v.getStatus() != VisitStatus.CANCELLED) {
+                visitByAppointmentId.putIfAbsent(v.getAppointmentId(), v);
+            }
+        }
+        List<AppointmentRow> appointmentRows = appointments.forDay(branchId, day,
+                List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN))
+                .stream().map(a -> appointmentRow(a, visitByAppointmentId.get(a.getAppointmentId()), ticketMap)).toList();
+        Comparator<VisitRow> triageComparator = Comparator
+                .comparing(VisitRow::emergency).reversed()
+                .thenComparing(VisitRow::priority).reversed()
+                .thenComparing(VisitRow::checkedInAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(VisitRow::id, Comparator.nullsLast(Comparator.naturalOrder()));
+        List<VisitRow> visitRows = dayVisits
+                .stream().map(v -> visitRow(v, ticketMap))
+                .sorted(triageComparator)
+                .toList();
         String term = query == null ? "" : query.trim();
-        List<PatientRow> matches = term.length() < 2 ? List.of()
+        List<PatientRow> matches = term.length() < 1 ? List.of()
                 : profiles.search(term, PageRequest.of(0, 20)).stream().map(this::patientRow).toList();
         return new Dashboard(branchId, branch.getBranchName(), day, options, appointmentRows, visitRows, matches, term, UUID.randomUUID().toString());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PatientRow> searchPatients(HttpSession session, String query) {
+        access.require(session);
+        String term = query == null ? "" : query.trim();
+        if (term.isEmpty()) {
+            return List.of();
+        }
+        return profiles.search(term, PageRequest.of(0, 15)).stream().map(this::patientRow).toList();
     }
 
     private void lockBranchForBooking(Long branchId) {
@@ -496,26 +572,65 @@ public class ReceptionService {
                 Boolean.TRUE.equals(p.getHasUnderlyingDisease()), p.getUnderlyingDiseaseDetails());
     }
 
+    private boolean canRevertVisit(Visit visit) {
+        if (visit == null) return true;
+        if (visit.getStatus() != VisitStatus.WAITING) return false;
+        if (visit.getRoomId() != null || visit.getChairId() != null) return false;
+        if (tickets != null) {
+            try {
+                List<QueueTicket> visitTickets = tickets.findAllByVisitAndType(visit.getVisitId(), QueueType.EXAM);
+                boolean isAlreadyBeingExamined = visitTickets != null && visitTickets.stream()
+                        .anyMatch(t -> t.getStatus() == QueueStatus.IN_SERVICE || t.getStatus() == QueueStatus.DONE);
+                if (isAlreadyBeingExamined) return false;
+            } catch (Exception ignored) {}
+        }
+        return true;
+    }
+
     private AppointmentRow appointmentRow(Appointment a) {
-        long lateMinutes = a.getExpectedTime() == null || a.getStatus() == AppointmentStatus.CHECKED_IN
-                ? 0 : Math.max(0, Duration.between(a.getExpectedTime(), LocalTime.now(CLINIC_ZONE)).toMinutes());
+        return appointmentRow(a, null, Map.of());
+    }
+
+    private AppointmentRow appointmentRow(Appointment a, Visit linkedVisit, Map<Long, QueueTicket> ticketMap) {
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        long lateMinutes = 0;
+        if (a.getExpectedTime() != null && a.getStatus() != AppointmentStatus.CHECKED_IN && a.getAppointmentDate() != null) {
+            if (a.getAppointmentDate().isBefore(today)) {
+                lateMinutes = Duration.between(a.getAppointmentDate().atTime(a.getExpectedTime()), LocalDateTime.now(CLINIC_ZONE)).toMinutes();
+            } else if (a.getAppointmentDate().isEqual(today)) {
+                lateMinutes = Math.max(0, Duration.between(a.getExpectedTime(), LocalTime.now(CLINIC_ZONE)).toMinutes());
+            }
+        }
+        boolean canRevert = false;
+        if (a.getStatus() == AppointmentStatus.CHECKED_IN) {
+            Visit v = linkedVisit != null ? linkedVisit : visits.findByAppointmentId(a.getAppointmentId()).orElse(null);
+            if (v == null) {
+                canRevert = true;
+            } else {
+                canRevert = canRevertVisit(v);
+            }
+        }
         return new AppointmentRow(a.getAppointmentId(), a.getAppointmentCode(), patientRow(a.getPatientProfile()),
                 a.getExpectedTime(), a.getInitialSymptoms(),
                 a.getDoctor() == null ? "Chưa chỉ định" : a.getDoctor().getFullName(),
-                a.getStatus(), UUID.randomUUID().toString(), lateMinutes);
+                a.getStatus(), UUID.randomUUID().toString(), lateMinutes, canRevert);
     }
 
     private VisitRow visitRow(Visit v, Map<Long, QueueTicket> ticketMap) {
         QueueTicket t = ticketMap != null ? ticketMap.get(v.getVisitId()) : null;
         String doctorName = v.getPrimaryDoctor() != null ? v.getPrimaryDoctor().getFullName()
                 : (t != null && t.getVisit() != null && t.getVisit().getPrimaryDoctor() != null ? t.getVisit().getPrimaryDoctor().getFullName() : null);
+        boolean isEmergency = v.getVisitType() == VisitType.EMERGENCY || (t != null && Boolean.TRUE.equals(t.getIsEmergency()));
+        boolean isPriority = isEmergency || (t != null && Boolean.TRUE.equals(t.getIsPriority()))
+                || (v.getNotes() != null && v.getNotes().contains("ƯU TIÊN"))
+                || (v.getPatientProfile() != null && v.getPatientProfile().getDob() != null && (java.time.Period.between(v.getPatientProfile().getDob(), java.time.LocalDate.now()).getYears() >= 65 || java.time.Period.between(v.getPatientProfile().getDob(), java.time.LocalDate.now()).getYears() <= 6));
         return new VisitRow(v.getVisitId(), v.getVisitCode(), patientRow(v.getPatientProfile()),
                 v.getVisitType(), v.getStatus(), v.getCheckInAt(), v.getInitialSymptoms(),
                 t != null ? t.getTicketId() : null,
                 t != null ? t.getDisplayNumber() : null,
                 doctorName,
-                t != null && Boolean.TRUE.equals(t.getIsPriority()),
-                t != null && Boolean.TRUE.equals(t.getIsEmergency()));
+                isPriority,
+                isEmergency);
     }
 
     private VisitRow visitRow(Visit v) {
@@ -530,7 +645,13 @@ public class ReceptionService {
                              String underlyingDiseaseDetails) { }
     public record AppointmentRow(Long id, String code, PatientRow patient, LocalTime expectedTime,
                                  String symptoms, String doctorName, AppointmentStatus status, String requestKey,
-                                 long lateMinutes) { }
+                                 long lateMinutes, boolean canRevert) {
+        public AppointmentRow(Long id, String code, PatientRow patient, LocalTime expectedTime,
+                              String symptoms, String doctorName, AppointmentStatus status, String requestKey,
+                              long lateMinutes) {
+            this(id, code, patient, expectedTime, symptoms, doctorName, status, requestKey, lateMinutes, status == AppointmentStatus.CHECKED_IN);
+        }
+    }
     public record VisitRow(Long id, String code, PatientRow patient, VisitType type,
                            VisitStatus status, LocalDateTime checkedInAt, String symptoms,
                            Long ticketId, String ticketDisplayNumber, String doctorName,

@@ -8,21 +8,15 @@
     <!-- Frontend Fragment: doctor/fragments/patient-info-tab.html             -->
     <!-- ===================================================================== -->
     <div th:fragment="patientInfoTab">
-        <div class="card border-0 shadow-sm rounded-3 mb-4 overflow-hidden bg-white">
-            <div class="card-header bg-light d-flex align-items-center justify-content-between p-3 border-bottom">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center"
-                        style="width: 36px; height: 36px;">
-                        <i class="bi bi-person-lines-fill fs-5"></i>
-                    </div>
-                    <div>
-                        <h4 class="mb-0 fw-bold text-dark fs-6">Hồ sơ thông tin hành chính bệnh nhân</h4>
-                        <span class="text-secondary small">Chi tiết thông tin liên hệ, tiền sử y khoa, người bảo hộ
-                            &amp; cơ sở điều trị</span>
-                    </div>
+        <div class="card border shadow-sm rounded-3 mb-4 overflow-hidden bg-white">
+            <div class="card-header df-tab-content-header bg-light d-flex align-items-center justify-content-between p-3 border-bottom">
+                <div class="df-tab-title-standard">
+                    <i class="bi bi-person-lines-fill"></i>
+                    <span>HỒ SƠ THÔNG TIN HÀNH CHÍNH BỆNH NHÂN</span>
+                    <span class="df-tab-subtitle-text d-none d-lg-inline">(Chi tiết liên hệ, tiền sử y khoa &amp; người bảo hộ)</span>
                 </div>
                 <span
-                    class="badge bg-primary-subtle text-primary border border-primary px-3 py-1.5 rounded-pill fw-bold"
+                    class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 rounded-pill fw-bold small"
                     th:text="${patient != null ? patient.patientCode : 'BN0001'}">
                     BN0001
                 </span>

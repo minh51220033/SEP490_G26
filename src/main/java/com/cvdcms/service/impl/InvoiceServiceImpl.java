@@ -139,7 +139,11 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (!isAdmin && branchId != null) {
             boolean hasAssignment = staffBranchAssignmentRepository.hasActiveAssignment(staff.getStaffId(), branchId, AssignmentStatus.ACTIVE);
             if (!hasAssignment) {
-                throw new IllegalStateException("Nhân sự (" + staff.getFullName() + ") không có phân công hoạt động hợp lệ tại chi nhánh ID: " + branchId);
+                boolean isMultiBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE).isEmpty()
+                        && (user.getBranch() == null || branchId.equals(user.getBranch().getBranchId()));
+                if (!isMultiBranch) {
+                    throw new IllegalStateException("Nhân sự (" + staff.getFullName() + ") không có phân công hoạt động hợp lệ tại chi nhánh ID: " + branchId);
+                }
             }
         }
 
@@ -231,7 +235,10 @@ public class InvoiceServiceImpl implements InvoiceService {
                 }
 
                 if (invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId())) {
-                    throw new IllegalStateException("Dịch vụ '" + ps.getService().getServiceName() + "' (ID: " + ps.getPerformedId() + ") đã được lập hóa đơn còn hiệu lực trước đó.");
+                    String displayName = (ps.getStepName() != null && !ps.getStepName().isBlank())
+                            ? ps.getStepName()
+                            : ps.getService().getServiceName();
+                    throw new IllegalStateException("Dịch vụ '" + displayName + "' (ID: " + ps.getPerformedId() + ") đã được lập hóa đơn còn hiệu lực trước đó.");
                 }
 
                 BigDecimal unitPrice = ps.getUnitPrice() != null ? ps.getUnitPrice() : ps.getService().getBasePrice();
@@ -249,8 +256,12 @@ public class InvoiceServiceImpl implements InvoiceService {
                     if (itemDto.getQuantity() != null && itemDto.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
                         throw new IllegalArgumentException("Số lượng dịch vụ phải lớn hơn 0.");
                     }
-                    unitPrice = itemDto.getUnitPrice();
-                    quantity = itemDto.getQuantity();
+                    if (itemDto.getUnitPrice() != null) {
+                        unitPrice = itemDto.getUnitPrice();
+                    }
+                    if (itemDto.getQuantity() != null) {
+                        quantity = itemDto.getQuantity();
+                    }
                 }
 
                 BigDecimal lineTotal = unitPrice.multiply(quantity).subtract(clinicalDiscount);
@@ -262,7 +273,15 @@ public class InvoiceServiceImpl implements InvoiceService {
                 item.setInvoice(invoice);
                 item.setItemType(InvoiceItemType.SERVICE);
                 item.setService(ps.getService());
-                item.setItemName(ps.getService().getServiceName());
+
+                // Khớp chuẩn theo cập nhật của Bác sĩ: Ưu tiên tên bước thủ thuật (stepName) hoặc itemName từ giao diện kế toán gửi lên
+                String finalItemName = (itemDto.getItemName() != null && !itemDto.getItemName().trim().isEmpty())
+                        ? itemDto.getItemName().trim()
+                        : (ps.getStepName() != null && !ps.getStepName().trim().isEmpty()
+                                ? ps.getStepName().trim()
+                                : ps.getService().getServiceName());
+                item.setItemName(finalItemName);
+
                 item.setQuantity(quantity);
                 item.setUnitPrice(unitPrice);
                 item.setFinalAmount(lineTotal);
@@ -705,7 +724,22 @@ public class InvoiceServiceImpl implements InvoiceService {
     public Invoice getInvoiceWithDetails(Long invoiceId) {
         Invoice invoice = invoiceRepository.findWithDetailsById(invoiceId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hóa đơn ID: " + invoiceId));
-        invoice.getItems().size(); // initialize items
+        if (invoice.getItems() != null) {
+            invoice.getItems().forEach(it -> {
+                if (it.getService() != null) {
+                    it.getService().getServiceName();
+                }
+                if (it.getPerformedService() != null) {
+                    it.getPerformedService().getToothNumbers();
+                    if (it.getPerformedService().getPlanItem() != null && it.getPerformedService().getPlanItem().getStage() != null) {
+                        it.getPerformedService().getPlanItem().getStage().getStageName();
+                    }
+                }
+                if (it.getBatch() != null) {
+                    it.getBatch().getBatchNumber();
+                }
+            });
+        }
         return invoice;
     }
 
@@ -890,22 +924,36 @@ public class InvoiceServiceImpl implements InvoiceService {
             }
         }
 
-        // Hoàn nguyên voucher nếu đã dùng
+        // Hoàn nguyên voucher nếu đã dùng: chỉ hoàn trả khi chưa hết hạn và không có hóa đơn hiệu lực khác đang gắn
         if (invoice.getVoucher() != null) {
             PatientVoucher voucher = invoice.getVoucher();
             if (voucher.getStatus() == VoucherStatus.USED) {
-                voucher.setStatus(VoucherStatus.AVAILABLE);
-                voucher.setUsedAt(null);
-                patientVoucherRepository.save(voucher);
+                boolean isExpired = voucher.getExpiresAt() != null && voucher.getExpiresAt().isBefore(LocalDateTime.now());
+                boolean usedByOther = invoiceRepository.existsByVoucher_VoucherIdAndStatusNot(voucher.getVoucherId(), InvoiceStatus.CANCELLED);
+                if (!isExpired && !usedByOther) {
+                    voucher.setStatus(VoucherStatus.AVAILABLE);
+                    voucher.setUsedAt(null);
+                    patientVoucherRepository.save(voucher);
+                }
             }
         }
 
-        // Hoàn nguyên số lượt dùng khuyến mãi nếu đã từng tính
+        // Hoàn nguyên số lượt dùng khuyến mãi nếu đã từng tính và chưa từng hoàn lại
         if (invoice.getPromotion() != null) {
-            Promotion promo = invoice.getPromotion();
-            if (promo.getUsedCount() != null && promo.getUsedCount() > 0) {
-                promo.setUsedCount(promo.getUsedCount() - 1);
-                promotionRepository.save(promo);
+            boolean promoWasApplied = invoiceAuditLogRepository.existsByInvoice_InvoiceIdAndActionType(invoice.getInvoiceId(), "PROMOTION_APPLIED");
+            boolean promoAlreadyReverted = invoiceAuditLogRepository.existsByInvoice_InvoiceIdAndActionType(invoice.getInvoiceId(), "PROMOTION_REVERTED");
+            if (promoWasApplied && !promoAlreadyReverted) {
+                Promotion promo = promotionRepository.findByIdForUpdate(invoice.getPromotion().getPromotionId())
+                        .orElse(invoice.getPromotion());
+                if (promo.getUsedCount() != null && promo.getUsedCount() > 0) {
+                    promo.setUsedCount(promo.getUsedCount() - 1);
+                    promotionRepository.save(promo);
+                }
+                InvoiceAuditLog promoRevLog = new InvoiceAuditLog();
+                promoRevLog.setInvoice(invoice);
+                promoRevLog.setActionType("PROMOTION_REVERTED");
+                promoRevLog.setReason("Hoàn trả lượt khuyến mãi do hủy hóa đơn");
+                invoiceAuditLogRepository.save(promoRevLog);
             }
         }
 
@@ -1002,11 +1050,26 @@ public class InvoiceServiceImpl implements InvoiceService {
             }
         }
 
-        // 2. Chốt lượt sử dụng promotion chung nếu có
+        // 2. Chốt lượt sử dụng promotion chung nếu có (khóa bi quan PESSIMISTIC_WRITE và chống ghi nhận trùng lặp)
         if (invoice.getPromotion() != null) {
-            Promotion promo = invoice.getPromotion();
-            promo.setUsedCount((promo.getUsedCount() != null ? promo.getUsedCount() : 0) + 1);
-            promotionRepository.save(promo);
+            boolean alreadyApplied = invoiceAuditLogRepository.existsByInvoice_InvoiceIdAndActionType(
+                    invoice.getInvoiceId(), "PROMOTION_APPLIED");
+            if (!alreadyApplied) {
+                Long promoId = invoice.getPromotion().getPromotionId();
+                Promotion promo = promotionRepository.findByIdForUpdate(promoId)
+                        .orElse(invoice.getPromotion());
+                if (promo.getUsageLimit() != null && promo.getUsedCount() != null && promo.getUsedCount() >= promo.getUsageLimit()) {
+                    throw new IllegalStateException("Chương trình khuyến mãi '" + promo.getPromoName() + "' đã đạt giới hạn số lượt sử dụng tối đa.");
+                }
+                promo.setUsedCount((promo.getUsedCount() != null ? promo.getUsedCount() : 0) + 1);
+                promotionRepository.save(promo);
+
+                InvoiceAuditLog promoLog = new InvoiceAuditLog();
+                promoLog.setInvoice(invoice);
+                promoLog.setActionType("PROMOTION_APPLIED");
+                promoLog.setReason("Ghi nhận lượt sử dụng khuyến mãi " + promo.getPromoCode());
+                invoiceAuditLogRepository.save(promoLog);
+            }
         }
 
         // 3. Trừ điểm Loyalty và ghi nhận giao dịch REDEEM (đúng một lần duy nhất)

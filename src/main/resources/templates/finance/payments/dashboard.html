@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:replace="~{fragments/head :: head('Dashboard Tài chính Bệnh nhân (SCR-22.1) - FT22')}"></th:block>
+    <th:block th:replace="~{fragments/head :: head('Dashboard Tài chính Bệnh nhân')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
     <link rel="stylesheet" th:href="@{/css/cashier.css}">
     <link rel="stylesheet" th:href="@{/css/enhanced-table.css}">
@@ -13,7 +13,7 @@
     <aside th:replace="~{fragments/sidebar :: sidebar(${activeMenu})}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main">
-        <header th:replace="~{fragments/header :: appTopbar('Thu ngân')}"></header>
+        <header th:replace="~{fragments/header :: appTopbar('Tài chính')}"></header>
         <main class="app-content finance-page cashier-page patient-finance-dashboard">
             <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
@@ -29,49 +29,40 @@
 
             <!-- Vùng nội dung tab Tổng quan -->
             <div id="cashierTabContent" class="cashier-tab-content">
-                <!-- Page Header -->
-                <div class="cashier-subhead">
-                    <div>
-                        <h2 class="cashier-subhead-title"><i class="bi bi-speedometer2 text-primary"></i> Tổng quan tài chính bệnh nhân</h2>
-                        <p class="cashier-subhead-desc">Tổng quan toàn diện tài chính, công nợ viện phí, số dư ví tạm ứng và lịch sử giao dịch thanh toán của bệnh nhân</p>
-                    </div>
 
-                </div>
+            <!-- 1. TRANG DANH SÁCH BỆNH NHÂN CHỜ (HIỂN THỊ KHI CHƯA CHỌN BỆNH NHÂN CỤ THỂ) -->
+            <th:block th:if="${patient == null}">
             <!-- 1. Thanh tìm kiếm bệnh nhân (Backend search & pagination - Requirement 3 & 7) -->
-            <div class="fin-card mb-3 p-3 border shadow-xs">
-                <form method="get" th:action="@{/payments/dashboard}" class="row g-2 align-items-center">
+            <div class="fin-card fin-filter-container mb-3">
+                <form method="get" th:action="@{/payments/dashboard}" class="fin-filter-bar">
                     <input type="hidden" name="patientId" th:if="${patient != null}" th:value="${patient.profileId}">
-                    <div class="col-md-3">
-                        <label for="cashierSearchKeyword" class="form-label fw-bold text-dark m-0">
-                            <i class="bi bi-search me-1 text-primary"></i> TÌM KIẾM BỆNH NHÂN:
-                        </label>
-                    </div>
-                    <div class="col-md-6">
+                    <div class="fin-form-group fin-search-group" style="flex: 1 1 360px;">
+                        <i class="bi bi-search search-lead-icon"></i>
                         <input type="text"
                                id="cashierSearchKeyword"
                                name="keyword"
                                th:value="${pendingKeyword}"
-                               class="form-control form-control-sm"
-                               placeholder="Tìm theo tên, mã bệnh nhân, số điện thoại hoặc ID..."
+                               class="fin-input"
+                               placeholder="Tìm kiếm nhanh bệnh nhân theo Mã BN, Tên BN, Số điện thoại..."
                                autocomplete="off">
                     </div>
-                    <div class="col-md-3 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
-                            <i class="bi bi-search me-1"></i> Tìm kiếm
+                    <div class="d-flex gap-2 align-items-center ms-auto">
+                        <button type="submit" class="fin-btn fin-btn-primary">
+                            <i class="bi bi-search"></i> Tìm kiếm
                         </button>
                         <a th:if="${pendingKeyword != null and !pendingKeyword.isEmpty()}"
                            th:href="@{/payments/dashboard(patientId=${patient != null ? patient.profileId : null})}"
-                           class="btn btn-outline-secondary btn-sm"
+                           class="fin-btn fin-btn-outline"
                            title="Xóa bộ lọc tìm kiếm">
-                            <i class="bi bi-x-circle me-1"></i> Bỏ lọc
+                            <i class="bi bi-x-circle"></i> Bỏ lọc
                         </a>
                     </div>
                 </form>
             </div>
 
             <!-- 2. Bảng Danh sách bệnh nhân chờ lập hóa đơn / thu tiền (Requirements 2, 4, 5, 7) -->
-            <div class="fin-card mb-4 p-0 shadow-sm border">
-                <div class="d-flex justify-content-between align-items-center p-3 bg-light border-bottom flex-wrap gap-2">
+            <div class="fin-card fin-table-card mb-4 p-0">
+                <div class="fin-grid-topbar d-flex justify-content-between align-items-center p-3 bg-light border-bottom flex-wrap gap-2">
                     <div>
                         <h5 class="fw-bold m-0 text-dark d-flex align-items-center">
                             <i class="bi bi-people-fill text-primary me-2"></i>
@@ -85,7 +76,7 @@
                             Hiển thị bệnh nhân khớp từ khóa "<strong th:text="${pendingKeyword}"></strong>" trong các cơ sở được phân quyền
                         </small>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="fin-topbar-right d-flex align-items-center gap-2">
                         <span class="badge bg-secondary-subtle text-secondary border px-3 py-2 fw-medium"
                               th:if="${pendingPatientsPage != null and pendingPatientsPage.totalElements > 0}"
                               th:text="'Hiển thị ' + (${pendingPatientsPage.number * 10 + 1}) + '–' + (${pendingPatientsPage.number * 10 + pendingPatients.size()}) + ' / ' + ${pendingPatientsPage.totalElements} + ' bệnh nhân'">
@@ -141,13 +132,13 @@
                                 <td class="text-center text-muted fw-medium"
                                     th:text="${(currentPendingPage * 10) + stat.index + 1}">1</td>
 
-                                <!-- Bệnh nhân (Tên & Mã) -->
+                                <!-- Bệnh nhân (Tên & Mã) - Bấm nhảy sang trang chi tiết bệnh nhân -->
                                 <td>
                                     <div>
-                                        <a th:href="@{/payments/dashboard(patientId=${p.profileId}, keyword=${pendingKeyword}, pendingPage=${currentPendingPage})}"
-                                           class="fw-bold text-primary text-decoration-none"
+                                        <a th:href="@{/payments/patient/{id}(id=${p.profileId})}"
+                                           class="fw-bold text-dark text-decoration-none patient-name"
                                            th:text="${p.fullName}"
-                                           title="Bấm để xem chi tiết tài chính của bệnh nhân này">
+                                           title="Bấm để xem chi tiết tài chính của bệnh nhân này trên trang riêng">
                                             Nguyễn Văn A
                                         </a>
                                         <span th:if="${patient != null and patient.profileId == p.profileId}"
@@ -223,11 +214,11 @@
                                     </div>
                                 </td>
 
-                                <!-- Thao tác: Chỉ còn một nút "Xem thông tin" -->
+                                <!-- Thao tác: Bấm nhảy sang trang chi tiết bệnh nhân -->
                                 <td class="text-center" data-column-key="actions" data-column-action="true">
-                                    <a th:href="@{/payments/dashboard(patientId=${p.profileId}, keyword=${pendingKeyword}, pendingPage=${currentPendingPage})}"
+                                    <a th:href="@{/payments/patient/{id}(id=${p.profileId})}"
                                        class="fin-table-btn fin-table-btn-view"
-                                       title="Xem thông tin chi tiết tài chính của bệnh nhân này">
+                                       title="Xem thông tin chi tiết tài chính của bệnh nhân này trên trang riêng">
                                         <i class="bi bi-eye"></i> <span>Xem thông tin</span>
                                     </a>
                                 </td>
@@ -380,13 +371,17 @@
                     </div>
                 </div>
             </div>
+            </th:block>
 
-            <!-- 3. Khi chưa chọn bệnh nhân: Gợi ý thao tác bên dưới bảng -->
-            <div th:if="${patient == null}" class="alert alert-light border text-center py-4 my-3 text-muted">
-                <i class="bi bi-hand-index-thumb text-primary me-2 fs-5"></i>
-                <span>Bấm <strong>Xem thông tin</strong> hoặc chọn tên bệnh nhân trong bảng trên để mở chi tiết công nợ, hóa đơn và lịch sử giao dịch.</span>
-            </div>
+            <!-- 2. TRANG CHI TIẾT TÀI CHÍNH BỆNH NHÂN (KHI ĐÃ CHỌN BỆNH NHÂN CỤ THỂ) -->
             <div th:if="${patient != null}">
+                <!-- Thanh điều hướng quay lại danh sách -->
+                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                    <a th:href="@{/payments/dashboard}" class="fin-btn fin-btn-outline d-inline-flex align-items-center gap-1.5 shadow-xs">
+                        <i class="bi bi-arrow-left"></i> <span>Quay lại Danh sách Bệnh nhân chờ</span>
+                    </a>
+                    <span class="text-muted small">Chi tiết hồ sơ tài chính &amp; Lịch sử giao dịch bệnh nhân</span>
+                </div>
                 <!-- Patient Profile Summary Card -->
                 <div class="fin-card mb-4 border-primary">
                     <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2 flex-wrap gap-2">
@@ -927,7 +922,7 @@
                 <div th:if="${treatmentPlans != null and !#lists.isEmpty(treatmentPlans)}" class="fin-card mt-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4 class="fw-bold m-0 text-dark">
-                            <i class="bi bi-journal-medical text-primary me-2"></i> Kế hoạch điều trị liên quan (FT15)
+                            <i class="bi bi-journal-medical text-primary me-2"></i> Kế hoạch điều trị liên quan
                         </h4>
                         <span class="badge bg-secondary" th:text="${treatmentPlans.size()} + ' kế hoạch'">0 kế hoạch</span>
                     </div>

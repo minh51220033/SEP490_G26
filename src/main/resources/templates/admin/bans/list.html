@@ -31,10 +31,7 @@
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
 
-                <!-- BREADCRUMB CHUẨN ĐỒNG BỘ -->
-                <nav class="dv-breadcrumb mb-2">
-                    <a th:href="@{/}">Trang chủ</a> / <span>Quản trị nội dung</span> / <span>Tài khoản bị cấm</span>
-                </nav>
+
 
                 <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS -->
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
@@ -48,6 +45,7 @@
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
+                        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                         <a th:href="@{/admin/comments}" class="btn btn-outline-primary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
                             <i class="bi bi-chat-dots"></i> Kiểm duyệt bình luận
                         </a>
@@ -57,6 +55,9 @@
                     </div>
                 </div>
 
+                <!-- THANH TAB NGANG PHÂN HỆ TÀI KHOẢN & BẢO MẬT (Chuẩn DentalSoft) -->
+                <nav th:replace="~{fragments/account_tabs :: accountTabs('bans')}"></nav>
+
                 <!-- 3 THẺ KPI TỔNG QUAN -->
                 <div class="row g-3 mb-4">
                     <div class="col-xl-4 col-sm-6">
@@ -64,8 +65,8 @@
                             <div class="dv-kpi-card" style="--kpi-accent: #0284c7;" th:classappend="${activeOnly == null} ? 'active-kpi' : ''">
                                 <div>
                                     <div class="dv-kpi-num" th:text="${totalBans ?: totalItems}">0</div>
-                                    <div class="dv-kpi-label">Tổng tài khoản vi phạm</div>
-                                    <div class="dv-kpi-sub">Toàn bộ tài khoản từng bị xử lý</div>
+                                    <div class="dv-kpi-label">Tổng tài khoản bị cấm bình luận</div>
+                                    <div class="dv-kpi-sub">Toàn bộ tài khoản từng bị cấm bình luận</div>
                                 </div>
                                 <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
                                     <i class="bi bi-shield-slash-fill"></i>
@@ -78,8 +79,8 @@
                             <div class="dv-kpi-card" style="--kpi-accent: #ef4444;" th:classappend="${activeOnly != null and activeOnly == true} ? 'active-kpi' : ''">
                                 <div>
                                     <div class="dv-kpi-num text-danger" th:text="${activeBans ?: 0}">0</div>
-                                    <div class="dv-kpi-label">Đang bị cấm</div>
-                                    <div class="dv-kpi-sub">Bị đình chỉ quyền bình luận</div>
+                                    <div class="dv-kpi-label">Đang bị cấm bình luận</div>
+                                    <div class="dv-kpi-sub">Bị đình chỉ quyền bình luận bài viết</div>
                                 </div>
                                 <div class="dv-kpi-icon" style="background: #fee2e2; color: #dc2626;">
                                     <i class="bi bi-slash-circle-fill"></i>
@@ -92,8 +93,8 @@
                             <div class="dv-kpi-card" style="--kpi-accent: #10b981;" th:classappend="${activeOnly != null and activeOnly == false} ? 'active-kpi' : ''">
                                 <div>
                                     <div class="dv-kpi-num text-success" th:text="${revokedBans ?: 0}">0</div>
-                                    <div class="dv-kpi-label">Đã gỡ cấm</div>
-                                    <div class="dv-kpi-sub">Đã khôi phục quyền bình luận</div>
+                                    <div class="dv-kpi-label">Đã gỡ cấm bình luận</div>
+                                    <div class="dv-kpi-sub">Đã khôi phục quyền bình luận bài viết</div>
                                 </div>
                                 <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
                                     <i class="bi bi-check-circle-fill"></i>
