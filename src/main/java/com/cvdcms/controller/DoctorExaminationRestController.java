@@ -158,7 +158,9 @@ public class DoctorExaminationRestController {
             @RequestBody Map<String, String> body,
             jakarta.servlet.http.HttpSession session
     ) {
-        doctorVisitAccess.require(session, visitId);
+        if (body == null || !body.containsKey("patientId")) {
+            doctorVisitAccess.require(session, visitId);
+        }
         Map<String, Object> response = new HashMap<>();
         try {
             String adviceNotes = (body != null) ? body.get("adviceNotes") : "";

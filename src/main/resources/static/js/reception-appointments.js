@@ -2174,6 +2174,34 @@
         // Initial Load
         await loadDoctors();
         await load();
+
+        // Tự động mở modal Thêm lịch hẹn khi điều hướng từ hồ sơ bệnh nhân
+        if (urlParams.get('openCreate') === '1' && $('openCreateModalBtn')) {
+            await openCreateModalWith(dateInput.value || today(), $('advFilterSession')?.value || 'MORNING');
+            const prefillQuery = urlParams.get('query')?.trim();
+            if (prefillQuery) {
+                if ($('modalPatientSearch')) $('modalPatientSearch').value = prefillQuery;
+                try {
+                    const bId = $('modalBranchId')?.value || branch.value || '';
+                    const url = bId
+                        ? `/patients?branchId=${encodeURIComponent(bId)}&query=${encodeURIComponent(prefillQuery)}`
+                        : `/patients?query=${encodeURIComponent(prefillQuery)}`;
+                    const matched = await request(url);
+                    const target = matched?.find(p => p.code === prefillQuery) || matched?.[0];
+                    if (target) {
+                        $('modalProfileId').value = target.id;
+                        $('modalPatientCode').value = target.code || '';
+                        $('modalPatientName').value = target.name;
+                        $('modalPatientPhone').value = target.phone || '';
+                        $('selectedPatientName').textContent = target.name;
+                        $('selectedPatientCode').textContent = `(${target.code})`;
+                        $('selectedPatientChip').style.display = 'flex';
+                        if ($('newPatientFieldsContainer')) $('newPatientFieldsContainer').style.display = 'none';
+                        if (target.dob) updatePriorityFromDob(target.dob);
+                    }
+                } catch (_) {}
+            }
+        }
     }
 
     async function calendarPage() {
