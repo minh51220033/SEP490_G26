@@ -840,7 +840,7 @@
                         </div>
 
                         <!-- Right Side: Primary Add Button -->
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2" th:if="${canManageAdministrative == null or canManageAdministrative}">
                             <!-- Primary Add Patient Button -->
                             <button type="button" class="dv-btn-add-patient" onclick="openAddPatientModal()">
                                 <i class="bi bi-person-plus-fill fs-5"></i>
@@ -1147,7 +1147,8 @@
                                             </a>
 
                                             <!-- Chỉnh sửa hồ sơ -->
-                                            <button type="button"
+                                            <button th:if="${canManageAdministrative == null or canManageAdministrative}"
+                                                    type="button"
                                                     class="dv-equal-btn-secondary"
                                                     title="Chỉnh sửa thông tin &amp; nguồn tiếp nhận"
                                                     th:data-id="${patient.id}"
@@ -1165,7 +1166,8 @@
                                             </button>
 
                                             <!-- Xóa / Lưu trữ mềm -->
-                                            <button type="button"
+                                            <button th:if="${canManageAdministrative == null or canManageAdministrative}"
+                                                    type="button"
                                                     class="dv-btn-crud dv-btn-crud-delete"
                                                     title="Lưu trữ / Xóa mềm hồ sơ bệnh nhân"
                                                     th:data-id="${patient.id}"
