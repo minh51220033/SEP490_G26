@@ -88,10 +88,25 @@
     flex-shrink: 0;
 }
 
-.fin-kpi-blue .fin-kpi-icon { background: #e0f2fe; color: #0284c7; }
-.fin-kpi-green .fin-kpi-icon { background: #d1fae5; color: #059669; }
-.fin-kpi-amber .fin-kpi-icon { background: #fef3c7; color: #d97706; }
-.fin-kpi-purple .fin-kpi-icon { background: #ede9fe; color: #7c3aed; }
+.fin-kpi-blue .fin-kpi-icon {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.fin-kpi-green .fin-kpi-icon {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.fin-kpi-amber .fin-kpi-icon {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.fin-kpi-purple .fin-kpi-icon {
+    background: #ede9fe;
+    color: #7c3aed;
+}
 
 .fin-kpi-info h4 {
     margin: 0 0 6px;
@@ -140,7 +155,8 @@
     color: #475569;
 }
 
-.fin-input, .fin-select {
+.fin-input,
+.fin-select {
     height: 42px;
     padding: 0 14px;
     border: 1px solid var(--fin-border);
@@ -152,7 +168,8 @@
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.fin-input:focus, .fin-select:focus {
+.fin-input:focus,
+.fin-select:focus {
     border-color: var(--fin-brand-light);
     box-shadow: 0 0 0 3px rgba(43, 79, 179, 0.15);
 }
@@ -203,10 +220,29 @@
     white-space: nowrap;
 }
 
-.fin-badge-unpaid { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
-.fin-badge-partial { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
-.fin-badge-paid { background: #d1fae5; color: #059669; border: 1px solid #a7f3d0; }
-.fin-badge-cancelled { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+.fin-badge-unpaid {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.fin-badge-partial {
+    background: #fef3c7;
+    color: #d97706;
+    border: 1px solid #fde68a;
+}
+
+.fin-badge-paid {
+    background: #d1fae5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+
+.fin-badge-cancelled {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
 
 .fin-badge-method {
     background: #f1f5f9;
@@ -244,6 +280,7 @@
     background: var(--fin-brand);
     color: #ffffff;
 }
+
 .fin-btn-primary:hover {
     background: var(--fin-brand-light);
     color: #ffffff;
@@ -253,6 +290,7 @@
     background: var(--fin-success);
     color: #ffffff;
 }
+
 .fin-btn-success:hover {
     background: #047857;
     color: #ffffff;
@@ -268,6 +306,7 @@
     border-color: var(--fin-border);
     color: #334155;
 }
+
 .fin-btn-outline:hover {
     background: #f8fafc;
     border-color: #cbd5e1;
@@ -325,9 +364,12 @@
     body * {
         visibility: hidden;
     }
-    .print-container, .print-container * {
+
+    .print-container,
+    .print-container * {
         visibility: visible;
     }
+
     .print-container {
         position: absolute;
         left: 0;
@@ -339,6 +381,7 @@
         color: #000000 !important;
         font-family: "Times New Roman", Times, serif;
     }
+
     .no-print {
         display: none !important;
     }
@@ -431,15 +474,23 @@
     border-radius: 14px;
     width: 90%;
     max-width: 520px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
     overflow: hidden;
     animation: finModalIn 0.25s ease-out;
 }
 
 @keyframes finModalIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
+
 /* Modal hoàn tiền */
 #refundModal {
     padding: 16px;
@@ -460,7 +511,7 @@
 }
 
 /* Thanh tiêu đề */
-#refundModal .fin-modal-card > .p-3 {
+#refundModal .fin-modal-card>.p-3 {
     flex-shrink: 0;
     gap: 12px;
     padding: 15px 18px !important;
@@ -477,7 +528,7 @@
     line-height: 1.5;
 }
 
-#refundModal h5 > i {
+#refundModal h5>i {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -630,7 +681,7 @@
 }
 
 /* Hàng nút cuối */
-#refundModal form > .border-top {
+#refundModal form>.border-top {
     margin-top: 18px;
     padding-top: 14px !important;
     border-color: #edf0f6 !important;
@@ -676,7 +727,7 @@
     }
 
     #refundModal form.p-4,
-    #refundModal .fin-modal-card > .p-3 {
+    #refundModal .fin-modal-card>.p-3 {
         padding: 14px !important;
     }
 }
@@ -707,6 +758,7 @@
         padding: 10px;
     }
 }
+
 .patient-finance-dashboard .finance-payment-pagination {
     display: flex;
     align-items: center;
@@ -741,7 +793,8 @@
 }
 
 .fin-pagination {
-    padding-right: 90px !important; /* Tránh icon Chat nổi góc dưới phải che mất số trang */
+    padding-right: 90px !important;
+    /* Tránh icon Chat nổi góc dưới phải che mất số trang */
 }
 
 /* Dashboard Table Date Filters (SCR-22.1) */
@@ -821,6 +874,7 @@
         justify-content: flex-end;
         width: 100%;
     }
+
     /* Chỉ áp dụng cho trang lập hóa đơn */
     .invoice-create-page {
         gap: 16px;
@@ -836,7 +890,7 @@
         gap: 18px;
     }
 
-    .invoice-create-page .fin-grid-2col > div {
+    .invoice-create-page .fin-grid-2col>div {
         min-width: 0;
     }
 
@@ -876,7 +930,7 @@
         border-top: 3px solid #294594 !important;
     }
 
-    .invoice-create-page .medicine-handover > .d-flex {
+    .invoice-create-page .medicine-handover>.d-flex {
         gap: 12px;
         flex-wrap: wrap;
         margin-bottom: 12px !important;
@@ -886,7 +940,7 @@
         color: #294594 !important;
     }
 
-    .invoice-create-page .medicine-handover > .alert {
+    .invoice-create-page .medicine-handover>.alert {
         padding: 10px 12px !important;
         border: 1px solid #dce7fc;
         border-radius: 7px;
@@ -905,7 +959,7 @@
         background: #fff;
     }
 
-    .invoice-create-page .prescription-card > .d-flex {
+    .invoice-create-page .prescription-card>.d-flex {
         align-items: flex-start !important;
         gap: 12px !important;
         padding-bottom: 12px !important;
@@ -913,12 +967,12 @@
         border-color: #e7edf7 !important;
     }
 
-    .invoice-create-page .prescription-card > .d-flex > div {
+    .invoice-create-page .prescription-card>.d-flex>div {
         min-width: 0;
         line-height: 1.8;
     }
 
-    .invoice-create-page .prescription-card > .d-flex > .d-flex {
+    .invoice-create-page .prescription-card>.d-flex>.d-flex {
         flex-wrap: wrap;
     }
 
@@ -1011,7 +1065,7 @@
     flex-direction: column;
 }
 
-#quickPayModal .fin-modal-card > div.p-4 {
+#quickPayModal .fin-modal-card>div.p-4 {
     overflow-y: auto;
     flex: 1 1 auto;
 }
@@ -1081,6 +1135,7 @@
     background: #f0f4ff;
     border-color: #d0dbf5;
 }
+
 .fin-table-btn-view:hover {
     color: #ffffff;
     background: var(--fin-brand, #1a2f6e);
@@ -1093,6 +1148,7 @@
     background: #f8fafc;
     border-color: #e2e8f0;
 }
+
 .fin-table-btn-print:hover {
     color: #ffffff;
     background: #475569;
@@ -1106,6 +1162,7 @@
     border-color: #a7f3d0;
     font-weight: 600;
 }
+
 .fin-table-btn-pay:hover {
     color: #ffffff;
     background: #059669;
@@ -1734,9 +1791,9 @@
 }
 
 /* Đảm bảo khoảng cách tách biệt rõ ràng giữa các bảng (tránh dính vào nhau) */
-.finance-page .fin-card + .fin-card,
-.cashier-page .fin-card + .fin-card,
-.fin-brand-theme .fin-card + .fin-card,
+.finance-page .fin-card+.fin-card,
+.cashier-page .fin-card+.fin-card,
+.fin-brand-theme .fin-card+.fin-card,
 .finance-page .fin-card.mt-4,
 .cashier-page .fin-card.mt-4,
 .fin-brand-theme .fin-card.mt-4 {
@@ -1993,3 +2050,44 @@ table.table-itemized tbody td {
     color: #1e293b !important;
 }
 
+/* ════════════════════════════════════════════════════════════════════════════
+   KPI TỔNG QUAN BÁO CÁO: SỐ TIỀN & ĐƠN VỊ LUÔN CÙNG 1 DÒNG, KHÔNG RỚT KÝ HIỆU "đ"
+   ════════════════════════════════════════════════════════════════════════════ */
+#overview-pane .dv-kpi-card {
+    padding: 16px 18px !important;
+    gap: 10px;
+}
+
+#overview-pane .dv-kpi-card>div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+#overview-pane .dv-kpi-num {
+    font-size: clamp(1.06rem, 1.35vw, 1.32rem) !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+}
+
+#overview-pane .dv-kpi-sub span.text-danger {
+    white-space: nowrap;
+}
+
+#overview-pane .dv-kpi-icon {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 12px !important;
+    font-size: 20px !important;
+}
+
+#overview-pane .fin-card .fs-4 {
+    font-size: clamp(1.1rem, 1.35vw, 1.38rem) !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+}
