@@ -57,7 +57,9 @@ public class PrescriptionRestController {
      */
     @PostMapping("/prescriptions")
     public ResponseEntity<?> createPrescription(@RequestBody PrescriptionRequestDTO request, jakarta.servlet.http.HttpSession session) {
-        doctorVisitAccess.require(session, request.getVisitId());
+        if (request.getPatientId() == null && request.getVisitId() != null) {
+            doctorVisitAccess.require(session, request.getVisitId());
+        }
         try {
             PrescriptionResponseDTO created = prescriptionService.createPrescription(request);
             Map<String, Object> response = new HashMap<>();
