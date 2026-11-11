@@ -20,41 +20,127 @@
                 <link rel="stylesheet" th:href="@{/css/account.css}">
 
                 <style>
-                    /* Mở rộng toàn bộ table content tràn viền và thoải mái chiều ngang */
-                    .dv-amis-table {
-                        width: 100% !important;
-                        min-width: 100% !important;
+                    /* Cho phép Popover Tùy biến cột xổ xuống trọn vẹn kể cả khi bảng chỉ có 1 dòng */
+                    .staff-table-card {
+                        overflow: visible !important;
                     }
-                    .dv-amis-table th[data-col="title"],
-                    .dv-amis-table td[data-col="title"] {
-                        min-width: 380px !important;
-                        width: auto !important;
+                    .staff-table-card .dv-grid-topbar {
+                        border-top-left-radius: 15px;
+                        border-top-right-radius: 15px;
                     }
-                    .dv-amis-table th[data-col="branch"],
-                    .dv-amis-table td[data-col="branch"] {
-                        min-width: 220px !important;
+                    .staff-table-card .misa-pagination-footer {
+                        border-bottom-left-radius: 15px;
+                        border-bottom-right-radius: 15px;
                     }
-                    .dv-amis-table th[data-col="author"],
-                    .dv-amis-table td[data-col="author"] {
-                        min-width: 180px !important;
-                    }
-                    .dv-amis-table th[data-col="publishedAt"],
-                    .dv-amis-table td[data-col="publishedAt"] {
-                        min-width: 180px !important;
-                    }
-                    .dv-amis-table th[data-col="status"],
-                    .dv-amis-table td[data-col="status"] {
-                        min-width: 160px !important;
-                    }
-                    .dv-amis-table th[data-col="actions"],
-                    .dv-amis-table td[data-col="actions"] {
-                        min-width: 360px !important;
-                    }
-                    /* Hàng tiêu đề cố định ở đầu bảng */
+                    /* Để table_style.html quản lý table-layout: fixed & độ rộng cột độc lập (tránh width: 100% !important làm co ép cột Cơ sở) */
                     .dv-amis-table thead th {
                         position: sticky !important;
                         top: 0 !important;
                         z-index: 10 !important;
+                    }
+                    .dv-amis-table td[data-col="branch"] .chip {
+                        max-width: 100%;
+                        display: inline-flex;
+                        align-items: center;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                    }
+                    .dv-amis-table td[data-col="branch"] .chip > span {
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                    }
+                    /* Cột được ghim cố định bên trái */
+                    .dv-amis-table thead th.news-col-pinned {
+                        position: sticky !important;
+                        z-index: 25 !important;
+                        background: #e2e8f0 !important;
+                        box-shadow: 2px 0 6px -2px rgba(15, 23, 42, 0.14) !important;
+                    }
+                    .dv-amis-table tbody tr.dv-data-row td.news-col-pinned {
+                        position: sticky !important;
+                        z-index: 15 !important;
+                        background: #ffffff !important;
+                        box-shadow: 2px 0 6px -2px rgba(15, 23, 42, 0.10) !important;
+                    }
+                    .dv-amis-table tbody tr.dv-data-row:hover td.news-col-pinned,
+                    .dv-amis-table tbody tr.dv-data-row.is-row-hovered td.news-col-pinned {
+                        background: #f0f9ff !important;
+                    }
+                    /* Popover Tùy biến cột chuẩn Enterprise */
+                    .custom-column-popover {
+                        width: 400px !important;
+                        overflow: hidden;
+                    }
+                    .custom-column-popover .custom-col-item {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 8px;
+                        padding: 9px 14px;
+                        border-bottom: 1px solid #f1f5f9;
+                        background: #ffffff;
+                        cursor: grab;
+                    }
+                    .custom-column-popover .custom-col-item:hover {
+                        background: #f8fafc;
+                    }
+                    .custom-column-popover .custom-col-item.is-dragging {
+                        opacity: 0.55;
+                        background: #e0f2fe;
+                    }
+                    .custom-col-left {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        min-width: 0;
+                        flex: 1;
+                    }
+                    .custom-col-name {
+                        margin: 0;
+                        font-size: 13.5px;
+                        font-weight: 600;
+                        color: #0f172a;
+                        cursor: pointer;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                    .custom-col-actions {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 4px;
+                        flex-shrink: 0;
+                    }
+                    .news-pin-btn,
+                    .news-order-btn {
+                        width: 26px;
+                        height: 26px;
+                        border-radius: 6px;
+                        border: 1px solid #e2e8f0;
+                        background: #f8fafc;
+                        color: #475569;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 12px;
+                        cursor: pointer;
+                        padding: 0;
+                    }
+                    .news-pin-btn:hover,
+                    .news-order-btn:hover:not(:disabled) {
+                        background: #e2e8f0;
+                        color: #0f172a;
+                    }
+                    .news-order-btn:disabled {
+                        opacity: 0.4;
+                        cursor: not-allowed;
+                    }
+                    .news-pin-btn.is-pinned {
+                        background: #e0f2fe;
+                        border-color: #38bdf8;
+                        color: #0284c7;
                     }
                 </style>
 
@@ -216,8 +302,8 @@
                                 <span class="text-muted mx-1">•</span>
                                 <span class="text-secondary fw-semibold">Tất cả các ngày</span>
                             </div>
-                            <span class="badge rounded-pill px-3 py-1.5"
-                                style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700;">
+                            <span class="badge rounded-pill px-3 py-1"
+                                style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700; line-height: 1.5;">
                                 <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện nút Thao tác nhanh (Không cần cuộn ngang)
                             </span>
                         </div>
@@ -227,62 +313,109 @@
                             <div class="custom-col-dropdown position-relative d-inline-block">
                                 <button type="button" class="btn btn-white bg-white border fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2 shadow-xs"
                                         style="font-size: 13.5px; border-color: #cbd5e1 !important; color: #0f172a;"
-                                        id="btnToggleCustomColumns" title="Tùy chỉnh cột">
+                                        id="btnToggleCustomColumns" title="Tùy chỉnh cột &amp; Ghim cột">
                                     <i class="bi bi-layout-three-columns text-primary"></i>
                                     <span>Tùy biến cột</span>
+                                    <span class="badge bg-primary-subtle text-primary rounded-pill" id="pinnedColCountBadge" style="display: none;">0 ghim</span>
                                 </button>
 
-                                <!-- POPOVER DROPDOWN XỔ XUỐNG DƯỚI BÁNH RĂNG -->
+                                <!-- POPOVER DROPDOWN TÙY BIẾN CỘT -->
                                 <div class="custom-column-popover" id="customColumnPopover" style="display: none;">
-                                    <div class="custom-column-header">
-                                        <h6 class="custom-column-title">
-                                            <i class="bi bi-layout-three-columns text-primary me-2"></i>Tùy chỉnh cột
-                                        </h6>
+                                    <div class="custom-column-header d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <h6 class="custom-column-title mb-0">
+                                                <i class="bi bi-layout-three-columns text-primary me-2"></i>Tùy chỉnh cột hiển thị
+                                            </h6>
+                                            <div class="text-muted" style="font-size: 11.5px;">Ẩn/hiện, kéo thả hoặc bấm ↑↓ đổi vị trí, 📌 để ghim</div>
+                                        </div>
                                         <button type="button" class="btn-close" id="btnCloseColPopover" aria-label="Đóng"></button>
                                     </div>
                                     <div class="custom-column-search">
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                                            <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên trường...">
+                                            <input type="text" id="colSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm tên cột...">
                                         </div>
                                     </div>
-                                    <div class="custom-column-table-head">
-                                        <div class="flex-grow-1">Tên trường</div>
+                                    <div class="custom-column-table-head d-flex align-items-center justify-content-between small fw-bold text-secondary">
+                                        <span>Tên cột</span>
+                                        <span>Ghim / Thứ tự</span>
                                     </div>
-                                    <div class="custom-col-list-scroll p-0" id="customColList" style="max-height: 280px; overflow-y: auto;">
+                                    <div class="custom-col-list-scroll p-0" id="customColList" style="max-height: 290px; overflow-y: auto;">
                                         <div class="custom-col-item" data-col-target="stt">
-                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-stt" checked>
-                                            <label for="chk-col-stt" class="custom-col-name"># (STT)</label>
+                                            <div class="custom-col-left">
+                                                <span class="custom-col-drag text-muted"><i class="bi bi-grip-vertical"></i></span>
+                                                <input type="checkbox" class="form-check-input custom-col-check mt-0" id="chk-col-stt" checked>
+                                                <label for="chk-col-stt" class="custom-col-name"># (STT)</label>
+                                            </div>
+                                            <div class="custom-col-actions">
+                                                <button type="button" class="news-pin-btn" title="Ghim cột cố định bên trái"><i class="bi bi-pin-angle"></i></button>
+                                                <button type="button" class="news-order-btn" data-dir="-1" title="Đưa lên trước"><i class="bi bi-arrow-up"></i></button>
+                                                <button type="button" class="news-order-btn" data-dir="1" title="Đưa xuống sau"><i class="bi bi-arrow-down"></i></button>
+                                            </div>
                                         </div>
                                         <div class="custom-col-item" data-col-target="title">
-                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-title" checked>
-                                            <label for="chk-col-title" class="custom-col-name">Tiêu đề bài viết</label>
+                                            <div class="custom-col-left">
+                                                <span class="custom-col-drag text-muted"><i class="bi bi-grip-vertical"></i></span>
+                                                <input type="checkbox" class="form-check-input custom-col-check mt-0" id="chk-col-title" checked>
+                                                <label for="chk-col-title" class="custom-col-name">Tiêu đề bài viết</label>
+                                            </div>
+                                            <div class="custom-col-actions">
+                                                <button type="button" class="news-pin-btn" title="Ghim cột cố định bên trái"><i class="bi bi-pin-angle"></i></button>
+                                                <button type="button" class="news-order-btn" data-dir="-1" title="Đưa lên trước"><i class="bi bi-arrow-up"></i></button>
+                                                <button type="button" class="news-order-btn" data-dir="1" title="Đưa xuống sau"><i class="bi bi-arrow-down"></i></button>
+                                            </div>
                                         </div>
                                         <div class="custom-col-item" data-col-target="branch">
-                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-branch" checked>
-                                            <label for="chk-col-branch" class="custom-col-name">Cơ sở / Chi nhánh</label>
+                                            <div class="custom-col-left">
+                                                <span class="custom-col-drag text-muted"><i class="bi bi-grip-vertical"></i></span>
+                                                <input type="checkbox" class="form-check-input custom-col-check mt-0" id="chk-col-branch" checked>
+                                                <label for="chk-col-branch" class="custom-col-name">Cơ sở / Chi nhánh</label>
+                                            </div>
+                                            <div class="custom-col-actions">
+                                                <button type="button" class="news-pin-btn" title="Ghim cột cố định bên trái"><i class="bi bi-pin-angle"></i></button>
+                                                <button type="button" class="news-order-btn" data-dir="-1" title="Đưa lên trước"><i class="bi bi-arrow-up"></i></button>
+                                                <button type="button" class="news-order-btn" data-dir="1" title="Đưa xuống sau"><i class="bi bi-arrow-down"></i></button>
+                                            </div>
                                         </div>
                                         <div class="custom-col-item" data-col-target="author">
-                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-author" checked>
-                                            <label for="chk-col-author" class="custom-col-name">Người tạo</label>
+                                            <div class="custom-col-left">
+                                                <span class="custom-col-drag text-muted"><i class="bi bi-grip-vertical"></i></span>
+                                                <input type="checkbox" class="form-check-input custom-col-check mt-0" id="chk-col-author" checked>
+                                                <label for="chk-col-author" class="custom-col-name">Người tạo</label>
+                                            </div>
+                                            <div class="custom-col-actions">
+                                                <button type="button" class="news-pin-btn" title="Ghim cột cố định bên trái"><i class="bi bi-pin-angle"></i></button>
+                                                <button type="button" class="news-order-btn" data-dir="-1" title="Đưa lên trước"><i class="bi bi-arrow-up"></i></button>
+                                                <button type="button" class="news-order-btn" data-dir="1" title="Đưa xuống sau"><i class="bi bi-arrow-down"></i></button>
+                                            </div>
                                         </div>
                                         <div class="custom-col-item" data-col-target="publishedAt">
-                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-publishedAt" checked>
-                                            <label for="chk-col-publishedAt" class="custom-col-name">Ngày đăng</label>
+                                            <div class="custom-col-left">
+                                                <span class="custom-col-drag text-muted"><i class="bi bi-grip-vertical"></i></span>
+                                                <input type="checkbox" class="form-check-input custom-col-check mt-0" id="chk-col-publishedAt" checked>
+                                                <label for="chk-col-publishedAt" class="custom-col-name">Ngày đăng</label>
+                                            </div>
+                                            <div class="custom-col-actions">
+                                                <button type="button" class="news-pin-btn" title="Ghim cột cố định bên trái"><i class="bi bi-pin-angle"></i></button>
+                                                <button type="button" class="news-order-btn" data-dir="-1" title="Đưa lên trước"><i class="bi bi-arrow-up"></i></button>
+                                                <button type="button" class="news-order-btn" data-dir="1" title="Đưa xuống sau"><i class="bi bi-arrow-down"></i></button>
+                                            </div>
                                         </div>
                                         <div class="custom-col-item" data-col-target="status">
-                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-status" checked>
-                                            <label for="chk-col-status" class="custom-col-name">Trạng thái</label>
+                                            <div class="custom-col-left">
+                                                <span class="custom-col-drag text-muted"><i class="bi bi-grip-vertical"></i></span>
+                                                <input type="checkbox" class="form-check-input custom-col-check mt-0" id="chk-col-status" checked>
+                                                <label for="chk-col-status" class="custom-col-name">Trạng thái</label>
+                                            </div>
+                                            <div class="custom-col-actions">
+                                                <button type="button" class="news-pin-btn" title="Ghim cột cố định bên trái"><i class="bi bi-pin-angle"></i></button>
+                                                <button type="button" class="news-order-btn" data-dir="-1" title="Đưa lên trước"><i class="bi bi-arrow-up"></i></button>
+                                                <button type="button" class="news-order-btn" data-dir="1" title="Đưa xuống sau"><i class="bi bi-arrow-down"></i></button>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="custom-column-footer">
-                                        <button type="button" id="btnResetCols" class="btn btn-link text-decoration-none text-muted p-0 small">
+                                    <div class="custom-column-footer d-flex align-items-center justify-content-between">
+                                        <button type="button" id="btnResetCols" class="btn btn-link text-decoration-none text-muted p-0 small fw-semibold">
                                             Lấy lại mặc định
                                         </button>
                                         <div class="d-flex gap-2">
@@ -302,22 +435,22 @@
                                 <th data-col="stt" style="width: 60px; min-width: 60px;" class="text-center">
                                     <div class="dv-th-inner justify-content-center"><span>#</span></div>
                                 </th>
-                                <th data-col="title" style="min-width: 320px;">
+                                <th data-col="title" style="width: 340px; min-width: 340px;">
                                     <div class="dv-th-inner"><span>Tiêu đề bài viết</span></div>
                                 </th>
-                                <th data-col="branch" style="min-width: 200px;">
+                                <th data-col="branch" style="width: 260px; min-width: 260px;">
                                     <div class="dv-th-inner"><span>Cơ sở / Chi nhánh</span></div>
                                 </th>
-                                <th data-col="author" style="min-width: 170px;">
+                                <th data-col="author" style="width: 170px; min-width: 170px;">
                                     <div class="dv-th-inner"><span>Người tạo</span></div>
                                 </th>
-                                <th data-col="publishedAt" style="min-width: 170px;">
+                                <th data-col="publishedAt" style="width: 175px; min-width: 175px;">
                                     <div class="dv-th-inner"><span>Ngày đăng</span></div>
                                 </th>
-                                <th data-col="status" style="min-width: 160px;">
+                                <th data-col="status" style="width: 150px; min-width: 150px;">
                                     <div class="dv-th-inner"><span>Trạng thái</span></div>
                                 </th>
-                                <th data-col="actions" class="text-center" style="min-width: 360px;">
+                                <th data-col="actions" class="text-center" style="width: 380px; min-width: 380px;">
                                     <div class="dv-th-inner justify-content-center"><span>Nút ấn nhanh</span></div>
                                 </th>
                                 <th class="dv-floating-actions-track"></th>
@@ -329,12 +462,12 @@
                                 th:data-slug="${news.slug}">
 
                                 <!-- 1. STT -->
-                                <td data-col="stt" class="text-center text-muted fw-semibold" style="width: 60px; min-width: 60px;">
+                                <td data-col="stt" class="text-center text-muted fw-semibold">
                                     <span th:text="${currentPage * pageSize + iter.count}">1</span>
                                 </td>
 
                                 <!-- 2. Tiêu đề + Ảnh + Ngày tạo -->
-                                <td data-col="title" style="min-width: 320px;">
+                                <td data-col="title">
                                     <div class="d-flex align-items-center gap-2">
                                         <img th:if="${news.thumbnail != null and news.thumbnail != ''}"
                                              th:src="${news.thumbnail}" alt="Thumbnail"
@@ -351,18 +484,18 @@
                                 </td>
 
                                 <!-- 3. Cơ sở -->
-                                <td data-col="branch" style="min-width: 200px;">
+                                <td data-col="branch">
                                     <span th:if="${news.branch != null}" class="chip chip--primary" th:title="${news.branch.branchName}">
-                                        <i class="bi bi-buildings me-1"></i>
+                                        <i class="bi bi-buildings me-1 flex-shrink-0"></i>
                                         <span th:text="${news.branch.branchName}">Chi nhánh</span>
                                     </span>
                                     <span th:unless="${news.branch != null}" class="chip">
-                                        <i class="bi bi-globe me-1"></i>Toàn hệ thống
+                                        <i class="bi bi-globe me-1 flex-shrink-0"></i><span>Toàn hệ thống</span>
                                     </span>
                                 </td>
 
                                 <!-- 4. Người tạo -->
-                                <td data-col="author" style="min-width: 170px;">
+                                <td data-col="author">
                                     <div class="d-flex align-items-center">
                                         <div class="dv-patient-avatar flex-shrink-0 avatar-secondary"
                                              th:text="${news.createdBy != null and news.createdBy.username != null ? #strings.toUpperCase(#strings.substring(news.createdBy.username, 0, 1)) : 'A'}">A</div>
@@ -371,23 +504,23 @@
                                 </td>
 
                                 <!-- 5. Ngày đăng -->
-                                <td data-col="publishedAt" style="min-width: 170px;">
+                                <td data-col="publishedAt">
                                     <div class="small fw-semibold text-secondary">
                                         <i class="bi bi-clock me-1 text-muted"></i><span th:text="${news.publishedAt != null ? #temporals.format(news.publishedAt, 'dd/MM/yyyy HH:mm') : '—'}">—</span>
                                     </div>
                                 </td>
 
                                 <!-- 6. Trạng thái -->
-                                <td data-col="status" style="min-width: 160px;">
-                                    <span class="badge rounded-pill px-3 py-1.5 fw-bold"
-                                          th:style="${news.status == 'PUBLISHED'} ? 'background:#ecfdf5;color:#059669;font-size:12.5px;border:1px solid #a7f3d0;' : (${news.status == 'DRAFT'} ? 'background:#fef3c7;color:#d97706;font-size:12.5px;border:1px solid #fde68a;' : 'background:#f1f5f9;color:#475569;font-size:12.5px;border:1px solid #cbd5e1;')">
+                                <td data-col="status">
+                                    <span class="badge rounded-pill px-3 py-1 fw-bold"
+                                          th:style="${news.status == 'PUBLISHED'} ? 'background:#ecfdf5;color:#059669;font-size:12.5px;border:1px solid #a7f3d0;line-height:1.5;' : (${news.status == 'DRAFT'} ? 'background:#fef3c7;color:#d97706;font-size:12.5px;border:1px solid #fde68a;line-height:1.5;' : 'background:#f1f5f9;color:#475569;font-size:12.5px;border:1px solid #cbd5e1;line-height:1.5;')">
                                         <i class="bi" th:classappend="${news.status == 'PUBLISHED'} ? 'bi-check-circle-fill me-1' : (${news.status == 'DRAFT'} ? 'bi-pencil-fill me-1' : 'bi-archive-fill me-1')"></i>
                                         <span th:text="${news.status == 'PUBLISHED'} ? 'Đã đăng' : (${news.status == 'DRAFT'} ? 'Bản nháp' : 'Lưu trữ')">Đã đăng</span>
                                     </span>
                                 </td>
 
                                 <!-- 7. Cột Thao tác tĩnh (3 nút chuẩn kích thước 112px như Quản lý tài khoản) -->
-                                <td data-col="actions" class="text-center" style="min-width: 360px;">
+                                <td data-col="actions" class="text-center">
                                     <div class="dv-actions-cell-always" onclick="event.stopPropagation()">
                                         <!-- Nút 1: Xem trên trang chủ (dv-equal-btn-primary) -->
                                         <a th:href="@{'/news/' + ${news.slug}}" target="_blank" rel="noopener"
@@ -441,8 +574,8 @@
                             </tr>
 
                             <!-- Empty State khi không có dữ liệu -->
-                            <tr th:if="${#lists.isEmpty(newsList)}">
-                                <td colspan="8" class="p-0">
+                            <tr th:if="${#lists.isEmpty(newsList)}" id="newsEmptyRow">
+                                <td colspan="8" id="newsEmptyCell" class="p-0">
                                     <div class="account-empty-state">
                                         <div class="account-empty-icon">
                                             <i class="bi bi-newspaper"></i>
@@ -643,25 +776,360 @@
             });
         }
 
-        // 2. Tùy chỉnh cột Popover
+        // 2. Tùy biến cột, đổi thứ tự, ghim cột trái & đồng bộ độ rộng với table_style.html
+        const DEFAULT_ORDER = ['stt', 'title', 'branch', 'author', 'publishedAt', 'status'];
+        const DEFAULT_WIDTHS = { stt: 60, title: 340, branch: 260, author: 170, publishedAt: 175, status: 150, actions: 380 };
+        const STORAGE_CONFIG_KEY = 'news_table_cols_v2';
+        const WIDTH_STORAGE_KEY = 'col_widths_v5_' + window.location.pathname.replace(/[^a-zA-Z0-9]/g, '_') + '_newsTable';
+
+        const newsTable = document.getElementById('newsTable');
         const popoverEl = document.getElementById('customColumnPopover');
         const btnToggleCol = document.getElementById('btnToggleCustomColumns');
         const btnCloseCol = document.getElementById('btnCloseColPopover');
         const btnCancelCol = document.getElementById('btnCancelCols');
+        const btnSaveCol = document.getElementById('btnSaveCols');
+        const btnResetCol = document.getElementById('btnResetCols');
+        const colSearchInput = document.getElementById('colSearchInput');
+        const colListEl = document.getElementById('customColList');
+        const pinnedBadgeEl = document.getElementById('pinnedColCountBadge');
+
+        function normalizeText(str) {
+            return (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        }
+
+        function loadColState() {
+            const fallback = { order: DEFAULT_ORDER.slice(), hidden: [], pinned: [] };
+            try {
+                const raw = localStorage.getItem(STORAGE_CONFIG_KEY);
+                if (!raw) return fallback;
+                const parsed = JSON.parse(raw);
+                const order = Array.isArray(parsed.order)
+                    ? parsed.order.filter(k => DEFAULT_ORDER.includes(k))
+                    : [];
+                DEFAULT_ORDER.forEach(k => { if (!order.includes(k)) order.push(k); });
+                const hidden = Array.isArray(parsed.hidden)
+                    ? parsed.hidden.filter(k => DEFAULT_ORDER.includes(k))
+                    : [];
+                if (hidden.length >= DEFAULT_ORDER.length) hidden.pop();
+                const pinned = Array.isArray(parsed.pinned)
+                    ? parsed.pinned.filter(k => DEFAULT_ORDER.includes(k) && !hidden.includes(k))
+                    : [];
+                return { order, hidden, pinned };
+            } catch (e) {
+                return fallback;
+            }
+        }
+
+        function saveColState(state) {
+            try {
+                localStorage.setItem(STORAGE_CONFIG_KEY, JSON.stringify(state));
+            } catch (e) {}
+        }
+
+        let currentState = loadColState();
+
+        function ensureValidSavedWidths() {
+            try {
+                const raw = localStorage.getItem(WIDTH_STORAGE_KEY);
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                let changed = false;
+                // Xóa độ rộng bị co ép bất thường từ bản CSS width: 100% trước đây (cả localStorage lẫn DOM do table_style.html áp trước)
+                ['title', 'branch', 'author', 'publishedAt', 'status'].forEach(k => {
+                    if (typeof parsed[k] === 'number' && parsed[k] < 110) {
+                        const fixedW = DEFAULT_WIDTHS[k];
+                        parsed[k] = fixedW;
+                        changed = true;
+                        if (newsTable) {
+                            const th = newsTable.querySelector('thead th[data-col="' + k + '"]');
+                            if (th) {
+                                th.style.width = fixedW + 'px';
+                                th.style.minWidth = fixedW + 'px';
+                                th.style.maxWidth = fixedW + 'px';
+                            }
+                        }
+                    }
+                });
+                if (changed) localStorage.setItem(WIDTH_STORAGE_KEY, JSON.stringify(parsed));
+            } catch (e) {}
+        }
+        ensureValidSavedWidths();
+
+        function updatePopoverOrderButtons() {
+            if (!colListEl) return;
+            const items = Array.from(colListEl.querySelectorAll('.custom-col-item'));
+            items.forEach((item, idx) => {
+                const upBtn = item.querySelector('.news-order-btn[data-dir="-1"]');
+                const downBtn = item.querySelector('.news-order-btn[data-dir="1"]');
+                if (upBtn) upBtn.disabled = idx === 0;
+                if (downBtn) downBtn.disabled = idx === items.length - 1;
+            });
+        }
+
+        function syncPopoverFromState(state) {
+            if (!colListEl) return;
+            state.order.forEach(colKey => {
+                const item = colListEl.querySelector('.custom-col-item[data-col-target="' + colKey + '"]');
+                if (!item) return;
+                colListEl.appendChild(item);
+                const chk = item.querySelector('.custom-col-check');
+                if (chk) chk.checked = !state.hidden.includes(colKey);
+                const pinBtn = item.querySelector('.news-pin-btn');
+                if (pinBtn) {
+                    const isPinned = state.pinned.includes(colKey);
+                    pinBtn.classList.toggle('is-pinned', isPinned);
+                    const icon = pinBtn.querySelector('i');
+                    if (icon) icon.className = 'bi ' + (isPinned ? 'bi-pin-angle-fill' : 'bi-pin-angle');
+                    pinBtn.title = isPinned ? 'Bỏ ghim cột này' : 'Ghim cột cố định bên trái';
+                }
+            });
+            updatePopoverOrderButtons();
+        }
+
+        function refreshTableLayout(state) {
+            if (!newsTable) return;
+            const pinnedCols = state.order.filter(k => state.pinned.includes(k) && !state.hidden.includes(k));
+            const unpinnedCols = state.order.filter(k => !pinnedCols.includes(k));
+            const renderOrder = pinnedCols.concat(unpinnedCols);
+
+            const theadTr = newsTable.querySelector('thead tr');
+            if (theadTr) {
+                renderOrder.forEach(colKey => {
+                    const th = theadTr.querySelector('th[data-col="' + colKey + '"]');
+                    if (th) theadTr.appendChild(th);
+                });
+                const thAct = theadTr.querySelector('th[data-col="actions"]');
+                if (thAct) theadTr.appendChild(thAct);
+                const thTrack = theadTr.querySelector('.dv-floating-actions-track');
+                if (thTrack) theadTr.appendChild(thTrack);
+            }
+
+            newsTable.querySelectorAll('tbody tr.dv-data-row').forEach(tr => {
+                renderOrder.forEach(colKey => {
+                    const td = tr.querySelector('td[data-col="' + colKey + '"]');
+                    if (td) tr.appendChild(td);
+                });
+                const tdAct = tr.querySelector('td[data-col="actions"]');
+                if (tdAct) tr.appendChild(tdAct);
+                const tdTrack = tr.querySelector('.dv-floating-actions-track');
+                if (tdTrack) tr.appendChild(tdTrack);
+            });
+
+            DEFAULT_ORDER.forEach(colKey => {
+                const isHidden = state.hidden.includes(colKey);
+                newsTable.querySelectorAll('[data-col="' + colKey + '"]').forEach(el => {
+                    el.classList.toggle('d-none', isHidden);
+                    el.classList.remove('news-col-pinned');
+                    el.style.left = '';
+                });
+            });
+
+            // Tính vị trí left cố định cho các cột ghim theo thứ tự hiển thị
+            let stickyLeft = 0;
+            pinnedCols.forEach(colKey => {
+                const th = newsTable.querySelector('thead th[data-col="' + colKey + '"]');
+                if (!th || th.classList.contains('d-none')) return;
+                const colWidth = th.offsetWidth || parseInt(th.style.width, 10) || DEFAULT_WIDTHS[colKey] || 160;
+                newsTable.querySelectorAll('[data-col="' + colKey + '"]').forEach(cell => {
+                    cell.classList.add('news-col-pinned');
+                    cell.style.left = stickyLeft + 'px';
+                });
+                stickyLeft += colWidth;
+            });
+
+            const emptyCell = document.getElementById('newsEmptyCell');
+            if (emptyCell) {
+                const visibleDataCount = DEFAULT_ORDER.filter(k => !state.hidden.includes(k)).length;
+                emptyCell.setAttribute('colspan', String(visibleDataCount + 2));
+            }
+
+            // Đồng bộ tổng chiều rộng bảng với các cột đang hiển thị
+            let totalW = 0;
+            if (theadTr) {
+                theadTr.querySelectorAll('th:not(.dv-floating-actions-track)').forEach(th => {
+                    if (!th.classList.contains('d-none')) {
+                        totalW += th.offsetWidth || parseInt(th.style.width, 10) || 150;
+                    }
+                });
+            }
+            const scrollContainer = newsTable.closest('.dv-table-scroll-container');
+            const containerW = scrollContainer ? scrollContainer.clientWidth : 1200;
+            const finalW = Math.max(totalW, containerW);
+            newsTable.style.width = finalW + 'px';
+            newsTable.style.minWidth = finalW + 'px';
+
+            if (pinnedBadgeEl) {
+                if (pinnedCols.length > 0) {
+                    pinnedBadgeEl.textContent = pinnedCols.length + ' ghim';
+                    pinnedBadgeEl.style.display = 'inline-block';
+                } else {
+                    pinnedBadgeEl.style.display = 'none';
+                }
+            }
+        }
 
         function openCustomColPopover() {
             if (!popoverEl) return;
+            syncPopoverFromState(currentState);
+            if (colSearchInput) {
+                colSearchInput.value = '';
+                colListEl.querySelectorAll('.custom-col-item').forEach(it => { it.style.display = ''; });
+            }
             popoverEl.style.display = 'block';
+            if (btnToggleCol) btnToggleCol.setAttribute('aria-expanded', 'true');
+            if (colSearchInput) setTimeout(() => colSearchInput.focus(), 50);
         }
 
         function closeCustomColPopover() {
-            if (popoverEl) popoverEl.style.display = 'none';
+            if (!popoverEl) return;
+            popoverEl.style.display = 'none';
+            if (btnToggleCol) btnToggleCol.setAttribute('aria-expanded', 'false');
+        }
+
+        if (colListEl) {
+            let draggedItem = null;
+            colListEl.querySelectorAll('.custom-col-item').forEach(item => {
+                item.setAttribute('draggable', 'true');
+                item.addEventListener('dragstart', function () {
+                    draggedItem = this;
+                    this.classList.add('is-dragging');
+                });
+                item.addEventListener('dragend', function () {
+                    this.classList.remove('is-dragging');
+                    draggedItem = null;
+                    updatePopoverOrderButtons();
+                });
+                item.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    if (!draggedItem || draggedItem === this) return;
+                    const rect = this.getBoundingClientRect();
+                    if (e.clientY < rect.top + rect.height / 2) {
+                        colListEl.insertBefore(draggedItem, this);
+                    } else {
+                        colListEl.insertBefore(draggedItem, this.nextSibling);
+                    }
+                });
+            });
+
+            colListEl.addEventListener('click', function (e) {
+                const pinBtn = e.target.closest('.news-pin-btn');
+                if (pinBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const item = pinBtn.closest('.custom-col-item');
+                    const isPinned = !pinBtn.classList.contains('is-pinned');
+                    pinBtn.classList.toggle('is-pinned', isPinned);
+                    const icon = pinBtn.querySelector('i');
+                    if (icon) icon.className = 'bi ' + (isPinned ? 'bi-pin-angle-fill' : 'bi-pin-angle');
+                    pinBtn.title = isPinned ? 'Bỏ ghim cột này' : 'Ghim cột cố định bên trái';
+                    if (isPinned && item) {
+                        const chk = item.querySelector('.custom-col-check');
+                        if (chk) chk.checked = true;
+                    }
+                    return;
+                }
+
+                const orderBtn = e.target.closest('.news-order-btn');
+                if (orderBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const item = orderBtn.closest('.custom-col-item');
+                    if (!item) return;
+                    const dir = parseInt(orderBtn.getAttribute('data-dir'), 10);
+                    if (dir < 0 && item.previousElementSibling) {
+                        colListEl.insertBefore(item, item.previousElementSibling);
+                    } else if (dir > 0 && item.nextElementSibling) {
+                        colListEl.insertBefore(item.nextElementSibling, item);
+                    }
+                    updatePopoverOrderButtons();
+                }
+            });
+
+            colListEl.addEventListener('change', function (e) {
+                const chk = e.target.closest('.custom-col-check');
+                if (!chk) return;
+                const checkedCount = colListEl.querySelectorAll('.custom-col-check:checked').length;
+                if (checkedCount === 0) {
+                    chk.checked = true;
+                    alert('Cần hiển thị tối thiểu 1 cột dữ liệu trong bảng!');
+                    return;
+                }
+                if (!chk.checked) {
+                    const item = chk.closest('.custom-col-item');
+                    const pinBtn = item ? item.querySelector('.news-pin-btn') : null;
+                    if (pinBtn) {
+                        pinBtn.classList.remove('is-pinned');
+                        const icon = pinBtn.querySelector('i');
+                        if (icon) icon.className = 'bi bi-pin-angle';
+                    }
+                }
+            });
+        }
+
+        if (colSearchInput && colListEl) {
+            colSearchInput.addEventListener('input', function () {
+                const term = normalizeText(this.value);
+                colListEl.querySelectorAll('.custom-col-item').forEach(item => {
+                    const name = normalizeText(item.querySelector('.custom-col-name').textContent);
+                    item.style.display = (!term || name.includes(term)) ? '' : 'none';
+                });
+            });
+        }
+
+        if (btnSaveCol && colListEl) {
+            btnSaveCol.addEventListener('click', function () {
+                const order = [];
+                const hidden = [];
+                const pinned = [];
+                colListEl.querySelectorAll('.custom-col-item').forEach(item => {
+                    const key = item.getAttribute('data-col-target');
+                    const chk = item.querySelector('.custom-col-check');
+                    const pinBtn = item.querySelector('.news-pin-btn');
+                    order.push(key);
+                    if (chk && !chk.checked) {
+                        hidden.push(key);
+                    } else if (pinBtn && pinBtn.classList.contains('is-pinned')) {
+                        pinned.push(key);
+                    }
+                });
+                currentState = { order, hidden, pinned };
+                saveColState(currentState);
+                refreshTableLayout(currentState);
+                closeCustomColPopover();
+            });
+        }
+
+        if (btnResetCol) {
+            btnResetCol.addEventListener('click', function () {
+                try {
+                    localStorage.removeItem(STORAGE_CONFIG_KEY);
+                    localStorage.removeItem(WIDTH_STORAGE_KEY);
+                } catch (e) {}
+                currentState = { order: DEFAULT_ORDER.slice(), hidden: [], pinned: [] };
+                if (newsTable) {
+                    Object.keys(DEFAULT_WIDTHS).forEach(colKey => {
+                        const th = newsTable.querySelector('thead th[data-col="' + colKey + '"]');
+                        if (th) {
+                            const w = DEFAULT_WIDTHS[colKey];
+                            th.style.width = w + 'px';
+                            th.style.minWidth = w + 'px';
+                            th.style.maxWidth = w + 'px';
+                        }
+                    });
+                }
+                if (typeof window.setupUniversalEnterpriseTable === 'function') {
+                    window.setupUniversalEnterpriseTable();
+                }
+                syncPopoverFromState(currentState);
+                refreshTableLayout(currentState);
+                closeCustomColPopover();
+            });
         }
 
         if (btnToggleCol) {
             btnToggleCol.addEventListener('click', function (e) {
                 e.stopPropagation();
-                if (popoverEl.style.display === 'block') closeCustomColPopover();
+                if (popoverEl && popoverEl.style.display === 'block') closeCustomColPopover();
                 else openCustomColPopover();
             });
         }
@@ -673,6 +1141,42 @@
             if (popoverEl && popoverEl.style.display === 'block' && !popoverEl.contains(e.target) && !btnToggleCol.contains(e.target)) {
                 closeCustomColPopover();
             }
+        });
+
+        // Khởi tạo trạng thái cột sau khi table_style.html áp độ rộng ban đầu
+        syncPopoverFromState(currentState);
+        refreshTableLayout(currentState);
+
+        // Cập nhật vị trí cột ghim & chiều rộng bảng khi kéo chỉnh độ rộng cột hoặc resize cửa sổ
+        let isResizingNewsCol = false;
+        if (newsTable) {
+            newsTable.addEventListener('mousedown', function (e) {
+                if (e.target && e.target.closest('.col-resizer')) {
+                    isResizingNewsCol = true;
+                }
+            });
+        }
+        document.addEventListener('mousemove', function () {
+            if (!isResizingNewsCol || currentState.pinned.length === 0 || !newsTable) return;
+            const pinnedCols = currentState.order.filter(k => currentState.pinned.includes(k) && !currentState.hidden.includes(k));
+            let stickyLeft = 0;
+            pinnedCols.forEach(colKey => {
+                const th = newsTable.querySelector('thead th[data-col="' + colKey + '"]');
+                if (!th || th.classList.contains('d-none')) return;
+                newsTable.querySelectorAll('[data-col="' + colKey + '"]').forEach(cell => {
+                    cell.style.left = stickyLeft + 'px';
+                });
+                stickyLeft += th.offsetWidth || parseInt(th.style.width, 10) || DEFAULT_WIDTHS[colKey] || 160;
+            });
+        });
+        document.addEventListener('mouseup', function () {
+            if (isResizingNewsCol) {
+                isResizingNewsCol = false;
+                setTimeout(() => refreshTableLayout(currentState), 0);
+            }
+        });
+        window.addEventListener('resize', function () {
+            refreshTableLayout(currentState);
         });
     });
     </script>
