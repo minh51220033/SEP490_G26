@@ -2,7 +2,7 @@
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Quản lý nhà cung cấp')}"></head>
 
-<body class="app-body">
+<body class="app-body" th:attr="data-current-branch-id=${currentBranchId}">
 
 <!-- CSS riêng của trang (head dùng chung fragment giống home.html) -->
 <link rel="stylesheet" th:href="@{/css/misa-pagination.css}">
