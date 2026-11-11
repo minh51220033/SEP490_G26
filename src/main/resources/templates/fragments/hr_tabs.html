@@ -101,7 +101,7 @@
 
         <!-- 4. Duyệt nghỉ phép -->
         <li class="hr-tab-item"
-            th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'SCHEDULE_MANAGE') or #lists.contains(permissionCodes, 'STAFF_MANAGE')))}">
+            th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_APPROVE'))}">
             <a th:href="@{/admin/leave-requests}"
                class="hr-tab-btn"
                th:classappend="${active == 'leaves'} ? 'active' : ''">

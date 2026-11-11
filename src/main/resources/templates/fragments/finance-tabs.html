@@ -162,7 +162,7 @@
         <!-- HÀNG 1: HAI NÚT CHUYỂN NHÓM [ Khách hàng ] [ Phòng khám ] -->
         <div class="finance-group-switch-container" role="tablist" aria-label="Chuyển nhóm tài chính">
             <!-- Nút 1: Khách hàng -->
-            <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'FINANCE_DEBT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}"
+            <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'FINANCE_DEBT') or #lists.contains(permissionCodes, 'FINANCE_DEPOSIT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}"
                 th:href="@{/finance/customer}" class="finance-group-btn"
                 th:classappend="${activeGroup == 'customer'} ? 'active' : ''" role="tab"
                 th:aria-selected="${activeGroup == 'customer'}">
@@ -171,8 +171,8 @@
             </a>
 
             <!-- Nút 2: Phòng khám -->
-            <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'FINANCE_DEBT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}"
-                th:href="@{/expenses}" class="finance-group-btn"
+            <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_EXPENSES') or #lists.contains(permissionCodes, 'FINANCE_PAYROLL') or #lists.contains(permissionCodes, 'FINANCE_PAYROLL_ADVANCES') or #lists.contains(permissionCodes, 'FINANCE_COMMISSION_CONFIG') or #lists.contains(permissionCodes, 'FINANCE_OWNER_DISTRIBUTIONS')))}"
+                th:href="@{/finance/clinic}" class="finance-group-btn"
                 th:classappend="${activeGroup == 'clinic'} ? 'active' : ''" role="tab"
                 th:aria-selected="${activeGroup == 'clinic'}">
                 <i class="bi bi-building" aria-hidden="true"></i>
@@ -217,7 +217,7 @@
 
                 <!--Đặt cọc -->
                 <li class="finance-subtab-item"
-                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'PAYMENT_COLLECT'))}">
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DEPOSIT') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT')))}">
                     <a th:href="@{/payments/deposits}" class="finance-subtab-btn"
                         th:classappend="${activeTab == 'deposits'} ? 'active' : ''">
                         <i class="bi bi-wallet2" aria-hidden="true"></i>
@@ -251,7 +251,7 @@
             <ul class="finance-subtabs-list">
                 <!-- 1. Chi phí vận hành -->
                 <li class="finance-subtab-item"
-                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_EXPENSES'))}">
                     <a th:href="@{/expenses}" class="finance-subtab-btn"
                         th:classappend="${activeTab == 'expenses'} ? 'active' : ''">
                         <i class="bi bi-journal-arrow-down" aria-hidden="true"></i>
@@ -261,7 +261,7 @@
 
                 <!-- 2. Bảng lương -->
                 <li class="finance-subtab-item"
-                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_PAYROLL'))}">
                     <a th:href="@{/payroll}" class="finance-subtab-btn"
                         th:classappend="${activeTab == 'payroll'} ? 'active' : ''">
                         <i class="bi bi-calendar3" aria-hidden="true"></i>
@@ -271,7 +271,7 @@
 
                 <!-- 3. Tạm ứng lương -->
                 <li class="finance-subtab-item"
-                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_PAYROLL_ADVANCES'))}">
                     <a th:href="@{/payroll/advances}" class="finance-subtab-btn"
                         th:classappend="${activeTab == 'advances'} ? 'active' : ''">
                         <i class="bi bi-cash-coin" aria-hidden="true"></i>
@@ -279,9 +279,9 @@
                     </a>
                 </li>
 
-                <!-- 4. Cấu hình hoa hồng (SCR-32.3 - Hiển thị cho Quản trị viên & Kế toán) -->
+                <!-- 4. Cấu hình hoa hồng (SCR-32.3 - Hiển thị cho Quản trị viên, Kế toán hoặc nhân sự được cấp quyền) -->
                 <li class="finance-subtab-item"
-                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN')))}">
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_COMMISSION_CONFIG'))}">
                     <a th:href="@{/payroll/commission-config}" class="finance-subtab-btn"
                         th:classappend="${activeTab == 'commission-config' or activeTab == 'config'} ? 'active' : ''">
                         <i class="bi bi-sliders" aria-hidden="true"></i>
@@ -291,7 +291,7 @@
 
                 <!-- 5. Phân chia lợi nhuận -->
                 <li class="finance-subtab-item"
-                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_DASHBOARD') or #lists.contains(permissionCodes, 'INVOICE_VIEW') or #lists.contains(permissionCodes, 'INVOICE_CREATE') or #lists.contains(permissionCodes, 'PAYMENT_COLLECT') or #lists.contains(permissionCodes, 'REFUND_MANAGE')))}">
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and #lists.contains(permissionCodes, 'FINANCE_OWNER_DISTRIBUTIONS'))}">
                     <a th:href="@{/payroll/owner-distributions}" class="finance-subtab-btn"
                         th:classappend="${activeTab == 'owner-distributions'} ? 'active' : ''">
                         <i class="bi bi-diagram-2" aria-hidden="true"></i>

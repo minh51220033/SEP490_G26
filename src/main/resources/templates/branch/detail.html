@@ -20,6 +20,13 @@
             <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
             <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
+            <!-- BREADCRUMB PHÂN CẤP -->
+            <nav class="dv-breadcrumb mb-2" aria-label="Đường dẫn phân cấp">
+                <a th:href="@{/}">Trang chủ</a> /
+                <a th:href="@{/admin/branches}">Quản lý cơ sở</a> /
+                <span th:text="${branch.branchName}">Chi nhánh</span>
+            </nav>
+
             <!-- TIÊU ĐỀ CHI NHÁNH -->
             <section class="welcome-card">
                 <div class="d-flex align-items-center gap-3">

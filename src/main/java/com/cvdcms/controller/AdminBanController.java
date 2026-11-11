@@ -50,7 +50,11 @@ public class AdminBanController {
     }
 
     private boolean isAdmin(HttpSession session) {
-        return hasRole(getLoggedInUser(session), "ADMIN");
+        User u = getLoggedInUser(session);
+        if (u == null || u.getUserId() == null) return false;
+        return hasRole(u, "ADMIN")
+                || userRepository.hasActiveAdminRole(u.getUserId())
+                || userRepository.hasActivePermission(u.getUserId(), "SYSTEM_BANS");
     }
 
     // =====================================================

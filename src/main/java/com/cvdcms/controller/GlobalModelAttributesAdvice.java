@@ -161,7 +161,10 @@ public class GlobalModelAttributesAdvice {
     public boolean populateIsStaffUser(HttpServletRequest request, HttpSession session) {
         List<String> roles = populateRoleNames(request, session);
         for (String r : roles) {
-            if (r != null && STAFF_ROLE_CODES.contains(r.trim().toUpperCase(Locale.ROOT))) {
+            if (r == null || r.isBlank()) continue;
+            String norm = r.trim().toUpperCase(Locale.ROOT);
+            if (!"BENH_NHAN".equals(norm) && !"ROLE_BENH_NHAN".equals(norm)
+                    && !"PATIENT".equals(norm) && !"ROLE_PATIENT".equals(norm)) {
                 return true;
             }
         }

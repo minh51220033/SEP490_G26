@@ -133,7 +133,7 @@ public class ReceptionService {
         Visit visit = newVisit(patient, branch, emergency ? VisitType.EMERGENCY : VisitType.APPOINTMENT, appointmentId,
                 symptoms(symptoms, appointment.getInitialSymptoms()));
         if (priority || emergency) {
-            visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] " + visit.getNotes());
+            visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] · " + visit.getNotes());
         }
         visits.saveAndFlush(visit);
         if (appointment.getDoctor() != null) {
@@ -223,7 +223,7 @@ public class ReceptionService {
         Visit visit = newVisit(patient, branch, emergency ? VisitType.EMERGENCY : VisitType.APPOINTMENT, appointmentId,
                 symptoms(symptoms, appointment.getInitialSymptoms()));
         if (priority || emergency) {
-            visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] " + visit.getNotes());
+            visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] · " + visit.getNotes());
         }
         visits.saveAndFlush(visit);
         if (appointment.getDoctor() != null) {

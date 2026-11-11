@@ -49,3 +49,4 @@ __pycache__/
 /docs/*
 !/docs/UC-08_Specification.docx
 GEMINI.md
+src/main/resources/application.properties

@@ -54,12 +54,15 @@ public class AdminNewsController {
 
     private boolean isAdmin(HttpSession session) {
         User user = getLoggedInUser(session);
-
-        return user != null
-                && user.getRoles() != null
-                && user.getRoles().stream()
-                .anyMatch(role ->
-                        "ADMIN".equals(role.getRoleName()));
+        if (user == null) return false;
+        if (user.getRoles() != null && user.getRoles().stream().anyMatch(role -> "ADMIN".equals(role.getRoleName()) || "ROLE_ADMIN".equals(role.getRoleName()))) {
+            return true;
+        }
+        Object permsObj = session != null ? session.getAttribute("permissionCodes") : null;
+        if (permsObj instanceof java.util.Collection<?> cols) {
+            return cols.stream().anyMatch(p -> "CATALOG_NEWS".equalsIgnoreCase(String.valueOf(p)));
+        }
+        return false;
     }
 
     @GetMapping

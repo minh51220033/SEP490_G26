@@ -33,6 +33,8 @@ import java.util.stream.Collectors;
  * 3. Người nhận được tin nhắn của Bệnh nhân (BENH_NHAN) để tiếp nhận và phản hồi CHỈ bao gồm: Lễ tân (LE_TAN), Bác sĩ (BAC_SI) cùng cơ sở và Admin (ADMIN).
  *    Quản lý kho (QUAN_LY_KHO) và Kế toán (KE_TOAN) không được xem hoặc phản hồi tin nhắn của Bệnh nhân (chỉ nhắn tin nội bộ với các tài khoản nhân viên cùng cơ sở).
  * 4. Hỗ trợ 1 tài khoản User liên kết với nhiều hồ sơ bệnh nhân (PatientProfile): tìm kiếm theo tên/mã BN/SĐT của bất kỳ hồ sơ nào, hiển thị ngữ cảnh hồ sơ mà không tạo tài khoản chat trùng lặp hay lộ thông tin bệnh án nhạy cảm.
+ * 5. Quản lý trạng thái Đã đọc / Chưa đọc và Xóa phía tôi độc lập theo từng tài khoản (User ID).
+ * 6. Hỗ trợ Chỉnh sửa và Thu hồi tin nhắn đã gửi trong vòng 10 phút.
  */
 @Service
 public class ChatServiceImpl implements ChatService {
@@ -41,6 +43,8 @@ public class ChatServiceImpl implements ChatService {
 
     private final ChatConversationRepository conversationRepository;
     private final ChatMessageRepository messageRepository;
+    private final ChatMessageUserStateRepository messageUserStateRepository;
+    private final ChatConversationUserStateRepository conversationUserStateRepository;
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
     private final StaffProfileRepository staffProfileRepository;
@@ -50,6 +54,28 @@ public class ChatServiceImpl implements ChatService {
     // Bộ nhớ đệm ngắn hạn chống gửi trùng tin nhắn khi người dùng bấm nút Gửi liên tiếp (clientMessageId)
     private final Map<String, ChatMessageDTO> recentClientMessages = new ConcurrentHashMap<>();
 
+    @org.springframework.beans.factory.annotation.Autowired
+    public ChatServiceImpl(
+            ChatConversationRepository conversationRepository,
+            ChatMessageRepository messageRepository,
+            ChatMessageUserStateRepository messageUserStateRepository,
+            ChatConversationUserStateRepository conversationUserStateRepository,
+            UserRepository userRepository,
+            BranchRepository branchRepository,
+            StaffProfileRepository staffProfileRepository,
+            PatientProfileRepository patientProfileRepository,
+            CustomerCareTaskRepository customerCareTaskRepository) {
+        this.conversationRepository = conversationRepository;
+        this.messageRepository = messageRepository;
+        this.messageUserStateRepository = messageUserStateRepository;
+        this.conversationUserStateRepository = conversationUserStateRepository;
+        this.userRepository = userRepository;
+        this.branchRepository = branchRepository;
+        this.staffProfileRepository = staffProfileRepository;
+        this.patientProfileRepository = patientProfileRepository;
+        this.customerCareTaskRepository = customerCareTaskRepository;
+    }
+
     public ChatServiceImpl(
             ChatConversationRepository conversationRepository,
             ChatMessageRepository messageRepository,
@@ -58,13 +84,17 @@ public class ChatServiceImpl implements ChatService {
             StaffProfileRepository staffProfileRepository,
             PatientProfileRepository patientProfileRepository,
             CustomerCareTaskRepository customerCareTaskRepository) {
-        this.conversationRepository = conversationRepository;
-        this.messageRepository = messageRepository;
-        this.userRepository = userRepository;
-        this.branchRepository = branchRepository;
-        this.staffProfileRepository = staffProfileRepository;
-        this.patientProfileRepository = patientProfileRepository;
-        this.customerCareTaskRepository = customerCareTaskRepository;
+        this(
+                conversationRepository,
+                messageRepository,
+                null,
+                null,
+                userRepository,
+                branchRepository,
+                staffProfileRepository,
+                patientProfileRepository,
+                customerCareTaskRepository
+        );
     }
 
     // =========================================================================
@@ -297,7 +327,7 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
-        return allActive.isEmpty() ? List.of() : List.of(allActive.get(0));
+        return allActive;
     }
 
     private List<PatientProfile> loadPatientProfilesForUser(Long userId) {
@@ -345,10 +375,6 @@ public class ChatServiceImpl implements ChatService {
         );
     }
 
-    /**
-     * Lấy danh sách cơ sở của một tài khoản ứng viên khi tìm kiếm người nhận trong cùng cơ sở.
-     * Đối với tài khoản Bệnh nhân quản lý nhiều PatientProfile, gom toàn bộ preferredBranch của các hồ sơ.
-     */
     private List<Branch> resolveAccountBranches(User account, String accountRoleCode) {
         if ("ADMIN".equals(accountRoleCode)) {
             return getAllActiveBranches();
@@ -395,6 +421,110 @@ public class ChatServiceImpl implements ChatService {
             }
         }
         return user.getUsername() != null ? user.getUsername() : "Người dùng #" + uid;
+    }
+
+    // =========================================================================
+    // 1B. HELPER KIỂM TRA TRẠNG THÁI ĐỌC / XÓA THEO TỪNG TÀI KHOẢN & 10 PHÚT SỬA/THU HỒI
+    // =========================================================================
+
+    private boolean isWithinEditRecallWindow(ChatMessage message) {
+        if (message == null || message.getSentAt() == null) {
+            return false;
+        }
+        if (Boolean.TRUE.equals(message.getIsRecalled())) {
+            return false;
+        }
+        LocalDateTime deadline = message.getSentAt().plusMinutes(EDIT_RECALL_WINDOW_MINUTES);
+        return !LocalDateTime.now().isAfter(deadline);
+    }
+
+    private boolean isMessageDeletedForUser(
+            ChatMessage m,
+            ChatConversationUserState convState,
+            ChatMessageUserState msgState) {
+        if (m == null) {
+            return true;
+        }
+        if (msgState != null && Boolean.TRUE.equals(msgState.getIsDeleted())) {
+            return true;
+        }
+        if (convState != null && convState.getClearedAt() != null && m.getSentAt() != null) {
+            if (!m.getSentAt().isAfter(convState.getClearedAt())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Kiểm tra một tin nhắn m trong cuộc hội thoại c có đang ở trạng thái CHƯA ĐỌC đối với tài khoản viewerUserId hay không.
+     * - Tin nhắn do chính viewerUserId gửi KHÔNG BAO GIỜ tính là chưa đọc cho viewerUserId.
+     * - Tin nhắn đã xóa ở phía viewerUserId hoặc đã bị thu hồi không tính là chưa đọc.
+     * - Trạng thái đọc của từng tài khoản hoàn toàn độc lập: Lễ tân đọc không làm mất trạng thái chưa đọc của Admin/Bác sĩ.
+     */
+    private boolean isMessageUnreadForUser(
+            ChatConversation c,
+            ChatMessage m,
+            Long viewerUserId,
+            ChatConversationUserState convState,
+            ChatMessageUserState msgState) {
+        if (c == null || m == null || viewerUserId == null) {
+            return false;
+        }
+        if (m.getSenderType() == SenderType.BOT) {
+            return false;
+        }
+        if (Boolean.TRUE.equals(m.getIsRecalled())) {
+            return false;
+        }
+        if (isMessageDeletedForUser(m, convState, msgState)) {
+            return false;
+        }
+        if (Objects.equals(m.getSenderId(), viewerUserId)) {
+            return false;
+        }
+
+        User initiator = c.getUser();
+        Long initiatorId = initiator != null ? initiator.getUserId() : null;
+        User recipient = c.getRecipientUser();
+        boolean isDirect = recipient != null;
+
+        if (isDirect) {
+            Long recipientId = recipient.getUserId();
+            boolean isParticipant = Objects.equals(initiatorId, viewerUserId)
+                    || Objects.equals(recipientId, viewerUserId);
+            if (!isParticipant) {
+                return false;
+            }
+        } else {
+            // Hội thoại chung của cơ sở do Bệnh nhân khởi tạo
+            if (Objects.equals(initiatorId, viewerUserId)) {
+                // Người xem là Bệnh nhân khởi tạo -> tin nhắn từ nhân viên/Admin là tin nhắn đến
+            } else {
+                // Người xem là Nhân viên/Admin -> tin nhắn từ Bệnh nhân khởi tạo là tin nhắn cần tiếp nhận
+                boolean fromInitiator = Objects.equals(m.getSenderId(), initiatorId)
+                        || m.getSenderType() == SenderType.PATIENT;
+                if (!fromInitiator) {
+                    return false;
+                }
+            }
+        }
+
+        // Kiểm tra trạng thái đã đọc riêng của tài khoản viewerUserId
+        if (msgState != null && Boolean.TRUE.equals(msgState.getIsRead())) {
+            return false;
+        }
+        if (convState != null && convState.getLastReadAt() != null && m.getSentAt() != null) {
+            if (!m.getSentAt().isAfter(convState.getLastReadAt())) {
+                return false;
+            }
+        }
+        // Tương thích dữ liệu cũ trước khi nâng cấp: nếu chưa có bản ghi state nào nhưng cột is_read cũ đã = true
+        if (convState == null && msgState == null && Boolean.TRUE.equals(m.getIsRead())) {
+            return false;
+        }
+
+        return true;
     }
 
     // =========================================================================
@@ -522,7 +652,6 @@ public class ChatServiceImpl implements ChatService {
                 if (!profileLabels.isEmpty()) {
                     patientProfilesSummary = String.join(", ", profileLabels);
                 }
-                // Nếu từ khóa khớp chính xác một hồ sơ con (người thân) trong tài khoản, hiển thị rõ tên hồ sơ đó kèm chủ tài khoản
                 if (!cleanKeyword.isEmpty() && patientProfiles.size() > 1) {
                     for (PatientProfile pp : patientProfiles) {
                         boolean subMatched = (pp.getFullName() != null && pp.getFullName().toLowerCase(Locale.ROOT).contains(cleanKeyword))
@@ -752,8 +881,121 @@ public class ChatServiceImpl implements ChatService {
     }
 
     // =========================================================================
-    // 3. NGỮ CẢNH CHAT & KHUNG CHAT NỔI (FLOATING WIDGET)
+    // 3. NGỮ CẢNH CHAT, TỔNG TIN CHƯA ĐỌC & KHUNG CHAT NỔI (FLOATING WIDGET)
     // =========================================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public long getTotalUnreadCount(Long currentUserId) {
+        if (currentUserId == null || currentUserId <= 0) {
+            return 0L;
+        }
+        User user = requireActiveUser(currentUserId);
+        String roleCode = resolvePrimaryRoleCode(currentUserId);
+
+        if ("BENH_NHAN".equals(roleCode)) {
+            Branch homeBranch = resolveUserHomeBranch(user, roleCode);
+            ChatConversation conv = findActiveConversationForUserAndBranch(user, homeBranch);
+            if (conv == null) {
+                return 0L;
+            }
+            Long cid = conv.getConversationId();
+            List<ChatMessage> rawMessages = messageRepository.findByConversationIdOrderBySentAtAsc(cid);
+            ChatConversationUserState convState = conversationUserStateRepository
+                    .findByConversationIdAndUserId(cid, currentUserId).orElse(null);
+            Map<Long, ChatMessageUserState> msgStateMap = messageUserStateRepository
+                    .findByConversationIdAndUserId(cid, currentUserId).stream()
+                    .collect(Collectors.toMap(ChatMessageUserState::getMessageId, s -> s, (a, b) -> a));
+
+            long count = 0L;
+            for (ChatMessage m : rawMessages) {
+                if (isMessageUnreadForUser(conv, m, currentUserId, convState, msgStateMap.get(m.getMessageId()))) {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        boolean canHandlePatient = canHandlePatientMessages(roleCode);
+        List<Branch> allowedBranches = resolveStaffAllowedBranches(currentUserId, roleCode);
+        Set<Long> allowedBranchIds = allowedBranches.stream()
+                .map(Branch::getBranchId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (!"ADMIN".equals(roleCode) && allowedBranchIds.isEmpty()) {
+            return 0L;
+        }
+
+        List<ChatConversation> allConversations = conversationRepository.findAllConversationsWithUserAndBranch();
+        if (allConversations == null || allConversations.isEmpty()) {
+            return 0L;
+        }
+
+        Map<Long, String> userRoleCache = new HashMap<>();
+        List<ChatConversation> accessible = new ArrayList<>();
+        for (ChatConversation c : allConversations) {
+            if (c.getUser() == null) {
+                continue;
+            }
+            Branch convBranch = c.getBranch() != null ? c.getBranch() : c.getUser().getBranch();
+            Long convBranchId = convBranch != null ? convBranch.getBranchId() : null;
+            if (!"ADMIN".equals(roleCode)) {
+                if (convBranchId == null || !allowedBranchIds.contains(convBranchId)) {
+                    continue;
+                }
+            }
+            User initiator = c.getUser();
+            User recipient = c.getRecipientUser();
+            boolean isDirect = recipient != null;
+            String initRoleCode = userRoleCache.computeIfAbsent(initiator.getUserId(), this::resolvePrimaryRoleCode);
+
+            if (isDirect) {
+                boolean isParticipant = Objects.equals(initiator.getUserId(), currentUserId)
+                        || Objects.equals(recipient.getUserId(), currentUserId);
+                if (!isParticipant) {
+                    continue;
+                }
+                if (!canHandlePatient) {
+                    String recRoleCode = userRoleCache.computeIfAbsent(recipient.getUserId(), this::resolvePrimaryRoleCode);
+                    if ("BENH_NHAN".equals(initRoleCode) || "BENH_NHAN".equals(recRoleCode)) {
+                        continue;
+                    }
+                }
+            } else {
+                if (!canHandlePatient) {
+                    continue;
+                }
+            }
+            accessible.add(c);
+        }
+
+        if (accessible.isEmpty()) {
+            return 0L;
+        }
+
+        List<Long> convIds = accessible.stream().map(ChatConversation::getConversationId).toList();
+        Map<Long, ChatConversation> convMap = accessible.stream()
+                .collect(Collectors.toMap(ChatConversation::getConversationId, c -> c, (a, b) -> a));
+        Map<Long, ChatConversationUserState> convStateMap = conversationUserStateRepository
+                .findByUserIdAndConversationIdIn(currentUserId, convIds).stream()
+                .collect(Collectors.toMap(ChatConversationUserState::getConversationId, s -> s, (a, b) -> a));
+        Map<Long, ChatMessageUserState> msgStateMap = messageUserStateRepository
+                .findByUserIdAndConversationIdIn(currentUserId, convIds).stream()
+                .collect(Collectors.toMap(ChatMessageUserState::getMessageId, s -> s, (a, b) -> a));
+
+        List<ChatMessage> allMessages = messageRepository.findAllByConversationIdsOrderBySentAtAsc(convIds);
+        long totalUnread = 0L;
+        for (ChatMessage m : allMessages) {
+            Long cid = m.getConversation() != null ? m.getConversation().getConversationId() : null;
+            ChatConversation conv = cid != null ? convMap.get(cid) : null;
+            if (conv != null && isMessageUnreadForUser(
+                    conv, m, currentUserId, convStateMap.get(cid), msgStateMap.get(m.getMessageId()))) {
+                totalUnread++;
+            }
+        }
+        return totalUnread;
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -778,6 +1020,8 @@ public class ChatServiceImpl implements ChatService {
             }
         }
 
+        long totalUnreadCount = getTotalUnreadCount(userId);
+
         Map<String, Object> ctx = new LinkedHashMap<>();
         ctx.put("authenticated", true);
         ctx.put("userId", user.getUserId());
@@ -793,6 +1037,7 @@ public class ChatServiceImpl implements ChatService {
         ctx.put("branchCode", homeBranch != null ? homeBranch.getBranchCode() : null);
         ctx.put("branchName", homeBranch != null ? homeBranch.getBranchName() : "Chưa gắn cơ sở");
         ctx.put("accessibleBranches", accessibleBranches);
+        ctx.put("totalUnreadCount", totalUnreadCount);
         ctx.put("greetingMessage", GREETING_MESSAGE);
         ctx.put("firstMessageSystemNotice", FIRST_MESSAGE_SYSTEM_NOTICE);
         return ctx;
@@ -816,11 +1061,24 @@ public class ChatServiceImpl implements ChatService {
                     conversation.setStatus(ChatStatus.STAFF_HANDLING);
                     conversationRepository.save(conversation);
                 }
-                List<ChatMessage> rawMessages = messageRepository.findByConversationIdOrderBySentAtAsc(conversation.getConversationId());
-                messages = mapMessagesToDTOs(conversation, rawMessages);
-                unreadCount = messageRepository.countUnreadForInitiator(conversation.getConversationId(), user.getUserId());
+                Long cid = conversation.getConversationId();
+                List<ChatMessage> rawMessages = messageRepository.findByConversationIdOrderBySentAtAsc(cid);
+                ChatConversationUserState convState = conversationUserStateRepository
+                        .findByConversationIdAndUserId(cid, userId).orElse(null);
+                Map<Long, ChatMessageUserState> msgStateMap = messageUserStateRepository
+                        .findByConversationIdAndUserId(cid, userId).stream()
+                        .collect(Collectors.toMap(ChatMessageUserState::getMessageId, s -> s, (a, b) -> a));
+
+                messages = mapMessagesToDTOsForViewer(conversation, rawMessages, userId, convState, msgStateMap);
+                for (ChatMessage m : rawMessages) {
+                    if (isMessageUnreadForUser(conversation, m, userId, convState, msgStateMap.get(m.getMessageId()))) {
+                        unreadCount++;
+                    }
+                }
             }
         }
+
+        long totalUnreadCount = "BENH_NHAN".equals(roleCode) ? unreadCount : getTotalUnreadCount(userId);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("userId", user.getUserId());
@@ -834,6 +1092,7 @@ public class ChatServiceImpl implements ChatService {
         result.put("branchName", homeBranch.getBranchName());
         result.put("conversationId", conversation != null ? conversation.getConversationId() : null);
         result.put("unreadCount", unreadCount);
+        result.put("totalUnreadCount", totalUnreadCount);
         result.put("greetingMessage", GREETING_MESSAGE);
         result.put("firstMessageSystemNotice", FIRST_MESSAGE_SYSTEM_NOTICE);
         result.put("messages", messages);
@@ -987,39 +1246,26 @@ public class ChatServiceImpl implements ChatService {
         }
 
         List<Long> convIds = branchFiltered.stream().map(ChatConversation::getConversationId).toList();
-        Map<Long, ChatMessage> latestMessageMap = new HashMap<>();
-        for (ChatMessage m : messageRepository.findLatestMessagesByConversationIds(convIds)) {
-            if (m.getConversation() != null) {
-                latestMessageMap.put(m.getConversation().getConversationId(), m);
-            }
-        }
 
-        Map<Long, Long> staffUnreadMap = new HashMap<>();
-        for (Object[] row : messageRepository.countUnreadForStaffByConversationIds(convIds)) {
-            if (row != null && row.length >= 2 && row[0] != null && row[1] != null) {
-                staffUnreadMap.put(((Number) row[0]).longValue(), ((Number) row[1]).longValue());
-            }
-        }
+        // Tải trạng thái đọc & xóa riêng của tài khoản currentUserId
+        Map<Long, ChatConversationUserState> convStateMap = conversationUserStateRepository
+                .findByUserIdAndConversationIdIn(currentUserId, convIds).stream()
+                .collect(Collectors.toMap(ChatConversationUserState::getConversationId, s -> s, (a, b) -> a));
+        Map<Long, ChatMessageUserState> msgStateMap = messageUserStateRepository
+                .findByUserIdAndConversationIdIn(currentUserId, convIds).stream()
+                .collect(Collectors.toMap(ChatMessageUserState::getMessageId, s -> s, (a, b) -> a));
 
-        Map<Long, Long> directUnreadMap = new HashMap<>();
-        List<Object[]> directRows = messageRepository.countUnreadForDirectViewerByConversationIds(convIds, currentUserId);
-        if (directRows != null) {
-            for (Object[] row : directRows) {
-                if (row != null && row.length >= 2 && row[0] != null && row[1] != null) {
-                    directUnreadMap.put(((Number) row[0]).longValue(), ((Number) row[1]).longValue());
-                }
+        List<ChatMessage> allMessagesForConvs = messageRepository.findAllByConversationIdsOrderBySentAtAsc(convIds);
+        Map<Long, List<ChatMessage>> messagesByConvId = new HashMap<>();
+        for (ChatMessage m : allMessagesForConvs) {
+            if (m.getSenderType() == SenderType.BOT || m.getConversation() == null) {
+                continue;
             }
+            Long cid = m.getConversation().getConversationId();
+            messagesByConvId.computeIfAbsent(cid, k -> new ArrayList<>()).add(m);
         }
 
         String cleanKeyword = keyword != null ? keyword.trim().toLowerCase(Locale.ROOT) : "";
-        Set<Long> messageMatchedConvIds = new HashSet<>();
-        if (!cleanKeyword.isEmpty()) {
-            List<Long> matchedIds = messageRepository.findConversationIdsByMessageKeyword(cleanKeyword);
-            if (matchedIds != null) {
-                messageMatchedConvIds.addAll(matchedIds);
-            }
-        }
-
         String cleanRoleFilter = initiatorRole != null ? initiatorRole.trim().toUpperCase(Locale.ROOT) : "";
         if ("ALL".equals(cleanRoleFilter) || "TAT_CA".equals(cleanRoleFilter)) {
             cleanRoleFilter = "";
@@ -1029,6 +1275,35 @@ public class ChatServiceImpl implements ChatService {
 
         List<ChatConversationDTO> matchedDTOs = new ArrayList<>();
         for (ChatConversation c : branchFiltered) {
+            Long cid = c.getConversationId();
+            ChatConversationUserState convState = convStateMap.get(cid);
+            List<ChatMessage> rawConvMessages = messagesByConvId.getOrDefault(cid, List.of());
+
+            List<ChatMessage> visibleMessages = new ArrayList<>();
+            long unreadCount = 0L;
+            boolean keywordMatchedInVisibleMessages = false;
+
+            for (ChatMessage m : rawConvMessages) {
+                ChatMessageUserState ms = msgStateMap.get(m.getMessageId());
+                if (isMessageDeletedForUser(m, convState, ms)) {
+                    continue;
+                }
+                visibleMessages.add(m);
+                if (isMessageUnreadForUser(c, m, currentUserId, convState, ms)) {
+                    unreadCount++;
+                }
+                if (!cleanKeyword.isEmpty() && !Boolean.TRUE.equals(m.getIsRecalled())
+                        && m.getMessageText() != null
+                        && m.getMessageText().toLowerCase(Locale.ROOT).contains(cleanKeyword)) {
+                    keywordMatchedInVisibleMessages = true;
+                }
+            }
+
+            // Nếu người dùng đã bấm "Xóa cuộc trò chuyện ở phía tôi" và chưa có tin nhắn mới nào sau thời điểm xóa -> ẩn khỏi danh sách của người dùng này
+            if (convState != null && convState.getClearedAt() != null && visibleMessages.isEmpty()) {
+                continue;
+            }
+
             User initiator = c.getUser();
             Long initiatorId = initiator.getUserId();
             String initRoleCode = userRoleCache.computeIfAbsent(initiatorId, this::resolvePrimaryRoleCode);
@@ -1059,16 +1334,17 @@ public class ChatServiceImpl implements ChatService {
                 }
             }
 
-            long unreadCount = isDirect
-                    ? directUnreadMap.getOrDefault(c.getConversationId(), 0L)
-                    : staffUnreadMap.getOrDefault(c.getConversationId(), 0L);
-
             if (Boolean.TRUE.equals(unreadOnly) && unreadCount <= 0) {
                 continue;
             }
 
-            ChatMessage lastMsg = latestMessageMap.get(c.getConversationId());
-            String lastMsgText = lastMsg != null && lastMsg.getMessageText() != null ? lastMsg.getMessageText() : "";
+            ChatMessage lastMsg = visibleMessages.isEmpty() ? null : visibleMessages.get(visibleMessages.size() - 1);
+            String lastMsgText = "";
+            if (lastMsg != null) {
+                lastMsgText = Boolean.TRUE.equals(lastMsg.getIsRecalled())
+                        ? RECALLED_MESSAGE_PLACEHOLDER
+                        : (lastMsg.getMessageText() != null ? lastMsg.getMessageText() : "");
+            }
 
             if (!cleanKeyword.isEmpty()) {
                 boolean nameMatch = initFullName.toLowerCase(Locale.ROOT).contains(cleanKeyword)
@@ -1088,9 +1364,7 @@ public class ChatServiceImpl implements ChatService {
                         }
                     }
                 }
-                boolean msgMatch = lastMsgText.toLowerCase(Locale.ROOT).contains(cleanKeyword)
-                        || messageMatchedConvIds.contains(c.getConversationId());
-                if (!nameMatch && !msgMatch) {
+                if (!nameMatch && !keywordMatchedInVisibleMessages) {
                     continue;
                 }
             }
@@ -1167,7 +1441,7 @@ public class ChatServiceImpl implements ChatService {
     }
 
     // =========================================================================
-    // 5. XEM CHI TIẾT TIN NHẮN, GỬI TIN NHẮN & ĐÁNH DẤU ĐÃ ĐỌC
+    // 5. XEM CHI TIẾT TIN NHẮN, GỬI, ĐỌC, SỬA, THU HỒI & XÓA Ở PHÍA TÔI
     // =========================================================================
 
     private ChatConversation requireConversationAccess(Long currentUserId, Long conversationId) {
@@ -1238,7 +1512,16 @@ public class ChatServiceImpl implements ChatService {
     public Map<String, Object> getConversationMessages(Long currentUserId, Long conversationId) {
         ChatConversation conversation = requireConversationAccess(currentUserId, conversationId);
         List<ChatMessage> rawMessages = messageRepository.findByConversationIdOrderBySentAtAsc(conversationId);
-        List<ChatMessageDTO> messageDTOs = mapMessagesToDTOs(conversation, rawMessages);
+
+        ChatConversationUserState convState = conversationUserStateRepository
+                .findByConversationIdAndUserId(conversationId, currentUserId).orElse(null);
+        Map<Long, ChatMessageUserState> msgStateMap = messageUserStateRepository
+                .findByConversationIdAndUserId(conversationId, currentUserId).stream()
+                .collect(Collectors.toMap(ChatMessageUserState::getMessageId, s -> s, (a, b) -> a));
+
+        List<ChatMessageDTO> messageDTOs = mapMessagesToDTOsForViewer(
+                conversation, rawMessages, currentUserId, convState, msgStateMap
+        );
 
         User initiator = conversation.getUser();
         String initiatorRoleCode = initiator != null ? resolvePrimaryRoleCode(initiator.getUserId()) : "BENH_NHAN";
@@ -1370,8 +1653,20 @@ public class ChatServiceImpl implements ChatService {
         message.setSenderId(sender.getUserId());
         message.setMessageText(trimmedText);
         message.setIsRead(false);
+        message.setIsEdited(false);
+        message.setIsRecalled(false);
         message.setSentAt(now);
         ChatMessage savedMessage = messageRepository.save(message);
+
+        // Ghi nhận trạng thái đã đọc cho chính người gửi đối với tin nhắn vừa tạo
+        ChatMessageUserState senderMsgState = new ChatMessageUserState();
+        senderMsgState.setMessageId(savedMessage.getMessageId());
+        senderMsgState.setConversationId(conversation.getConversationId());
+        senderMsgState.setUserId(sender.getUserId());
+        senderMsgState.setIsRead(true);
+        senderMsgState.setReadAt(now);
+        senderMsgState.setIsDeleted(false);
+        messageUserStateRepository.save(senderMsgState);
 
         String initiatorRoleCode = resolvePrimaryRoleCode(initiator.getUserId());
         String recipientRoleCode = isDirect ? resolvePrimaryRoleCode(recipient.getUserId()) : null;
@@ -1400,8 +1695,12 @@ public class ChatServiceImpl implements ChatService {
                 .recipientRoleCode(recipientRoleCode)
                 .recipientRoleLabel(recipientRoleCode != null ? toRoleLabel(recipientRoleCode) : null)
                 .messageText(savedMessage.getMessageText())
-                .isRead(savedMessage.getIsRead())
+                .isRead(false)
                 .sentAt(savedMessage.getSentAt() != null ? savedMessage.getSentAt() : now)
+                .isEdited(false)
+                .isRecalled(false)
+                .canEditOrRecall(true)
+                .eventType("NEW")
                 .clientMessageId(clientMessageId)
                 .firstMessageInConversation(isFirstMessage)
                 .systemNotice(isFirstMessage ? FIRST_MESSAGE_SYSTEM_NOTICE : null)
@@ -1421,24 +1720,234 @@ public class ChatServiceImpl implements ChatService {
     @Transactional
     public Map<String, Object> markConversationAsRead(Long currentUserId, Long conversationId) {
         ChatConversation conversation = requireConversationAccess(currentUserId, conversationId);
-        User initiator = conversation.getUser();
-        Long initiatorUserId = initiator != null ? initiator.getUserId() : -1L;
+        List<ChatMessage> rawMessages = messageRepository.findByConversationIdOrderBySentAtAsc(conversationId);
 
-        int updatedCount;
-        if (conversation.getRecipientUser() != null || Objects.equals(currentUserId, initiatorUserId)) {
-            updatedCount = messageRepository.markMessagesAsReadForInitiator(conversationId, currentUserId);
-        } else {
-            updatedCount = messageRepository.markMessagesAsReadForStaff(conversationId, initiatorUserId);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime maxReadAt = now;
+        for (ChatMessage m : rawMessages) {
+            if (m.getSentAt() != null && m.getSentAt().isAfter(maxReadAt)) {
+                maxReadAt = m.getSentAt();
+            }
         }
+
+        ChatConversationUserState convState = conversationUserStateRepository
+                .findByConversationIdAndUserId(conversationId, currentUserId)
+                .orElseGet(() -> {
+                    ChatConversationUserState s = new ChatConversationUserState();
+                    s.setConversationId(conversationId);
+                    s.setUserId(currentUserId);
+                    return s;
+                });
+
+        Map<Long, ChatMessageUserState> existingMsgStates = messageUserStateRepository
+                .findByConversationIdAndUserId(conversationId, currentUserId).stream()
+                .collect(Collectors.toMap(ChatMessageUserState::getMessageId, s -> s, (a, b) -> a));
+
+        int updatedCount = 0;
+        List<ChatMessageUserState> toSave = new ArrayList<>();
+        for (ChatMessage m : rawMessages) {
+            ChatMessageUserState ms = existingMsgStates.get(m.getMessageId());
+            if (isMessageUnreadForUser(conversation, m, currentUserId, convState, ms)) {
+                if (ms == null) {
+                    ms = new ChatMessageUserState();
+                    ms.setMessageId(m.getMessageId());
+                    ms.setConversationId(conversationId);
+                    ms.setUserId(currentUserId);
+                    ms.setIsDeleted(false);
+                }
+                ms.setIsRead(true);
+                ms.setReadAt(now);
+                toSave.add(ms);
+                updatedCount++;
+            }
+        }
+
+        if (!toSave.isEmpty()) {
+            messageUserStateRepository.saveAll(toSave);
+        }
+
+        convState.setLastReadAt(maxReadAt);
+        conversationUserStateRepository.save(convState);
+
+        long totalUnreadCount = getTotalUnreadCount(currentUserId);
 
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("conversationId", conversationId);
         res.put("updatedCount", updatedCount);
         res.put("unreadCount", 0);
+        res.put("totalUnreadCount", totalUnreadCount);
         return res;
     }
 
-    private List<ChatMessageDTO> mapMessagesToDTOs(ChatConversation conversation, List<ChatMessage> rawMessages) {
+    @Override
+    @Transactional
+    public ChatMessageDTO editMessage(Long currentUserId, Long messageId, String newMessageText) {
+        requireActiveUser(currentUserId);
+        if (messageId == null || messageId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã tin nhắn không hợp lệ.");
+        }
+        if (newMessageText == null || newMessageText.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nội dung tin nhắn chỉnh sửa không được để trống.");
+        }
+        String trimmed = newMessageText.trim();
+        if (trimmed.length() > MAX_MESSAGE_LENGTH) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Nội dung tin nhắn vượt quá giới hạn cho phép (" + MAX_MESSAGE_LENGTH + " ký tự)."
+            );
+        }
+
+        ChatMessage message = messageRepository.findByIdWithConversation(messageId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy tin nhắn #" + messageId));
+        ChatConversation conversation = requireConversationAccess(currentUserId, message.getConversation().getConversationId());
+
+        if (!Objects.equals(message.getSenderId(), currentUserId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn chỉ được phép chỉnh sửa tin nhắn do chính mình gửi.");
+        }
+        if (Boolean.TRUE.equals(message.getIsRecalled())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Không thể chỉnh sửa tin nhắn đã bị thu hồi.");
+        }
+        if (!isWithinEditRecallWindow(message)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Đã quá thời hạn " + EDIT_RECALL_WINDOW_MINUTES + " phút kể từ khi gửi, không thể chỉnh sửa tin nhắn này."
+            );
+        }
+
+        message.setMessageText(trimmed);
+        message.setIsEdited(true);
+        message.setEditedAt(LocalDateTime.now());
+        ChatMessage saved = messageRepository.save(message);
+
+        ChatMessageDTO dto = toSingleMessageDTO(conversation, saved, currentUserId);
+        dto.setEventType("EDIT");
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public ChatMessageDTO recallMessage(Long currentUserId, Long messageId) {
+        requireActiveUser(currentUserId);
+        if (messageId == null || messageId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã tin nhắn không hợp lệ.");
+        }
+
+        ChatMessage message = messageRepository.findByIdWithConversation(messageId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy tin nhắn #" + messageId));
+        ChatConversation conversation = requireConversationAccess(currentUserId, message.getConversation().getConversationId());
+
+        if (!Objects.equals(message.getSenderId(), currentUserId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn chỉ được phép thu hồi tin nhắn do chính mình gửi.");
+        }
+        if (Boolean.TRUE.equals(message.getIsRecalled())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Tin nhắn này đã được thu hồi trước đó.");
+        }
+        if (!isWithinEditRecallWindow(message)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Đã quá thời hạn " + EDIT_RECALL_WINDOW_MINUTES + " phút kể từ khi gửi, không thể thu hồi tin nhắn này."
+            );
+        }
+
+        message.setIsRecalled(true);
+        message.setRecalledAt(LocalDateTime.now());
+        ChatMessage saved = messageRepository.save(message);
+
+        ChatMessageDTO dto = toSingleMessageDTO(conversation, saved, currentUserId);
+        dto.setEventType("RECALL");
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> deleteMessageForUser(Long currentUserId, Long messageId) {
+        requireActiveUser(currentUserId);
+        if (messageId == null || messageId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã tin nhắn không hợp lệ.");
+        }
+
+        ChatMessage message = messageRepository.findByIdWithConversation(messageId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy tin nhắn #" + messageId));
+        Long conversationId = message.getConversation().getConversationId();
+        requireConversationAccess(currentUserId, conversationId);
+
+        LocalDateTime now = LocalDateTime.now();
+        ChatMessageUserState state = messageUserStateRepository
+                .findByMessageIdAndUserId(messageId, currentUserId)
+                .orElseGet(() -> {
+                    ChatMessageUserState s = new ChatMessageUserState();
+                    s.setMessageId(messageId);
+                    s.setConversationId(conversationId);
+                    s.setUserId(currentUserId);
+                    return s;
+                });
+        state.setIsDeleted(true);
+        state.setDeletedAt(now);
+        state.setIsRead(true);
+        if (state.getReadAt() == null) {
+            state.setReadAt(now);
+        }
+        messageUserStateRepository.save(state);
+
+        long totalUnreadCount = getTotalUnreadCount(currentUserId);
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("messageId", messageId);
+        res.put("conversationId", conversationId);
+        res.put("deletedForUserId", currentUserId);
+        res.put("totalUnreadCount", totalUnreadCount);
+        return res;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> deleteConversationForUser(Long currentUserId, Long conversationId) {
+        requireActiveUser(currentUserId);
+        if (conversationId == null || conversationId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã cuộc hội thoại không hợp lệ.");
+        }
+        requireConversationAccess(currentUserId, conversationId);
+
+        List<ChatMessage> rawMessages = messageRepository.findByConversationIdOrderBySentAtAsc(conversationId);
+        LocalDateTime clearMark = LocalDateTime.now();
+        for (ChatMessage m : rawMessages) {
+            if (m.getSentAt() != null && m.getSentAt().isAfter(clearMark)) {
+                clearMark = m.getSentAt();
+            }
+        }
+
+        ChatConversationUserState convState = conversationUserStateRepository
+                .findByConversationIdAndUserId(conversationId, currentUserId)
+                .orElseGet(() -> {
+                    ChatConversationUserState s = new ChatConversationUserState();
+                    s.setConversationId(conversationId);
+                    s.setUserId(currentUserId);
+                    return s;
+                });
+        convState.setClearedAt(clearMark);
+        convState.setLastReadAt(clearMark);
+        conversationUserStateRepository.save(convState);
+
+        long totalUnreadCount = getTotalUnreadCount(currentUserId);
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("conversationId", conversationId);
+        res.put("deletedForUserId", currentUserId);
+        res.put("totalUnreadCount", totalUnreadCount);
+        return res;
+    }
+
+    private ChatMessageDTO toSingleMessageDTO(ChatConversation conversation, ChatMessage m, Long viewerUserId) {
+        List<ChatMessageDTO> list = mapMessagesToDTOsForViewer(
+                conversation, List.of(m), viewerUserId, null, Collections.emptyMap()
+        );
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    private List<ChatMessageDTO> mapMessagesToDTOsForViewer(
+            ChatConversation conversation,
+            List<ChatMessage> rawMessages,
+            Long viewerUserId,
+            ChatConversationUserState convState,
+            Map<Long, ChatMessageUserState> msgStateMap) {
         if (rawMessages == null || rawMessages.isEmpty()) {
             return List.of();
         }
@@ -1489,6 +1998,11 @@ public class ChatServiceImpl implements ChatService {
             if (m.getSenderType() == SenderType.BOT) {
                 continue;
             }
+            ChatMessageUserState ms = msgStateMap != null ? msgStateMap.get(m.getMessageId()) : null;
+            if (isMessageDeletedForUser(m, convState, ms)) {
+                continue;
+            }
+
             Long sid = m.getSenderId() != null ? m.getSenderId() : initiatorId;
             User senderUser = sid != null
                     ? userCache.computeIfAbsent(sid, id -> userRepository.findById(id).orElse(null))
@@ -1507,6 +2021,15 @@ public class ChatServiceImpl implements ChatService {
                 firstInitiatorMsgMarked = true;
                 isFirstInitiatorMsg = true;
             }
+
+            boolean recalled = Boolean.TRUE.equals(m.getIsRecalled());
+            boolean edited = Boolean.TRUE.equals(m.getIsEdited()) && !recalled;
+            boolean canModify = viewerUserId != null
+                    && Objects.equals(sid, viewerUserId)
+                    && isWithinEditRecallWindow(m);
+
+            boolean isUnreadForViewer = viewerUserId != null
+                    && isMessageUnreadForUser(conversation, m, viewerUserId, convState, ms);
 
             result.add(ChatMessageDTO.builder()
                     .messageId(m.getMessageId())
@@ -1530,9 +2053,15 @@ public class ChatServiceImpl implements ChatService {
                     .recipientFullName(recipientFullName)
                     .recipientRoleCode(recipientRoleCode)
                     .recipientRoleLabel(recipientRoleLabel)
-                    .messageText(m.getMessageText())
-                    .isRead(m.getIsRead())
+                    .messageText(recalled ? RECALLED_MESSAGE_PLACEHOLDER : m.getMessageText())
+                    .isRead(!isUnreadForViewer)
                     .sentAt(m.getSentAt())
+                    .isEdited(edited)
+                    .editedAt(m.getEditedAt())
+                    .isRecalled(recalled)
+                    .recalledAt(m.getRecalledAt())
+                    .canEditOrRecall(canModify)
+                    .eventType("NEW")
                     .firstMessageInConversation(isFirstInitiatorMsg)
                     .systemNotice(isFirstInitiatorMsg ? FIRST_MESSAGE_SYSTEM_NOTICE : null)
                     .build());

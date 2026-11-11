@@ -118,8 +118,10 @@ public class AdminIcd10Controller {
         Object sessionUser = session.getAttribute("loggedInUser");
         if (!(sessionUser instanceof User user)
                 || user.getUserId() == null
-                || (!userRepository.hasActiveAdminRole(user.getUserId()) && !userRepository.hasActivePermission(user.getUserId(), "CATALOG_MANAGE"))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Chỉ Admin đang hoạt động mới được xóa mã ICD-10.");
+                || (!userRepository.hasActiveAdminRole(user.getUserId())
+                && !userRepository.hasActivePermission(user.getUserId(), "CATALOG_ICD10")
+                && !userRepository.hasActivePermission(user.getUserId(), "CATALOG_MANAGE"))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xóa mã ICD-10.");
         }
         if (deleteToken == null || !deleteToken.equals(session.getAttribute(DELETE_TOKEN_KEY))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Phiên xác nhận không hợp lệ. Vui lòng tải lại trang.");

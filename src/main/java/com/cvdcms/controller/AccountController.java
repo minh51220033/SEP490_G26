@@ -765,15 +765,22 @@ public class AccountController {
         }
 
         /**
-         * Chỉ cho phép ADMIN thực hiện thao tác quản trị.
+         * Cho phép ADMIN hoặc tài khoản được cấp quyền ACCOUNT_MANAGE truy cập quản lý tài khoản.
          */
         private void requireAdmin(HttpSession session) {
-                User currentUser = (User) session.getAttribute("loggedInUser");
+                User currentUser = session != null ? (User) session.getAttribute("loggedInUser") : null;
 
-                if (!isAdmin(currentUser)) {
+                if (currentUser == null || currentUser.getUserId() == null) {
                         throw new ResponseStatusException(
                                         HttpStatus.FORBIDDEN,
-                                        "Chỉ Quản trị viên mới được quản lý tài khoản hệ thống.");
+                                        "Vui lòng đăng nhập.");
+                }
+
+                if (!isAdmin(currentUser)
+                                && !userRepository.hasActivePermission(currentUser.getUserId(), "ACCOUNT_MANAGE")) {
+                        throw new ResponseStatusException(
+                                        HttpStatus.FORBIDDEN,
+                                        "Bạn không có quyền quản lý tài khoản hệ thống.");
                 }
         }
 

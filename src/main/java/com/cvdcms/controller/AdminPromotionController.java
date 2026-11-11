@@ -64,7 +64,9 @@ public class AdminPromotionController {
             return "redirect:/login";
         }
         boolean isAdmin = userRepository.hasActiveAdminRole(user.getUserId());
-        if (!isAdmin && !userRepository.hasActivePermission(user.getUserId(), "CATALOG_MANAGE")) {
+        if (!isAdmin
+                && !userRepository.hasActivePermission(user.getUserId(), "CATALOG_PROMOTIONS")
+                && !userRepository.hasActivePermission(user.getUserId(), "CATALOG_MANAGE")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền quản lý chương trình khuyến mãi và voucher.");
         }
         return null;

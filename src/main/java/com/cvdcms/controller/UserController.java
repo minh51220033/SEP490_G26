@@ -159,11 +159,8 @@ public class UserController {
         for (String r : roleNames) {
             if (r == null) continue;
             String norm = r.trim().toUpperCase(Locale.ROOT);
-            if ("ADMIN".equals(norm) || "ROLE_ADMIN".equals(norm)
-                    || "BAC_SI".equals(norm) || "ROLE_BAC_SI".equals(norm)
-                    || "LE_TAN".equals(norm) || "ROLE_LE_TAN".equals(norm)
-                    || "QUAN_LY_KHO".equals(norm) || "ROLE_QUAN_LY_KHO".equals(norm)
-                    || "KE_TOAN".equals(norm) || "ROLE_KE_TOAN".equals(norm)) {
+            if (!"BENH_NHAN".equals(norm) && !"ROLE_BENH_NHAN".equals(norm)
+                    && !"PATIENT".equals(norm) && !"ROLE_PATIENT".equals(norm)) {
                 return true;
             }
         }
@@ -912,6 +909,22 @@ public class UserController {
 
         user = userRepository.save(user);
 
+        // Tự động tìm kiếm và liên kết hồ sơ bệnh nhân đã được tạo trước đó tại quầy lễ tân (dựa theo Số điện thoại)
+        boolean hasLinkedProfile = false;
+        if (phoneNumber != null && !phoneNumber.isBlank() && patientProfileRepository != null) {
+            List<PatientProfile> unlinkedProfiles = patientProfileRepository.findByPhoneNumber(phoneNumber);
+            for (PatientProfile profile : unlinkedProfiles) {
+                if (profile.getUser() == null) {
+                    profile.setUser(user);
+                    if (!hasLinkedProfile && (profile.getIsDefault() == null || !profile.getIsDefault())) {
+                        profile.setIsDefault(true);
+                    }
+                    patientProfileRepository.save(profile);
+                    hasLinkedProfile = true;
+                }
+            }
+        }
+
         // =============================================
         // ĐĂNG NHẬP NGAY SAU KHI ĐĂNG KÝ
         // =============================================
@@ -931,6 +944,14 @@ public class UserController {
                 "permissionCodes",
                 userRepository.findActivePermissionCodesByUserId(user.getUserId())
         );
+
+        if (hasLinkedProfile) {
+            session.setAttribute(
+                    "notification",
+                    "Đăng ký tài khoản thành công! Hồ sơ khám bệnh tại phòng khám của bạn đã được tự động liên kết."
+            );
+            return "redirect:/home";
+        }
 
         session.setAttribute(
                 "notification",

@@ -30,11 +30,17 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
     private final BranchService branchService;
     private final com.cvdcms.repository.UserRepository userRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.StaffScheduleService scheduleService;
 
     public AttendanceController(AttendanceService attendanceService, BranchService branchService, com.cvdcms.repository.UserRepository userRepository) {
         this.attendanceService = attendanceService;
         this.branchService = branchService;
         this.userRepository = userRepository;
+    }
+
+    public void setScheduleService(com.cvdcms.service.StaffScheduleService scheduleService) {
+        this.scheduleService = scheduleService;
     }
 
     private void addLayoutAttributes(HttpSession session, Model model) {
@@ -49,7 +55,7 @@ public class AttendanceController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
         }
         boolean isAdmin = userRepository.hasActiveAdminRole(user.getUserId());
-        if (!isAdmin && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MANAGE")) {
+        if (!isAdmin && !userRepository.hasActivePermission(user.getUserId(), "HR_BRANCH_ATTENDANCE")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem chấm công toàn chi nhánh.");
         }
     }
@@ -84,6 +90,7 @@ public class AttendanceController {
 
     @GetMapping("/attendance/my")
     public String myAttendance(@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week,
             Model model, HttpSession session, HttpServletRequest request) {
         if (!(session.getAttribute("loggedInUser") instanceof User user)) {
             return "redirect:/login";
@@ -91,7 +98,9 @@ public class AttendanceController {
         if (isPureAdmin(session)) {
             return "redirect:/admin/attendance";
         }
-        if (!userRepository.hasActiveAdminRole(user.getUserId()) && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
+        if (!userRepository.hasActiveAdminRole(user.getUserId())
+                && !userRepository.hasActivePermission(user.getUserId(), "HR_MY_ATTENDANCE")
+                && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền truy cập chấm công cá nhân.");
         }
         addLayoutAttributes(session, model);
@@ -99,6 +108,12 @@ public class AttendanceController {
         YearMonth selected = month != null ? month : YearMonth.now();
         addMonthAttributes(model, selected);
         model.addAttribute("clientIp", clientIp(request));
+
+        LocalDate monday = com.cvdcms.service.StaffScheduleService.mondayOf(week != null ? week : LocalDate.now());
+        model.addAttribute("monday", monday);
+        model.addAttribute("prevWeek", monday.minusWeeks(1));
+        model.addAttribute("nextWeek", monday.plusWeeks(1));
+        model.addAttribute("today", LocalDate.now());
 
         StaffProfile staff = attendanceService.findStaffByUserId(user.getUserId());
         model.addAttribute("staff", staff);
@@ -113,6 +128,10 @@ public class AttendanceController {
             model.addAttribute("history", history);
             model.addAttribute("summary", attendanceService.summarize(history));
             model.addAttribute("shiftLabelsByDate", attendanceService.getShiftLabelsByDate(staff.getStaffId(), selected));
+
+            if (scheduleService != null) {
+                model.addAttribute("myWeek", scheduleService.getMyWeek(staff.getStaffId(), monday));
+            }
 
             // Đồng bộ tên cơ sở hiển thị trên Topbar theo ca trực hôm nay hoặc lịch sử chấm công gần nhất
             String activeBranchName = null;
@@ -138,7 +157,9 @@ public class AttendanceController {
             ra.addFlashAttribute("errorMessage", "Tài khoản Quản trị hệ thống không thực hiện chấm công cá nhân.");
             return "redirect:/admin/attendance";
         }
-        if (!userRepository.hasActiveAdminRole(user.getUserId()) && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
+        if (!userRepository.hasActiveAdminRole(user.getUserId())
+                && !userRepository.hasActivePermission(user.getUserId(), "HR_MY_ATTENDANCE")
+                && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
             ra.addFlashAttribute("errorMessage", "Bạn không có quyền thực hiện chấm công cá nhân.");
             return "redirect:/home";
         }
@@ -162,7 +183,9 @@ public class AttendanceController {
             ra.addFlashAttribute("errorMessage", "Tài khoản Quản trị hệ thống không thực hiện chấm công cá nhân.");
             return "redirect:/admin/attendance";
         }
-        if (!userRepository.hasActiveAdminRole(user.getUserId()) && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
+        if (!userRepository.hasActiveAdminRole(user.getUserId())
+                && !userRepository.hasActivePermission(user.getUserId(), "HR_MY_ATTENDANCE")
+                && !userRepository.hasActivePermission(user.getUserId(), "SCHEDULE_MY")) {
             ra.addFlashAttribute("errorMessage", "Bạn không có quyền thực hiện chấm công cá nhân.");
             return "redirect:/home";
         }
