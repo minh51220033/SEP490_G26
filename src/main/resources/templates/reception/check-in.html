@@ -176,14 +176,11 @@
                                         <span class="badge bg-light text-dark border font-monospace fw-bold" th:text="${a.patient.code}">BN10001</span>
                                     </td>
                                     <td data-col="expectedTime" class="text-center">
-                                        <span class="fw-semibold text-dark d-inline-flex align-items-center gap-1.5"><i class="bi bi-clock text-primary"></i><span th:text="${a.expectedTime != null ? a.expectedTime : 'Chưa định giờ'}">09:30</span></span>
+                                        <span class="fw-semibold text-dark" th:text="${a.expectedTime != null ? a.expectedTime : 'Chưa định giờ'}">09:30</span>
                                         <small th:if="${a.lateMinutes >= 15}" class="badge bg-warning text-dark d-block mt-0.5" style="font-size: 10px;" th:text="|Trễ ${a.lateMinutes}p|"></small>
                                     </td>
                                     <td data-col="patientName">
-                                        <div class="d-flex align-items-center gap-2.5">
-                                            <div class="patient-card-avatar flex-shrink-0" style="width: 34px; height: 34px; font-size: 13px;" th:text="${#strings.substring(a.patient.name, 0, 1)}">N</div>
-                                            <strong class="text-dark text-truncate" th:text="${a.patient.name}">Nguyễn Minh An</strong>
-                                        </div>
+                                        <strong class="text-dark text-truncate d-block" th:text="${a.patient.name}">Nguyễn Minh An</strong>
                                     </td>
                                     <td data-col="phone" class="text-center">
                                         <span class="text-dark fw-medium small" th:text="${a.patient.phone}">0905000601</span>
@@ -576,13 +573,10 @@
                                         <span class="badge bg-light text-dark border font-monospace fw-bold" th:text="${v.patient.code}">BN001</span>
                                     </td>
                                     <td data-col="checkInTime" class="text-center">
-                                        <span class="fw-semibold text-dark d-inline-flex align-items-center gap-1.5"><i class="bi bi-clock text-primary"></i><span th:text="${#temporals.format(v.checkedInAt, 'HH:mm')}">08:30</span></span>
+                                        <span class="fw-semibold text-dark" th:text="${#temporals.format(v.checkedInAt, 'HH:mm')}">08:30</span>
                                     </td>
                                     <td data-col="patientName">
-                                        <div class="d-flex align-items-center gap-2.5">
-                                            <div class="patient-card-avatar flex-shrink-0" style="width: 34px; height: 34px; font-size: 13px;" th:text="${#strings.substring(v.patient.name, 0, 1)}">N</div>
-                                            <strong class="text-dark text-truncate" th:text="${v.patient.name}">Nguyễn Quang Anh</strong>
-                                        </div>
+                                        <strong class="text-dark text-truncate d-block" th:text="${v.patient.name}">Nguyễn Quang Anh</strong>
                                     </td>
                                     <td data-col="phone" class="text-center">
                                         <span class="text-dark fw-medium small" th:text="${v.patient.phone}">0961895546</span>

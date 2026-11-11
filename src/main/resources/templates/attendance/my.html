@@ -356,16 +356,25 @@
                     </div>
                 </div>
 
-                <!-- BÊN PHẢI: NÚT YÊU CẦU NGHỈ / KHÓA LỊCH + CHỌN CƠ SỞ (DUY NHẤT 1 TAB ĐẦY ĐỦ CHỨC NĂNG) -->
+                <!-- BÊN PHẢI: CHỌN CƠ SỞ -->
                 <div class="d-flex align-items-center gap-2">
-                    <a th:href="@{/doctor/leave-requests}"
-                       class="btn btn-outline-secondary fw-semibold px-2.5 py-1.5 rounded-3 d-inline-flex align-items-center gap-1.5"
-                       style="font-size: 12.5px; height: 32px; border-color: #cbd5e1; background: #fff;"
-                       th:if="${permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS')}">
-                        <i class="bi bi-calendar2-plus text-primary"></i> Yêu cầu nghỉ / Khóa lịch
-                    </a>
                     <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                 </div>
+            </div>
+
+            <!-- THANH 2 TAB CHUYỂN NHANH: LỊCH LÀM VIỆC & CHẤM CÔNG | YÊU CẦU NGHỈ / KHÓA LỊCH -->
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3 pb-2 border-bottom" style="border-color: #e2e8f0 !important;">
+                <a th:href="@{/attendance/my}"
+                   class="btn btn-sm fw-bold px-3 py-1.5 rounded-3 d-inline-flex align-items-center gap-1.5"
+                   style="background: #0284c7; color: #fff; border: 1px solid #0284c7; font-size: 13px;">
+                    <i class="bi bi-calendar-check"></i><span>Lịch làm việc &amp; Chấm công</span>
+                </a>
+                <a th:href="@{/doctor/leave-requests}"
+                   th:if="${permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS')}"
+                   class="btn btn-sm fw-semibold px-3 py-1.5 rounded-3 d-inline-flex align-items-center gap-1.5"
+                   style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-size: 13px;">
+                    <i class="bi bi-calendar2-x text-primary"></i><span>Yêu cầu nghỉ / Khóa lịch</span>
+                </a>
             </div>
 
             <div class="alert alert-success rounded-3 shadow-xs py-2 px-3 mb-2 d-flex align-items-center gap-2" style="font-size: 12.5px;" th:if="${successMessage}">
@@ -388,8 +397,8 @@
                 <div class="row g-2.5 mb-3 align-items-stretch mt-1">
                     <!-- CỘT TRÁI: CHECK-IN / CHECK-OUT NHANH -->
                     <div class="col-xl-5 col-lg-5">
-                        <div class="h-100 bg-white p-2.5 px-3 rounded-3 border d-flex flex-column justify-content-between shadow-xs" style="border-color: #e2e8f0 !important; border-radius: 12px !important;">
-                            <div class="d-flex align-items-center justify-content-between mb-1">
+                        <div class="h-100 bg-white p-3 rounded-3 border d-flex flex-column justify-content-between gap-2 shadow-xs" style="border-color: #e2e8f0 !important; border-radius: 12px !important;">
+                            <div class="d-flex align-items-center justify-content-between gap-2">
                                 <div class="d-flex align-items-baseline gap-2">
                                     <span id="liveClock" style="color: #0284c7; font-weight: 800; font-size: 1.4rem; line-height: 1; letter-spacing: 0.5px;">--:--:--</span>
                                     <span class="text-secondary fw-semibold" style="font-size: 12px;" th:text="${#temporals.dayOfWeekName(today)} + ', ' + ${#temporals.format(today, 'dd/MM/yyyy')}">Thứ hai, 01/01/2026</span>
@@ -403,7 +412,7 @@
                             </div>
 
                             <!-- Trạng thái check-in hôm nay nếu đã bấm -->
-                            <div class="p-1 px-2 rounded-2 border mb-1" style="background: #f8fafc; border-color: #e2e8f0 !important; font-size: 12px;" th:if="${todayRecord != null and todayRecord.checkInAt != null}">
+                            <div class="p-2 rounded-2 border" style="background: #f8fafc; border-color: #e2e8f0 !important; font-size: 12px;" th:if="${todayRecord != null and todayRecord.checkInAt != null}">
                                 <i class="bi bi-check-circle-fill text-success me-1"></i>
                                 <span th:text="${todayRecord.checkOutAt == null ? 'Đang trong ca: ' : 'Ca gần nhất: '}"></span>
                                 Vào: <strong class="text-dark" th:text="${#temporals.format(todayRecord.checkInAt, 'HH:mm:ss')}">08:00:00</strong>
@@ -419,35 +428,37 @@
                             </div>
 
                             <!-- Nếu có ca hiển thị ca nhanh -->
-                            <div th:if="${!#lists.isEmpty(todayShifts) and (todayRecord == null or todayRecord.checkInAt == null)}" class="d-flex align-items-center gap-1.5 mb-1 text-muted text-truncate" style="font-size: 12px;">
-                                <i class="bi bi-clock text-primary"></i>
-                                <span>Ca:</span>
-                                <span th:each="s : ${todayShifts}" class="badge bg-light text-dark border me-1 py-0.5 px-1.5" style="font-size: 11px;">
-                                    <strong th:text="${s.shift.shiftName}">Ca sáng</strong> (<span th:text="${#temporals.format(s.shift.startTime, 'HH:mm')} + '-' + ${#temporals.format(s.shift.endTime, 'HH:mm')}">08:00-12:00</span>)
+                            <div th:if="${!#lists.isEmpty(todayShifts) and (todayRecord == null or todayRecord.checkInAt == null)}" class="d-flex align-items-center flex-wrap gap-2 text-muted" style="font-size: 12px;">
+                                <span class="d-inline-flex align-items-center gap-1">
+                                    <i class="bi bi-clock text-primary"></i>
+                                    <span>Ca trực:</span>
+                                </span>
+                                <span th:each="s : ${todayShifts}" class="badge bg-light text-dark border py-1 px-2 fw-semibold" style="font-size: 11.5px;">
+                                    <span th:text="${s.shift.shiftName}">Ca sáng</span><span th:if="${!#strings.contains(s.shift.shiftName, ':')}" th:text="' (' + ${#temporals.format(s.shift.startTime, 'HH:mm')} + ' - ' + ${#temporals.format(s.shift.endTime, 'HH:mm')} + ')'"></span>
                                 </span>
                             </div>
 
                             <!-- Hàng nút Check-in / Check-out + IP -->
-                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-1.5 pt-1 border-top" style="border-color: #f1f5f9 !important;">
-                                <div class="d-flex align-items-center gap-1.5">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-2 border-top" style="border-color: #f1f5f9 !important;">
+                                <div class="d-flex align-items-center gap-2">
                                     <form th:action="@{/attendance/check-in}" method="post" class="m-0">
-                                        <button type="submit" class="btn btn-primary fw-bold px-2.5 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" id="btnCheckIn"
+                                        <button type="submit" class="btn btn-primary fw-bold px-3 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-2" id="btnCheckIn"
                                                 style="height: 32px; font-size: 12px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;"
                                                 th:disabled="${#lists.isEmpty(todayShifts) or (todayRecord != null and todayRecord.checkInAt != null and todayRecord.checkOutAt == null)}">
                                             <i class="bi bi-box-arrow-in-right"></i> Check-in vào ca
                                         </button>
                                     </form>
                                     <form th:action="@{/attendance/check-out}" method="post" class="m-0">
-                                        <button type="submit" class="btn btn-outline-primary fw-bold px-2.5 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" id="btnCheckOut"
+                                        <button type="submit" class="btn btn-outline-primary fw-bold px-3 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-2" id="btnCheckOut"
                                                 style="height: 32px; font-size: 12px;"
                                                 th:disabled="${todayRecord == null or todayRecord.checkInAt == null or todayRecord.checkOutAt != null}">
                                             <i class="bi bi-box-arrow-right"></i> Check-out tan ca
                                         </button>
                                     </form>
                                 </div>
-                                <div class="text-muted" style="font-size: 11px;" title="Chỉ chấm công được khi kết nối đúng Wi-Fi của chi nhánh.">
+                                <div class="text-muted d-inline-flex align-items-center gap-1" style="font-size: 11px;" title="Chỉ chấm công được khi kết nối đúng Wi-Fi của chi nhánh.">
                                     <i class="bi bi-wifi text-primary"></i>
-                                    IP: <strong class="text-dark" th:text="${clientIp}">127.0.0.1</strong>
+                                    <span>IP: <strong class="text-dark" th:text="${clientIp}">127.0.0.1</strong></span>
                                 </div>
                             </div>
                         </div>
