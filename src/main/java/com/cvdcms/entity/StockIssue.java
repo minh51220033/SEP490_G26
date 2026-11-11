@@ -39,6 +39,9 @@ public class StockIssue {
     @Column(name = "issue_type", nullable = false, length = 20)
     private StockIssueType issueType = StockIssueType.INTERNAL_USE;
 
+    @Column(name = "issue_reason", length = 255)
+    private String issueReason;
+
     @Column(name = "issue_date", nullable = false)
     private LocalDate issueDate;
 

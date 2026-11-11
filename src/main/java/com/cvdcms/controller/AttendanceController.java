@@ -30,11 +30,17 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
     private final BranchService branchService;
     private final com.cvdcms.repository.UserRepository userRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.StaffScheduleService scheduleService;
 
     public AttendanceController(AttendanceService attendanceService, BranchService branchService, com.cvdcms.repository.UserRepository userRepository) {
         this.attendanceService = attendanceService;
         this.branchService = branchService;
         this.userRepository = userRepository;
+    }
+
+    public void setScheduleService(com.cvdcms.service.StaffScheduleService scheduleService) {
+        this.scheduleService = scheduleService;
     }
 
     private void addLayoutAttributes(HttpSession session, Model model) {
@@ -84,6 +90,7 @@ public class AttendanceController {
 
     @GetMapping("/attendance/my")
     public String myAttendance(@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week,
             Model model, HttpSession session, HttpServletRequest request) {
         if (!(session.getAttribute("loggedInUser") instanceof User user)) {
             return "redirect:/login";
@@ -102,6 +109,12 @@ public class AttendanceController {
         addMonthAttributes(model, selected);
         model.addAttribute("clientIp", clientIp(request));
 
+        LocalDate monday = com.cvdcms.service.StaffScheduleService.mondayOf(week != null ? week : LocalDate.now());
+        model.addAttribute("monday", monday);
+        model.addAttribute("prevWeek", monday.minusWeeks(1));
+        model.addAttribute("nextWeek", monday.plusWeeks(1));
+        model.addAttribute("today", LocalDate.now());
+
         StaffProfile staff = attendanceService.findStaffByUserId(user.getUserId());
         model.addAttribute("staff", staff);
         if (staff != null) {
@@ -115,6 +128,10 @@ public class AttendanceController {
             model.addAttribute("history", history);
             model.addAttribute("summary", attendanceService.summarize(history));
             model.addAttribute("shiftLabelsByDate", attendanceService.getShiftLabelsByDate(staff.getStaffId(), selected));
+
+            if (scheduleService != null) {
+                model.addAttribute("myWeek", scheduleService.getMyWeek(staff.getStaffId(), monday));
+            }
 
             // Đồng bộ tên cơ sở hiển thị trên Topbar theo ca trực hôm nay hoặc lịch sử chấm công gần nhất
             String activeBranchName = null;

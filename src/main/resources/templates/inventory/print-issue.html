@@ -75,7 +75,7 @@
                         <div class="info-item">
                             <span class="info-label">Loại phiếu xuất:</span>
                             <span class="info-value"
-                                  th:text="${issue.issueType == 'DISCARD_EXPIRED' ? 'Xuất hủy hàng hết hạn' : 'Xuất sử dụng nội bộ'}">Xuất sử dụng nội bộ</span>
+                                  th:text="${issue.issueType == 'DISCARD_EXPIRED' ? 'Xuất hủy hàng hết hạn' : (issue.issueType == 'OTHER' ? 'Mục đích khác' : 'Xuất sử dụng nội bộ')}">Xuất sử dụng nội bộ</span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Người lập phiếu:</span>
@@ -87,7 +87,7 @@
                         </div>
                         <div class="info-item full-width">
                             <span class="info-label">Lý do / Ghi chú:</span>
-                            <span class="info-value" th:text="${issue.notes ?: '—'}">Xuất phục vụ ca điều trị nha khoa</span>
+                            <span class="info-value" th:text="${issue.issueReason != null and !#strings.isEmpty(issue.issueReason) ? (issue.issueReason + (issue.notes != null and !#strings.isEmpty(issue.notes) ? ' — ' + issue.notes : '')) : (issue.notes ?: '—')}">Xuất phục vụ ca điều trị nha khoa</span>
                         </div>
                     </div>
 

@@ -281,7 +281,7 @@
                             </div>
                         </div>
 
-                        <div class="d-flex flex-column gap-2.5">
+                        <div class="d-flex flex-column" style="gap: 12px;">
                             <div th:each="r : ${roles}"
                                  th:with="permCount=${r.permissions != null ? #sets.size(r.permissions) : 0},
                                           totalCount=${totalPermissionsCount != null and totalPermissionsCount > 0 ? totalPermissionsCount : 61},

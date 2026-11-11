@@ -48,6 +48,14 @@ public class ChatMessageDTO {
     private Boolean isRead;
     private LocalDateTime sentAt;
 
+    // Trạng thái chỉnh sửa & thu hồi tin nhắn (trong vòng 10 phút)
+    private boolean isEdited;
+    private LocalDateTime editedAt;
+    private boolean isRecalled;
+    private LocalDateTime recalledAt;
+    private boolean canEditOrRecall;
+    private String eventType; // NEW, EDIT, RECALL
+
     // Mã định danh tạm phía client để chống nhân đôi tin nhắn trên giao diện
     private String clientMessageId;
 

@@ -1333,3 +1333,315 @@ textarea:focus {
         transform: translateY(0);
     }
 }
+
+
+/* ==========================================================================
+   MODAL TÌM KIẾM & CHỌN NHIỀU VẬT TƯ KHO (NHẬP / XUẤT / ĐIỀU CHUYỂN)
+   ========================================================================== */
+.mat-picker-modal-card {
+    max-width: 920px;
+    width: 100%;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 22px;
+}
+
+.mat-picker-header {
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.mat-picker-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+.mat-picker-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.mat-picker-search-icon {
+    position: absolute;
+    left: 12px;
+    color: #64748b;
+    font-size: 14px;
+    pointer-events: none;
+}
+
+.mat-picker-search-input {
+    width: 100%;
+    height: 38px;
+    padding: 6px 12px 6px 36px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 13.5px;
+    background: #ffffff;
+}
+
+.mat-picker-search-input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.mat-picker-filters-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.mat-picker-filter-col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 180px;
+}
+
+.mat-picker-filter-col label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #475569;
+    margin: 0;
+}
+
+.mat-picker-filter-col select {
+    height: 34px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    padding: 4px 10px;
+    font-size: 13px;
+    background: #ffffff;
+}
+
+.mat-picker-filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mat-picker-list-wrap {
+    flex: 1;
+    min-height: 220px;
+    max-height: 360px;
+    overflow: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.mat-picker-table tbody tr.mat-picker-row {
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+
+.mat-picker-table tbody tr.mat-picker-row:hover {
+    background-color: #f0f9ff !important;
+}
+
+.mat-picker-table tbody tr.mat-picker-row.is-selected {
+    background-color: #eff6ff !important;
+}
+
+.mat-picker-table tbody tr.mat-picker-row.is-already-in-voucher {
+    background-color: #f8fafc !important;
+    cursor: not-allowed;
+    opacity: 0.85;
+}
+
+.mat-picker-table tbody tr.mat-picker-row.is-already-in-voucher:hover {
+    background-color: #f1f5f9 !important;
+}
+
+.mat-picker-checkbox:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.mat-picker-in-voucher-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    vertical-align: middle;
+}
+
+.mat-picker-selected-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+    vertical-align: middle;
+}
+
+.mat-picker-checkbox {
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+    accent-color: #2563eb;
+}
+
+.mat-picker-footer {
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.mat-picker-selected-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   VOUCHER MATERIAL DETAIL TABLE (PHIẾU NHẬP / XUẤT / ĐIỀU CHUYỂN)
+   ========================================================================== */
+.voucher-detail-table {
+    table-layout: auto !important;
+    width: 100%;
+}
+
+.voucher-detail-table thead th {
+    padding: 9px 10px;
+    font-size: 11.5px;
+    vertical-align: middle;
+}
+
+.voucher-detail-table tbody td {
+    padding: 8px 10px;
+    vertical-align: middle;
+}
+
+.voucher-selected-count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f0f9ff;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.voucher-mat-code-badge {
+    font-family: 'JetBrains Mono', Consolas, monospace;
+    font-weight: 700;
+    font-size: 11.5px;
+    color: #0284c7;
+    background: #f0f9ff;
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid #bae6fd;
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.voucher-mat-name {
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 13px;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.voucher-mat-sub {
+    font-size: 11.5px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.voucher-mat-unit {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.voucher-row-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.add-batch-row-btn {
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid #bae6fd;
+    border-radius: 6px;
+    background: #f0f9ff;
+    color: #0284c7;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    transition: all 0.15s ease;
+}
+
+.add-batch-row-btn:hover {
+    background: #e0f2fe;
+    border-color: #38bdf8;
+    color: #0369a1;
+}
+
+.voucher-empty-row td {
+    padding: 26px 16px !important;
+    text-align: center;
+    color: #64748b;
+    background: #fcfdff;
+    font-size: 13px;
+}
+
+@media (max-width: 992px) {
+    .receipt-payment-grid {
+        grid-template-columns: 1fr;
+    }
+    .receipt-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .form-action-group {
+        justify-content: flex-end;
+    }
+}

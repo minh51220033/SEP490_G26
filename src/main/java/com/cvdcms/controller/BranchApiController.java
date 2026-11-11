@@ -73,8 +73,9 @@ public class    BranchApiController {
                 ))
                 .collect(Collectors.toList());
 
+        boolean branchSelectionAllowed = isAdmin || branches.size() > 1;
         BranchAccessResponseDTO response =
-                new BranchAccessResponseDTO(isAdmin, branches);
+                new BranchAccessResponseDTO(branchSelectionAllowed, branches);
 
         return ResponseEntity.ok(response);
     }

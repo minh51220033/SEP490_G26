@@ -1,12 +1,15 @@
 package com.cvdcms.config;
 
+import com.cvdcms.entity.Branch;
 import com.cvdcms.entity.User;
 import com.cvdcms.entity.enums.AssignmentStatus;
+import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.StaffBranchAssignmentRepository;
 import com.cvdcms.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -18,6 +21,7 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
 
     private final UserRepository userRepository;
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
+    private BranchRepository branchRepository;
 
     public FinanceAccessInterceptor(
             UserRepository userRepository,
@@ -25,6 +29,11 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
     ) {
         this.userRepository = userRepository;
         this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
+    }
+
+    @Autowired(required = false)
+    public void setBranchRepository(BranchRepository branchRepository) {
+        this.branchRepository = branchRepository;
     }
 
     @Override
@@ -133,6 +142,11 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
             if ((activeBranchIds == null || activeBranchIds.isEmpty())
                     && dbUser.getBranch() != null && dbUser.getBranch().getBranchId() != null) {
                 activeBranchIds = List.of(dbUser.getBranch().getBranchId());
+            }
+            if ((activeBranchIds == null || activeBranchIds.isEmpty()) && branchRepository != null) {
+                activeBranchIds = branchRepository.findByIsActiveTrueOrderByBranchNameAsc().stream()
+                        .map(Branch::getBranchId)
+                        .toList();
             }
             if (activeBranchIds == null || activeBranchIds.isEmpty()) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản nhân viên chưa được phân công chi nhánh làm việc hợp lệ.");

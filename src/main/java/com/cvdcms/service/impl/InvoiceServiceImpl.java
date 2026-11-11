@@ -139,7 +139,11 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (!isAdmin && branchId != null) {
             boolean hasAssignment = staffBranchAssignmentRepository.hasActiveAssignment(staff.getStaffId(), branchId, AssignmentStatus.ACTIVE);
             if (!hasAssignment) {
-                throw new IllegalStateException("Nhân sự (" + staff.getFullName() + ") không có phân công hoạt động hợp lệ tại chi nhánh ID: " + branchId);
+                boolean isMultiBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE).isEmpty()
+                        && (user.getBranch() == null || branchId.equals(user.getBranch().getBranchId()));
+                if (!isMultiBranch) {
+                    throw new IllegalStateException("Nhân sự (" + staff.getFullName() + ") không có phân công hoạt động hợp lệ tại chi nhánh ID: " + branchId);
+                }
             }
         }
 

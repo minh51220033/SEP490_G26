@@ -21,17 +21,14 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Xử lý nghiệp vụ Phiếu xuất kho nội bộ / hủy hết hạn (Stock Issue) và Điều chuyển liên chi nhánh (Transfer):
+ * Xử lý nghiệp vụ Phiếu xuất kho nội bộ / hủy hết hạn / mục đích khác (Stock Issue) và Điều chuyển liên chi nhánh (Transfer):
  * - Hỗ trợ xuất đích danh theo lô hoặc tự động phân bổ theo FEFO (First Expired, First Out).
- * - Chặn xuất sử dụng hoặc điều chuyển đối với lô đã hết hạn (chỉ cho phép xuất hủy DISCARD_EXPIRED).
+ * - Khi chọn loại xuất kho là OTHER ("Mục đích khác"): bắt buộc nhập Lý do xuất kho (issueReason).
+ * - Chặn xuất sử dụng, mục đích khác hoặc điều chuyển đối với lô đã hết hạn (chỉ cho phép xuất hủy DISCARD_EXPIRED).
  * - Sử dụng bộ nhớ đệm (cache) trong cùng transaction để cộng/trừ tồn kho chính xác khi phiếu có nhiều dòng trùng vật tư.
  * - Tự động trừ kho nguồn và cộng kho đích (kèm tạo/cập nhật lô tương ứng tại chi nhánh đích) khi điều chuyển.
  * - Hỗ trợ ký điện tử bất biến (chống ký đè / chống giả mạo người ký).
@@ -89,6 +86,18 @@ public class StockIssueServiceImpl implements StockIssueService {
             bad("Ngày lập phiếu không được ở tương lai.");
         }
 
+        String issueReason = trimToNull(dto.getIssueReason());
+        if (type == StockIssueType.OTHER) {
+            if (issueReason == null) {
+                bad("Vui lòng nhập lý do xuất kho khi chọn loại xuất kho là Mục đích khác.");
+            }
+            if (issueReason.length() > 255) {
+                bad("Lý do xuất kho tối đa 255 ký tự.");
+            }
+        } else {
+            issueReason = null;
+        }
+
         String notes = trimToNull(dto.getNotes());
         if (notes != null && notes.length() > 255) {
             bad("Ghi chú phiếu tối đa 255 ký tự.");
@@ -120,6 +129,7 @@ public class StockIssueServiceImpl implements StockIssueService {
         StockIssue issue = new StockIssue();
         issue.setBranch(sourceBranch);
         issue.setIssueType(type);
+        issue.setIssueReason(issueReason);
         issue.setIssueDate(issueDate);
         issue.setDestinationBranch(destinationBranch);
         issue.setIssuer(issuer);
@@ -132,6 +142,9 @@ public class StockIssueServiceImpl implements StockIssueService {
         Map<Long, MaterialBatch> sourceBatchCache = new HashMap<>();
         Map<Long, BranchInventory> destInventoryCache = new HashMap<>();
         Map<String, MaterialBatch> destBatchCache = new HashMap<>();
+        Set<Long> autoBatchMaterialIdsInVoucher = new HashSet<>();
+        Set<Long> anyMaterialIdsInVoucher = new HashSet<>();
+        Set<String> explicitMaterialBatchesInVoucher = new HashSet<>();
 
         for (StockIssueCreateDTO.Item input : dto.getItems()) {
             if (input == null || input.getMaterialId() == null || input.getMaterialId() <= 0) {
@@ -150,6 +163,27 @@ public class StockIssueServiceImpl implements StockIssueService {
             Material material = materialRepository.findById(input.getMaterialId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "Không tìm thấy vật tư ID " + input.getMaterialId()));
+
+            Long matId = material.getMaterialId();
+            Long reqBatchId = (input.getBatchId() != null && input.getBatchId() > 0) ? input.getBatchId() : null;
+            if (reqBatchId == null) {
+                if (!anyMaterialIdsInVoucher.add(matId)) {
+                    bad("Vật tư " + material.getMaterialCode() + " (" + material.getMaterialName()
+                            + ") bị chọn trùng lặp trong cùng phiếu. Vui lòng gộp số lượng vào cùng một dòng.");
+                }
+                autoBatchMaterialIdsInVoucher.add(matId);
+            } else {
+                if (autoBatchMaterialIdsInVoucher.contains(matId)) {
+                    bad("Vật tư " + material.getMaterialCode() + " (" + material.getMaterialName()
+                            + ") đã có dòng xuất tự động theo FEFO trong phiếu. Không thể chọn trùng vật tư này.");
+                }
+                String matBatchKey = matId + "::" + reqBatchId;
+                if (!explicitMaterialBatchesInVoucher.add(matBatchKey)) {
+                    bad("Vật tư " + material.getMaterialCode() + " (" + material.getMaterialName()
+                            + ") bị chọn trùng cùng một lô trong phiếu. Vui lòng gộp số lượng.");
+                }
+                anyMaterialIdsInVoucher.add(matId);
+            }
 
             BranchInventory sourceInv = sourceInventoryCache.get(material.getMaterialId());
             if (sourceInv == null) {
@@ -176,11 +210,13 @@ public class StockIssueServiceImpl implements StockIssueService {
                     bad("Lô " + batch.getBatchNumber() + " không thuộc vật tư hoặc chi nhánh đã chọn.");
                 }
 
-                if ((type == StockIssueType.INTERNAL_USE || type == StockIssueType.TRANSFER)
+                if ((type == StockIssueType.INTERNAL_USE
+                        || type == StockIssueType.TRANSFER
+                        || type == StockIssueType.OTHER)
                         && batch.getExpiryDate().isBefore(today)) {
                     bad("Lô " + batch.getBatchNumber() + " của vật tư " + material.getMaterialCode()
                             + " đã hết hạn (" + batch.getExpiryDate()
-                            + "). Không được xuất sử dụng hoặc điều chuyển lô hết hạn.");
+                            + "). Không được xuất sử dụng, mục đích khác hoặc điều chuyển lô hết hạn.");
                 }
 
                 if (batch.getQuantityRemaining().compareTo(requestedQty) < 0) {
@@ -531,7 +567,7 @@ public class StockIssueServiceImpl implements StockIssueService {
         try {
             return StockIssueType.valueOf(value.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
-            bad("Loại phiếu xuất không hợp lệ (chỉ chấp nhận INTERNAL_USE, TRANSFER, DISCARD_EXPIRED).");
+            bad("Loại phiếu xuất không hợp lệ (chỉ chấp nhận INTERNAL_USE, TRANSFER, DISCARD_EXPIRED, OTHER).");
             return StockIssueType.INTERNAL_USE;
         }
     }
@@ -543,6 +579,7 @@ public class StockIssueServiceImpl implements StockIssueService {
         dto.setBranchId(si.getBranch().getBranchId());
         dto.setBranchName(si.getBranch().getBranchName());
         dto.setIssueType(si.getIssueType() != null ? si.getIssueType().name() : null);
+        dto.setIssueReason(si.getIssueReason());
         dto.setIssueDate(si.getIssueDate());
         if (si.getDestinationBranch() != null) {
             dto.setDestinationBranchId(si.getDestinationBranch().getBranchId());

@@ -19,6 +19,7 @@ public class StockIssueResponseDTO {
     private Long branchId;
     private String branchName;
     private String issueType;
+    private String issueReason;
     private LocalDate issueDate;
     private Long destinationBranchId;
     private String destinationBranchName;
