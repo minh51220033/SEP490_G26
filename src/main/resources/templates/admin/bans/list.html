@@ -55,6 +55,9 @@
                     </div>
                 </div>
 
+                <!-- THANH TAB NGANG PHÂN HỆ TÀI KHOẢN & BẢO MẬT (Chuẩn DentalSoft) -->
+                <nav th:replace="~{fragments/account_tabs :: accountTabs('bans')}"></nav>
+
                 <!-- 3 THẺ KPI TỔNG QUAN -->
                 <div class="row g-3 mb-4">
                     <div class="col-xl-4 col-sm-6">
@@ -62,8 +65,8 @@
                             <div class="dv-kpi-card" style="--kpi-accent: #0284c7;" th:classappend="${activeOnly == null} ? 'active-kpi' : ''">
                                 <div>
                                     <div class="dv-kpi-num" th:text="${totalBans ?: totalItems}">0</div>
-                                    <div class="dv-kpi-label">Tổng tài khoản vi phạm</div>
-                                    <div class="dv-kpi-sub">Toàn bộ tài khoản từng bị xử lý</div>
+                                    <div class="dv-kpi-label">Tổng tài khoản bị cấm bình luận</div>
+                                    <div class="dv-kpi-sub">Toàn bộ tài khoản từng bị cấm bình luận</div>
                                 </div>
                                 <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
                                     <i class="bi bi-shield-slash-fill"></i>
@@ -76,8 +79,8 @@
                             <div class="dv-kpi-card" style="--kpi-accent: #ef4444;" th:classappend="${activeOnly != null and activeOnly == true} ? 'active-kpi' : ''">
                                 <div>
                                     <div class="dv-kpi-num text-danger" th:text="${activeBans ?: 0}">0</div>
-                                    <div class="dv-kpi-label">Đang bị cấm</div>
-                                    <div class="dv-kpi-sub">Bị đình chỉ quyền bình luận</div>
+                                    <div class="dv-kpi-label">Đang bị cấm bình luận</div>
+                                    <div class="dv-kpi-sub">Bị đình chỉ quyền bình luận bài viết</div>
                                 </div>
                                 <div class="dv-kpi-icon" style="background: #fee2e2; color: #dc2626;">
                                     <i class="bi bi-slash-circle-fill"></i>
@@ -90,8 +93,8 @@
                             <div class="dv-kpi-card" style="--kpi-accent: #10b981;" th:classappend="${activeOnly != null and activeOnly == false} ? 'active-kpi' : ''">
                                 <div>
                                     <div class="dv-kpi-num text-success" th:text="${revokedBans ?: 0}">0</div>
-                                    <div class="dv-kpi-label">Đã gỡ cấm</div>
-                                    <div class="dv-kpi-sub">Đã khôi phục quyền bình luận</div>
+                                    <div class="dv-kpi-label">Đã gỡ cấm bình luận</div>
+                                    <div class="dv-kpi-sub">Đã khôi phục quyền bình luận bài viết</div>
                                 </div>
                                 <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
                                     <i class="bi bi-check-circle-fill"></i>

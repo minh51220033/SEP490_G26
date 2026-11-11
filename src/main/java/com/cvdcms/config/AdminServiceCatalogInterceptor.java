@@ -14,61 +14,57 @@ import java.io.IOException;
 
 @Component
 public class AdminServiceCatalogInterceptor
-        implements HandlerInterceptor {
+                implements HandlerInterceptor {
 
-    private final UserRepository userRepository;
+        private final UserRepository userRepository;
 
-    public AdminServiceCatalogInterceptor(
-            UserRepository userRepository
-    ) {
-        this.userRepository = userRepository;
-    }
-
-    @Override
-    public boolean preHandle(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            Object handler
-    ) throws IOException {
-
-        HttpSession session = request.getSession(false);
-
-        if (session == null
-                || !(session.getAttribute("loggedInUser")
-                instanceof User)) {
-
-            response.sendRedirect(
-                    request.getContextPath() + "/login"
-            );
-
-            return false;
+        public AdminServiceCatalogInterceptor(
+                        UserRepository userRepository) {
+                this.userRepository = userRepository;
         }
 
-        User user = (User) session.getAttribute("loggedInUser");
+        @Override
+        public boolean preHandle(
+                        HttpServletRequest request,
+                        HttpServletResponse response,
+                        Object handler) throws IOException {
 
-        if (user.getUserId() == null
-                || user.getUserId() <= 0) {
+                HttpSession session = request.getSession(false);
 
-            response.sendError(
-                    HttpServletResponse.SC_FORBIDDEN,
-                    "Thông tin tài khoản không hợp lệ."
-            );
+                if (session == null
+                                || !(session.getAttribute("loggedInUser") instanceof User)) {
 
-            return false;
+                        response.sendRedirect(
+                                        request.getContextPath() + "/login");
+
+                        return false;
+                }
+
+                User user = (User) session.getAttribute("loggedInUser");
+
+                if (user.getUserId() == null
+                                || user.getUserId() <= 0) {
+
+                        response.sendError(
+                                        HttpServletResponse.SC_FORBIDDEN,
+                                        "Thông tin tài khoản không hợp lệ.");
+
+                        return false;
+                }
+
+                boolean isAllowed = userRepository.hasActiveAdminRole(user.getUserId())
+                                || userRepository.hasActivePermission(user.getUserId(), "CATALOG_MANAGE")
+                                || userRepository.hasActivePermission(user.getUserId(), "CATALOG_SERVICES")
+                                || userRepository.hasActivePermission(user.getUserId(), "CATALOG_SERVICE_CATEGORIES");
+
+                if (!isAllowed) {
+                        response.sendError(
+                                        HttpServletResponse.SC_FORBIDDEN,
+                                        "Bạn không có quyền quản lý danh mục dịch vụ.");
+
+                        return false;
+                }
+
+                return true;
         }
-
-        boolean isAllowed = userRepository.hasActiveAdminRole(user.getUserId())
-                || userRepository.hasActivePermission(user.getUserId(), "CATALOG_MANAGE");
-
-        if (!isAllowed) {
-            response.sendError(
-                    HttpServletResponse.SC_FORBIDDEN,
-                    "Bạn không có quyền quản lý danh mục dịch vụ."
-            );
-
-            return false;
-        }
-
-        return true;
-    }
 }

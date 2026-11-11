@@ -56,6 +56,14 @@ public class DoctorLeaveController {
                 return true;
             }
         }
+        // Cho phép nhân sự có quyền HR_LEAVE_REQUESTS
+        Object permsObj = session.getAttribute("permissionCodes");
+        if (staff != null && permsObj instanceof Collection<?> perms) {
+            boolean hasLeavePermission = perms.stream().anyMatch(p -> "HR_LEAVE_REQUESTS".equalsIgnoreCase(String.valueOf(p)));
+            if (hasLeavePermission) {
+                return true;
+            }
+        }
         // Kiểm tra mã nhân viên nếu bắt đầu bằng BS (Bác sĩ)
         return staff != null && staff.getStaffCode() != null && staff.getStaffCode().toUpperCase().startsWith("BS");
     }

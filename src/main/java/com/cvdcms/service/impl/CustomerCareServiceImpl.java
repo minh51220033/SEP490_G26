@@ -216,7 +216,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             }
         }
 
-        return allActive.isEmpty() ? List.of() : List.of(allActive.get(0));
+        return allActive;
     }
 
     private Long resolveAndAuthorizeBranchId(Long requestedBranchId, Long userId, boolean requireSpecificBranch) {

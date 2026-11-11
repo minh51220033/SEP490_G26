@@ -285,6 +285,43 @@
                     </div>
                 </nav>
 
+                <!-- BANNER CẢNH BÁO LỊCH HẸN BỊ HỦY DO BÁC SĨ NGHỈ PHÉP (SCR-42 / FT-07) -->
+                <div id="doctorLeaveAlertBanner"
+                    class="alert alert-danger border-danger shadow-sm rounded-4 mb-3 p-3 d-none align-items-center justify-content-between flex-wrap gap-2"
+                    style="background: #fef2f2; border: 1.5px solid #ef4444 !important; animation: fadeIn 0.3s ease-in-out;">
+                    <div class="d-flex align-items-center gap-3">
+                        <div
+                            style="width: 42px; height: 42px; background: #fee2e2; color: #dc2626; border-radius: 12px; display: grid; place-items: center; font-size: 20px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.15);">
+                            <i class="bi bi-bell-fill"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h6 class="mb-0 text-danger fw-bold" style="font-size: 14.5px;">
+                                    <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i> Cảnh báo: Có <span
+                                        id="leaveAlertCount" class="badge bg-danger rounded-pill px-2">0</span> lịch hẹn
+                                    bị hủy do Bác sĩ nghỉ phép
+                                </h6>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle"
+                                    style="font-size: 11px;">Cần liên hệ bệnh nhân</span>
+                            </div>
+                            <p class="mb-0 text-secondary small mt-1" id="leaveAlertText" style="font-size: 12.8px;">
+                                Bác sĩ có lịch nghỉ phép đã được duyệt. Vui lòng chủ động gọi điện thoại cho bệnh nhân
+                                để đổi bác sĩ phụ trách hoặc sắp xếp lại ngày khám mới.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button"
+                            class="btn btn-danger btn-sm fw-bold px-3 py-1.5 rounded-pill shadow-xs d-inline-flex align-items-center gap-1.5"
+                            id="btnFilterLeaveCancelled"
+                            style="background:#dc2626; border:none; color:white; font-size: 12.5px;">
+                            <i class="bi bi-telephone-outbound"></i> Xem danh sách cần gọi
+                        </button>
+                        <button type="button" class="btn-close ms-2" id="btnCloseLeaveAlert"
+                            aria-label="Đóng cảnh báo"></button>
+                    </div>
+                </div>
+
                 <!-- THANH ĐIỀU KHIỂN & BỘ LỌC CHUẨN ENTERPRISE (GIỐNG DANH SÁCH KHÁM THEO NGÀY) -->
                 <div class="dv-toolbar-card">
                     <!-- TẦNG 1: ĐIỀU HƯỚNG THỜI GIAN, PHẠM VI NGÀY/TUẦN/THÁNG & CHẾ ĐỘ XEM (DANH SÁCH / Ô LỊCH) -->
@@ -472,29 +509,23 @@
                             </select>
                         </div>
 
-                        <!-- Hàng 2 -->
-                        <div class="col-md-4 col-sm-6">
-                            <label for="advFilterService" class="form-label small fw-semibold text-secondary mb-1">
-                                <i class="bi bi-heart-pulse me-1 text-primary"></i>Nhóm dịch vụ hẹn
+                        <!-- Hàng 2: Bỏ nhóm dịch vụ, tập trung vào Đối tượng ưu tiên hàng chờ -->
+                        <div class="col-md-6 col-sm-6">
+                            <label for="advFilterPriorityGroup" class="form-label small fw-semibold text-secondary mb-1">
+                                <i class="bi bi-star-fill me-1 text-warning"></i>Đối tượng ưu tiên hàng chờ
                             </label>
-                            <select id="advFilterService" class="form-select form-select-sm rounded-3">
-                                <option value="">-- Tất cả Nhóm dịch vụ --</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-4 col-sm-6">
-                            <label for="advFilterMedicalAlert" class="form-label small fw-semibold text-secondary mb-1">
-                                <i class="bi bi-shield-exclamation me-1 text-danger"></i>Cảnh báo y tế &amp; Nhóm BN
-                            </label>
-                            <select id="advFilterMedicalAlert" class="form-select form-select-sm rounded-3">
+                            <select id="advFilterPriorityGroup" class="form-select form-select-sm rounded-3">
                                 <option value="">-- Tất cả bệnh nhân --</option>
-                                <option value="HAS_ALERT">Có cảnh báo y tế / Dị ứng thuốc</option>
-                                <option value="MINOR">Bệnh nhân dưới 18 tuổi (Có giám hộ)</option>
-                                <option value="FOLLOW_UP">Lịch hẹn tái khám chuyên khoa</option>
+                                <option value="ALL_PRIORITY">Tất cả đối tượng ưu tiên</option>
+                                <option value="ELDERLY">Người cao tuổi (≥ 65 tuổi)</option>
+                                <option value="CHILD">Trẻ nhỏ (≤ 6 tuổi)</option>
+                                <option value="PREGNANT">Phụ nữ có thai</option>
+                                <option value="DISABLED">Người khuyết tật / Đi lại khó khăn</option>
+                                <option value="EMERGENCY">Cấp cứu / Đau cấp tính</option>
                             </select>
                         </div>
 
-                        <div class="col-md-4 col-sm-12">
+                        <div class="col-md-6 col-sm-6">
                             <label class="form-label small fw-semibold text-secondary mb-1">
                                 <i class="bi bi-grid-3x3-gap me-1 text-primary"></i>Chế độ hiển thị
                             </label>
@@ -1190,6 +1221,24 @@
                                                 <textarea id="modalSymptoms" class="form-control rounded-3 py-2 px-3"
                                                     rows="2" placeholder="Cạo vôi, trám răng, điều trị tuỷ..."
                                                     required></textarea>
+                                            </div>
+
+                                            <!-- Đối tượng ưu tiên hàng chờ (Tự động nhận diện hoặc chọn nhanh) -->
+                                            <div class="mb-3">
+                                                <label for="modalPriorityType"
+                                                    class="form-label small fw-semibold text-dark mb-1.5 text-uppercase">
+                                                    <i class="bi bi-star-fill text-warning me-1"></i>ĐỐI TƯỢNG ƯU TIÊN HÀNG CHỜ
+                                                </label>
+                                                <select id="modalPriorityType"
+                                                    class="form-select form-select-sm py-2 rounded-3">
+                                                    <option value="">-- Không ưu tiên (Khám thường) --</option>
+                                                    <option value="ELDERLY">⭐ Người cao tuổi (≥ 65 tuổi) - Tự động ưu tiên</option>
+                                                    <option value="CHILD">⭐ Trẻ nhỏ (≤ 6 tuổi) - Tự động ưu tiên</option>
+                                                    <option value="PREGNANT">⭐ Phụ nữ có thai</option>
+                                                    <option value="DISABLED">⭐ Người khuyết tật / Đi lại khó khăn</option>
+                                                    <option value="EMERGENCY">🚨 Cấp cứu / Đau cấp tính</option>
+                                                    <option value="OTHER">Ưu tiên đặc biệt khác</option>
+                                                </select>
                                             </div>
 
                                             <!-- Ghi chú nội bộ -->

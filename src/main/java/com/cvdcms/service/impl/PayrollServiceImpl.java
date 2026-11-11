@@ -6,6 +6,7 @@ import com.cvdcms.DTO.PitCalculationResult;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
+import com.cvdcms.repository.ServiceCommissionRepository;
 import com.cvdcms.service.PayrollService;
 import com.cvdcms.service.TaxCalculationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -631,8 +632,9 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     public PayrollPeriod approvePeriod(Long periodId, Long currentUserId) {
-        if (currentUserId == null || !userRepository.hasActiveAdminRole(currentUserId)) {
-            throw new AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền phê duyệt bảng lương");
+        if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
+                && !userRepository.hasActivePermission(currentUserId, "FINANCE_PAYROLL"))) {
+            throw new AccessDeniedException("Bạn không có quyền phê duyệt bảng lương");
         }
 
         PayrollPeriod period = payrollPeriodRepository.findByIdForUpdate(periodId)
@@ -654,8 +656,9 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     public PayrollPeriod rejectPeriod(Long periodId, String reason, Long currentUserId) {
-        if (currentUserId == null || !userRepository.hasActiveAdminRole(currentUserId)) {
-            throw new AccessDeniedException("Chỉ Quản trị viên (Admin) mới có quyền từ chối duyệt bảng lương");
+        if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
+                && !userRepository.hasActivePermission(currentUserId, "FINANCE_PAYROLL"))) {
+            throw new AccessDeniedException("Bạn không có quyền từ chối duyệt bảng lương");
         }
 
         PayrollPeriod period = payrollPeriodRepository.findByIdForUpdate(periodId)
@@ -923,7 +926,11 @@ public class PayrollServiceImpl implements PayrollService {
         boolean hasAssignment = staffBranchAssignmentRepository.hasActiveUserAssignment(
                 currentUserId, branchId, AssignmentStatus.ACTIVE);
         if (!hasAssignment) {
-            throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh này");
+            boolean isMultiBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(currentUserId, AssignmentStatus.ACTIVE).isEmpty()
+                    && userRepository.findById(currentUserId).map(u -> u.getBranch() == null || branchId.equals(u.getBranch().getBranchId())).orElse(false);
+            if (!isMultiBranch) {
+                throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh này");
+            }
         }
     }
 }

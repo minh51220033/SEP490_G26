@@ -155,7 +155,9 @@ public class ReceptionAppointmentService {
     public Options options(HttpSession session) {
         PatientAccess.Scope scope = access.require(session);
         List<Branch> allowed = scope.admin() ? branches.findByIsActiveTrueOrderByBranchNameAsc()
-                : branches.findById(scope.branchId()).filter(b -> Boolean.TRUE.equals(b.getIsActive())).stream().toList();
+                : (scope.branchIds() != null && !scope.branchIds().isEmpty()
+                        ? branches.findAllById(scope.branchIds()).stream().filter(b -> Boolean.TRUE.equals(b.getIsActive())).toList()
+                        : branches.findById(scope.branchId()).filter(b -> Boolean.TRUE.equals(b.getIsActive())).stream().toList());
         List<BranchOption> branchOptions = allowed.stream().map(b -> new BranchOption(b.getBranchId(), b.getBranchName())).toList();
         List<ServiceOption> serviceOptions = services.findByStatusOrderByCategory_DisplayOrderAscServiceNameAsc(ServiceStatus.ACTIVE)
                 .stream().filter(s -> Boolean.TRUE.equals(s.getCategory().getIsActive()))
