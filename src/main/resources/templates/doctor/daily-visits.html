@@ -50,14 +50,14 @@
                     }
 
                     .dv-page-title {
-                        font-size: 26px;
+                        font-size: 24px;
                         font-weight: 800;
                         color: #0f172a;
                         letter-spacing: -0.5px;
                         display: flex;
                         align-items: center;
-                        gap: 12px;
-                        margin-bottom: 4px;
+                        gap: 10px;
+                        margin-bottom: 0;
                     }
 
                     .dv-kpi-card {
@@ -1078,63 +1078,70 @@
     </style>
 
                 <!-- ========================================================================= -->
-                <!-- 1. TIÊU ĐỀ TRANG & NÚT ĐIỀU HƯỚNG NHANH                                   -->
+                <!-- 1. TIÊU ĐỀ TRANG & NÚT ĐIỀU HƯỚNG NHANH (ĐỒNG BỘ HEADER CHUẨN HỆ THỐNG)   -->
                 <!-- ========================================================================= -->
-                <!-- BỘ CHỌN CƠ SỞ PHÍA TRÊN CÙNG BÊN PHẢI -->
-                <div class="d-flex justify-content-end mb-2">
-                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-                </div>
-
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-                    <div>
-                        <h1 class="dv-page-title">
-                            <span
-                                class="d-inline-flex align-items-center justify-content-center rounded-3 text-white shadow-sm"
-                                style="width: 42px; height: 42px; background: linear-gradient(135deg, #0284c7, #1d4ed8); font-size: 20px;">
-                                <i class="bi bi-calendar2-check-fill"></i>
-                            </span>
-                            <span>Danh sách ca khám &amp; Điều phối ghế khám</span>
-                            <span th:if="${isDoctorAccount and currentDoctorName != ''}" 
-                                  class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle fw-bold fs-6 py-1.5 px-3 ms-2 align-middle">
-                                <i class="bi bi-person-badge-fill me-1"></i>Hàng chờ cá nhân: <span th:text="${currentDoctorName}">Bác sĩ</span>
-                            </span>
-                        </h1>
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="dv-header-icon"
+                            style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                            <i class="bi bi-calendar2-check-fill"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <h1 class="dv-page-title mb-0">Danh sách ca khám &amp; Điều phối ghế khám</h1>
+                                <span th:if="${isDoctorAccount and currentDoctorName != ''}"
+                                    class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle fw-bold px-3 py-1 align-middle"
+                                    style="font-size: 12.5px;">
+                                    <i class="bi bi-person-badge-fill me-1"></i>Hàng chờ cá nhân: <span
+                                        th:text="${currentDoctorName}">Bác sĩ</span>
+                                </span>
+                            </div>
+                            <p class="dv-page-subtitle">Theo dõi hàng chờ tiếp đón, phân bổ ghế khám và tiến độ điều
+                                trị lâm sàng trong ngày</p>
+                        </div>
                     </div>
 
-                    <!-- THONG BAO CANH BAO TU FLASH ATTRIBUTES HOAC CHUYEN TRANG -->
-                    <div th:if="${errorMessage != null}" class="w-100 alert alert-warning border-0 shadow-sm rounded-3 d-flex align-items-center gap-2.5 mb-2 px-3 py-2.5" style="background: #fffbeb; border-left: 4px solid #f59e0b !important;">
-                        <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0"></i>
-                        <div class="fw-semibold text-dark small" th:text="${errorMessage}">Cảnh báo quyền truy cập</div>
-                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-
-                    <div class="d-flex align-items-center gap-2.5 flex-wrap">
+                    <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
                         <button type="button"
-                            class="btn btn-white bg-white border fw-bold px-3.5 py-2 rounded-3 shadow-xs d-inline-flex align-items-center gap-2"
-                            style="font-size: 14px; border-color: #cbd5e1 !important;" onclick="fetchDailyVisits()">
-                            <i class="bi bi-arrow-clockwise text-primary fs-6"></i>
+                            class="btn btn-outline-secondary bg-white fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                            style="font-size: 14px;" onclick="fetchDailyVisits()">
+                            <i class="bi bi-arrow-clockwise text-primary"></i>
                             <span>Làm mới dữ liệu</span>
                         </button>
-
-                        <div class="dv-quick-segment">
-                            <button type="button" class="dv-seg-btn active" id="btnViewTable"
-                                onclick="switchViewMode('TABLE')">
-                                <i class="bi bi-table"></i> Bảng dữ liệu
-                            </button>
-                            <button type="button" class="dv-seg-btn" id="btnViewCard" onclick="switchViewMode('CARD')">
-                                <i class="bi bi-grid-3x3-gap-fill"></i> Thẻ (Card)
-                            </button>
-                        </div>
-
-                        <a href="/doctor/examination"
-                            id="btnEnterExamination"
-                            onclick="return handleEnterExamClick(event)"
-                            class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
-                            style="font-size: 14.5px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
-                            <i class="bi bi-person-workspace"></i>
-                            <span>Vào bàn khám ngay</span>
-                        </a>
                     </div>
+                </div>
+
+                <!-- Thanh chuyển chế độ hiển thị & nút Vào bàn khám bên trái -->
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-4">
+                    <div class="dv-quick-segment">
+                        <button type="button" class="dv-seg-btn active" id="btnViewTable"
+                            onclick="switchViewMode('TABLE')">
+                            <i class="bi bi-table"></i> Bảng dữ liệu
+                        </button>
+                        <button type="button" class="dv-seg-btn" id="btnViewCard"
+                            onclick="switchViewMode('CARD')">
+                            <i class="bi bi-grid-3x3-gap-fill"></i> Thẻ (Card)
+                        </button>
+                    </div>
+
+                    <a href="/doctor/examination"
+                        id="btnEnterExamination"
+                        onclick="return handleEnterExamClick(event)"
+                        class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                        style="font-size: 14px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                        <i class="bi bi-person-workspace"></i>
+                        <span>Vào bàn khám ngay</span>
+                    </a>
+                </div>
+
+                <!-- THONG BAO CANH BAO TU FLASH ATTRIBUTES HOAC CHUYEN TRANG -->
+                <div th:if="${errorMessage != null}"
+                    class="w-100 alert alert-warning border-0 shadow-sm rounded-3 d-flex align-items-center gap-2 mb-3 px-3 py-2"
+                    style="background: #fffbeb; border-left: 4px solid #f59e0b !important;">
+                    <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0"></i>
+                    <div class="fw-semibold text-dark small" th:text="${errorMessage}">Cảnh báo quyền truy cập</div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
 
                 <!-- ========================================================================= -->
