@@ -23,3 +23,14 @@ Mọi phản hồi và hành động của AI trong dự án này bắt buộc p
 ## 5. Bảo toàn cấu hình Database
 - Giữ nguyên vẹn cấu hình kết nối database trong `application.properties` (`spring.datasource.password=class9stop`), không tự ý mở hay thay đổi file này.
 
+## 6. Kiểm tra đúng tên field / getter giữa Entity, DTO/Record và Thymeleaf
+- Trước khi viết biểu thức Thymeleaf (`th:text`, `th:value`, `th:href`, JS inline `/*[[...]]*/`) hoặc gọi method Java mới: Luôn đọc qua class/record/entity nguồn để dùng đúng tên thuộc tính & getter thực tế (đặc biệt trên template dùng chung như `patient-records/detail.html`, nơi truyền `PatientView`, `ReceptionVisitView` dùng `id`, `code`, `phoneNumber` khác với Entity dùng `visitId`, `visitCode`, `phone`; hoặc `PatientProfile` dùng `preferredBranch` chứ không phải `branch`).
+- Tránh suy đoán tên getter/field gây lỗi biên dịch (dẫn tới mất Spring bean khi khởi động) hoặc lỗi `SpelEvaluationException` khi render giao diện.
+
+## 7. Quy chuẩn giao diện Danh sách, Bảng & Toolbar (chuẩn `/doctor/daily-visits` & Bootstrap 5)
+- **Toolbar & Bộ lọc gọn**: Dùng `.dv-toolbar-card` với ô tìm kiếm `.dv-search-box` bên trái; bên phải gồm bộ đếm kết quả, nút **Lọc nâng cao** (`.dv-adv-filter-btn` + `.dv-filter-pulse-badge`) và nút tác vụ chính (`.dv-toolbar-primary-btn`). Đưa phân loại trạng thái/danh mục và khoảng thời gian vào `<select class="form-select dv-adv-control">` bên trong `.dv-adv-filter-panel`; tránh lặp KPI cards hay dải nút pill trùng chức năng.
+- **Bảng dữ liệu (`.dv-grid-card` + `.dv-amis-table`)**:
+  - Giữ viền/bo góc thoáng (`border-radius: 16px`, dòng `.dv-data-row` nền trắng, hover `#f0f9ff`), dùng `.dv-code-pill` và `.dv-status-pill` có `text-nowrap` để không rớt chữ/mã xuống nhiều dòng.
+  - Khi bảng có nhiều cột trong `.dv-table-scroll-container`, dùng thanh thao tác nổi bám mép phải khi di chuột qua dòng & cuộn ngang (`.dv-floating-actions-track` + `.dv-floating-actions-bar` với `.dv-equal-btn-primary` / `.dv-equal-btn-secondary`).
+- **Bootstrap 5 chuẩn – không dùng class thập phân kiểu Tailwind**: Tuyệt đối không viết `gap-1.5`, `gap-2.5`, `px-3.5`, `py-1.5`, `me-1.5`, `me-0.5` (bị trình duyệt bỏ qua khiến icon dính sát chữ và nút mất padding). Luôn dùng utility hợp lệ của Bootstrap 5 (`gap-2`, `px-3`, `py-2`, `me-1`, `me-2`) hoặc `gap` CSS thuần (`gap: 7px–8px`).
+

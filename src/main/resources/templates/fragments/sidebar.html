@@ -10,7 +10,7 @@
         <div   th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
 -->
     <aside th:fragment="sidebar(activeMenu)" class="app-sidebar" id="appSidebar" aria-label="Menu hệ thống" data-sidebar
-        th:with="roleNames=${(session != null and session.roleNames != null and !#lists.isEmpty(session.roleNames)) ? session.roleNames : (roleNames != null ? roleNames : {})},
+        th:with="roleNames=${(session != null and session.roleNames != null and !#lists.isEmpty(session.roleNames)) ? session.roleNames : (roleNames != null ? roleNames : T(java.util.Collections).emptyList())},
 
                 displayName=${(displayName != null and !#strings.isEmpty(displayName)) ? displayName : (session != null and session.loggedInUser != null ? (session.loggedInUser.fullName != null and !#strings.isEmpty(session.loggedInUser.fullName) ? session.loggedInUser.fullName : session.loggedInUser.username) : '')},
                 membershipAdminEntry=${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS') or #lists.contains(permissionCodes, 'CATALOG_PROMOTIONS')))}">
@@ -149,7 +149,7 @@
                               or activeMenu == 'admin-promotions'}
                               ? 'is-active' : ''" title="Quản lý thẻ bệnh nhân, hạng thành viên, tích điểm và ưu đãi">
 
-                                <i class="bi bi-person-vcard" aria-hidden="true"></i>
+                                <i class="bi bi-gift" aria-hidden="true"></i>
                                 <span class="side-link__label">Quản lý thẻ &amp; ưu đãi</span>
                             </a>
                         </th:block>
@@ -227,7 +227,7 @@
        or activeMenu == 'admin-promotions'}
        ? 'is-active' : ''" title="Quản lý thẻ bệnh nhân, hạng thành viên, tích điểm và ưu đãi">
 
-                                <i class="bi bi-person-vcard" aria-hidden="true"></i>
+                                <i class="bi bi-gift" aria-hidden="true"></i>
                                 <span class="side-link__label">Quản lý thẻ &amp; ưu đãi</span>
                             </a>
                         </th:block>
