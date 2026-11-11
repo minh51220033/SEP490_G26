@@ -32,6 +32,31 @@
                         border-bottom-left-radius: 15px;
                         border-bottom-right-radius: 15px;
                     }
+                    /* Thanh cuộn ngang rõ nét chuẩn Desktop cho bảng tin tức */
+                    .dv-table-scroll-container {
+                        width: 100% !important;
+                        overflow-x: auto !important;
+                        overflow-y: hidden !important;
+                        position: relative !important;
+                        scrollbar-width: thin !important;
+                        scrollbar-color: #94a3b8 #f1f5f9 !important;
+                    }
+                    .dv-table-scroll-container::-webkit-scrollbar {
+                        height: 11px !important;
+                        width: 0 !important;
+                        display: block !important;
+                    }
+                    .dv-table-scroll-container::-webkit-scrollbar-track {
+                        background: #f1f5f9 !important;
+                    }
+                    .dv-table-scroll-container::-webkit-scrollbar-thumb {
+                        background: #94a3b8 !important;
+                        border-radius: 6px !important;
+                        border: 2px solid #f1f5f9 !important;
+                    }
+                    .dv-table-scroll-container::-webkit-scrollbar-thumb:hover {
+                        background: #64748b !important;
+                    }
                     /* Để table_style.html quản lý table-layout: fixed & độ rộng cột độc lập (tránh width: 100% !important làm co ép cột Cơ sở) */
                     .dv-amis-table thead th {
                         position: sticky !important;
@@ -432,25 +457,25 @@
                         <table class="dv-amis-table" id="newsTable">
                             <thead>
                             <tr>
-                                <th data-col="stt" style="width: 60px; min-width: 60px;" class="text-center">
+                                <th data-col="stt" style="width: 65px; min-width: 65px;" class="text-center">
                                     <div class="dv-th-inner justify-content-center"><span>#</span></div>
                                 </th>
-                                <th data-col="title" style="width: 340px; min-width: 340px;">
+                                <th data-col="title" style="width: 460px; min-width: 460px;">
                                     <div class="dv-th-inner"><span>Tiêu đề bài viết</span></div>
                                 </th>
-                                <th data-col="branch" style="width: 260px; min-width: 260px;">
+                                <th data-col="branch" style="width: 310px; min-width: 310px;">
                                     <div class="dv-th-inner"><span>Cơ sở / Chi nhánh</span></div>
                                 </th>
-                                <th data-col="author" style="width: 170px; min-width: 170px;">
+                                <th data-col="author" style="width: 210px; min-width: 210px;">
                                     <div class="dv-th-inner"><span>Người tạo</span></div>
                                 </th>
-                                <th data-col="publishedAt" style="width: 175px; min-width: 175px;">
+                                <th data-col="publishedAt" style="width: 210px; min-width: 210px;">
                                     <div class="dv-th-inner"><span>Ngày đăng</span></div>
                                 </th>
-                                <th data-col="status" style="width: 150px; min-width: 150px;">
+                                <th data-col="status" style="width: 180px; min-width: 180px;">
                                     <div class="dv-th-inner"><span>Trạng thái</span></div>
                                 </th>
-                                <th data-col="actions" class="text-center" style="width: 380px; min-width: 380px;">
+                                <th data-col="actions" class="text-center" style="width: 385px; min-width: 385px;">
                                     <div class="dv-th-inner justify-content-center"><span>Nút ấn nhanh</span></div>
                                 </th>
                                 <th class="dv-floating-actions-track"></th>
@@ -778,9 +803,10 @@
 
         // 2. Tùy biến cột, đổi thứ tự, ghim cột trái & đồng bộ độ rộng với table_style.html
         const DEFAULT_ORDER = ['stt', 'title', 'branch', 'author', 'publishedAt', 'status'];
-        const DEFAULT_WIDTHS = { stt: 60, title: 340, branch: 260, author: 170, publishedAt: 175, status: 150, actions: 380 };
+        const DEFAULT_WIDTHS = { stt: 65, title: 460, branch: 310, author: 210, publishedAt: 210, status: 180, actions: 385 };
         const STORAGE_CONFIG_KEY = 'news_table_cols_v2';
         const WIDTH_STORAGE_KEY = 'col_widths_v5_' + window.location.pathname.replace(/[^a-zA-Z0-9]/g, '_') + '_newsTable';
+        const WIDTH_SCHEMA_KEY = 'news_width_schema_v3';
 
         const newsTable = document.getElementById('newsTable');
         const popoverEl = document.getElementById('customColumnPopover');
@@ -828,8 +854,28 @@
 
         let currentState = loadColState();
 
+        function applyDefaultColumnWidthsToDom() {
+            if (!newsTable) return;
+            Object.keys(DEFAULT_WIDTHS).forEach(k => {
+                const th = newsTable.querySelector('thead th[data-col="' + k + '"]');
+                if (th) {
+                    const w = DEFAULT_WIDTHS[k];
+                    th.style.width = w + 'px';
+                    th.style.minWidth = w + 'px';
+                    th.style.maxWidth = w + 'px';
+                }
+            });
+        }
+
         function ensureValidSavedWidths() {
             try {
+                // Nâng cấp 1 lần sang bộ độ rộng mặc định 1820px để luôn có thanh cuộn ngang rõ nét
+                if (!localStorage.getItem(WIDTH_SCHEMA_KEY)) {
+                    localStorage.removeItem(WIDTH_STORAGE_KEY);
+                    localStorage.setItem(WIDTH_SCHEMA_KEY, '1');
+                    applyDefaultColumnWidthsToDom();
+                    return;
+                }
                 const raw = localStorage.getItem(WIDTH_STORAGE_KEY);
                 if (!raw) return;
                 const parsed = JSON.parse(raw);
