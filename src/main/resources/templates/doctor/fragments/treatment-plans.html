@@ -4,21 +4,572 @@
 
 <!-- ===================================================================== -->
 <!-- FRAGMENT 1: SECTION KẾ HOẠCH & LỘ TRÌNH ĐIỀU TRỊ (SCR-15.1, 15.3)    -->
+<!-- Chuẩn MISA AMIS Data Grid đồng bộ /doctor/daily-visits + Kéo dãn cột  -->
 <!-- ===================================================================== -->
 <div th:fragment="treatmentPlanSection">
     <style>
-        .df-plan-tr-hover {
+        .tp-section-shell {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+            margin-bottom: 20px;
+            overflow: visible;
+        }
+
+        .tp-section-header {
+            padding: 16px 20px;
+            background: #f8fafc;
+            border-bottom: 1.5px solid #e2e8f0;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .tp-body-wrap {
+            padding: 16px 20px 20px;
+            background: #f8fafc;
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
+        }
+
+        /* Toolbar & Bộ lọc chuẩn /doctor/daily-visits */
+        .tp-toolbar-card {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 14px 18px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+            margin-bottom: 14px;
+        }
+
+        .tp-search-box {
+            position: relative;
+            flex: 1;
+            min-width: 240px;
+        }
+
+        .tp-search-box input {
+            width: 100%;
+            height: 40px;
+            padding: 8px 36px 8px 38px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #0f172a;
+            background: #f8fafc;
+            transition: all 0.2s;
+        }
+
+        .tp-search-box input:focus {
+            background: #ffffff;
+            border-color: #0284c7;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
+            outline: none;
+        }
+
+        .tp-search-box .tp-search-icon {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+            font-size: 15px;
+            pointer-events: none;
+        }
+
+        .tp-search-box .tp-search-clear {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: #e2e8f0;
+            color: #475569;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            font-size: 11px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .tp-search-box .tp-search-clear:hover {
+            background: #cbd5e1;
+            color: #0f172a;
+        }
+
+        .tp-quick-segment {
+            display: inline-flex;
+            background: #f1f5f9;
+            padding: 3px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            gap: 3px;
+            flex-wrap: wrap;
+        }
+
+        .tp-seg-btn {
+            border: none;
+            background: transparent;
+            color: #475569;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .tp-seg-btn:hover {
+            color: #0f172a;
+            background: rgba(255, 255, 255, 0.65);
+        }
+
+        .tp-seg-btn.active {
+            background: #ffffff;
+            color: #0284c7;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+        }
+
+        .tp-seg-count {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 1px 6px;
+            border-radius: 20px;
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        .tp-seg-btn.active .tp-seg-count {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
+        .tp-adv-filter-btn {
+            height: 40px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: 1.5px solid #cbd5e1;
+            background: #ffffff;
+            color: #0f172a;
+            font-size: 13.5px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tp-adv-filter-btn:hover,
+        .tp-adv-filter-btn.is-open,
+        .tp-adv-filter-btn.has-active-filters {
+            border-color: #0284c7;
+            color: #0369a1;
+            background: #f0f9ff;
+        }
+
+        @keyframes tpRedPulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); transform: scale(1); }
+            50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); transform: scale(1.06); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
+        }
+
+        .tp-filter-pulse-badge {
+            background: #ef4444;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 800;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 5px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            animation: tpRedPulse 1.5s infinite;
+            border: 2px solid #ffffff;
+        }
+
+        .tp-adv-filter-panel {
+            display: none;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1.5px dashed #cbd5e1;
+        }
+
+        .tp-adv-filter-panel.show {
+            display: block;
+        }
+
+        .tp-adv-label {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tp-adv-control {
+            height: 38px;
+            border-radius: 9px;
+            border: 1.5px solid #cbd5e1;
+            font-size: 13px;
+            font-weight: 600;
+            color: #0f172a;
+            padding: 6px 10px;
+            background: #ffffff;
+            width: 100%;
+        }
+
+        .tp-adv-control:focus {
+            border-color: #0284c7;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
+            outline: none;
+        }
+
+        /* Grid Card & Table chuẩn MISA AMIS (/doctor/daily-visits) */
+        .tp-grid-card {
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 14px;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+            overflow: visible;
+            position: relative;
+        }
+
+        .tp-grid-topbar {
+            padding: 12px 18px;
+            background: #f8fafc;
+            border-bottom: 1.5px solid #e2e8f0;
+            border-top-left-radius: 13px;
+            border-top-right-radius: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .tp-table-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            position: relative;
+            scroll-behavior: smooth;
+        }
+
+        .tp-amis-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            table-layout: fixed;
+        }
+
+        .tp-amis-table thead th {
+            background: #f1f5f9;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.35px;
+            padding: 13px 14px;
+            border-bottom: 2px solid #cbd5e1;
+            border-right: 1px solid #e2e8f0;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            user-select: none;
+            transition: background 0.15s;
+            overflow: visible;
+        }
+
+        .tp-amis-table thead th:hover {
+            background: #e2e8f0;
+        }
+
+        .tp-th-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            overflow: hidden;
+        }
+
+        .tp-th-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tp-pin-btn {
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.15s;
+        }
+
+        .tp-pin-btn:hover {
+            background: #cbd5e1;
+            color: #0f172a;
+        }
+
+        .tp-pin-btn.is-pinned {
+            color: #0284c7;
+            background: #e0f2fe;
+        }
+
+        /* Tay nắm kéo dãn độ rộng cột (Column Resizer) */
+        .tp-col-resizer {
+            position: absolute;
+            top: 0;
+            right: -3px;
+            width: 8px;
+            height: 100%;
+            cursor: col-resize;
+            z-index: 30;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .tp-col-resizer::after {
+            content: "";
+            position: absolute;
+            top: 20%;
+            bottom: 20%;
+            left: 3px;
+            width: 2px;
+            border-radius: 2px;
+            background: transparent;
             transition: background-color 0.15s ease;
         }
-        .df-plan-tr-hover:hover {
-            background-color: #f8fafc !important;
+
+        .tp-amis-table thead th:hover .tp-col-resizer::after {
+            background: #94a3b8;
         }
-        .df-btn-roadmap {
-            height: 30px;
-            padding: 0 10px;
+
+        .tp-col-resizer:hover::after,
+        .tp-col-resizer.is-resizing::after {
+            background: #0284c7 !important;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+        }
+
+        body.tp-is-resizing {
+            cursor: col-resize !important;
+            user-select: none !important;
+        }
+
+        .tp-amis-table tbody tr.tp-data-row {
+            position: relative;
+            transition: background-color 0.12s ease;
+        }
+
+        .tp-amis-table tbody tr.tp-data-row td {
+            padding: 14px;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #f1f5f9;
+            vertical-align: middle;
+            font-size: 13.5px;
+            color: #1e293b;
+            background: #ffffff;
+            transition: background-color 0.12s ease;
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+
+        .tp-amis-table tbody tr.tp-data-row:hover td {
+            background: #f0f9ff !important;
+        }
+
+        /* Ghim cột trái */
+        .tp-amis-table th.tp-col-pinned,
+        .tp-amis-table td.tp-col-pinned {
+            position: sticky !important;
+            z-index: 15 !important;
+        }
+
+        .tp-amis-table thead th.tp-col-pinned {
+            z-index: 25 !important;
+            background: #e0f2fe !important;
+            color: #0369a1;
+        }
+
+        .tp-amis-table th.tp-col-pinned-last,
+        .tp-amis-table td.tp-col-pinned-last {
+            border-right: 2px solid #93c5fd !important;
+            box-shadow: 6px 0 14px -4px rgba(15, 23, 42, 0.12);
+        }
+
+        /* Ghim cột phải (Thao tác) */
+        .tp-amis-table th.tp-col-pinned-right,
+        .tp-amis-table td.tp-col-pinned-right {
+            position: sticky !important;
+            right: 0 !important;
+            z-index: 18 !important;
+            background: #ffffff !important;
+            border-left: 1.5px solid #cbd5e1 !important;
+            box-shadow: -8px 0 16px -4px rgba(15, 23, 42, 0.08);
+            text-align: center;
+        }
+
+        .tp-amis-table thead th.tp-col-pinned-right {
+            z-index: 28 !important;
+            background: #f1f5f9 !important;
+            color: #0369a1;
+        }
+
+        .tp-amis-table tbody tr.tp-data-row:hover td.tp-col-pinned-right {
+            background: #f0f9ff !important;
+        }
+
+        /* Thanh thao tác nổi khi hover dòng (Floating Action Bar chuẩn daily-visits) */
+        .tp-floating-actions-track {
+            position: sticky !important;
+            right: 0 !important;
+            width: 0 !important;
+            min-width: 0 !important;
+            max-width: 0 !important;
+            height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+            overflow: visible !important;
+            z-index: 25;
+            background: transparent !important;
+        }
+
+        .tp-floating-actions-bar {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%) translateX(8px);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px 7px 28px;
+            background: linear-gradient(90deg, rgba(240, 249, 255, 0) 0%, rgba(240, 249, 255, 0.96) 20%, #f0f9ff 100%);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+            white-space: nowrap;
+            z-index: 30;
+        }
+
+        .tp-amis-table tbody tr.tp-data-row:hover .tp-floating-actions-bar {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(-50%) translateX(0);
+            pointer-events: auto;
+        }
+
+        /* Popover tùy biến cột */
+        .tp-col-customizer-wrapper {
+            position: relative;
+        }
+
+        .tp-col-popover {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 8px);
+            width: 350px;
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 14px;
+            box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16);
+            z-index: 1050;
+            display: none;
+            overflow: hidden;
+        }
+
+        .tp-col-popover.show {
+            display: block;
+        }
+
+        .tp-col-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #ffffff;
+            cursor: grab;
+        }
+
+        .tp-col-item:hover {
+            background: #f8fafc;
+        }
+
+        .tp-col-item.dragging {
+            opacity: 0.5;
+            background: #e0f2fe;
+        }
+
+        .tp-col-order-btn {
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #475569;
+            width: 24px;
+            height: 24px;
             border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .tp-col-order-btn:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        /* Code pill & Action buttons */
+        .tp-code-pill {
+            font-family: 'JetBrains Mono', Consolas, monospace;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: #f1f5f9;
+            color: #0369a1;
+            border: 1px solid #cbd5e1;
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .df-btn-roadmap {
+            height: 32px;
+            padding: 0 11px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 700;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -26,68 +577,75 @@
             background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
             color: #ffffff !important;
             border: none;
-            box-shadow: 0 1px 3px rgba(2, 132, 199, 0.22);
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
             white-space: nowrap;
             text-decoration: none;
             transition: all 0.15s ease;
             cursor: pointer;
         }
+
         .df-btn-roadmap:hover {
             background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
             transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(2, 132, 199, 0.32);
+            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.34);
         }
+
         .df-btn-plan-detail {
-            height: 30px;
-            padding: 0 9px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
+            height: 32px;
+            padding: 0 10px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 700;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 4px;
+            gap: 5px;
             background: #ffffff;
             color: #1e293b !important;
-            border: 1px solid #cbd5e1;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            border: 1.5px solid #cbd5e1;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
             white-space: nowrap;
             text-decoration: none;
             transition: all 0.15s ease;
             cursor: pointer;
         }
+
         .df-btn-plan-detail:hover {
-            background: #f0f9ff;
-            border-color: #0284c7;
-            color: #0284c7 !important;
+            background: #e0f2fe;
+            border-color: #7dd3fc;
+            color: #0369a1 !important;
             transform: translateY(-1px);
-            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.15);
         }
+
         .df-btn-plan-detail i {
             color: #0284c7;
             font-size: 12.5px;
         }
+
         .df-btn-plan-delete {
-            width: 30px;
-            height: 30px;
-            border-radius: 6px;
-            border: 1px solid #fecdd3;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1.5px solid #fecdd3;
             background: #ffffff;
             color: #e11d48;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 12.5px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            font-size: 13px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
             transition: all 0.15s ease;
             cursor: pointer;
+            flex-shrink: 0;
         }
+
         .df-btn-plan-delete:hover {
             background: #fee2e2;
             border-color: #f87171;
             color: #be123c;
             transform: translateY(-1px);
         }
+
         .df-btn-white-plan {
             display: inline-flex;
             align-items: center;
@@ -106,6 +664,7 @@
             text-decoration: none;
             white-space: nowrap;
         }
+
         .df-btn-white-plan:hover {
             background: #f0f9ff;
             color: #0369a1;
@@ -113,13 +672,8 @@
             transform: translateY(-1px);
             box-shadow: 0 3px 8px rgba(2, 132, 199, 0.18);
         }
-        .df-btn-white-plan i {
-            font-size: 14px;
-            color: #0284c7;
-        }
-        .df-btn-white-plan:hover i {
-            color: #0369a1;
-        }
+
+        .df-btn-white-plan i { font-size: 14px; color: #0284c7; }
         .df-btn-white-plan .badge {
             font-size: 11px;
             font-weight: 700;
@@ -128,6 +682,64 @@
             background: #0284c7 !important;
             color: #ffffff;
         }
+
+        /* Footer phân trang chuẩn MISA AMIS */
+        .tp-pagination-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 12px 18px;
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
+            border-bottom-left-radius: 13px;
+            border-bottom-right-radius: 13px;
+            font-size: 13.5px;
+            color: #475569;
+        }
+
+        .tp-pagination-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .tp-page-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #334155;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .tp-page-btn:hover:not(:disabled) {
+            background: #f0f9ff;
+            border-color: #0284c7;
+            color: #0284c7;
+        }
+
+        .tp-page-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        /* Empty state & Card Course */
+        .tp-empty-state-box {
+            padding: 48px 24px;
+            text-align: center;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border-bottom-left-radius: 13px;
+            border-bottom-right-radius: 13px;
+        }
+
         .df-course-card {
             border: 1px solid #cbd5e1;
             border-radius: 12px;
@@ -137,10 +749,7 @@
             overflow: hidden;
             transition: box-shadow 0.2s ease, border-color 0.2s ease;
         }
-        .df-course-card:hover {
-            border-color: #94a3b8;
-            box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08);
-        }
+        .df-course-card:hover { border-color: #94a3b8; box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08); }
         .df-course-header {
             padding: 12px 16px;
             cursor: pointer;
@@ -149,24 +758,18 @@
             user-select: none;
             transition: background 0.15s ease;
         }
-        .df-course-header:hover {
-            background: #f1f5f9;
-        }
-        .df-course-body {
-            padding: 16px;
-            background: #f8fafc;
-        }
-        .df-course-chevron {
-            transition: transform 0.2s ease;
-        }
+        .df-course-header:hover { background: #f1f5f9; }
+        .df-course-body { padding: 16px; background: #f8fafc; }
+        .df-course-chevron { transition: transform 0.2s ease; }
     </style>
 
-    <div class="card border shadow-sm rounded-3 mb-4 overflow-hidden bg-white" id="treatmentPlanSection">
-        <div class="df-plan-header df-tab-content-header d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 bg-light border-bottom">
+    <div class="tp-section-shell" id="treatmentPlanSection">
+        <!-- HEADER SECTION -->
+        <div class="tp-section-header">
             <div class="df-tab-title-standard">
                 <i class="bi bi-diagram-3"></i>
                 <span>KẾ HOẠCH &amp; LỘ TRÌNH ĐIỀU TRỊ</span>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-0.5 ms-1" id="planCountBadge"
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1 ms-1" id="planCountBadge"
                       th:text="${treatmentPlans != null ? treatmentPlans.size() : 0} + ' kế hoạch'" style="text-transform: none; letter-spacing: normal;">
                     0 kế hoạch
                 </span>
@@ -174,18 +777,16 @@
             </div>
 
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <!-- NÚT LẬP KẾ HOẠCH MỚI -> CHUYỂN HƯỚNG SANG TRANG CHUYÊN DỤNG TREATMENT-PLAN-CREATE -->
-                <a th:if="${!isClinicalLocked}"
+                <a th:if="${!isClinicalLocked and visit != null}"
                    th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create'}"
                    class="df-btn-add-plan text-decoration-none border-0 text-white">
                     <i class="bi bi-plus-lg me-1"></i>
                     <span>Lập kế hoạch</span>
                 </a>
-                <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
+                <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-2 rounded-pill fw-semibold">
                     <i class="bi bi-lock-fill me-1"></i>Đã khóa bệnh án (BR-EMR-02)
                 </span>
 
-                <!-- NÚT HẸN TÁI KHÁM -->
                 <button type="button" class="df-btn-white-plan"
                         onclick="openReExamModal()" title="Hẹn ngày tái khám sau điều trị (SCR-18.1)">
                     <i class="bi bi-calendar2-plus-fill"></i>
@@ -196,161 +797,406 @@
             </div>
         </div>
 
-        <!-- Ghi chú nghiệp vụ Kế hoạch điều trị -->
-        <div class="px-3 pt-3">
-            <div class="alert alert-info py-2 px-3 mb-0 small d-flex align-items-center">
-                <i class="bi bi-info-circle-fill text-info me-2 fs-6"></i>
+        <div class="tp-body-wrap">
+            <!-- Lưu ý chuyên môn -->
+            <div class="alert alert-info py-2 px-3 mb-3 small d-flex align-items-center border border-info-subtle rounded-3">
+                <i class="bi bi-info-circle-fill text-info me-2 fs-6 flex-shrink-0"></i>
                 <div>
                     <strong>Lưu ý chuyên môn:</strong> Kế hoạch điều trị hiển thị <em>Tổng chi phí dự kiến (Tạm tính)</em> để bệnh nhân tham khảo lộ trình.
                     <strong>Kế hoạch không tự phát sinh hóa đơn hoặc công nợ.</strong>
                     Chỉ các dịch vụ thực tế được bác sĩ xác nhận hoàn thành mới đủ điều kiện để Kế toán lập hóa đơn dịch vụ.
                 </div>
             </div>
-        </div>
 
-        <!-- BẢNG DANH SÁCH CÁC KẾ HOẠCH ĐIỀU TRỊ CỦA BỆNH NHÂN (THIẾT KẾ RỘNG RÃI CHUẨN ENTERPRISE) -->
-        <div class="table-responsive p-3 bg-white">
-            <table class="table table-hover align-middle mb-0 border rounded-3" style="font-size: 13.5px; width: 100%;">
-                <thead class="table-light">
-                <tr>
-                    <th style="width: 100px;">Mã KHĐT</th>
-                    <th>Tên phác đồ / Kế hoạch điều trị</th>
-                    <th style="width: 180px;">Thời gian thực hiện</th>
-                    <th style="width: 170px;">Tiến độ điều trị</th>
-                    <th style="width: 170px;" class="text-end">Giá dự kiến (Tạm tính)</th>
-                    <th style="width: 130px;" class="text-center">Trạng thái</th>
-                    <th style="width: 200px;" class="text-center">Thao tác</th>
-                </tr>
-                </thead>
-                <tbody id="treatmentPlansTableBody">
-                <tr th:if="${treatmentPlans == null or treatmentPlans.isEmpty()}" id="emptyPlanRow">
-                    <td colspan="7" class="text-center" style="padding: 70px 24px 90px 24px !important; background: #ffffff;">
-                        <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 290px;">
-                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
-                                 style="width: 88px; height: 88px; background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%); border: 2px dashed #38bdf8; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.12);">
-                                <i class="bi bi-diagram-3-fill" style="font-size: 42px; color: #0284c7;"></i>
-                            </div>
-                            <h4 class="fw-bold text-dark mb-2" style="font-size: 20px; letter-spacing: -0.3px;">
-                                Bệnh nhân chưa có kế hoạch điều trị nào
-                            </h4>
-                            <p class="text-muted mb-4" style="font-size: 14.5px; max-width: 540px; line-height: 1.6;">
-                                Bác sĩ có thể lập kế hoạch và phác đồ điều trị chi tiết theo từng giai đoạn, dự kiến chi phí và liên kết trực tiếp với dịch vụ thực hiện tại ghế.
-                            </p>
-                            <a th:if="${!isClinicalLocked}" th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create'}"
-                               class="btn btn-primary px-4 py-2.5 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
-                               style="background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); border: none; font-size: 15px;">
-                                <i class="bi bi-plus-circle-fill fs-6"></i>
-                                <span>Lập kế hoạch điều trị</span>
-                            </a>
-                            <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3.5 py-2 rounded-pill fw-semibold">
-                                <i class="bi bi-lock-fill me-1"></i>Bệnh án đã khóa (BR-EMR-02)
-                            </span>
-                        </div>
-                    </td>
-                </tr>
-                <th:block th:each="plan : ${treatmentPlans}">
-                <tr th:id="'plan-row-' + ${plan.planId}" class="df-plan-tr-hover">
-                    <td style="padding: 10px 12px;">
-                        <span class="badge bg-light text-primary border fw-bold" style="font-size: 12px; letter-spacing: 0.3px;" th:text="${plan.planCode}">KHDT1001</span>
-                    </td>
-                    <td style="padding: 10px 12px;">
-                        <div class="fw-bold text-dark" style="font-size: 13.5px; line-height: 1.45;" th:text="${plan.planName}">Phác đồ Cấy ghép Implant</div>
-                    </td>
-                    <td style="padding: 10px 12px;">
-                        <div class="small text-dark fw-semibold" style="white-space: nowrap;">
-                            <i class="bi bi-calendar-event me-1 text-primary"></i>
-                            <span th:text="${plan.startDate != null ? plan.startDate : '---'}">01/10/2026</span>
-                            <span class="text-muted"> &rarr; </span>
-                            <span th:text="${plan.expectedEndDate != null ? plan.expectedEndDate : '---'}">30/12/2026</span>
-                        </div>
-                    </td>
-                    <td style="padding: 10px 12px;">
-                        <div class="d-flex align-items-center justify-content-between mb-1 small">
-                            <span class="fw-semibold text-secondary" th:id="'plan-stages-text-' + ${plan.planId}"
-                                  th:text="(${plan.totalItems != null and plan.totalItems > 0} ? (${plan.completedItems} + '/' + ${plan.totalItems} + ' bước') : (${plan.completedStages} + '/' + ${plan.totalStages} + ' giai đoạn'))">1/3 giai đoạn</span>
-                            <strong class="text-primary" th:id="'plan-progress-percent-' + ${plan.planId}"
-                                    th:text="${plan.progressPercent} + '%'">33%</strong>
-                        </div>
-                        <div class="progress" style="height: 6px;">
-                            <div class="progress-bar bg-success" role="progressbar"
-                                 th:id="'plan-progress-bar-' + ${plan.planId}"
-                                 th:style="'width: ' + ${plan.progressPercent} + '%'"
-                                 th:aria-valuenow="${plan.progressPercent}" aria-valuemin="0" aria-valuemax="100">
-                            </div>
-                        </div>
-                    </td>
-                    <td style="padding: 10px 12px;" class="text-end">
-                        <strong class="text-primary fs-6 d-block"
-                                th:text="${plan.finalEstimatedCost != null ? #numbers.formatDecimal(plan.finalEstimatedCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
-                            15.500.000 đ
-                        </strong>
-                        <div th:id="'plan-accounting-box-' + ${plan.planId}" class="mt-1">
-                            <span class="badge bg-success-subtle text-success border border-success d-inline-flex align-items-center gap-1 py-1 px-2"
-                                  style="font-size: 11px;"
-                                  th:title="${plan.sentToAccountingAt != null ? 'Đã lưu và đồng bộ Kế toán: ' + plan.sentToAccountingAt : 'Đã lưu và đồng bộ Kế toán'}">
-                                <i class="bi bi-check2-all text-success"></i>Đã lưu Kế toán
-                            </span>
-                        </div>
-                    </td>
-                    <td style="padding: 10px 12px;" class="text-center" th:id="'plan-status-cell-' + ${plan.planId}">
-                        <div class="dropdown d-inline-block">
-                            <button class="btn btn-sm dropdown-toggle rounded-pill px-2.5 py-1 fw-bold border shadow-xs d-inline-flex align-items-center gap-1"
-                                    th:classappend="${plan.statusBadgeClass}"
-                                    type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'
-                                    title="Nhấn để đổi trạng thái phác đồ">
-                                <span th:text="${plan.statusDisplayName}">Đang điều trị</span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border py-1 rounded-3" style="font-size: 13px; min-width: 175px;">
-                                <li><h6 class="dropdown-header text-uppercase text-muted" style="font-size: 10px; letter-spacing: 0.5px;">Cập nhật trạng thái</h6></li>
-                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2" href="javascript:void(0)" th:data-plan-id="${plan.planId}" onclick="updatePlanStatusDirectly(this.getAttribute('data-plan-id'), 'ACCEPTED')"><span class="badge bg-info-subtle text-info border">BN đã đồng ý</span></a></li>
-                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2" href="javascript:void(0)" th:data-plan-id="${plan.planId}" onclick="updatePlanStatusDirectly(this.getAttribute('data-plan-id'), 'IN_PROGRESS')"><span class="badge bg-primary-subtle text-primary border">Đang điều trị</span></a></li>
-                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2" href="javascript:void(0)" th:data-plan-id="${plan.planId}" onclick="updatePlanStatusDirectly(this.getAttribute('data-plan-id'), 'COMPLETED')"><span class="badge bg-success-subtle text-success border">Hoàn thành phác đồ</span></a></li>
-                                <li><hr class="dropdown-divider my-1"></li>
-                                <li><a class="dropdown-item py-1.5 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" th:data-plan-id="${plan.planId}" onclick="updatePlanStatusDirectly(this.getAttribute('data-plan-id'), 'CANCELLED')"><span class="badge bg-danger-subtle text-danger border">Hủy kế hoạch</span></a></li>
-                            </ul>
-                        </div>
-                    </td>
-                    <td style="padding: 10px 12px;" class="text-center">
-                        <div class="d-flex align-items-center justify-content-center gap-1.5 flex-nowrap">
-                            <a th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create?planId=' + ${plan.planId}}"
-                               class="df-btn-plan-detail"
-                               title="Xem chi tiết &amp; cập nhật kế hoạch này">
-                                <i class="bi bi-pencil-square"></i>
-                                <span>Chi tiết</span>
-                            </a>
-                            <button type="button" class="df-btn-roadmap"
-                                    title="Xem &amp; cập nhật lộ trình các bước lâm sàng (SCR-15.3)"
-                                    th:data-id="${plan.planId}"
-                                    onclick="togglePlanInlineRoadmap(this.getAttribute('data-id'))">
-                                <i class="bi bi-diagram-3-fill"></i>
-                                <span>Lộ trình</span>
-                                <i class="bi bi-chevron-down" style="font-size: 11px;" th:id="'chevron-plan-' + ${plan.planId}"></i>
-                            </button>
-                            <button type="button" class="df-btn-plan-delete"
-                                    title="Xóa kế hoạch này"
-                                    th:data-id="${plan.planId}"
-                                    onclick="deleteTreatmentPlan(this.getAttribute('data-id'))">
-                                <i class="bi bi-trash3-fill"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                </th:block>
-                </tbody>
-            </table>
-        </div>
+            <!-- THANH TÌM KIẾM & BỘ LỌC CHUẨN /doctor/daily-visits -->
+            <div class="tp-toolbar-card">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="tp-search-box">
+                        <i class="bi bi-search tp-search-icon"></i>
+                        <input type="text" id="tpSearchInput"
+                               placeholder="Tìm nhanh theo Mã KHĐT, Tên phác đồ, Thời gian thực hiện..."
+                               oninput="tpHandleSearch(this.value)">
+                        <button type="button" class="tp-search-clear" id="tpClearSearchBtn"
+                                onclick="tpClearSearch()" title="Xóa từ khóa">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
 
-        <!-- KHỐI LỘ TRÌNH CHI TIẾT TỪNG BƯỚC (TÁCH RIÊNG HOÀN TOÀN BÊN DƯỚI BẢNG, RỘNG 100%, KHÔNG SCROLL TRÁI PHẢI) -->
-        <div id="planRoadmapStandaloneArea" style="width: 100%; max-width: 100%; overflow-x: hidden; margin-top: 16px;">
-            <th:block th:each="plan : ${treatmentPlans}">
-            <div th:id="'plan-roadmap-row-' + ${plan.planId}" class="df-plan-roadmap-row border rounded-3 shadow-xs mb-3" style="display: none; width: 100%; max-width: 100%; background: #f8fafc; overflow: hidden;">
-                <!-- NỘI DUNG ĐƯỢC TỰ ĐỘNG PHÂN TÁCH THEO CÁC QUÁ TRÌNH ĐIỀU TRỊ (GẬP/MỞ) BỞI treatment-plan.js -->
-                <div class="text-center py-4 text-muted">
-                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                    <span>Đang tải lộ trình chi tiết các quá trình điều trị...</span>
+                    <div class="tp-quick-segment" aria-label="Bộ lọc trạng thái kế hoạch">
+                        <button type="button" class="tp-seg-btn active" data-tp-status="ALL" onclick="tpSetStatusFilter('ALL')">
+                            Tất cả <span class="tp-seg-count" id="tpCntAll">0</span>
+                        </button>
+                        <button type="button" class="tp-seg-btn" data-tp-status="ACCEPTED" onclick="tpSetStatusFilter('ACCEPTED')">
+                            <span class="rounded-circle d-inline-block" style="width:8px;height:8px;background:#06b6d4;"></span>
+                            BN đã đồng ý <span class="tp-seg-count" id="tpCntAccepted">0</span>
+                        </button>
+                        <button type="button" class="tp-seg-btn" data-tp-status="IN_PROGRESS" onclick="tpSetStatusFilter('IN_PROGRESS')">
+                            <span class="rounded-circle d-inline-block" style="width:8px;height:8px;background:#2563eb;"></span>
+                            Đang điều trị <span class="tp-seg-count" id="tpCntInProgress">0</span>
+                        </button>
+                        <button type="button" class="tp-seg-btn" data-tp-status="COMPLETED" onclick="tpSetStatusFilter('COMPLETED')">
+                            <span class="rounded-circle d-inline-block" style="width:8px;height:8px;background:#10b981;"></span>
+                            Hoàn thành <span class="tp-seg-count" id="tpCntCompleted">0</span>
+                        </button>
+                    </div>
+
+                    <button type="button" class="tp-adv-filter-btn" id="tpBtnAdvFilter" onclick="tpToggleAdvFilter()">
+                        <i class="bi bi-funnel-fill"></i>
+                        <span>Lọc nâng cao</span>
+                        <span class="tp-filter-pulse-badge" id="tpAdvCountBadge" style="display: none;">1</span>
+                        <i class="bi bi-chevron-down small" id="tpAdvChevron"></i>
+                    </button>
+                </div>
+
+                <!-- Khung lọc nâng cao -->
+                <div class="tp-adv-filter-panel" id="tpAdvFilterPanel">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 13.5px;">
+                            <i class="bi bi-sliders2-vertical text-primary"></i>
+                            <span>Bộ lọc chi tiết Kế hoạch điều trị</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-link text-danger fw-bold text-decoration-none p-0"
+                                onclick="tpResetAllFilters()">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại mặc định
+                        </button>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="tp-adv-label"><i class="bi bi-activity text-primary"></i> Trạng thái chi tiết</label>
+                            <select class="tp-adv-control" id="tpAdvSubStatus" onchange="tpSetStatusFilter(this.value)">
+                                <option value="ALL">-- Tất cả trạng thái --</option>
+                                <option value="DRAFT">Bản nháp (DRAFT)</option>
+                                <option value="PROPOSED">Đã tư vấn (PROPOSED)</option>
+                                <option value="ACCEPTED">BN đã đồng ý (ACCEPTED)</option>
+                                <option value="IN_PROGRESS">Đang điều trị (IN_PROGRESS)</option>
+                                <option value="COMPLETED">Hoàn thành (COMPLETED)</option>
+                                <option value="CANCELLED">Đã hủy (CANCELLED)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="tp-adv-label"><i class="bi bi-calendar-event text-primary"></i> Ngày bắt đầu (Từ)</label>
+                            <input type="date" class="tp-adv-control" id="tpFromDate" onchange="tpApplyFilters()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="tp-adv-label"><i class="bi bi-calendar-event text-secondary"></i> Ngày bắt đầu (Đến)</label>
+                            <input type="date" class="tp-adv-control" id="tpToDate" onchange="tpApplyFilters()">
+                        </div>
+                    </div>
                 </div>
             </div>
-            </th:block>
+
+            <!-- KHỐI BẢNG DỮ LIỆU MISA AMIS (KÉO DÃN CỘT + GHIM CỘT + TÙY BIẾN CỘT + HOVER ACTIONS) -->
+            <div class="tp-grid-card">
+                <div class="tp-grid-topbar">
+                    <div class="fw-bold text-dark" style="font-size: 14px;">
+                        Hiển thị <span class="text-primary fw-bolder" id="tpVisibleCountText"
+                                         th:text="${treatmentPlans != null ? treatmentPlans.size() : 0}">0</span> kế hoạch điều trị
+                        <span class="text-muted mx-1">•</span>
+                        <span class="text-secondary fw-semibold small">Kéo mép phải tiêu đề cột để thay đổi độ rộng</span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="tp-col-customizer-wrapper" id="tpColCustomizerWrapper">
+                            <button type="button"
+                                    class="btn btn-white bg-white border fw-bold px-3 py-1 rounded-3 d-inline-flex align-items-center gap-2 shadow-sm"
+                                    style="font-size: 13px; border-color: #cbd5e1 !important; color: #0f172a; height: 36px;"
+                                    onclick="tpToggleColumnCustomizer(event)">
+                                <i class="bi bi-layout-three-columns text-primary"></i>
+                                <span>Tùy biến cột &amp; Ghim cột</span>
+                                <span class="badge bg-primary-subtle text-primary rounded-pill" id="tpPinnedColBadge">1 ghim</span>
+                            </button>
+
+                            <div class="tp-col-popover" id="tpColCustomizerPopover" onclick="event.stopPropagation()">
+                                <div class="p-3 bg-light border-bottom d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <div class="fw-bold text-dark" style="font-size: 14px;">
+                                            <i class="bi bi-sliders text-primary me-1"></i>Tùy chỉnh cột hiển thị
+                                        </div>
+                                        <div class="text-muted" style="font-size: 11.5px;">Ẩn/hiện, đổi thứ tự, ghim cột &amp; đặt lại độ rộng</div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-link text-primary fw-bold text-decoration-none p-0"
+                                            onclick="tpResetDefaultColumns()">
+                                        Mặc định
+                                    </button>
+                                </div>
+                                <div id="tpColCustomizerList" style="max-height: 320px; overflow-y: auto;"></div>
+                                <div class="p-2 bg-light border-top text-end">
+                                    <button type="button" class="btn btn-primary btn-sm px-3 fw-bold rounded-pill"
+                                            onclick="tpCloseColumnCustomizer()">
+                                        Hoàn tất
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bảng chính -->
+                <div class="tp-table-scroll-container" id="tpTableContainer">
+                    <table class="tp-amis-table" id="tpMainDataTable">
+                        <thead>
+                        <tr id="tpTableHeadRow">
+                            <th data-col-id="planCode" data-default-width="135" data-min-width="110" style="width: 135px;">
+                                <div class="tp-th-inner">
+                                    <span class="tp-th-title">Mã KHĐT</span>
+                                    <button type="button" class="tp-pin-btn" onclick="tpTogglePinColumn('planCode')" title="Ghim/Bỏ ghim cột">
+                                        <i class="bi bi-pin-angle"></i>
+                                    </button>
+                                </div>
+                                <div class="tp-col-resizer" data-resize-col="planCode" title="Kéo để thay đổi độ rộng cột"></div>
+                            </th>
+                            <th data-col-id="planName" data-default-width="320" data-min-width="200" style="width: 320px;">
+                                <div class="tp-th-inner">
+                                    <span class="tp-th-title">Tên phác đồ / Kế hoạch điều trị</span>
+                                    <button type="button" class="tp-pin-btn" onclick="tpTogglePinColumn('planName')" title="Ghim/Bỏ ghim cột">
+                                        <i class="bi bi-pin-angle"></i>
+                                    </button>
+                                </div>
+                                <div class="tp-col-resizer" data-resize-col="planName" title="Kéo để thay đổi độ rộng cột"></div>
+                            </th>
+                            <th data-col-id="period" data-default-width="200" data-min-width="150" style="width: 200px;">
+                                <div class="tp-th-inner">
+                                    <span class="tp-th-title">Thời gian thực hiện</span>
+                                    <button type="button" class="tp-pin-btn" onclick="tpTogglePinColumn('period')" title="Ghim/Bỏ ghim cột">
+                                        <i class="bi bi-pin-angle"></i>
+                                    </button>
+                                </div>
+                                <div class="tp-col-resizer" data-resize-col="period" title="Kéo để thay đổi độ rộng cột"></div>
+                            </th>
+                            <th data-col-id="progress" data-default-width="180" data-min-width="140" style="width: 180px;">
+                                <div class="tp-th-inner">
+                                    <span class="tp-th-title">Tiến độ điều trị</span>
+                                    <button type="button" class="tp-pin-btn" onclick="tpTogglePinColumn('progress')" title="Ghim/Bỏ ghim cột">
+                                        <i class="bi bi-pin-angle"></i>
+                                    </button>
+                                </div>
+                                <div class="tp-col-resizer" data-resize-col="progress" title="Kéo để thay đổi độ rộng cột"></div>
+                            </th>
+                            <th data-col-id="cost" data-default-width="175" data-min-width="145" class="text-end" style="width: 175px;">
+                                <div class="tp-th-inner">
+                                    <span class="tp-th-title">Giá dự kiến (Tạm tính)</span>
+                                    <button type="button" class="tp-pin-btn" onclick="tpTogglePinColumn('cost')" title="Ghim/Bỏ ghim cột">
+                                        <i class="bi bi-pin-angle"></i>
+                                    </button>
+                                </div>
+                                <div class="tp-col-resizer" data-resize-col="cost" title="Kéo để thay đổi độ rộng cột"></div>
+                            </th>
+                            <th data-col-id="status" data-default-width="155" data-min-width="130" class="text-center" style="width: 155px;">
+                                <div class="tp-th-inner">
+                                    <span class="tp-th-title">Trạng thái</span>
+                                    <button type="button" class="tp-pin-btn" onclick="tpTogglePinColumn('status')" title="Ghim/Bỏ ghim cột">
+                                        <i class="bi bi-pin-angle"></i>
+                                    </button>
+                                </div>
+                                <div class="tp-col-resizer" data-resize-col="status" title="Kéo để thay đổi độ rộng cột"></div>
+                            </th>
+                            <th data-col-id="actions" data-default-width="235" data-min-width="210" class="text-center tp-col-pinned-right" style="width: 235px;">
+                                <div class="tp-th-inner justify-content-center">
+                                    <span class="tp-th-title">Thao tác</span>
+                                </div>
+                                <div class="tp-col-resizer" data-resize-col="actions" title="Kéo để thay đổi độ rộng cột"></div>
+                            </th>
+                            <th class="tp-floating-actions-track"></th>
+                        </tr>
+                        </thead>
+
+                        <tbody id="treatmentPlansTableBody">
+                        <tr th:if="${treatmentPlans == null or treatmentPlans.isEmpty()}" id="emptyPlanRow">
+                            <td colspan="8" class="p-0 border-0">
+                                <div class="tp-empty-state-box">
+                                    <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
+                                         style="width: 84px; height: 84px; background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%); border: 2px dashed #38bdf8; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.12);">
+                                        <i class="bi bi-diagram-3-fill" style="font-size: 38px; color: #0284c7;"></i>
+                                    </div>
+                                    <h4 class="fw-bold text-dark mb-2" style="font-size: 18px;">
+                                        Bệnh nhân chưa có kế hoạch điều trị nào
+                                    </h4>
+                                    <p class="text-muted mb-4 mx-auto" style="font-size: 14px; max-width: 520px; line-height: 1.55;">
+                                        Bác sĩ có thể lập kế hoạch và phác đồ điều trị chi tiết theo từng giai đoạn, dự kiến chi phí và liên kết trực tiếp với dịch vụ thực hiện tại ghế.
+                                    </p>
+                                    <a th:if="${!isClinicalLocked and visit != null}"
+                                       th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create'}"
+                                       class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
+                                       style="background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); border: none; font-size: 14.5px;">
+                                        <i class="bi bi-plus-circle-fill"></i>
+                                        <span>Lập kế hoạch điều trị</span>
+                                    </a>
+                                    <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-2 rounded-pill fw-semibold">
+                                        <i class="bi bi-lock-fill me-1"></i>Bệnh án đã khóa (BR-EMR-02)
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <th:block th:each="plan : ${treatmentPlans}">
+                            <tr th:id="'plan-row-' + ${plan.planId}"
+                                class="tp-data-row"
+                                th:attr="data-plan-id=${plan.planId},
+                                         data-status=${plan.status != null ? plan.status : ''},
+                                         data-start-date=${plan.startDate != null ? plan.startDate : ''}">
+                                <td data-col-id="planCode">
+                                    <span class="tp-code-pill" th:text="${plan.planCode}">KHDT1001</span>
+                                </td>
+                                <td data-col-id="planName">
+                                    <div class="fw-bold text-dark" style="font-size: 13.5px; line-height: 1.45;" th:text="${plan.planName}">
+                                        Phác đồ Cấy ghép Implant
+                                    </div>
+                                </td>
+                                <td data-col-id="period">
+                                    <div class="small text-dark fw-semibold text-nowrap">
+                                        <i class="bi bi-calendar-event me-1 text-primary"></i>
+                                        <span th:text="${plan.startDate != null ? plan.startDate : '---'}">01/10/2026</span>
+                                        <span class="text-muted"> &rarr; </span>
+                                        <span th:text="${plan.expectedEndDate != null ? plan.expectedEndDate : '---'}">30/12/2026</span>
+                                    </div>
+                                </td>
+                                <td data-col-id="progress">
+                                    <div class="d-flex align-items-center justify-content-between mb-1 small">
+                                        <span class="fw-semibold text-secondary" th:id="'plan-stages-text-' + ${plan.planId}"
+                                              th:text="(${plan.totalItems != null and plan.totalItems > 0} ? (${plan.completedItems} + '/' + ${plan.totalItems} + ' bước') : (${plan.completedStages} + '/' + ${plan.totalStages} + ' giai đoạn'))">1/3 giai đoạn</span>
+                                        <strong class="text-primary" th:id="'plan-progress-percent-' + ${plan.planId}"
+                                                th:text="${plan.progressPercent} + '%'">33%</strong>
+                                    </div>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-success" role="progressbar"
+                                             th:id="'plan-progress-bar-' + ${plan.planId}"
+                                             th:style="'width: ' + ${plan.progressPercent} + '%'"
+                                             th:aria-valuenow="${plan.progressPercent}" aria-valuemin="0" aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                </td>
+                                <td data-col-id="cost" class="text-end">
+                                    <strong class="text-primary fs-6 d-block"
+                                            th:text="${plan.finalEstimatedCost != null ? #numbers.formatDecimal(plan.finalEstimatedCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                                        15.500.000 đ
+                                    </strong>
+                                    <div th:id="'plan-accounting-box-' + ${plan.planId}" class="mt-1">
+                                        <span class="badge bg-success-subtle text-success border border-success d-inline-flex align-items-center gap-1 py-1 px-2"
+                                              style="font-size: 11px;"
+                                              th:title="${plan.sentToAccountingAt != null ? 'Đã lưu và đồng bộ Kế toán: ' + plan.sentToAccountingAt : 'Đã lưu và đồng bộ Kế toán'}">
+                                            <i class="bi bi-check2-all text-success"></i>Đã lưu Kế toán
+                                        </span>
+                                    </div>
+                                </td>
+                                <td data-col-id="status" class="text-center" th:id="'plan-status-cell-' + ${plan.planId}">
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-sm dropdown-toggle rounded-pill px-2 py-1 fw-bold border shadow-sm d-inline-flex align-items-center gap-1"
+                                                th:classappend="${plan.statusBadgeClass}"
+                                                type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper-config='{"strategy":"fixed"}'
+                                                title="Nhấn để đổi trạng thái phác đồ">
+                                            <span th:text="${plan.statusDisplayName}">Đang điều trị</span>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border py-1 rounded-3" style="font-size: 13px; min-width: 175px;">
+                                            <li><h6 class="dropdown-header text-uppercase text-muted" style="font-size: 10px; letter-spacing: 0.5px;">Cập nhật trạng thái</h6></li>
+                                            <li><a class="dropdown-item py-1 d-flex align-items-center gap-2" href="javascript:void(0)" th:data-plan-id="${plan.planId}" onclick="updatePlanStatusDirectly(this.getAttribute('data-plan-id'), 'ACCEPTED')"><span class="badge bg-info-subtle text-info border">BN đã đồng ý</span></a></li>
+                                            <li><a class="dropdown-item py-1 d-flex align-items-center gap-2" href="javascript:void(0)" th:data-plan-id="${plan.planId}" onclick="updatePlanStatusDirectly(this.getAttribute('data-plan-id'), 'IN_PROGRESS')"><span class="badge bg-primary-subtle text-primary border">Đang điều trị</span></a></li>
+                                            <li><a class="dropdown-item py-1 d-flex align-items-center gap-2" href="javascript:void(0)" th:data-plan-id="${plan.planId}" onclick="updatePlanStatusDirectly(this.getAttribute('data-plan-id'), 'COMPLETED')"><span class="badge bg-success-subtle text-success border">Hoàn thành phác đồ</span></a></li>
+                                            <li><hr class="dropdown-divider my-1"></li>
+                                            <li><a class="dropdown-item py-1 d-flex align-items-center gap-2 text-danger" href="javascript:void(0)" th:data-plan-id="${plan.planId}" onclick="updatePlanStatusDirectly(this.getAttribute('data-plan-id'), 'CANCELLED')"><span class="badge bg-danger-subtle text-danger border">Hủy kế hoạch</span></a></li>
+                                        </ul>
+                                    </div>
+                                </td>
+                                <td data-col-id="actions" class="text-center tp-col-pinned-right">
+                                    <div class="d-flex align-items-center justify-content-center gap-2 flex-nowrap">
+                                        <a th:if="${visit != null}"
+                                           th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create?planId=' + ${plan.planId}}"
+                                           class="df-btn-plan-detail"
+                                           title="Xem chi tiết &amp; cập nhật kế hoạch này">
+                                            <i class="bi bi-pencil-square"></i>
+                                            <span>Chi tiết</span>
+                                        </a>
+                                        <button type="button" class="df-btn-roadmap"
+                                                title="Xem &amp; cập nhật lộ trình các bước lâm sàng (SCR-15.3)"
+                                                th:data-id="${plan.planId}"
+                                                onclick="togglePlanInlineRoadmap(this.getAttribute('data-id'))">
+                                            <i class="bi bi-diagram-3-fill"></i>
+                                            <span>Lộ trình</span>
+                                            <i class="bi bi-chevron-down" style="font-size: 11px;" th:id="'chevron-plan-' + ${plan.planId}"></i>
+                                        </button>
+                                        <button type="button" class="df-btn-plan-delete"
+                                                title="Xóa kế hoạch này"
+                                                th:data-id="${plan.planId}"
+                                                onclick="deleteTreatmentPlan(this.getAttribute('data-id'))">
+                                            <i class="bi bi-trash3-fill"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td class="tp-floating-actions-track">
+                                    <div class="tp-floating-actions-bar" onclick="event.stopPropagation()">
+                                        <a th:if="${visit != null}"
+                                           th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create?planId=' + ${plan.planId}}"
+                                           class="df-btn-plan-detail"
+                                           title="Xem chi tiết &amp; cập nhật kế hoạch này">
+                                            <i class="bi bi-pencil-square"></i>
+                                            <span>Chi tiết</span>
+                                        </a>
+                                        <button type="button" class="df-btn-roadmap"
+                                                title="Xem &amp; cập nhật lộ trình các bước lâm sàng"
+                                                th:data-id="${plan.planId}"
+                                                onclick="togglePlanInlineRoadmap(this.getAttribute('data-id'))">
+                                            <i class="bi bi-diagram-3-fill"></i>
+                                            <span>Lộ trình</span>
+                                        </button>
+                                        <button type="button" class="df-btn-plan-delete"
+                                                title="Xóa kế hoạch này"
+                                                th:data-id="${plan.planId}"
+                                                onclick="deleteTreatmentPlan(this.getAttribute('data-id'))">
+                                            <i class="bi bi-trash3-fill"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </th:block>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Trạng thái rỗng khi lọc không có kết quả -->
+                <div class="tp-empty-state-box" id="tpFilterEmptyState" style="display: none;">
+                    <i class="bi bi-funnel text-secondary fs-1 d-block mb-2"></i>
+                    <div class="fw-bold text-dark fs-6 mb-1">Không tìm thấy kế hoạch điều trị phù hợp</div>
+                    <p class="text-muted small mb-3">Thử đổi từ khóa tìm kiếm, trạng thái hoặc khoảng thời gian lọc.</p>
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold" onclick="tpResetAllFilters()">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Xóa bộ lọc
+                    </button>
+                </div>
+
+                <!-- Footer phân trang chuẩn MISA AMIS -->
+                <div id="tpPaginationBar" class="tp-pagination-footer">
+                    <div>
+                        Tổng số: <strong id="tpTotalCountText" th:text="${treatmentPlans != null ? treatmentPlans.size() : 0}">0</strong>
+                    </div>
+                    <div class="tp-pagination-right">
+                        <div class="d-flex align-items-center gap-2">
+                            <span>Số dòng/trang</span>
+                            <select id="tpPageSizeSelect" class="form-select form-select-sm" style="width: 72px;"
+                                    onchange="tpChangePageSize(this.value)">
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                        <div class="fw-semibold">
+                            <span id="tpPageRangeFrom">0</span> - <span id="tpPageRangeTo">0</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-1" id="tpPaginationNav"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KHỐI LỘ TRÌNH CHI TIẾT TỪNG BƯỚC (TÁCH RIÊNG BÊN DƯỚI BẢNG, RỘNG 100%, KHÔNG SCROLL TRÁI PHẢI) -->
+            <div id="planRoadmapStandaloneArea" style="width: 100%; max-width: 100%; overflow-x: hidden; margin-top: 16px;">
+                <th:block th:each="plan : ${treatmentPlans}">
+                    <div th:id="'plan-roadmap-row-' + ${plan.planId}" class="df-plan-roadmap-row border rounded-3 shadow-xs mb-3"
+                         style="display: none; width: 100%; max-width: 100%; background: #f8fafc; overflow: hidden;">
+                        <div class="text-center py-4 text-muted">
+                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                            <span>Đang tải lộ trình chi tiết các quá trình điều trị...</span>
+                        </div>
+                    </div>
+                </th:block>
+            </div>
         </div>
     </div>
 </div>
@@ -365,6 +1211,457 @@
         /*]]>*/
     </script>
     <script th:src="@{/js/doctor/treatment-plan.js}"></script>
+    <script>
+        (function () {
+            const TP_STORAGE_KEY = 'cvdcms_tp_grid_config_v1';
+            const TP_DEFAULT_COLS = [
+                { id: 'planCode', label: 'Mã KHĐT', visible: true, pinned: 'left', width: 135, minWidth: 110 },
+                { id: 'planName', label: 'Tên phác đồ / Kế hoạch điều trị', visible: true, pinned: false, width: 320, minWidth: 200 },
+                { id: 'period', label: 'Thời gian thực hiện', visible: true, pinned: false, width: 200, minWidth: 150 },
+                { id: 'progress', label: 'Tiến độ điều trị', visible: true, pinned: false, width: 180, minWidth: 140 },
+                { id: 'cost', label: 'Giá dự kiến (Tạm tính)', visible: true, pinned: false, width: 175, minWidth: 145 },
+                { id: 'status', label: 'Trạng thái', visible: true, pinned: false, width: 155, minWidth: 130 },
+                { id: 'actions', label: 'Thao tác', visible: true, pinned: 'right', width: 235, minWidth: 210 }
+            ];
+
+            let tpCols = loadTpColConfig();
+            let tpState = { search: '', status: 'ALL', fromDate: '', toDate: '', page: 1, pageSize: 10 };
+            let tpDragIdx = null;
+            let tpResizing = null;
+
+            function loadTpColConfig() {
+                try {
+                    const raw = localStorage.getItem(TP_STORAGE_KEY);
+                    if (!raw) return JSON.parse(JSON.stringify(TP_DEFAULT_COLS));
+                    const saved = JSON.parse(raw);
+                    if (!Array.isArray(saved)) return JSON.parse(JSON.stringify(TP_DEFAULT_COLS));
+                    const defMap = new Map(TP_DEFAULT_COLS.map(c => [c.id, c]));
+                    const merged = [];
+                    saved.forEach(s => {
+                        const base = defMap.get(s.id);
+                        if (base) {
+                            merged.push({
+                                ...base,
+                                visible: base.id === 'actions' ? true : (s.visible !== false),
+                                pinned: base.id === 'actions' ? 'right' : (s.pinned === 'left' || s.pinned === true ? 'left' : false),
+                                width: Math.max(Number(s.width) || base.width, base.minWidth)
+                            });
+                            defMap.delete(s.id);
+                        }
+                    });
+                    defMap.forEach(c => merged.push({ ...c }));
+                    return merged;
+                } catch (e) {
+                    return JSON.parse(JSON.stringify(TP_DEFAULT_COLS));
+                }
+            }
+
+            function saveTpColConfig() {
+                try {
+                    localStorage.setItem(TP_STORAGE_KEY, JSON.stringify(tpCols));
+                } catch (e) {}
+            }
+
+            function getOrderedTpCols() {
+                const left = tpCols.filter(c => c.pinned === 'left' || c.pinned === true);
+                const right = tpCols.filter(c => c.pinned === 'right');
+                const mid = tpCols.filter(c => c.pinned !== 'left' && c.pinned !== true && c.pinned !== 'right');
+                return [...left, ...mid, ...right];
+            }
+
+            function applyTpColumnsToDom() {
+                const table = document.getElementById('tpMainDataTable');
+                const headRow = document.getElementById('tpTableHeadRow');
+                const tbody = document.getElementById('treatmentPlansTableBody');
+                if (!table || !headRow || !tbody) return;
+
+                const ordered = getOrderedTpCols();
+                const visibleLeft = ordered.filter(c => c.visible && (c.pinned === 'left' || c.pinned === true));
+                const stickyLeftMap = {};
+                let leftAcc = 0;
+                visibleLeft.forEach((c, idx) => {
+                    stickyLeftMap[c.id] = { left: leftAcc, isLast: idx === visibleLeft.length - 1 };
+                    leftAcc += c.width;
+                });
+
+                // Sắp xếp lại TH theo ordered
+                const trackTh = headRow.querySelector('.tp-floating-actions-track');
+                const thById = {};
+                headRow.querySelectorAll('th[data-col-id]').forEach(th => {
+                    thById[th.getAttribute('data-col-id')] = th;
+                });
+                ordered.forEach(col => {
+                    const th = thById[col.id];
+                    if (!th) return;
+                    headRow.insertBefore(th, trackTh || null);
+                    th.style.display = col.visible ? '' : 'none';
+                    th.style.width = col.width + 'px';
+                    th.style.minWidth = col.width + 'px';
+                    th.style.maxWidth = col.width + 'px';
+                    th.classList.remove('tp-col-pinned', 'tp-col-pinned-last');
+                    th.style.left = '';
+                    const pinBtn = th.querySelector('.tp-pin-btn');
+                    if (pinBtn) {
+                        const isPinned = col.pinned === 'left' || col.pinned === true;
+                        pinBtn.classList.toggle('is-pinned', isPinned);
+                        const icon = pinBtn.querySelector('i');
+                        if (icon) icon.className = isPinned ? 'bi bi-pin-angle-fill' : 'bi bi-pin-angle';
+                    }
+                    if (stickyLeftMap[col.id]) {
+                        th.classList.add('tp-col-pinned');
+                        if (stickyLeftMap[col.id].isLast) th.classList.add('tp-col-pinned-last');
+                        th.style.left = stickyLeftMap[col.id].left + 'px';
+                    }
+                });
+
+                // Sắp xếp & áp độ rộng cho TD từng dòng dữ liệu
+                const dataRows = tbody.querySelectorAll('tr.tp-data-row');
+                dataRows.forEach(tr => {
+                    const trackTd = tr.querySelector('.tp-floating-actions-track');
+                    const tdById = {};
+                    tr.querySelectorAll('td[data-col-id]').forEach(td => {
+                        tdById[td.getAttribute('data-col-id')] = td;
+                    });
+                    ordered.forEach(col => {
+                        const td = tdById[col.id];
+                        if (!td) return;
+                        tr.insertBefore(td, trackTd || null);
+                        td.style.display = col.visible ? '' : 'none';
+                        td.style.width = col.width + 'px';
+                        td.style.minWidth = col.width + 'px';
+                        td.style.maxWidth = col.width + 'px';
+                        td.classList.remove('tp-col-pinned', 'tp-col-pinned-last');
+                        td.style.left = '';
+                        if (stickyLeftMap[col.id]) {
+                            td.classList.add('tp-col-pinned');
+                            if (stickyLeftMap[col.id].isLast) td.classList.add('tp-col-pinned-last');
+                            td.style.left = stickyLeftMap[col.id].left + 'px';
+                        }
+                    });
+                });
+
+                const totalWidth = ordered.filter(c => c.visible).reduce((sum, c) => sum + c.width, 0);
+                table.style.minWidth = Math.max(totalWidth, 720) + 'px';
+                table.style.width = Math.max(totalWidth, 720) + 'px';
+
+                const pinnedCount = tpCols.filter(c => c.visible && (c.pinned === 'left' || c.pinned === true || c.pinned === 'right')).length;
+                const badge = document.getElementById('tpPinnedColBadge');
+                if (badge) badge.textContent = pinnedCount + ' ghim';
+            }
+
+            function bindTpResizers() {
+                const table = document.getElementById('tpMainDataTable');
+                if (!table) return;
+                table.querySelectorAll('.tp-col-resizer').forEach(handle => {
+                    if (handle.dataset.bound === '1') return;
+                    handle.dataset.bound = '1';
+                    handle.addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const colId = handle.getAttribute('data-resize-col');
+                        const col = tpCols.find(c => c.id === colId);
+                        const th = handle.closest('th');
+                        if (!col || !th) return;
+
+                        tpResizing = { col, th, handle, startX: e.pageX, startWidth: th.getBoundingClientRect().width };
+                        document.body.classList.add('tp-is-resizing');
+                        handle.classList.add('is-resizing');
+
+                        const onMove = (ev) => {
+                            if (!tpResizing) return;
+                            const diff = ev.pageX - tpResizing.startX;
+                            const nextW = Math.max(tpResizing.col.minWidth, Math.round(tpResizing.startWidth + diff));
+                            tpResizing.col.width = nextW;
+                            applyTpColumnsToDom();
+                        };
+
+                        const onUp = () => {
+                            if (!tpResizing) return;
+                            tpResizing.handle.classList.remove('is-resizing');
+                            tpResizing = null;
+                            document.body.classList.remove('tp-is-resizing');
+                            document.removeEventListener('mousemove', onMove);
+                            document.removeEventListener('mouseup', onUp);
+                            saveTpColConfig();
+                        };
+
+                        document.addEventListener('mousemove', onMove);
+                        document.addEventListener('mouseup', onUp);
+                    });
+                });
+            }
+
+            function parseIsoOrVnDate(str) {
+                if (!str || str === '---') return '';
+                const s = str.trim();
+                if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+                const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+                return '';
+            }
+
+            function updateTpCountsAndPagination() {
+                const tbody = document.getElementById('treatmentPlansTableBody');
+                if (!tbody) return;
+                const allRows = Array.from(tbody.querySelectorAll('tr.tp-data-row'));
+                const emptyServerRow = document.getElementById('emptyPlanRow');
+                const filterEmptyBox = document.getElementById('tpFilterEmptyState');
+                const tableContainer = document.getElementById('tpTableContainer');
+                const paginationBar = document.getElementById('tpPaginationBar');
+
+                const setCnt = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = String(val);
+                };
+                setCnt('tpCntAll', allRows.length);
+                setCnt('tpCntAccepted', allRows.filter(r => (r.getAttribute('data-status') || '').toUpperCase() === 'ACCEPTED').length);
+                setCnt('tpCntInProgress', allRows.filter(r => (r.getAttribute('data-status') || '').toUpperCase() === 'IN_PROGRESS').length);
+                setCnt('tpCntCompleted', allRows.filter(r => (r.getAttribute('data-status') || '').toUpperCase() === 'COMPLETED').length);
+
+                const q = tpState.search.toLowerCase();
+                const filtered = allRows.filter(row => {
+                    const st = (row.getAttribute('data-status') || '').toUpperCase();
+                    const rowDate = parseIsoOrVnDate(row.getAttribute('data-start-date') || '');
+                    const txt = (row.innerText || '').toLowerCase();
+                    if (q && !txt.includes(q)) return false;
+                    if (tpState.status !== 'ALL' && st !== tpState.status) return false;
+                    if (tpState.fromDate && (!rowDate || rowDate < tpState.fromDate)) return false;
+                    if (tpState.toDate && (!rowDate || rowDate > tpState.toDate)) return false;
+                    return true;
+                });
+
+                const totalFiltered = filtered.length;
+                const totalPages = Math.max(1, Math.ceil(totalFiltered / tpState.pageSize));
+                if (tpState.page > totalPages) tpState.page = totalPages;
+                const startIdx = (tpState.page - 1) * tpState.pageSize;
+                const endIdx = Math.min(startIdx + tpState.pageSize, totalFiltered);
+                const pageSet = new Set(filtered.slice(startIdx, endIdx));
+
+                allRows.forEach(r => {
+                    r.style.display = pageSet.has(r) ? '' : 'none';
+                });
+
+                const visibleText = document.getElementById('tpVisibleCountText');
+                if (visibleText) visibleText.textContent = String(totalFiltered);
+                const totalText = document.getElementById('tpTotalCountText');
+                if (totalText) totalText.textContent = String(totalFiltered);
+                const fromText = document.getElementById('tpPageRangeFrom');
+                const toText = document.getElementById('tpPageRangeTo');
+                if (fromText) fromText.textContent = totalFiltered === 0 ? '0' : String(startIdx + 1);
+                if (toText) toText.textContent = totalFiltered === 0 ? '0' : String(endIdx);
+
+                if (allRows.length === 0) {
+                    if (emptyServerRow) emptyServerRow.style.display = '';
+                    if (tableContainer) tableContainer.style.display = '';
+                    if (filterEmptyBox) filterEmptyBox.style.display = 'none';
+                    if (paginationBar) paginationBar.style.display = 'none';
+                } else if (totalFiltered === 0) {
+                    if (emptyServerRow) emptyServerRow.style.display = 'none';
+                    if (tableContainer) tableContainer.style.display = 'none';
+                    if (filterEmptyBox) filterEmptyBox.style.display = 'block';
+                    if (paginationBar) paginationBar.style.display = 'none';
+                } else {
+                    if (emptyServerRow) emptyServerRow.style.display = 'none';
+                    if (tableContainer) tableContainer.style.display = '';
+                    if (filterEmptyBox) filterEmptyBox.style.display = 'none';
+                    if (paginationBar) paginationBar.style.display = 'flex';
+                }
+
+                // Render pagination nav
+                const nav = document.getElementById('tpPaginationNav');
+                if (nav) {
+                    const isFirst = tpState.page <= 1;
+                    const isLast = tpState.page >= totalPages;
+                    nav.innerHTML = `
+                        <button type="button" class="tp-page-btn" ${isFirst ? 'disabled' : ''} onclick="tpGoPage(1)" title="Trang đầu"><i class="bi bi-chevron-bar-left"></i></button>
+                        <button type="button" class="tp-page-btn" ${isFirst ? 'disabled' : ''} onclick="tpGoPage(${tpState.page - 1})" title="Trang trước"><i class="bi bi-chevron-left"></i></button>
+                        <button type="button" class="tp-page-btn" ${isLast ? 'disabled' : ''} onclick="tpGoPage(${tpState.page + 1})" title="Trang sau"><i class="bi bi-chevron-right"></i></button>
+                        <button type="button" class="tp-page-btn" ${isLast ? 'disabled' : ''} onclick="tpGoPage(${totalPages})" title="Trang cuối"><i class="bi bi-chevron-bar-right"></i></button>
+                    `;
+                }
+
+                // Update advanced badge
+                let advCount = 0;
+                if (tpState.status !== 'ALL') advCount++;
+                if (tpState.fromDate || tpState.toDate) advCount++;
+                const advBadge = document.getElementById('tpAdvCountBadge');
+                const advBtn = document.getElementById('tpBtnAdvFilter');
+                if (advBadge && advBtn) {
+                    advBadge.textContent = String(advCount);
+                    advBadge.style.display = advCount > 0 ? 'inline-flex' : 'none';
+                    advBtn.classList.toggle('has-active-filters', advCount > 0);
+                }
+            }
+
+            function renderTpColumnCustomizerList() {
+                const container = document.getElementById('tpColCustomizerList');
+                if (!container) return;
+                container.innerHTML = tpCols.map((col, idx) => {
+                    const isActions = col.id === 'actions';
+                    const isPinned = col.pinned === 'left' || col.pinned === true;
+                    return `
+                        <div class="tp-col-item" ${!isActions ? `draggable="true" ondragstart="tpOnColDragStart(event, ${idx})" ondragover="tpOnColDragOver(event)" ondrop="tpOnColDrop(event, ${idx})"` : ''}>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi ${!isActions ? 'bi-grip-vertical text-muted' : 'bi-lock-fill text-primary'}"></i>
+                                <input type="checkbox" class="form-check-input mt-0" style="width:16px;height:16px;cursor:pointer;"
+                                       ${col.visible ? 'checked' : ''} ${isActions ? 'disabled checked' : ''}
+                                       onchange="tpToggleColumnVisibility('${col.id}', this.checked)">
+                                <span class="fw-bold text-dark" style="font-size: 13px;">${col.label}</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                ${!isActions ? `
+                                    <button type="button" class="tp-pin-btn ${isPinned ? 'is-pinned' : ''}" onclick="tpTogglePinColumn('${col.id}')" title="Ghim cột bên trái">
+                                        <i class="bi ${isPinned ? 'bi-pin-angle-fill' : 'bi-pin-angle'}"></i>
+                                    </button>
+                                    <button type="button" class="tp-col-order-btn" onclick="tpMoveCol(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} title="Lên"><i class="bi bi-arrow-up"></i></button>
+                                    <button type="button" class="tp-col-order-btn" onclick="tpMoveCol(${idx}, 1)" ${idx === tpCols.length - 1 ? 'disabled' : ''} title="Xuống"><i class="bi bi-arrow-down"></i></button>
+                                ` : '<span class="badge bg-light text-secondary border px-2 py-1" style="font-size: 11px;">Cố định</span>'}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            window.tpHandleSearch = function (val) {
+                tpState.search = (val || '').trim();
+                tpState.page = 1;
+                const clearBtn = document.getElementById('tpClearSearchBtn');
+                if (clearBtn) clearBtn.style.display = tpState.search ? 'inline-flex' : 'none';
+                updateTpCountsAndPagination();
+            };
+            window.tpClearSearch = function () {
+                const inp = document.getElementById('tpSearchInput');
+                if (inp) inp.value = '';
+                window.tpHandleSearch('');
+            };
+            window.tpSetStatusFilter = function (st) {
+                tpState.status = st || 'ALL';
+                tpState.page = 1;
+                document.querySelectorAll('[data-tp-status]').forEach(btn => {
+                    btn.classList.toggle('active', btn.getAttribute('data-tp-status') === tpState.status);
+                });
+                const sub = document.getElementById('tpAdvSubStatus');
+                if (sub) sub.value = tpState.status;
+                updateTpCountsAndPagination();
+            };
+            window.tpToggleAdvFilter = function () {
+                const panel = document.getElementById('tpAdvFilterPanel');
+                const btn = document.getElementById('tpBtnAdvFilter');
+                const chev = document.getElementById('tpAdvChevron');
+                if (!panel || !btn) return;
+                const open = panel.classList.toggle('show');
+                btn.classList.toggle('is-open', open);
+                if (chev) chev.className = open ? 'bi bi-chevron-up small' : 'bi bi-chevron-down small';
+            };
+            window.tpApplyFilters = function () {
+                tpState.fromDate = document.getElementById('tpFromDate')?.value || '';
+                tpState.toDate = document.getElementById('tpToDate')?.value || '';
+                tpState.page = 1;
+                updateTpCountsAndPagination();
+            };
+            window.tpResetAllFilters = function () {
+                tpState = { ...tpState, search: '', status: 'ALL', fromDate: '', toDate: '', page: 1 };
+                const inp = document.getElementById('tpSearchInput');
+                if (inp) inp.value = '';
+                const clr = document.getElementById('tpClearSearchBtn');
+                if (clr) clr.style.display = 'none';
+                const f = document.getElementById('tpFromDate');
+                const t = document.getElementById('tpToDate');
+                if (f) f.value = '';
+                if (t) t.value = '';
+                window.tpSetStatusFilter('ALL');
+            };
+            window.tpGoPage = function (p) {
+                tpState.page = Math.max(1, p);
+                updateTpCountsAndPagination();
+            };
+            window.tpChangePageSize = function (sz) {
+                tpState.pageSize = parseInt(sz, 10) || 10;
+                tpState.page = 1;
+                updateTpCountsAndPagination();
+            };
+            window.tpToggleColumnCustomizer = function (e) {
+                e.stopPropagation();
+                const pop = document.getElementById('tpColCustomizerPopover');
+                if (!pop) return;
+                const open = pop.classList.toggle('show');
+                if (open) renderTpColumnCustomizerList();
+            };
+            window.tpCloseColumnCustomizer = function () {
+                document.getElementById('tpColCustomizerPopover')?.classList.remove('show');
+            };
+            window.tpTogglePinColumn = function (colId) {
+                const col = tpCols.find(c => c.id === colId);
+                if (!col || col.id === 'actions') return;
+                col.pinned = (col.pinned === 'left' || col.pinned === true) ? false : 'left';
+                if (col.pinned) col.visible = true;
+                saveTpColConfig();
+                applyTpColumnsToDom();
+                renderTpColumnCustomizerList();
+            };
+            window.tpToggleColumnVisibility = function (colId, checked) {
+                if (!checked && tpCols.filter(c => c.visible).length <= 2) {
+                    alert('Cần giữ lại tối thiểu 2 cột hiển thị!');
+                    renderTpColumnCustomizerList();
+                    return;
+                }
+                const col = tpCols.find(c => c.id === colId);
+                if (!col || col.id === 'actions') return;
+                col.visible = checked;
+                if (!checked) col.pinned = false;
+                saveTpColConfig();
+                applyTpColumnsToDom();
+                renderTpColumnCustomizerList();
+            };
+            window.tpMoveCol = function (idx, dir) {
+                const target = idx + dir;
+                if (target < 0 || target >= tpCols.length) return;
+                const tmp = tpCols[idx];
+                tpCols[idx] = tpCols[target];
+                tpCols[target] = tmp;
+                saveTpColConfig();
+                applyTpColumnsToDom();
+                renderTpColumnCustomizerList();
+            };
+            window.tpResetDefaultColumns = function () {
+                tpCols = JSON.parse(JSON.stringify(TP_DEFAULT_COLS));
+                saveTpColConfig();
+                applyTpColumnsToDom();
+                renderTpColumnCustomizerList();
+            };
+            window.tpOnColDragStart = function (e, idx) {
+                tpDragIdx = idx;
+                e.currentTarget.classList.add('dragging');
+            };
+            window.tpOnColDragOver = function (e) { e.preventDefault(); };
+            window.tpOnColDrop = function (e, dropIdx) {
+                e.preventDefault();
+                if (tpDragIdx === null || tpDragIdx === dropIdx) return;
+                const item = tpCols.splice(tpDragIdx, 1)[0];
+                tpCols.splice(dropIdx, 0, item);
+                tpDragIdx = null;
+                saveTpColConfig();
+                applyTpColumnsToDom();
+                renderTpColumnCustomizerList();
+            };
+            window.refreshTpGrid = function () {
+                applyTpColumnsToDom();
+                updateTpCountsAndPagination();
+            };
+
+            document.addEventListener('click', function (e) {
+                const wrap = document.getElementById('tpColCustomizerWrapper');
+                if (wrap && !wrap.contains(e.target)) {
+                    window.tpCloseColumnCustomizer();
+                }
+            });
+
+            document.addEventListener('DOMContentLoaded', function () {
+                bindTpResizers();
+                window.refreshTpGrid();
+            });
+        })();
+    </script>
 </th:block>
 
 <!-- ===================================================================== -->
