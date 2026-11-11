@@ -1479,16 +1479,10 @@
                                                     </div>
                                                 </td>
                                                 <td class="text-nowrap">
-                                                    <div class="d-flex align-items-center gap-2 mb-1">
-                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0"
-                                                            style="width: 28px; height: 28px; background: #e0f2fe; color: #0284c7; font-size: 12px;">
-                                                            <i class="bi bi-person-badge-fill"></i>
-                                                        </span>
-                                                        <span class="fw-bold text-dark" style="font-size: 13.5px;"
-                                                            th:text="${item.doctorName != null ? item.doctorName : 'Chưa phân công'}">Bác
-                                                            sĩ</span>
-                                                    </div>
-                                                    <div class="text-muted small d-flex align-items-center gap-1 ps-1">
+                                                    <div class="fw-bold text-dark mb-1" style="font-size: 13.5px;"
+                                                        th:text="${item.doctorName != null ? item.doctorName : 'Chưa phân công'}">Bác
+                                                        sĩ</div>
+                                                    <div class="text-muted small d-flex align-items-center gap-1">
                                                         <i class="bi bi-geo-alt-fill text-primary" style="font-size: 11px;"></i>
                                                         <span th:text="${item.branchName != null ? item.branchName : 'Chi nhánh chính'}">Chi
                                                             nhánh</span>
@@ -1599,11 +1593,10 @@
                             </div>
                         </div>
 
-                        <!-- CHẾ ĐỘ 2: BẢNG NHẬT KÝ THAO TÁC CHI TIẾT (AUDIT LOG TABLE ĐỒNG BỘ KIỂU DÁNG) -->
+                        <!-- CHẾ ĐỘ 2: BẢNG NHẬT KÝ THAO TÁC CHI TIẾT (CHUẨN /doctor/daily-visits) -->
                         <div id="treatmentAuditView" style="display: none;">
                             <div class="dv-toolbar-card mb-3">
-                                <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-2 pb-2 border-bottom"
-                                    style="border-color: #f1f5f9 !important;">
+                                <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
                                     <div class="dv-search-box">
                                         <i class="bi bi-search search-lead-icon"></i>
                                         <input type="text" id="auditSearchInput"
@@ -1616,13 +1609,37 @@
                                         </button>
                                     </div>
                                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                                        <!-- Lọc theo thời gian -->
-                                        <div class="dv-date-filter-group"
-                                            title="Lọc theo khoảng thời gian nhật ký thao tác">
-                                            <i class="bi bi-calendar3 text-primary" style="font-size: 13px;"></i>
-                                            <select class="form-select form-select-sm dv-preset-select"
-                                                id="auditDatePreset"
-                                                onchange="applyDatePreset('audit', filterAuditTable)">
+                                        <span class="text-muted small me-2">
+                                            Hiển thị: <strong class="text-primary" id="auditTotalCount"
+                                                th:text="${auditLogs != null ? auditLogs.size() : 0}">0</strong> thao tác
+                                        </span>
+                                        <button type="button" class="dv-adv-filter-btn" id="btnAdvFilterAudit"
+                                            onclick="toggleAdvFilterDrawer('audit')">
+                                            <i class="bi bi-funnel-fill"></i>
+                                            <span>Lọc nâng cao</span>
+                                            <span class="dv-filter-pulse-badge" id="auditAdvBadge" style="display: none;">1</span>
+                                            <i class="bi bi-chevron-down small ms-1" id="auditAdvChevron"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Khung Lọc Nâng Cao Audit Log chuẩn Ca khám trong ngày -->
+                                <div class="dv-adv-filter-panel" id="auditAdvPanel">
+                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                        <div class="fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 14px;">
+                                            <i class="bi bi-sliders2-vertical text-primary"></i>
+                                            <span>Bộ lọc chuyên sâu Nhật ký thao tác</span>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-link text-danger fw-bold text-decoration-none p-0"
+                                            onclick="clearDateFilter('audit', filterAuditTable); setAuditActionFilter('ALL', null); if (document.getElementById('auditEntityFilter')) document.getElementById('auditEntityFilter').value=''; filterAuditTable(); updateAdvFilterBadge('audit');">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại mặc định
+                                        </button>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="dv-adv-label"><i class="bi bi-calendar3 text-primary"></i> Mốc thời gian nhanh</label>
+                                            <select class="form-select dv-adv-control" id="auditDatePreset"
+                                                onchange="applyDatePreset('audit', filterAuditTable); updateAdvFilterBadge('audit');">
                                                 <option value="ALL">Tất cả thời gian</option>
                                                 <option value="TODAY">Hôm nay</option>
                                                 <option value="LAST_7_DAYS">7 ngày qua</option>
@@ -1630,51 +1647,52 @@
                                                 <option value="THIS_YEAR">Năm nay</option>
                                                 <option value="CUSTOM">Tùy chọn...</option>
                                             </select>
-                                            <input type="date" class="dv-date-input" id="auditFromDate"
-                                                onchange="onCustomDateChange('audit', filterAuditTable)"
-                                                title="Từ ngày">
-                                            <span class="text-muted small">→</span>
-                                            <input type="date" class="dv-date-input" id="auditToDate"
-                                                onchange="onCustomDateChange('audit', filterAuditTable)"
-                                                title="Đến ngày">
-                                            <button type="button" class="dv-date-clear-btn" id="auditDateClearBtn"
-                                                onclick="clearDateFilter('audit', filterAuditTable)"
-                                                title="Xóa lọc thời gian">
-                                                <i class="bi bi-x-circle-fill"></i>
-                                            </button>
                                         </div>
-
-                                        <select class="form-select dv-adv-control" id="auditEntityFilter"
-                                            style="width: 190px;" onchange="filterAuditTable()">
-                                            <option value="">Tất cả phân hệ</option>
-                                            <option value="Lượt khám">Phân hệ: Lượt khám</option>
-                                            <option value="Hồ sơ bệnh nhân">Phân hệ: Hồ sơ bệnh nhân</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                                    <div class="dv-quick-segment" id="auditActionSegment">
-                                        <button type="button" class="dv-seg-btn active" data-action="ALL"
-                                            onclick="setAuditActionFilter('ALL', this)">
-                                            Tất cả thao tác <span class="dv-seg-count"
-                                                th:text="${auditLogs != null ? auditLogs.size() : 0}">0</span>
-                                        </button>
-                                        <button type="button" class="dv-seg-btn" data-action="CREATE"
-                                            onclick="setAuditActionFilter('CREATE', this)">
-                                            <i class="bi bi-plus-circle-fill text-success"></i> Thêm mới / Tiếp nhận
-                                        </button>
-                                        <button type="button" class="dv-seg-btn" data-action="UPDATE"
-                                            onclick="setAuditActionFilter('UPDATE', this)">
-                                            <i class="bi bi-pencil-square text-primary"></i> Cập nhật / Điều trị
-                                        </button>
-                                        <button type="button" class="dv-seg-btn" data-action="DELETE"
-                                            onclick="setAuditActionFilter('DELETE', this)">
-                                            <i class="bi bi-trash3-fill text-danger"></i> Xóa / Hủy
-                                        </button>
-                                    </div>
-                                    <div class="text-muted small">
-                                        Hiển thị: <strong class="text-primary" id="auditTotalCount"
-                                            th:text="${auditLogs != null ? auditLogs.size() : 0}">0</strong> thao tác
+                                        <div class="col-md-4">
+                                            <label class="dv-adv-label"><i class="bi bi-calendar-event text-secondary"></i> Từ ngày</label>
+                                            <input type="date" class="form-control dv-adv-control" id="auditFromDate"
+                                                onchange="onCustomDateChange('audit', filterAuditTable); updateAdvFilterBadge('audit');">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="dv-adv-label"><i class="bi bi-calendar-event text-secondary"></i> Đến ngày</label>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <input type="date" class="form-control dv-adv-control" id="auditToDate"
+                                                    onchange="onCustomDateChange('audit', filterAuditTable); updateAdvFilterBadge('audit');">
+                                                <button type="button" class="dv-date-clear-btn" id="auditDateClearBtn"
+                                                    onclick="clearDateFilter('audit', filterAuditTable); updateAdvFilterBadge('audit');"
+                                                    title="Xóa lọc thời gian" style="border:none;background:transparent;color:#dc2626;display:none;">
+                                                    <i class="bi bi-x-circle-fill"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="dv-adv-label"><i class="bi bi-layers text-primary"></i> Phân hệ</label>
+                                            <select class="form-select dv-adv-control" id="auditEntityFilter"
+                                                onchange="filterAuditTable(); updateAdvFilterBadge('audit');">
+                                                <option value="">Tất cả phân hệ</option>
+                                                <option value="Hồ sơ bệnh nhân">Phân hệ: Hồ sơ bệnh nhân</option>
+                                                <option value="Lịch hẹn">Phân hệ: Lịch hẹn</option>
+                                                <option value="Lượt khám">Phân hệ: Lượt khám</option>
+                                                <option value="Quy trình điều trị">Phân hệ: Quy trình điều trị</option>
+                                                <option value="Khám &amp; Thủ thuật">Phân hệ: Khám &amp; Thủ thuật</option>
+                                                <option value="Cận lâm sàng &amp; Phim ảnh">Phân hệ: Cận lâm sàng &amp; Phim ảnh</option>
+                                                <option value="Đơn thuốc">Phân hệ: Đơn thuốc</option>
+                                                <option value="Đặt xưởng Labo">Phân hệ: Đặt xưởng Labo</option>
+                                                <option value="Bệnh án (BAĐT)">Phân hệ: Bệnh án (BAĐT)</option>
+                                                <option value="Hóa đơn &amp; Thanh toán">Phân hệ: Hóa đơn &amp; Thanh toán</option>
+                                                <option value="Chăm sóc khách hàng">Phân hệ: Chăm sóc khách hàng</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="dv-adv-label"><i class="bi bi-funnel text-primary"></i> Phân loại thao tác</label>
+                                            <select class="form-select dv-adv-control" id="auditActionFilter"
+                                                onchange="setAuditActionFilter(this.value, null); updateAdvFilterBadge('audit');">
+                                                <option value="ALL">Tất cả thao tác</option>
+                                                <option value="CREATE">Thêm mới / Tiếp nhận</option>
+                                                <option value="UPDATE">Cập nhật / Điều trị</option>
+                                                <option value="DELETE">Xóa / Hủy</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1682,22 +1700,21 @@
                             <div class="dv-grid-card">
                                 <div class="dv-grid-topbar">
                                     <span
-                                        class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-bold">
+                                        class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 fw-bold">
                                         <i class="bi bi-journal-text me-1"></i>Nhật ký thao tác hệ thống (Audit Log)
                                     </span>
-                                    <small class="text-muted">Ghi nhận tự động mọi thao tác trên hồ sơ và lượt
-                                        khám</small>
+                                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Ghi nhận tự động mọi thao tác trên hồ sơ và lượt khám</small>
                                 </div>
                                 <div class="dv-table-scroll-container">
                                     <table class="dv-amis-table" id="auditTable">
                                         <thead>
                                             <tr>
-                                                <th style="width: 50px;" class="text-center">STT</th>
-                                                <th style="width: 170px;">Thời gian</th>
-                                                <th style="width: 185px;">Người thực hiện</th>
-                                                <th class="text-center" style="width: 130px;">Phân loại thao tác</th>
-                                                <th style="width: 165px;">Phân hệ</th>
-                                                <th>Nội dung chi tiết</th>
+                                                <th style="width: 54px;" class="text-center">STT</th>
+                                                <th style="min-width: 185px;">Thời gian</th>
+                                                <th style="min-width: 195px;">Người thực hiện</th>
+                                                <th class="text-center" style="min-width: 175px;">Phân loại thao tác</th>
+                                                <th style="min-width: 175px;">Phân hệ</th>
+                                                <th style="min-width: 320px;">Nội dung chi tiết</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1706,31 +1723,38 @@
                                                 <td colspan="6" class="text-center text-muted py-5">Chưa có nhật ký thao
                                                     tác nào.</td>
                                             </tr>
-                                            <tr th:each="log, stat : ${auditLogs}" class="audit-row"
+                                            <tr th:each="log, stat : ${auditLogs}" class="audit-row dv-data-row"
                                                 th:data-action="${log.action != null ? log.action : ''}"
                                                 th:data-entity="${log.entityType != null ? log.entityType : ''}"
                                                 th:data-date="${log.timestamp != null ? #temporals.format(log.timestamp, 'yyyy-MM-dd') : ''}">
-                                                <td class="text-center text-muted fw-semibold" th:text="${stat.count}">1
+                                                <td class="text-center text-muted fw-bold" th:text="${stat.count}">1
                                                 </td>
-                                                <td class="text-muted fw-semibold">
-                                                    <i class="bi bi-clock me-1 text-primary"></i><span
-                                                        th:text="${log.timestamp != null ? #temporals.format(log.timestamp, 'dd/MM/yyyy HH:mm:ss') : '—'}">01/01/2026
-                                                        10:00:00</span>
+                                                <td class="text-nowrap">
+                                                    <div class="text-muted fw-semibold d-flex align-items-center gap-1">
+                                                        <i class="bi bi-clock text-primary"></i>
+                                                        <span th:text="${log.timestamp != null ? #temporals.format(log.timestamp, 'dd/MM/yyyy HH:mm:ss') : '—'}">01/01/2026
+                                                            10:00:00</span>
+                                                    </div>
                                                 </td>
-                                                <td class="fw-bold text-dark">
-                                                    <i class="bi bi-person-circle text-primary me-1"></i><span
+                                                <td class="text-nowrap">
+                                                    <span class="fw-bold text-dark" style="font-size: 13.5px;"
                                                         th:text="${log.userName}">Bác sĩ</span>
                                                 </td>
-                                                <td class="text-center">
-                                                    <span class="badge px-2 py-1"
-                                                        th:classappend="${log.actionBadgeClass}"
-                                                        th:text="${log.actionLabel}">THÊM</span>
+                                                <td class="text-center text-nowrap">
+                                                    <span class="dv-status-pill"
+                                                        th:with="act=${log.action != null ? #strings.toUpperCase(log.action) : ''}"
+                                                        th:classappend="${act == 'CREATE' ? 'st-completed' : (act == 'DELETE' ? 'st-cancelled' : (act == 'UPDATE' ? 'st-examining' : 'st-waiting'))}">
+                                                        <i class="bi"
+                                                            th:classappend="${act == 'CREATE' ? 'bi-plus-circle-fill' : (act == 'DELETE' ? 'bi-trash3-fill' : (act == 'UPDATE' ? 'bi-pencil-square' : 'bi-activity'))}"></i>
+                                                        <span th:text="${log.actionLabel}">THÊM</span>
+                                                    </span>
+                                                </td>
+                                                <td class="text-nowrap">
+                                                    <span class="dv-code-pill" th:text="${log.entityType}">Hồ sơ</span>
                                                 </td>
                                                 <td>
-                                                    <span class="badge bg-light text-secondary border fw-semibold"
-                                                        th:text="${log.entityType}">Hồ sơ</span>
+                                                    <span class="text-dark" style="line-height: 1.45;" th:text="${log.details}">Nội dung thao tác</span>
                                                 </td>
-                                                <td class="text-dark" th:text="${log.details}">Nội dung thao tác</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -1912,15 +1936,9 @@
                                                 <small class="text-muted">Bệnh án Răng Hàm Mặt chuẩn Bộ Y Tế</small>
                                             </td>
                                             <td class="text-nowrap">
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <span class="rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0"
-                                                        style="width: 28px; height: 28px; background: #e0f2fe; color: #0284c7; font-size: 12px;">
-                                                        <i class="bi bi-person-badge-fill"></i>
-                                                    </span>
-                                                    <span class="fw-bold text-dark" style="font-size: 13.5px;"
-                                                        th:text="${emr.doctorName != null ? emr.doctorName : 'Bác sĩ phụ trách'}">Bác
-                                                        sĩ</span>
-                                                </div>
+                                                <span class="fw-bold text-dark" style="font-size: 13.5px;"
+                                                    th:text="${emr.doctorName != null ? emr.doctorName : 'Bác sĩ phụ trách'}">Bác
+                                                    sĩ</span>
                                             </td>
                                             <td class="text-center text-nowrap">
                                                 <span class="dv-status-pill"
@@ -4089,14 +4107,15 @@
 
         function initSegmentCountsAndEmptyFilterRows() {
             // 1. Treatment status segment counts
+            const inProgressStatuses = ['IN_PROGRESS', 'WAITING', 'IN_EXAM', 'EXAMINING', 'WAITING_PARACLINICAL', 'WAITING_RESULT', 'IN_TREATMENT', 'CHECKED_IN'];
             const treatmentRows = Array.from(document.querySelectorAll("#treatmentTable tbody tr.treatment-row"));
             document.querySelectorAll("#treatmentStatusSegment .dv-seg-btn").forEach(btn => {
-                const status = btn.getAttribute("data-status") || 'ALL';
+                const status = btn.getAttribute("data-filter") || btn.getAttribute("data-status") || 'ALL';
                 let count = treatmentRows.length;
                 if (status === 'COMPLETED') {
                     count = treatmentRows.filter(r => (r.getAttribute("data-status") || '').toUpperCase() === 'COMPLETED').length;
                 } else if (status === 'IN_PROGRESS') {
-                    count = treatmentRows.filter(r => ['IN_PROGRESS', 'WAITING', 'EXAMINING', 'CHECKED_IN'].includes((r.getAttribute("data-status") || '').toUpperCase())).length;
+                    count = treatmentRows.filter(r => inProgressStatuses.includes((r.getAttribute("data-status") || '').toUpperCase())).length;
                 } else if (status === 'WAITING_PAYMENT') {
                     count = treatmentRows.filter(r => (r.getAttribute("data-status") || '').toUpperCase() === 'WAITING_PAYMENT').length;
                 } else if (status === 'HAS_EMR') {
@@ -4105,8 +4124,22 @@
                 ensureSegCountBadge(btn, count);
             });
 
-            // 2. Audit action segment counts
+            // 2. Audit action segment counts & dynamic entity options
             const auditRows = Array.from(document.querySelectorAll("#auditTable tbody tr.audit-row"));
+            const entitySelect = document.getElementById("auditEntityFilter");
+            if (entitySelect) {
+                const existingValues = new Set(Array.from(entitySelect.options).map(o => o.value.trim().toLowerCase()));
+                auditRows.forEach(r => {
+                    const ent = (r.getAttribute("data-entity") || '').trim();
+                    if (ent && !existingValues.has(ent.toLowerCase())) {
+                        existingValues.add(ent.toLowerCase());
+                        const opt = document.createElement("option");
+                        opt.value = ent;
+                        opt.textContent = "Phân hệ: " + ent;
+                        entitySelect.appendChild(opt);
+                    }
+                });
+            }
             document.querySelectorAll("#auditActionSegment .dv-seg-btn").forEach(btn => {
                 const action = (btn.getAttribute("data-action") || 'ALL').toUpperCase();
                 const count = (action === 'ALL')
@@ -4277,6 +4310,11 @@
             } else if (prefix === 'treatment') {
                 const st = document.getElementById('treatmentStatusFilter')?.value;
                 if (st && st !== 'ALL') active++;
+            } else if (prefix === 'audit') {
+                const ent = document.getElementById('auditEntityFilter')?.value;
+                const act = document.getElementById('auditActionFilter')?.value;
+                if (ent) active++;
+                if (act && act !== 'ALL') active++;
             }
 
             if (active > 0) {
@@ -4342,7 +4380,7 @@
                 if (currentTreatmentStatusFilter === 'COMPLETED') {
                     matchesStatus = status === 'COMPLETED';
                 } else if (currentTreatmentStatusFilter === 'IN_PROGRESS') {
-                    matchesStatus = (status === 'IN_PROGRESS' || status === 'WAITING' || status === 'EXAMINING' || status === 'CHECKED_IN');
+                    matchesStatus = ['IN_PROGRESS', 'WAITING', 'IN_EXAM', 'EXAMINING', 'WAITING_PARACLINICAL', 'WAITING_RESULT', 'IN_TREATMENT', 'CHECKED_IN'].includes(status);
                 } else if (currentTreatmentStatusFilter === 'WAITING_PAYMENT') {
                     matchesStatus = status === 'WAITING_PAYMENT';
                 } else if (currentTreatmentStatusFilter === 'HAS_EMR') {
@@ -4365,8 +4403,8 @@
         // 3. Bộ lọc bảng Nhật ký thao tác (Audit Log)
         function setAuditActionFilter(actionVal, btn) {
             currentAuditActionFilter = actionVal || 'ALL';
-            document.querySelectorAll("#auditActionSegment .dv-seg-btn").forEach(b => b.classList.remove("active"));
-            if (btn) btn.classList.add("active");
+            const actionSelect = document.getElementById("auditActionFilter");
+            if (actionSelect) actionSelect.value = currentAuditActionFilter;
             filterAuditTable();
         }
 
