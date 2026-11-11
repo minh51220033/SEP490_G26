@@ -971,7 +971,7 @@
             if (!appointments.length) {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td colspan="9" class="text-center py-5 text-muted">
+                    <td colspan="10" class="text-center py-5 text-muted">
                         <i class="bi bi-calendar-x display-6 d-block mb-2 text-secondary opacity-50"></i>
                         Không có lịch hẹn nào phù hợp với điều kiện lọc hiện tại.
                     </td>
@@ -989,6 +989,38 @@
                 EVENING: { label: 'Ca Tối', icon: 'bi-moon-stars-fill', cls: 'evening' }
             };
 
+            const buildActionButtonsHtml = (a, isMutable, statusMeta) => `
+                <button type="button" class="dv-equal-btn-secondary btn-details" data-appointment-id="${a.id}" title="Xem chi tiết lịch hẹn">
+                    <i class="bi bi-eye text-primary"></i><span>Chi tiết</span>
+                </button>
+                ${isMutable
+                    ? `<button type="button" class="dv-equal-btn-secondary btn-edit" data-appointment-id="${a.id}" title="Sửa / Đổi lịch hẹn"><i class="bi bi-pencil text-secondary"></i><span>Sửa</span></button>`
+                    : `<button type="button" class="dv-equal-btn-secondary text-muted opacity-50" disabled title="Chỉ có thể sửa lịch hẹn khi đang Chờ xác nhận hoặc Đã xác nhận"><i class="bi bi-pencil"></i><span>Sửa</span></button>`
+                }
+                ${isMutable
+                    ? `<button type="button" class="dv-equal-btn-secondary text-danger btn-delete" title="Hủy lịch hẹn"><i class="bi bi-trash"></i><span>Hủy</span></button>`
+                    : `<button type="button" class="dv-equal-btn-secondary text-muted opacity-50" disabled title="Không thể hủy lịch hẹn ở trạng thái ${escapeHtml(statusMeta.label)}"><i class="bi bi-trash"></i><span>Hủy</span></button>`
+                }
+            `;
+
+            const bindActionHandlers = (container, a) => {
+                container.querySelector('.btn-details')?.addEventListener('click', () => openQuickStatusModal(a));
+                container.querySelector('.btn-edit')?.addEventListener('click', () => openEditAppointmentModal(a));
+                container.querySelector('.btn-delete')?.addEventListener('click', async () => {
+                    if (confirm(`Bạn có chắc chắn muốn hủy lịch hẹn của khách hàng "${a.patientName}"?`)) {
+                        try {
+                            await request(`/${a.id}/quick-status`, {
+                                method: 'POST',
+                                body: JSON.stringify({ status: 'CANCELLED', note: 'Lễ tân hủy lịch hẹn trên danh sách' })
+                            });
+                            await load();
+                        } catch (err) {
+                            error(err.message);
+                        }
+                    }
+                });
+            };
+
             appointments.forEach((a, index) => {
                 if (showDateGroupHeaders && a.date !== lastDate) {
                     lastDate = a.date;
@@ -996,7 +1028,7 @@
                     const groupTr = document.createElement('tr');
                     groupTr.className = 'apt-date-group-row';
                     groupTr.innerHTML = `
-                        <td colspan="9">
+                        <td colspan="10">
                             <div class="d-flex align-items-center justify-content-between">
                                 <span><i class="bi bi-calendar3 text-primary me-2"></i>${escapeHtml(formatDayWithWeekday(lastDate))}</span>
                                 <span class="badge bg-white text-secondary border fw-semibold">${dayCount} ca hẹn</span>
@@ -1007,6 +1039,7 @@
                 }
 
                 const tr = document.createElement('tr');
+                tr.className = 'dv-data-row';
                 tr.dataset.status = a.status || '';
                 tr.dataset.doctor = a.doctorId || '';
                 tr.dataset.doctorName = a.doctorName || '';
@@ -1128,41 +1161,20 @@
                 tdStatus.appendChild(statusBadge);
                 tr.appendChild(tdStatus);
 
-                // 9. Thao tác (Chỉ hiển thị 3 nút: Xem chi tiết, Chỉnh sửa tại chỗ qua Modal, Xóa/Hủy)
+                // 9. Thao tác (Đồng bộ dv-amis-table: nút icon kèm chữ + thanh nổi khi hover)
                 const tdAction = document.createElement('td');
-                tdAction.className = 'text-center appointment-actions-column';
+                tdAction.className = 'text-center';
                 const isMutable = a.status === 'PENDING' || a.status === 'CONFIRMED';
-                tdAction.innerHTML = `
-                    <div class="appointment-action-group">
-                        <button type="button" class="btn-action-icon text-primary btn-details" data-appointment-id="${a.id}" title="Xem chi tiết lịch hẹn">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        ${isMutable
-                            ? `<button type="button" class="btn-action-icon text-secondary btn-edit" data-appointment-id="${a.id}" title="Sửa / Đổi lịch hẹn"><i class="bi bi-pencil"></i></button>`
-                            : `<button type="button" class="btn-action-icon text-muted opacity-50" disabled title="Chỉ có thể sửa lịch hẹn khi đang Chờ xác nhận hoặc Đã xác nhận"><i class="bi bi-pencil"></i></button>`
-                        }
-                        ${isMutable
-                            ? `<button type="button" class="btn-action-icon text-danger btn-delete" title="Hủy lịch hẹn"><i class="bi bi-trash"></i></button>`
-                            : `<button type="button" class="btn-action-icon text-muted opacity-50" disabled title="Không thể hủy lịch hẹn ở trạng thái ${escapeHtml(statusMeta.label)}"><i class="bi bi-trash"></i></button>`
-                        }
-                    </div>
-                `;
-                tdAction.querySelector('.btn-details')?.addEventListener('click', () => openQuickStatusModal(a));
-                tdAction.querySelector('.btn-edit')?.addEventListener('click', () => openEditAppointmentModal(a));
-                tdAction.querySelector('.btn-delete')?.addEventListener('click', async () => {
-                    if (confirm(`Bạn có chắc chắn muốn hủy lịch hẹn của khách hàng "${a.patientName}"?`)) {
-                        try {
-                            await request(`/${a.id}/quick-status`, {
-                                method: 'POST',
-                                body: JSON.stringify({ status: 'CANCELLED', note: 'Lễ tân hủy lịch hẹn trên danh sách' })
-                            });
-                            await load();
-                        } catch (err) {
-                            error(err.message);
-                        }
-                    }
-                });
+                const buttonsHtml = buildActionButtonsHtml(a, isMutable, statusMeta);
+                tdAction.innerHTML = `<div class="dv-actions-cell-always">${buttonsHtml}</div>`;
+                bindActionHandlers(tdAction, a);
                 tr.appendChild(tdAction);
+
+                const tdTrack = document.createElement('td');
+                tdTrack.className = 'dv-floating-actions-track';
+                tdTrack.innerHTML = `<div class="dv-floating-actions-bar">${buttonsHtml}</div>`;
+                bindActionHandlers(tdTrack, a);
+                tr.appendChild(tdTrack);
 
                 rows.appendChild(tr);
             });
@@ -2122,7 +2134,7 @@
                     event.innerHTML = `
                         <span class="cal-session-badge">${badgeInfo.text}</span>
                         <span class="text-truncate fw-medium flex-grow-1">${escapeHtml(a.patientName || a.patientCode)}</span>
-                        <span class="badge ms-1" style="font-size: 9.5px; padding: 1.5px 5px; border-radius: 4px; background: rgba(0,0,0,0.08); font-weight: 600;">${statusMeta.label}</span>
+                        <span class="badge ms-1" style="font-size: 9.5px; padding: 1.5px 5px; border-radius: 4px; background: rgba(0,0,0,0.08); color: inherit; font-weight: 600;">${statusMeta.label}</span>
                     `;
                     event.title = `${a.patientName || a.patientCode} · ${badgeInfo.full} · ${a.doctorName || 'Chưa chỉ định BS'}${a.serviceName ? ' · ' + a.serviceName : ''}`;
                     event.addEventListener('click', () => openQuickStatusModal(a));
