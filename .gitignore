@@ -50,3 +50,4 @@ __pycache__/
 !/docs/UC-08_Specification.docx
 GEMINI.md
 src/main/resources/application.properties
+src/main/resources/seed_full_data.sql

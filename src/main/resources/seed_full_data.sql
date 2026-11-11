@@ -5,20 +5,27 @@
 -- Mật khẩu mọi tài khoản mẫu: Hieu1811
 -- =============================================================================
 
+SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- =============================================================================
 -- 1. CHI NHÁNH, PHÒNG KHÁM, GHẾ NHA, CA LÀM VIỆC, TÀI KHOẢN NGÂN HÀNG & THUẾ
 -- =============================================================================
-INSERT IGNORE INTO branches (branch_code, branch_name, address, phone, email, tax_code, opening_time, closing_time, working_days, is_active, created_at, updated_at) VALUES
-('CN01', 'Cơ sở Quận 1',   '123 Nguyễn Trãi, Quận 1, TP.HCM',    '0901234567', 'cs1@dentalclinic.com', '0311000111', '08:00:00', '20:00:00', '2,3,4,5,6,7,CN', 1, NOW(), NOW()),
-('CN02', 'Cơ sở Đống Đa',  '456 Láng Hạ, Đống Đa, Hà Nội',       '0907654321', 'cs2@dentalclinic.com', '0102000222', '08:00:00', '20:00:00', '2,3,4,5,6,7,CN', 1, NOW(), NOW()),
-('CN03', 'Cơ sở Cầu Giấy', '88 Trần Thái Tông, Cầu Giấy, Hà Nội','0908889999', 'cs3@dentalclinic.com', '0103000333', '08:00:00', '20:00:00', '2,3,4,5,6,7',    1, NOW(), NOW());
+INSERT IGNORE INTO branches (branch_code, branch_name, address, phone, email, tax_code, opening_time, closing_time, working_days, is_active, created_at, updated_at)
+SELECT src.branch_code, src.branch_name, src.address, src.phone, src.email, src.tax_code, src.opening_time, src.closing_time, src.working_days, 1, NOW(), NOW()
+FROM (
+    SELECT 'CN01' AS branch_code, 'Cơ sở Quận 1'  AS branch_name, '123 Nguyễn Trãi, Quận 1, TP.HCM'     AS address, '0901234567' AS phone, 'cs1@dentalclinic.com' AS email, '0311000111' AS tax_code, '08:00:00' AS opening_time, '20:00:00' AS closing_time, '2,3,4,5,6,7,CN' AS working_days UNION ALL
+    SELECT 'CN02',                 'Cơ sở Đống Đa',               '456 Láng Hạ, Đống Đa, Hà Nội',                 '0907654321',          'cs2@dentalclinic.com',          '0102000222',             '08:00:00',                 '20:00:00',                '2,3,4,5,6,7,CN'                UNION ALL
+    SELECT 'CN03',                 'Cơ sở Cầu Giấy',              '88 Trần Thái Tông, Cầu Giấy, Hà Nội',          '0908889999',          'cs3@dentalclinic.com',          '0103000333',             '08:00:00',                 '20:00:00',                '2,3,4,5,6,7'
+) src
+WHERE NOT (
+    src.branch_code = 'CN01'
+    AND EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CS-MAU-01')
+);
 
 INSERT IGNORE INTO rooms (branch_id, room_code, room_name, room_type, status)
 SELECT b.branch_id, r.room_code, r.room_name, r.room_type, 'ACTIVE'
-FROM branches b
-JOIN (
+FROM (
     SELECT 'CN01' AS bcode, 'P101' AS room_code, 'Phòng Khám Tổng quát 1'      AS room_name, 'EXAM'      AS room_type UNION ALL
     SELECT 'CN01',          'P102',              'Phòng Điều trị & Tiểu phẫu',               'TREATMENT'              UNION ALL
     SELECT 'CN01',          'P103',              'Phòng Chỉnh nha & Thẩm mỹ',                'TREATMENT'              UNION ALL
@@ -26,7 +33,8 @@ JOIN (
     SELECT 'CN02',          'P201',              'Phòng Khám Tổng quát Đống Đa',             'EXAM'                   UNION ALL
     SELECT 'CN02',          'P202',              'Phòng Điều trị Đống Đa',                   'TREATMENT'              UNION ALL
     SELECT 'CN03',          'P301',              'Phòng Khám Cầu Giấy',                      'EXAM'
-) r ON b.branch_code = r.bcode;
+) r
+JOIN branches b ON b.branch_code = IF(r.bcode = 'CN01' AND NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', r.bcode);
 
 INSERT IGNORE INTO dental_chairs (branch_id, room_id, chair_code, chair_name, status)
 SELECT b.branch_id, rm.room_id, c.chair_code, c.chair_name, c.status
@@ -38,7 +46,7 @@ FROM (
     SELECT 'CN02',          'P202',          'G202',               'Ghế Điều Trị Đống Đa 02',              'IN_USE'              UNION ALL
     SELECT 'CN03',          'P301',          'G301',               'Ghế Khám Cầu Giấy 01',                 'AVAILABLE'
 ) c
-JOIN branches b ON b.branch_code = c.bcode
+JOIN branches b ON b.branch_code = IF(c.bcode = 'CN01' AND NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', c.bcode)
 JOIN rooms rm ON rm.branch_id = b.branch_id AND rm.room_code = c.rcode;
 
 INSERT IGNORE INTO work_shifts (branch_id, shift_code, shift_name, start_time, end_time, is_active)
@@ -49,15 +57,15 @@ CROSS JOIN (
     SELECT 'CA_CHIEU',               'Ca Chiều (13:30 - 17:30)',               '13:30:00',               '17:30:00'              UNION ALL
     SELECT 'CA_TOI',                 'Ca Tối (17:30 - 20:30)',                 '17:30:00',               '20:30:00'
 ) s
-WHERE b.branch_code IN ('CN01', 'CN02', 'CN03')
-  AND NOT EXISTS (SELECT 1 FROM (SELECT branch_id, shift_code FROM work_shifts) ws WHERE ws.branch_id = b.branch_id AND ws.shift_code = s.shift_code);
+WHERE b.branch_code IN (IF(NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', 'CN01'), 'CN02', 'CN03')
+  AND NOT EXISTS (SELECT 1 FROM (SELECT branch_id, shift_code FROM work_shifts) ws WHERE ws.branch_id = b.branch_id AND ws.shift_code IN (s.shift_code, REPLACE(s.shift_code, 'CA_', '')));
 
 INSERT IGNORE INTO branch_bank_accounts (branch_id, bank_bin, bank_name, bank_short_name, account_number, account_holder_name, is_default, is_active, notes, created_at)
 SELECT b.branch_id, '970436', 'Ngân hàng TMCP Ngoại thương Việt Nam', 'Vietcombank',
-       CASE b.branch_code WHEN 'CN01' THEN '0071001234561' WHEN 'CN02' THEN '0011001234562' ELSE '0021001234563' END,
+       CASE WHEN b.branch_code IN ('CN01', 'CS-MAU-01') THEN '0071001234561' WHEN b.branch_code = 'CN02' THEN '0011001234562' ELSE '0021001234563' END,
        'NHA KHOA CUONG VIET', 1, 1, 'Tài khoản nhận thanh toán QR chi nhánh', NOW()
 FROM branches b
-WHERE b.branch_code IN ('CN01', 'CN02', 'CN03')
+WHERE b.branch_code IN (IF(NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', 'CN01'), 'CN02', 'CN03')
   AND NOT EXISTS (SELECT 1 FROM (SELECT branch_id FROM branch_bank_accounts) ba WHERE ba.branch_id = b.branch_id);
 
 INSERT IGNORE INTO tax_policies (policy_code, policy_name, effective_from, personal_relief, dependent_relief, casual_tax_rate, non_resident_tax_rate, insurance_employee_rate, insurance_employer_rate, legal_reference, is_active, created_at) VALUES
@@ -66,7 +74,7 @@ INSERT IGNORE INTO tax_policies (policy_code, policy_name, effective_from, perso
 INSERT IGNORE INTO branch_tax_configs (branch_id, entity_type, tax_regime, cit_rate, service_tax_rate, medicine_tax_rate, effective_from, legal_reference, notes, created_at)
 SELECT b.branch_id, 'ENTERPRISE', 'CIT_STANDARD', 20.00, 2.00, 0.50, '2026-01-01', 'Thông tư 78/2014/TT-BTC', 'Cấu hình thuế mặc định chi nhánh', NOW()
 FROM branches b
-WHERE b.branch_code IN ('CN01', 'CN02', 'CN03')
+WHERE b.branch_code IN (IF(NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', 'CN01'), 'CN02', 'CN03')
   AND NOT EXISTS (SELECT 1 FROM (SELECT branch_id FROM branch_tax_configs) btc WHERE btc.branch_id = b.branch_id);
 
 -- =============================================================================
@@ -74,14 +82,14 @@ WHERE b.branch_code IN ('CN01', 'CN02', 'CN03')
 -- =============================================================================
 INSERT IGNORE INTO users (username, password, email, phone_number, branch_id, user_type, status, is_active, custom_permissions_enabled, created_date) VALUES
 ('admin',     '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'admin@dentalclinic.com',    '0988888888', NULL, 'STAFF', 'ACTIVE', 1, 0, NOW()),
-('bs_hoang',  '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bs.hoang@dentalclinic.com', '0901000101', (SELECT branch_id FROM branches WHERE branch_code = 'CN01' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW()),
+('bs_hoang',  '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bs.hoang@dentalclinic.com', '0901000101', (SELECT branch_id FROM branches WHERE branch_code IN ('CN01', 'CS-MAU-01') ORDER BY (branch_code = 'CN01') DESC LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW()),
 ('bs_huong',  '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bs.huong@dentalclinic.com', '0901000102', (SELECT branch_id FROM branches WHERE branch_code = 'CN02' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW()),
-('letan_01',  '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'letan01@dentalclinic.com',  '0901000201', (SELECT branch_id FROM branches WHERE branch_code = 'CN01' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW()),
-('ketoan_01', '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'ketoan01@dentalclinic.com', '0901000301', (SELECT branch_id FROM branches WHERE branch_code = 'CN01' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW()),
+('letan_01',  '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'letan01@dentalclinic.com',  '0901000201', (SELECT branch_id FROM branches WHERE branch_code IN ('CN01', 'CS-MAU-01') ORDER BY (branch_code = 'CN01') DESC LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW()),
+('ketoan_01', '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'ketoan01@dentalclinic.com', '0901000301', (SELECT branch_id FROM branches WHERE branch_code IN ('CN01', 'CS-MAU-01') ORDER BY (branch_code = 'CN01') DESC LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW()),
 ('kho_01',    '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'kho01@dentalclinic.com',    '0901000401', (SELECT branch_id FROM branches WHERE branch_code = 'CN02' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW()),
-('bn_bao',    '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bao.pham@gmail.com',        '0916040604', (SELECT branch_id FROM branches WHERE branch_code = 'CN01' LIMIT 1), 'PATIENT', 'ACTIVE', 1, 0, NOW()),
-('bn_thao',   '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'thao.le@gmail.com',         '0916050605', (SELECT branch_id FROM branches WHERE branch_code = 'CN02' LIMIT 1), 'PATIENT', 'ACTIVE', 1, 0, NOW()),
-('bn_minh',   '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'minh.tran@gmail.com',       '0916060606', (SELECT branch_id FROM branches WHERE branch_code = 'CN02' LIMIT 1), 'PATIENT', 'ACTIVE', 1, 0, NOW());
+('bn_bao',    '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bao.pham@gmail.com',        '0918000101', (SELECT branch_id FROM branches WHERE branch_code IN ('CN01', 'CS-MAU-01') ORDER BY (branch_code = 'CN01') DESC LIMIT 1), 'PATIENT', 'ACTIVE', 1, 0, NOW()),
+('bn_thao',   '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'thao.le@gmail.com',         '0918000102', (SELECT branch_id FROM branches WHERE branch_code = 'CN02' LIMIT 1), 'PATIENT', 'ACTIVE', 1, 0, NOW()),
+('bn_minh',   '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'minh.tran@gmail.com',       '0918000103', (SELECT branch_id FROM branches WHERE branch_code = 'CN02' LIMIT 1), 'PATIENT', 'ACTIVE', 1, 0, NOW());
 
 -- Gán user_roles tra cứu động theo role_name (không tạo hay sửa bảng roles)
 INSERT IGNORE INTO user_roles (user_id, role_id)
@@ -121,7 +129,7 @@ FROM (
     SELECT 'KHO-SEED-01',          'CN02',          'QUAN_LY_KHO'
 ) a
 JOIN staff_profiles sp ON sp.staff_code = a.scode
-JOIN branches b ON b.branch_code = a.bcode
+JOIN branches b ON b.branch_code = IF(a.bcode = 'CN01' AND NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', a.bcode)
 JOIN roles r ON UPPER(r.role_name) = a.rname
 WHERE NOT EXISTS (
     SELECT 1 FROM (SELECT staff_id, branch_id, role_id FROM staff_branch_assignments) sba
@@ -133,7 +141,10 @@ SELECT sp.staff_id, b.branch_id, ws.shift_id, CURDATE(), 'SCHEDULED', 'Ca làm v
 FROM staff_branch_assignments sba
 JOIN staff_profiles sp ON sp.staff_id = sba.staff_id
 JOIN branches b ON b.branch_id = sba.branch_id
-JOIN work_shifts ws ON ws.branch_id = b.branch_id AND ws.shift_code = 'CA_SANG'
+JOIN work_shifts ws ON ws.shift_id = (
+    SELECT MIN(w2.shift_id) FROM (SELECT shift_id, branch_id, shift_code FROM work_shifts) w2
+    WHERE w2.branch_id = b.branch_id AND w2.shift_code IN ('CA_SANG', 'SANG')
+)
 WHERE sba.status = 'ACTIVE'
   AND NOT EXISTS (SELECT 1 FROM (SELECT staff_id, branch_id, work_date FROM staff_schedules) ss WHERE ss.staff_id = sp.staff_id AND ss.branch_id = b.branch_id AND ss.work_date = CURDATE());
 
@@ -152,10 +163,13 @@ INSERT IGNORE INTO leave_requests (staff_id, branch_id, shift_id, leave_type, is
 SELECT sp.staff_id, b.branch_id, ws.shift_id, 'ANNUAL', 0, DATE_ADD(CURDATE(), INTERVAL 3 DAY), DATE_ADD(CURDATE(), INTERVAL 3 DAY),
        'Tham dự hội thảo chuyên môn Răng Hàm Mặt', 'PENDING', NOW()
 FROM staff_profiles sp
-JOIN branches b ON b.branch_code = 'CN01'
-JOIN work_shifts ws ON ws.branch_id = b.branch_id AND ws.shift_code = 'CA_CHIEU'
+JOIN branches b ON b.branch_code = IF(NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', 'CN01')
+JOIN work_shifts ws ON ws.shift_id = (
+    SELECT MIN(w2.shift_id) FROM (SELECT shift_id, branch_id, shift_code FROM work_shifts) w2
+    WHERE w2.branch_id = b.branch_id AND w2.shift_code IN ('CA_CHIEU', 'CHIEU')
+)
 WHERE sp.staff_code = 'BS-SEED-01'
-  AND NOT EXISTS (SELECT 1 FROM (SELECT staff_id, start_date FROM leave_requests) lr WHERE lr.staff_id = sp.staff_id AND lr.start_date = DATE_ADD(CURDATE(), INTERVAL 3 DAY));
+  AND NOT EXISTS (SELECT 1 FROM (SELECT staff_id, reason FROM leave_requests) lr WHERE lr.staff_id = sp.staff_id AND lr.reason = 'Tham dự hội thảo chuyên môn Răng Hàm Mặt');
 
 -- =============================================================================
 -- 3. DANH MỤC DỊCH VỤ, ICD-10, HẠNG THẺ, KHUYẾN MÃI, NHÀ CUNG CẤP, VẬT TƯ & THUỐC
@@ -234,7 +248,7 @@ FROM (
     SELECT 'bn_minh',          'BN-SEED-03',                  'Trần Đức Minh',        '1988-03-19',        'Nam',           '12 Nguyễn Chí Thanh, Đống Đa, Hà Nội',              0,            'Không',                               'CN02',          'GOLD',              1000000.00,        'Giới thiệu'
 ) p
 JOIN users u ON u.username = p.uname
-JOIN branches b ON b.branch_code = p.bcode
+JOIN branches b ON b.branch_code = IF(p.bcode = 'CN01' AND NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', p.bcode)
 LEFT JOIN membership_tiers mt ON mt.tier_code = p.tcode;
 
 INSERT IGNORE INTO patient_loyalty_wallets (profile_id, current_points, total_spent_amount, last_updated)
@@ -256,7 +270,7 @@ SELECT pp.profile_id, 'CONSENT_FORM', 'Phiếu cam kết tiểu phẫu nhổ ră
        (SELECT user_id FROM users WHERE username = 'letan_01' LIMIT 1), NOW()
 FROM patient_profiles pp
 WHERE pp.patient_code = 'BN-SEED-01'
-  AND NOT EXISTS (SELECT 1 FROM (SELECT profile_id FROM patient_documents) pd WHERE pd.profile_id = pp.profile_id);
+  AND NOT EXISTS (SELECT 1 FROM (SELECT profile_id, document_name FROM patient_documents) pd WHERE pd.profile_id = pp.profile_id AND pd.document_name = 'Phiếu cam kết tiểu phẫu nhổ răng khôn');
 
 -- =============================================================================
 -- 5. LỊCH HẸN, LƯỢT KHÁM, HÀNG CHỜ GỌI SỐ, BỆNH ÁN, ĐƠN THUỐC, LABO & X-QUANG
@@ -269,11 +283,11 @@ CROSS JOIN (
     SELECT 'AFTERNOON',         '13:30:00',       '17:30:00'       UNION ALL
     SELECT 'EVENING',           '17:30:00',       '20:00:00'
 ) w
-WHERE b.branch_code IN ('CN01', 'CN02', 'CN03');
+WHERE b.branch_code IN (IF(NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', 'CN01'), 'CN02', 'CN03');
 
 INSERT IGNORE INTO appointment_session_policies (branch_id, appointment_date, preferred_session, branch_capacity, doctor_capacity)
 SELECT b.branch_id, CURDATE(), 'MORNING', 20, 8
-FROM branches b WHERE b.branch_code IN ('CN01', 'CN02');
+FROM branches b WHERE b.branch_code IN (IF(NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', 'CN01'), 'CN02');
 
 INSERT IGNORE INTO appointments (appointment_code, profile_id, branch_id, doctor_id, service_id, appointment_date, preferred_session, expected_time, duration_minutes, initial_symptoms, source, status, reschedule_count, created_at)
 SELECT a.code, pp.profile_id, b.branch_id, sp.staff_id, sv.service_id, a.adate, a.sess, a.etime, 30, a.symp, 'ONLINE', a.st, 0, NOW()
@@ -284,7 +298,7 @@ FROM (
     SELECT 'LH-SEED-04',         'BN-SEED-01',          'CN01',          'BS-SEED-01',          'DV-KHAM-TQ',            DATE_ADD(CURDATE(), INTERVAL 1 DAY),          'MORNING',           '09:30:00',          'Tái khám cắt chỉ sau nhổ răng',                'CONFIRMED'
 ) a
 JOIN patient_profiles pp ON pp.patient_code = a.pcode
-JOIN branches b ON b.branch_code = a.bcode
+JOIN branches b ON b.branch_code = IF(a.bcode = 'CN01' AND NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', a.bcode)
 JOIN staff_profiles sp ON sp.staff_code = a.dcode
 JOIN services sv ON sv.service_code = a.scode;
 
@@ -303,7 +317,7 @@ FROM (
     SELECT 'VIS-SEED-04',          'BN-SEED-01',          'CN01',          NULL,                  'WALK_IN',              NOW() - INTERVAL 15 MINUTE,            'Kiểm tra phim X-quang răng hàm dưới',     'BS-SEED-01',          'P101',          'G01',           'WAITING_RESULT',        NULL,                                  'Đang chờ kết quả X-quang'
 ) v
 JOIN patient_profiles pp ON pp.patient_code = v.pcode
-JOIN branches b ON b.branch_code = v.bcode
+JOIN branches b ON b.branch_code = IF(v.bcode = 'CN01' AND NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', v.bcode)
 LEFT JOIN appointments ap ON ap.appointment_code = v.acode
 JOIN staff_profiles sp ON sp.staff_code = v.dcode
 LEFT JOIN rooms rm ON rm.branch_id = b.branch_id AND rm.room_code = v.rcode
@@ -343,7 +357,7 @@ INSERT IGNORE INTO treatment_plans (plan_code, profile_id, branch_id, doctor_id,
 SELECT 'KH-SEED-01', pp.profile_id, b.branch_id, sp.staff_id,
        'Phác đồ nhổ răng khôn R48 & phục hình sứ Zirconia', 7000000.00, 7000000.00, 'IN_PROGRESS', CURDATE(), DATE_ADD(CURDATE(), INTERVAL 14 DAY), 'Điều trị 2 giai đoạn', 1, NOW()
 FROM patient_profiles pp
-JOIN branches b ON b.branch_code = 'CN01'
+JOIN branches b ON b.branch_code = IF(NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', 'CN01')
 JOIN staff_profiles sp ON sp.staff_code = 'BS-SEED-01'
 WHERE pp.patient_code = 'BN-SEED-01';
 
@@ -377,15 +391,17 @@ INSERT IGNORE INTO paraclinical_order_items (order_id, service_id, tooth_numbers
 SELECT po.order_id, sv.service_id, '48', 'WAITING', 'XQ-SEED-001'
 FROM paraclinical_orders po
 JOIN services sv ON sv.service_code = 'DV-XQ-QUANH'
-WHERE po.order_code = 'CLS-SEED-01';
+WHERE po.order_code = 'CLS-SEED-01'
+  AND NOT EXISTS (SELECT 1 FROM (SELECT order_id, service_id FROM paraclinical_order_items) poi WHERE poi.order_id = po.order_id AND poi.service_id = sv.service_id);
 
 INSERT IGNORE INTO nanopix_xray_sync_logs (external_study_uid, external_patient_id, raw_patient_name, image_url, sync_status, matched_profile_id, matched_visit_id, branch_id, matched_item_id, tooth_numbers, is_manual_linked, captured_at, notes, sync_time)
 SELECT 'STUDY-NANOPIX-SEED-001', 'BN-SEED-01', 'Pham Quoc Bao', '/uploads/nanopix/sample-xray.png', 'MATCHED',
        v.profile_id, v.visit_id, v.branch_id, poi.order_item_id, '48', 1, NOW(), 'Ảnh phim X-quang quanh chóp R48 rõ nét', NOW()
 FROM visits v
-JOIN paraclinical_orders po ON po.visit_id = v.visit_id
-JOIN paraclinical_order_items poi ON poi.order_id = po.order_id
-WHERE v.visit_code = 'VIS-SEED-04';
+JOIN paraclinical_orders po ON po.visit_id = v.visit_id AND po.order_code = 'CLS-SEED-01'
+JOIN paraclinical_order_items poi ON poi.order_id = po.order_id AND poi.external_ref_id = 'XQ-SEED-001'
+WHERE v.visit_code = 'VIS-SEED-04'
+LIMIT 1;
 
 INSERT IGNORE INTO prescriptions (prescription_code, visit_id, profile_id, branch_id, doctor_id, diagnosis_text, advice_notes, followup_date, status, created_at)
 SELECT 'TOA-SEED-01', v.visit_id, v.profile_id, v.branch_id, v.primary_doctor_id,
@@ -409,7 +425,7 @@ INSERT IGNORE INTO clinical_workflow_templates (template_code, template_name, de
 SELECT 'QT-NHO-RKHON', 'Quy trình tiểu phẫu nhổ răng khôn mọc lệch', 'Quy trình chuẩn 3 bước theo phác đồ Bộ Y tế', sv.service_id, b.branch_id, 'ACTIVE',
        (SELECT user_id FROM users WHERE username = 'admin' LIMIT 1), NOW()
 FROM services sv
-JOIN branches b ON b.branch_code = 'CN01'
+JOIN branches b ON b.branch_code = IF(NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', 'CN01')
 WHERE sv.service_code = 'DV-NHO-RKHON';
 
 INSERT IGNORE INTO clinical_workflow_versions (template_id, version_number, status, flow_mode, effective_from, change_summary, created_by, created_at, published_at)
@@ -447,7 +463,7 @@ FROM (
     SELECT 'CN02',          'VT-TH-GANG',            'LO-GANG-2026-01',          DATE_ADD(CURDATE(), INTERVAL 540 DAY),        50.000,        110000.00,          'NCC-3M'                 UNION ALL
     SELECT 'CN01',          'VT-COMP-Z350',          'LO-COMP-CN1-01',           DATE_ADD(CURDATE(), INTERVAL 365 DAY),        18.000,        450000.00,          'NCC-3M'
 ) mb
-JOIN branches b ON b.branch_code = mb.bcode
+JOIN branches b ON b.branch_code = IF(mb.bcode = 'CN01' AND NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', mb.bcode)
 JOIN materials m ON m.material_code = mb.mcode
 JOIN suppliers s ON s.supplier_code = mb.scode;
 
@@ -480,7 +496,7 @@ INSERT IGNORE INTO stock_issue_items (issue_id, material_id, batch_id, quantity,
 SELECT si.issue_id, m.material_id, mb.batch_id, 2.000, 'Xuất dùng hàng ngày tại ghế khám'
 FROM stock_issues si
 JOIN materials m ON m.material_code = 'VT-TH-GANG'
-JOIN material_batches mb ON mb.branch_id = si.branch_id AND mb.material_id = m.material_id
+JOIN material_batches mb ON mb.branch_id = si.branch_id AND mb.material_id = m.material_id AND mb.batch_number = 'LO-GANG-2026-01'
 WHERE si.issue_code = 'PX-SEED-001'
   AND NOT EXISTS (SELECT 1 FROM (SELECT issue_id, material_id FROM stock_issue_items) sii WHERE sii.issue_id = si.issue_id AND sii.material_id = m.material_id);
 
@@ -503,7 +519,8 @@ SELECT 'SERVICE', inv.invoice_id, ps.performed_id, ps.service_id, 'Tiểu phẫu
 FROM invoices inv
 JOIN performed_services ps ON ps.visit_id = inv.visit_id
 WHERE inv.invoice_code = 'HD-SEED-001'
-  AND NOT EXISTS (SELECT 1 FROM (SELECT invoice_id FROM invoice_items) ii WHERE ii.invoice_id = inv.invoice_id);
+  AND NOT EXISTS (SELECT 1 FROM (SELECT invoice_id FROM invoice_items) ii WHERE ii.invoice_id = inv.invoice_id)
+LIMIT 1;
 
 INSERT IGNORE INTO payments (payment_code, invoice_id, profile_id, branch_id, payment_type, payment_method, amount, transaction_ref, idempotency_key, notes, cashier_id, paid_at)
 SELECT 'PT-SEED-001', inv.invoice_id, inv.profile_id, inv.branch_id, 'PAYMENT', 'BANK_TRANSFER', 1500000.00, 'FT261110001', 'IDEMP-PT-SEED-001',
@@ -515,7 +532,8 @@ SELECT p.payment_id, ii.item_id, p.invoice_id, 1500000.00, 'SERVICE', ii.item_na
 FROM payments p
 JOIN invoice_items ii ON ii.invoice_id = p.invoice_id
 WHERE p.payment_code = 'PT-SEED-001'
-  AND NOT EXISTS (SELECT 1 FROM (SELECT payment_id FROM payment_allocations) pa WHERE pa.payment_id = p.payment_id);
+  AND NOT EXISTS (SELECT 1 FROM (SELECT payment_id FROM payment_allocations) pa WHERE pa.payment_id = p.payment_id)
+LIMIT 1;
 
 INSERT IGNORE INTO operating_expenses (expense_code, branch_id, category, amount, expense_date, recipient_name, payment_method, source_type, description, is_cancelled, created_by, created_at)
 SELECT 'PC-VH-SEED-01', b.branch_id, 'Điện nước & Mặt bằng', 12000000.00, CURDATE(), 'Ban quản lý tòa nhà Láng Hạ', 'BANK_TRANSFER', 'MANUAL', 'Thanh toán tiền điện, nước & thuê mặt bằng tháng hiện tại', 0,
@@ -536,10 +554,10 @@ JOIN visits v ON v.visit_id = ps.visit_id
 WHERE v.visit_code = 'VIS-SEED-01'
   AND NOT EXISTS (SELECT 1 FROM (SELECT performed_id FROM service_commissions) sc WHERE sc.performed_id = ps.performed_id);
 
-INSERT IGNORE INTO payroll_periods (period_name, branch_id, month, year, total_salary, total_base_salary, total_allowance, total_bonus, total_commission, total_deduction, total_advance_allocated, total_remaining_payable, total_gross_salary, total_insurance_employee, total_insurance_employer, total_pit_amount, status, created_at)
-SELECT CONCAT('Bảng lương T', MONTH(CURDATE()), '/', YEAR(CURDATE()), ' - CN01'), b.branch_id, MONTH(CURDATE()), YEAR(CURDATE()),
-       25000000.00, 25000000.00, 3000000.00, 0.00, 375000.00, 0.00, 0.00, 28375000.00, 28375000.00, 1890000.00, 3870000.00, 0.00, 'DRAFT', NOW()
-FROM branches b WHERE b.branch_code = 'CN01'
+INSERT IGNORE INTO payroll_periods (period_name, branch_id, month, year, total_salary, total_base_salary, total_allowance, total_bonus, total_commission, total_deduction, total_advance_allocated, total_remaining_payable, total_gross_salary, total_insurance_employee, total_insurance_employer, total_pit_amount, status, created_at, updated_at)
+SELECT CONCAT('Bảng lương T', MONTH(CURDATE()), '/', YEAR(CURDATE()), ' - ', b.branch_code), b.branch_id, MONTH(CURDATE()), YEAR(CURDATE()),
+       25000000.00, 25000000.00, 3000000.00, 0.00, 375000.00, 0.00, 0.00, 28375000.00, 28375000.00, 1890000.00, 3870000.00, 0.00, 'DRAFT', NOW(), NOW()
+FROM branches b WHERE b.branch_code = IF(NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', 'CN01')
   AND NOT EXISTS (SELECT 1 FROM (SELECT branch_id, month, year FROM payroll_periods) pp WHERE pp.branch_id = b.branch_id AND pp.month = MONTH(CURDATE()) AND pp.year = YEAR(CURDATE()));
 
 INSERT IGNORE INTO payroll_items (period_id, staff_id, period_month, period_year, base_salary, actual_work_days, actual_base_salary, total_allowance, bonus_amount, total_commission, gross_salary, non_taxable_income, insurance_employee_deduction, insurance_employer_amount, personal_deduction_amount, dependent_deduction_amount, taxable_income, assessable_income, pit_amount, deduction_amount, net_salary, advance_allocated_amount, remaining_payable, payment_status)
@@ -547,7 +565,7 @@ SELECT pp.period_id, sp.staff_id, pp.month, pp.year, sp.base_salary, 22.00, sp.b
        sp.base_salary + sp.allowance_amount + 375000.00, 0.00, 1890000.00, 3870000.00, 11000000.00, 0.00, 0.00, 0.00, 0.00, 1890000.00,
        sp.base_salary + sp.allowance_amount + 375000.00 - 1890000.00, 0.00, sp.base_salary + sp.allowance_amount + 375000.00 - 1890000.00, 'UNPAID'
 FROM payroll_periods pp
-JOIN branches b ON b.branch_id = pp.branch_id AND b.branch_code = 'CN01'
+JOIN branches b ON b.branch_id = pp.branch_id AND b.branch_code = IF(NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', 'CN01')
 JOIN staff_profiles sp ON sp.staff_code = 'BS-SEED-01'
 WHERE pp.month = MONTH(CURDATE()) AND pp.year = YEAR(CURDATE())
   AND NOT EXISTS (SELECT 1 FROM (SELECT period_id, staff_id FROM payroll_items) pi WHERE pi.period_id = pp.period_id AND pi.staff_id = sp.staff_id);
@@ -556,13 +574,13 @@ INSERT IGNORE INTO salary_advances (advance_code, staff_id, branch_id, amount, r
 SELECT 'TU-SEED-001', sp.staff_id, b.branch_id, 2000000.00, 'Tạm ứng lương giữa tháng', 'BANK_TRANSFER', 'PENDING', 0.00, 2000000.00,
        (SELECT user_id FROM users WHERE username = 'letan_01' LIMIT 1), 'Đơn tạm ứng chờ duyệt', NOW()
 FROM staff_profiles sp
-JOIN branches b ON b.branch_code = 'CN01'
+JOIN branches b ON b.branch_code = IF(NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', 'CN01')
 WHERE sp.staff_code = 'LT-SEED-01';
 
 INSERT IGNORE INTO owner_distributions (distribution_code, branch_id, month, year, distributable_amount, retained_amount, total_distributed_amount, basis_notes, status, submitted_by, submitted_at, created_at)
 SELECT 'PCLN-SEED-01', b.branch_id, MONTH(CURDATE()), YEAR(CURDATE()), 100000000.00, 20000000.00, 80000000.00, 'Phân bổ lợi nhuận định kỳ quý', 'SUBMITTED',
        (SELECT staff_id FROM staff_profiles WHERE staff_code = 'KT-SEED-01' LIMIT 1), NOW(), NOW()
-FROM branches b WHERE b.branch_code = 'CN01';
+FROM branches b WHERE b.branch_code = IF(NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', 'CN01');
 
 INSERT IGNORE INTO owner_distribution_items (distribution_id, recipient_staff_id, percentage, amount, note)
 SELECT od.distribution_id, sp.staff_id, 100.00, 80000000.00, 'Cổ đông sáng lập'
@@ -590,7 +608,7 @@ SELECT 'Hướng dẫn chăm sóc răng miệng đúng cách sau khi nhổ răng
        'Những lưu ý quan trọng trong 48 giờ đầu giúp vết thương mau lành, tránh viêm ổ răng khô.',
        '<p>Sau tiểu phẫu nhổ răng khôn, bệnh nhân cần cắn chặt gạc vô trùng trong 45 phút, chườm lạnh ngoài má và ăn thức ăn mềm nguội trong 2 ngày đầu.</p>',
        'PUBLISHED', (SELECT user_id FROM users WHERE username = 'admin' LIMIT 1), b.branch_id, NOW(), NOW()
-FROM branches b WHERE b.branch_code = 'CN01';
+FROM branches b WHERE b.branch_code = IF(NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', 'CN01');
 
 INSERT IGNORE INTO comments (news_id, user_id, content, status, created_at)
 SELECT na.news_id, (SELECT user_id FROM users WHERE username = 'bn_bao' LIMIT 1), 'Bài viết rất hữu ích, cảm ơn bác sĩ đã hướng dẫn tận tình!', 'ACTIVE', NOW()
@@ -617,12 +635,12 @@ FROM visits v WHERE v.visit_code = 'VIS-SEED-01';
 INSERT IGNORE INTO system_notifications (user_id, title, message, notification_type, is_read, created_at)
 SELECT u.user_id, 'Chào mừng đến với CV-DCMS', 'Hệ thống đã sẵn sàng dữ liệu mẫu cho toàn bộ phân hệ nghiệp vụ.', 'SYSTEM', 0, NOW()
 FROM users u WHERE u.username = 'admin'
-  AND NOT EXISTS (SELECT 1 FROM (SELECT user_id, notification_type FROM system_notifications) sn WHERE sn.user_id = u.user_id AND sn.notification_type = 'SYSTEM');
+  AND NOT EXISTS (SELECT 1 FROM (SELECT user_id, notification_type, title FROM system_notifications) sn WHERE sn.user_id = u.user_id AND sn.notification_type = 'SYSTEM' AND sn.title = 'Chào mừng đến với CV-DCMS');
 
 INSERT IGNORE INTO system_audit_logs (user_id, branch_id, action, entity_table, entity_id, new_values_json, ip_address, created_at)
 SELECT u.user_id, b.branch_id, 'SEED_INIT', 'branches', b.branch_id, '{"note":"Khởi tạo dữ liệu mẫu toàn hệ thống"}', '127.0.0.1', NOW()
 FROM users u
-JOIN branches b ON b.branch_code = 'CN01'
+JOIN branches b ON b.branch_code = IF(NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', 'CN01')
 WHERE u.username = 'admin'
   AND NOT EXISTS (SELECT 1 FROM (SELECT action FROM system_audit_logs) sal WHERE sal.action = 'SEED_INIT');
 
@@ -700,7 +718,7 @@ SELECT ps.visit_id, ps.performed_id, ps.branch_id, m.material_id, mb.batch_id, 1
 FROM performed_services ps
 JOIN visits v ON v.visit_id = ps.visit_id AND v.visit_code = 'VIS-SEED-01'
 JOIN materials m ON m.material_code = 'VT-COMP-Z350'
-JOIN material_batches mb ON mb.branch_id = ps.branch_id AND mb.material_id = m.material_id
+JOIN material_batches mb ON mb.branch_id = ps.branch_id AND mb.material_id = m.material_id AND mb.batch_number = 'LO-COMP-CN1-01'
 WHERE NOT EXISTS (SELECT 1 FROM (SELECT performed_id, material_id FROM material_consumptions) mc WHERE mc.performed_id = ps.performed_id AND mc.material_id = m.material_id);
 
 INSERT IGNORE INTO doctor_cover_grants (visit_id, covering_doctor_id, granted_by_user_id, reason, granted_at, expires_at)
@@ -712,23 +730,23 @@ WHERE v.visit_code = 'VIS-SEED-02'
   AND NOT EXISTS (SELECT 1 FROM (SELECT visit_id, covering_doctor_id FROM doctor_cover_grants) dcg WHERE dcg.visit_id = v.visit_id AND dcg.covering_doctor_id = sp.staff_id);
 
 INSERT IGNORE INTO point_transactions (profile_id, invoice_id, payment_id, transaction_type, points, balance_after, reason, created_at)
-SELECT p.profile_id, p.invoice_id, p.payment_id, 'EARN', 150, 270, 'Tích điểm từ thanh toán hóa đơn HD-SEED-01', NOW()
-FROM payments p WHERE p.payment_code = 'PT-SEED-01'
+SELECT p.profile_id, p.invoice_id, p.payment_id, 'EARN', 150, 270, 'Tích điểm từ thanh toán hóa đơn HD-SEED-001', NOW()
+FROM payments p WHERE p.payment_code = 'PT-SEED-001'
   AND NOT EXISTS (SELECT 1 FROM (SELECT payment_id FROM point_transactions) pt WHERE pt.payment_id = p.payment_id);
 
 INSERT IGNORE INTO refunds (refund_code, idempotency_key, invoice_id, profile_id, branch_id, amount, refund_method, reason, reduce_invoice_total, refunded_by, refunded_at)
 SELECT 'HT-SEED-001', 'IDEMP-HT-SEED-001', inv.invoice_id, inv.profile_id, inv.branch_id, 100000.00, 'CASH',
        'Hoàn tiền chênh lệch chi phí vật tư phụ', 0, inv.cashier_id, NOW()
-FROM invoices inv WHERE inv.invoice_code = 'HD-SEED-01';
+FROM invoices inv WHERE inv.invoice_code = 'HD-SEED-001';
 
 INSERT IGNORE INTO invoice_audit_logs (invoice_id, action_type, old_total_amount, new_total_amount, old_discount_amount, new_discount_amount, old_paid_amount, new_paid_amount, reason, details, performed_by, performed_at)
 SELECT inv.invoice_id, 'PAYMENT', 2500000.00, 2500000.00, 0.00, 0.00, 0.00, 1500000.00,
        'Ghi nhận thanh toán đợt 1', 'Thu qua chuyển khoản PT-SEED-001', inv.cashier_id, NOW()
-FROM invoices inv WHERE inv.invoice_code = 'HD-SEED-01'
+FROM invoices inv WHERE inv.invoice_code = 'HD-SEED-001'
   AND NOT EXISTS (SELECT 1 FROM (SELECT invoice_id, action_type FROM invoice_audit_logs) ial WHERE ial.invoice_id = inv.invoice_id AND ial.action_type = 'PAYMENT');
 
-INSERT IGNORE INTO salary_advance_allocations (advance_id, item_id, allocated_amount, status, created_at)
-SELECT sa.advance_id, pi.item_id, 500000.00, 'RESERVED', NOW()
+INSERT IGNORE INTO salary_advance_allocations (advance_id, item_id, allocated_amount, status, created_at, updated_at)
+SELECT sa.advance_id, pi.item_id, 500000.00, 'RESERVED', NOW(), NOW()
 FROM salary_advances sa
 JOIN payroll_items pi ON pi.period_month = MONTH(CURDATE()) AND pi.period_year = YEAR(CURDATE())
 WHERE sa.advance_code = 'TU-SEED-001'
