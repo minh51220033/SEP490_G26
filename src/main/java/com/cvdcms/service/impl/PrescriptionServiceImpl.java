@@ -28,6 +28,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     private final MedicationRepository medicationRepository;
     private final VisitRepository visitRepository;
     private final StaffProfileRepository staffProfileRepository;
+    private final PatientProfileRepository patientProfileRepository;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -59,29 +60,39 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     @Override
     @Transactional
     public PrescriptionResponseDTO createPrescription(PrescriptionRequestDTO request) {
-        if (request.getVisitId() == null) {
-            throw new IllegalArgumentException("Mã ca khám (visitId) không được để trống!");
+        Visit visit = null;
+        if (request.getVisitId() != null) {
+            visit = visitRepository.findById(request.getVisitId()).orElse(null);
+        }
+        if (visit == null && request.getPatientId() != null) {
+            visit = visitRepository.findFirstByPatientProfile_ProfileIdOrderByCheckInAtDesc(request.getPatientId()).orElse(null);
+        }
+        if (visit == null && request.getPatientId() == null) {
+            throw new IllegalArgumentException("Không tìm thấy ca khám hoặc hồ sơ bệnh nhân để kê đơn thuốc!");
         }
 
-        Visit visit = visitRepository.findById(request.getVisitId())
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám ID: " + request.getVisitId()));
-
-        // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi chuyển thanh toán hoặc hoàn tất
-        if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
+        // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi chuyển thanh toán hoặc hoàn tất (áp dụng khi kê trực tiếp trong ca khám)
+        if (visit != null && request.getPatientId() == null
+                && (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED)) {
             throw new IllegalStateException("Bệnh án lâm sàng đã hoàn tất và khóa bất biến (BR-EMR-02). Không thể tạo đơn thuốc mới.");
         }
 
-        PatientProfile patient = visit.getPatientProfile();
+        PatientProfile patient = (visit != null && visit.getPatientProfile() != null)
+                ? visit.getPatientProfile()
+                : (request.getPatientId() != null ? patientProfileRepository.findById(request.getPatientId()).orElse(null) : null);
         if (patient == null) {
-            throw new IllegalArgumentException("Ca khám chưa liên kết với hồ sơ bệnh nhân!");
+            throw new IllegalArgumentException("Không tìm thấy hồ sơ bệnh nhân!");
         }
 
         StaffProfile doctor = null;
         if (request.getDoctorId() != null) {
             doctor = staffProfileRepository.findById(request.getDoctorId()).orElse(null);
         }
-        if (doctor == null) {
+        if (doctor == null && visit != null) {
             doctor = visit.getPrimaryDoctor();
+        }
+        if (doctor == null) {
+            doctor = staffProfileRepository.findAll().stream().findFirst().orElse(null);
         }
         if (doctor == null) {
             throw new IllegalArgumentException("Vui lòng chọn bác sĩ kê đơn!");
@@ -91,7 +102,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         prescription.setPrescriptionCode("DT" + (System.currentTimeMillis() % 10000000));
         prescription.setVisit(visit);
         prescription.setPatientProfile(patient);
-        prescription.setBranch(visit.getBranch());
+        prescription.setBranch(visit != null && visit.getBranch() != null ? visit.getBranch() : patient.getPreferredBranch());
         prescription.setDoctor(doctor);
         prescription.setDiagnosisText(
                 (request.getDiagnosisText() != null && !request.getDiagnosisText().trim().isEmpty())

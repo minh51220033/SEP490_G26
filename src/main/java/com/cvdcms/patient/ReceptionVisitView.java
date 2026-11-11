@@ -18,4 +18,12 @@ public record ReceptionVisitView(Long id, String code, LocalDateTime checkInAt,
                 visit.getStatus() != null ? visit.getStatus().name() : null,
                 visit.getInitialSymptoms(), visit.getNotes());
     }
+
+    public Long getVisitId() {
+        return id;
+    }
+
+    public String getVisitCode() {
+        return code;
+    }
 }
