@@ -490,42 +490,40 @@ public interface UserRepository extends JpaRepository<User, Long> {
             @Param("branchId") Long branchId);
 
     @Query(value = """
-            SELECT EXISTS (
-                SELECT 1
-                FROM users u
-                JOIN user_roles ur ON ur.user_id = u.user_id
-                JOIN roles r ON r.role_id = ur.role_id
-                JOIN role_permissions rp ON rp.role_id = r.role_id
-                JOIN permissions p ON p.permission_id = rp.permission_id
-                JOIN branches b ON b.branch_id = :branchId
-                LEFT JOIN user_permissions up
-                       ON up.user_id = u.user_id AND up.permission_id = p.permission_id
-                LEFT JOIN staff_profiles sp ON sp.user_id = u.user_id
-                LEFT JOIN staff_branch_assignments sba
-                       ON sba.staff_id = sp.staff_id
-                      AND sba.branch_id = :branchId
-                      AND UPPER(sba.status) = 'ACTIVE'
-                      AND (sba.start_date IS NULL OR sba.start_date <= CURDATE())
-                      AND (sba.end_date IS NULL OR sba.end_date >= CURDATE())
-                WHERE u.user_id = :userId
-                  AND u.is_active = 1
-                  AND UPPER(u.status) = 'ACTIVE'
-                  AND r.is_active = 1
-                  AND b.is_active = 1
-                  AND (
-                      UPPER(COALESCE(p.module, '')) = 'INVENTORY'
-                      OR UPPER(COALESCE(p.permission_code, '')) IN (
-                          'INVENTORY_VIEW', 'INVENTORY_MANAGE', 'SUPPLIER_MANAGE',
-                          'INVENTORY_STOCK', 'INVENTORY_BATCHES', 'INVENTORY_RECEIPT',
-                          'INVENTORY_ISSUE', 'INVENTORY_TRANSFER', 'INVENTORY_MATERIALS',
-                          'INVENTORY_CATEGORIES'
-                      )
+            SELECT COUNT(*)
+            FROM users u
+            JOIN user_roles ur ON ur.user_id = u.user_id
+            JOIN roles r ON r.role_id = ur.role_id
+            JOIN role_permissions rp ON rp.role_id = r.role_id
+            JOIN permissions p ON p.permission_id = rp.permission_id
+            JOIN branches b ON b.branch_id = :branchId
+            LEFT JOIN user_permissions up
+                   ON up.user_id = u.user_id AND up.permission_id = p.permission_id
+            LEFT JOIN staff_profiles sp ON sp.user_id = u.user_id
+            LEFT JOIN staff_branch_assignments sba
+                   ON sba.staff_id = sp.staff_id
+                  AND sba.branch_id = :branchId
+                  AND UPPER(sba.status) = 'ACTIVE'
+                  AND (sba.start_date IS NULL OR sba.start_date <= CURDATE())
+                  AND (sba.end_date IS NULL OR sba.end_date >= CURDATE())
+            WHERE u.user_id = :userId
+              AND u.is_active = 1
+              AND UPPER(u.status) = 'ACTIVE'
+              AND r.is_active = 1
+              AND b.is_active = 1
+              AND (
+                  UPPER(COALESCE(p.module, '')) = 'INVENTORY'
+                  OR UPPER(COALESCE(p.permission_code, '')) IN (
+                      'INVENTORY_VIEW', 'INVENTORY_MANAGE', 'SUPPLIER_MANAGE',
+                      'INVENTORY_STOCK', 'INVENTORY_BATCHES', 'INVENTORY_RECEIPT',
+                      'INVENTORY_ISSUE', 'INVENTORY_TRANSFER', 'INVENTORY_MATERIALS',
+                      'INVENTORY_CATEGORIES'
                   )
-                  AND (COALESCE(u.custom_permissions_enabled, 0) = 0 OR up.permission_id IS NOT NULL)
-                  AND (sba.assignment_id IS NOT NULL OR u.branch_id = :branchId)
-            )
+              )
+              AND (COALESCE(u.custom_permissions_enabled, 0) = 0 OR up.permission_id IS NOT NULL)
+              AND (sba.assignment_id IS NOT NULL OR u.branch_id = :branchId)
             """, nativeQuery = true)
-    boolean hasActiveInventoryPermissionForBranch(
+    Long countActiveInventoryPermissionForBranch(
             @Param("userId") Long userId,
             @Param("branchId") Long branchId);
 

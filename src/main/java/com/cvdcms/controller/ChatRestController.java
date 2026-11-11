@@ -22,12 +22,15 @@ import java.util.Map;
 /**
  * REST API Controller phục vụ chức năng Realtime Chat theo Cơ sở:
  * - Cung cấp ngữ cảnh người dùng & lịch sử hội thoại cho Floating Widget (/api/chat/context, /api/chat/my-conversation).
+ * - Đếm tổng số tin nhắn chưa đọc riêng theo từng tài khoản (/api/chat/unread-count).
  * - Tìm kiếm tất cả các tài khoản trong cùng cơ sở để gửi tin nhắn cho các vai trò ngoài Bệnh nhân (/api/chat/recipients).
  * - Khởi tạo hoặc mở cuộc hội thoại với người nhận đã chọn (/api/chat/conversations/start).
  * - Tìm kiếm, lọc theo vai trò, lọc theo cơ sở và phân trang cho Hộp thư (/api/chat/conversations).
  * - Lấy chi tiết lịch sử tin nhắn (/api/chat/conversations/{id}/messages).
  * - Gửi tin nhắn qua HTTP POST và phát đồng bộ qua STOMP (/api/chat/messages).
- * - Đánh dấu hội thoại đã đọc (/api/chat/conversations/{id}/read).
+ * - Chỉnh sửa và thu hồi tin nhắn đã gửi trong vòng 10 phút (/api/chat/messages/{id}, /api/chat/messages/{id}/recall).
+ * - Xóa tin nhắn hoặc xóa cuộc hội thoại ở phía tài khoản hiện tại (/api/chat/messages/{id}/self, /api/chat/conversations/{id}/self).
+ * - Đánh dấu hội thoại đã đọc riêng cho tài khoản hiện tại (/api/chat/conversations/{id}/read).
  */
 @RestController
 @RequestMapping("/api/chat")
@@ -60,6 +63,7 @@ public class ChatRestController {
         if (!(obj instanceof User user) || user.getUserId() == null) {
             Map<String, Object> unauth = new LinkedHashMap<>();
             unauth.put("authenticated", false);
+            unauth.put("totalUnreadCount", 0L);
             return ResponseEntity.ok(unauth);
         }
         try {
@@ -67,7 +71,29 @@ public class ChatRestController {
         } catch (Exception ex) {
             Map<String, Object> unauth = new LinkedHashMap<>();
             unauth.put("authenticated", false);
+            unauth.put("totalUnreadCount", 0L);
             return ResponseEntity.ok(unauth);
+        }
+    }
+
+    /**
+     * Lấy tổng số tin nhắn chưa đọc của riêng tài khoản đang đăng nhập (phục vụ Badge trên Sidebar và Icon User).
+     */
+    @GetMapping("/unread-count")
+    public ResponseEntity<Map<String, Object>> getUnreadCount(HttpSession session) {
+        Object obj = session != null ? session.getAttribute("loggedInUser") : null;
+        if (!(obj instanceof User user) || user.getUserId() == null) {
+            return ResponseEntity.ok(Map.of("authenticated", false, "totalUnreadCount", 0L));
+        }
+        try {
+            long totalUnread = chatService.getTotalUnreadCount(user.getUserId());
+            Map<String, Object> res = new LinkedHashMap<>();
+            res.put("authenticated", true);
+            res.put("userId", user.getUserId());
+            res.put("totalUnreadCount", totalUnread);
+            return ResponseEntity.ok(res);
+        } catch (Exception ex) {
+            return ResponseEntity.ok(Map.of("authenticated", false, "totalUnreadCount", 0L));
         }
     }
 
@@ -211,7 +237,61 @@ public class ChatRestController {
     }
 
     /**
-     * Đánh dấu cuộc hội thoại là đã đọc.
+     * Chỉnh sửa tin nhắn đã gửi (chỉ chính chủ và trong vòng 10 phút kể từ lúc gửi).
+     */
+    @PutMapping("/messages/{messageId}")
+    public ResponseEntity<ChatMessageDTO> editMessage(
+            @PathVariable("messageId") Long messageId,
+            @RequestBody Map<String, String> body,
+            HttpSession session) {
+
+        Long userId = requireSessionUserId(session);
+        String newText = body != null ? body.get("messageText") : null;
+        ChatMessageDTO edited = chatService.editMessage(userId, messageId, newText);
+        chatWebSocketController.broadcastSavedMessage(edited);
+        return ResponseEntity.ok(edited);
+    }
+
+    /**
+     * Thu hồi / Gỡ tin nhắn đã gửi (chỉ chính chủ và trong vòng 10 phút kể từ lúc gửi).
+     */
+    @PostMapping("/messages/{messageId}/recall")
+    public ResponseEntity<ChatMessageDTO> recallMessage(
+            @PathVariable("messageId") Long messageId,
+            HttpSession session) {
+
+        Long userId = requireSessionUserId(session);
+        ChatMessageDTO recalled = chatService.recallMessage(userId, messageId);
+        chatWebSocketController.broadcastSavedMessage(recalled);
+        return ResponseEntity.ok(recalled);
+    }
+
+    /**
+     * Xóa 1 tin nhắn ở phía tài khoản hiện tại (không ảnh hưởng tới các tài khoản khác).
+     */
+    @DeleteMapping("/messages/{messageId}/self")
+    public ResponseEntity<Map<String, Object>> deleteMessageForSelf(
+            @PathVariable("messageId") Long messageId,
+            HttpSession session) {
+
+        Long userId = requireSessionUserId(session);
+        return ResponseEntity.ok(chatService.deleteMessageForUser(userId, messageId));
+    }
+
+    /**
+     * Xóa toàn bộ cuộc hội thoại ở phía tài khoản hiện tại (không ảnh hưởng tới các tài khoản khác).
+     */
+    @DeleteMapping("/conversations/{conversationId}/self")
+    public ResponseEntity<Map<String, Object>> deleteConversationForSelf(
+            @PathVariable("conversationId") Long conversationId,
+            HttpSession session) {
+
+        Long userId = requireSessionUserId(session);
+        return ResponseEntity.ok(chatService.deleteConversationForUser(userId, conversationId));
+    }
+
+    /**
+     * Đánh dấu cuộc hội thoại là đã đọc (riêng cho tài khoản đang đăng nhập).
      */
     @PostMapping("/conversations/{conversationId}/read")
     public ResponseEntity<Map<String, Object>> markConversationAsRead(
@@ -220,5 +300,11 @@ public class ChatRestController {
 
         Long userId = requireSessionUserId(session);
         return ResponseEntity.ok(chatService.markConversationAsRead(userId, conversationId));
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> handleResponseStatus(ResponseStatusException ex) {
+        String msg = ex.getReason() != null ? ex.getReason() : "Yêu cầu không hợp lệ.";
+        return ResponseEntity.status(ex.getStatusCode()).body(Map.of("message", msg));
     }
 }

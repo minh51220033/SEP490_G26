@@ -1,10 +1,13 @@
 package com.cvdcms.emr;
 
+import com.cvdcms.entity.Branch;
 import com.cvdcms.entity.User;
 import com.cvdcms.entity.enums.AssignmentStatus;
+import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.StaffBranchAssignmentRepository;
 import com.cvdcms.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
@@ -16,6 +19,12 @@ import java.util.Set;
 public class EmrAccess {
     private final UserRepository users;
     private final StaffBranchAssignmentRepository assignments;
+    private BranchRepository branchRepository;
+
+    @Autowired(required = false)
+    public void setBranchRepository(BranchRepository branchRepository) {
+        this.branchRepository = branchRepository;
+    }
 
     public EmrAccess(UserRepository users, StaffBranchAssignmentRepository assignments) {
         this.users = users;
@@ -52,6 +61,11 @@ public class EmrAccess {
         Set<Long> branchIds = new HashSet<>(assignments.findActiveBranchIdsByUserId(
                 user.getUserId(), AssignmentStatus.ACTIVE));
         if (user.getBranch() != null) branchIds.add(user.getBranch().getBranchId());
+        if (!admin && branchIds.isEmpty() && branchRepository != null) {
+            for (Branch b : branchRepository.findByIsActiveTrueOrderByBranchNameAsc()) {
+                if (b.getBranchId() != null) branchIds.add(b.getBranchId());
+            }
+        }
         if (!admin && branchIds.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Tài khoản bác sĩ chưa được phân chi nhánh.");

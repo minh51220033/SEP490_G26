@@ -405,7 +405,12 @@ public class BranchService {
             );
         }
 
-        return branchRepository.findAccessibleBranchesByUserId(userId);
+        List<Branch> branches = branchRepository.findAccessibleBranchesByUserId(userId);
+        if ((branches == null || branches.isEmpty())
+                && (userRepository.hasActiveAdminRole(userId) || userRepository.hasActiveSupplierManagementRole(userId))) {
+            return getUserAccessibleBranches(userId);
+        }
+        return branches != null ? branches : Collections.emptyList();
     }
 
 
@@ -446,7 +451,9 @@ public class BranchService {
         }
 
         if (branchMap.isEmpty() && !allActive.isEmpty()) {
-            branchMap.put(allActive.get(0).getBranchId(), allActive.get(0));
+            for (Branch b : allActive) {
+                branchMap.put(b.getBranchId(), b);
+            }
         }
 
         return new ArrayList<>(branchMap.values());

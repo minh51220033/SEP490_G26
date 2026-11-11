@@ -44,13 +44,12 @@ public class FinanceRedirectController {
             perms = userRepository.findActivePermissionCodesByUserId(user.getUserId());
         }
 
-        boolean isKeToan = roleNames.stream().anyMatch(r -> "KE_TOAN".equalsIgnoreCase(r) || "ROLE_KE_TOAN".equalsIgnoreCase(r));
         if (!isAdmin) {
             isAdmin = roleNames.stream().anyMatch(r -> "ADMIN".equalsIgnoreCase(r) || "ROLE_ADMIN".equalsIgnoreCase(r));
         }
 
         // 1. Nhóm Khách hàng (Thu ngân):
-        if (isAdmin || isKeToan || perms.contains("FINANCE_DASHBOARD")) {
+        if (isAdmin || perms.contains("FINANCE_DASHBOARD")) {
             return "redirect:/payments/dashboard";
         }
         if (perms.contains("INVOICE_CREATE") || perms.contains("INVOICE_VIEW")) {
@@ -100,9 +99,8 @@ public class FinanceRedirectController {
         if (perms.isEmpty() && user.getUserId() != null) {
             perms = userRepository.findActivePermissionCodesByUserId(user.getUserId());
         }
-        boolean isKeToan = roleNames.stream().anyMatch(r -> "KE_TOAN".equalsIgnoreCase(r) || "ROLE_KE_TOAN".equalsIgnoreCase(r));
 
-        if (isAdmin || isKeToan || perms.contains("FINANCE_EXPENSES")) {
+        if (isAdmin || perms.contains("FINANCE_EXPENSES")) {
             return "redirect:/expenses";
         }
         if (perms.contains("FINANCE_PAYROLL")) {

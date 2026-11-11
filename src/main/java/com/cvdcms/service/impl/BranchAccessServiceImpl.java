@@ -3,6 +3,9 @@ package com.cvdcms.service.impl;
 
 import com.cvdcms.repository.UserRepository;
 import com.cvdcms.service.BranchAccessService;
+import com.cvdcms.service.BranchService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,9 +16,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class BranchAccessServiceImpl implements BranchAccessService {
 
     private final UserRepository userRepository;
+    private BranchService branchService;
 
     public BranchAccessServiceImpl(UserRepository userRepository) {
         this.userRepository = userRepository;
+    }
+
+    @Autowired(required = false)
+    public void setBranchService(@Lazy BranchService branchService) {
+        this.branchService = branchService;
     }
 
     /**
@@ -42,7 +51,14 @@ public class BranchAccessServiceImpl implements BranchAccessService {
             return true;
         }
 
-        return userRepository.hasActiveInventoryPermissionForBranch(userId, branchId);
+        Long invPermCount = userRepository.countActiveInventoryPermissionForBranch(userId, branchId);
+        if (invPermCount != null && invPermCount > 0) {
+            return true;
+        }
+
+        return branchService != null
+                && userRepository.hasActiveSupplierManagementRole(userId)
+                && branchService.canUserAccessBranch(userId, branchId);
     }
 
 
