@@ -63,14 +63,6 @@
                     tôi</span>
             </a>
 
-            <!-- Tin nhắn realtime theo cơ sở: nhân viên cơ sở & admin -->
-            <a th:if="${isAdmin or (permissionCodes != null and !#lists.isEmpty(permissionCodes))}" th:href="@{/chat}"
-                class="side-link" th:classappend="${activeMenu == 'chat'} ? 'is-active' : ''"
-                title="Hộp thư tin nhắn trực tuyến theo cơ sở">
-                <i class="bi bi-chat-dots" aria-hidden="true"></i><span class="side-link__label">Tin nhắn trực
-                    tuyến</span>
-            </a>
-        <!-- Tin nhắn realtime theo cơ sở: nhân viên cơ sở & admin -->
         <a th:if="${isAdmin or (permissionCodes != null and !#lists.isEmpty(permissionCodes))}"
            th:href="@{/chat}" class="side-link"
            th:classappend="${activeMenu == 'chat'} ? 'is-active' : ''"
