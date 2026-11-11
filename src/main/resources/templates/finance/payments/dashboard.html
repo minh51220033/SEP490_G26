@@ -32,32 +32,82 @@
 
             <!-- 1. TRANG DANH SÁCH BỆNH NHÂN CHỜ (HIỂN THỊ KHI CHƯA CHỌN BỆNH NHÂN CỤ THỂ) -->
             <th:block th:if="${patient == null}">
-            <!-- 1. Thanh tìm kiếm bệnh nhân (Backend search & pagination - Requirement 3 & 7) -->
+            <!-- 1. Thanh tìm kiếm bệnh nhân & Bộ lọc đa tiêu chí (Requirement 3 & 7) -->
             <div class="fin-card fin-filter-container mb-3">
-                <form method="get" th:action="@{/payments/dashboard}" class="fin-filter-bar">
+                <form method="get" th:action="@{/payments/dashboard}" id="cashierPendingFilterForm" class="fin-filter-bar d-flex flex-wrap gap-2 align-items-center">
                     <input type="hidden" name="patientId" th:if="${patient != null}" th:value="${patient.profileId}">
-                    <div class="fin-form-group fin-search-group" style="flex: 1 1 360px;">
+                    
+                    <!-- Ô tìm kiếm keyword -->
+                    <div class="fin-form-group fin-search-group" style="flex: 1 1 260px; min-width: 220px;">
                         <i class="bi bi-search search-lead-icon"></i>
                         <input type="text"
                                id="cashierSearchKeyword"
                                name="keyword"
                                th:value="${pendingKeyword}"
                                class="fin-input"
-                               placeholder="Tìm kiếm nhanh bệnh nhân theo Mã BN, Tên BN, Số điện thoại..."
-                               autocomplete="off">
+                               placeholder="Mã BN, Tên BN, SĐT, Mã ca khám, Mã HĐ..."
+                               autocomplete="off"
+                               title="Tìm kiếm nhanh bệnh nhân khi chỉ nhớ 1 phần thông tin">
                     </div>
+
+                    <!-- Lọc theo Cơ sở chi nhánh -->
+                    <div class="fin-form-group" style="flex: 0 1 170px; min-width: 140px;">
+                        <select id="pendingBranchSelect" name="pendingBranchId" class="fin-select" title="Lọc theo Cơ sở điều trị">
+                            <option value="">-- Tất cả cơ sở --</option>
+                            <option th:each="b : ${branches}" 
+                                    th:value="${b.branchId}" 
+                                    th:text="${b.branchName}"
+                                    th:selected="${pendingBranchId != null and b.branchId == pendingBranchId}"></option>
+                        </select>
+                    </div>
+
+                    <!-- Lọc theo Trạng thái xử lý -->
+                    <div class="fin-form-group" style="flex: 0 1 190px; min-width: 150px;">
+                        <select id="pendingStatusSelect" name="pendingStatus" class="fin-select" title="Lọc theo Trạng thái xử lý">
+                            <option value="">-- Tất cả trạng thái --</option>
+                            <option value="PENDING_INVOICE" th:selected="${pendingStatus == 'PENDING_INVOICE'}">🕒 Chờ lập hóa đơn</option>
+                            <option value="PENDING_PAYMENT" th:selected="${pendingStatus == 'PENDING_PAYMENT'}">💳 Chờ thu tiền / Còn nợ</option>
+                            <option value="PENDING_BOTH" th:selected="${pendingStatus == 'PENDING_BOTH'}">⚡ Cả chờ lập & Chờ thu</option>
+                        </select>
+                    </div>
+
+                    <!-- Khoảng ngày phát sinh / đến khám -->
+                    <div class="fin-form-group fin-date-group d-flex align-items-center gap-1" style="flex: 0 1 auto;">
+                        <span class="text-muted small fw-medium text-nowrap"><i class="bi bi-calendar-event me-1"></i>Từ:</span>
+                        <input type="date" id="pendingFromDate" name="pendingFromDate" class="fin-input" style="width: 135px;"
+                               th:value="${pendingFromDate}" title="Từ ngày phát sinh / đến khám">
+                        <span class="text-muted small fw-medium text-nowrap">đến:</span>
+                        <input type="date" id="pendingToDate" name="pendingToDate" class="fin-input" style="width: 135px;"
+                               th:value="${pendingToDate}" title="Đến ngày phát sinh / đến khám">
+                    </div>
+
+                    <!-- Nút thao tác lọc -->
                     <div class="d-flex gap-2 align-items-center ms-auto">
                         <button type="submit" class="fin-btn fin-btn-primary">
                             <i class="bi bi-search"></i> Tìm kiếm
                         </button>
-                        <a th:if="${pendingKeyword != null and !pendingKeyword.isEmpty()}"
-                           th:href="@{/payments/dashboard(patientId=${patient != null ? patient.profileId : null})}"
+                        <a th:href="@{/payments/dashboard(patientId=${patient != null ? patient.profileId : null})}"
                            class="fin-btn fin-btn-outline"
-                           title="Xóa bộ lọc tìm kiếm">
-                            <i class="bi bi-x-circle"></i> Bỏ lọc
+                           title="Đặt lại toàn bộ bộ lọc">
+                            <i class="bi bi-arrow-clockwise"></i> Đặt lại
                         </a>
                     </div>
                 </form>
+
+                <!-- Phím tắt chọn nhanh khoảng thời gian -->
+                <div class="d-flex align-items-center gap-2 mt-2 pt-2 border-top flex-wrap" style="font-size: 12px;">
+                    <span class="text-muted fw-semibold me-1"><i class="bi bi-lightning-charge text-warning"></i> Chọn nhanh ngày:</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn" onclick="setCashierQuickDate('today')">Hôm nay</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn" onclick="setCashierQuickDate('yesterday')">Hôm qua</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn" onclick="setCashierQuickDate('week')">7 ngày qua</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn" onclick="setCashierQuickDate('month')">Tháng này</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn" onclick="setCashierQuickDate('clear')">Xóa ngày</button>
+                </div>
+
+                <!-- Cảnh báo lỗi ngày -->
+                <div th:if="${pendingDateError}" class="alert alert-warning py-2 px-3 mt-2 mb-0 small" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> <span th:text="${pendingDateError}"></span>
+                </div>
             </div>
 
             <!-- 2. Bảng Danh sách bệnh nhân chờ lập hóa đơn / thu tiền (Requirements 2, 4, 5, 7) -->
@@ -66,15 +116,31 @@
                     <div>
                         <h5 class="fw-bold m-0 text-dark d-flex align-items-center">
                             <i class="bi bi-people-fill text-primary me-2"></i>
-                            <span th:if="${pendingKeyword == null or pendingKeyword.isEmpty()}">Bệnh nhân chờ lập hóa đơn / thu tiền</span>
-                            <span th:if="${pendingKeyword != null and !pendingKeyword.isEmpty()}">Kết quả tìm kiếm bệnh nhân</span>
+                            <span th:if="${(pendingKeyword == null or pendingKeyword.isEmpty()) and pendingBranchId == null and pendingStatus == null and pendingFromDate == null and pendingToDate == null}">
+                                Bệnh nhân chờ lập hóa đơn / thu tiền
+                            </span>
+                            <span th:if="${(pendingKeyword != null and !pendingKeyword.isEmpty()) or pendingBranchId != null or pendingStatus != null or pendingFromDate != null or pendingToDate != null}">
+                                Kết quả lọc danh sách bệnh nhân
+                            </span>
                         </h5>
-                        <small class="text-muted" th:if="${pendingKeyword == null or pendingKeyword.isEmpty()}">
+                        <small class="text-muted" th:if="${(pendingKeyword == null or pendingKeyword.isEmpty()) and pendingBranchId == null and pendingStatus == null and pendingFromDate == null and pendingToDate == null}">
                             Tự động lọc các hồ sơ có ca khám chờ lập hóa đơn (A) hoặc có hóa đơn còn nợ cần thu (B)
                         </small>
-                        <small class="text-muted" th:if="${pendingKeyword != null and !pendingKeyword.isEmpty()}">
-                            Hiển thị bệnh nhân khớp từ khóa "<strong th:text="${pendingKeyword}"></strong>" trong các cơ sở được phân quyền
-                        </small>
+                        <div class="mt-1 d-flex flex-wrap gap-1 align-items-center" th:if="${(pendingKeyword != null and !pendingKeyword.isEmpty()) or pendingBranchId != null or pendingStatus != null or pendingFromDate != null or pendingToDate != null}">
+                            <span class="badge bg-primary-subtle text-primary border" th:if="${pendingKeyword != null and !pendingKeyword.isEmpty()}">
+                                Từ khóa: "<span th:text="${pendingKeyword}"></span>"
+                            </span>
+                            <span class="badge bg-info-subtle text-info border" th:if="${pendingFromDate != null or pendingToDate != null}">
+                                <i class="bi bi-calendar3 me-1"></i>
+                                <span th:text="'Từ ' + (${pendingFromDate != null} ? ${#temporals.format(pendingFromDate, 'dd/MM/yyyy')} : 'đầu') + ' đến ' + (${pendingToDate != null} ? ${#temporals.format(pendingToDate, 'dd/MM/yyyy')} : 'nay')"></span>
+                            </span>
+                            <span class="badge bg-warning-subtle text-dark border" th:if="${pendingStatus != null and !pendingStatus.isEmpty()}">
+                                Trạng thái: 
+                                <span th:if="${pendingStatus == 'PENDING_INVOICE'}">Chờ lập HĐ</span>
+                                <span th:if="${pendingStatus == 'PENDING_PAYMENT'}">Chờ thu tiền / Còn nợ</span>
+                                <span th:if="${pendingStatus == 'PENDING_BOTH'}">Cả chờ lập & Chờ thu</span>
+                            </span>
+                        </div>
                     </div>
                     <div class="fin-topbar-right d-flex align-items-center gap-2">
                         <span class="badge bg-secondary-subtle text-secondary border px-3 py-2 fw-medium"
@@ -236,7 +302,7 @@
                     <nav aria-label="Phân trang bệnh nhân chờ xử lý">
                         <ul class="pagination pagination-sm m-0">
                             <li class="page-item" th:classappend="${pendingPatientsPage.first} ? 'disabled'">
-                                <a class="page-link" th:href="@{/payments/dashboard(keyword=${pendingKeyword}, pendingPage=${pendingPatientsPage.number - 1}, patientId=${patient != null ? patient.profileId : null})}">
+                                <a class="page-link" th:href="@{/payments/dashboard(keyword=${pendingKeyword}, pendingBranchId=${pendingBranchId}, pendingFromDate=${pendingFromDate}, pendingToDate=${pendingToDate}, pendingStatus=${pendingStatus}, pendingPage=${pendingPatientsPage.number - 1}, patientId=${patient != null ? patient.profileId : null})}">
                                     <i class="bi bi-chevron-left"></i> Trước
                                 </a>
                             </li>
@@ -244,11 +310,11 @@
                                 th:each="pNo : ${#numbers.sequence(0, pendingPatientsPage.totalPages - 1)}"
                                 th:classappend="${pNo == pendingPatientsPage.number} ? 'active'">
                                 <a class="page-link"
-                                   th:href="@{/payments/dashboard(keyword=${pendingKeyword}, pendingPage=${pNo}, patientId=${patient != null ? patient.profileId : null})}"
+                                   th:href="@{/payments/dashboard(keyword=${pendingKeyword}, pendingBranchId=${pendingBranchId}, pendingFromDate=${pendingFromDate}, pendingToDate=${pendingToDate}, pendingStatus=${pendingStatus}, pendingPage=${pNo}, patientId=${patient != null ? patient.profileId : null})}"
                                    th:text="${pNo + 1}">1</a>
                             </li>
                             <li class="page-item" th:classappend="${pendingPatientsPage.last} ? 'disabled'">
-                                <a class="page-link" th:href="@{/payments/dashboard(keyword=${pendingKeyword}, pendingPage=${pendingPatientsPage.number + 1}, patientId=${patient != null ? patient.profileId : null})}">
+                                <a class="page-link" th:href="@{/payments/dashboard(keyword=${pendingKeyword}, pendingBranchId=${pendingBranchId}, pendingFromDate=${pendingFromDate}, pendingToDate=${pendingToDate}, pendingStatus=${pendingStatus}, pendingPage=${pendingPatientsPage.number + 1}, patientId=${patient != null ? patient.profileId : null})}">
                                     Sau <i class="bi bi-chevron-right"></i>
                                 </a>
                             </li>
@@ -256,6 +322,42 @@
                     </nav>
                 </div>
             </div>
+
+            <script>
+            function setCashierQuickDate(preset) {
+                const fromInput = document.getElementById('pendingFromDate');
+                const toInput = document.getElementById('pendingToDate');
+                if (!fromInput || !toInput) return;
+
+                const pad = (n) => String(n).padStart(2, '0');
+                const toIsoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+                const now = new Date();
+                if (preset === 'today') {
+                    const todayStr = toIsoDate(now);
+                    fromInput.value = todayStr;
+                    toInput.value = todayStr;
+                } else if (preset === 'yesterday') {
+                    const y = new Date(now);
+                    y.setDate(y.getDate() - 1);
+                    const yStr = toIsoDate(y);
+                    fromInput.value = yStr;
+                    toInput.value = yStr;
+                } else if (preset === 'week') {
+                    const past = new Date(now);
+                    past.setDate(past.getDate() - 6);
+                    fromInput.value = toIsoDate(past);
+                    toInput.value = toIsoDate(now);
+                } else if (preset === 'month') {
+                    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                    fromInput.value = toIsoDate(startOfMonth);
+                    toInput.value = toIsoDate(now);
+                } else if (preset === 'clear') {
+                    fromInput.value = '';
+                    toInput.value = '';
+                }
+            }
+            </script>
 
             <!-- Modals chọn ca khám cho bệnh nhân có nhiều ca chờ lập (Requirement 5) -->
             <div th:each="p : ${pendingPatients}" th:if="${p.unbilledVisitCount > 1}">
