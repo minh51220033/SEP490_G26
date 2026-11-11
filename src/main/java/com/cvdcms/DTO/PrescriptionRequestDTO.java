@@ -14,6 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 public class PrescriptionRequestDTO {
     private Long visitId;
+    private Long patientId;
     private Long doctorId;
     private String prescriptionTitle;
     private String diagnosisText;
