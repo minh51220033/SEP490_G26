@@ -55,10 +55,24 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
     @Override
     public Page<CashierPendingPatientDTO> getPendingCashierPatients(
             String keyword,
+            Long branchId,
+            java.time.LocalDate fromDate,
+            java.time.LocalDate toDate,
+            String status,
             List<Long> allowedBranchIds,
             Pageable pageable
     ) {
-        if (allowedBranchIds != null && allowedBranchIds.isEmpty()) {
+        List<Long> effectiveBranchIds = allowedBranchIds;
+        if (branchId != null) {
+            if (allowedBranchIds != null) {
+                if (!allowedBranchIds.contains(branchId)) {
+                    return Page.empty(pageable);
+                }
+                effectiveBranchIds = List.of(branchId);
+            } else {
+                effectiveBranchIds = List.of(branchId);
+            }
+        } else if (allowedBranchIds != null && allowedBranchIds.isEmpty()) {
             return Page.empty(pageable);
         }
 
@@ -67,33 +81,63 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
 
         if (hasKeyword) {
             String kw = keyword.trim();
-            List<PatientProfile> matched = patientProfileRepository.searchPatients(kw);
+            Set<PatientProfile> matched = new LinkedHashSet<>(patientProfileRepository.searchPatients(kw));
+
+            // Hỗ trợ tìm kiếm nhanh theo mã hóa đơn nếu người dùng chỉ nhớ mã HĐ
+            try {
+                invoiceRepository.findByInvoiceCode(kw).ifPresent(inv -> {
+                    if (inv.getPatientProfile() != null) matched.add(inv.getPatientProfile());
+                });
+            } catch (Exception ignored) {
+            }
+
+            // Hỗ trợ tìm kiếm theo mã lượt khám nếu người dùng chỉ nhớ mã ca khám
+            try {
+                visitRepository.findByVisitCode(kw).ifPresent(v -> {
+                    if (v.getPatientProfile() != null) matched.add(v.getPatientProfile());
+                });
+            } catch (Exception ignored) {
+            }
+
+            try {
+                List<Visit> matchedVisits = visitRepository.findFilteredVisits(null, null, null, branchId, kw);
+                if (matchedVisits != null) {
+                    for (Visit mv : matchedVisits) {
+                        if (mv.getPatientProfile() != null) {
+                            matched.add(mv.getPatientProfile());
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+
             if (matched.isEmpty()) {
                 return Page.empty(pageable);
             }
-            if (allowedBranchIds != null) {
-                // Lọc bệnh nhân liên quan đến các chi nhánh được phân quyền
+            if (effectiveBranchIds != null) {
+                final List<Long> bIds = effectiveBranchIds;
+                // Lọc bệnh nhân liên quan đến các chi nhánh được phân quyền / lựa chọn
                 candidatePatients = matched.stream().filter(p -> {
-                    List<Invoice> invs = invoiceRepository.findInvoicesByPatientAndBranches(p.getProfileId(), allowedBranchIds);
+                    List<Invoice> invs = invoiceRepository.findInvoicesByPatientAndBranches(p.getProfileId(), bIds);
                     if (!invs.isEmpty()) return true;
                     List<Visit> visits = visitRepository.findByPatientProfile_ProfileIdOrderByCheckInAtDesc(p.getProfileId());
-                    return visits.stream().anyMatch(v -> v.getBranch() != null && allowedBranchIds.contains(v.getBranch().getBranchId()));
+                    return visits.stream().anyMatch(v -> v.getBranch() != null && bIds.contains(v.getBranch().getBranchId()));
                 }).toList();
             } else {
-                candidatePatients = matched;
+                candidatePatients = new ArrayList<>(matched);
             }
         } else {
             // Danh sách mặc định: chỉ lấy bệnh nhân có khả năng thỏa điều kiện A hoặc B
             Set<Long> candidateProfileIds = new LinkedHashSet<>();
-            List<Long> debtIds = invoiceRepository.findPatientProfileIdsWithDebtInBranches(allowedBranchIds);
+            List<Long> debtIds = invoiceRepository.findPatientProfileIdsWithDebtInBranches(effectiveBranchIds);
             if (debtIds != null) candidateProfileIds.addAll(debtIds);
 
-            List<Long> waitingVisitIds = visitRepository.findPatientProfileIdsByStatusAndBranches(VisitStatus.WAITING_PAYMENT, allowedBranchIds);
+            List<Long> waitingVisitIds = visitRepository.findPatientProfileIdsByStatusAndBranches(VisitStatus.WAITING_PAYMENT, effectiveBranchIds);
             if (waitingVisitIds != null) candidateProfileIds.addAll(waitingVisitIds);
 
             List<Long> pendingPrescIds = prescriptionRepository.findPatientProfileIdsByStatusNotInAndBranches(
                     List.of(PrescriptionStatus.CANCELLED, PrescriptionStatus.EXTERNAL_PURCHASE, PrescriptionStatus.CLINIC_PURCHASE_COMPLETED),
-                    allowedBranchIds
+                    effectiveBranchIds
             );
             if (pendingPrescIds != null) candidateProfileIds.addAll(pendingPrescIds);
 
@@ -106,17 +150,26 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
         List<CashierPendingPatientDTO> resultList = new ArrayList<>();
 
         for (PatientProfile patient : candidatePatients) {
-            CashierPendingPatientDTO dto = buildPatientDTO(patient, allowedBranchIds);
+            CashierPendingPatientDTO dto = buildPatientDTO(patient, effectiveBranchIds);
 
             if (!hasKeyword) {
                 // Không có từ khóa: chỉ giữ bệnh nhân thỏa A (chờ lập) HOẶC B (còn nợ)
-                if (dto.isHasUnbilledItems() || dto.isHasUnpaidInvoices()) {
-                    resultList.add(dto);
+                if (!dto.isHasUnbilledItems() && !dto.isHasUnpaidInvoices()) {
+                    continue;
                 }
-            } else {
-                // Có từ khóa: giữ tất cả bệnh nhân khớp
-                resultList.add(dto);
             }
+
+            // Lọc theo trạng thái xử lý
+            if (!matchesStatus(dto, status)) {
+                continue;
+            }
+
+            // Lọc theo khoảng thời gian phát sinh/hoạt động
+            if (!matchesDateRange(dto, fromDate, toDate)) {
+                continue;
+            }
+
+            resultList.add(dto);
         }
 
         // Sắp xếp: Thời điểm phát sinh việc chờ xử lý gần nhất giảm dần, profileId giảm dần làm khóa phụ
@@ -133,6 +186,52 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
         List<CashierPendingPatientDTO> pageContent = (start < total) ? resultList.subList(start, end) : Collections.emptyList();
 
         return new PageImpl<>(pageContent, pageable, total);
+    }
+
+    private boolean matchesStatus(CashierPendingPatientDTO dto, String status) {
+        if (status == null || status.isBlank() || "ALL".equalsIgnoreCase(status.trim())) {
+            return true;
+        }
+        String s = status.trim().toUpperCase();
+        if ("PENDING_INVOICE".equals(s)) {
+            return dto.isHasUnbilledItems();
+        } else if ("PENDING_PAYMENT".equals(s)) {
+            return dto.isHasUnpaidInvoices();
+        } else if ("PENDING_BOTH".equals(s)) {
+            return dto.isHasUnbilledItems() && dto.isHasUnpaidInvoices();
+        }
+        return true;
+    }
+
+    private boolean matchesDateRange(CashierPendingPatientDTO dto, java.time.LocalDate fromDate, java.time.LocalDate toDate) {
+        if (fromDate == null && toDate == null) {
+            return true;
+        }
+        if (dto.getPendingVisits() != null) {
+            for (PendingVisitSummaryDTO pv : dto.getPendingVisits()) {
+                if (pv.getCheckInAt() != null && isDateInRange(pv.getCheckInAt().toLocalDate(), fromDate, toDate)) {
+                    return true;
+                }
+            }
+        }
+        if (dto.getUnpaidInvoices() != null) {
+            for (UnpaidInvoiceSummaryDTO inv : dto.getUnpaidInvoices()) {
+                if (inv.getIssuedAt() != null && isDateInRange(inv.getIssuedAt().toLocalDate(), fromDate, toDate)) {
+                    return true;
+                }
+            }
+        }
+        if (dto.getLatestActivityTime() != null && isDateInRange(dto.getLatestActivityTime().toLocalDate(), fromDate, toDate)) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isDateInRange(java.time.LocalDate target, java.time.LocalDate fromDate, java.time.LocalDate toDate) {
+        if (target == null) return false;
+        if (fromDate != null && target.isBefore(fromDate)) return false;
+        if (toDate != null && target.isAfter(toDate)) return false;
+        return true;
     }
 
     @Override
