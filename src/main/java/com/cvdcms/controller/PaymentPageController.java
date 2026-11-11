@@ -251,12 +251,58 @@ public class PaymentPageController {
                 null, invoiceFromDate, invoiceToDate, paymentFromDate, paymentToDate, model, session);
     }
 
+    public String patientFinancialDashboard(
+            Long profileId,
+            Long patientId,
+            String keyword,
+            int pendingPageNumber,
+            int paymentPageNumber,
+            int invoicePageNumber,
+            String invoicePaymentStatus,
+            LocalDate invoiceFromDate,
+            LocalDate invoiceToDate,
+            LocalDate paymentFromDate,
+            LocalDate paymentToDate,
+            Model model,
+            HttpSession session
+    ) {
+        return patientFinancialDashboard(
+                profileId, patientId, keyword,
+                null, null, null, null, null, null, null, null,
+                pendingPageNumber, paymentPageNumber, invoicePageNumber,
+                invoicePaymentStatus,
+                invoiceFromDate, invoiceToDate,
+                paymentFromDate, paymentToDate,
+                model, session
+        );
+    }
+
     // SCR-22.1: Dashboard tài chính theo bệnh nhân
     @GetMapping({"/dashboard", "/patient/{profileId}"})
     public String patientFinancialDashboard(
             @PathVariable(required = false) Long profileId,
             @RequestParam(required = false) Long patientId,
             @RequestParam(required = false) String keyword,
+            @RequestParam(name = "pendingBranchId", required = false)
+            Long pendingBranchId,
+            @RequestParam(name = "branchId", required = false)
+            Long branchId,
+            @RequestParam(name = "pendingFromDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate pendingFromDate,
+            @RequestParam(name = "fromDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate fromDate,
+            @RequestParam(name = "pendingToDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate pendingToDate,
+            @RequestParam(name = "toDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate toDate,
+            @RequestParam(name = "pendingStatus", required = false)
+            String pendingStatus,
+            @RequestParam(name = "status", required = false)
+            String status,
             @RequestParam(name = "pendingPage", defaultValue = "0")
             int pendingPageNumber,
             @RequestParam(name = "paymentPage", defaultValue = "0")
@@ -290,11 +336,28 @@ public class PaymentPageController {
         Long targetProfileId = profileId != null ? profileId : patientId;
         model.addAttribute("branches", allowedBranches);
 
+        Long effectivePendingBranchId = pendingBranchId != null ? pendingBranchId : branchId;
+        LocalDate effectivePendingFromDate = pendingFromDate != null ? pendingFromDate : fromDate;
+        LocalDate effectivePendingToDate = pendingToDate != null ? pendingToDate : toDate;
+        String effectivePendingStatus = (pendingStatus != null && !pendingStatus.isBlank()) ? pendingStatus : status;
+
+        if (effectivePendingFromDate != null && effectivePendingToDate != null && effectivePendingFromDate.isAfter(effectivePendingToDate)) {
+            model.addAttribute("pendingDateError", "Khoảng thời gian không hợp lệ: 'Từ ngày' không được lớn hơn 'Đến ngày'.");
+        }
+
         // Bổ sung bảng danh sách bệnh nhân chờ lập hóa đơn / thu tiền trên tab Tổng quan (Requirement 2 & 7)
         int effectivePendingPage = Math.max(0, pendingPageNumber);
         Pageable pendingPageable = PageRequest.of(effectivePendingPage, 10);
         if (cashierOverviewService != null) {
-            Page<com.cvdcms.DTO.CashierPendingPatientDTO> pendingPatientsPage = cashierOverviewService.getPendingCashierPatients(keyword, allowedBranchIds, pendingPageable);
+            Page<com.cvdcms.DTO.CashierPendingPatientDTO> pendingPatientsPage = cashierOverviewService.getPendingCashierPatients(
+                    keyword,
+                    effectivePendingBranchId,
+                    effectivePendingFromDate,
+                    effectivePendingToDate,
+                    effectivePendingStatus,
+                    allowedBranchIds,
+                    pendingPageable
+            );
             model.addAttribute("pendingPatientsPage", pendingPatientsPage);
             model.addAttribute("pendingPatients", pendingPatientsPage.getContent());
         } else {
@@ -302,6 +365,10 @@ public class PaymentPageController {
             model.addAttribute("pendingPatients", java.util.Collections.emptyList());
         }
         model.addAttribute("pendingKeyword", (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null);
+        model.addAttribute("pendingBranchId", effectivePendingBranchId);
+        model.addAttribute("pendingFromDate", effectivePendingFromDate);
+        model.addAttribute("pendingToDate", effectivePendingToDate);
+        model.addAttribute("pendingStatus", (effectivePendingStatus != null && !effectivePendingStatus.isBlank()) ? effectivePendingStatus.trim() : null);
         model.addAttribute("currentPendingPage", effectivePendingPage);
 
         // Kiểm tra hợp lệ khoảng ngày cho bộ lọc Hóa đơn
