@@ -61,6 +61,10 @@ public class ClinicalWorkflowStep {
     @Column(name = "estimated_duration_minutes")
     private Integer estimatedDurationMinutes;
 
+    // Chi phí (tiền) của từng bước kỹ thuật
+    @Column(name = "step_price", precision = 15, scale = 2)
+    private java.math.BigDecimal stepPrice;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "target_queue_type", length = 30)
     private QueueType targetQueueType;

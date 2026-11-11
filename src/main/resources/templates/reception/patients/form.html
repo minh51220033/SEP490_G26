@@ -9,7 +9,7 @@
         <header th:replace="~{fragments/header :: appTopbar('Hồ sơ bệnh nhân')}"></header>
         <main class="app-content">
             <link rel="stylesheet" th:href="@{/css/patients.css}">
-            <div class="patient-page-heading"><div><a th:href="@{/reception/patients}">← Danh sách hồ sơ</a><h1 th:text="${patient == null} ? 'Thêm bệnh nhân' : 'Cập nhật hồ sơ'">Thêm bệnh nhân</h1><p>Thông tin bắt buộc được đánh dấu *.</p></div></div>
+            <div class="patient-page-heading"><div><a th:href="${patient == null ? '/reception/patients' : ((recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '#info')}" th:text="${patient == null ? '← Danh sách hồ sơ' : '← Chi tiết hồ sơ'}">← Chi tiết hồ sơ</a><h1 th:text="${patient == null} ? 'Thêm bệnh nhân' : 'Cập nhật hồ sơ'">Thêm bệnh nhân</h1><p>Thông tin bắt buộc được đánh dấu *.</p></div></div>
             <div id="formError" class="alert alert-danger" role="alert" hidden></div>
             <form id="patientForm" class="panel patient-form" th:attr="data-patient-id=${patient != null ? patient.id : ''}">
                 <h2>Thông tin cá nhân</h2>
