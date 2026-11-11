@@ -46,8 +46,23 @@ public class PatientPageController {
 
     @ModelAttribute("roleNames")
     public List<String> roleNames(HttpSession session) {
+        if (session != null && session.getAttribute("roleNames") instanceof List<?> sessionRoles && !sessionRoles.isEmpty()) {
+            return sessionRoles.stream().map(String::valueOf).toList();
+        }
         var scope = service.scope(session);
-        return scope.admin() ? List.of("ADMIN", "LE_TAN") : List.of("LE_TAN");
+        if (scope.admin()) {
+            return List.of("ADMIN");
+        }
+        if (scope.user() != null && scope.user().getRoles() != null) {
+            List<String> userRoles = scope.user().getRoles().stream()
+                    .filter(r -> Boolean.TRUE.equals(r.getIsActive()) && r.getRoleName() != null)
+                    .map(r -> r.getRoleName().toUpperCase().replace("ROLE_", ""))
+                    .toList();
+            if (!userRoles.isEmpty()) {
+                return userRoles;
+            }
+        }
+        return List.of("LE_TAN");
     }
 
     @GetMapping
@@ -88,7 +103,9 @@ public class PatientPageController {
         model.addAttribute("query", query);
         model.addAttribute("dob", dob);
         model.addAttribute("status", status);
-        shared(model, "/reception/patients", "patients", true, false);
+        boolean canManageAdministrative = canManageAdmin(session);
+        boolean canViewClinical = canViewClinicalRecords(session);
+        shared(model, "/reception/patients", "patients", canManageAdministrative, canViewClinical);
         return "patient-records/list";
     }
 
@@ -185,7 +202,8 @@ public class PatientPageController {
         model.addAttribute("performedServices", overviewService.getPatientPerformedServices(id));
         model.addAttribute("diagnoses", overviewService.getPatientDiagnoses(id));
         model.addAttribute("treatmentPlans", overviewService.getPatientTreatmentPlans(id));
-        model.addAttribute("canPerformClinical", false); // Lễ tân không kê đơn/ký thay bác sĩ
+        boolean isDoctor = checkDoctorRole(session);
+        model.addAttribute("canPerformClinical", isDoctor);
         model.addAttribute("currentTab", tab != null ? tab : "info");
 
         // Billing permission: only true for accounting/cashier roles
@@ -200,7 +218,9 @@ public class PatientPageController {
                                    "ROLE_THU_NGAN".equalsIgnoreCase(r.getRoleName()));
         }
         model.addAttribute("canManageBilling", canManageBilling);
-        shared(model, "/reception/patients", "patients", true, true);
+        boolean canManageAdministrative = canManageAdmin(session);
+        boolean canViewClinical = canViewClinicalRecords(session);
+        shared(model, "/reception/patients", "patients", canManageAdministrative, canViewClinical);
         return "patient-records/detail";
     }
 
@@ -350,6 +370,51 @@ public class PatientPageController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline()
                         .filename(file.originalName(), java.nio.charset.StandardCharsets.UTF_8).build().toString())
                 .body(file.resource());
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public String handleStatusException(ResponseStatusException ex, RedirectAttributes redirect) {
+        if (ex.getStatusCode().value() == 401) {
+            return "redirect:/login";
+        }
+        redirect.addFlashAttribute("documentError", ex.getReason() != null ? ex.getReason() : "Không thể truy cập hồ sơ này.");
+        return "redirect:/reception/patients";
+    }
+
+    private boolean canManageAdmin(HttpSession session) {
+        if (session == null) return false;
+        var scope = service.scope(session);
+        if (scope.admin()) return true;
+        if (session.getAttribute("permissionCodes") instanceof List<?> perms) {
+            return perms.stream().anyMatch(p -> "PATIENT_PROFILE_MANAGE".equalsIgnoreCase(String.valueOf(p)));
+        }
+        return false;
+    }
+
+    private boolean canViewClinicalRecords(HttpSession session) {
+        if (session == null) return false;
+        var scope = service.scope(session);
+        if (scope.admin() || checkDoctorRole(session)) return true;
+        if (session.getAttribute("permissionCodes") instanceof List<?> perms) {
+            return perms.stream().anyMatch(p -> "MEDICAL_RECORD_VIEW".equalsIgnoreCase(String.valueOf(p)));
+        }
+        return false;
+    }
+
+    private boolean checkDoctorRole(HttpSession session) {
+        if (session == null) return false;
+        if (session.getAttribute("roleNames") instanceof List<?> roles) {
+            if (roles.stream().anyMatch(r -> "BAC_SI".equalsIgnoreCase(String.valueOf(r)) || "ROLE_BAC_SI".equalsIgnoreCase(String.valueOf(r)))) {
+                return true;
+            }
+        }
+        var scope = service.scope(session);
+        if (scope.user() != null && scope.user().getRoles() != null) {
+            return scope.user().getRoles().stream().anyMatch(r ->
+                    Boolean.TRUE.equals(r.getIsActive()) && r.getRoleName() != null &&
+                    ("BAC_SI".equalsIgnoreCase(r.getRoleName()) || "ROLE_BAC_SI".equalsIgnoreCase(r.getRoleName())));
+        }
+        return false;
     }
 
     private void shared(Model model, String basePath, String sidebarMenu,
