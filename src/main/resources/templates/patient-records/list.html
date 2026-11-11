@@ -658,11 +658,13 @@
                         white-space: nowrap;
                     }
 
+
                     .badge-payment.success {
                         background: #dcfce7;
                         color: #15803d;
                         border: 1px solid #bbf7d0;
                     }
+
 
                     .badge-payment.warning {
                         background: #fef3c7;
@@ -913,14 +915,16 @@
                             </div>
 
                             <!-- Right Side: Primary Add Button -->
-                            <div class="d-flex align-items-center gap-2">
-                                <!-- Primary Add Patient Button -->
-                                <button type="button" class="dv-btn-add-patient" onclick="openAddPatientModal()">
-                                    <i class="bi bi-person-plus-fill fs-5"></i>
-                                    <span>Thêm bệnh nhân</span>
-                                </button>
-                            </div>
-                        </div>
+                            <div class="d-flex align-items-center gap-2"
+     th:if="${canManageAdministrative == null or canManageAdministrative}">
+    <!-- Primary Add Patient Button -->
+    <button type="button"
+            class="dv-btn-add-patient"
+            onclick="openAddPatientModal()">
+        <i class="bi bi-person-plus-fill fs-5"></i>
+        <span>Thêm bệnh nhân</span>
+    </button>
+</div>
 
                         <!-- QUICK SEGMENT TABS (Chuẩn AMIS ProTable) -->
                         <div
@@ -1058,6 +1062,7 @@
                             </div>
                         </div>
                     </div>
+
 
                     <div class="dv-table-scroll-container">
                         <table class="dv-amis-table align-middle" id="patientsTable">
@@ -1263,6 +1268,7 @@
                                             <div class="dv-action-btn-group">
                                                 <!-- Xem chi tiết hồ sơ -->
                                                 <a th:href="${recordBasePath + '/' + patient.id}"
+
                                                     class="dv-equal-btn-secondary"
                                                     title="Xem hồ sơ bệnh nhân toàn diện &amp; bệnh sử">
                                                     <i class="bi bi-person-vcard text-secondary"></i>
@@ -1270,27 +1276,37 @@
                                                 </a>
 
                                                 <!-- Chỉnh sửa hồ sơ -->
-                                                <button type="button" class="dv-equal-btn-secondary"
-                                                    title="Chỉnh sửa thông tin &amp; nguồn tiếp nhận"
-                                                    th:data-id="${patient.id}" th:data-code="${patient.code}"
-                                                    th:data-name="${patient.fullName}"
-                                                    th:data-phone="${patient.phoneNumber}" th:data-dob="${patient.dob}"
-                                                    th:data-gender="${patient.gender}"
-                                                    th:data-address="${patient.address}"
-                                                    th:data-source="${patient.customerSourceDisplay}"
-                                                    th:data-status="${patient.status}"
-                                                    onclick="openEditPatientModal(this)">
-                                                    <i class="bi bi-pencil text-primary"></i>
-                                                    <span>Sửa</span>
-                                                </button>
+                                                <!-- Chỉnh sửa hồ sơ -->
+<button type="button"
+        th:if="${canManageAdministrative == null or canManageAdministrative}"
+        class="dv-equal-btn-secondary"
+        title="Chỉnh sửa thông tin &amp; nguồn tiếp nhận"
+        th:data-id="${patient.id}"
+        th:data-code="${patient.code}"
+        th:data-name="${patient.fullName}"
+        th:data-phone="${patient.phoneNumber}"
+        th:data-dob="${patient.dob}"
+        th:data-gender="${patient.gender}"
+        th:data-address="${patient.address}"
+        th:data-source="${patient.customerSourceDisplay}"
+        th:data-status="${patient.status}"
+        onclick="openEditPatientModal(this)">
+    <i class="bi bi-pencil text-primary"></i>
+    <span>Sửa</span>
+</button>
 
                                                 <!-- Xóa / Lưu trữ mềm -->
-                                                <button type="button" class="dv-btn-crud dv-btn-crud-delete"
-                                                    title="Lưu trữ / Xóa mềm hồ sơ bệnh nhân" th:data-id="${patient.id}"
-                                                    th:data-code="${patient.code}" th:data-name="${patient.fullName}"
-                                                    onclick="openDeletePatientModal(this)">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
+                                               <!-- Xóa / Lưu trữ mềm -->
+<button type="button"
+        th:if="${canManageAdministrative == null or canManageAdministrative}"
+        class="dv-btn-crud dv-btn-crud-delete"
+        title="Lưu trữ / Xóa mềm hồ sơ bệnh nhân"
+        th:data-id="${patient.id}"
+        th:data-code="${patient.code}"
+        th:data-name="${patient.fullName}"
+        onclick="openDeletePatientModal(this)">
+    <i class="bi bi-trash"></i>
+</button>
                                             </div>
                                         </div>
                                     </td>
