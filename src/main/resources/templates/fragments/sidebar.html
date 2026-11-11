@@ -320,24 +320,15 @@
                 </button>
                 <div class="side-group__panel" id="sgPersonal">
                     <div class="side-group__inner">
-                        <!-- GỘP LỊCH LÀM VIỆC & CHẤM CÔNG CÁ NHÂN THÀNH 1 TAB DUY NHẤT -->
+                        <!-- GỘP LỊCH LÀM VIỆC, CHẤM CÔNG & YÊU CẦU NGHỈ VÀO 1 MỤC SIDEBAR -->
                         <a th:if="${permissionCodes != null and (#lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') or #lists.contains(permissionCodes, 'SCHEDULE_MY'))}"
                             th:href="@{${#lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') ? '/attendance/my' : '/schedules/my'}}"
                             class="side-link side-sublink"
-                            th:classappend="${activeMenu == 'my-attendance' or activeMenu == 'my-schedule'} ? 'is-active' : ''"
+                            th:classappend="${activeMenu == 'my-attendance' or activeMenu == 'my-schedule' or activeMenu == 'leave-requests'} ? 'is-active' : ''"
                             title="Lịch làm việc và chấm công của tôi">
                             <i class="bi bi-calendar-check" aria-hidden="true"></i><span class="side-link__label">Lịch
                                 trực &amp; Chấm công</span>
                         </a>
-                        <!-- Đơn xin nghỉ / Khóa lịch (SCR-33.5 - Dành riêng cho Bác sĩ theo FT42 & Matrix 4.4) -->
-                        <a th:if="${permissionCodes != null and #lists.contains(permissionCodes, 'HR_LEAVE_REQUESTS')}"
-                            th:href="@{/doctor/leave-requests}" class="side-link side-sublink"
-                            th:classappend="${activeMenu == 'leave-requests'} ? 'is-active' : ''"
-                            title="Gửi yêu cầu nghỉ phép &amp; Khóa lịch">
-                            <i class="bi bi-calendar-x" aria-hidden="true"></i><span class="side-link__label">Yêu cầu
-                                nghỉ / Khóa lịch</span>
-                        </a>
-                        <a></a>
                     </div>
                 </div>
             </div>

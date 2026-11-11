@@ -38,6 +38,8 @@ public class PatientService {
     private final ClinicalPhotoRepository photos;
     private final EmrRecordRepository emrRecords;
     private final PatientDocumentRepository documentRepository;
+    @Autowired(required = false)
+    private PatientOverviewService overviewService;
 
     public PatientService(PatientAccess access, ReceptionPatientRepository profiles,
                           PatientSearchRepository search, PatientVisitReadRepository visits,
@@ -285,34 +287,32 @@ public class PatientService {
     public List<DoctorRecordService.AuditLogRow> auditLogs(HttpSession session, Long patientId) {
         var scope = access.require(session);
         visibleProfile(scope, patientId);
+        if (overviewService != null) {
+            return overviewService.getUnifiedAuditLogs(patientId);
+        }
         List<DoctorRecordService.AuditLogRow> list = new ArrayList<>();
 
         if (auditRepository != null) {
             List<SystemAuditLog> dbLogs = auditRepository.findByEntityTableAndEntityIdOrderByCreatedAtDesc("patient_profiles", patientId);
             for (SystemAuditLog l : dbLogs) {
-                String action = l.getAction() != null ? l.getAction() : "UPDATE";
+                String rawAction = l.getAction() != null ? l.getAction() : "UPDATE";
+                String actionGroup = "UPDATE";
                 String badge = "bg-primary";
                 String label = "CẬP NHẬT";
-                if (action.contains("CREATE") || action.contains("UPLOAD") || action.contains("ADD")) {
+                if (rawAction.contains("CREATE") || rawAction.contains("UPLOAD") || rawAction.contains("ADD")) {
+                    actionGroup = "CREATE";
                     badge = "bg-success";
-                    label = "THÊM";
-                } else if (action.contains("DELETE") || action.contains("REMOVE") || action.contains("CANCEL")) {
+                    label = "THÊM MỚI";
+                } else if (rawAction.contains("DELETE") || rawAction.contains("REMOVE") || rawAction.contains("CANCEL")) {
+                    actionGroup = "DELETE";
                     badge = "bg-danger";
                     label = "XÓA";
-                } else if (action.contains("UPDATE") || action.contains("EDIT") || action.contains("CHANGE")) {
-                    badge = "bg-warning text-dark";
-                    label = "SỬA";
                 }
                 String user = l.getUser() != null ? l.getUser().getFullName() : "Hệ thống";
-                String details = action;
-                if ("CREATE".equals(action)) details = "Tạo mới hồ sơ bệnh nhân";
-                else if ("UPDATE".equals(action)) details = "Cập nhật thông tin hành chính hồ sơ";
-                else if ("UPLOAD_PATIENT_DOCUMENT".equals(action)) details = "Tải lên bản scan giấy tờ tùy thân";
-                else if (l.getNewValuesJson() != null && !l.getNewValuesJson().isBlank()) {
-                    details = l.getAction() + " - " + l.getNewValuesJson();
-                    if (details.length() > 100) details = details.substring(0, 100) + "...";
-                }
-                list.add(new DoctorRecordService.AuditLogRow(l.getLogId(), l.getCreatedAt(), user, action, badge, label, "Hồ sơ bệnh nhân", details));
+                String details = l.getNewValuesJson() != null && !l.getNewValuesJson().isBlank()
+                        ? rawAction + " — " + l.getNewValuesJson()
+                        : rawAction;
+                list.add(new DoctorRecordService.AuditLogRow(l.getLogId(), l.getCreatedAt(), user, actionGroup, badge, label, "Hồ sơ bệnh nhân", details));
             }
         }
 
@@ -323,11 +323,11 @@ public class PatientService {
                     v.getVisitId() + 100000L,
                     v.getCheckInAt(),
                     dr,
-                    "VISIT_EXAM",
+                    "CREATE",
                     "bg-success",
-                    "THÊM",
+                    "TIẾP NHẬN",
                     "Lượt khám",
-                    "Tiếp nhận và khám ca khám " + v.getVisitCode() + " tại " + (v.getBranch() != null ? v.getBranch().getBranchName() : "phòng khám")
+                    "Tiếp nhận ca khám " + v.getVisitCode() + " tại " + (v.getBranch() != null ? v.getBranch().getBranchName() : "phòng khám")
             ));
         }
 

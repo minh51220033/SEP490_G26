@@ -791,9 +791,15 @@ function updatePlanInlineView(plan) {
         if (statusCell && plan.statusDisplayName) {
             const btn = statusCell.querySelector('button.dropdown-toggle');
             if (btn) {
-                btn.className = `btn btn-sm dropdown-toggle rounded-pill px-2.5 py-1 fw-bold border shadow-xs d-inline-flex align-items-center gap-1 ${plan.statusBadgeClass}`;
+                btn.className = `btn btn-sm dropdown-toggle rounded-pill px-2 py-1 fw-bold border shadow-sm d-inline-flex align-items-center gap-1 ${plan.statusBadgeClass}`;
                 btn.innerHTML = `<span>${plan.statusDisplayName}</span>`;
             }
+        }
+        if (plan.status) {
+            parentRow.setAttribute('data-status', plan.status);
+        }
+        if (typeof window.refreshTpGrid === 'function') {
+            window.refreshTpGrid();
         }
     }
 
@@ -962,6 +968,9 @@ function deleteTreatmentPlan(planId) {
         const roadmapRow = document.getElementById(`plan-roadmap-row-${planId}`);
         if (roadmapRow) roadmapRow.remove();
         updatePlanCountBadge();
+        if (typeof window.refreshTpGrid === 'function') {
+            window.refreshTpGrid();
+        }
     })
     .catch(err => {
         showToast(err.message, true);
