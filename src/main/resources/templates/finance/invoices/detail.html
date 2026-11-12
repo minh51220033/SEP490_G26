@@ -48,7 +48,7 @@
                     <p class="text-muted mt-1" th:text="'Ngày lập: ' + ${#temporals.format(invoice.issuedAt, 'dd/MM/yyyy HH:mm')} + ' | Cơ sở: ' + ${invoice.branch.branchName} + ' | Thu ngân: ' + (${invoice.cashier != null ? invoice.cashier.fullName : 'N/A'}) + (${invoice.prescription != null ? ' | Đơn thuốc: ' + invoice.prescription.prescriptionCode : ''})"></p>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
-                    <a th:href="@{/invoices}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-left"></i> Quay lại</a>
+                    <a th:href="${returnUrl != null and !returnUrl.isBlank() ? returnUrl : '/invoices'}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-left"></i> Quay lại</a>
                     <a th:href="@{/invoices/{id}/print(id=${invoice.invoiceId})}" target="_blank" class="fin-btn fin-btn-outline">
                         <i class="bi bi-printer"></i> In hóa đơn
                     </a>
