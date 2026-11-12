@@ -387,6 +387,7 @@ public class InvoicePageController {
     @GetMapping("/{id}")
     public String invoiceDetail(
             @PathVariable Long id,
+            @RequestParam(required = false) String returnUrl,
             Model model,
             HttpSession session
     ) {
@@ -411,6 +412,13 @@ public class InvoicePageController {
         } else {
             model.addAttribute("hasAllocations", false);
             model.addAttribute("allocations", java.util.List.of());
+        }
+
+        if (returnUrl != null && !returnUrl.isBlank()) {
+            String trimmed = returnUrl.trim();
+            if (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.contains("\\")) {
+                model.addAttribute("returnUrl", trimmed);
+            }
         }
 
         return "finance/invoices/detail";
