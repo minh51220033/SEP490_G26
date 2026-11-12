@@ -1113,36 +1113,31 @@ public class RoleManagementController {
                         List.of(new ActionSpec("CUSTOMER_CARE_MANAGE", "Toàn quyền", "Chăm sóc khách hàng sau điều trị", ""))
                 ),
 
-                // 16. Chấm công & Ca trực cá nhân (Có 3 Tab ngang: Chấm công cá nhân, Lịch trực tuần của tôi, Yêu cầu nghỉ / Khóa lịch)
+                // 16. Chấm công & Ca trực cá nhân (Có 2 Tab ngang: Lịch làm việc & Chấm công, Yêu cầu nghỉ / Khóa lịch)
                 new GroupSpec(
                         "GRP_MENU_MY_SCHEDULE",
                         "Chấm công & Ca trực cá nhân",
-                        "Theo dõi lịch trực tuần của tôi, thực hiện điểm danh chấm công cá nhân và gửi yêu cầu nghỉ / khóa lịch.",
-                        "Chấm công & Ca trực cá nhân",
+                        "Theo dõi lịch làm việc tuần của tôi, thực hiện điểm danh chấm công cá nhân và gửi yêu cầu nghỉ / khóa lịch.",
+                        "Lịch trực & Chấm công",
                         "bi-calendar2-check",
                         List.of(
                                 new SubTabSpec(
                                         "TAB_MY_ATTENDANCE",
-                                        "Chấm công cá nhân",
-                                        "Thực hiện điểm danh vào/ra ca qua WiFi/GPS chi nhánh và tra cứu lịch sử chấm công.",
-                                        "Tab ngang",
-                                        "bi-fingerprint",
-                                        List.of(new ActionSpec("HR_MY_ATTENDANCE", "Toàn quyền", "Chấm công cá nhân hàng ngày", ""))
-                                ),
-                                new SubTabSpec(
-                                        "TAB_MY_SCHEDULE",
-                                        "Lịch trực tuần của tôi",
-                                        "Xem lịch phân ca cá nhân theo tuần/tháng, thông tin ca trực và vị trí phòng khám.",
-                                        "Tab ngang",
-                                        "bi-calendar-week",
-                                        List.of(new ActionSpec("SCHEDULE_MY", "Toàn quyền", "Xem lịch làm việc cá nhân", ""))
+                                        "Lịch làm việc & Chấm công",
+                                        "Xem lịch phân ca cá nhân hàng tuần, điểm danh vào/ra ca qua WiFi chi nhánh và tra cứu lịch sử chấm công.",
+                                        "Tab 1",
+                                        "bi-calendar-check",
+                                        List.of(
+                                                new ActionSpec("HR_MY_ATTENDANCE", "Toàn quyền", "Chấm công cá nhân hàng ngày", ""),
+                                                new ActionSpec("SCHEDULE_MY", "Xem lịch trực", "Xem lịch làm việc cá nhân", "")
+                                        )
                                 ),
                                 new SubTabSpec(
                                         "TAB_MY_LEAVE",
                                         "Yêu cầu nghỉ / Khóa lịch",
                                         "Tạo đơn xin nghỉ phép/khóa lịch khám, theo dõi tiến độ phê duyệt từ ban quản lý.",
-                                        "Tab ngang",
-                                        "bi-calendar-x",
+                                        "Tab 2",
+                                        "bi-calendar2-x",
                                         List.of(new ActionSpec("HR_LEAVE_REQUESTS", "Toàn quyền", "Tạo và theo dõi đơn xin nghỉ phép", ""))
                                 )
                         ),
