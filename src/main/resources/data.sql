@@ -209,3 +209,23 @@ INSERT IGNORE INTO visits (visit_id, visit_code, profile_id, branch_id, visit_ty
     (115, 'VIS26110501', 101, 1, 'APPOINTMENT', '2026-11-05 08:30:00', 'Khám tổng quát nha khoa định kỳ', 1, 1, 1, 'COMPLETED', '2026-11-05 09:15:00', 'Hẹn tái khám trám răng hôm nay', '2026-11-05 08:30:00'),
     (116, 'VIS26110502', 102, 1, 'WALK_IN',     '2026-11-05 14:00:00', 'Viêm lợi góc hàm, kê đơn thuốc giảm phù nề', 1, 1, 1, 'COMPLETED', '2026-11-05 14:30:00', 'Kê thuốc kháng sinh, giảm đau', '2026-11-05 14:00:00'),
     (117, 'VIS26110503', 115, 1, 'APPOINTMENT', '2026-11-05 15:30:00', 'Điều trị tủy răng hàm dưới R46 lần 2', 1, 1, 5, 'COMPLETED', '2026-11-05 16:30:00', 'Đặt thuốc diệt tủy, hẹn lần 3', '2026-11-05 15:30:00');
+
+-- =========================================================================
+-- DỮ LIỆU SEED DEMO CLEAN CHO NGÀY HÔM NAY (CURDATE())
+-- =========================================================================
+INSERT IGNORE INTO appointments (appointment_id, appointment_code, profile_id, branch_id, doctor_id, appointment_date, preferred_session, expected_time, initial_symptoms, source, status, reschedule_count, created_at) VALUES
+    (701, 'LH-TODAY-01', 101, 1, 1, CURDATE(), 'MORNING', '08:30:00', 'Cấp cứu: Đau nhức dữ dội răng hàm dưới R46', 'ONLINE', 'CONFIRMED', 0, NOW()),
+    (702, 'LH-TODAY-02', 109, 1, 1, CURDATE(), 'MORNING', '09:00:00', 'Khám kiểm tra cầu răng sứ Zirconia (Bệnh nhân cao tuổi)', 'ONLINE', 'CONFIRMED', 0, NOW()),
+    (703, 'LH-TODAY-03', 105, 1, 26, CURDATE(), 'MORNING', '09:30:00', 'Khám sâu răng trẻ em & bôi vecni fluor (Bệnh nhi 6 tuổi)', 'RECEPTIONIST', 'CONFIRMED', 0, NOW()),
+    (704, 'LH-TODAY-04', 102, 1, 26, CURDATE(), 'MORNING', '10:00:00', 'Lấy cao răng siêu âm êm ái cho phụ nữ mang thai', 'ONLINE', 'CONFIRMED', 0, NOW()),
+    (705, 'LH-TODAY-05', 108, 1, 1, CURDATE(), 'AFTERNOON', '14:00:00', 'Tư vấn chỉnh nha niềng răng máng trong suốt Invisalign', 'RECEPTIONIST', 'CONFIRMED', 0, NOW());
+
+INSERT IGNORE INTO visits (visit_id, visit_code, profile_id, branch_id, appointment_id, visit_type, check_in_at, initial_symptoms, primary_doctor_id, room_id, chair_id, status, completed_at, notes, created_at) VALUES
+    (701, 'VIS-TODAY-01', 101, 1, 701, 'EMERGENCY', NOW(), 'Đau răng cấp tính góc hàm phải', 1, 1, 1, 'IN_EXAM', NULL, 'Bác sĩ Nam đang xử lý giảm đau cấp tính', NOW()),
+    (702, 'VIS-TODAY-02', 109, 1, 702, 'APPOINTMENT', NOW(), 'Kiểm tra cầu răng sứ Zirconia', 1, 1, 2, 'WAITING', NULL, 'Bệnh nhân 71 tuổi ưu tiên hàng chờ', NOW()),
+    (703, 'VIS-TODAY-03', 105, 1, 703, 'APPOINTMENT', NOW(), 'Khám sâu răng trẻ em', 26, 2, 3, 'WAITING', NULL, 'Bé 6 tuổi ưu tiên hàng chờ', NOW());
+
+INSERT IGNORE INTO queue_tickets (ticket_id, visit_id, branch_id, queue_type, queue_date, ticket_number, is_priority, display_number, is_emergency, priority_score, priority_reason, status, issued_at, called_at, completed_at) VALUES
+    (701, 701, 1, 'EXAM', CURDATE(), 1, 1, '01', 1, 100, 'Ca cấp cứu đau răng cấp tính cần xử lý ngay', 'IN_SERVICE', NOW(), NOW(), NULL),
+    (702, 702, 1, 'EXAM', CURDATE(), 2, 1, '02', 0, 60, 'Người cao tuổi (≥65 tuổi) ưu tiên khám trước', 'WAITING', NOW(), NULL, NULL),
+    (703, 703, 1, 'EXAM', CURDATE(), 3, 1, '03', 0, 50, 'Trẻ nhỏ (≤6 tuổi) quấy khóc ưu tiên khám trước', 'CALLED', NOW(), NOW(), NULL);

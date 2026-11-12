@@ -474,6 +474,38 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                         t.setCompletedAt(LocalDateTime.now());
                         queueTickets.save(t);
                     });
+
+            // Tự động gọi ca tiếp theo của Bác sĩ này (Event-driven queue progression)
+            if (visit.getPrimaryDoctor() != null && visit.getBranch() != null) {
+                Long docId = visit.getPrimaryDoctor().getStaffId();
+                Long bId = visit.getBranch().getBranchId();
+                LocalDate today = LocalDate.now();
+                var nextWaitingOpt = queueTickets.findAll().stream()
+                        .filter(t -> t.getBranch() != null && bId.equals(t.getBranch().getBranchId())
+                                && today.equals(t.getQueueDate())
+                                && t.getQueueType() == com.cvdcms.entity.enums.QueueType.EXAM
+                                && t.getStatus() == com.cvdcms.entity.enums.QueueStatus.WAITING
+                                && t.getVisit() != null && t.getVisit().getPrimaryDoctor() != null
+                                && docId.equals(t.getVisit().getPrimaryDoctor().getStaffId()))
+                        .min((a, b) -> {
+                            boolean aEmer = Boolean.TRUE.equals(a.getIsEmergency());
+                            boolean bEmer = Boolean.TRUE.equals(b.getIsEmergency());
+                            if (aEmer != bEmer) return aEmer ? -1 : 1;
+                            int aScore = a.getPriorityScore() != null ? a.getPriorityScore() : 0;
+                            int bScore = b.getPriorityScore() != null ? b.getPriorityScore() : 0;
+                            if (aScore != bScore) return Integer.compare(bScore, aScore);
+                            int aNum = a.getTicketNumber() != null ? a.getTicketNumber() : 999999;
+                            int bNum = b.getTicketNumber() != null ? b.getTicketNumber() : 999999;
+                            return Integer.compare(aNum, bNum);
+                        });
+                nextWaitingOpt.ifPresent(nextTicket -> {
+                    nextTicket.setStatus(com.cvdcms.entity.enums.QueueStatus.CALLED);
+                    nextTicket.setCalledAt(LocalDateTime.now());
+                    queueTickets.save(nextTicket);
+                    log.info("Event-driven: Tự động chuyển ca tiếp theo #{} sang ĐANG GỌI cho Bác sĩ {}", 
+                            nextTicket.getDisplayNumber(), visit.getPrimaryDoctor().getFullName());
+                });
+            }
         }
 
         NumberFormat vndFmt = NumberFormat.getInstance(Locale.forLanguageTag("vi-VN"));
