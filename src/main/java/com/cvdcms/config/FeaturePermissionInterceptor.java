@@ -232,6 +232,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             return List.of("REFUND_MANAGE");
         }
         if (uri.startsWith("/invoices") || uri.startsWith("/api/invoices")) {
+            if (!isWriteMethod && (uri.matches("^/invoices/\\d+$") || uri.matches("^/invoices/\\d+/print$"))) {
+                return List.of("INVOICE_CREATE", "INVOICE_VIEW", "PAYMENT_COLLECT", "FINANCE_DASHBOARD", "FINANCE_DEBT");
+            }
             return List.of("INVOICE_CREATE");
         }
         if (uri.startsWith("/payments") || uri.startsWith("/api/payments")) {
