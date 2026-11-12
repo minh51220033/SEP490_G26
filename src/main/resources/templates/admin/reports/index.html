@@ -4,7 +4,201 @@
     <th:block th:replace="~{fragments/head :: head('Báo cáo & Thống kê')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
     <link rel="stylesheet" th:href="@{/css/enhanced-table.css}">
+    <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
     <style>
+        #dailyStatsSection .dv-toolbar-card {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        }
+        #dailyStatsSection .dv-search-box {
+            position: relative;
+            flex: 1;
+            min-width: 260px;
+        }
+        #dailyStatsSection .dv-search-box input {
+            width: 100%;
+            height: 44px;
+            padding: 10px 40px 10px 40px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #0f172a;
+            background: #f8fafc;
+            transition: all 0.2s;
+        }
+        #dailyStatsSection .dv-search-box input:focus {
+            background: #ffffff;
+            border-color: #294690;
+            box-shadow: 0 0 0 4px rgba(41, 70, 144, 0.14);
+            outline: none;
+        }
+        #dailyStatsSection .dv-search-box .search-lead-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+            font-size: 15px;
+            pointer-events: none;
+        }
+        #dailyStatsSection .dv-search-box .search-clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: #e2e8f0;
+            color: #475569;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            font-size: 12px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        #dailyStatsSection .dv-adv-filter-btn {
+            height: 44px;
+            padding: 0 16px;
+            border-radius: 12px;
+            border: 1.5px solid #cbd5e1;
+            background: #ffffff;
+            color: #294690;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        #dailyStatsSection .dv-adv-filter-btn i {
+            color: #294690 !important;
+        }
+        #dailyStatsSection .dv-adv-filter-btn:hover,
+        #dailyStatsSection .dv-adv-filter-btn.is-open {
+            border-color: #294690;
+            color: #294690;
+            background: #eff6ff;
+            box-shadow: 0 0 0 3px rgba(41, 70, 144, 0.1);
+        }
+        #dailyStatsSection .dv-toolbar-primary-btn {
+            height: 44px;
+            padding: 0 18px;
+            border-radius: 12px;
+            border: 1.5px solid #294690;
+            background: #294690;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        #dailyStatsSection .dv-toolbar-primary-btn:hover {
+            background: #1d3677;
+            border-color: #1d3677;
+        }
+        #dailyStatsSection .dv-filter-pulse-badge {
+            background: #ef4444;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 800;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 5px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #dailyStatsSection .dv-adv-control {
+            height: 42px;
+            border-radius: 10px;
+            border: 1.5px solid #cbd5e1;
+            font-size: 14px;
+            font-weight: 600;
+            color: #0f172a;
+            background: #f8fafc;
+        }
+        #dailyStatsSection .dv-adv-control:focus {
+            background: #ffffff;
+            border-color: #294690;
+            box-shadow: 0 0 0 3px rgba(41, 70, 144, 0.12);
+        }
+        #dailyStatsSection .rotate-180 {
+            transform: rotate(180deg);
+            transition: transform 0.2s ease;
+        }
+        #dailyStatsSection .dv-grid-card {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+            overflow: hidden;
+        }
+        #dailyStatsSection .dv-table-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+        #dailyStatsSection .dv-amis-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        #dailyStatsSection .dv-amis-table thead th {
+            position: relative;
+            background: #f8fafc;
+            color: #334155;
+            font-size: 12.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            padding: 13px 16px;
+            border-bottom: 1.5px solid #e2e8f0;
+            white-space: nowrap;
+        }
+        #dailyStatsSection .dv-amis-table tbody tr.dv-data-row td {
+            padding: 13px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #ffffff;
+            font-size: 14px;
+        }
+        #dailyStatsSection .dv-amis-table tbody tr.dv-data-row:hover td {
+            background: #f0f9ff !important;
+        }
+        #dailyStatsSection .dv-code-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 8px;
+            background: #eff6ff;
+            color: #294690;
+            font-weight: 700;
+            font-size: 13px;
+            border: 1px solid #dbeafe;
+        }
+        #dailyStatsSection .dv-col-resizer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 6px;
+            height: 100%;
+            cursor: col-resize;
+            user-select: none;
+        }
+        #dailyStatsSection .dv-col-resizer:hover,
+        #dailyStatsSection .dv-col-resizer.is-resizing {
+            background: rgba(41, 70, 144, 0.25);
+        }
         .report-kpi-card {
             background: #fff;
             border-radius: 12px;
@@ -414,53 +608,187 @@
                         </div>
                     </div>
 
-                    <!-- BẢNG XU HƯỚNG THEO NGÀY -->
-                    <div class="fin-card shadow-sm p-4 mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h4 class="fw-bold mb-0 text-dark fs-5">Diễn biến Doanh số & Lượt khám theo ngày</h4>
-                            <span class="badge bg-light text-dark border">
-                                <span th:text="${#lists.size(dashboard.dailyStats)}">0</span> ngày trong kỳ
-                            </span>
+                    <!-- BẢNG XU HƯỚNG THEO NGÀY (CHUẨN LIST GEMINI.MD - GIỮ NGUYÊN MÀU SẮC) -->
+                    <div id="dailyStatsSection" class="mb-4">
+                        <div class="dv-toolbar-card mb-3">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <h4 class="fw-bold mb-0 text-dark fs-5">Diễn biến Doanh số &amp; Lượt khám theo ngày</h4>
+                                    <span class="badge bg-light text-dark border text-nowrap">
+                                        <span th:text="${#lists.size(dashboard.dailyStats)}">0</span> ngày trong kỳ
+                                    </span>
+                                </div>
+                                <span class="text-muted small fw-semibold" id="dailyStatsCounter">
+                                    Hiển thị <strong class="text-dark" th:text="${#lists.size(dashboard.dailyStats)}">0</strong> ngày
+                                </span>
+                            </div>
+
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <div class="dv-search-box">
+                                    <i class="bi bi-search search-lead-icon"></i>
+                                    <input type="search" id="dailyStatsSearch"
+                                           placeholder="Tìm theo ngày (dd/MM/yyyy), doanh số, thực thu, lượt khám..."
+                                           autocomplete="off" oninput="dailyStatsApplyFilters()">
+                                    <button type="button" class="search-clear-btn" id="dailyStatsClearSearch"
+                                            title="Xóa từ khóa" onclick="dailyStatsClearSearchInput()">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+
+                                <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                                    <button type="button" class="dv-adv-filter-btn" id="dailyStatsAdvBtn"
+                                            onclick="dailyStatsToggleAdvPanel()">
+                                        <i class="bi bi-funnel-fill text-primary"></i>
+                                        <span>Lọc nâng cao</span>
+                                        <span class="dv-filter-pulse-badge d-none" id="dailyStatsAdvBadge">0</span>
+                                        <i class="bi bi-chevron-down small" id="dailyStatsAdvChevron"></i>
+                                    </button>
+                                    <button type="button" class="dv-toolbar-primary-btn" onclick="dailyStatsExportCsv()"
+                                            title="Xuất bảng diễn biến ra file CSV">
+                                        <i class="bi bi-download me-1"></i> Xuất CSV
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="dailyStatsAdvPanel" class="mt-3 pt-3 border-top" style="display: none; border-color: #f1f5f9 !important;">
+                                <div class="row g-3">
+                                    <div class="col-md-4 col-sm-6">
+                                        <label for="dailyStatsFilterActivity" class="form-label small fw-semibold text-secondary mb-1">
+                                            <i class="bi bi-activity me-1 text-primary"></i>Phân loại phát sinh
+                                        </label>
+                                        <select id="dailyStatsFilterActivity" class="form-select dv-adv-control" onchange="dailyStatsApplyFilters()">
+                                            <option value="ALL">Tất cả các ngày</option>
+                                            <option value="HAS_ANY">Có doanh số hoặc lượt khám</option>
+                                            <option value="HAS_REVENUE">Chỉ ngày có thực thu &gt; 0 đ</option>
+                                            <option value="HAS_VISIT">Chỉ ngày có lượt khám &gt; 0</option>
+                                            <option value="EMPTY">Ngày không phát sinh (0 đ)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 col-sm-6">
+                                        <label for="dailyStatsFilterRange" class="form-label small fw-semibold text-secondary mb-1">
+                                            <i class="bi bi-calendar-range me-1 text-primary"></i>Khoảng thời gian
+                                        </label>
+                                        <select id="dailyStatsFilterRange" class="form-select dv-adv-control" onchange="dailyStatsApplyFilters()">
+                                            <option value="ALL">Toàn bộ ngày trong kỳ</option>
+                                            <option value="LAST_7">7 ngày gần nhất</option>
+                                            <option value="LAST_14">14 ngày gần nhất</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 col-sm-12">
+                                        <label for="dailyStatsSortBy" class="form-label small fw-semibold text-secondary mb-1">
+                                            <i class="bi bi-sort-down me-1 text-primary"></i>Sắp xếp dữ liệu
+                                        </label>
+                                        <select id="dailyStatsSortBy" class="form-select dv-adv-control" onchange="dailyStatsApplyFilters()">
+                                            <option value="DATE_ASC">Ngày tăng dần (mặc định)</option>
+                                            <option value="DATE_DESC">Ngày mới nhất → cũ nhất</option>
+                                            <option value="INVOICE_DESC">Doanh số hóa đơn cao nhất</option>
+                                            <option value="REAL_DESC">Thực thu dòng tiền cao nhất</option>
+                                            <option value="VISIT_DESC">Số lượt khám cao nhất</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end mt-2">
+                                    <button type="button" class="btn btn-sm btn-link text-danger text-decoration-none fw-semibold"
+                                            onclick="dailyStatsResetFilters()">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại bộ lọc
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle table-report mb-0">
-                                <thead>
-                                <tr>
-                                    <th style="width: 140px;">Ngày</th>
-                                    <th>Doanh số hóa đơn</th>
-                                    <th>Thực thu dòng tiền</th>
-                                    <th class="text-center" style="width: 120px;">Số lượt khám</th>
-                                    <th style="width: 250px;">Mức độ đóng góp</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr th:if="${#lists.isEmpty(dashboard.dailyStats)}">
-                                    <td colspan="5" class="text-center py-4 text-muted">Không có dữ liệu trong khoảng thời gian này.</td>
-                                </tr>
-                                <tr th:each="st : ${dashboard.dailyStats}">
-                                    <td>
-                                        <span class="fw-semibold" th:text="${#temporals.format(st.date, 'dd/MM/yyyy')}">01/11/2026</span>
-                                    </td>
-                                    <td class="fw-bold text-primary"
-                                        th:text="${#numbers.formatDecimal(st.invoiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
-                                    <td class="fw-bold text-success"
-                                        th:text="${#numbers.formatDecimal(st.realRevenue, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
-                                    <td class="text-center">
-                                        <span class="badge bg-light text-dark border px-2 py-1" th:text="${st.visitCount}">0</span>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="mini-progress-bar flex-grow-1">
-                                                <div class="mini-progress-fill"
-                                                     th:style="'width:' + (${dashboard.totalRealRevenue.signum() > 0 ? (st.realRevenue.doubleValue() * 100 / dashboard.totalRealRevenue.doubleValue()) : 0}) + '%;'"></div>
+
+                        <div class="dv-grid-card">
+                            <div class="dv-table-scroll-container">
+                                <table class="dv-amis-table align-middle mb-0" id="dailyStatsTable">
+                                    <thead>
+                                    <tr>
+                                        <th style="width: 64px;" class="text-center">
+                                            <div class="dv-th-inner justify-content-center"><span>#</span></div>
+                                        </th>
+                                        <th style="width: 150px;">
+                                            <div class="dv-th-inner"><span>Ngày</span></div>
+                                            <span class="dv-col-resizer"></span>
+                                        </th>
+                                        <th style="width: 190px;">
+                                            <div class="dv-th-inner"><span>Doanh số hóa đơn</span></div>
+                                            <span class="dv-col-resizer"></span>
+                                        </th>
+                                        <th style="width: 190px;">
+                                            <div class="dv-th-inner"><span>Thực thu dòng tiền</span></div>
+                                            <span class="dv-col-resizer"></span>
+                                        </th>
+                                        <th class="text-center" style="width: 140px;">
+                                            <div class="dv-th-inner justify-content-center"><span>Số lượt khám</span></div>
+                                            <span class="dv-col-resizer"></span>
+                                        </th>
+                                        <th style="min-width: 240px;">
+                                            <div class="dv-th-inner"><span>Mức độ đóng góp</span></div>
+                                        </th>
+                                    </tr>
+                                    </thead>
+                                    <tbody id="dailyStatsTbody">
+                                    <tr th:if="${#lists.isEmpty(dashboard.dailyStats)}" class="dv-empty-row">
+                                        <td colspan="6" class="text-center py-4 text-muted">Không có dữ liệu trong khoảng thời gian này.</td>
+                                    </tr>
+                                    <tr th:each="st, iter : ${dashboard.dailyStats}"
+                                        class="dv-data-row daily-stat-row"
+                                        th:data-date="${#temporals.format(st.date, 'yyyy-MM-dd')}"
+                                        th:data-date-label="${#temporals.format(st.date, 'dd/MM/yyyy')}"
+                                        th:data-invoice="${st.invoiceAmount != null ? st.invoiceAmount.longValue() : 0}"
+                                        th:data-real="${st.realRevenue != null ? st.realRevenue.longValue() : 0}"
+                                        th:data-visits="${st.visitCount}">
+                                        <td class="text-center text-muted fw-semibold daily-row-stt" th:text="${iter.count}">1</td>
+                                        <td>
+                                            <span class="dv-code-pill text-nowrap" th:text="${#temporals.format(st.date, 'dd/MM/yyyy')}">01/11/2026</span>
+                                        </td>
+                                        <td class="fw-bold text-primary text-nowrap"
+                                            th:text="${#numbers.formatDecimal(st.invoiceAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                        <td class="fw-bold text-success text-nowrap"
+                                            th:text="${#numbers.formatDecimal(st.realRevenue, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                        <td class="text-center">
+                                            <span class="dv-status-pill badge bg-light text-dark border px-2 py-1 text-nowrap" th:text="${st.visitCount}">0</span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="mini-progress-bar flex-grow-1">
+                                                    <div class="mini-progress-fill"
+                                                         th:style="'width:' + (${dashboard.totalRealRevenue.signum() > 0 ? (st.realRevenue.doubleValue() * 100 / dashboard.totalRealRevenue.doubleValue()) : 0}) + '%;'"></div>
+                                                </div>
+                                                <span class="small text-muted text-nowrap" style="min-width: 45px;"
+                                                      th:text="${dashboard.totalRealRevenue.signum() > 0 ? #numbers.formatDecimal(st.realRevenue.doubleValue() * 100 / dashboard.totalRealRevenue.doubleValue(), 1, 'POINT', 1, 'POINT') + '%' : '0%'}">0%</span>
                                             </div>
-                                            <span class="small text-muted" style="min-width: 45px;"
-                                                  th:text="${dashboard.totalRealRevenue.signum() > 0 ? #numbers.formatDecimal(st.realRevenue.doubleValue() * 100 / dashboard.totalRealRevenue.doubleValue(), 1, 'POINT', 1, 'POINT') + '%' : '0%'}">0%</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
+                                        </td>
+                                    </tr>
+                                    <tr id="dailyStatsFilterEmptyRow" style="display: none;">
+                                        <td colspan="6" class="text-center py-4 text-muted">Không có ngày nào khớp điều kiện lọc.</td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="misa-pagination-footer">
+                                <div class="misa-pagination-left">
+                                    Tổng số: <strong id="dailyStatsTotalCount" th:text="${#lists.size(dashboard.dailyStats)}">0</strong> bản ghi
+                                </div>
+                                <div class="misa-pagination-right">
+                                    <div class="misa-page-size-wrapper">
+                                        <span>Số bản ghi/trang</span>
+                                        <select id="dailyStatsPageSize" class="form-select misa-page-size-select" onchange="dailyStatsChangePageSize()">
+                                            <option value="10" selected>10</option>
+                                            <option value="20">20</option>
+                                            <option value="50">50</option>
+                                            <option value="9999">Tất cả</option>
+                                        </select>
+                                    </div>
+                                    <span class="misa-page-range" id="dailyStatsPageRange">0 - 0</span>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <button type="button" class="misa-nav-btn" id="dailyStatsPrevBtn" onclick="dailyStatsPrevPage()" title="Trang trước">
+                                            <i class="bi bi-chevron-left"></i>
+                                        </button>
+                                        <button type="button" class="misa-nav-btn" id="dailyStatsNextBtn" onclick="dailyStatsNextPage()" title="Trang sau">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -963,6 +1291,182 @@
         // Tự động submit form ngay lập tức để áp dụng lọc dữ liệu!
         document.getElementById('reportFilterForm').submit();
     }
+
+    // =========================================================================
+    // LIST DIỄN BIẾN DOANH SỐ & LƯỢT KHÁM THEO NGÀY (SEARCH, FILTER, SORT, RESIZE, PAGINATION)
+    // =========================================================================
+    let dailyStatsCurrentPage = 1;
+    let dailyStatsPageSize = 10;
+
+    function dailyStatsToggleAdvPanel() {
+        const panel = document.getElementById('dailyStatsAdvPanel');
+        const btn = document.getElementById('dailyStatsAdvBtn');
+        const chev = document.getElementById('dailyStatsAdvChevron');
+        if (!panel) return;
+        const isOpen = panel.style.display !== 'none';
+        panel.style.display = isOpen ? 'none' : 'block';
+        btn?.classList.toggle('is-open', !isOpen);
+        chev?.classList.toggle('rotate-180', !isOpen);
+    }
+
+    function dailyStatsClearSearchInput() {
+        const inp = document.getElementById('dailyStatsSearch');
+        if (inp) inp.value = '';
+        dailyStatsApplyFilters();
+    }
+
+    function dailyStatsResetFilters() {
+        const s = document.getElementById('dailyStatsSearch');
+        const a = document.getElementById('dailyStatsFilterActivity');
+        const r = document.getElementById('dailyStatsFilterRange');
+        const sort = document.getElementById('dailyStatsSortBy');
+        if (s) s.value = '';
+        if (a) a.value = 'ALL';
+        if (r) r.value = 'ALL';
+        if (sort) sort.value = 'DATE_ASC';
+        dailyStatsCurrentPage = 1;
+        dailyStatsApplyFilters();
+    }
+
+    function dailyStatsApplyFilters() {
+        const tbody = document.getElementById('dailyStatsTbody');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('tr.daily-stat-row'));
+        const term = (document.getElementById('dailyStatsSearch')?.value || '').trim().toLowerCase();
+        const clearBtn = document.getElementById('dailyStatsClearSearch');
+        if (clearBtn) clearBtn.style.display = term ? 'inline-flex' : 'none';
+
+        const activity = document.getElementById('dailyStatsFilterActivity')?.value || 'ALL';
+        const range = document.getElementById('dailyStatsFilterRange')?.value || 'ALL';
+        const sortBy = document.getElementById('dailyStatsSortBy')?.value || 'DATE_ASC';
+
+        let activeFilterCount = 0;
+        if (activity !== 'ALL') activeFilterCount++;
+        if (range !== 'ALL') activeFilterCount++;
+        if (sortBy !== 'DATE_ASC') activeFilterCount++;
+        const badge = document.getElementById('dailyStatsAdvBadge');
+        if (badge) {
+            badge.textContent = String(activeFilterCount);
+            badge.classList.toggle('d-none', activeFilterCount === 0);
+        }
+
+        let maxDateStr = '';
+        rows.forEach(r => {
+            const d = r.getAttribute('data-date') || '';
+            if (d > maxDateStr) maxDateStr = d;
+        });
+        let cutoffStr = '';
+        if ((range === 'LAST_7' || range === 'LAST_14') && maxDateStr) {
+            const ref = new Date(maxDateStr + 'T00:00:00');
+            ref.setDate(ref.getDate() - (range === 'LAST_7' ? 6 : 13));
+            cutoffStr = ref.toISOString().slice(0, 10);
+        }
+
+        const matched = rows.filter(r => {
+            const inv = Number(r.getAttribute('data-invoice') || 0);
+            const real = Number(r.getAttribute('data-real') || 0);
+            const vis = Number(r.getAttribute('data-visits') || 0);
+            const d = r.getAttribute('data-date') || '';
+
+            if (term && !r.textContent.toLowerCase().includes(term)) return false;
+            if (cutoffStr && d < cutoffStr) return false;
+            if (activity === 'HAS_ANY' && inv <= 0 && real <= 0 && vis <= 0) return false;
+            if (activity === 'HAS_REVENUE' && real <= 0) return false;
+            if (activity === 'HAS_VISIT' && vis <= 0) return false;
+            if (activity === 'EMPTY' && (inv > 0 || real > 0 || vis > 0)) return false;
+            return true;
+        });
+
+        matched.sort((a, b) => {
+            if (sortBy === 'DATE_DESC') return (b.getAttribute('data-date') || '').localeCompare(a.getAttribute('data-date') || '');
+            if (sortBy === 'INVOICE_DESC') return Number(b.getAttribute('data-invoice') || 0) - Number(a.getAttribute('data-invoice') || 0);
+            if (sortBy === 'REAL_DESC') return Number(b.getAttribute('data-real') || 0) - Number(a.getAttribute('data-real') || 0);
+            if (sortBy === 'VISIT_DESC') return Number(b.getAttribute('data-visits') || 0) - Number(a.getAttribute('data-visits') || 0);
+            return (a.getAttribute('data-date') || '').localeCompare(b.getAttribute('data-date') || '');
+        });
+
+        const emptyFilterRow = document.getElementById('dailyStatsFilterEmptyRow');
+        rows.forEach(r => { r.style.display = 'none'; });
+        matched.forEach(r => tbody.appendChild(r));
+        if (emptyFilterRow) tbody.appendChild(emptyFilterRow);
+
+        const total = matched.length;
+        const totalPages = Math.max(1, Math.ceil(total / dailyStatsPageSize));
+        if (dailyStatsCurrentPage > totalPages) dailyStatsCurrentPage = totalPages;
+        const startIdx = (dailyStatsCurrentPage - 1) * dailyStatsPageSize;
+        const endIdx = Math.min(startIdx + dailyStatsPageSize, total);
+
+        matched.forEach((r, idx) => {
+            const visible = idx >= startIdx && idx < endIdx;
+            r.style.display = visible ? '' : 'none';
+            const sttEl = r.querySelector('.daily-row-stt');
+            if (sttEl) sttEl.textContent = String(idx + 1);
+        });
+
+        if (emptyFilterRow) {
+            emptyFilterRow.style.display = (rows.length > 0 && total === 0) ? '' : 'none';
+        }
+        const totalEl = document.getElementById('dailyStatsTotalCount');
+        if (totalEl) totalEl.textContent = String(total);
+        const counterEl = document.getElementById('dailyStatsCounter');
+        if (counterEl) counterEl.innerHTML = `Hiển thị <strong class="text-dark">${total}</strong> / ${rows.length} ngày`;
+        const rangeEl = document.getElementById('dailyStatsPageRange');
+        if (rangeEl) rangeEl.textContent = total === 0 ? '0 - 0' : `${startIdx + 1} - ${endIdx}`;
+        const prevBtn = document.getElementById('dailyStatsPrevBtn');
+        const nextBtn = document.getElementById('dailyStatsNextBtn');
+        if (prevBtn) prevBtn.disabled = dailyStatsCurrentPage <= 1;
+        if (nextBtn) nextBtn.disabled = dailyStatsCurrentPage >= totalPages;
+    }
+
+    function dailyStatsChangePageSize() {
+        dailyStatsPageSize = Number(document.getElementById('dailyStatsPageSize')?.value || 10);
+        dailyStatsCurrentPage = 1;
+        dailyStatsApplyFilters();
+    }
+    function dailyStatsPrevPage() { if (dailyStatsCurrentPage > 1) { dailyStatsCurrentPage--; dailyStatsApplyFilters(); } }
+    function dailyStatsNextPage() { dailyStatsCurrentPage++; dailyStatsApplyFilters(); }
+
+    function dailyStatsExportCsv() {
+        const rows = Array.from(document.querySelectorAll('#dailyStatsTbody tr.daily-stat-row'));
+        if (!rows.length) return;
+        const lines = ['Ngay,Doanh so hoa don,Thuc thu dong tien,So luot kham'];
+        rows.forEach(r => {
+            if (r.style.display === 'none') return;
+            lines.push([
+                r.getAttribute('data-date-label') || '',
+                r.getAttribute('data-invoice') || '0',
+                r.getAttribute('data-real') || '0',
+                r.getAttribute('data-visits') || '0'
+            ].join(','));
+        });
+        const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'dien-bien-doanh-so-luot-kham.csv';
+        a.click();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('#dailyStatsTable thead .dv-col-resizer').forEach(resizer => {
+            const th = resizer.closest('th');
+            if (!th) return;
+            resizer.addEventListener('mousedown', e => {
+                e.preventDefault();
+                const startX = e.pageX;
+                const startW = th.offsetWidth;
+                resizer.classList.add('is-resizing');
+                const onMove = ev => { th.style.width = Math.max(80, startW + (ev.pageX - startX)) + 'px'; };
+                const onUp = () => {
+                    resizer.classList.remove('is-resizing');
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                };
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+        });
+        dailyStatsApplyFilters();
+    });
 </script>
 </body>
 </html>
