@@ -17,6 +17,7 @@ public class WorkflowStepDTO {
     private String stepDescription;
     private String completionCriteria;
     private Integer estimatedDurationMinutes;
+    private java.math.BigDecimal stepPrice;
     private String stepType;
     private Boolean isOptional;
     private Boolean requiresClinicalApproval;

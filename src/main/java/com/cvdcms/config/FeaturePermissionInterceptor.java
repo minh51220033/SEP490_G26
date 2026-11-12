@@ -74,7 +74,11 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        boolean allowed = hasAnyPermission(activePermissionCodes, requiredAnyOf);
+        boolean isDoctor = roleNames != null && roleNames.stream()
+                .anyMatch(r -> "BAC_SI".equalsIgnoreCase(r) || "ROLE_BAC_SI".equalsIgnoreCase(r));
+
+        boolean allowed = hasAnyPermission(activePermissionCodes, requiredAnyOf)
+                || (isDoctor && requiredAnyOf.contains("MEDICAL_RECORD_VIEW"));
         if (!allowed) {
             denyAccess(request, response, session, uri, String.join(" / ", requiredAnyOf));
             return false;
@@ -110,7 +114,16 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         // 1. TIẾP ĐÓN, LỊCH HẸN & CSKH (RECEPTION - 7 chức năng độc lập 1:1)
         // =====================================================================
         if (uri.startsWith("/reception/patients") || uri.startsWith("/api/reception/patients")) {
-            return List.of("PATIENT_PROFILE_MANAGE");
+            if (isWriteMethod) {
+                if (uri.matches("^/reception/patients/\\d+/photos.*") || uri.matches("^/api/reception/patients/\\d+/photos.*")) {
+                    return List.of("PATIENT_PROFILE_MANAGE", "CLINICAL_PHOTOS");
+                }
+                return List.of("PATIENT_PROFILE_MANAGE");
+            }
+            if (uri.equals("/reception/patients/new") || uri.matches("^/reception/patients/\\d+/edit.*")) {
+                return List.of("PATIENT_PROFILE_MANAGE");
+            }
+            return List.of("PATIENT_PROFILE_MANAGE", "MEDICAL_RECORD_VIEW");
         }
         if (uri.startsWith("/reception/memberships") || uri.startsWith("/api/reception/memberships")) {
             return List.of("RECEPTION_MEMBERSHIPS");

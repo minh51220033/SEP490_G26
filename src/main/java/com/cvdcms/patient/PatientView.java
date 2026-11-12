@@ -27,6 +27,10 @@ public record PatientView(
         return dob != null ? dob.getYear() : null;
     }
 
+    public String getPhone() {
+        return phoneNumber;
+    }
+
     public String getGenderShort() {
         if (gender == null) return "?";
         String g = gender.trim().toLowerCase();

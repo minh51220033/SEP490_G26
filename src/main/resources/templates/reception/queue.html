@@ -19,7 +19,11 @@
                         <i class="bi bi-list-ol"></i>
                     </div>
                     <div>
-                        <h1 class="dv-page-title mb-0">Hàng chờ gọi số</h1>
+                        <div class="d-flex align-items-center gap-2">
+                            <h1 class="dv-page-title mb-0">Hàng chờ gọi số</h1>
+                            <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold"
+                                  th:text="|${#lists.size(board.tickets)} số khám|">0 số khám</span>
+                        </div>
                         <p class="dv-page-subtitle">Theo dõi hàng chờ gọi số, tiến độ tiếp nhận ca khám và đồng bộ hiển thị màn hình TV</p>
                     </div>
                 </div>

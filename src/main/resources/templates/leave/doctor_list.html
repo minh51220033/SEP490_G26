@@ -3,7 +3,7 @@
 
 <head th:replace="~{fragments/head :: head('Đơn xin nghỉ phép & Khóa lịch')}"></head>
 
-<body class="app-body">
+<body class="app-body account-page-body staff-page-body">
 <div class="app-shell">
 
     <aside th:replace="~{fragments/sidebar :: sidebar('leave-requests')}"></aside>
@@ -12,139 +12,240 @@
     <div class="app-main">
         <header th:replace="~{fragments/header :: appTopbar('Đơn xin nghỉ phép & Khóa lịch')}"></header>
 
-        <main class="app-content p-3 p-md-4" style="background: #f8fafc !important;">
+        <main class="app-content">
+            <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
             <link rel="stylesheet" th:href="@{/css/staff.css}">
+            <link rel="stylesheet" th:href="@{/css/account.css}">
             <link rel="stylesheet" th:href="@{/css/schedule.css}">
+            <link rel="stylesheet" th:href="@{/css/attendance.css}">
 
-            <div class="schedule-container">
+            <style>
+                .dv-kpi-card {
+                    background: #ffffff;
+                    border: 1.5px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding: 8px 12px;
+                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+                    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    cursor: pointer;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .dv-kpi-card::before {
+                    content: '';
+                    position: absolute;
+                    left: 0; top: 0; bottom: 0;
+                    width: 3.5px;
+                    background: var(--kpi-accent, #0284c7);
+                    border-radius: 10px 0 0 10px;
+                }
+                .dv-kpi-card:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
+                    border-color: #cbd5e1;
+                }
+                .dv-kpi-card.active-kpi {
+                    border-color: var(--kpi-accent, #0284c7);
+                    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+                    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.1);
+                }
+                .dv-kpi-num { font-size: 20px; font-weight: 800; line-height: 1.1; color: #0f172a; letter-spacing: -0.5px; }
+                .dv-kpi-label { font-size: 11.5px; font-weight: 700; color: #475569; margin-top: 2px; }
+                .dv-kpi-sub { font-size: 10.5px; color: #94a3b8; font-weight: 600; margin-top: 1px; }
+                .dv-kpi-icon {
+                    width: 34px; height: 34px; border-radius: 8px;
+                    display: flex; align-items: center; justify-content: center;
+                    font-size: 15px; flex-shrink: 0;
+                }
+                .dv-toolbar-card {
+                    background: #ffffff;
+                    border: 1.5px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding: 6px 12px;
+                    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+                    margin-bottom: 10px;
+                }
+                .dv-search-box { position: relative; flex: 1; min-width: 240px; max-width: 380px; }
+                .dv-search-box input {
+                    width: 100%; height: 34px; padding: 6px 14px 6px 34px;
+                    border: 1.5px solid #cbd5e1; border-radius: 8px;
+                    font-size: 12.5px; color: #0f172a; background: #f8fafc;
+                }
+                .dv-search-box input:focus {
+                    background: #ffffff; border-color: #0284c7;
+                    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12); outline: none;
+                }
+                .dv-search-box i {
+                    position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+                    color: #94a3b8; font-size: 13px; pointer-events: none;
+                }
+            </style>
 
-                <!-- 1. TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN ENTERPRISE (GIỐNG DOCTOR/LABO) -->
-                <div class="d-flex flex-wrap flex-xl-nowrap align-items-center justify-content-between gap-3 mb-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white; width: 44px; height: 44px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
-                            <i class="bi bi-calendar-x-fill"></i>
-                        </div>
+            <!-- 1. TIÊU ĐỀ TRANG ĐỒNG BỘ 100% VỚI LỊCH LÀM VIỆC & CHẤM CÔNG -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 pb-1">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; margin-right: 4px;">
+                        <i class="bi bi-calendar-x-fill"></i>
+                    </div>
+                    <div>
+                        <h1 class="dv-page-title mb-0" style="font-size: 17px; font-weight: 800; line-height: 1.2;">Đơn xin nghỉ phép &amp; Khóa lịch Bác sĩ</h1>
+                        <p class="dv-page-subtitle mb-0 text-muted" style="font-size: 12px;">
+                            <span th:if="${doctor != null}">
+                                Bác sĩ: <strong class="text-dark" th:text="${doctor.fullName}">Bác sĩ</strong> (<span th:text="${doctor.staffCode}">BS001</span>) ·
+                                Chuyên khoa: <span class="badge bg-light text-primary border" th:text="${doctor.specialty != null ? doctor.specialty : 'Nha khoa tổng quát'}">Tổng quát</span>
+                            </span>
+                            <span th:if="${doctor == null}" class="text-danger">Tài khoản chưa liên kết hồ sơ Bác sĩ</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-shrink-0 flex-wrap">
+                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                    <button type="button" class="btn btn-primary fw-bold px-3 py-1.5 rounded-3 shadow-xs d-inline-flex align-items-center gap-1.5"
+                            style="height: 32px; font-size: 12.5px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;"
+                            data-bs-toggle="modal" data-bs-target="#createLeaveModal"
+                            th:disabled="${doctor == null}">
+                        <i class="bi bi-plus-lg"></i> Gửi yêu cầu nghỉ / Khóa lịch
+                    </button>
+                </div>
+            </div>
+
+            <!-- THANH 2 TAB CHUYỂN NHANH: LỊCH LÀM VIỆC & CHẤM CÔNG | YÊU CẦU NGHỈ / KHÓA LỊCH -->
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3 pb-2 border-bottom" style="border-color: #e2e8f0 !important;">
+                <a th:href="@{${permissionCodes != null and #lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') ? '/attendance/my' : '/schedules/my'}}"
+                   class="btn btn-sm fw-semibold px-3 py-1.5 rounded-3 d-inline-flex align-items-center gap-1.5"
+                   style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-size: 13px;">
+                    <i class="bi bi-calendar-check text-primary"></i><span>Lịch làm việc &amp; Chấm công</span>
+                </a>
+                <a th:href="@{/doctor/leave-requests}"
+                   class="btn btn-sm fw-bold px-3 py-1.5 rounded-3 d-inline-flex align-items-center gap-1.5"
+                   style="background: #0284c7; color: #fff; border: 1px solid #0284c7; font-size: 13px;">
+                    <i class="bi bi-calendar2-x"></i><span>Yêu cầu nghỉ / Khóa lịch</span>
+                </a>
+            </div>
+
+            <!-- ALERT THÔNG BÁO -->
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-2 rounded-3" style="font-size: 12.5px;" role="alert">
+                <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                <div th:text="${successMessage}">Thao tác thành công.</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-2 rounded-3" style="font-size: 12.5px;" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                <div th:text="${errorMessage}">Đã xảy ra lỗi.</div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- 2. 4 THẺ KPI ĐỒNG BỘ VỚI ATTENDANCE/MY -->
+            <div class="row g-2 mb-3">
+                <div class="col-6 col-md-3">
+                    <div class="dv-kpi-card active-kpi leave-kpi-card h-100" data-status-val="" style="--kpi-accent: #0284c7;">
                         <div>
-                            <h1 class="dv-page-title mb-0" style="font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">Đơn xin nghỉ phép &amp; Khóa lịch Bác sĩ</h1>
-                            <p class="dv-page-subtitle mb-0" style="font-size: 13px; color: #64748b;">
-                                <span th:if="${doctor != null}">
-                                    Bác sĩ: <strong class="text-dark" th:text="${doctor.fullName}">Bác sĩ</strong>
-                                    (<span th:text="${doctor.staffCode}">BS001</span>) ·
-                                    Chuyên khoa: <span class="badge bg-light text-primary border" th:text="${doctor.specialty != null ? doctor.specialty : 'Nha khoa tổng quát'}">Tổng quát</span>
-                                </span>
-                                <span th:if="${doctor == null}" class="text-danger">Tài khoản chưa liên kết hồ sơ Bác sĩ</span>
-                            </p>
+                            <div class="dv-kpi-num" th:text="${summary.total}">0</div>
+                            <div class="dv-kpi-label">Tổng số đơn</div>
+                            <div class="dv-kpi-sub">Toàn bộ yêu cầu đã gửi</div>
                         </div>
-                    </div>
-
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0 flex-wrap">
-                        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-                        <a th:href="@{/schedules/my}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1.5" style="height: 38px; font-size: 13px;">
-                            <i class="bi bi-calendar3"></i> Lịch trực của tôi
-                        </a>
-                        <button type="button" class="btn btn-primary fw-bold px-3.5 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1.5"
-                                style="height: 38px; font-size: 13px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;"
-                                data-bs-toggle="modal" data-bs-target="#createLeaveModal"
-                                th:disabled="${doctor == null}">
-                            <i class="bi bi-plus-lg"></i> Gửi yêu cầu nghỉ / Khóa lịch
-                        </button>
-                    </div>
-                </div>
-
-                <!-- ALERT THÔNG BÁO -->
-                <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-0" role="alert">
-                    <i class="bi bi-check-circle-fill me-2 fs-5"></i>
-                    <div th:text="${successMessage}">Thao tác thành công.</div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show d-flex align-items-center py-2 px-3 mb-0" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-                    <div th:text="${errorMessage}">Đã xảy ra lỗi.</div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-
-                <!-- 2. STAT COUNTERS -->
-                <div class="row g-3">
-                    <div class="col-6 col-md-3">
-                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="text-muted small fw-medium">Tổng số đơn</span>
-                                <span class="badge rounded-pill bg-light text-primary fs-6 p-2">
-                                    <i class="bi bi-file-earmark-text"></i>
-                                </span>
-                            </div>
-                            <h3 class="fw-bold mt-2 mb-0" style="color: #0f172a;" th:text="${summary.total}">0</h3>
-                            <span class="text-muted" style="font-size: 0.75rem;">Toàn bộ yêu cầu đã gửi</span>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="text-muted small fw-medium">Đang chờ duyệt</span>
-                                <span class="badge rounded-pill bg-warning-subtle text-warning fs-6 p-2">
-                                    <i class="bi bi-hourglass-split"></i>
-                                </span>
-                            </div>
-                            <h3 class="fw-bold mt-2 mb-0 text-warning" th:text="${summary.pending}">0</h3>
-                            <span class="text-muted" style="font-size: 0.75rem;">Chờ Quản lý/Admin xét duyệt</span>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="text-muted small fw-medium">Đã phê duyệt</span>
-                                <span class="badge rounded-pill bg-success-subtle text-success fs-6 p-2">
-                                    <i class="bi bi-check-circle"></i>
-                                </span>
-                            </div>
-                            <h3 class="fw-bold mt-2 mb-0 text-success" th:text="${summary.approved}">0</h3>
-                            <span class="text-muted" style="font-size: 0.75rem;">Đã khóa lịch &amp; miễn ca trực</span>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <span class="text-muted small fw-medium">Bị từ chối</span>
-                                <span class="badge rounded-pill bg-danger-subtle text-danger fs-6 p-2">
-                                    <i class="bi bi-x-circle"></i>
-                                </span>
-                            </div>
-                            <h3 class="fw-bold mt-2 mb-0 text-danger" th:text="${summary.rejected}">0</h3>
-                            <span class="text-muted" style="font-size: 0.75rem;">Không được chấp thuận</span>
+                        <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                            <i class="bi bi-file-earmark-text-fill"></i>
                         </div>
                     </div>
                 </div>
-
-                <!-- 3. BẢNG DANH SÁCH YÊU CẦU NGHỈ (SCR-42.2) -->
-                <div class="card border-0 shadow-sm rounded-3 bg-white overflow-hidden">
-                    <div class="card-header bg-white py-3 px-3 border-bottom d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-list-task text-primary"></i>
-                            <h6 class="mb-0 fw-bold" style="color: #1e293b;">Lịch sử đơn xin nghỉ phép &amp; khóa lịch</h6>
+                <div class="col-6 col-md-3">
+                    <div class="dv-kpi-card leave-kpi-card h-100" data-status-val="PENDING" style="--kpi-accent: #f59e0b;">
+                        <div>
+                            <div class="dv-kpi-num text-warning" th:text="${summary.pending}">0</div>
+                            <div class="dv-kpi-label">Đang chờ duyệt</div>
+                            <div class="dv-kpi-sub">Chờ Quản lý/Admin xét duyệt</div>
                         </div>
-                        <span class="badge bg-light text-muted border px-2 py-1" style="font-size: 0.75rem;"
-                              th:text="'Hiển thị ' + ${requests.size()} + ' đơn'">Hiển thị 0 đơn</span>
+                        <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
                     </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="dv-kpi-card leave-kpi-card h-100" data-status-val="APPROVED" style="--kpi-accent: #10b981;">
+                        <div>
+                            <div class="dv-kpi-num text-success" th:text="${summary.approved}">0</div>
+                            <div class="dv-kpi-label">Đã phê duyệt</div>
+                            <div class="dv-kpi-sub">Đã khóa lịch &amp; miễn ca trực</div>
+                        </div>
+                        <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="dv-kpi-card leave-kpi-card h-100" data-status-val="REJECTED" style="--kpi-accent: #ef4444;">
+                        <div>
+                            <div class="dv-kpi-num text-danger" th:text="${summary.rejected}">0</div>
+                            <div class="dv-kpi-label">Bị từ chối</div>
+                            <div class="dv-kpi-sub">Không được chấp thuận</div>
+                        </div>
+                        <div class="dv-kpi-icon" style="background: #fee2e2; color: #dc2626;">
+                            <i class="bi bi-x-circle-fill"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 text-nowrap" style="font-size: 0.86rem;">
-                            <thead class="table-light text-secondary" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.3px;">
+            <!-- 3. BẢNG DANH SÁCH YÊU CẦU NGHỈ ĐỒNG BỘ DV-AMIS-TABLE -->
+            <div class="dv-toolbar-card d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-list-task text-primary"></i>
+                    <h6 class="mb-0 fw-bold" style="font-size: 13.5px; color: #1e293b;">Lịch sử đơn xin nghỉ phép &amp; khóa lịch</h6>
+                    <span class="badge bg-primary-subtle text-primary rounded-pill px-2.5 py-1 fw-semibold" id="leaveVisibleCount"
+                          th:text="|Hiển thị ${requests.size()} đơn|">Hiển thị 0 đơn</span>
+                </div>
+                <div class="dv-search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="search" id="leaveSearchInput" placeholder="Tìm theo cơ sở, lý do, ghi chú...">
+                </div>
+            </div>
+
+            <div class="staff-table-card p-3">
+                <div class="dv-table-scroll-container rounded-3 border">
+                    <table class="dv-amis-table align-middle mb-0" id="doctorLeaveTable">
+                        <thead>
                             <tr>
-                                <th class="text-center" style="width: 50px;">#</th>
-                                <th>Cơ sở</th>
-                                <th>Thời gian nghỉ</th>
-                                <th>Ca trực</th>
-                                <th>Loại nghỉ</th>
-                                <th>Lý do</th>
-                                <th>Ngày gửi</th>
-                                <th class="text-center">Trạng thái</th>
-                                <th>Phản hồi / Ghi chú</th>
-                                <th class="text-end" style="width: 100px;">Thao tác</th>
+                                <th data-col="stt" class="text-center" style="width: 60px; min-width: 55px;">
+                                    <div class="dv-th-inner justify-content-center text-center"><span>#</span></div>
+                                </th>
+                                <th data-col="branch" class="text-center" style="width: 155px; min-width: 140px;">
+                                    <div class="dv-th-inner justify-content-center text-center"><span>Cơ sở</span></div>
+                                </th>
+                                <th data-col="dateRange" class="text-center" style="width: 185px; min-width: 165px;">
+                                    <div class="dv-th-inner justify-content-center text-center"><span>Thời gian nghỉ</span></div>
+                                </th>
+                                <th data-col="shift" class="text-center" style="width: 175px; min-width: 155px;">
+                                    <div class="dv-th-inner justify-content-center text-center"><span>Ca trực</span></div>
+                                </th>
+                                <th data-col="leaveType" class="text-center" style="width: 125px; min-width: 115px;">
+                                    <div class="dv-th-inner justify-content-center text-center"><span>Loại nghỉ</span></div>
+                                </th>
+                                <th data-col="reason" class="text-center" style="width: 220px; min-width: 180px;">
+                                    <div class="dv-th-inner justify-content-center text-center"><span>Lý do</span></div>
+                                </th>
+                                <th data-col="submittedAt" class="text-center" style="width: 135px; min-width: 120px;">
+                                    <div class="dv-th-inner justify-content-center text-center"><span>Ngày gửi</span></div>
+                                </th>
+                                <th data-col="status" class="text-center" style="width: 135px; min-width: 120px;">
+                                    <div class="dv-th-inner justify-content-center text-center"><span>Trạng thái</span></div>
+                                </th>
+                                <th data-col="reviewNote" class="text-center" style="width: 200px; min-width: 170px;">
+                                    <div class="dv-th-inner justify-content-center text-center"><span>Phản hồi / Ghi chú</span></div>
+                                </th>
+                                <th data-col="actions" class="text-center" style="width: 125px; min-width: 115px;">
+                                    <div class="dv-th-inner justify-content-center text-center"><span>Thao tác</span></div>
+                                </th>
+                                <th class="dv-floating-actions-track"></th>
                             </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:if="${#lists.isEmpty(requests)}">
-                                <td colspan="10" class="text-center py-5 text-muted">
+                        </thead>
+                        <tbody>
+                            <tr th:if="${#lists.isEmpty(requests)}" id="leaveEmptyRow">
+                                <td colspan="11" class="text-center py-5 text-muted">
                                     <div class="d-flex flex-column align-items-center gap-2">
                                         <i class="bi bi-calendar-check text-secondary" style="font-size: 2.2rem; opacity: 0.5;"></i>
                                         <span>Bạn chưa có đơn xin nghỉ phép nào.</span>
@@ -156,23 +257,21 @@
                                     </div>
                                 </td>
                             </tr>
-                            <tr th:each="r, iter : ${requests}">
+                            <tr th:each="r, iter : ${requests}" class="dv-data-row leave-row"
+                                th:attr="data-status=${r.status.name()},
+                                         data-search=|${r.branch.branchName} ${r.reason} ${r.reviewNote != null ? r.reviewNote : ''}|">
                                 <td class="text-center text-muted fw-semibold" th:text="${iter.count}">1</td>
-                                <td>
-                                    <span class="fw-semibold text-dark" th:text="${r.branch.branchName}">Cơ sở Đống Đa</span>
+                                <td class="overflow-hidden">
+                                    <span class="fw-semibold text-dark text-truncate d-block" th:text="${r.branch.branchName}" th:title="${r.branch.branchName}">Cơ sở Đống Đa</span>
                                 </td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1">
-                                        <i class="bi bi-calendar-event text-primary"></i>
-                                        <strong th:text="${#temporals.format(r.startDate, 'dd/MM/yyyy')}">01/01/2026</strong>
-                                        <span th:if="${!r.startDate.isEqual(r.endDate)}" class="text-muted">
-                                            đến <strong th:text="${#temporals.format(r.endDate, 'dd/MM/yyyy')}">03/01/2026</strong>
-                                        </span>
-                                    </div>
+                                <td class="text-center">
+                                    <strong th:text="${#temporals.format(r.startDate, 'dd/MM/yyyy')}">01/01/2026</strong>
+                                    <span th:if="${!r.startDate.isEqual(r.endDate)}" class="text-muted">
+                                        đến <strong th:text="${#temporals.format(r.endDate, 'dd/MM/yyyy')}">03/01/2026</strong>
+                                    </span>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     <span th:if="${r.shift != null}" class="badge bg-light text-dark border">
-                                        <i class="bi bi-clock me-1"></i>
                                         <span th:text="${r.shift.shiftName}">Ca sáng</span>
                                         (<span th:text="${#temporals.format(r.shift.startTime, 'HH:mm')}">08:00</span> -
                                          <span th:text="${#temporals.format(r.shift.endTime, 'HH:mm')}">12:00</span>)
@@ -181,22 +280,21 @@
                                         <i class="bi bi-brightness-high me-1"></i> Cả ngày
                                     </span>
                                 </td>
-                                <td>
-                                    <span th:if="${r.leaveType.name() == 'ANNUAL'}" class="badge bg-info-subtle text-info border border-info-subtle">Phép năm</span>
-                                    <span th:if="${r.leaveType.name() == 'SICK'}" class="badge bg-warning-subtle text-warning border border-warning-subtle">Nghỉ ốm</span>
-                                    <span th:if="${r.leaveType.name() == 'PERSONAL'}" class="badge bg-secondary-subtle text-secondary border">Việc riêng</span>
-                                    <span th:if="${r.leaveType.name() == 'UNPAID'}" class="badge bg-light text-dark border">Không lương</span>
-
-                                    <span th:if="${r.isEmergency}" class="badge bg-danger text-white ms-1" title="Đơn nộp gấp dưới 3 ngày (Quy tắc R8)">
-                                        <i class="bi bi-lightning-fill"></i> Đột xuất
-                                    </span>
+                                <td class="text-center">
+                                    <div>
+                                        <span th:if="${r.leaveType.name() == 'ANNUAL'}" class="badge bg-info-subtle text-info border border-info-subtle">Phép năm</span>
+                                        <span th:if="${r.leaveType.name() == 'SICK'}" class="badge bg-warning-subtle text-warning border border-warning-subtle">Nghỉ ốm</span>
+                                        <span th:if="${r.leaveType.name() == 'PERSONAL'}" class="badge bg-secondary-subtle text-secondary border">Việc riêng</span>
+                                        <span th:if="${r.leaveType.name() == 'UNPAID'}" class="badge bg-light text-dark border">Không lương</span>
+                                    </div>
+                                    <div th:if="${r.isEmergency}" class="text-danger fw-semibold mt-1" style="font-size: 11px;" title="Đơn nộp gấp dưới 3 ngày (Quy tắc R8)">
+                                        Đột xuất (&lt; 3 ngày)
+                                    </div>
                                 </td>
-                                <td>
-                                    <span class="text-truncate d-inline-block" style="max-width: 220px;" th:text="${r.reason}" th:title="${r.reason}">
-                                        Lý do nghỉ
-                                    </span>
+                                <td class="overflow-hidden">
+                                    <span class="text-truncate d-block" th:text="${r.reason}" th:title="${r.reason}">Lý do nghỉ</span>
                                 </td>
-                                <td class="text-muted" style="font-size: 0.8rem;" th:text="${#temporals.format(r.submittedAt, 'dd/MM/yyyy HH:mm')}">
+                                <td class="text-center text-muted" style="font-size: 0.8rem;" th:text="${#temporals.format(r.submittedAt, 'dd/MM/yyyy HH:mm')}">
                                     01/01/2026 09:30
                                 </td>
                                 <td class="text-center">
@@ -213,32 +311,42 @@
                                         <i class="bi bi-slash-circle me-1"></i> Đã hủy
                                     </span>
                                 </td>
-                                <td>
+                                <td class="overflow-hidden">
                                     <div th:if="${r.reviewNote != null and !r.reviewNote.isBlank()}">
-                                        <span class="fst-italic text-dark small" th:text="${r.reviewNote}">Ghi chú</span>
-                                        <span th:if="${r.reviewedBy != null}" class="text-muted small d-block" style="font-size: 0.72rem;">
+                                        <span class="fst-italic text-dark small text-truncate d-block" th:text="${r.reviewNote}" th:title="${r.reviewNote}">Ghi chú</span>
+                                        <span th:if="${r.reviewedBy != null}" class="text-muted small d-block text-truncate" style="font-size: 0.72rem;">
                                             (bởi <span th:text="${r.reviewedBy.username}">admin</span> lúc <span th:text="${#temporals.format(r.reviewedAt, 'dd/MM HH:mm')}"></span>)
                                         </span>
                                     </div>
                                     <span th:if="${r.reviewNote == null or r.reviewNote.isBlank()}" class="text-muted small">—</span>
                                 </td>
-                                <td class="text-end">
-                                    <form th:if="${r.status.name() == 'PENDING'}"
-                                          th:action="@{/doctor/leave-requests/{id}/cancel(id=${r.leaveId})}"
-                                          method="post" class="d-inline"
-                                          onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn xin nghỉ phép này?');">
-                                        <button type="submit" class="btn btn-outline-danger btn-sm py-1 px-2" style="font-size: 0.78rem;">
-                                            <i class="bi bi-trash"></i> Hủy đơn
-                                        </button>
-                                    </form>
+                                <td class="text-center">
+                                    <div class="dv-actions-cell-always" th:if="${r.status.name() == 'PENDING'}">
+                                        <form th:action="@{/doctor/leave-requests/{id}/cancel(id=${r.leaveId})}"
+                                              method="post" class="d-inline m-0"
+                                              onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn xin nghỉ phép này?');">
+                                            <button type="submit" class="dv-equal-btn-secondary text-danger">
+                                                <i class="bi bi-trash"></i><span>Hủy đơn</span>
+                                            </button>
+                                        </form>
+                                    </div>
                                     <span th:if="${r.status.name() != 'PENDING'}" class="text-muted small">—</span>
                                 </td>
+                                <td class="dv-floating-actions-track">
+                                    <div class="dv-floating-actions-bar" th:if="${r.status.name() == 'PENDING'}">
+                                        <form th:action="@{/doctor/leave-requests/{id}/cancel(id=${r.leaveId})}"
+                                              method="post" class="d-inline m-0"
+                                              onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn xin nghỉ phép này?');">
+                                            <button type="submit" class="dv-equal-btn-secondary text-danger">
+                                                <i class="bi bi-trash"></i><span>Hủy đơn</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
                             </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
-
             </div>
 
                     </main>
@@ -470,6 +578,36 @@
                         branchSelect.selectedIndex = 1;
                         loadShifts(branchSelect.value);
                     }
+
+                    // Lọc nhanh theo thẻ KPI trạng thái & ô tìm kiếm
+                    const kpiCards = document.querySelectorAll('.leave-kpi-card');
+                    const searchInput = document.getElementById('leaveSearchInput');
+                    const leaveRows = document.querySelectorAll('.leave-row');
+                    const visibleCountEl = document.getElementById('leaveVisibleCount');
+                    let selectedStatus = '';
+
+                    function applyLeaveFilters() {
+                        const kw = (searchInput?.value || '').trim().toLowerCase();
+                        let shown = 0;
+                        leaveRows.forEach(row => {
+                            const matchStatus = !selectedStatus || row.dataset.status === selectedStatus;
+                            const matchKw = !kw || (row.dataset.search || '').toLowerCase().includes(kw);
+                            const visible = matchStatus && matchKw;
+                            row.style.display = visible ? '' : 'none';
+                            if (visible) shown++;
+                        });
+                        if (visibleCountEl) visibleCountEl.textContent = `Hiển thị ${shown} đơn`;
+                    }
+
+                    kpiCards.forEach(card => {
+                        card.addEventListener('click', function () {
+                            selectedStatus = this.dataset.statusVal || '';
+                            kpiCards.forEach(c => c.classList.remove('active-kpi'));
+                            this.classList.add('active-kpi');
+                            applyLeaveFilters();
+                        });
+                    });
+                    searchInput?.addEventListener('input', applyLeaveFilters);
 
                     // Tự động mở lại modal nếu server trả về lỗi
                     const hasError = /*[[${errorMessage != null}]]*/ false;
