@@ -28,6 +28,7 @@ import static org.mockito.Mockito.*;
 
 /** Examples designed against DB(8).zip. Execution must be verified locally. */
 @ExtendWith(MockitoExtension.class)
+@DisplayName("CreateService")
 class ServiceCatalogCreateReportTest {
     @Mock ServiceRepository serviceRepository;
     @Mock ServiceCategoryRepository categoryRepository;
@@ -82,7 +83,7 @@ class ServiceCatalogCreateReportTest {
         verify(serviceRepository, never()).save(any(Service.class));
     }
 
-    @Test @DisplayName("UTC_FT02_CS01 - N - Tạo hợp lệ và chuẩn hóa mã")
+    @Test @DisplayName("UTCID01 - N - Tạo hợp lệ và chuẩn hóa mã")
     void UTC_FT02_CS01_validInput_normalizesCodeAndSaves() {
         existingCategory(true, ServiceType.PROCEDURE);
         service.createService(validInput());
