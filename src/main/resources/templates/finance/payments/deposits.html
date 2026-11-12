@@ -246,12 +246,12 @@
                             </button>
 
                             <!-- Lọc theo ngày (Từ ngày -> Đến ngày) -->
-                            <div class="d-inline-flex align-items-center gap-1.5 ms-2">
+                            <div class="d-inline-flex align-items-center gap-2 ms-2">
                                 <span class="text-muted small fw-bold">Từ:</span>
-                                <input type="date" name="startDate" th:value="${startDate}" class="form-control" style="height: 44px; width: 140px; font-size: 13.5px;" title="Từ ngày">
+                                <input type="date" id="startDate" name="startDate" th:value="${startDate}" class="form-control" style="height: 44px; width: 140px; font-size: 13.5px;" title="Từ ngày">
                                 <span class="text-muted small fw-bold mx-1">Đến:</span>
-                                <input type="date" name="endDate" th:value="${endDate}" class="form-control" style="height: 44px; width: 140px; font-size: 13.5px;" title="Đến ngày">
-                                <button type="submit" class="btn btn-outline-secondary fw-semibold px-2.5 rounded-3 d-inline-flex align-items-center gap-1" style="height: 44px;" title="Áp dụng lọc ngày">
+                                <input type="date" id="endDate" name="endDate" th:value="${endDate}" class="form-control" style="height: 44px; width: 140px; font-size: 13.5px;" title="Đến ngày">
+                                <button type="submit" class="btn btn-outline-secondary fw-semibold px-3 rounded-3 d-inline-flex align-items-center gap-1" style="height: 44px;" title="Áp dụng lọc ngày">
                                     <i class="bi bi-funnel"></i> Lọc
                                 </button>
                             </div>
@@ -274,6 +274,7 @@
                             </select>
                         </div>
                     </form>
+                    <div th:replace="~{fragments/cashier-tabs :: quickDateBar('startDate', 'endDate')}"></div>
                 </div>
 
                 <!-- BẢNG DANH SÁCH BỆNH NHÂN ĐÃ ĐÓNG TẠM ỨNG (CHUẨN ẢNH 2) -->

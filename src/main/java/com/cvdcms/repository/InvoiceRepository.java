@@ -350,6 +350,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
           AND i.remainingDebt > 0
           AND (:paymentStatus IS NULL OR i.paymentStatus = :paymentStatus)
           AND (:branchId IS NULL OR i.branch.branchId = :branchId)
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt <= :endDate)
           AND (
               :keyword IS NULL OR :keyword = ''
               OR LOWER(pp.patientCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -366,6 +368,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
           AND i.remainingDebt > 0
           AND (:paymentStatus IS NULL OR i.paymentStatus = :paymentStatus)
           AND (:branchId IS NULL OR i.branch.branchId = :branchId)
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt <= :endDate)
           AND (
               :keyword IS NULL OR :keyword = ''
               OR LOWER(pp.patientCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -377,6 +381,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
             @Param("branchId") Long branchId,
             @Param("paymentStatus") InvoicePaymentStatus paymentStatus,
             @Param("keyword") String keyword,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
             Pageable pageable
     );
 
@@ -399,6 +405,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
           AND i.remainingDebt > 0
           AND (:paymentStatus IS NULL OR i.paymentStatus = :paymentStatus)
           AND (i.branch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt <= :endDate)
           AND (
               :keyword IS NULL OR :keyword = ''
               OR LOWER(pp.patientCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -415,6 +423,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
           AND i.remainingDebt > 0
           AND (:paymentStatus IS NULL OR i.paymentStatus = :paymentStatus)
           AND (i.branch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt <= :endDate)
           AND (
               :keyword IS NULL OR :keyword = ''
               OR LOWER(pp.patientCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -426,6 +436,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
             @Param("branchIds") List<Long> branchIds,
             @Param("paymentStatus") InvoicePaymentStatus paymentStatus,
             @Param("keyword") String keyword,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
             Pageable pageable
     );
 

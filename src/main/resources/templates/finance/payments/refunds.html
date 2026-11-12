@@ -84,6 +84,7 @@
                         <a th:href="@{/payments/refunds}" class="fin-btn fin-btn-outline" title="Đặt lại bộ lọc"><i class="bi bi-arrow-clockwise"></i> Đặt lại</a>
                     </div>
                 </form>
+                <div th:replace="~{fragments/cashier-tabs :: quickDateBar('startDate', 'endDate')}"></div>
             </div>
 
             <!-- Table Card -->
