@@ -23,6 +23,11 @@ public interface ReceptionVisitRepository extends JpaRepository<Visit, Long> {
             WHERE b.branchId = :branchId AND v.checkInAt >= :start AND v.checkInAt < :end ORDER BY v.checkInAt DESC, v.visitId DESC""")
     List<Visit> forDay(@Param("branchId") Long branchId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
+    @Query("""
+            SELECT v FROM Visit v JOIN FETCH v.patientProfile p JOIN FETCH v.branch b LEFT JOIN FETCH v.primaryDoctor d
+            WHERE b.branchId = :branchId ORDER BY v.checkInAt DESC, v.visitId DESC""")
+    List<Visit> forAllDays(@Param("branchId") Long branchId);
+
     @Query(value = """
             SELECT v FROM Visit v JOIN FETCH v.patientProfile p JOIN FETCH v.branch b LEFT JOIN FETCH v.primaryDoctor d
             WHERE b.branchId = :branchId

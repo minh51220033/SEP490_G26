@@ -87,11 +87,15 @@
             </div>
           </div>
           <div class="d-flex flex-wrap align-items-center gap-2">
-            <a th:if="${issuedTicketId != null}"
-              th:href="@{/reception/dispatch/tickets/{id}(id=${issuedTicketId}, autoPrint=true)}" target="_blank"
-              class="btn btn-sm btn-primary fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm text-decoration-none">
+            <button th:if="${issuedTicketId != null}"
+              type="button"
+              class="btn btn-sm btn-primary fw-bold d-inline-flex align-items-center gap-2 shadow-sm btn-print-k80"
+              th:attr="data-ticket-number=${issuedTicketNumber != null ? issuedTicketNumber : '01'},
+                       data-patient-name=${notice != null ? notice : 'Bệnh nhân'},
+                       data-ticket-id=${issuedTicketId}"
+              th:onclick="|printTicketDirect(${issuedTicketId})|">
               <i class="bi bi-printer-fill"></i><span>In phiếu A6 ngay</span>
-            </a>
+            </button>
           </div>
         </div>
         <div class="alert alert-danger shadow-sm rounded-4 p-3 mb-3 border-0" role="alert" th:if="${error}"
@@ -330,12 +334,21 @@
                           </button>
 
                           <!-- Nút In phiếu A6 trực tiếp 1-chạm -->
-                          <a th:if="${board.issued[v.visitId] != null and board.ticketIds[v.visitId] != null}"
-                            th:href="@{/reception/dispatch/tickets/{id}(id=${board.ticketIds[v.visitId]}, autoPrint=true)}"
-                            target="_blank" class="dv-equal-btn-primary text-decoration-none">
+                          <button th:if="${board.issued[v.visitId] != null}"
+                            type="button"
+                            class="dv-equal-btn-primary btn-print-k80"
+                            th:attr="data-ticket-number=${board.issued[v.visitId]},
+                                     data-patient-name=${v.patientProfile.fullName},
+                                     data-patient-code=${v.patientProfile.patientCode},
+                                     data-doctor-name=${doc.name},
+                                     data-room-name=${board.roomNames[v.visitId]},
+                                     data-chair-name=${board.chairNames[v.visitId]},
+                                     data-issued-time=${#temporals.format(v.checkInAt, 'HH:mm')},
+                                     data-is-emergency=${v.visitType.name() == 'EMERGENCY'}"
+                            title="In phiếu khám A6 / K80 tại chỗ">
                             <i class="bi bi-printer-fill"></i>
                             <span>In phiếu</span>
-                          </a>
+                          </button>
 
                           <!-- Nút Cấp số (dự phòng nếu chưa có số) -->
                           <form th:if="${board.issued[v.visitId] == null}"
@@ -371,12 +384,21 @@
                             <span>Đổi BS</span>
                           </button>
 
-                          <a th:if="${board.issued[v.visitId] != null and board.ticketIds[v.visitId] != null}"
-                            th:href="@{/reception/dispatch/tickets/{id}(id=${board.ticketIds[v.visitId]}, autoPrint=true)}"
-                            target="_blank" class="dv-equal-btn-primary text-decoration-none">
+                          <button th:if="${board.issued[v.visitId] != null}"
+                            type="button"
+                            class="dv-equal-btn-primary btn-print-k80"
+                            th:attr="data-ticket-number=${board.issued[v.visitId]},
+                                     data-patient-name=${v.patientProfile.fullName},
+                                     data-patient-code=${v.patientProfile.patientCode},
+                                     data-doctor-name=${doc.name},
+                                     data-room-name=${board.roomNames[v.visitId]},
+                                     data-chair-name=${board.chairNames[v.visitId]},
+                                     data-issued-time=${#temporals.format(v.checkInAt, 'HH:mm')},
+                                     data-is-emergency=${v.visitType.name() == 'EMERGENCY'}"
+                            title="In phiếu khám A6 / K80 tại chỗ">
                             <i class="bi bi-printer-fill"></i>
                             <span>In phiếu</span>
-                          </a>
+                          </button>
 
                           <!-- Nút Cấp số nổi khi Hover (nếu chưa có số) -->
                           <form th:if="${board.issued[v.visitId] == null}"
@@ -802,9 +824,9 @@
           aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered" style="max-width: 380px;">
             <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-              <div class="modal-header bg-light border-bottom py-2.5 px-3.5 no-print">
+              <div class="modal-header bg-light border-bottom py-2 px-3 no-print">
                 <h6 class="modal-title fw-bold text-dark mb-0" id="k80TicketModalLabel">
-                  <i class="bi bi-receipt-cutoff text-primary me-1.5"></i>Bản in Phiếu nhiệt K80
+                  <i class="bi bi-receipt-cutoff text-primary me-2"></i>Bản in Phiếu tiếp đón (Khổ A6)
                 </h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
@@ -872,11 +894,11 @@
                 </div>
               </div>
 
-              <div class="modal-footer bg-light border-top py-2.5 px-3.5 d-flex justify-content-end gap-2 no-print">
+              <div class="modal-footer bg-light border-top py-2 px-3 d-flex justify-content-end gap-2 no-print">
                 <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
                 <button type="button" id="btnPrintK80Now"
                   class="btn btn-primary btn-sm fw-bold px-3 d-inline-flex align-items-center gap-2 shadow-sm">
-                  <i class="bi bi-printer-fill"></i><span>In phiếu ngay</span>
+                  <i class="bi bi-printer-fill"></i><span>In phiếu A6 ngay</span>
                 </button>
               </div>
             </div>
@@ -951,6 +973,36 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
   <script th:src="@{/js/reception-dispatch.js}" defer></script>
   <script th:src="@{/js/reception-workflow-navigation.js}" defer></script>
+  <script>
+    function printTicketDirect(ticketId) {
+      if (!ticketId) return;
+      let iframe = document.getElementById('ticketPrintIframe');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'ticketPrintIframe';
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '10px';
+        iframe.style.height = '10px';
+        iframe.style.border = '0';
+        iframe.style.opacity = '0.01';
+        document.body.appendChild(iframe);
+      }
+      iframe.onload = function() {
+        try {
+          setTimeout(function() {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+          }, 200);
+        } catch (e) {
+          console.warn('Lỗi in qua iframe ẩn, mở tab in dự phòng:', e);
+          window.open('/reception/dispatch/tickets/' + ticketId + '?autoPrint=true', '_blank');
+        }
+      };
+      iframe.src = '/reception/dispatch/tickets/' + ticketId + '?autoPrint=true&ts=' + Date.now();
+    }
+  </script>
 </body>
 
 </html>

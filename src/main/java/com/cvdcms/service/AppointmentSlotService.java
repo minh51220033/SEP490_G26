@@ -162,11 +162,21 @@ public class AppointmentSlotService {
 
     private Range range(Branch branch, PreferredSession session) {
         return windows.findByBranch_BranchIdAndPreferredSession(branch.getBranchId(), session)
-                .map(w -> new Range(w.getStartTime(), w.getEndTime(), Boolean.TRUE.equals(w.getIsActive())))
+                .map(w -> {
+                    LocalTime end = w.getEndTime();
+                    if (session == PreferredSession.EVENING) {
+                        if (end == null || end.isBefore(LocalTime.of(23, 30))) {
+                            end = LocalTime.of(23, 30);
+                        }
+                    } else if (branch.getClosingTime() != null && branch.getClosingTime().isAfter(end)) {
+                        end = branch.getClosingTime();
+                    }
+                    return new Range(w.getStartTime(), end, Boolean.TRUE.equals(w.getIsActive()));
+                })
                 .orElseGet(() -> switch (session) {
                     case MORNING -> new Range(LocalTime.of(8, 0), LocalTime.NOON, true);
                     case AFTERNOON -> new Range(LocalTime.of(13, 30), LocalTime.of(17, 30), true);
-                    case EVENING -> new Range(LocalTime.of(18, 0), LocalTime.of(20, 0), true);
+                    case EVENING -> new Range(LocalTime.of(18, 0), LocalTime.of(23, 30), true);
                     default -> new Range(LocalTime.MAX, LocalTime.MIN, false);
                 });
     }
