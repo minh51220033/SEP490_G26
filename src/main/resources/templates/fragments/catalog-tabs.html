@@ -9,17 +9,7 @@
 <nav th:fragment="catalogTabs(activeTab)" class="catalog-tabs-container mb-3" aria-label="Quản lý danh mục">
     <div class="catalog-tabs-nav">
 
-        <!-- 1. Danh mục dịch vụ -->
-        <a th:href="@{/admin/services}"
-           class="catalog-tab-item"
-           th:classappend="${activeTab == 'services'} ? 'is-active' : ''"
-           th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))}"
-           id="tab-catalog-services">
-            <i class="bi bi-tags" aria-hidden="true"></i>
-            <span>Danh mục dịch vụ</span>
-        </a>
-
-        <!-- 2. Nhóm dịch vụ -->
+        <!-- 1. Nhóm dịch vụ -->
         <a th:href="@{/admin/services/categories}"
            class="catalog-tab-item"
            th:classappend="${activeTab == 'categories'} ? 'is-active' : ''"
@@ -27,6 +17,16 @@
            id="tab-catalog-categories">
             <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
             <span>Nhóm dịch vụ</span>
+        </a>
+
+        <!-- 2. Danh mục dịch vụ -->
+        <a th:href="@{/admin/services}"
+           class="catalog-tab-item"
+           th:classappend="${activeTab == 'services'} ? 'is-active' : ''"
+           th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))}"
+           id="tab-catalog-services">
+            <i class="bi bi-tags" aria-hidden="true"></i>
+            <span>Danh mục dịch vụ</span>
         </a>
 
         <!-- 3. Danh mục thuốc -->
