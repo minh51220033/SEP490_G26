@@ -519,7 +519,7 @@
                                             <div class="d-flex flex-column gap-2 ps-3 border-start border-2 border-primary-subtle">
                                                 <div th:each="tab : ${grp.subTabs}"
                                                      class="misa-subtab-row misa-feature-row p-2 px-3 rounded-2 border d-flex align-items-center justify-content-between bg-white"
-                                                     th:with="isTabChecked=${!tab.actions.isEmpty() and selectedPermissionIds.contains(tab.actions[0].permissionId)}"
+                                                     th:with="isTabChecked=${(!#lists.isEmpty(tab.actions) and selectedPermissionIds.contains(tab.actions[0].permissionId)) or (#lists.size(tab.actions) > 1 and selectedPermissionIds.contains(tab.actions[1].permissionId))}"
                                                      th:classappend="${isTabChecked ? 'is-granted' : ''}"
                                                      th:attr="data-search-text=${#strings.toLowerCase(tab.tabTitle)}">
                                                     <div class="d-flex align-items-center gap-2 flex-shrink-0 min-w-0" th:title="${tab.tabDescription}">
@@ -736,7 +736,7 @@
                                     <div class="d-flex flex-column gap-2 ps-3 border-start border-2 border-primary-subtle">
                                         <div th:each="tab : ${grp.subTabs}"
                                              class="misa-subtab-row misa-feature-row p-2 px-3 rounded-2 border d-flex align-items-center justify-content-between bg-white"
-                                             th:with="isTabChecked=${!tab.actions.isEmpty() and tab.actions[0].permissionCode == 'SCHEDULE_MY'}"
+                                             th:with="isTabChecked=${!tab.actions.isEmpty() and (tab.actions[0].permissionCode == 'HR_MY_ATTENDANCE' or tab.actions[0].permissionCode == 'SCHEDULE_MY')}"
                                              th:classappend="${isTabChecked ? 'is-granted' : ''}"
                                              th:attr="data-search-text=${#strings.toLowerCase(tab.tabTitle)}">
                                             <div class="d-flex align-items-center gap-2 flex-shrink-0 min-w-0" th:title="${tab.tabDescription}">
@@ -752,7 +752,7 @@
                                                        name="permissionIds"
                                                        th:value="${act.permissionId}"
                                                        th:attr="data-code=${act.permissionCode}"
-                                                       th:checked="${act.permissionCode == 'SCHEDULE_MY'}">
+                                                       th:checked="${act.permissionCode == 'HR_MY_ATTENDANCE' or act.permissionCode == 'SCHEDULE_MY'}">
                                                 <span class="misa-switch-badge"
                                                       th:classappend="${isTabChecked ? 'state-granted' : 'state-denied'}"
                                                       th:text="${isTabChecked ? 'Được phép' : 'Chưa cấp'}">Chưa cấp</span>

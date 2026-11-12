@@ -148,6 +148,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 step.setStepDescription(sDto.getStepDescription());
                 step.setCompletionCriteria(sDto.getCompletionCriteria());
                 step.setEstimatedDurationMinutes(sDto.getEstimatedDurationMinutes() != null ? sDto.getEstimatedDurationMinutes() : 10);
+                step.setStepPrice(sDto.getStepPrice() != null ? sDto.getStepPrice() : java.math.BigDecimal.ZERO);
                 step.setIsOptional(sDto.getIsOptional() != null ? sDto.getIsOptional() : false);
                 step.setRequiresClinicalApproval(sDto.getRequiresClinicalApproval() != null ? sDto.getRequiresClinicalApproval() : false);
 
@@ -696,6 +697,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     .stepDescription(s.getStepDescription())
                     .completionCriteria(s.getCompletionCriteria())
                     .estimatedDurationMinutes(s.getEstimatedDurationMinutes())
+                    .stepPrice(s.getStepPrice())
                     .stepType(s.getStepType() != null ? s.getStepType().name() : "CLINICAL")
                     .isOptional(s.getIsOptional())
                     .requiresClinicalApproval(s.getRequiresClinicalApproval())
@@ -761,6 +763,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     .stepDescription(step.getStepDescription())
                     .completionCriteria(step.getCompletionCriteria())
                     .estimatedDurationMinutes(step.getEstimatedDurationMinutes())
+                    .stepPrice(step.getStepPrice())
                     .stepType(step.getStepType() != null ? step.getStepType().name() : "CLINICAL")
                     .isOptional(step.getIsOptional())
                     .requiresClinicalApproval(step.getRequiresClinicalApproval())

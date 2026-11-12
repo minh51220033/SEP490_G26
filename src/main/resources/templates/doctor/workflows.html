@@ -1381,7 +1381,7 @@
             if (wf.steps && wf.steps.length > 0) {
                 wf.steps.sort((a,b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0));
                 wf.steps.forEach(st => {
-                    addNewStepRow(st.stepName, st.stepDescription, st.completionCriteria, st.estimatedDurationMinutes, st.stepCode, st.stepType);
+                    addNewStepRow(st.stepName, st.stepDescription, st.completionCriteria, st.estimatedDurationMinutes, st.stepCode, st.stepType, st.stepPrice);
                 });
             } else {
                 addNewStepRow("Bước 1: ", "", "", 10);
@@ -1394,7 +1394,7 @@
         }
     }
 
-    function addNewStepRow(name = '', desc = '', criteria = '', duration = 10, code = '', type = 'CLINICAL') {
+    function addNewStepRow(name = '', desc = '', criteria = '', duration = 10, code = '', type = 'CLINICAL', price = 0) {
         currentStepCount++;
         const container = document.getElementById("stepsContainer");
         const rowId = `step-row-${Date.now()}-${Math.floor(Math.random()*1000)}`;
@@ -1413,13 +1413,18 @@
                 </button>
             </div>
             <div class="row g-2 mb-2">
-                <div class="col-md-9">
+                <div class="col-md-6">
                     <label class="form-label small fw-semibold text-dark mb-1">Tên bước kỹ thuật</label>
                     <input type="text" class="form-control form-control-sm step-name-input" value="${escapeHtml(defaultName)}" placeholder="Ví dụ: Bước 1: Khám và đánh giá...">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label small fw-semibold text-dark mb-1">Thời gian (phút)</label>
                     <input type="number" class="form-control form-control-sm step-duration-input" value="${duration}" min="1" max="180">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold text-dark mb-1">Chi phí bước (VNĐ)</label>
+                    <input type="text" inputmode="numeric" class="form-control form-control-sm step-price-input text-end" value="${Number(price || 0).toLocaleString('vi-VN')}" placeholder="0"
+                           oninput="const v=this.value.replace(/[^\\d]/g,''); this.value = v ? Number(v).toLocaleString('vi-VN') : '';">
                 </div>
             </div>
             <div class="mb-2">
@@ -1481,6 +1486,7 @@
             const duration = parseInt(r.querySelector(".step-duration-input").value) || 10;
             const desc = r.querySelector(".step-desc-input").value.trim();
             const criteria = r.querySelector(".step-criteria-input").value.trim();
+            const price = parseFloat((r.querySelector(".step-price-input").value || "0").replace(/[^\d]/g, "")) || 0;
 
             if (name) {
                 steps.push({
@@ -1490,6 +1496,7 @@
                     stepDescription: desc,
                     completionCriteria: criteria,
                     estimatedDurationMinutes: duration,
+                    stepPrice: price,
                     stepType: 'CLINICAL'
                 });
             }
