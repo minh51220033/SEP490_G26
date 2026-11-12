@@ -5,6 +5,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.ui.Model;
 
@@ -30,8 +31,10 @@ public class PortalAppointmentPageController {
     public String page() { return "portal/appointments/index"; }
 
     @GetMapping("/new")
-    public String newAppointment() {
-        return "redirect:/?openBooking=true";
+    public String newAppointment(HttpSession session, Model model, @RequestParam(required = false) Long profileId) {
+        access.requireUser(session);
+        model.addAttribute("selectedProfileId", profileId);
+        return "portal/appointments/form";
     }
 
     @GetMapping("/{id}")

@@ -69,15 +69,15 @@
                                     </span>
                                 </div>
                                 <div class="d-flex flex-wrap gap-1 align-items-center">
-                                    <span class="badge bg-secondary-subtle text-secondary" th:if="${t.visit.patientProfile.dob != null and T(java.time.Period).between(t.visit.patientProfile.dob, T(java.time.LocalDate).now()).years >= 65}">65+ tuổi</span>
-                                    <span class="badge bg-secondary-subtle text-secondary" th:if="${t.visit.patientProfile.dob != null and T(java.time.Period).between(t.visit.patientProfile.dob, T(java.time.LocalDate).now()).years <= 6}">Trẻ nhỏ</span>
+                                    <span class="badge bg-secondary-subtle text-secondary" th:if="${t.visit?.patientProfile?.dob != null and T(java.time.Period).between(t.visit.patientProfile.dob, T(java.time.LocalDate).now()).getYears() >= 65}">65+ tuổi</span>
+                                    <span class="badge bg-secondary-subtle text-secondary" th:if="${t.visit?.patientProfile?.dob != null and T(java.time.Period).between(t.visit.patientProfile.dob, T(java.time.LocalDate).now()).getYears() <= 6}">Trẻ nhỏ</span>
                                 </div>
                             </div>
 
                             <!-- Patient identity -->
-                            <strong class="queue-patient text-dark fw-bold d-block text-truncate" th:text="${t.visit.patientProfile.fullName}">Nguyễn Văn A</strong>
+                            <strong class="queue-patient text-dark fw-bold d-block text-truncate" th:text="${t.visit?.patientProfile?.fullName != null ? t.visit.patientProfile.fullName : 'Bệnh nhân'}">Nguyễn Văn A</strong>
                             <div class="d-flex align-items-center gap-1.5 small text-muted mb-2">
-                                <span class="badge bg-light text-dark border font-monospace" th:text="${t.visit.patientProfile.patientCode}">BN001</span>
+                                <span class="badge bg-light text-dark border font-monospace" th:text="${t.visit?.patientProfile?.patientCode != null ? t.visit.patientProfile.patientCode : 'BN--'}">BN001</span>
                             </div>
 
                             <!-- Notes -->
@@ -112,13 +112,13 @@
                                 <button th:if="${t.visit.primaryDoctor != null and callableDoctorIds.contains(t.visit.primaryDoctor.staffId) and !nextTicketIds.contains(t.ticketId)}"
                                         type="button" class="btn btn-outline-primary btn-sm btn-queue-action fw-semibold d-inline-flex align-items-center gap-1.5"
                                         data-action="CALL" data-title="Gọi vượt thứ tự"
-                                        th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit.patientProfile.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit.visitCode}">
+                                        th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit?.patientProfile?.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit?.visitCode}">
                                     <i class="bi bi-megaphone"></i><span>Gọi vượt</span>
                                 </button>
 
                                 <button th:if="${!t.isEmergency}" type="button" class="btn btn-outline-danger btn-sm btn-queue-action"
                                         data-action="EMERGENCY" data-title="Kích hoạt cấp cứu"
-                                        th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit.patientProfile.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit.visitCode}"
+                                        th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit?.patientProfile?.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit?.visitCode}"
                                         title="Chuyển sang ca cấp cứu">
                                     <i class="bi bi-lightning-fill"></i>
                                 </button>
@@ -126,7 +126,7 @@
                                 <button th:if="${!t.isEmergency and (t.priorityScore == null or t.priorityScore < 50)}"
                                         type="button" class="btn btn-outline-warning btn-sm btn-queue-action text-dark"
                                         data-action="PRIORITIZE" data-title="Áp dụng ưu tiên phục vụ"
-                                        th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit.patientProfile.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit.visitCode}"
+                                        th:attr="data-ticket-id=${t.ticketId},data-patient-name=${t.visit?.patientProfile?.fullName},data-display-number=${t.displayNumber},data-visit-code=${t.visit?.visitCode}"
                                         title="Ưu tiên người già / trẻ em">
                                     <i class="bi bi-star-fill text-warning"></i>
                                 </button>
