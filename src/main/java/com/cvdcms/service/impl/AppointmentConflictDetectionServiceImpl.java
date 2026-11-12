@@ -153,12 +153,15 @@ public class AppointmentConflictDetectionServiceImpl implements AppointmentConfl
             }
         }
 
-        // 5. Patient duplicate booking check
-        if (profile != null) {
+        // 5. Patient duplicate booking check: Chỉ cảnh báo khi trùng hoàn toàn ca và giờ hẹn với cùng bác sĩ
+        if (profile != null && session != null && session != PreferredSession.ANY && appointment.getExpectedTime() != null) {
+            Long apptDoctorId = appointment.getDoctor() != null ? appointment.getDoctor().getStaffId() : null;
             boolean duplicate = appointments.findOccupyingForPatientDay(profile.getProfileId(), branch.getBranchId(), date, OCCUPYING).stream()
-                    .anyMatch(a -> !Objects.equals(a.getAppointmentId(), appointment.getAppointmentId()));
+                    .filter(a -> !Objects.equals(a.getAppointmentId(), appointment.getAppointmentId()))
+                    .anyMatch(a -> a.getPreferredSession() == session && Objects.equals(a.getExpectedTime(), appointment.getExpectedTime())
+                            && Objects.equals(a.getDoctor() != null ? a.getDoctor().getStaffId() : null, apptDoctorId));
             if (duplicate) {
-                conflicts.add(new Conflict("DUPLICATE_PATIENT_APPOINTMENT", "Bệnh nhân đã có lịch hẹn khác còn hiệu lực tại chi nhánh trong ngày này.", false));
+                conflicts.add(new Conflict("DUPLICATE_PATIENT_APPOINTMENT", "Bệnh nhân đã có lịch hẹn trùng ca, giờ và bác sĩ tại chi nhánh.", false));
             }
         }
 
