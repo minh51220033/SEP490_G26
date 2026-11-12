@@ -351,6 +351,7 @@ public class DoctorPatientRestController {
                 .map(v -> mapToDailyVisitDTO(v, currentVisitId, turnMap.get(v.getVisitId())))
                 .sorted(Comparator
                         .comparing((com.cvdcms.DTO.DailyVisitDTO d) -> d.getCheckInIso() != null ? d.getCheckInIso() : "", Comparator.reverseOrder())
+                        .thenComparingInt(this::getVisitStatusSortRank)
                         .thenComparing(d -> Boolean.TRUE.equals(d.getIsEmergency()), Comparator.reverseOrder())
                         .thenComparing(d -> Boolean.TRUE.equals(d.getIsPriority()), Comparator.reverseOrder())
                         .thenComparing(d -> d.getTicketNumber() != null ? d.getTicketNumber() : Integer.MAX_VALUE)
@@ -358,6 +359,24 @@ public class DoctorPatientRestController {
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(result);
+    }
+
+    private int getVisitStatusSortRank(com.cvdcms.DTO.DailyVisitDTO d) {
+        if (d == null || d.getStatus() == null) return 2;
+        String s = d.getStatus().toUpperCase();
+        if (s.contains("EXAM") || s.contains("TREATMENT") || s.equals("ORDERED")) {
+            return 0; // Đang khám / Điều trị: Ưu tiên cao nhất
+        }
+        if (s.equals("WAITING")) {
+            return 1; // Đang chờ khám: Ưu tiên kế tiếp
+        }
+        if (s.equals("WAITING_PAYMENT") || s.equals("COMPLETED")) {
+            return 2; // Đã hoàn thành / Chờ thu ngân: Nhóm sau
+        }
+        if (s.equals("CANCELLED")) {
+            return 3; // Đã hủy
+        }
+        return 2;
     }
 
     private record ResolvedTurnInfo(

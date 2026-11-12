@@ -127,9 +127,18 @@ public class PublicBookingRestController {
             return ResponseEntity.ok(resp);
         }
 
-        AppointmentPolicyService.Availability result = appointmentPolicyService.availability(
-                branch, date, sessionPeriod, null, AppointmentActorType.PATIENT
-        );
+        AppointmentPolicyService.Availability result;
+        try {
+            result = appointmentPolicyService.availability(
+                    branch, date, sessionPeriod, null, AppointmentActorType.PATIENT
+            );
+        } catch (Exception ex) {
+            resp.put("available", false);
+            resp.put("reason", "Tạm thời chưa kiểm tra được lịch buổi này: " + ex.getMessage());
+            resp.put("remainingBranch", 0);
+            resp.put("doctors", Collections.emptyList());
+            return ResponseEntity.ok(resp);
+        }
 
         resp.put("available", result.available());
         resp.put("reason", result.reason());
@@ -410,7 +419,9 @@ public class PublicBookingRestController {
         resp.put("success", true);
         resp.put("appointmentId", appointment.getAppointmentId());
         resp.put("appointmentCode", appointmentCode);
-        resp.put("message", "Đặt lịch thành công (" + sessionName + timeInfo + docInfo + "). Cơ sở " + branch.getBranchName() + " sẽ liên hệ để xác nhận lịch hẹn.");
+        resp.put("branchId", branch.getBranchId());
+        resp.put("branchName", branch.getBranchName());
+        resp.put("message", "Đặt lịch thành công (" + sessionName + timeInfo + docInfo + ") tại " + branch.getBranchName() + ". Lịch hẹn đã sẵn sàng trên màn hình Quản lý lịch hẹn của Lễ tân.");
 
         return ResponseEntity.ok(resp);
     }
@@ -450,6 +461,8 @@ public class PublicBookingRestController {
         p.setUser(user);
         p.setFullName(fullName != null && !fullName.isBlank() ? fullName : "Khách hàng");
         p.setPhoneNumber(cleanPhone);
+        p.setGender("Khác");
+        p.setAddress("Chưa cập nhật");
         p.setPatientCode("BN" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase());
         p.setStatus("ACTIVE");
         return patientProfileRepository.save(p);

@@ -364,11 +364,16 @@ public class ReceptionService {
 
     @Transactional(readOnly = true)
     public Dashboard dashboard(HttpSession session, Long requestedBranchId, String query) {
-        return dashboard(session, requestedBranchId, query, null);
+        return dashboard(session, requestedBranchId, query, null, null);
     }
 
     @Transactional(readOnly = true)
     public Dashboard dashboard(HttpSession session, Long requestedBranchId, String query, LocalDate requestedDay) {
+        return dashboard(session, requestedBranchId, query, requestedDay, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Dashboard dashboard(HttpSession session, Long requestedBranchId, String query, LocalDate requestedDay, String datePreset) {
         var scope = access.require(session);
         List<Branch> options = branches.findByIsActiveTrueOrderByBranchNameAsc().stream()
                 .filter(b -> scope.permits(b.getBranchId())).toList();
@@ -389,40 +394,84 @@ public class ReceptionService {
             session.setAttribute("currentBranchId", branchId);
         }
         Branch branch = allowedBranch(session, branchId);
-        LocalDate day = (requestedDay == null) ? today() : requestedDay;
+
+        String effectivePreset = (datePreset != null && !datePreset.isBlank()) ? datePreset.trim().toUpperCase() : null;
+        LocalDate effectiveDay = requestedDay;
+        if (effectivePreset == null) {
+            effectivePreset = (requestedDay != null) ? "DAY" : "TODAY";
+        }
+
+        LocalDate appointmentDay = (effectiveDay != null) ? effectiveDay : today();
+        List<Visit> historyVisits;
+
+        if ("ALL".equalsIgnoreCase(effectivePreset)) {
+            historyVisits = visits.forAllDays(branchId);
+            effectiveDay = null;
+        } else if ("THIS_WEEK".equalsIgnoreCase(effectivePreset)) {
+            LocalDate mon = today().with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+            historyVisits = visits.forDay(branchId, mon.atStartOfDay(), today().plusDays(1).atStartOfDay());
+            effectiveDay = today();
+        } else if ("THIS_MONTH".equalsIgnoreCase(effectivePreset)) {
+            LocalDate firstOfMonth = today().withDayOfMonth(1);
+            historyVisits = visits.forDay(branchId, firstOfMonth.atStartOfDay(), today().plusDays(1).atStartOfDay());
+            effectiveDay = today();
+        } else {
+            LocalDate targetDay = (effectiveDay != null) ? effectiveDay : today();
+            historyVisits = visits.forDay(branchId, targetDay.atStartOfDay(), targetDay.plusDays(1).atStartOfDay());
+            effectiveDay = targetDay;
+            if (targetDay.isEqual(today())) {
+                effectivePreset = "TODAY";
+            }
+        }
+
         Map<Long, QueueTicket> ticketMap = new HashMap<>();
         if (tickets != null) {
             try {
-                tickets.board(branchId, day, QueueType.EXAM).forEach(t -> {
+                LocalDate ticketDay = (effectiveDay != null) ? effectiveDay : today();
+                tickets.board(branchId, ticketDay, QueueType.EXAM).forEach(t -> {
                     if (t.getVisit() != null) {
                         ticketMap.put(t.getVisit().getVisitId(), t);
                     }
                 });
             } catch (Exception ignored) {}
         }
-        List<Visit> dayVisits = visits.forDay(branchId, day.atStartOfDay(), day.plusDays(1).atStartOfDay());
+
         Map<Long, Visit> visitByAppointmentId = new HashMap<>();
-        for (Visit v : dayVisits) {
+        for (Visit v : historyVisits) {
             if (v.getAppointmentId() != null && v.getStatus() != VisitStatus.CANCELLED) {
                 visitByAppointmentId.putIfAbsent(v.getAppointmentId(), v);
             }
         }
-        List<AppointmentRow> appointmentRows = appointments.forDay(branchId, day,
+        List<AppointmentRow> appointmentRows = appointments.forDay(branchId, appointmentDay,
                 List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.CHECKED_IN))
                 .stream().map(a -> appointmentRow(a, visitByAppointmentId.get(a.getAppointmentId()), ticketMap)).toList();
+
         Comparator<VisitRow> triageComparator = Comparator
-                .comparing(VisitRow::emergency).reversed()
+                .comparing((VisitRow v) -> getVisitRowStatusRank(v.status()))
+                .thenComparing(VisitRow::emergency).reversed()
                 .thenComparing(VisitRow::priority).reversed()
-                .thenComparing(VisitRow::checkedInAt, Comparator.nullsLast(Comparator.naturalOrder()))
-                .thenComparing(VisitRow::id, Comparator.nullsLast(Comparator.naturalOrder()));
-        List<VisitRow> visitRows = dayVisits
+                .thenComparing(VisitRow::checkedInAt, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(VisitRow::id, Comparator.nullsLast(Comparator.reverseOrder()));
+
+        List<VisitRow> visitRows = historyVisits
                 .stream().map(v -> visitRow(v, ticketMap))
                 .sorted(triageComparator)
                 .toList();
         String term = query == null ? "" : query.trim();
         List<PatientRow> matches = term.length() < 1 ? List.of()
                 : profiles.search(term, PageRequest.of(0, 20)).stream().map(this::patientRow).toList();
-        return new Dashboard(branchId, branch.getBranchName(), day, options, appointmentRows, visitRows, matches, term, UUID.randomUUID().toString());
+        return new Dashboard(branchId, branch.getBranchName(), effectiveDay, options, appointmentRows, visitRows, matches, term, UUID.randomUUID().toString(), effectivePreset);
+    }
+
+    private int getVisitRowStatusRank(VisitStatus status) {
+        if (status == null) return 2;
+        return switch (status) {
+            case IN_EXAM, IN_TREATMENT -> 0; // Đang khám / điều trị
+            case WAITING -> 1; // Đang chờ khám
+            case WAITING_PAYMENT, COMPLETED -> 2; // Đã xong / chờ thanh toán
+            case CANCELLED -> 3; // Đã hủy
+            default -> 2;
+        };
     }
 
     @Transactional(readOnly = true)
@@ -665,5 +714,11 @@ public class ReceptionService {
 
     public record Dashboard(Long branchId, String branchName, LocalDate day, List<Branch> branches,
                             List<AppointmentRow> appointments, List<VisitRow> visits, List<PatientRow> matches,
-                            String query, String walkInKey) { }
+                            String query, String walkInKey, String datePreset) {
+        public Dashboard(Long branchId, String branchName, LocalDate day, List<Branch> branches,
+                         List<AppointmentRow> appointments, List<VisitRow> visits, List<PatientRow> matches,
+                         String query, String walkInKey) {
+            this(branchId, branchName, day, branches, appointments, visits, matches, query, walkInKey, "TODAY");
+        }
+    }
 }
