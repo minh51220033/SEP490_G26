@@ -53,7 +53,7 @@ class PatientServiceTest {
     }
 
     private void mockPermission() {
-        when(access.require(session)).thenReturn(new PatientAccess.Scope(actor, true, null));
+        when(access.require(session)).thenReturn(new PatientAccess.Scope(actor, null, false));
         when(branches.findById(1L)).thenReturn(Optional.of(branch));
     }
 
