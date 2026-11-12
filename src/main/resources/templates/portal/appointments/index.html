@@ -1,7 +1,8 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Lịch hẹn của tôi')}"></head>
-<body class="app-body"><div class="app-shell">
+<body class="app-body">
+<div class="app-shell">
     <aside th:replace="~{fragments/sidebar :: sidebar('portal-appointments')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main">
@@ -9,37 +10,84 @@
         <main class="app-content">
             <link rel="stylesheet" th:href="@{/css/patients.css}">
             <link rel="stylesheet" th:href="@{/css/portal-appointments.css}">
-            <div class="patient-page-heading">
+
+            <!-- TIÊU ĐỀ TRANG VÀ NÚT ĐẶT LỊCH NỘI BỘ -->
+            <div class="patient-page-heading portal-heading mb-4">
                 <div>
-                    <h1>Lịch hẹn của tôi</h1>
-                    <p>Theo dõi danh sách lịch hẹn khám, lịch tái khám chỉ định và tiến độ tiếp nhận.</p>
+                    <h1 class="mb-1"><i class="bi bi-calendar2-check-fill text-primary me-2"></i>Lịch hẹn khám nha khoa</h1>
+                    <p class="mb-0 text-muted">Theo dõi danh sách lịch hẹn khám, lịch tái khám chỉ định của bác sĩ và tiến độ tiếp nhận cho cả gia đình.</p>
                 </div>
-                <a class="btn btn-primary shadow-sm" th:href="@{/portal/appointments/new}"><i class="bi bi-calendar-plus me-1"></i> Đặt lịch khám mới</a>
+                <div>
+                    <a class="btn btn-primary px-3 py-2 fw-semibold shadow-sm d-inline-flex align-items-center"
+                       th:href="@{/portal/appointments/new}"
+                       style="background-color: #1e40af; border-color: #1e40af;">
+                        <i class="bi bi-calendar-plus me-2"></i> Đặt lịch khám mới
+                    </a>
+                </div>
             </div>
-            <div id="pageError" class="alert alert-danger" hidden></div>
+
+            <div id="pageError" class="alert alert-danger py-3 px-4 rounded-3 mb-4 shadow-sm" hidden></div>
+
             <section class="panel appointment-panel">
-                <div class="mb-3">
-                    <label for="profileFilter" class="form-label fw-bold text-dark mb-1">Hồ sơ bệnh nhân</label>
-                    <select id="profileFilter" class="form-select appointment-filter" aria-label="Chọn hồ sơ bệnh nhân"></select>
+                <!-- BỘ LỌC THEO THÀNH VIÊN GIA ĐÌNH (FAMILY PILL FILTERS - FT35) -->
+                <div class="family-filter-container">
+                    <div class="family-filter-label">
+                        <i class="bi bi-people-fill text-primary me-2"></i>Xem lịch hẹn theo thành viên:
+                    </div>
+                    <div id="familyPillsRow" class="family-pills-row">
+                        <button type="button" class="family-pill-btn active" data-profile-id="">
+                            <i class="bi bi-house-door-fill me-1.5 text-primary"></i>
+                            <span>Tất cả gia đình</span>
+                            <span class="pill-count" id="allCountBadge">0</span>
+                        </button>
+                        <!-- Dynamic member pills injected via JS -->
+                    </div>
+                    <!-- Hidden select for compatibility -->
+                    <select id="profileFilter" class="d-none" aria-label="Chọn hồ sơ"></select>
                 </div>
+
+                <!-- BỘ LỌC TRẠNG THÁI LỊCH HẸN -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <div class="status-pills-row mb-0" id="statusFilterRow">
+                        <button type="button" class="status-pill-btn active" data-status="">Tất cả trạng thái</button>
+                        <button type="button" class="status-pill-btn" data-status="UPCOMING">Sắp tới</button>
+                        <button type="button" class="status-pill-btn" data-status="PENDING">Chờ xác nhận</button>
+                        <button type="button" class="status-pill-btn" data-status="RE_EXAM">Lịch tái khám (FT18)</button>
+                        <button type="button" class="status-pill-btn" data-status="COMPLETED">Đã khám</button>
+                        <button type="button" class="status-pill-btn" data-status="CANCELLED">Đã hủy</button>
+                    </div>
+                    <span id="appointmentCountDisplay" class="badge bg-light text-secondary border px-3 py-2 rounded-3 fw-normal" style="font-size: 13px;">
+                        <i class="bi bi-eye me-1.5"></i>Đang hiển thị <strong class="text-dark" id="showingCount">0</strong> lịch hẹn
+                    </span>
+                </div>
+
+                <!-- BẢNG LỊCH HẸN DENTALSOFT THOÁNG ĐÃNG -->
                 <div class="table-responsive rounded-3 border">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
+                    <table class="portal-appt-table align-middle">
+                        <thead>
                             <tr>
-                                <th style="width: 170px;">Mã lịch</th>
-                                <th style="width: 190px;">Ngày &amp; Buổi</th>
-                                <th>Chi nhánh</th>
-                                <th>Bác sĩ yêu cầu</th>
-                                <th style="width: 170px;">Trạng thái</th>
-                                <th class="text-end pe-3" style="width: 140px;">Thao tác</th>
+                                <th style="width: 150px;">MÃ LỊCH</th>
+                                <th style="min-width: 220px;">NGƯỜI ĐI KHÁM</th>
+                                <th style="min-width: 200px;">NGÀY &amp; BUỔI HẸN</th>
+                                <th style="min-width: 200px;">CƠ SỞ &amp; BÁC SĨ</th>
+                                <th style="width: 170px;">TRẠNG THÁI</th>
+                                <th class="text-end pe-3" style="width: 140px;">THAO TÁC</th>
                             </tr>
                         </thead>
                         <tbody id="appointmentRows">
-                            <tr><td colspan="6" class="text-muted text-center py-4">Đang tải danh sách lịch hẹn…</td></tr>
+                            <tr>
+                                <td colspan="6" class="text-muted text-center py-5">
+                                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                    Đang tải danh sách lịch hẹn gia đình…
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
             </section>
         </main>
     </div>
-</div><script th:src="@{/js/portal-appointments.js}" defer></script></body></html>
+</div>
+<script th:src="@{/js/portal-appointments.js}" defer></script>
+</body>
+</html>

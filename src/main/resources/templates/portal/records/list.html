@@ -1,32 +1,231 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: head('Hồ sơ của tôi')}"></head>
-<body class="app-body"><div class="app-shell">
+<head th:replace="~{fragments/head :: head('Hồ sơ sức khỏe gia đình')}"></head>
+<body class="app-body">
+<div class="app-shell">
     <aside th:replace="~{fragments/sidebar :: sidebar('portal-records')}"></aside>
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main">
-        <header th:replace="~{fragments/header :: appTopbar('Hồ sơ của tôi')}"></header>
+        <header th:replace="~{fragments/header :: appTopbar('Hồ sơ sức khỏe')}"></header>
         <main class="app-content">
-            <link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/portal-records-ui.css}">
-            <div class="alert alert-success" th:if="${param.transferred != null}">Đã tách hồ sơ. Tài khoản nhận có thể xem hồ sơ và toàn bộ lịch sử cũ.</div>
-            <div class="patient-page-heading portal-heading"><div><h1>Hồ sơ của tôi</h1><p>Quản lý hồ sơ bản thân và người phụ thuộc trong gia đình.</p></div>
-                <a class="btn btn-primary" th:href="@{/portal/records/new}"><i class="bi bi-person-plus"></i> Thêm người phụ thuộc</a></div>
-            <section class="panel portal-record-list">
-                <div class="portal-record-list-head"><div><h2>Danh sách hồ sơ</h2><p>Chọn một hồ sơ để xem thông tin và lịch sử khám.</p></div><span class="portal-record-count" th:text="|${#lists.size(records)} hồ sơ|">0 hồ sơ</span></div>
-                <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-                    <thead><tr><th>Mã hồ sơ</th><th>Họ tên</th><th>Ngày sinh</th><th>Số điện thoại</th><th>Loại hồ sơ</th><th></th></tr></thead>
-                    <tbody>
-                    <tr th:each="record : ${records}"><td th:text="${record.code}">BN</td>
-                        <td><strong th:text="${record.fullName}">Tên</strong></td>
-                        <td th:text="${record.dob != null ? #temporals.format(record.dob, 'dd/MM/yyyy') : '—'}">—</td>
-                        <td th:text="${record.phoneNumber}">—</td>
-                        <td><span class="portal-record-type" th:text="${record.self ? 'Bản thân' : 'Người phụ thuộc'}">—</span></td>
-                        <td class="text-end"><span class="badge bg-primary me-2" th:if="${record.defaultProfile}">Mặc định</span><button type="button" class="btn btn-sm btn-outline-secondary me-2" th:unless="${record.defaultProfile}" th:attr="data-default-id=${record.id}">Đặt mặc định</button><a class="btn btn-sm btn-outline-primary" th:href="@{/portal/records/{id}(id=${record.id})}">Xem hồ sơ</a></td></tr>
-                    <tr th:if="${#lists.isEmpty(records)}"><td colspan="6" class="text-center text-muted py-5">Chưa có hồ sơ. Bạn có thể hoàn thiện hồ sơ bản thân tại trang tài khoản.</td></tr>
-                    </tbody>
-                </table></div>
+            <link rel="stylesheet" th:href="@{/css/patients.css}">
+            <link rel="stylesheet" th:href="@{/css/portal-records-ui.css}">
+
+            <!-- THÔNG BÁO TÁCH HỒ SƠ THÀNH CÔNG -->
+            <div class="alert alert-success d-flex align-items-center mb-4 py-3 px-4 rounded-3 shadow-sm" th:if="${param.transferred != null}">
+                <i class="bi bi-check-circle-fill me-3 fs-5 text-success"></i>
+                <div>
+                    <strong>Tách hồ sơ thành công!</strong> Tài khoản nhận đã được bàn giao quyền quản lý. Toàn bộ lịch sử khám, đơn thuốc và phim X-quang được bảo toàn nguyên vẹn.
+                </div>
+            </div>
+
+            <!-- TIÊU ĐỀ TRANG VÀ NÚT TẠO NGƯỜI PHỤ THUỘC (FT35) -->
+            <div class="patient-page-heading portal-heading">
+                <div>
+                    <h1 class="mb-1"><i class="bi bi-people-fill text-primary me-2"></i>Hồ sơ sức khỏe gia đình</h1>
+                    <p class="mb-0 text-muted">Quản lý thông tin hồ sơ y tế cho bản thân và theo dõi quá trình điều trị của các thành viên phụ thuộc.</p>
+                </div>
+                <div>
+                    <a class="btn btn-primary px-3 py-2 fw-semibold shadow-sm d-inline-flex align-items-center"
+                       th:href="@{/portal/records/new}"
+                       style="background-color: #1e40af; border-color: #1e40af;">
+                        <i class="bi bi-person-plus-fill me-2"></i> Thêm người phụ thuộc
+                    </a>
+                </div>
+            </div>
+
+            <!-- STATS ROW TỔNG QUAN -->
+            <div class="portal-stats-row">
+                <div class="portal-stat-card">
+                    <div class="portal-stat-icon primary">
+                        <i class="bi bi-person-badge-fill"></i>
+                    </div>
+                    <div class="portal-stat-info">
+                        <h4 th:text="${#lists.size(records)}">1</h4>
+                        <span>Hồ sơ đang quản lý</span>
+                    </div>
+                </div>
+                <div class="portal-stat-card">
+                    <div class="portal-stat-icon success">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <div class="portal-stat-info">
+                        <h4>1</h4>
+                        <span>Hồ sơ chính chủ (Mặc định)</span>
+                    </div>
+                </div>
+                <div class="portal-stat-card">
+                    <div class="portal-stat-icon purple">
+                        <i class="bi bi-heart-pulse-fill"></i>
+                    </div>
+                    <div class="portal-stat-info">
+                        <h4 th:text="${#lists.size(records) - 1 >= 0 ? #lists.size(records) - 1 : 0}">0</h4>
+                        <span>Người thân phụ thuộc</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DANH SÁCH HỒ SƠ DẠNG THẺ THÀNH VIÊN GIA ĐÌNH (FAMILY CARDS) -->
+            <h2 class="h5 fw-bold text-dark mb-3 d-flex align-items-center">
+                <i class="bi bi-grid-fill text-primary me-2"></i>Các thành viên trong gia đình
+            </h2>
+
+            <div class="family-cards-grid">
+                <div th:each="record : ${records}"
+                     class="family-member-card"
+                     th:classappend="${record.self ? 'is-self' : ''}">
+                    <div>
+                        <div class="family-card-header">
+                            <div class="family-card-avatar">
+                                <img th:if="${record.avatarUrl != null and !record.avatarUrl.isBlank()}"
+                                     th:src="${record.avatarUrl}" th:alt="${record.fullName}">
+                                <span th:unless="${record.avatarUrl != null and !record.avatarUrl.isBlank()}"
+                                      th:text="${#strings.substring(record.fullName, 0, 1)}">A</span>
+                            </div>
+                            <div class="family-card-meta">
+                                <h3 th:text="${record.fullName}">Nguyễn Văn A</h3>
+                                <div class="family-card-badges">
+                                    <span class="role-badge self" th:if="${record.self}">
+                                        <i class="bi bi-star-fill me-1 text-warning"></i>Bản thân (Chủ hộ)
+                                    </span>
+                                    <span class="role-badge dependent" th:unless="${record.self}">
+                                        <i class="bi bi-person-heart me-1"></i>
+                                        <span th:text="${record.guardianRelationship != null and !record.guardianRelationship.isBlank() ? record.guardianRelationship : 'Người phụ thuộc'}">Người phụ thuộc</span>
+                                    </span>
+                                    <span class="patient-code-badge" th:text="${record.code}">BN000001</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="family-card-details">
+                            <div>
+                                <span class="label"><i class="bi bi-calendar3 me-1.5 text-muted"></i>Ngày sinh</span>
+                                <span class="value" th:text="${record.dob != null ? #temporals.format(record.dob, 'dd/MM/yyyy') : '—'}">—</span>
+                            </div>
+                            <div>
+                                <span class="label"><i class="bi bi-gender-ambiguous me-1.5 text-muted"></i>Giới tính</span>
+                                <span class="value">
+                                    <span th:if="${record.gender == 'Nữ' or record.gender == 'Female'}" class="gender-pill female me-1" title="Nữ">N</span>
+                                    <span th:unless="${record.gender == 'Nữ' or record.gender == 'Female'}" class="gender-pill male me-1" title="Nam">M</span>
+                                    <span th:text="${record.gender != null ? record.gender : 'Chưa cập nhật'}">Nam</span>
+                                </span>
+                            </div>
+                            <div>
+                                <span class="label"><i class="bi bi-telephone me-1.5 text-muted"></i>Điện thoại</span>
+                                <span class="value" th:text="${record.phoneNumber != null ? record.phoneNumber : 'Dùng chung SĐT'}">—</span>
+                            </div>
+                            <div>
+                                <span class="label"><i class="bi bi-geo-alt me-1.5 text-muted"></i>Cơ sở khám</span>
+                                <span class="value text-truncate" style="max-width: 170px;" th:text="${record.branchName != null ? record.branchName : 'Chưa chọn'}">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- HÀNH ĐỘNG TRÊN TỪNG CARD -->
+                    <div>
+                        <div class="family-card-actions">
+                            <!-- Nút đặt lịch trực tiếp gắn với profileId -->
+                            <a class="btn btn-primary"
+                               th:href="@{/portal/appointments/new(profileId=${record.id})}"
+                               style="background-color: #1e40af; border-color: #1e40af;">
+                                <i class="bi bi-calendar-plus me-1.5"></i> Đặt lịch khám
+                            </a>
+                            <a class="btn btn-outline-secondary"
+                               th:href="@{/portal/records/{id}(id=${record.id})}">
+                                <i class="bi bi-folder2-open me-1.5"></i> Chi tiết
+                            </a>
+                        </div>
+                        <div th:unless="${record.self}" class="mt-2 text-center">
+                            <a class="small text-muted text-decoration-none d-inline-flex align-items-center"
+                               th:href="@{/portal/records/{id}/transfer(id=${record.id})}">
+                                <i class="bi bi-arrow-left-right me-1 text-primary"></i> Tách tài khoản riêng cho người này (FT36)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BẢNG TRA CỨU DỮ LIỆU ĐỒNG BỘ THEO CHUẨN LỄ TÂN (DENTALSOFT PATIENT TABLE) -->
+            <section class="panel portal-record-list mt-4">
+                <div class="portal-record-list-head">
+                    <div>
+                        <h2 class="mb-1"><i class="bi bi-table me-2 text-secondary"></i>Bảng danh sách chi tiết</h2>
+                        <p class="mb-0 text-muted">Đối chiếu thông tin hành chính đồng bộ với dữ liệu tại bàn tiếp đón lễ tân.</p>
+                    </div>
+                    <span class="badge bg-light text-secondary border px-3 py-2 rounded-3 fw-semibold"
+                          th:text="|Tổng số: ${#lists.size(records)} hồ sơ|">1 hồ sơ</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="portal-table align-middle">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width: 50px;">TT</th>
+                                <th style="width: 140px;">MÃ HỒ SƠ</th>
+                                <th style="min-width: 200px;">HỌ VÀ TÊN</th>
+                                <th class="text-center" style="width: 70px;">G.T</th>
+                                <th class="text-center" style="width: 110px;">NĂM SINH</th>
+                                <th style="width: 140px;">ĐIỆN THOẠI</th>
+                                <th style="width: 170px;">VAI TRÒ / QUAN HỆ</th>
+                                <th class="text-end pe-4" style="width: 190px;">THAO TÁC</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="record, stat : ${records}">
+                                <td class="text-center text-muted" th:text="${stat.count}">1</td>
+                                <td>
+                                    <span class="patient-code-badge" th:text="${record.code}">BN000001</span>
+                                </td>
+                                <td>
+                                    <strong class="text-dark d-block" style="font-size: 14px;" th:text="${record.fullName}">Nguyễn Văn A</strong>
+                                    <small class="text-muted text-truncate d-block" style="max-width: 250px;"
+                                           th:text="${record.address != null and !record.address.isBlank() ? record.address : 'Chưa cập nhật địa chỉ'}">Hà Nội</small>
+                                </td>
+                                <td class="text-center">
+                                    <span th:if="${record.gender == 'Nữ' or record.gender == 'Female'}" class="gender-pill female" title="Nữ">N</span>
+                                    <span th:unless="${record.gender == 'Nữ' or record.gender == 'Female'}" class="gender-pill male" title="Nam">M</span>
+                                </td>
+                                <td class="text-center fw-medium text-dark"
+                                    th:text="${record.dob != null ? record.dob.year : '—'}">1990</td>
+                                <td>
+                                    <span class="text-dark fw-medium" th:text="${record.phoneNumber}">0900000000</span>
+                                </td>
+                                <td>
+                                    <span class="role-badge self" th:if="${record.self}">
+                                        <i class="bi bi-star-fill me-1 text-warning"></i>Bản thân
+                                    </span>
+                                    <span class="role-badge dependent" th:unless="${record.self}">
+                                        <i class="bi bi-person-heart me-1"></i>
+                                        <span th:text="${record.guardianRelationship != null and !record.guardianRelationship.isBlank() ? record.guardianRelationship : 'Phụ thuộc'}">Phụ thuộc</span>
+                                    </span>
+                                    <span class="badge bg-primary ms-1" th:if="${record.defaultProfile}">Mặc định</span>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <a class="btn btn-sm btn-outline-primary me-2 fw-semibold"
+                                       th:href="@{/portal/records/{id}(id=${record.id})}">
+                                        <i class="bi bi-eye me-1"></i>Xem
+                                    </a>
+                                    <a class="btn btn-sm btn-primary fw-semibold"
+                                       th:href="@{/portal/appointments/new(profileId=${record.id})}"
+                                       title="Đặt lịch cho người này"
+                                       style="background-color: #1e40af; border-color: #1e40af;">
+                                        <i class="bi bi-calendar-plus me-1"></i>Đặt lịch
+                                    </a>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(records)}">
+                                <td colspan="8" class="text-center text-muted py-5">
+                                    <i class="bi bi-people display-6 d-block mb-2 text-secondary opacity-50"></i>
+                                    Chưa có hồ sơ bệnh nhân. Bạn có thể thêm hồ sơ cá nhân hoặc người phụ thuộc.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </section>
-            <p class="mt-3"><a th:href="@{/profile}">Thông tin tài khoản</a></p>
         </main>
     </div>
-</div><script th:src="@{/js/portal-record-list.js}" defer></script></body></html>
+</div>
+<script th:src="@{/js/portal-record-list.js}" defer></script>
+</body>
+</html>
