@@ -929,15 +929,16 @@
 
                             <!-- Right Side: Primary Add Button -->
                             <div class="d-flex align-items-center gap-2"
-     th:if="${canManageAdministrative == null or canManageAdministrative}">
-    <!-- Primary Add Patient Button -->
-    <button type="button"
-            class="dv-btn-add-patient"
-            onclick="openAddPatientModal()">
-        <i class="bi bi-person-plus-fill fs-5"></i>
-        <span>Thêm bệnh nhân</span>
-    </button>
-</div>
+                                th:if="${canManageAdministrative == null or canManageAdministrative}">
+                                <!-- Primary Add Patient Button -->
+                                <button type="button"
+                                    class="dv-btn-add-patient"
+                                    onclick="openAddPatientModal()">
+                                    <i class="bi bi-person-plus-fill fs-5"></i>
+                                    <span>Thêm bệnh nhân</span>
+                                </button>
+                            </div>
+                        </div>
 
                         <!-- QUICK SEGMENT TABS (Chuẩn AMIS ProTable) -->
                         <div
