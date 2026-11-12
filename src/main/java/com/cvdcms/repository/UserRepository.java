@@ -345,7 +345,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
                   AND u.isActive = TRUE
                   AND r.isActive = TRUE
                   AND (
-                      UPPER(r.roleName) IN ('ADMIN', 'ROLE_ADMIN')
+                      UPPER(r.roleName) IN ('ADMIN', 'ROLE_ADMIN', 'QUAN_LY_KHO', 'ROLE_QUAN_LY_KHO')
                       OR (
                           (UPPER(COALESCE(p.module, '')) = 'INVENTORY'
                            OR UPPER(COALESCE(p.permissionCode, '')) IN (

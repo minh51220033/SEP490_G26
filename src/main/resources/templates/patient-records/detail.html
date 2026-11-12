@@ -1484,16 +1484,10 @@
                                                     </div>
                                                 </td>
                                                 <td class="text-nowrap">
-                                                    <div class="d-flex align-items-center gap-2 mb-1">
-                                                        <span class="rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0"
-                                                            style="width: 28px; height: 28px; background: #e0f2fe; color: #0284c7; font-size: 12px;">
-                                                            <i class="bi bi-person-badge-fill"></i>
-                                                        </span>
-                                                        <span class="fw-bold text-dark" style="font-size: 13.5px;"
-                                                            th:text="${item.doctorName != null ? item.doctorName : 'Chưa phân công'}">Bác
-                                                            sĩ</span>
-                                                    </div>
-                                                    <div class="text-muted small d-flex align-items-center gap-1 ps-1">
+                                                    <div class="fw-bold text-dark mb-1" style="font-size: 13.5px;"
+                                                        th:text="${item.doctorName != null ? item.doctorName : 'Chưa phân công'}">Bác
+                                                        sĩ</div>
+                                                    <div class="text-muted small d-flex align-items-center gap-1">
                                                         <i class="bi bi-geo-alt-fill text-primary" style="font-size: 11px;"></i>
                                                         <span th:text="${item.branchName != null ? item.branchName : 'Chi nhánh chính'}">Chi
                                                             nhánh</span>
@@ -1604,11 +1598,10 @@
                             </div>
                         </div>
 
-                        <!-- CHẾ ĐỘ 2: BẢNG NHẬT KÝ THAO TÁC CHI TIẾT (AUDIT LOG TABLE ĐỒNG BỘ KIỂU DÁNG) -->
+                        <!-- CHẾ ĐỘ 2: BẢNG NHẬT KÝ THAO TÁC CHI TIẾT (CHUẨN /doctor/daily-visits) -->
                         <div id="treatmentAuditView" style="display: none;">
                             <div class="dv-toolbar-card mb-3">
-                                <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-2 pb-2 border-bottom"
-                                    style="border-color: #f1f5f9 !important;">
+                                <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
                                     <div class="dv-search-box">
                                         <i class="bi bi-search search-lead-icon"></i>
                                         <input type="text" id="auditSearchInput"
@@ -1621,13 +1614,37 @@
                                         </button>
                                     </div>
                                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                                        <!-- Lọc theo thời gian -->
-                                        <div class="dv-date-filter-group"
-                                            title="Lọc theo khoảng thời gian nhật ký thao tác">
-                                            <i class="bi bi-calendar3 text-primary" style="font-size: 13px;"></i>
-                                            <select class="form-select form-select-sm dv-preset-select"
-                                                id="auditDatePreset"
-                                                onchange="applyDatePreset('audit', filterAuditTable)">
+                                        <span class="text-muted small me-2">
+                                            Hiển thị: <strong class="text-primary" id="auditTotalCount"
+                                                th:text="${auditLogs != null ? auditLogs.size() : 0}">0</strong> thao tác
+                                        </span>
+                                        <button type="button" class="dv-adv-filter-btn" id="btnAdvFilterAudit"
+                                            onclick="toggleAdvFilterDrawer('audit')">
+                                            <i class="bi bi-funnel-fill"></i>
+                                            <span>Lọc nâng cao</span>
+                                            <span class="dv-filter-pulse-badge" id="auditAdvBadge" style="display: none;">1</span>
+                                            <i class="bi bi-chevron-down small ms-1" id="auditAdvChevron"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Khung Lọc Nâng Cao Audit Log chuẩn Ca khám trong ngày -->
+                                <div class="dv-adv-filter-panel" id="auditAdvPanel">
+                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                        <div class="fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 14px;">
+                                            <i class="bi bi-sliders2-vertical text-primary"></i>
+                                            <span>Bộ lọc chuyên sâu Nhật ký thao tác</span>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-link text-danger fw-bold text-decoration-none p-0"
+                                            onclick="clearDateFilter('audit', filterAuditTable); setAuditActionFilter('ALL', null); if (document.getElementById('auditEntityFilter')) document.getElementById('auditEntityFilter').value=''; filterAuditTable(); updateAdvFilterBadge('audit');">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại mặc định
+                                        </button>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="dv-adv-label"><i class="bi bi-calendar3 text-primary"></i> Mốc thời gian nhanh</label>
+                                            <select class="form-select dv-adv-control" id="auditDatePreset"
+                                                onchange="applyDatePreset('audit', filterAuditTable); updateAdvFilterBadge('audit');">
                                                 <option value="ALL">Tất cả thời gian</option>
                                                 <option value="TODAY">Hôm nay</option>
                                                 <option value="LAST_7_DAYS">7 ngày qua</option>
@@ -1635,51 +1652,52 @@
                                                 <option value="THIS_YEAR">Năm nay</option>
                                                 <option value="CUSTOM">Tùy chọn...</option>
                                             </select>
-                                            <input type="date" class="dv-date-input" id="auditFromDate"
-                                                onchange="onCustomDateChange('audit', filterAuditTable)"
-                                                title="Từ ngày">
-                                            <span class="text-muted small">→</span>
-                                            <input type="date" class="dv-date-input" id="auditToDate"
-                                                onchange="onCustomDateChange('audit', filterAuditTable)"
-                                                title="Đến ngày">
-                                            <button type="button" class="dv-date-clear-btn" id="auditDateClearBtn"
-                                                onclick="clearDateFilter('audit', filterAuditTable)"
-                                                title="Xóa lọc thời gian">
-                                                <i class="bi bi-x-circle-fill"></i>
-                                            </button>
                                         </div>
-
-                                        <select class="form-select dv-adv-control" id="auditEntityFilter"
-                                            style="width: 190px;" onchange="filterAuditTable()">
-                                            <option value="">Tất cả phân hệ</option>
-                                            <option value="Lượt khám">Phân hệ: Lượt khám</option>
-                                            <option value="Hồ sơ bệnh nhân">Phân hệ: Hồ sơ bệnh nhân</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                                    <div class="dv-quick-segment" id="auditActionSegment">
-                                        <button type="button" class="dv-seg-btn active" data-action="ALL"
-                                            onclick="setAuditActionFilter('ALL', this)">
-                                            Tất cả thao tác <span class="dv-seg-count"
-                                                th:text="${auditLogs != null ? auditLogs.size() : 0}">0</span>
-                                        </button>
-                                        <button type="button" class="dv-seg-btn" data-action="CREATE"
-                                            onclick="setAuditActionFilter('CREATE', this)">
-                                            <i class="bi bi-plus-circle-fill text-success"></i> Thêm mới / Tiếp nhận
-                                        </button>
-                                        <button type="button" class="dv-seg-btn" data-action="UPDATE"
-                                            onclick="setAuditActionFilter('UPDATE', this)">
-                                            <i class="bi bi-pencil-square text-primary"></i> Cập nhật / Điều trị
-                                        </button>
-                                        <button type="button" class="dv-seg-btn" data-action="DELETE"
-                                            onclick="setAuditActionFilter('DELETE', this)">
-                                            <i class="bi bi-trash3-fill text-danger"></i> Xóa / Hủy
-                                        </button>
-                                    </div>
-                                    <div class="text-muted small">
-                                        Hiển thị: <strong class="text-primary" id="auditTotalCount"
-                                            th:text="${auditLogs != null ? auditLogs.size() : 0}">0</strong> thao tác
+                                        <div class="col-md-4">
+                                            <label class="dv-adv-label"><i class="bi bi-calendar-event text-secondary"></i> Từ ngày</label>
+                                            <input type="date" class="form-control dv-adv-control" id="auditFromDate"
+                                                onchange="onCustomDateChange('audit', filterAuditTable); updateAdvFilterBadge('audit');">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="dv-adv-label"><i class="bi bi-calendar-event text-secondary"></i> Đến ngày</label>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <input type="date" class="form-control dv-adv-control" id="auditToDate"
+                                                    onchange="onCustomDateChange('audit', filterAuditTable); updateAdvFilterBadge('audit');">
+                                                <button type="button" class="dv-date-clear-btn" id="auditDateClearBtn"
+                                                    onclick="clearDateFilter('audit', filterAuditTable); updateAdvFilterBadge('audit');"
+                                                    title="Xóa lọc thời gian" style="border:none;background:transparent;color:#dc2626;display:none;">
+                                                    <i class="bi bi-x-circle-fill"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="dv-adv-label"><i class="bi bi-layers text-primary"></i> Phân hệ</label>
+                                            <select class="form-select dv-adv-control" id="auditEntityFilter"
+                                                onchange="filterAuditTable(); updateAdvFilterBadge('audit');">
+                                                <option value="">Tất cả phân hệ</option>
+                                                <option value="Hồ sơ bệnh nhân">Phân hệ: Hồ sơ bệnh nhân</option>
+                                                <option value="Lịch hẹn">Phân hệ: Lịch hẹn</option>
+                                                <option value="Lượt khám">Phân hệ: Lượt khám</option>
+                                                <option value="Quy trình điều trị">Phân hệ: Quy trình điều trị</option>
+                                                <option value="Khám &amp; Thủ thuật">Phân hệ: Khám &amp; Thủ thuật</option>
+                                                <option value="Cận lâm sàng &amp; Phim ảnh">Phân hệ: Cận lâm sàng &amp; Phim ảnh</option>
+                                                <option value="Đơn thuốc">Phân hệ: Đơn thuốc</option>
+                                                <option value="Đặt xưởng Labo">Phân hệ: Đặt xưởng Labo</option>
+                                                <option value="Bệnh án (BAĐT)">Phân hệ: Bệnh án (BAĐT)</option>
+                                                <option value="Hóa đơn &amp; Thanh toán">Phân hệ: Hóa đơn &amp; Thanh toán</option>
+                                                <option value="Chăm sóc khách hàng">Phân hệ: Chăm sóc khách hàng</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="dv-adv-label"><i class="bi bi-funnel text-primary"></i> Phân loại thao tác</label>
+                                            <select class="form-select dv-adv-control" id="auditActionFilter"
+                                                onchange="setAuditActionFilter(this.value, null); updateAdvFilterBadge('audit');">
+                                                <option value="ALL">Tất cả thao tác</option>
+                                                <option value="CREATE">Thêm mới / Tiếp nhận</option>
+                                                <option value="UPDATE">Cập nhật / Điều trị</option>
+                                                <option value="DELETE">Xóa / Hủy</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1687,22 +1705,21 @@
                             <div class="dv-grid-card">
                                 <div class="dv-grid-topbar">
                                     <span
-                                        class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 fw-bold">
+                                        class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 fw-bold">
                                         <i class="bi bi-journal-text me-1"></i>Nhật ký thao tác hệ thống (Audit Log)
                                     </span>
-                                    <small class="text-muted">Ghi nhận tự động mọi thao tác trên hồ sơ và lượt
-                                        khám</small>
+                                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Ghi nhận tự động mọi thao tác trên hồ sơ và lượt khám</small>
                                 </div>
                                 <div class="dv-table-scroll-container">
                                     <table class="dv-amis-table" id="auditTable">
                                         <thead>
                                             <tr>
-                                                <th style="width: 50px;" class="text-center">STT</th>
-                                                <th style="width: 170px;">Thời gian</th>
-                                                <th style="width: 185px;">Người thực hiện</th>
-                                                <th class="text-center" style="width: 130px;">Phân loại thao tác</th>
-                                                <th style="width: 165px;">Phân hệ</th>
-                                                <th>Nội dung chi tiết</th>
+                                                <th style="width: 54px;" class="text-center">STT</th>
+                                                <th style="min-width: 185px;">Thời gian</th>
+                                                <th style="min-width: 195px;">Người thực hiện</th>
+                                                <th class="text-center" style="min-width: 175px;">Phân loại thao tác</th>
+                                                <th style="min-width: 175px;">Phân hệ</th>
+                                                <th style="min-width: 320px;">Nội dung chi tiết</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1711,31 +1728,38 @@
                                                 <td colspan="6" class="text-center text-muted py-5">Chưa có nhật ký thao
                                                     tác nào.</td>
                                             </tr>
-                                            <tr th:each="log, stat : ${auditLogs}" class="audit-row"
+                                            <tr th:each="log, stat : ${auditLogs}" class="audit-row dv-data-row"
                                                 th:data-action="${log.action != null ? log.action : ''}"
                                                 th:data-entity="${log.entityType != null ? log.entityType : ''}"
                                                 th:data-date="${log.timestamp != null ? #temporals.format(log.timestamp, 'yyyy-MM-dd') : ''}">
-                                                <td class="text-center text-muted fw-semibold" th:text="${stat.count}">1
+                                                <td class="text-center text-muted fw-bold" th:text="${stat.count}">1
                                                 </td>
-                                                <td class="text-muted fw-semibold">
-                                                    <i class="bi bi-clock me-1 text-primary"></i><span
-                                                        th:text="${log.timestamp != null ? #temporals.format(log.timestamp, 'dd/MM/yyyy HH:mm:ss') : '—'}">01/01/2026
-                                                        10:00:00</span>
+                                                <td class="text-nowrap">
+                                                    <div class="text-muted fw-semibold d-flex align-items-center gap-1">
+                                                        <i class="bi bi-clock text-primary"></i>
+                                                        <span th:text="${log.timestamp != null ? #temporals.format(log.timestamp, 'dd/MM/yyyy HH:mm:ss') : '—'}">01/01/2026
+                                                            10:00:00</span>
+                                                    </div>
                                                 </td>
-                                                <td class="fw-bold text-dark">
-                                                    <i class="bi bi-person-circle text-primary me-1"></i><span
+                                                <td class="text-nowrap">
+                                                    <span class="fw-bold text-dark" style="font-size: 13.5px;"
                                                         th:text="${log.userName}">Bác sĩ</span>
                                                 </td>
-                                                <td class="text-center">
-                                                    <span class="badge px-2 py-1"
-                                                        th:classappend="${log.actionBadgeClass}"
-                                                        th:text="${log.actionLabel}">THÊM</span>
+                                                <td class="text-center text-nowrap">
+                                                    <span class="dv-status-pill"
+                                                        th:with="act=${log.action != null ? #strings.toUpperCase(log.action) : ''}"
+                                                        th:classappend="${act == 'CREATE' ? 'st-completed' : (act == 'DELETE' ? 'st-cancelled' : (act == 'UPDATE' ? 'st-examining' : 'st-waiting'))}">
+                                                        <i class="bi"
+                                                            th:classappend="${act == 'CREATE' ? 'bi-plus-circle-fill' : (act == 'DELETE' ? 'bi-trash3-fill' : (act == 'UPDATE' ? 'bi-pencil-square' : 'bi-activity'))}"></i>
+                                                        <span th:text="${log.actionLabel}">THÊM</span>
+                                                    </span>
+                                                </td>
+                                                <td class="text-nowrap">
+                                                    <span class="dv-code-pill" th:text="${log.entityType}">Hồ sơ</span>
                                                 </td>
                                                 <td>
-                                                    <span class="badge bg-light text-secondary border fw-semibold"
-                                                        th:text="${log.entityType}">Hồ sơ</span>
+                                                    <span class="text-dark" style="line-height: 1.45;" th:text="${log.details}">Nội dung thao tác</span>
                                                 </td>
-                                                <td class="text-dark" th:text="${log.details}">Nội dung thao tác</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -1917,15 +1941,9 @@
                                                 <small class="text-muted">Bệnh án Răng Hàm Mặt chuẩn Bộ Y Tế</small>
                                             </td>
                                             <td class="text-nowrap">
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <span class="rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0"
-                                                        style="width: 28px; height: 28px; background: #e0f2fe; color: #0284c7; font-size: 12px;">
-                                                        <i class="bi bi-person-badge-fill"></i>
-                                                    </span>
-                                                    <span class="fw-bold text-dark" style="font-size: 13.5px;"
-                                                        th:text="${emr.doctorName != null ? emr.doctorName : 'Bác sĩ phụ trách'}">Bác
-                                                        sĩ</span>
-                                                </div>
+                                                <span class="fw-bold text-dark" style="font-size: 13.5px;"
+                                                    th:text="${emr.doctorName != null ? emr.doctorName : 'Bác sĩ phụ trách'}">Bác
+                                                    sĩ</span>
                                             </td>
                                             <td class="text-center text-nowrap">
                                                 <span class="dv-status-pill"
@@ -1995,10 +2013,10 @@
                                         hẹn tái khám của bệnh nhân.</span>
                                 </div>
                                 <div>
-                                    <a th:href="@{/reception/appointments/new(branchId=${patient.branchId}, query=${patient.code})}"
-                                        class="btn btn-sm btn-outline-primary">
+                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                        onclick="openPatientCreateAppointmentModal()">
                                         <i class="bi bi-calendar-plus me-1"></i> Đặt lịch hẹn mới
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
 
@@ -2008,10 +2026,10 @@
                                 <h6 class="text-secondary">Chưa có lịch hẹn nào</h6>
                                 <p class="text-muted small mb-3">Chưa có lịch hẹn nào được ghi nhận cho bệnh nhân này.
                                 </p>
-                                <a th:href="@{/reception/appointments/new(branchId=${patient.branchId}, query=${patient.code})}"
-                                    class="btn btn-sm btn-primary">
+                                <button type="button" class="btn btn-sm btn-primary"
+                                    onclick="openPatientCreateAppointmentModal()">
                                     <i class="bi bi-calendar-plus me-1"></i> Tạo lịch hẹn ngay
-                                </a>
+                                </button>
                             </div>
 
                             <div class="fin-card p-0" th:unless="${#lists.isEmpty(appointments)}">
@@ -4088,6 +4106,337 @@
         </div>
     </div>
 
+    <!-- POPUP THÊM LỊCH HẸN (ĐỘC LẬP TỪ /reception/appointments) -->
+    <style>
+        #patientCreateAppointmentModal .modal-create-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        #patientCreateAppointmentModal .modal-create-header .icon-circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #eff6ff;
+            color: #2563eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        #patientCreateAppointmentModal .modal-session-btn {
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #334155;
+            border-radius: 8px;
+            padding: 7px 8px;
+            line-height: 1.25;
+            transition: all 0.15s ease;
+        }
+        #patientCreateAppointmentModal .modal-session-btn:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+        }
+        #patientCreateAppointmentModal .modal-session-btn.active {
+            background: #f0f9ff;
+            border-color: #0284c7;
+            color: #0369a1;
+            box-shadow: 0 0 0 1.5px #0284c7;
+        }
+        #patientCreateAppointmentModal .modal-session-btn .session-time-sub {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 400;
+        }
+        #patientCreateAppointmentModal .modal-session-btn.active .session-time-sub {
+            color: #0284c7;
+            font-weight: 500;
+        }
+        #patientCreateAppointmentModal .patient-autocomplete-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 1055;
+        }
+        #patientCreateAppointmentModal .patient-autocomplete-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+        }
+        #patientCreateAppointmentModal .patient-autocomplete-item:hover {
+            background: #f0f9ff;
+            color: #0284c7;
+        }
+    </style>
+
+    <div class="modal fade" id="patientCreateAppointmentModal" tabindex="-1" aria-labelledby="ptApptModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-create-header bg-white">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="icon-circle shadow-xs">
+                            <i class="bi bi-calendar-event"></i>
+                        </div>
+                        <div>
+                            <h6 class="modal-title fw-bold text-dark mb-0" id="ptApptModalTitle">Thêm lịch hẹn</h6>
+                            <small class="text-muted" id="ptApptModalSubtitle">Tạo lịch hẹn mới cho phòng khám</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+
+                <div class="modal-body p-4 bg-white">
+                    <form id="ptApptForm">
+                        <input type="hidden" id="ptApptProfileId" value="">
+                        <input type="hidden" id="ptApptPatientCode" value="">
+                        <div class="row g-4">
+                            <!-- CỘT TRÁI: THÔNG TIN KHÁCH HÀNG -->
+                            <div class="col-md-6 border-end pe-md-4">
+                                <h6 class="fw-bold text-primary small text-uppercase mb-3 pb-2 border-bottom" style="letter-spacing: 0.5px;">
+                                    <i class="bi bi-person-vcard me-1"></i>Thông tin khách hàng
+                                </h6>
+
+                                <div class="mb-3 position-relative">
+                                    <label class="form-label small fw-semibold text-secondary mb-1 text-uppercase">KHÁCH HÀNG CŨ</label>
+                                    <div class="position-relative">
+                                        <i class="bi bi-search position-absolute text-muted" style="left: 13px; top: 11px; font-size: 13px;"></i>
+                                        <input type="text" id="ptApptPatientSearch" class="form-control form-control-sm py-2 ps-4 pe-3 rounded-3"
+                                            placeholder="Mã hồ sơ, tên hoặc số điện thoại...">
+                                        <div id="ptApptPatientResults" class="patient-autocomplete-results" style="display: none;"></div>
+                                    </div>
+                                    <div id="ptApptSelectedChip" class="alert alert-primary py-2 px-3 mt-2 mb-0 rounded-3 align-items-center justify-content-between small" style="display: none;">
+                                        <div>
+                                            <strong id="ptApptSelectedName"></strong>
+                                            <span class="text-muted ms-1" id="ptApptSelectedCode"></span>
+                                        </div>
+                                        <button type="button" class="btn-close btn-close-sm" id="ptApptClearPatientBtn" aria-label="Bỏ chọn"></button>
+                                    </div>
+                                </div>
+
+                                <div id="ptApptNewDivider" class="text-center text-muted small my-3 position-relative">
+                                    <span class="bg-white px-2 position-relative" style="z-index: 1; font-size: 11.5px;">hoặc khách mới (chưa có hồ sơ)</span>
+                                    <hr class="position-absolute w-100 top-50 start-0 m-0" style="z-index: 0; opacity: 0.15;">
+                                </div>
+
+                                <div id="ptApptNewFields">
+                                    <div class="mb-3">
+                                        <label for="ptApptPatientName" class="form-label small fw-semibold text-dark mb-1 text-uppercase">HỌ TÊN KHÁCH HÀNG <span class="text-danger">*</span></label>
+                                        <input type="text" id="ptApptPatientName" class="form-control form-control-sm py-2 px-3 rounded-3" placeholder="Nguyễn Văn A">
+                                    </div>
+
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-7">
+                                            <label for="ptApptPatientDob" class="form-label small fw-semibold text-dark mb-1 text-uppercase">NGÀY SINH <span class="text-danger">*</span></label>
+                                            <input type="date" id="ptApptPatientDob" class="form-control form-control-sm py-2 px-3 rounded-3">
+                                        </div>
+                                        <div class="col-5">
+                                            <label for="ptApptPatientGender" class="form-label small fw-semibold text-dark mb-1 text-uppercase">GIỚI TÍNH <span class="text-danger">*</span></label>
+                                            <select id="ptApptPatientGender" class="form-select form-select-sm py-2 rounded-3">
+                                                <option value="">-- Chọn --</option>
+                                                <option value="Nam">Nam</option>
+                                                <option value="Nữ">Nữ</option>
+                                                <option value="Khác">Khác</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="ptApptPatientPhone" class="form-label small fw-semibold text-dark mb-1 text-uppercase">ĐIỆN THOẠI <span class="text-danger">*</span></label>
+                                        <input type="tel" id="ptApptPatientPhone" class="form-control form-control-sm py-2 px-3 rounded-3" placeholder="0901234567" pattern="^0\d{9,10}$">
+                                        <small class="text-muted d-block mt-1" style="font-size: 11px;">Số điện thoại 10-11 chữ số bắt đầu bằng 0</small>
+                                    </div>
+
+                                    <div id="ptApptGuardianBox" class="p-3 bg-light rounded-3 border mb-3" style="display: none;">
+                                        <div class="small fw-bold text-primary mb-2"><i class="bi bi-shield-check me-1"></i>Người giám hộ (bắt buộc với BN &lt; 18 tuổi)</div>
+                                        <div class="mb-2">
+                                            <label for="ptApptGuardianName" class="form-label small text-secondary mb-1">Họ tên người giám hộ</label>
+                                            <input type="text" id="ptApptGuardianName" class="form-control form-control-sm py-1 rounded-2" placeholder="Nguyễn Văn B">
+                                        </div>
+                                        <div class="row g-2">
+                                            <div class="col-7">
+                                                <label for="ptApptGuardianPhone" class="form-label small text-secondary mb-1">SĐT người giám hộ</label>
+                                                <input type="tel" id="ptApptGuardianPhone" class="form-control form-control-sm py-1 rounded-2" placeholder="0912345678">
+                                            </div>
+                                            <div class="col-5">
+                                                <label for="ptApptGuardianRelation" class="form-label small text-secondary mb-1">Quan hệ</label>
+                                                <input type="text" id="ptApptGuardianRelation" class="form-control form-control-sm py-1 rounded-2" placeholder="Bố/Mẹ">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="ptApptPatientAddress" class="form-label small fw-semibold text-secondary mb-1 text-uppercase">ĐỊA CHỈ</label>
+                                        <input type="text" id="ptApptPatientAddress" class="form-control form-control-sm py-2 px-3 rounded-3" placeholder="Số nhà, đường, phường...">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="ptApptCustomerSource" class="form-label small fw-semibold text-secondary mb-1 text-uppercase">NGUỒN KHÁCH</label>
+                                        <select id="ptApptCustomerSource" class="form-select form-select-sm py-2 rounded-3">
+                                            <option value="">-- Chọn --</option>
+                                            <option value="Google">Google</option>
+                                            <option value="Facebook">Facebook</option>
+                                            <option value="Giới thiệu">Giới thiệu</option>
+                                            <option value="Vãng lai">Vãng lai</option>
+                                            <option value="Hotline">Hotline</option>
+                                            <option value="TikTok">TikTok</option>
+                                            <option value="Zalo">Zalo</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CỘT PHẢI: THÔNG TIN LỊCH HẸN -->
+                            <div class="col-md-6 ps-md-4">
+                                <h6 class="fw-bold text-primary small text-uppercase mb-3 pb-2 border-bottom" style="letter-spacing: 0.5px;">
+                                    <i class="bi bi-calendar-event me-1"></i>Thông tin lịch hẹn
+                                </h6>
+
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <label for="ptApptBranchId" class="form-label small fw-semibold text-dark mb-1 text-uppercase">CHI NHÁNH <span class="text-danger">*</span></label>
+                                        <select id="ptApptBranchId" class="form-select form-select-sm py-2 rounded-3" required></select>
+                                    </div>
+                                    <div class="col-6">
+                                        <label for="ptApptDate" class="form-label small fw-semibold text-dark mb-1 text-uppercase">NGÀY HẸN <span class="text-danger">*</span></label>
+                                        <input type="date" id="ptApptDate" class="form-control form-control-sm py-2 px-3 rounded-3" required>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold text-dark mb-1 text-uppercase">CA KHÁM ĐĂNG KÝ <span class="text-danger">*</span></label>
+                                    <input type="hidden" id="ptApptSession" value="MORNING">
+                                    <div class="row g-2" id="ptApptSessionGroup">
+                                        <div class="col-4">
+                                            <button type="button" class="btn btn-sm w-100 modal-session-btn py-2 text-start active" data-pt-session="MORNING">
+                                                <div class="fw-bold small"><i class="bi bi-sunrise me-1"></i>Ca Sáng</div>
+                                                <div class="session-time-sub">08:00 – 12:00</div>
+                                            </button>
+                                        </div>
+                                        <div class="col-4">
+                                            <button type="button" class="btn btn-sm w-100 modal-session-btn py-2 text-start" data-pt-session="AFTERNOON">
+                                                <div class="fw-bold small"><i class="bi bi-sun me-1"></i>Ca Chiều</div>
+                                                <div class="session-time-sub">13:30 – 17:30</div>
+                                            </button>
+                                        </div>
+                                        <div class="col-4">
+                                            <button type="button" class="btn btn-sm w-100 modal-session-btn py-2 text-start" data-pt-session="EVENING">
+                                                <div class="fw-bold small"><i class="bi bi-moon-stars me-1"></i>Ca Tối</div>
+                                                <div class="session-time-sub">17:30 – 20:30</div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="ptApptDoctorId" class="form-label small fw-semibold text-dark mb-1 text-uppercase">BÁC SĨ TRỰC CA <span class="text-danger">*</span></label>
+                                    <select id="ptApptDoctorId" class="form-select form-select-sm py-2 rounded-3" required>
+                                        <option value="">Chọn chi nhánh và ngày hẹn trước</option>
+                                    </select>
+                                    <small id="ptApptDoctorHelp" class="form-text text-muted d-block mt-1" style="font-size: 11.5px;">Hiển thị bác sĩ có lịch trực trong ca và ngày đã chọn.</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold text-dark mb-1 text-uppercase">GIỜ DỰ KIẾN (LINH ĐỘNG THEO CA)</label>
+                                    <div class="d-flex gap-2">
+                                        <select id="ptApptHour" class="form-select form-select-sm py-2 rounded-3 flex-grow-1">
+                                            <option value="">Linh động cả ca</option>
+                                            <optgroup label="Ca sáng">
+                                                <option value="08">08 giờ</option>
+                                                <option value="09">09 giờ</option>
+                                                <option value="10">10 giờ</option>
+                                                <option value="11">11 giờ</option>
+                                            </optgroup>
+                                            <optgroup label="Ca chiều">
+                                                <option value="13">13 giờ</option>
+                                                <option value="14">14 giờ</option>
+                                                <option value="15">15 giờ</option>
+                                                <option value="16">16 giờ</option>
+                                                <option value="17">17 giờ</option>
+                                            </optgroup>
+                                            <optgroup label="Ca tối">
+                                                <option value="18">18 giờ</option>
+                                                <option value="19">19 giờ</option>
+                                                <option value="20">20 giờ</option>
+                                            </optgroup>
+                                        </select>
+                                        <select id="ptApptMinute" class="form-select form-select-sm py-2 rounded-3" style="max-width: 95px;">
+                                            <option value="00">00 ph</option>
+                                            <option value="15">15 ph</option>
+                                            <option value="30">30 ph</option>
+                                            <option value="45">45 ph</option>
+                                        </select>
+                                    </div>
+                                    <small class="text-muted d-block mt-1" style="font-size: 11.5px;">Có thể chọn giờ cụ thể hoặc để "Linh động cả ca" (tiếp đón theo thứ tự đến).</small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="ptApptServiceId" class="form-label small fw-semibold text-secondary mb-1 text-uppercase">NHÓM DỊCH VỤ</label>
+                                    <select id="ptApptServiceId" class="form-select form-select-sm py-2 rounded-3">
+                                        <option value="">-- Chọn dịch vụ --</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="ptApptSymptoms" class="form-label small fw-semibold text-dark mb-1 text-uppercase">NỘI DUNG HẸN <span class="text-danger">*</span></label>
+                                    <textarea id="ptApptSymptoms" class="form-control rounded-3 py-2 px-3" rows="2" placeholder="Cạo vôi, trám răng, điều trị tuỷ..." required></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="ptApptPriorityType" class="form-label small fw-semibold text-dark mb-1 text-uppercase">
+                                        <i class="bi bi-star-fill text-warning me-1"></i>ĐỐI TƯỢNG ƯU TIÊN HÀNG CHỜ
+                                    </label>
+                                    <select id="ptApptPriorityType" class="form-select form-select-sm py-2 rounded-3">
+                                        <option value="">-- Không ưu tiên (Khám thường) --</option>
+                                        <option value="ELDERLY">Người cao tuổi (≥ 65 tuổi) - Tự động ưu tiên</option>
+                                        <option value="CHILD">Trẻ nhỏ (≤ 6 tuổi) - Tự động ưu tiên</option>
+                                        <option value="PREGNANT">Phụ nữ có thai</option>
+                                        <option value="DISABLED">Người khuyết tật / Đi lại khó khăn</option>
+                                        <option value="EMERGENCY">Cấp cứu / Đau cấp tính</option>
+                                        <option value="OTHER">Ưu tiên đặc biệt khác</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="ptApptInternalNote" class="form-label small fw-semibold text-secondary mb-1 text-uppercase">GHI CHÚ</label>
+                                    <input type="text" id="ptApptInternalNote" class="form-control form-control-sm py-2 px-3 rounded-3" placeholder="Ghi chú nội bộ (không gửi cho KH)">
+                                </div>
+
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="ptApptIsTentative">
+                                    <label class="form-check-label small text-secondary" for="ptApptIsTentative">
+                                        Chờ xác nhận (lễ tân sẽ gọi điện chốt lại sau)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="ptApptSendSms" checked>
+                                    <label class="form-check-label small text-secondary" for="ptApptSendSms">
+                                        Gửi tin nhắn SMS/Zalo xác nhận ngay khi lưu
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="modal-footer bg-light px-4 py-2 border-top-0 d-flex justify-content-end gap-3">
+                    <button type="button" class="btn btn-primary px-4 py-2 fw-semibold rounded-3 shadow-xs" id="ptApptSaveBtn"
+                        style="background-color: #0284c7; border-color: #0284c7;">Lưu</button>
+                    <button type="button" class="btn btn-outline-secondary px-4 py-2 fw-medium rounded-3 bg-white" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- =========================================================================
      JAVASCRIPT HỖ TRỢ CHUYỂN TAB & BỘ LỌC CLIENT-SIDE
      ========================================================================= -->
@@ -4158,10 +4507,7 @@
                 return;
             }
 
-            if (normalizedKey === 'appointments') {
-                slot.innerHTML = '<a href="/reception/appointments/new?branchId=' + (patientBranchId || '') + '&query=' + encodeURIComponent(patientCode) + '" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2">' +
-                    '<i class="bi bi-calendar-plus"></i> Đặt lịch hẹn mới</a>';
-            } else if (normalizedKey === 'photos') {
+            if (normalizedKey === 'photos') {
                 slot.innerHTML = '<button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2" onclick="openPhotoUploadModal()">' +
                     '<i class="bi bi-camera-fill"></i> Thêm phim ảnh</button>';
             } else if (normalizedKey === 'prescriptions') {
@@ -4330,14 +4676,15 @@
 
         function initSegmentCountsAndEmptyFilterRows() {
             // 1. Treatment status segment counts
+            const inProgressStatuses = ['IN_PROGRESS', 'WAITING', 'IN_EXAM', 'EXAMINING', 'WAITING_PARACLINICAL', 'WAITING_RESULT', 'IN_TREATMENT', 'CHECKED_IN'];
             const treatmentRows = Array.from(document.querySelectorAll("#treatmentTable tbody tr.treatment-row"));
             document.querySelectorAll("#treatmentStatusSegment .dv-seg-btn").forEach(btn => {
-                const status = btn.getAttribute("data-status") || 'ALL';
+                const status = btn.getAttribute("data-filter") || btn.getAttribute("data-status") || 'ALL';
                 let count = treatmentRows.length;
                 if (status === 'COMPLETED') {
                     count = treatmentRows.filter(r => (r.getAttribute("data-status") || '').toUpperCase() === 'COMPLETED').length;
                 } else if (status === 'IN_PROGRESS') {
-                    count = treatmentRows.filter(r => ['IN_PROGRESS', 'WAITING', 'EXAMINING', 'CHECKED_IN'].includes((r.getAttribute("data-status") || '').toUpperCase())).length;
+                    count = treatmentRows.filter(r => inProgressStatuses.includes((r.getAttribute("data-status") || '').toUpperCase())).length;
                 } else if (status === 'WAITING_PAYMENT') {
                     count = treatmentRows.filter(r => (r.getAttribute("data-status") || '').toUpperCase() === 'WAITING_PAYMENT').length;
                 } else if (status === 'HAS_EMR') {
@@ -4346,8 +4693,22 @@
                 ensureSegCountBadge(btn, count);
             });
 
-            // 2. Audit action segment counts
+            // 2. Audit action segment counts & dynamic entity options
             const auditRows = Array.from(document.querySelectorAll("#auditTable tbody tr.audit-row"));
+            const entitySelect = document.getElementById("auditEntityFilter");
+            if (entitySelect) {
+                const existingValues = new Set(Array.from(entitySelect.options).map(o => o.value.trim().toLowerCase()));
+                auditRows.forEach(r => {
+                    const ent = (r.getAttribute("data-entity") || '').trim();
+                    if (ent && !existingValues.has(ent.toLowerCase())) {
+                        existingValues.add(ent.toLowerCase());
+                        const opt = document.createElement("option");
+                        opt.value = ent;
+                        opt.textContent = "Phân hệ: " + ent;
+                        entitySelect.appendChild(opt);
+                    }
+                });
+            }
             document.querySelectorAll("#auditActionSegment .dv-seg-btn").forEach(btn => {
                 const action = (btn.getAttribute("data-action") || 'ALL').toUpperCase();
                 const count = (action === 'ALL')
@@ -4518,9 +4879,12 @@
             } else if (prefix === 'treatment') {
                 const st = document.getElementById('treatmentStatusFilter')?.value;
                 if (st && st !== 'ALL') active++;
-            } else if (prefix === 'invoice') {
-                const st = document.getElementById('invoiceStatusFilter')?.value;
-                if (st) active++;
+
+            } else if (prefix === 'audit') {
+                const ent = document.getElementById('auditEntityFilter')?.value;
+                const act = document.getElementById('auditActionFilter')?.value;
+                if (ent) active++;
+                if (act && act !== 'ALL') active++;
             }
 
             if (active > 0) {
@@ -4586,7 +4950,7 @@
                 if (currentTreatmentStatusFilter === 'COMPLETED') {
                     matchesStatus = status === 'COMPLETED';
                 } else if (currentTreatmentStatusFilter === 'IN_PROGRESS') {
-                    matchesStatus = (status === 'IN_PROGRESS' || status === 'WAITING' || status === 'EXAMINING' || status === 'CHECKED_IN');
+                    matchesStatus = ['IN_PROGRESS', 'WAITING', 'IN_EXAM', 'EXAMINING', 'WAITING_PARACLINICAL', 'WAITING_RESULT', 'IN_TREATMENT', 'CHECKED_IN'].includes(status);
                 } else if (currentTreatmentStatusFilter === 'WAITING_PAYMENT') {
                     matchesStatus = status === 'WAITING_PAYMENT';
                 } else if (currentTreatmentStatusFilter === 'HAS_EMR') {
@@ -4609,8 +4973,8 @@
         // 3. Bộ lọc bảng Nhật ký thao tác (Audit Log)
         function setAuditActionFilter(actionVal, btn) {
             currentAuditActionFilter = actionVal || 'ALL';
-            document.querySelectorAll("#auditActionSegment .dv-seg-btn").forEach(b => b.classList.remove("active"));
-            if (btn) btn.classList.add("active");
+            const actionSelect = document.getElementById("auditActionFilter");
+            if (actionSelect) actionSelect.value = currentAuditActionFilter;
             filterAuditTable();
         }
 
@@ -5646,6 +6010,305 @@
                 printWindow.close();
             }, 300);
         }
+        // =====================================================================
+        // POPUP ĐẶT LỊCH HẸN ĐỘC LẬP (TÁI SỬ DỤNG TỪ /reception/appointments)
+        // =====================================================================
+        const currentPatientFullName = /*[[${patient.fullName}]]*/ '';
+        const currentPatientDob = /*[[${patient.dob != null ? #temporals.format(patient.dob, 'yyyy-MM-dd') : ''}]]*/ '';
+        let ptApptOptionsCache = null;
+
+        function ptApptTodayIso() {
+            return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Bangkok' }).format(new Date());
+        }
+
+        function ptApptDateLabel(value) {
+            return value ? value.split('-').reverse().join('/') : '—';
+        }
+
+        function ptApptSetSession(sessionVal) {
+            const input = document.getElementById('ptApptSession');
+            if (input) input.value = sessionVal;
+            document.querySelectorAll('#ptApptSessionGroup [data-pt-session]').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-pt-session') === sessionVal);
+            });
+            ptApptUpdateSubtitle();
+        }
+
+        function ptApptUpdateSubtitle() {
+            const dateVal = document.getElementById('ptApptDate')?.value || ptApptTodayIso();
+            const sessVal = document.getElementById('ptApptSession')?.value || 'MORNING';
+            const sessNames = { MORNING: 'Ca Sáng', AFTERNOON: 'Ca Chiều', EVENING: 'Ca Tối' };
+            const sub = document.getElementById('ptApptModalSubtitle');
+            if (sub) sub.textContent = `Ngày ${ptApptDateLabel(dateVal)} · ${sessNames[sessVal] || 'Ca Sáng'}`;
+        }
+
+        function ptApptSyncPriorityNote(label) {
+            const noteInput = document.getElementById('ptApptInternalNote');
+            if (!noteInput) return;
+            let current = noteInput.value.trim().replace(/\[ƯU TIÊN:.*?\]\s*/gi, '').trim();
+            noteInput.value = label ? `[ƯU TIÊN: ${label}] ${current}`.trim() : current;
+        }
+
+        function ptApptSelectExistingPatient(id, code, name, dobStr) {
+            document.getElementById('ptApptProfileId').value = String(id || '');
+            document.getElementById('ptApptPatientCode').value = code || '';
+            document.getElementById('ptApptSelectedName').textContent = name || '';
+            document.getElementById('ptApptSelectedCode').textContent = code ? `(${code})` : '';
+            document.getElementById('ptApptSelectedChip').style.display = 'flex';
+            document.getElementById('ptApptNewFields').style.display = 'none';
+            const divider = document.getElementById('ptApptNewDivider');
+            if (divider) divider.style.display = 'none';
+            document.getElementById('ptApptPatientResults').style.display = 'none';
+            document.getElementById('ptApptPatientSearch').value = '';
+            if (dobStr) {
+                const birthDate = new Date(dobStr);
+                const now = new Date();
+                let age = now.getFullYear() - birthDate.getFullYear();
+                const m = now.getMonth() - birthDate.getMonth();
+                if (m < 0 || (m === 0 && now.getDate() < birthDate.getDate())) age--;
+                const pri = document.getElementById('ptApptPriorityType');
+                if (pri) {
+                    if (age >= 65) { pri.value = 'ELDERLY'; ptApptSyncPriorityNote(`Người cao tuổi (${age} tuổi)`); }
+                    else if (age <= 6 && age >= 0) { pri.value = 'CHILD'; ptApptSyncPriorityNote(`Trẻ nhỏ (${age} tuổi)`); }
+                }
+            }
+        }
+
+        async function ptApptLoadOptions() {
+            if (ptApptOptionsCache) return ptApptOptionsCache;
+            const res = await fetch('/reception/appointments/api/options', { credentials: 'same-origin' });
+            if (!res.ok) throw new Error('Không tải được danh mục chi nhánh và dịch vụ.');
+            ptApptOptionsCache = await res.json();
+            return ptApptOptionsCache;
+        }
+
+        async function ptApptLoadDoctors() {
+            const select = document.getElementById('ptApptDoctorId');
+            const branchId = document.getElementById('ptApptBranchId')?.value;
+            const dateVal = document.getElementById('ptApptDate')?.value;
+            const session = document.getElementById('ptApptSession')?.value || 'MORNING';
+            const help = document.getElementById('ptApptDoctorHelp');
+            if (!select) return;
+            select.disabled = true;
+            select.innerHTML = '<option value="">Đang tải bác sĩ trực…</option>';
+            if (!branchId || !dateVal) {
+                select.innerHTML = '<option value="">Chọn chi nhánh và ngày hẹn trước</option>';
+                if (help) help.textContent = 'Chọn chi nhánh và ngày hẹn để xem danh sách bác sĩ trực.';
+                return;
+            }
+            try {
+                const res = await fetch(`/reception/appointments/api/doctors?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(dateVal)}`, { credentials: 'same-origin' });
+                const list = await res.json().catch(() => []);
+                if (!res.ok) throw new Error(list.message || 'Không tải được danh sách bác sĩ.');
+                select.innerHTML = '<option value="">-- Chọn bác sĩ phụ trách --</option>';
+                list.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.id;
+                    opt.textContent = `BS. ${d.name}${d.specialty ? ` · ${d.specialty}` : ''}`;
+                    select.appendChild(opt);
+                });
+                select.disabled = false;
+                const sessNames = { MORNING: 'Ca Sáng', AFTERNOON: 'Ca Chiều', EVENING: 'Ca Tối' };
+                if (help) help.textContent = list.length
+                    ? `Có ${list.length} bác sĩ trực (${sessNames[session] || 'Ca Sáng'}) ngày ${ptApptDateLabel(dateVal)}.`
+                    : `Chưa có bác sĩ phân ca trực ngày ${ptApptDateLabel(dateVal)}.`;
+            } catch (err) {
+                select.innerHTML = '<option value="">Không tải được danh sách bác sĩ</option>';
+                if (help) help.textContent = err.message || 'Không tải được danh sách bác sĩ trực.';
+            }
+        }
+
+        async function openPatientCreateAppointmentModal() {
+            const modalEl = document.getElementById('patientCreateAppointmentModal');
+            if (!modalEl) return;
+            document.getElementById('ptApptForm')?.reset();
+            document.getElementById('ptApptDate').value = ptApptTodayIso();
+            ptApptSetSession('MORNING');
+            document.getElementById('ptApptGuardianBox').style.display = 'none';
+
+            if (patientId) {
+                ptApptSelectExistingPatient(patientId, patientCode, currentPatientFullName, currentPatientDob);
+            } else {
+                document.getElementById('ptApptSelectedChip').style.display = 'none';
+                document.getElementById('ptApptNewFields').style.display = 'block';
+                const divider = document.getElementById('ptApptNewDivider');
+                if (divider) divider.style.display = 'block';
+            }
+
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+
+            try {
+                const opts = await ptApptLoadOptions();
+                const branchSelect = document.getElementById('ptApptBranchId');
+                branchSelect.innerHTML = '<option value="">Chọn chi nhánh</option>';
+                (opts.branches || []).forEach(b => {
+                    const opt = document.createElement('option');
+                    opt.value = b.id;
+                    opt.textContent = b.name;
+                    branchSelect.appendChild(opt);
+                });
+                if (patientBranchId && [...branchSelect.options].some(o => o.value === String(patientBranchId))) {
+                    branchSelect.value = String(patientBranchId);
+                } else if (branchSelect.options.length > 1) {
+                    branchSelect.selectedIndex = 1;
+                }
+
+                const svcSelect = document.getElementById('ptApptServiceId');
+                svcSelect.innerHTML = '<option value="">-- Chọn dịch vụ --</option>';
+                (opts.services || []).forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = s.name;
+                    svcSelect.appendChild(opt);
+                });
+                await ptApptLoadDoctors();
+            } catch (e) {
+                alert(e.message || 'Không thể khởi tạo dữ liệu đặt lịch hẹn.');
+            }
+        }
+
+        document.querySelectorAll('#ptApptSessionGroup [data-pt-session]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                ptApptSetSession(btn.getAttribute('data-pt-session') || 'MORNING');
+                ptApptLoadDoctors();
+            });
+        });
+
+        document.getElementById('ptApptBranchId')?.addEventListener('change', ptApptLoadDoctors);
+        document.getElementById('ptApptDate')?.addEventListener('change', () => {
+            ptApptUpdateSubtitle();
+            ptApptLoadDoctors();
+        });
+
+        document.getElementById('ptApptPriorityType')?.addEventListener('change', (e) => {
+            const val = e.target.value;
+            if (val === 'PREGNANT') ptApptSyncPriorityNote('Phụ nữ có thai');
+            else if (val === 'DISABLED') ptApptSyncPriorityNote('Người khuyết tật');
+            else if (val === 'EMERGENCY') ptApptSyncPriorityNote('Cấp cứu / Đau cấp tính');
+            else if (val === 'OTHER') ptApptSyncPriorityNote('Ưu tiên đặc biệt');
+            else if (!val) ptApptSyncPriorityNote('');
+        });
+
+        document.getElementById('ptApptPatientDob')?.addEventListener('change', (e) => {
+            const val = e.target.value;
+            const gBox = document.getElementById('ptApptGuardianBox');
+            if (!val) return;
+            const birthDate = new Date(val);
+            const now = new Date();
+            let age = now.getFullYear() - birthDate.getFullYear();
+            const m = now.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && now.getDate() < birthDate.getDate())) age--;
+            const pri = document.getElementById('ptApptPriorityType');
+            if (pri) {
+                if (age >= 65) { pri.value = 'ELDERLY'; ptApptSyncPriorityNote(`Người cao tuổi (${age} tuổi)`); }
+                else if (age <= 6 && age >= 0) { pri.value = 'CHILD'; ptApptSyncPriorityNote(`Trẻ nhỏ (${age} tuổi)`); }
+            }
+            if (gBox) gBox.style.display = age < 18 ? 'block' : 'none';
+        });
+
+        document.getElementById('ptApptClearPatientBtn')?.addEventListener('click', () => {
+            document.getElementById('ptApptProfileId').value = '';
+            document.getElementById('ptApptPatientCode').value = '';
+            document.getElementById('ptApptSelectedChip').style.display = 'none';
+            document.getElementById('ptApptNewFields').style.display = 'block';
+            const divider = document.getElementById('ptApptNewDivider');
+            if (divider) divider.style.display = 'block';
+            document.getElementById('ptApptPatientSearch').focus();
+        });
+
+        let ptApptSearchTimer = null;
+        document.getElementById('ptApptPatientSearch')?.addEventListener('input', (e) => {
+            clearTimeout(ptApptSearchTimer);
+            const q = e.target.value.trim();
+            const resultsEl = document.getElementById('ptApptPatientResults');
+            if (q.length < 2) { resultsEl.style.display = 'none'; return; }
+            ptApptSearchTimer = setTimeout(async () => {
+                try {
+                    const bId = document.getElementById('ptApptBranchId')?.value || '';
+                    const res = await fetch(`/reception/appointments/api/patients?query=${encodeURIComponent(q)}&branchId=${encodeURIComponent(bId)}`, { credentials: 'same-origin' });
+                    const list = await res.json().catch(() => []);
+                    resultsEl.replaceChildren();
+                    if (!list.length) {
+                        resultsEl.innerHTML = '<div class="patient-autocomplete-item text-muted">Không tìm thấy khách hàng phù hợp</div>';
+                    } else {
+                        list.forEach(p => {
+                            const div = document.createElement('div');
+                            div.className = 'patient-autocomplete-item';
+                            div.innerHTML = `<strong>${p.name}</strong> <span class="text-muted">(${p.code})</span> - <span class="text-primary">${p.phone}</span>`;
+                            div.addEventListener('click', () => ptApptSelectExistingPatient(p.id, p.code, p.name, null));
+                            resultsEl.appendChild(div);
+                        });
+                    }
+                    resultsEl.style.display = 'block';
+                } catch (_) { resultsEl.style.display = 'none'; }
+            }, 300);
+        });
+
+        document.getElementById('ptApptSaveBtn')?.addEventListener('click', async () => {
+            const branchId = document.getElementById('ptApptBranchId').value ? Number(document.getElementById('ptApptBranchId').value) : null;
+            const date = document.getElementById('ptApptDate').value;
+            const doctorId = document.getElementById('ptApptDoctorId').value ? Number(document.getElementById('ptApptDoctorId').value) : null;
+            const serviceId = document.getElementById('ptApptServiceId').value ? Number(document.getElementById('ptApptServiceId').value) : null;
+            const profileId = document.getElementById('ptApptProfileId').value ? Number(document.getElementById('ptApptProfileId').value) : null;
+            const symptoms = document.getElementById('ptApptSymptoms').value.trim();
+            const isTentative = document.getElementById('ptApptIsTentative')?.checked || false;
+
+            if (!branchId) { alert('Vui lòng chọn chi nhánh cho lịch hẹn.'); document.getElementById('ptApptBranchId').focus(); return; }
+            if (!date) { alert('Vui lòng chọn ngày hẹn.'); return; }
+            if (!doctorId) { alert('Vui lòng chọn bác sĩ trực.'); document.getElementById('ptApptDoctorId').focus(); return; }
+            if (!symptoms) { alert('Vui lòng nhập nội dung hẹn khám.'); document.getElementById('ptApptSymptoms').focus(); return; }
+
+            let patientName = document.getElementById('ptApptPatientName').value.trim();
+            let patientDob = null, patientGender = null, guardianName = null, guardianPhone = null, guardianRelationship = null;
+            if (!profileId) {
+                const dobVal = document.getElementById('ptApptPatientDob')?.value;
+                const genderVal = document.getElementById('ptApptPatientGender')?.value;
+                const phoneVal = document.getElementById('ptApptPatientPhone')?.value.trim();
+                if (!patientName) { alert('Vui lòng nhập họ tên khách hàng.'); document.getElementById('ptApptPatientName').focus(); return; }
+                if (!dobVal) { alert('Vui lòng chọn ngày sinh cho bệnh nhân mới.'); document.getElementById('ptApptPatientDob').focus(); return; }
+                if (!genderVal) { alert('Vui lòng chọn giới tính cho bệnh nhân mới.'); document.getElementById('ptApptPatientGender').focus(); return; }
+                if (!phoneVal || !/^0\d{9,10}$/.test(phoneVal)) { alert('Số điện thoại bệnh nhân phải gồm 10 hoặc 11 chữ số và bắt đầu bằng 0.'); document.getElementById('ptApptPatientPhone').focus(); return; }
+                patientDob = dobVal; patientGender = genderVal;
+            }
+
+            const hour = document.getElementById('ptApptHour')?.value;
+            const minute = document.getElementById('ptApptMinute')?.value || '00';
+            const expectedTime = hour ? `${hour}:${minute}:00` : null;
+
+            const payload = {
+                branchId, profileId, patientName,
+                patientPhone: document.getElementById('ptApptPatientPhone').value.trim(),
+                patientAddress: document.getElementById('ptApptPatientAddress').value.trim(),
+                customerSource: document.getElementById('ptApptCustomerSource').value || 'Vãng lai',
+                patientDob, patientGender, guardianName, guardianPhone, guardianRelationship,
+                doctorId, date,
+                session: document.getElementById('ptApptSession')?.value || 'MORNING',
+                expectedTime, durationMinutes: 30, serviceId, symptoms,
+                internalNote: document.getElementById('ptApptInternalNote').value.trim(),
+                isTentative
+            };
+
+            const saveBtn = document.getElementById('ptApptSaveBtn');
+            const origText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Đang lưu...';
+            try {
+                const headers = Object.assign({ 'Content-Type': 'application/json' }, typeof getCsrfHeaders === 'function' ? getCsrfHeaders() : {});
+                const res = await fetch('/reception/appointments/api', {
+                    method: 'POST', credentials: 'same-origin', headers, body: JSON.stringify(payload)
+                });
+                const body = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(body.message || body.detail || body.error || `Không thể tạo lịch hẹn (${res.status}).`);
+                bootstrap.Modal.getInstance(document.getElementById('patientCreateAppointmentModal'))?.hide();
+                window.location.hash = '#appointments';
+                window.location.reload();
+            } catch (err) {
+                alert('Không thể tạo lịch hẹn: ' + err.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = origText;
+            }
+        });
         /*]]>*/
     </script>
 </body>

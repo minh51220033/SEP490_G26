@@ -308,7 +308,7 @@
                 select.appendChild(option);
             });
 
-            const currentBranchIdAttr = Number(document.body?.dataset?.currentBranchId || 0);
+            const urlBranchId = Number(new URLSearchParams(window.location.search).get("branchId") || 0); const currentBranchIdAttr = urlBranchId || Number(document.body?.dataset?.currentBranchId || 0);
             const preferredBranch = branches.find(b => Number(b.branchId) === currentBranchIdAttr) || branches[0];
 
             if (state.branchSelectionAllowed) {

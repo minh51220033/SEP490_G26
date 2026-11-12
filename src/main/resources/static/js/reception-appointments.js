@@ -546,14 +546,23 @@
                 $('viewCalendarBtn')?.classList.remove('active', 'btn-primary');
                 $('viewCalendarBtn')?.classList.add('btn-outline-secondary');
                 if (radioModeList) radioModeList.checked = true;
-            } else {
-                $('listViewContainer').style.display = 'none';
-                $('calendarViewContainer').style.display = 'block';
-                $('viewCalendarBtn')?.classList.add('active', 'btn-primary');
-                $('viewCalendarBtn')?.classList.remove('btn-outline-secondary');
-                $('viewListBtn')?.classList.remove('active', 'btn-primary');
-                $('viewListBtn')?.classList.add('btn-outline-secondary');
-                if (radioModeCalendar) radioModeCalendar.checked = true;
+                applyFiltersAndRender();
+                return;
+            }
+            $('listViewContainer').style.display = 'none';
+            $('calendarViewContainer').style.display = 'block';
+            $('viewCalendarBtn')?.classList.add('active', 'btn-primary');
+            $('viewCalendarBtn')?.classList.remove('btn-outline-secondary');
+            $('viewListBtn')?.classList.remove('active', 'btn-primary');
+            $('viewListBtn')?.classList.add('btn-outline-secondary');
+            if (radioModeCalendar) radioModeCalendar.checked = true;
+            if (currentPeriod === 'day') {
+                currentPeriod = 'week';
+                if ($('advFilterDateOp')) $('advFilterDateOp').value = 'THIS_WEEK';
+                updateDateDisplay();
+                syncPeriodButtons();
+                load().catch(e => error(e.message));
+                return;
             }
             applyFiltersAndRender();
         }
@@ -971,7 +980,7 @@
             if (!appointments.length) {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td colspan="9" class="text-center py-5 text-muted">
+                    <td colspan="10" class="text-center py-5 text-muted">
                         <i class="bi bi-calendar-x display-6 d-block mb-2 text-secondary opacity-50"></i>
                         Không có lịch hẹn nào phù hợp với điều kiện lọc hiện tại.
                     </td>
@@ -989,6 +998,38 @@
                 EVENING: { label: 'Ca Tối', icon: 'bi-moon-stars-fill', cls: 'evening' }
             };
 
+            const buildActionButtonsHtml = (a, isMutable, statusMeta) => `
+                <button type="button" class="dv-equal-btn-secondary btn-details" data-appointment-id="${a.id}" title="Xem chi tiết lịch hẹn">
+                    <i class="bi bi-eye text-primary"></i><span>Chi tiết</span>
+                </button>
+                ${isMutable
+                    ? `<button type="button" class="dv-equal-btn-secondary btn-edit" data-appointment-id="${a.id}" title="Sửa / Đổi lịch hẹn"><i class="bi bi-pencil text-secondary"></i><span>Sửa</span></button>`
+                    : `<button type="button" class="dv-equal-btn-secondary text-muted opacity-50" disabled title="Chỉ có thể sửa lịch hẹn khi đang Chờ xác nhận hoặc Đã xác nhận"><i class="bi bi-pencil"></i><span>Sửa</span></button>`
+                }
+                ${isMutable
+                    ? `<button type="button" class="dv-equal-btn-secondary text-danger btn-delete" title="Hủy lịch hẹn"><i class="bi bi-trash"></i><span>Hủy</span></button>`
+                    : `<button type="button" class="dv-equal-btn-secondary text-muted opacity-50" disabled title="Không thể hủy lịch hẹn ở trạng thái ${escapeHtml(statusMeta.label)}"><i class="bi bi-trash"></i><span>Hủy</span></button>`
+                }
+            `;
+
+            const bindActionHandlers = (container, a) => {
+                container.querySelector('.btn-details')?.addEventListener('click', () => openQuickStatusModal(a));
+                container.querySelector('.btn-edit')?.addEventListener('click', () => openEditAppointmentModal(a));
+                container.querySelector('.btn-delete')?.addEventListener('click', async () => {
+                    if (confirm(`Bạn có chắc chắn muốn hủy lịch hẹn của khách hàng "${a.patientName}"?`)) {
+                        try {
+                            await request(`/${a.id}/quick-status`, {
+                                method: 'POST',
+                                body: JSON.stringify({ status: 'CANCELLED', note: 'Lễ tân hủy lịch hẹn trên danh sách' })
+                            });
+                            await load();
+                        } catch (err) {
+                            error(err.message);
+                        }
+                    }
+                });
+            };
+
             appointments.forEach((a, index) => {
                 if (showDateGroupHeaders && a.date !== lastDate) {
                     lastDate = a.date;
@@ -996,7 +1037,7 @@
                     const groupTr = document.createElement('tr');
                     groupTr.className = 'apt-date-group-row';
                     groupTr.innerHTML = `
-                        <td colspan="9">
+                        <td colspan="10">
                             <div class="d-flex align-items-center justify-content-between">
                                 <span><i class="bi bi-calendar3 text-primary me-2"></i>${escapeHtml(formatDayWithWeekday(lastDate))}</span>
                                 <span class="badge bg-white text-secondary border fw-semibold">${dayCount} ca hẹn</span>
@@ -1007,6 +1048,7 @@
                 }
 
                 const tr = document.createElement('tr');
+                tr.className = 'dv-data-row';
                 tr.dataset.status = a.status || '';
                 tr.dataset.doctor = a.doctorId || '';
                 tr.dataset.doctorName = a.doctorName || '';
@@ -1128,41 +1170,20 @@
                 tdStatus.appendChild(statusBadge);
                 tr.appendChild(tdStatus);
 
-                // 9. Thao tác (Chỉ hiển thị 3 nút: Xem chi tiết, Chỉnh sửa tại chỗ qua Modal, Xóa/Hủy)
+                // 9. Thao tác (Đồng bộ dv-amis-table: nút icon kèm chữ + thanh nổi khi hover)
                 const tdAction = document.createElement('td');
-                tdAction.className = 'text-center appointment-actions-column';
+                tdAction.className = 'text-center';
                 const isMutable = a.status === 'PENDING' || a.status === 'CONFIRMED';
-                tdAction.innerHTML = `
-                    <div class="appointment-action-group">
-                        <button type="button" class="btn-action-icon text-primary btn-details" data-appointment-id="${a.id}" title="Xem chi tiết lịch hẹn">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                        ${isMutable
-                            ? `<button type="button" class="btn-action-icon text-secondary btn-edit" data-appointment-id="${a.id}" title="Sửa / Đổi lịch hẹn"><i class="bi bi-pencil"></i></button>`
-                            : `<button type="button" class="btn-action-icon text-muted opacity-50" disabled title="Chỉ có thể sửa lịch hẹn khi đang Chờ xác nhận hoặc Đã xác nhận"><i class="bi bi-pencil"></i></button>`
-                        }
-                        ${isMutable
-                            ? `<button type="button" class="btn-action-icon text-danger btn-delete" title="Hủy lịch hẹn"><i class="bi bi-trash"></i></button>`
-                            : `<button type="button" class="btn-action-icon text-muted opacity-50" disabled title="Không thể hủy lịch hẹn ở trạng thái ${escapeHtml(statusMeta.label)}"><i class="bi bi-trash"></i></button>`
-                        }
-                    </div>
-                `;
-                tdAction.querySelector('.btn-details')?.addEventListener('click', () => openQuickStatusModal(a));
-                tdAction.querySelector('.btn-edit')?.addEventListener('click', () => openEditAppointmentModal(a));
-                tdAction.querySelector('.btn-delete')?.addEventListener('click', async () => {
-                    if (confirm(`Bạn có chắc chắn muốn hủy lịch hẹn của khách hàng "${a.patientName}"?`)) {
-                        try {
-                            await request(`/${a.id}/quick-status`, {
-                                method: 'POST',
-                                body: JSON.stringify({ status: 'CANCELLED', note: 'Lễ tân hủy lịch hẹn trên danh sách' })
-                            });
-                            await load();
-                        } catch (err) {
-                            error(err.message);
-                        }
-                    }
-                });
+                const buttonsHtml = buildActionButtonsHtml(a, isMutable, statusMeta);
+                tdAction.innerHTML = `<div class="dv-actions-cell-always">${buttonsHtml}</div>`;
+                bindActionHandlers(tdAction, a);
                 tr.appendChild(tdAction);
+
+                const tdTrack = document.createElement('td');
+                tdTrack.className = 'dv-floating-actions-track';
+                tdTrack.innerHTML = `<div class="dv-floating-actions-bar">${buttonsHtml}</div>`;
+                bindActionHandlers(tdTrack, a);
+                tr.appendChild(tdTrack);
 
                 rows.appendChild(tr);
             });
@@ -2053,10 +2074,105 @@
             const grid = $('calendarGrid');
             if (!grid) return;
             grid.replaceChildren();
-            grid.classList.toggle('is-week', !isMonth);
-            grid.style.gridTemplateColumns = isDay ? 'minmax(0, 1fr)' : 'repeat(7, minmax(0, 1fr))';
+            grid.classList.toggle('is-week', !isMonth && !isDay);
+            grid.classList.toggle('is-day', isDay);
 
-            if (!isDay) {
+            const sessBadgeMap = {
+                MORNING: { text: 'Sáng', cls: 'morning', full: 'Ca Sáng', hours: '08:00 – 12:00', icon: 'bi-sunrise-fill' },
+                AFTERNOON: { text: 'Chiều', cls: 'afternoon', full: 'Ca Chiều', hours: '13:30 – 17:30', icon: 'bi-sun-fill' },
+                EVENING: { text: 'Tối', cls: 'evening', full: 'Ca Tối', hours: '17:30 – 20:30', icon: 'bi-moon-stars-fill' }
+            };
+
+            const buildRichCalendarCard = (a, showSessionBadge) => {
+                const event = document.createElement('div');
+                event.className = 'calendar-event';
+                event.dataset.status = a.status;
+                const sessKey = resolveAppointmentSession(a);
+                const badgeInfo = sessBadgeMap[sessKey] || sessBadgeMap.MORNING;
+                const statusMeta = getStatusMeta(a.status);
+                const timeText = a.expectedTime ? a.expectedTime.slice(0, 5) : 'Linh động';
+                const doctorText = a.doctorName ? (a.doctorName.startsWith('BS') ? a.doctorName : `BS. ${a.doctorName}`) : 'Chưa chỉ định BS';
+                const serviceText = a.serviceName || a.symptoms || 'Khám tổng quát';
+
+                event.innerHTML = `
+                    <div class="cal-card-top">
+                        <div class="d-flex align-items-center gap-1 min-w-0">
+                            ${showSessionBadge ? `<span class="cal-session-badge ${badgeInfo.cls} m-0">${badgeInfo.text}</span>` : ''}
+                            <span class="fw-bold font-monospace" style="font-size: 11.5px;">${escapeHtml(timeText)}</span>
+                        </div>
+                        <span class="badge" style="font-size: 10px; padding: 2px 6px; border-radius: 999px; background: rgba(15,23,42,0.08); color: inherit; font-weight: 700;">${escapeHtml(statusMeta.label)}</span>
+                    </div>
+                    <div class="cal-card-patient text-truncate">${escapeHtml(a.patientName || a.patientCode)}</div>
+                    <div class="cal-card-meta">
+                        <span class="text-truncate" style="max-width: 100%;"><i class="bi bi-bandaid me-1 opacity-75"></i>${escapeHtml(serviceText)}</span>
+                        <span class="text-truncate" style="max-width: 100%;"><i class="bi bi-person-badge me-1 opacity-75"></i>${escapeHtml(doctorText)}</span>
+                    </div>
+                `;
+                event.title = `${a.patientName || a.patientCode} · ${badgeInfo.full} (${timeText}) · ${doctorText} · ${serviceText}`;
+                event.addEventListener('click', () => openQuickStatusModal(a));
+                return event;
+            };
+
+            // 1. CHẾ ĐỘ NGÀY: Chia 3 cột Ca Sáng / Ca Chiều / Ca Tối cân đối (kiểu bảng lịch trực)
+            if (isDay) {
+                const dayIso = iso(first);
+                const dayEvents = list.filter(a => a.date === dayIso);
+                grid.style.gridTemplateColumns = 'repeat(3, minmax(0, 1fr))';
+
+                ['MORNING', 'AFTERNOON', 'EVENING'].forEach(sessKey => {
+                    const info = sessBadgeMap[sessKey];
+                    const shiftEvents = dayEvents
+                        .filter(a => resolveAppointmentSession(a) === sessKey)
+                        .sort((l, r) => (l.expectedTime || '99:99').localeCompare(r.expectedTime || '99:99'));
+
+                    const col = document.createElement('div');
+                    col.className = 'cal-shift-column';
+
+                    const head = document.createElement('div');
+                    head.className = 'cal-shift-column-head';
+                    head.innerHTML = `
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="cal-shift-icon-wrap ${info.cls}"><i class="bi ${info.icon}"></i></span>
+                            <div>
+                                <div class="fw-bold text-dark" style="font-size: 13.5px; line-height: 1.15;">${info.full}</div>
+                                <div class="text-muted" style="font-size: 11.5px;">${info.hours}</div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge rounded-pill ${shiftEvents.length ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-light text-muted border'}">${shiftEvents.length} ca</span>
+                        </div>
+                    `;
+                    const addBtn = document.createElement('button');
+                    addBtn.type = 'button';
+                    addBtn.className = 'cal-quick-add';
+                    addBtn.title = `Đặt lịch nhanh vào ${info.full} ngày ${dateLabel(dayIso)}`;
+                    addBtn.innerHTML = '<i class="bi bi-plus"></i>';
+                    addBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openCreateModalWith(dayIso, sessKey);
+                    });
+                    head.lastElementChild.appendChild(addBtn);
+                    col.appendChild(head);
+
+                    if (!shiftEvents.length) {
+                        const empty = document.createElement('div');
+                        empty.className = 'cal-shift-empty';
+                        empty.innerHTML = `<i class="bi bi-calendar2 text-secondary opacity-50 fs-5 mb-1"></i><span>Chưa có lịch hẹn ${info.full.toLowerCase()}</span>`;
+                        col.appendChild(empty);
+                    } else {
+                        shiftEvents.forEach(a => col.appendChild(buildRichCalendarCard(a, false)));
+                    }
+
+                    grid.appendChild(col);
+                });
+                return;
+            }
+
+            // 2. CHẾ ĐỘ TUẦN & THÁNG: 7 CỘT THẺ BO GÓC KIỂU LỊCH TRỰC
+            grid.style.gridTemplateColumns = 'repeat(7, minmax(0, 1fr))';
+            const weekDayUpper = ['CHỦ NHẬT', 'THỨ HAI', 'THỨ BA', 'THỨ TƯ', 'THỨ NĂM', 'THỨ SÁU', 'THỨ BẢY'];
+
+            if (isMonth) {
                 ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'].forEach(label => {
                     const header = document.createElement('div');
                     header.className = 'appointment-calendar-header';
@@ -2066,8 +2182,7 @@
             }
 
             let current = new Date(first);
-            const isWeek = !isMonth && !isDay;
-            const maxVisible = isMonth ? 4 : 6;
+            const maxVisible = isMonth ? 3 : 5;
 
             while (current <= last) {
                 const dayIso = iso(current);
@@ -2080,15 +2195,19 @@
                     dayCell.classList.add('is-today');
                 }
 
-                const events = list.filter(a => a.date === dayIso);
+                const events = list.filter(a => a.date === dayIso)
+                    .sort((l, r) => (l.expectedTime || '99:99').localeCompare(r.expectedTime || '99:99'));
                 const dayHeader = document.createElement('div');
-                dayHeader.className = 'd-flex justify-content-between align-items-center mb-1.5 pb-1 border-bottom';
-                dayHeader.innerHTML = `
-                    <span class="calendar-day-number mb-0 fw-bold">
-                        ${isDay ? escapeHtml(formatDayWithWeekday(dayIso)) : `${current.getUTCDate()}/${current.getUTCMonth() + 1}`}
-                        ${events.length ? `<span class="badge bg-light text-primary border ms-1">${events.length} ca</span>` : ''}
-                    </span>
-                `;
+                dayHeader.className = 'cal-day-card-head';
+                const dd = String(current.getUTCDate()).padStart(2, '0');
+                const mm = String(current.getUTCMonth() + 1).padStart(2, '0');
+                dayHeader.innerHTML = isMonth
+                    ? `<div><span class="cal-day-date-num" style="font-size: 13px;">${dd}/${mm}</span>${events.length ? `<span class="badge bg-primary-subtle text-primary ms-1" style="font-size:10px;">${events.length}</span>` : ''}</div>`
+                    : `<div>
+                            <div class="cal-day-weekday">${weekDayUpper[current.getUTCDay()]}</div>
+                            <div class="cal-day-date-num">${dd}/${mm} ${events.length ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1 align-middle" style="font-size:10px;">${events.length} ca</span>` : ''}</div>
+                       </div>`;
+
                 const quickAddDayBtn = document.createElement('button');
                 quickAddDayBtn.type = 'button';
                 quickAddDayBtn.className = 'cal-quick-add';
@@ -2101,38 +2220,19 @@
                 dayHeader.appendChild(quickAddDayBtn);
                 dayCell.appendChild(dayHeader);
 
-                // Cả hai chế độ xem Tuần và Tháng đều thiết kế thống nhất theo dạng ô lịch:
-                // Hiển thị thời gian theo Ca (Sáng / Chiều / Tối) thay vì giờ, không chia rãnh ca rối mắt
-                const visibleEvents = isDay ? events : events.slice(0, maxVisible);
-                visibleEvents.forEach(a => {
-                    const event = document.createElement('div');
-                    event.className = 'calendar-event';
-                    event.dataset.status = a.status;
-                    event.style.cursor = 'pointer';
+                if (!events.length && !isMonth) {
+                    const empty = document.createElement('div');
+                    empty.className = 'text-center text-muted my-auto py-4 small opacity-75';
+                    empty.textContent = 'Trống lịch';
+                    dayCell.appendChild(empty);
+                } else {
+                    events.slice(0, maxVisible).forEach(a => dayCell.appendChild(buildRichCalendarCard(a, true)));
+                }
 
-                    const sessKey = resolveAppointmentSession(a);
-                    const sessBadgeMap = {
-                        MORNING: { text: 'Sáng', cls: 'morning', full: 'Ca Sáng (08:00–12:00)' },
-                        AFTERNOON: { text: 'Chiều', cls: 'afternoon', full: 'Ca Chiều (13:30–17:30)' },
-                        EVENING: { text: 'Tối', cls: 'evening', full: 'Ca Tối (17:30–20:30)' }
-                    };
-                    const badgeInfo = sessBadgeMap[sessKey] || { text: 'Sáng', cls: 'morning', full: 'Ca Sáng' };
-
-                    const statusMeta = getStatusMeta(a.status);
-                    event.innerHTML = `
-                        <span class="cal-session-badge">${badgeInfo.text}</span>
-                        <span class="text-truncate fw-medium flex-grow-1">${escapeHtml(a.patientName || a.patientCode)}</span>
-                        <span class="badge ms-1" style="font-size: 9.5px; padding: 1.5px 5px; border-radius: 4px; background: rgba(0,0,0,0.08); font-weight: 600;">${statusMeta.label}</span>
-                    `;
-                    event.title = `${a.patientName || a.patientCode} · ${badgeInfo.full} · ${a.doctorName || 'Chưa chỉ định BS'}${a.serviceName ? ' · ' + a.serviceName : ''}`;
-                    event.addEventListener('click', () => openQuickStatusModal(a));
-                    dayCell.appendChild(event);
-                });
-
-                if (!isDay && events.length > maxVisible) {
+                if (events.length > maxVisible) {
                     const more = document.createElement('button');
                     more.type = 'button';
-                    more.className = 'calendar-more text-primary small cursor-pointer border-0 bg-transparent p-0 mt-1 fw-semibold';
+                    more.className = 'calendar-more text-primary small cursor-pointer border-0 bg-transparent p-0 mt-1 fw-semibold text-start';
                     more.textContent = `+${events.length - maxVisible} ca khác`;
                     more.addEventListener('click', (ev) => {
                         ev.preventDefault();
