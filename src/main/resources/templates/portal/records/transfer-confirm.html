@@ -1,34 +1,103 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/head :: head('Xác minh tách tài khoản')}"></head>
-<body class="app-body"><div class="app-shell">
-    <aside th:replace="~{fragments/sidebar :: sidebar('portal-records')}"></aside><div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
-    <div class="app-main"><header th:replace="~{fragments/header :: appTopbar('Tách tài khoản')}"></header>
-        <main class="app-content"><link rel="stylesheet" th:href="@{/css/patients.css}"><link rel="stylesheet" th:href="@{/css/portal-records-ui.css}">
-            <div class="patient-page-heading"><div><a th:href="@{/portal/records/{id}/transfer(id=${record.id})}">← Bước trước</a>
-                <h1>Tách tài khoản · Bước 2/3</h1><p>Hồ sơ <strong th:text="${record.code}">BN</strong> sẽ được chuyển sang <strong th:text="${request.targetEmail}">email</strong>.</p></div></div>
-            <section class="panel patient-detail">
-                <p>Hai mã xác minh có hiệu lực 10 phút. Chủ tài khoản hiện tại và người nhận cần cùng xác nhận.</p>
-                <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
-                <form method="post" th:action="@{/portal/records/{id}/transfer/{requestId}(id=${record.id},requestId=${request.requestId})}" class="patient-form">
-                    <div class="patient-form-grid">
-                        <div><label for="ownerCode">Mã gửi tới email tài khoản hiện tại *</label><input id="ownerCode" name="ownerCode" class="form-control" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code"></div>
-                        <div><label for="targetCode">Mã gửi tới email tài khoản nhận *</label><input id="targetCode" name="targetCode" class="form-control" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></div>
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('portal-records')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Xác minh tách tài khoản')}"></header>
+        <main class="app-content">
+            <link rel="stylesheet" th:href="@{/css/patients.css}">
+            <link rel="stylesheet" th:href="@{/css/portal-records-ui.css}">
+
+            <div class="patient-page-heading portal-heading mb-4">
+                <div>
+                    <a class="text-decoration-none fw-semibold text-primary mb-2 d-inline-flex align-items-center" th:href="@{/portal/records/{id}/transfer(id=${record.id})}">
+                        <i class="bi bi-arrow-left me-1.5"></i> Quay lại bước trước
+                    </a>
+                    <h1 class="mb-1"><i class="bi bi-shield-lock-fill text-primary me-2"></i>Xác minh tách tài khoản (FT36) · Bước 2/2</h1>
+                    <p class="mb-0 text-muted">
+                        Hồ sơ <strong class="text-dark" th:text="${record.fullName}">Tên</strong> (<span class="patient-code-badge" th:text="${record.code}">BN</span>) 
+                        sẽ được chuyển giao sở hữu sang tài khoản email: <strong class="text-primary" th:text="${request.targetEmail}">email</strong>.
+                    </p>
+                </div>
+            </div>
+
+            <section class="panel patient-detail p-4 rounded-4 shadow-sm bg-white">
+                <div class="alert alert-warning py-3 px-4 rounded-3 d-flex align-items-center gap-3 mb-4">
+                    <i class="bi bi-info-circle-fill fs-4 text-warning"></i>
+                    <div>
+                        Hai mã xác minh 6 chữ số đã được gửi qua email (có hiệu lực 10 phút). Cả chủ tài khoản hiện tại và người nhận cần xác nhận để bảo mật.
                     </div>
-                    <div th:unless="${request.existingAccount}">
-                        <h2>Tạo tài khoản nhận mới</h2>
-                        <div class="patient-form-grid">
-                            <div><label for="username">Tên đăng nhập *</label><input id="username" name="username" class="form-control" pattern="[A-Za-z0-9][A-Za-z0-9._-]{3,49}" minlength="4" maxlength="50" required></div>
-                            <div><label for="phoneNumber">Số điện thoại tài khoản *</label><input id="phoneNumber" name="phoneNumber" class="form-control" type="tel" pattern="0[0-9]{9,10}" maxlength="11" required></div>
-                            <div><label for="password">Mật khẩu mới *</label><input id="password" name="password" class="form-control" type="password" minlength="8" required autocomplete="new-password"></div>
-                            <div><label for="passwordConfirm">Nhập lại mật khẩu *</label><input id="passwordConfirm" class="form-control" type="password" minlength="8" required autocomplete="new-password"></div>
+                </div>
+
+                <div class="alert alert-danger py-3 px-4 rounded-3 mb-4 shadow-sm" th:if="${error}">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${error}">Lỗi</span>
+                </div>
+
+                <form method="post" th:action="@{/portal/records/{id}/transfer/{requestId}(id=${record.id},requestId=${request.requestId})}" class="patient-form">
+                    <div class="patient-form-grid mb-4">
+                        <div>
+                            <label for="ownerCode" class="form-label fw-bold mb-1">Mã xác minh gửi tới email của bạn (Chủ hộ) *</label>
+                            <input id="ownerCode" name="ownerCode" class="form-control py-2.5 font-monospace text-center fs-5 fw-bold"
+                                   inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code" placeholder="000000">
+                        </div>
+                        <div>
+                            <label for="targetCode" class="form-label fw-bold mb-1">Mã xác minh gửi tới email tài khoản nhận *</label>
+                            <input id="targetCode" name="targetCode" class="form-control py-2.5 font-monospace text-center fs-5 fw-bold"
+                                   inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required placeholder="000000">
                         </div>
                     </div>
-                    <label class="d-flex align-items-start gap-2 mt-3"><input class="mt-1" type="checkbox" required><span>Tôi xác nhận hồ sơ này sẽ chuyển sang tài khoản nhận. Tài khoản hiện tại sẽ mất quyền xem hồ sơ sau khi hoàn tất.</span></label>
-                    <div class="patient-form-actions"><button type="submit" class="btn btn-primary">Xác nhận chuyển hồ sơ</button></div>
+
+                    <div th:unless="${request.existingAccount}" class="mt-4 pt-3 border-top">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <i class="bi bi-person-plus-fill text-primary fs-5"></i>
+                            <h2 class="h5 fw-bold text-dark mb-0">Khởi tạo tài khoản riêng cho người nhận</h2>
+                        </div>
+                        <div class="patient-form-grid mb-4">
+                            <div>
+                                <label for="username" class="form-label fw-bold mb-1">Tên đăng nhập mới *</label>
+                                <input id="username" name="username" class="form-control py-2" pattern="[A-Za-z0-9][A-Za-z0-9._-]{3,49}" minlength="4" maxlength="50" required placeholder="nguyenvanb123">
+                            </div>
+                            <div>
+                                <label for="phoneNumber" class="form-label fw-bold mb-1">Số điện thoại tài khoản *</label>
+                                <input id="phoneNumber" name="phoneNumber" class="form-control py-2" type="tel" pattern="0[0-9]{9,10}" maxlength="11" required placeholder="0901234567">
+                            </div>
+                            <div>
+                                <label for="password" class="form-label fw-bold mb-1">Mật khẩu mới *</label>
+                                <input id="password" name="password" class="form-control py-2" type="password" minlength="8" required autocomplete="new-password">
+                            </div>
+                            <div>
+                                <label for="passwordConfirm" class="form-label fw-bold mb-1">Nhập lại mật khẩu *</label>
+                                <input id="passwordConfirm" class="form-control py-2" type="password" minlength="8" required autocomplete="new-password">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-light p-3 rounded-3 mb-4 border">
+                        <label class="d-flex align-items-start gap-2.5 mb-0 cursor-pointer">
+                            <input class="form-check-input mt-1 flex-shrink-0" type="checkbox" required>
+                            <span class="small text-secondary">
+                                Tôi xác nhận chuyển giao toàn bộ quyền quản lý hồ sơ y tế này sang cho tài khoản nhận. Sau khi hoàn tất, tài khoản hiện tại của tôi sẽ không còn quyền can thiệp vào hồ sơ này.
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="patient-form-actions d-flex align-items-center justify-content-end gap-3 pt-3 border-top">
+                        <a class="btn btn-outline-secondary px-4 py-2 fw-semibold" th:href="@{/portal/records/{id}/transfer(id=${record.id})}">
+                            <i class="bi bi-x-circle me-1.5"></i> Hủy
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold shadow-sm d-inline-flex align-items-center"
+                                style="background-color: #1e40af; border-color: #1e40af;">
+                            <i class="bi bi-check2-circle me-2"></i> Xác nhận hoàn tất tách hồ sơ
+                        </button>
+                    </div>
                 </form>
             </section>
-        </main></div></div>
+        </main>
+    </div>
+</div>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.querySelector('.patient-form');
@@ -42,4 +111,5 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', validate);
 });
 </script>
-</body></html>
+</body>
+</html>

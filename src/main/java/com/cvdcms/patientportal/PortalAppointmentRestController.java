@@ -23,7 +23,9 @@ public class PortalAppointmentRestController {
     @GetMapping("/options")
     public Options options(HttpSession session) {
         return new Options(patients.list(session).stream()
-                .map(p -> new ProfileOption(p.id(), p.code(), p.fullName())).toList(),
+                .map(p -> new ProfileOption(p.id(), p.code(), p.fullName(), p.self(),
+                        p.self() ? "Bản thân" : (p.guardianRelationship() != null && !p.guardianRelationship().isBlank() ? p.guardianRelationship() : "Người phụ thuộc"),
+                        p.phoneNumber(), p.avatarUrl())).toList(),
                 appointments.branches(session).stream()
                         .map(b -> new BranchOption(b.getBranchId(), b.getBranchName())).toList(),
                 appointments.bookableServices(session).stream()
@@ -54,7 +56,18 @@ public class PortalAppointmentRestController {
     }
 
     @GetMapping
-    public List<PortalAppointmentService.AppointmentView> list(HttpSession session, @RequestParam Long profileId) {
+    public List<PortalAppointmentService.AppointmentView> list(HttpSession session,
+            @RequestParam(required = false) Long profileId) {
+        if (profileId == null || profileId <= 0) {
+            java.util.List<PortalProfileView> userProfiles = patients.list(session);
+            java.util.List<PortalAppointmentService.AppointmentView> allAppointments = new java.util.ArrayList<>();
+            for (PortalProfileView prof : userProfiles) {
+                allAppointments.addAll(appointments.list(session, prof.id()));
+            }
+            allAppointments.sort(java.util.Comparator.comparing(PortalAppointmentService.AppointmentView::date).reversed()
+                    .thenComparing(PortalAppointmentService.AppointmentView::id, java.util.Comparator.reverseOrder()));
+            return allAppointments;
+        }
         return appointments.list(session, profileId);
     }
 
@@ -75,7 +88,7 @@ public class PortalAppointmentRestController {
         return appointments.cancel(session, id, request);
     }
 
-    public record ProfileOption(Long id, String code, String name) {}
+    public record ProfileOption(Long id, String code, String name, boolean self, String relation, String phone, String avatarUrl) {}
     public record BranchOption(Long id, String name) {}
     public record ServiceOption(Long id, String name, int durationMinutes) {}
     public record Options(List<ProfileOption> profiles, List<BranchOption> branches, List<ServiceOption> services) {}
