@@ -387,9 +387,10 @@
             renderCode39(visitCode, svgEl);
         }
         const urlParams = new URLSearchParams(window.location.search);
-        const shouldPrint = /*[[${autoPrint}]]*/ false || urlParams.get('print') === 'true' || urlParams.get('autoPrint') === 'true' || true;
+        const shouldPrint = /*[[${autoPrint}]]*/ false || urlParams.get('print') === 'true' || urlParams.get('autoPrint') === 'true';
         if (shouldPrint) {
             setTimeout(function() {
+                window.focus();
                 window.print();
             }, 300);
         }
