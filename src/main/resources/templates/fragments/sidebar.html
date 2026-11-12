@@ -231,8 +231,8 @@
                                 <span class="side-link__label">Quản lý thẻ &amp; ưu đãi</span>
                             </a>
                         </th:block>
-                        <!-- TIẾP ĐÓN BỆNH NHÂN: Gộp toàn bộ 4 bước quy trình (Lịch hẹn, Check-in, Điều phối, Hàng chờ) thành 1 mục duy nhất cho mọi role -->
-                        <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'LE_TAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'APPOINTMENT_MANAGE') or #lists.contains(permissionCodes, 'RECEPTION_CHECKIN') or #lists.contains(permissionCodes, 'APPOINTMENT_VIEW') or #lists.contains(permissionCodes, 'RECEPTION_DISPATCH')))}"
+                        <!-- TIẾP ĐÓN BỆNH NHÂN: Dành riêng cho Lễ tân và Quản trị viên, ẩn hoàn toàn ở sidebar Bác sĩ -->
+                        <a th:if="${(isAdmin or (roleNames != null and #lists.contains(roleNames, 'LE_TAN'))) and (roleNames == null or !#lists.contains(roleNames, 'BAC_SI') or isAdmin)}"
                             th:href="@{${(isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'APPOINTMENT_MANAGE'))) ? '/reception/appointments' : ((permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_CHECKIN')) ? '/reception/check-in' : ((permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_DISPATCH')) ? '/reception/dispatch' : '/reception/queue'))}}"
                             class="side-link side-sublink"
                             th:classappend="${#strings.contains(',appointments,checkin,queue,dispatch,', ',' + activeMenu + ',')} ? 'is-active' : ''"

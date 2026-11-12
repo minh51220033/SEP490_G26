@@ -27,6 +27,7 @@ public class ReceptionCheckInController {
                        @RequestParam(required = false) String query,
                        @RequestParam(required = false) Long appointmentId,
                        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate day,
+                       @RequestParam(required = false) String datePreset,
                        HttpSession session, Model model) {
         String effectiveQuery = query;
         if ((effectiveQuery == null || effectiveQuery.isBlank()) && model.containsAttribute("savedQuery")) {
@@ -39,11 +40,14 @@ public class ReceptionCheckInController {
             if (sId instanceof Long sid) effectiveBranchId = sid;
         }
         LocalDate effectiveDay = day;
-        if (effectiveDay == null && session != null) {
+        String effectivePreset = (datePreset != null && !datePreset.isBlank()) ? datePreset.trim().toUpperCase() : null;
+        if ("ALL".equalsIgnoreCase(effectivePreset)) {
+            effectiveDay = null;
+        } else if (effectiveDay == null && effectivePreset == null && session != null) {
             Object sDay = session.getAttribute("currentWorkflowDay");
             if (sDay instanceof LocalDate sd) effectiveDay = sd;
         }
-        var dashboard = service.dashboard(session, effectiveBranchId, effectiveQuery, effectiveDay);
+        var dashboard = service.dashboard(session, effectiveBranchId, effectiveQuery, effectiveDay, effectivePreset);
         if (session != null) {
             session.setAttribute("currentBranchId", dashboard.branchId());
             session.setAttribute("currentWorkflowDay", dashboard.day());
@@ -52,6 +56,7 @@ public class ReceptionCheckInController {
         model.addAttribute("currentBranchId", dashboard.branchId());
         model.addAttribute("selectedAppointmentId", appointmentId);
         model.addAttribute("selectedDay", dashboard.day());
+        model.addAttribute("selectedDatePreset", dashboard.datePreset());
         model.addAttribute("roleNames", List.of("LE_TAN"));
         model.addAttribute("sidebarMenu", "checkin");
         return "reception/check-in";
