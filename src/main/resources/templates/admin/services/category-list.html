@@ -18,17 +18,85 @@
       <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
       <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
 
-      <!-- BREADCRUMB & BỘ CHỌN CƠ SỞ PHÍA TRÊN CÙNG -->
-      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-        <nav aria-label="breadcrumb">
-          <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
-            <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Nhóm dịch vụ</li>
-          </ol>
-        </nav>
+      <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN QUẢN LÝ DANH MỤC -->
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+            <i class="bi bi-grid-3x3-gap-fill"></i>
+          </div>
+          <div>
+            <h1 class="dv-page-title mb-0">Quản lý nhóm dịch vụ</h1>
+            <p class="dv-page-subtitle">Quản lý phân nhóm chuyên khoa, kỹ thuật và cấu trúc danh mục dịch vụ</p>
+          </div>
+        </div>
         <div class="d-flex align-items-center gap-2">
           <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+          <a th:href="@{/admin/services/categories}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+            <i class="bi bi-arrow-clockwise"></i> Làm mới
+          </a>
+          <button type="button" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createCategoryModal" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+            <i class="bi bi-plus-lg"></i> Thêm mới nhóm dịch vụ
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 THẺ KPI TỔNG QUAN -->
+      <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-sm-6">
+          <a th:href="@{/admin/services/categories}" class="text-decoration-none">
+            <div class="dv-kpi-card" style="--kpi-accent: #0284c7;" th:classappend="${selectedActive == null} ? 'active-kpi' : ''">
+              <div>
+                <div class="dv-kpi-num" th:text="${totalCategoriesCount ?: #lists.size(categories)}">0</div>
+                <div class="dv-kpi-label">Tổng nhóm dịch vụ</div>
+                <div class="dv-kpi-sub">Toàn bộ phân nhóm chuyên khoa</div>
+              </div>
+              <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                <i class="bi bi-grid-3x3-gap-fill"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+          <a th:href="@{/admin/services/categories(active=true)}" class="text-decoration-none">
+            <div class="dv-kpi-card" style="--kpi-accent: #10b981;" th:classappend="${selectedActive != null and selectedActive == true} ? 'active-kpi' : ''">
+              <div>
+                <div class="dv-kpi-num text-success" th:text="${activeCategoriesCount ?: 0}">0</div>
+                <div class="dv-kpi-label">Đang sử dụng</div>
+                <div class="dv-kpi-sub">Sẵn sàng phân loại dịch vụ</div>
+              </div>
+              <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                <i class="bi bi-check2-circle"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+          <a th:href="@{/admin/services}" class="text-decoration-none">
+            <div class="dv-kpi-card" style="--kpi-accent: #6366f1;">
+              <div>
+                <div class="dv-kpi-num" style="color: #4f46e5;" th:text="${totalServicesCount ?: 0}">0</div>
+                <div class="dv-kpi-label">Danh mục dịch vụ</div>
+                <div class="dv-kpi-sub">Kỹ thuật &amp; bảng giá điều trị</div>
+              </div>
+              <div class="dv-kpi-icon" style="background: #e0e7ff; color: #4f46e5;">
+                <i class="bi bi-tags-fill"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+          <a th:href="@{/admin/services/categories(active=false)}" class="text-decoration-none">
+            <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;" th:classappend="${selectedActive != null and selectedActive == false} ? 'active-kpi' : ''">
+              <div>
+                <div class="dv-kpi-num text-warning" th:text="${inactiveCategoriesCount ?: 0}">0</div>
+                <div class="dv-kpi-label">Ngừng sử dụng</div>
+                <div class="dv-kpi-sub">Tạm ngưng áp dụng nhóm</div>
+              </div>
+              <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                <i class="bi bi-pause-circle-fill"></i>
+              </div>
+            </div>
+          </a>
         </div>
       </div>
 
@@ -98,17 +166,6 @@
                  class="btn btn-outline-secondary">
                 Bỏ lọc
               </a>
-            </div>
-
-            <!-- 4. Nút Thêm nhóm dịch vụ -->
-            <div class="col-12 col-md-auto ms-md-auto d-flex align-items-center justify-content-end gap-2">
-              <button type="button"
-                      class="btn btn-primary"
-                      data-bs-toggle="modal"
-                      data-bs-target="#createCategoryModal">
-                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
-                Thêm nhóm dịch vụ
-              </button>
             </div>
           </div>
         </form>
