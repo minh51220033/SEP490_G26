@@ -6,6 +6,7 @@ import com.cvdcms.entity.enums.InvoicePaymentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface DebtService {
@@ -13,6 +14,8 @@ public interface DebtService {
     Page<PatientDebtSummaryDTO> getPatientDebts(Long branchId, String keyword, Pageable pageable);
 
     Page<PatientDebtSummaryDTO> getPatientDebts(Long branchId, List<Long> allowedBranchIds, InvoicePaymentStatus paymentStatus, String keyword, Pageable pageable);
+
+    Page<PatientDebtSummaryDTO> getPatientDebts(Long branchId, List<Long> allowedBranchIds, InvoicePaymentStatus paymentStatus, String keyword, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
 
     PatientDebtSummaryDTO getPatientDebtDetail(Long profileId);
 

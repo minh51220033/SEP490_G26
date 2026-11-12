@@ -65,12 +65,20 @@
                         </select>
                     </div>
 
+                    <!-- Khoảng ngày phát sinh hóa đơn nợ -->
+                    <div class="fin-form-group fin-date-group">
+                        <input type="date" id="startDate" name="startDate" class="fin-input" th:value="${startDate}" title="Từ ngày">
+                        <span class="text-muted small fw-semibold mx-1">đến</span>
+                        <input type="date" id="endDate" name="endDate" class="fin-input" th:value="${endDate}" title="Đến ngày">
+                    </div>
+
                     <!-- Nút thao tác lọc -->
                     <div class="d-flex gap-2 align-items-center ms-auto">
                         <button type="submit" class="fin-btn fin-btn-primary"><i class="bi bi-search"></i> Tìm kiếm</button>
                         <a th:href="@{/payments/debts}" class="fin-btn fin-btn-outline" title="Đặt lại bộ lọc"><i class="bi bi-arrow-clockwise"></i> Đặt lại</a>
                     </div>
                 </form>
+                <div th:replace="~{fragments/cashier-tabs :: quickDateBar('startDate', 'endDate')}"></div>
             </div>
 
             <!-- Table Card -->
@@ -80,7 +88,9 @@
                     <div class="fin-topbar-left">
                         Hiển thị <span class="text-primary fw-bolder" th:text="${patientDebts != null ? patientDebts.size() : 0}">0</span> hồ sơ công nợ
                         <span class="text-muted mx-1">•</span>
-                        <span class="text-secondary fw-semibold">Theo dõi viện phí tồn đọng</span>
+                        <span class="text-secondary fw-semibold" th:if="${startDate == null and endDate == null}">Theo dõi viện phí tồn đọng</span>
+                        <span class="text-secondary fw-semibold" th:if="${startDate != null or endDate != null}"
+                              th:text="'Từ ' + (${startDate != null} ? ${#temporals.format(startDate, 'dd/MM/yyyy')} : 'đầu') + ' đến ' + (${endDate != null} ? ${#temporals.format(endDate, 'dd/MM/yyyy')} : 'nay')"></span>
                     </div>
                 </div>
 
@@ -135,22 +145,25 @@
                                 <span th:if="${d.lastInvoiceDate == null}" class="text-muted">-</span>
                             </td>
                             <td data-column-key="actions" data-column-action="true" class="text-center">
-                                <a class="fin-table-btn fin-table-btn-view"
-                                   th:href="@{/payments/debts/{id}(id=${d.profileId},branchId=${selectedBranchId})}">
-                                    <i class="bi bi-eye"></i> <span>Chi tiết</span>
-                                </a>
-                                <button type="button"
-                                        class="fin-table-btn fin-table-btn-pay"
-                                        th:data-profile-id="${d.profileId}"
-                                        th:data-invoices-url="@{/payments/api/patients/{id}/unpaid-invoices(id=${d.profileId},branchId=${selectedBranchId},paymentStatus=${selectedPaymentStatus})}"
-                                        th:data-patient-code="${d.patientCode}"
-                                        th:data-patient-name="${d.fullName}"
-                                        th:data-total-debt="${d.totalDebt}"
-                                        th:data-deposit-balance="${d.depositBalance}"
-                                        onclick="openDebtQuickPay(this)"
-                                        title="Thu nợ">
-                                    <i class="bi bi-cash-stack"></i> <span>Thu nợ</span>
-                                </button>
+                                <div class="fin-table-actions">
+                                    <a class="fin-table-btn fin-table-btn-view fin-table-btn-icon"
+                                       th:href="@{/payments/debts/{id}(id=${d.profileId},branchId=${selectedBranchId})}"
+                                       title="Xem chi tiết công nợ">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <button type="button"
+                                            class="fin-table-btn fin-table-btn-pay"
+                                            th:data-profile-id="${d.profileId}"
+                                            th:data-invoices-url="@{/payments/api/patients/{id}/unpaid-invoices(id=${d.profileId},branchId=${selectedBranchId},paymentStatus=${selectedPaymentStatus})}"
+                                            th:data-patient-code="${d.patientCode}"
+                                            th:data-patient-name="${d.fullName}"
+                                            th:data-total-debt="${d.totalDebt}"
+                                            th:data-deposit-balance="${d.depositBalance}"
+                                            onclick="openDebtQuickPay(this)"
+                                            title="Thu nợ">
+                                        <i class="bi bi-cash-stack"></i> <span>Thu nợ</span>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         </tbody>
@@ -168,19 +181,19 @@
                         </div>
                         <div class="d-flex align-items-center gap-1">
                             <a class="misa-nav-btn" th:classappend="${currentPage == 0} ? 'disabled' : ''"
-                               th:href="@{/payments/debts(page=0, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}" title="Trang đầu">
+                               th:href="@{/payments/debts(page=0, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang đầu">
                                 <i class="bi bi-chevron-bar-left"></i>
                             </a>
                             <a class="misa-nav-btn" th:classappend="${currentPage == 0} ? 'disabled' : ''"
-                               th:href="@{/payments/debts(page=${currentPage - 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}" title="Trang trước">
+                               th:href="@{/payments/debts(page=${currentPage - 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang trước">
                                 <i class="bi bi-chevron-left"></i>
                             </a>
                             <a class="misa-nav-btn" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''"
-                               th:href="@{/payments/debts(page=${currentPage + 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}" title="Trang sau">
+                               th:href="@{/payments/debts(page=${currentPage + 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang sau">
                                 <i class="bi bi-chevron-right"></i>
                             </a>
                             <a class="misa-nav-btn" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''"
-                               th:href="@{/payments/debts(page=${totalPages - 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, keyword=${keyword})}" title="Trang cuối">
+                               th:href="@{/payments/debts(page=${totalPages - 1}, branchId=${selectedBranchId}, paymentStatus=${selectedPaymentStatus}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang cuối">
                                 <i class="bi bi-chevron-bar-right"></i>
                             </a>
                         </div>
