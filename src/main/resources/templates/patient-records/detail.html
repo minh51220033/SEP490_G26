@@ -1009,6 +1009,11 @@
                             data-bs-target="#tab-instructions" type="button" role="tab" aria-controls="tab-instructions"
                             aria-selected="false">Lời dặn</button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-billing-btn" data-bs-toggle="tab"
+                            data-bs-target="#tab-billing" type="button" role="tab" aria-controls="tab-billing"
+                            aria-selected="false">Thanh toán</button>
+                    </li>
 
                     <!-- TAB DROPDOWN "THÊM ▾" CHUẨN DENTALSOFT -->
                     <li class="nav-item dropdown">
@@ -2690,6 +2695,240 @@
                         </div>
                     </div>
 
+                    <!-- -----------------------------------------------------------------
+                     TAB 10: HÓA ĐƠN & THANH TOÁN (TRA CỨU VIỆN PHÍ & HÓA ĐƠN)
+                     ----------------------------------------------------------------- -->
+                    <div class="tab-pane fade" id="tab-billing" role="tabpanel"
+                        aria-labelledby="tab-billing-btn">
+                        <div class="patient-tab-panel">
+                            <div class="dental-toolbar d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                <div>
+                                    <h4 class="h6 fw-bold mb-0 text-dark">
+                                        <i class="bi bi-receipt text-primary me-2"></i>Hóa đơn &amp; Thanh toán
+                                    </h4>
+                                    <span class="text-secondary small">Theo dõi thông tin viện phí, hóa đơn đã xuất và trạng thái thanh toán.</span>
+                                </div>
+                            </div>
+
+                            <!-- Cảnh báo nếu không có quyền xem thông tin tài chính -->
+                            <div th:if="${canViewBilling == false}" class="alert alert-warning border border-warning-subtle d-flex align-items-center gap-2 p-3 rounded-3 mb-3">
+                                <i class="bi bi-shield-lock-fill text-warning fs-4"></i>
+                                <div>
+                                    <div class="fw-bold">Không có quyền truy cập</div>
+                                    <div class="small text-muted">Bạn không có quyền xem thông tin hóa đơn và thanh toán của bệnh nhân.</div>
+                                </div>
+                            </div>
+
+                            <div th:if="${canViewBilling != false}">
+                                <!-- Thông báo khi bệnh nhân chưa có hóa đơn -->
+                                <div th:if="${#lists.isEmpty(invoices)}" class="text-center py-5 border rounded bg-light">
+                                    <i class="bi bi-receipt text-secondary fs-1 d-block mb-2"></i>
+                                    <h6 class="text-secondary fw-bold">Bệnh nhân chưa có hóa đơn</h6>
+                                    <p class="text-muted small mb-0">Hiện chưa phát sinh chi phí hoặc hóa đơn dịch vụ/thuốc nào.</p>
+                                </div>
+
+                                <div th:unless="${#lists.isEmpty(invoices)}">
+                                    <!-- Thanh tìm kiếm & lọc nâng cao -->
+                                    <div class="dv-toolbar-card mb-3">
+                                        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                                            <div class="dv-search-box">
+                                                <i class="bi bi-search search-lead-icon"></i>
+                                                <input type="text" id="invoiceSearchInput"
+                                                    placeholder="Tìm theo Mã hóa đơn, cơ sở khám..."
+                                                    oninput="toggleClearBtn(this); filterInvoiceTable()">
+                                                <button type="button" class="search-clear-btn"
+                                                    onclick="document.getElementById('invoiceSearchInput').value=''; toggleClearBtn(document.getElementById('invoiceSearchInput')); filterInvoiceTable();"
+                                                    title="Xóa tìm kiếm">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <span class="text-muted small me-2">
+                                                    Hiển thị: <strong class="text-primary" id="invoiceVisibleCount"
+                                                        th:text="${invoices != null ? invoices.size() : 0}">0</strong>
+                                                    hóa đơn
+                                                </span>
+                                                <button type="button" class="dv-adv-filter-btn" id="btnAdvFilterInvoice"
+                                                    onclick="toggleAdvFilterDrawer('invoice')">
+                                                    <i class="bi bi-funnel-fill"></i>
+                                                    <span>Lọc nâng cao</span>
+                                                    <span class="dv-filter-pulse-badge" id="invoiceAdvBadge" style="display: none;">1</span>
+                                                    <i class="bi bi-chevron-down small ms-1" id="invoiceAdvChevron"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Khung Lọc Nâng Cao -->
+                                        <div class="dv-adv-filter-panel" id="invoiceAdvPanel">
+                                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                                <div class="fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 14px;">
+                                                    <i class="bi bi-sliders2-vertical text-primary"></i>
+                                                    <span>Bộ lọc chuyên sâu Hóa đơn &amp; Thanh toán</span>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-link text-danger fw-bold text-decoration-none p-0"
+                                                    onclick="clearDateFilter('invoice', filterInvoiceTable); resetInvoiceFilters();">
+                                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại mặc định
+                                                </button>
+                                            </div>
+                                            <div class="row g-3">
+                                                <div class="col-md-3">
+                                                    <label class="dv-adv-label"><i class="bi bi-calendar3 text-primary"></i> Mốc thời gian nhanh</label>
+                                                    <select class="form-select dv-adv-control" id="invoiceDatePreset"
+                                                        onchange="applyDatePreset('invoice', filterInvoiceTable); updateAdvFilterBadge('invoice');">
+                                                        <option value="ALL">Tất cả thời gian</option>
+                                                        <option value="TODAY">Hôm nay</option>
+                                                        <option value="LAST_7_DAYS">7 ngày qua</option>
+                                                        <option value="THIS_MONTH">Tháng này</option>
+                                                        <option value="THIS_YEAR">Năm nay</option>
+                                                        <option value="CUSTOM">Tùy chọn...</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="dv-adv-label"><i class="bi bi-calendar-event text-secondary"></i> Từ ngày</label>
+                                                    <input type="date" class="form-control dv-adv-control" id="invoiceFromDate"
+                                                        onchange="onCustomDateChange('invoice', filterInvoiceTable); updateAdvFilterBadge('invoice');">
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="dv-adv-label"><i class="bi bi-calendar-event text-secondary"></i> Đến ngày</label>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <input type="date" class="form-control dv-adv-control" id="invoiceToDate"
+                                                            onchange="onCustomDateChange('invoice', filterInvoiceTable); updateAdvFilterBadge('invoice');">
+                                                        <button type="button" class="dv-date-clear-btn" id="invoiceDateClearBtn"
+                                                            onclick="clearDateFilter('invoice', filterInvoiceTable); updateAdvFilterBadge('invoice');"
+                                                            title="Xóa lọc thời gian" style="border:none;background:transparent;color:#dc2626;display:none;">
+                                                            <i class="bi bi-x-circle-fill"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="dv-adv-label"><i class="bi bi-funnel text-primary"></i> Trạng thái thanh toán</label>
+                                                    <select class="form-select dv-adv-control" id="invoiceStatusFilter"
+                                                        onchange="filterInvoiceTable(); updateAdvFilterBadge('invoice');">
+                                                        <option value="">Tất cả trạng thái</option>
+                                                        <option value="PAID">Đã thanh toán</option>
+                                                        <option value="PARTIAL">Trả 1 phần</option>
+                                                        <option value="UNPAID">Chưa trả</option>
+                                                        <option value="CANCELLED">Đã hủy</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Bảng danh sách hóa đơn chuẩn AMIS & Bootstrap 5 -->
+                                    <div class="dv-grid-card">
+                                        <div class="dv-grid-topbar">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold">
+                                                    <i class="bi bi-table me-1"></i>Danh sách Hóa đơn &amp; Viện phí
+                                                </span>
+                                            </div>
+                                            <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Bấm "Xem HĐ" để mở chi tiết hóa đơn trong cùng tab</small>
+                                        </div>
+                                        <div class="dv-table-scroll-container">
+                                            <table class="dv-amis-table" id="invoiceTable" data-enhanced-table="patient-invoices">
+                                                <thead>
+                                                    <tr>
+                                                        <th data-column-key="code" data-pinned="true" style="min-width: 170px;">Mã HĐ</th>
+                                                        <th data-column-key="type" class="text-center" style="min-width: 120px;">Loại HĐ</th>
+                                                        <th data-column-key="date" style="min-width: 130px;">Ngày lập</th>
+                                                        <th data-column-key="branch" style="min-width: 150px;">Cơ sở khám</th>
+                                                        <th data-column-key="total" class="text-end" style="min-width: 130px;">Tổng tiền</th>
+                                                        <th data-column-key="paid" class="text-end" style="min-width: 130px;">Đã thanh toán</th>
+                                                        <th data-column-key="debt" class="text-end" style="min-width: 130px;">Còn nợ</th>
+                                                        <th data-column-key="status" class="text-center" style="min-width: 130px;">Trạng thái</th>
+                                                        <th data-column-key="actions" class="text-center" style="min-width: 130px;">Thao tác</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr th:each="inv : ${invoices}" class="invoice-row dv-data-row"
+                                                        th:data-status="${inv.status != null and inv.status.name() == 'CANCELLED' ? 'CANCELLED' : (inv.paymentStatus != null ? inv.paymentStatus.name() : '')}"
+                                                        th:data-type="${inv.invoiceType != null ? inv.invoiceType.name() : 'SERVICE'}"
+                                                        th:data-date="${inv.issuedAt != null ? #temporals.format(inv.issuedAt, 'yyyy-MM-dd') : ''}">
+                                                        <td data-column-key="code">
+                                                            <span class="fw-bold text-primary" th:text="${inv.invoiceCode}">HD123456</span>
+                                                            <span th:if="${inv.status != null and inv.status.name() == 'CANCELLED'}" class="badge bg-danger ms-1">Đã hủy</span>
+                                                        </td>
+                                                        <td data-column-key="type" class="text-center">
+                                                            <span th:if="${inv.invoiceType != null and inv.invoiceType.name() == 'MIXED'}" class="badge text-white" style="background-color: #6f42c1;">
+                                                                <i class="bi bi-receipt me-1"></i>DV &amp; Thuốc
+                                                            </span>
+                                                            <span th:if="${inv.invoiceType != null and inv.invoiceType.name() == 'MEDICINE'}" class="badge bg-info text-dark">
+                                                                <i class="bi bi-capsule me-1"></i>Thuốc
+                                                            </span>
+                                                            <span th:if="${inv.invoiceType == null or inv.invoiceType.name() == 'SERVICE'}" class="badge bg-primary text-white">
+                                                                <i class="bi bi-tools me-1"></i>Dịch vụ
+                                                            </span>
+                                                        </td>
+                                                        <td data-column-key="date" class="text-nowrap">
+                                                            <span th:text="${inv.issuedAt != null ? #temporals.format(inv.issuedAt, 'dd/MM/yyyy') : '—'}">01/01/2026</span>
+                                                            <small class="text-muted d-block" th:text="${inv.issuedAt != null ? #temporals.format(inv.issuedAt, 'HH:mm') : ''}">10:00</small>
+                                                        </td>
+                                                        <td data-column-key="branch" th:text="${inv.branch != null ? inv.branch.branchName : '—'}">Chi nhánh</td>
+                                                        <td data-column-key="total" class="text-end fw-bold text-dark text-nowrap"
+                                                            th:text="${#numbers.formatDecimal((inv.totalAmount ?: 0), 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                                        <td data-column-key="paid" class="text-end fw-semibold text-success text-nowrap"
+                                                            th:text="${#numbers.formatDecimal((inv.paidAmount ?: 0), 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                                        <td data-column-key="debt" class="text-end fw-bold text-nowrap"
+                                                            th:classappend="${inv.remainingDebt != null and inv.remainingDebt.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? 'text-danger' : 'text-secondary'}"
+                                                            th:text="${#numbers.formatDecimal((inv.remainingDebt ?: 0), 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                                        <td data-column-key="status" class="text-center text-nowrap">
+                                                            <span th:if="${inv.status != null and inv.status.name() == 'CANCELLED'}" class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">
+                                                                <i class="bi bi-slash-circle me-1"></i>Đã hủy
+                                                            </span>
+                                                            <span th:if="${inv.status == null or inv.status.name() != 'CANCELLED'}">
+                                                                <span th:if="${inv.paymentStatus != null and inv.paymentStatus.name() == 'PAID'}" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                                                    <i class="bi bi-check-circle me-1"></i>Đã thanh toán
+                                                                </span>
+                                                                <span th:if="${inv.paymentStatus != null and inv.paymentStatus.name() == 'PARTIAL'}" class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                                                    <i class="bi bi-clock-history me-1"></i>Trả 1 phần
+                                                                </span>
+                                                                <span th:if="${inv.paymentStatus != null and inv.paymentStatus.name() == 'UNPAID'}" class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                                                    <i class="bi bi-exclamation-circle me-1"></i>Chưa trả
+                                                                </span>
+                                                                <span th:if="${inv.paymentStatus != null and inv.paymentStatus.name() == 'CANCELLED'}" class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">
+                                                                    <i class="bi bi-slash-circle me-1"></i>Đã hủy
+                                                                </span>
+                                                            </span>
+                                                        </td>
+                                                        <td data-column-key="actions" class="text-center text-nowrap">
+                                                            <a th:href="@{/invoices/{id}(id=${inv.invoiceId}, returnUrl=${recordBasePath + '/' + patient.id + '?tab=billing'})}"
+                                                               class="dv-equal-btn-primary"
+                                                               title="Xem chi tiết hóa đơn">
+                                                                <i class="bi bi-eye-fill"></i>
+                                                                <span>Xem HĐ</span>
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <!-- Phân trang 10 dòng/trang -->
+                                        <div class="misa-pagination-footer" id="invoicePaginationFooter">
+                                            <div class="misa-pagination-left">
+                                                Tổng số: <strong id="invoiceTotalCount" th:text="${invoices != null ? invoices.size() : 0}">0</strong> hóa đơn
+                                            </div>
+                                            <div class="misa-pagination-right d-flex align-items-center gap-2">
+                                                <div class="misa-page-size-wrapper d-flex align-items-center gap-1">
+                                                    <span class="small text-muted">Số dòng/trang</span>
+                                                    <select id="invoicePageSizeSelect" class="form-select form-select-sm misa-page-size-select" style="width: 70px;" onchange="changeInvoicePageSize(this.value)">
+                                                        <option value="10" selected>10</option>
+                                                        <option value="25">25</option>
+                                                        <option value="50">50</option>
+                                                    </select>
+                                                </div>
+                                                <div id="invoicePaginationControls" class="d-flex align-items-center gap-1">
+                                                    <!-- Nút trang render bởi JS -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </main>
         </div>
@@ -4227,7 +4466,8 @@
             labo: /*[[${laboOrders != null ? laboOrders.size() : 0}]]*/ 0,
             photos: /*[[${photos != null ? photos.size() : 0}]]*/ 0,
             instructions: 0,
-            invoices: /*[[${invoices != null ? invoices.size() : 0}]]*/ 0
+            invoices: /*[[${invoices != null ? invoices.size() : 0}]]*/ 0,
+            billing: /*[[${invoices != null ? invoices.size() : 0}]]*/ 0
         };
 
         // Ánh xạ linh hoạt giữa hash cũ/ngắn và tab ID chính thống
@@ -4243,7 +4483,7 @@
             if (clean === 'labo') return 'tab-labo';
             if (clean === 'photos') return 'tab-photos';
             if (clean === 'instructions') return 'tab-instructions';
-            if (clean === 'invoices' || clean === 'billing') return 'tab-info';
+            if (clean === 'invoices' || clean === 'billing') return 'tab-billing';
             if (clean === 'audit') return 'tab-treatment';
             if (!clean.startsWith('tab-')) {
                 clean = 'tab-' + clean;
@@ -4399,6 +4639,7 @@
 
             // Tự động gắn .dv-seg-count cho mọi nút phân loại & dòng thông báo lọc rỗng
             initSegmentCountsAndEmptyFilterRows();
+            filterInvoiceTable();
         });
 
         function toggleTableFilterEmptyRow(tableSelector, dataRowSelector, visibleCount) {
@@ -4638,6 +4879,7 @@
             } else if (prefix === 'treatment') {
                 const st = document.getElementById('treatmentStatusFilter')?.value;
                 if (st && st !== 'ALL') active++;
+
             } else if (prefix === 'audit') {
                 const ent = document.getElementById('auditEntityFilter')?.value;
                 const act = document.getElementById('auditActionFilter')?.value;
@@ -4865,7 +5107,41 @@
             }
         }
 
-        // 6. Bộ lọc Hóa đơn & Viện phí
+        // 6. Bộ lọc & Phân trang Hóa đơn & Thanh toán
+        let invoiceCurrentPage = 1;
+        let invoicePageSize = 10;
+        let invoiceFilteredRows = [];
+
+        function changeInvoicePageSize(size) {
+            invoicePageSize = parseInt(size, 10) || 10;
+            invoiceCurrentPage = 1;
+            filterInvoiceTable();
+        }
+
+        function goToInvoicePage(page) {
+            invoiceCurrentPage = page;
+            renderInvoicePageRows();
+        }
+
+        function resetInvoiceFilters() {
+            const searchEl = document.getElementById("invoiceSearchInput");
+            if (searchEl) {
+                searchEl.value = '';
+                toggleClearBtn(searchEl);
+            }
+            const statusEl = document.getElementById("invoiceStatusFilter");
+            if (statusEl) statusEl.value = '';
+            const fromEl = document.getElementById("invoiceFromDate");
+            if (fromEl) fromEl.value = '';
+            const toEl = document.getElementById("invoiceToDate");
+            if (toEl) toEl.value = '';
+            const presetEl = document.getElementById("invoiceDatePreset");
+            if (presetEl) presetEl.value = 'ALL';
+            invoiceCurrentPage = 1;
+            filterInvoiceTable();
+            updateAdvFilterBadge('invoice');
+        }
+
         function setInvoiceStatusSegment(statusVal, btn) {
             const statusSelect = document.getElementById("invoiceStatusFilter");
             if (statusSelect) statusSelect.value = statusVal || '';
@@ -4873,6 +5149,7 @@
             document.querySelectorAll("#invoiceStatusSegment .dv-seg-btn").forEach(b => {
                 b.classList.toggle("active", (b.getAttribute("data-status") || '') === (statusVal || ''));
             });
+            invoiceCurrentPage = 1;
             filterInvoiceTable();
         }
 
@@ -4881,36 +5158,84 @@
             const query = searchEl ? searchEl.value.trim().toLowerCase() : '';
             const statusEl = document.getElementById("invoiceStatusFilter");
             const status = statusEl ? statusEl.value.toUpperCase() : '';
-            const typeEl = document.getElementById("invoiceTypeFilter");
-            const type = typeEl ? typeEl.value.toUpperCase() : '';
             const fromDate = document.getElementById("invoiceFromDate")?.value || '';
             const toDate = document.getElementById("invoiceToDate")?.value || '';
 
             const rows = document.querySelectorAll("#invoiceTable tbody tr.invoice-row");
-            let visibleCount = 0;
+            invoiceFilteredRows = [];
 
             rows.forEach(row => {
                 const text = row.innerText.toLowerCase();
                 const rowStatus = (row.getAttribute("data-status") || '').toUpperCase();
-                const rowType = (row.getAttribute("data-type") || '').toUpperCase();
                 const rowDate = row.getAttribute("data-date") || '';
 
                 const matchesQuery = !query || text.includes(query);
                 const matchesStatus = !status || rowStatus === status;
-                const matchesType = !type || rowType === type;
                 const matchesDate = matchesDateRange(rowDate, fromDate, toDate);
 
-                if (matchesQuery && matchesStatus && matchesType && matchesDate) {
-                    row.style.display = "";
-                    visibleCount++;
+                if (matchesQuery && matchesStatus && matchesDate) {
+                    invoiceFilteredRows.push(row);
                 } else {
                     row.style.display = "none";
                 }
             });
 
             const countEl = document.getElementById("invoiceVisibleCount");
-            if (countEl) countEl.innerText = visibleCount;
-            toggleTableFilterEmptyRow("#invoiceTable", "tr.invoice-row", visibleCount);
+            if (countEl) countEl.innerText = invoiceFilteredRows.length;
+            const totalCountEl = document.getElementById("invoiceTotalCount");
+            if (totalCountEl) totalCountEl.innerText = invoiceFilteredRows.length;
+
+            renderInvoicePageRows();
+            toggleTableFilterEmptyRow("#invoiceTable", "tr.invoice-row", invoiceFilteredRows.length);
+        }
+
+        function renderInvoicePageRows() {
+            const total = invoiceFilteredRows.length;
+            const totalPages = Math.ceil(total / invoicePageSize) || 1;
+            if (invoiceCurrentPage > totalPages) invoiceCurrentPage = totalPages;
+            if (invoiceCurrentPage < 1) invoiceCurrentPage = 1;
+
+            const startIdx = (invoiceCurrentPage - 1) * invoicePageSize;
+            const endIdx = startIdx + invoicePageSize;
+
+            invoiceFilteredRows.forEach((row, idx) => {
+                if (idx >= startIdx && idx < endIdx) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+
+            const controlsEl = document.getElementById("invoicePaginationControls");
+            const footerEl = document.getElementById("invoicePaginationFooter");
+            if (!controlsEl) return;
+            if (total === 0) {
+                if (footerEl) footerEl.style.display = "none";
+                return;
+            }
+            if (footerEl) footerEl.style.display = "flex";
+
+            let html = '';
+            const prevDisabled = invoiceCurrentPage <= 1 ? 'disabled' : '';
+            html += `<button type="button" class="btn btn-sm btn-outline-secondary ${prevDisabled}" onclick="goToInvoicePage(${invoiceCurrentPage - 1})" ${prevDisabled ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button>`;
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (totalPages > 7) {
+                    if (i > 1 && i < totalPages && Math.abs(i - invoiceCurrentPage) > 2) {
+                        if (i === 2 || i === totalPages - 1) {
+                            html += `<span class="px-1 text-muted">...</span>`;
+                        }
+                        continue;
+                    }
+                }
+                const activeCls = i === invoiceCurrentPage ? 'btn-primary text-white fw-bold' : 'btn-outline-secondary';
+                html += `<button type="button" class="btn btn-sm ${activeCls}" onclick="goToInvoicePage(${i})">${i}</button>`;
+            }
+
+            const nextDisabled = invoiceCurrentPage >= totalPages ? 'disabled' : '';
+            html += `<button type="button" class="btn btn-sm btn-outline-secondary ${nextDisabled}" onclick="goToInvoicePage(${invoiceCurrentPage + 1})" ${nextDisabled ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`;
+
+            controlsEl.innerHTML = html;
         }
 
         // 7. Lightbox phóng to ảnh

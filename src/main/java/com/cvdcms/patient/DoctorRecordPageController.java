@@ -33,6 +33,8 @@ public class DoctorRecordPageController {
     private final PatientOverviewService overviewService;
     @Autowired(required = false)
     private ClinicalPhotoService clinicalPhotoService;
+    @Autowired(required = false)
+    private com.cvdcms.repository.UserRepository userRepository;
 
     public DoctorRecordPageController(DoctorRecordService records,
                                       com.cvdcms.repository.InvoiceRepository invoiceRepository,
@@ -135,8 +137,49 @@ public class DoctorRecordPageController {
         model.addAttribute("treatmentTimeline", records.treatmentTimeline(session, id));
         model.addAttribute("auditLogs", records.auditLogs(session, id));
 
+        // Permissions & Billing access check
+        boolean admin = records.isAdmin(session);
+        boolean isDoctor = records.isDoctor(session);
+        Long currentUserId = records.extractUserId(session);
+        boolean isAccountantOrCashier = false;
+        Object principal = session == null ? null : session.getAttribute("loggedInUser");
+        if (principal instanceof com.cvdcms.entity.User u && u.getRoles() != null) {
+            isAccountantOrCashier = u.getRoles().stream().anyMatch(r ->
+                    "KE_TOAN".equalsIgnoreCase(r.getRoleName()) || "ROLE_KE_TOAN".equalsIgnoreCase(r.getRoleName()) ||
+                    "THU_NGAN".equalsIgnoreCase(r.getRoleName()) || "ROLE_THU_NGAN".equalsIgnoreCase(r.getRoleName()) ||
+                    "ADMIN".equalsIgnoreCase(r.getRoleName()) || "ROLE_ADMIN".equalsIgnoreCase(r.getRoleName()));
+        }
+        boolean hasFinancePerm = false;
+        if (userRepository != null && currentUserId != null) {
+            hasFinancePerm = userRepository.hasActiveFinanceRole(currentUserId)
+                    || userRepository.hasActivePermission(currentUserId, "INVOICE_VIEW")
+                    || userRepository.hasActivePermission(currentUserId, "INVOICE_CREATE")
+                    || userRepository.hasActivePermission(currentUserId, "PAYMENT_COLLECT")
+                    || userRepository.hasActivePermission(currentUserId, "FINANCE_DASHBOARD")
+                    || userRepository.hasActivePermission(currentUserId, "FINANCE_DEBT");
+        }
+        boolean canViewBilling = admin || isAccountantOrCashier || hasFinancePerm;
+        boolean canManageBilling = admin || isAccountantOrCashier;
+        model.addAttribute("canManageBilling", canManageBilling);
+        model.addAttribute("canViewBilling", canViewBilling);
+        model.addAttribute("canPerformClinical", isDoctor);
+
         // Invoices and financial summary
-        List<Invoice> invoiceList = invoiceRepository.findByPatientProfile_ProfileIdOrderByIssuedAtDesc(id);
+        List<Invoice> invoiceList = List.of();
+        if (canViewBilling) {
+            invoiceList = invoiceRepository.findByPatientProfile_ProfileIdOrderByIssuedAtDesc(id);
+            if (!admin) {
+                java.util.Set<Long> allowedBranches = records.allowedBranches(session).stream()
+                        .map(com.cvdcms.entity.Branch::getBranchId)
+                        .filter(java.util.Objects::nonNull)
+                        .collect(java.util.stream.Collectors.toSet());
+                if (!allowedBranches.isEmpty()) {
+                    invoiceList = invoiceList.stream()
+                            .filter(inv -> inv.getBranch() != null && allowedBranches.contains(inv.getBranch().getBranchId()))
+                            .toList();
+                }
+            }
+        }
         model.addAttribute("invoices", invoiceList);
 
         BigDecimal totalIncurred = BigDecimal.ZERO;
@@ -154,7 +197,6 @@ public class DoctorRecordPageController {
         model.addAttribute("totalDebt", totalDebt);
 
         // Bổ sung dữ liệu hợp nhất từ PatientOverviewService
-        Long currentUserId = records.extractUserId(session);
         model.addAttribute("appointments", overviewService.getPatientAppointments(id));
         model.addAttribute("careData", overviewService.getPatientCareHistory(id, patient.branchId(), currentUserId));
         model.addAttribute("prescriptions", overviewService.getPatientPrescriptions(id));
@@ -163,11 +205,6 @@ public class DoctorRecordPageController {
         model.addAttribute("diagnoses", overviewService.getPatientDiagnoses(id));
         model.addAttribute("treatmentPlans", overviewService.getPatientTreatmentPlans(id));
 
-        // Permissions
-        boolean admin = records.isAdmin(session);
-        boolean isDoctor = records.isDoctor(session);
-        model.addAttribute("canManageBilling", admin);
-        model.addAttribute("canPerformClinical", isDoctor);
         model.addAttribute("currentTab", tab != null ? tab : "info");
         shared(model, session);
         return "patient-records/detail";
