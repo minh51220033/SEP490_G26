@@ -56,4 +56,23 @@ public interface CustomerCareInteractionRepository extends JpaRepository<Custome
         ORDER BY i.createdAt DESC, i.interactionId DESC
         """)
     List<CustomerCareInteraction> findAllByBranchOrderByCreatedAtDesc(@Param("branchId") Long branchId);
+
+    /**
+     * Truy vấn danh sách tương tác CSKH kèm chi tiết task, branch, patient, staff, doctor phục vụ Lịch sử chung & Lịch sử bệnh nhân.
+     */
+    @Query("""
+        SELECT i
+        FROM CustomerCareInteraction i
+        JOIN FETCH i.task t
+        JOIN FETCH t.branch b
+        JOIN FETCH i.patientProfile p
+        JOIN FETCH i.staff s
+        LEFT JOIN FETCH t.escalatedToDoctor doc
+        WHERE (:branchId IS NULL OR b.branchId = :branchId)
+          AND (:profileId IS NULL OR p.profileId = :profileId)
+        ORDER BY i.createdAt DESC, i.interactionId DESC
+        """)
+    List<CustomerCareInteraction> findInteractionsWithDetails(
+            @Param("branchId") Long branchId,
+            @Param("profileId") Long profileId);
 }

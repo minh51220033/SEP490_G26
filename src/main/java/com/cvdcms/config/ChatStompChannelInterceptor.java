@@ -1,6 +1,9 @@
 package com.cvdcms.config;
 
 import com.cvdcms.service.ChatService;
+import com.cvdcms.service.CustomerCareService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -25,12 +28,21 @@ public class ChatStompChannelInterceptor implements ChannelInterceptor {
     private static final String BRANCH_TOPIC_PREFIX = "/topic/chat/branch/";
     private static final String ADMIN_TOPIC = "/topic/chat/admin";
     private static final String USER_QUEUE = "/user/queue/chat/messages";
+    private static final String CC_BRANCH_TOPIC_PREFIX = "/topic/customer-care/branch/";
+    private static final String CC_ADMIN_TOPIC = "/topic/customer-care/admin";
+    private static final String CC_USER_QUEUE = "/user/queue/customer-care/notifications";
     private static final String SEND_DEST = "/app/chat.send";
 
     private final ChatService chatService;
+    private CustomerCareService customerCareService;
 
     public ChatStompChannelInterceptor(ChatService chatService) {
         this.chatService = chatService;
+    }
+
+    @Autowired
+    public void setCustomerCareService(@Lazy CustomerCareService customerCareService) {
+        this.customerCareService = customerCareService;
     }
 
     @Override
@@ -96,12 +108,39 @@ public class ChatStompChannelInterceptor implements ChannelInterceptor {
     }
 
     public void validateSubscription(Long userId, String destination) {
-        if (USER_QUEUE.equals(destination) || "/queue/chat/messages".equals(destination)) {
+        if (USER_QUEUE.equals(destination) || "/queue/chat/messages".equals(destination)
+                || CC_USER_QUEUE.equals(destination) || "/queue/customer-care/notifications".equals(destination)) {
             return;
         }
-        if (ADMIN_TOPIC.equals(destination)) {
+        if (ADMIN_TOPIC.equals(destination) || CC_ADMIN_TOPIC.equals(destination)) {
             if (!chatService.isAdminUser(userId)) {
-                throw new AccessDeniedException("Chỉ Admin mới có quyền theo dõi kênh hội thoại toàn hệ thống.");
+                throw new AccessDeniedException("Chỉ Admin mới có quyền theo dõi kênh tổng hợp toàn hệ thống.");
+            }
+            return;
+        }
+        if (destination.startsWith(CC_BRANCH_TOPIC_PREFIX)) {
+            String branchPart = destination.substring(CC_BRANCH_TOPIC_PREFIX.length()).trim();
+            Long branchId;
+            try {
+                branchId = Long.parseLong(branchPart);
+            } catch (NumberFormatException ex) {
+                throw new AccessDeniedException("Mã cơ sở trong kênh CSKH STOMP không hợp lệ.");
+            }
+            if (customerCareService != null) {
+                try {
+                    customerCareService.getAccessibleBranches(userId);
+                    if (!chatService.canAccessBranchTopic(userId, branchId)) {
+                        throw new AccessDeniedException("Bạn không có quyền theo dõi kênh CSKH của cơ sở #" + branchId + ".");
+                    }
+                    return;
+                } catch (AccessDeniedException ade) {
+                    throw ade;
+                } catch (Exception ex) {
+                    throw new AccessDeniedException("Bạn không có quyền theo dõi kênh CSKH của cơ sở #" + branchId + ".");
+                }
+            }
+            if (!chatService.canAccessBranchTopic(userId, branchId)) {
+                throw new AccessDeniedException("Bạn không có quyền theo dõi kênh CSKH của cơ sở #" + branchId + ".");
             }
             return;
         }
