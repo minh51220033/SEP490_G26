@@ -335,7 +335,7 @@
                             <ol class="breadcrumb mb-0">
                                 <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
                                 <li class="breadcrumb-item">
-                                    <a th:href="${patientRecordBackUrl != null ? patientRecordBackUrl : '/doctor/patient-records/' + (fromPatientId != null ? fromPatientId : (patient != null ? patient.profileId : 0)) + '#tab-treatment'}">Hồ sơ bệnh nhân</a>
+                                    <a th:href="${patientRecordBackUrl != null ? patientRecordBackUrl : (patientToken != null ? '/doctor/patient-records/' + patientToken + '#tab-treatment' : (fromPatientId != null ? '/doctor/patient-records/' + idCodec.encodePatient(fromPatientId) + '#tab-treatment' : (patient != null ? '/doctor/patient-records/' + idCodec.encodePatient(patient.profileId) + '#tab-treatment' : '/doctor/patient-records')))}">Hồ sơ bệnh nhân</a>
                                 </li>
                                 <li class="breadcrumb-item" th:if="${patient != null and patient.patientCode != null}">
                                     <span th:text="${patient.patientCode}">---</span>
@@ -350,7 +350,7 @@
                                 <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
                                 <li class="breadcrumb-item"><a th:href="@{/doctor/daily-visits}">DS Khám</a></li>
                                 <li class="breadcrumb-item">
-                                    <a th:href="${visit != null ? '/doctor/examination/' + visit.visitId + '/diagnoses' : '/doctor/examination'}">Bàn khám bệnh</a>
+                                    <a th:href="${visitToken != null ? '/doctor/examination/' + visitToken + '/diagnoses' : (visit != null ? '/doctor/examination/' + idCodec.encodeVisit(visit.visitId) + '/diagnoses' : '/doctor/examination')}">Bàn khám bệnh</a>
                                 </li>
                                 <li class="breadcrumb-item active" aria-current="page" id="breadcrumbActiveTab">Khám &amp; Điều trị</li>
                             </ol>
@@ -441,7 +441,7 @@
                                 <i class="bi bi-lock-fill"></i>
                                 <span>Chế độ Chỉ xem Chi tiết lượt khám</span>
                             </span>
-                            <a th:href="${'/doctor/patient-records/' + (fromPatientId != null ? fromPatientId : (patient != null ? patient.profileId : (visit != null and visit.patientProfile != null ? visit.patientProfile.profileId : 0))) + '#emr'}"
+                            <a th:href="${patientToken != null ? '/doctor/patient-records/' + patientToken + '#emr' : (fromPatientId != null ? '/doctor/patient-records/' + idCodec.encodePatient(fromPatientId) + '#emr' : (patient != null ? '/doctor/patient-records/' + idCodec.encodePatient(patient.profileId) + '#emr' : (visit != null and visit.patientProfile != null ? '/doctor/patient-records/' + idCodec.encodePatient(visit.patientProfile.profileId) + '#emr' : '/doctor/patient-records')))}"
                                class="btn btn-outline-primary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2 shadow-xs"
                                title="Xem bệnh án điện tử EMR của bệnh nhân">
                                 <i class="bi bi-file-earmark-medical text-primary"></i>
@@ -1615,7 +1615,7 @@
             }
 
             html += `
-                <div class="dvd-card ${isCurrent ? 'is-current' : ''}" onclick="onSelectDailyVisitCard(${v.visitId}, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}')">
+                <div class="dvd-card ${isCurrent ? 'is-current' : ''}" onclick="onSelectDailyVisitCard(${v.visitId}, '${v.visitToken || ''}', ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}')">
                     <div class="dvd-card-header">
                         <div class="d-flex align-items-center flex-grow-1 me-2">
                             <div class="dvd-avatar">
@@ -1668,18 +1668,19 @@
         container.innerHTML = html;
     }
 
-    function onSelectDailyVisitCard(visitId, visitBranchId, visitBranchName) {
-        if (!visitId) return;
+    function onSelectDailyVisitCard(visitId, visitToken, visitBranchId, visitBranchName) {
+        if (!visitId && !visitToken) return;
         if (isDoctorRestricted && doctorAssignedBranchId && visitBranchId && visitBranchId != doctorAssignedBranchId) {
             showBranchWarningModal(visitBranchName || 'cơ sở khác');
             return;
         }
         const currentVid = getCurrentExamVisitId();
-        if (currentVid && Number(currentVid) === Number(visitId)) {
+        if (currentVid && visitId && Number(currentVid) === Number(visitId)) {
             closeDailyVisitsDrawer();
             return;
         }
-        window.location.href = `/doctor/examination/${visitId}/diagnoses`;
+        if (!visitToken) return;
+        window.location.href = `/doctor/examination/${visitToken}/diagnoses`;
     }
 
     function updateTopBadges(count) {

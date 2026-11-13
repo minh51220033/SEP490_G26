@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.*;
 public class EmrRestController {
     private final EmrModuleService service;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+
     public EmrRestController(EmrModuleService service) {
         this.service = service;
     }
@@ -38,7 +41,10 @@ public class EmrRestController {
     }
 
     @GetMapping("/visit/{visitId}/snapshot")
-    public java.util.Map<String, Object> getVisitSnapshot(@PathVariable Long visitId) {
+    public java.util.Map<String, Object> getVisitSnapshot(HttpSession session, @PathVariable Long visitId) {
+        if (doctorVisitAccess != null) {
+            doctorVisitAccess.requireVisitRead(session, visitId);
+        }
         return service.getVisitSnapshot(visitId);
     }
 
@@ -81,8 +87,9 @@ public class EmrRestController {
     }
 
     @PostMapping("/{recordId}/signatures/upload")
-    public java.util.Map<String, String> uploadSignature(@PathVariable Long recordId,
+    public java.util.Map<String, String> uploadSignature(HttpSession session, @PathVariable Long recordId,
             @RequestBody java.util.Map<String, String> payload) {
+        service.detail(session, recordId);
         String dataUrl = payload != null ? payload.get("signatureData") : null;
         String signerType = payload != null ? payload.getOrDefault("signerType", "doctor") : "doctor";
         String url = com.cvdcms.util.InventoryFileStorageUtil.saveSignatureDataUrl(dataUrl, "emr-" + signerType);

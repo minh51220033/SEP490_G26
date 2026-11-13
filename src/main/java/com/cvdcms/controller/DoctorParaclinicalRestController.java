@@ -120,6 +120,10 @@ public class DoctorParaclinicalRestController {
             @PathVariable("orderItemId") Long orderItemId,
             @RequestBody ParaclinicalOrderCreateDTO dto
     ) {
+        var requestAttrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        if (requestAttrs instanceof org.springframework.web.context.request.ServletRequestAttributes sra) {
+            doctorVisitAccess.requireParaclinicalItem(sra.getRequest().getSession(false), orderItemId);
+        }
         try {
             ParaclinicalOrderItemResponseDTO updated = paraclinicalOrderService.updateOrder(orderItemId, dto);
             return ResponseEntity.ok(updated);
