@@ -18,10 +18,10 @@ INSERT IGNORE INTO icd10_diseases (icd10_code, disease_name_vi, disease_name_en,
 
 -- 2. Đảm bảo có tài khoản & hồ sơ Bác sĩ và Lễ tân CSKH mẫu tại Cơ sở 1 (branch_id = 1)
 INSERT IGNORE INTO users (user_id, username, password, email, phone_number, is_active, status, branch_id, created_date) VALUES
-    (601, 'bs_cskh_604', '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bs604@dentalclinic.com', '0906040001', 1, 'ACTIVE', 1, NOW()),
-    (602, 'lt_cskh_604', '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'lt604@dentalclinic.com', '0906040002', 1, 'ACTIVE', 1, NOW()),
-    (604, 'bn_604',      '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bn604@dentalclinic.com', '0916040604', 1, 'ACTIVE', 1, NOW()),
-    (605, 'bn_605',      '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bn605@dentalclinic.com', '0916050605', 1, 'ACTIVE', 1, NOW());
+    (601, 'bs_cskh_604', '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'bs604@dentalclinic.com', '0906040001', 1, 'ACTIVE', 1, NOW()),
+    (602, 'lt_cskh_604', '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'lt604@dentalclinic.com', '0906040002', 1, 'ACTIVE', 1, NOW()),
+    (604, 'bn_604',      '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'bn604@dentalclinic.com', '0916040604', 1, 'ACTIVE', 1, NOW()),
+    (605, 'bn_605',      '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'bn605@dentalclinic.com', '0916050605', 1, 'ACTIVE', 1, NOW());
 
 INSERT IGNORE INTO staff_profiles (staff_id, user_id, staff_code, full_name, gender, dob, phone_number, email, department, position_title, specialty, base_salary, allowance_amount, insurance_salary, status, created_at) VALUES
     (601, 601, 'BS-604', 'BS.CKI Trần Minh Hoàng', 'MALE',   '1985-04-15', '0906040001', 'bs604@dentalclinic.com', 'Lâm sàng', 'Bác sĩ Răng-Hàm-Mặt', 'Phẫu thuật trong miệng & Nội nha', 25000000.00, 3000000.00, 20000000.00, 'ACTIVE', NOW()),

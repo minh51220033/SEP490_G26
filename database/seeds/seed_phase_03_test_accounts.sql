@@ -3,7 +3,7 @@
 INSERT INTO users (username, password, email, phone_number, branch_id,
                    user_type, status, is_active, created_date)
 SELECT 'reception_phase03',
-       '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe',
+       '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe',
        'reception.phase03@dentalclinic.com', '0903300033', b.branch_id,
        'STAFF', 'ACTIVE', 1, NOW()
 FROM branches b
