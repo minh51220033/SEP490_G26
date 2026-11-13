@@ -1,19 +1,170 @@
 -- =============================================================================
--- SEED FULL DATA FOR CV-DCMS (ALL TABLES EXCEPT roles / permissions / role_permissions)
--- An toàn chạy lại nhiều lần trên MySQL 8.0 (dùng INSERT IGNORE + derived table tránh lỗi 1093).
--- LƯU Ý: Không đụng vào bảng roles, permissions, role_permissions (do hệ thống tự nạp).
--- Mật khẩu mọi tài khoản mẫu: Hieu1811
+-- SEED FULL DATA FOR CV-DCMS (MASTER DATA + DEMO OPERATIONAL DATA)
+-- An toàn chạy lại nhiều lần trên MySQL 8.0 (Idempotent 100%, không dùng DROP/TRUNCATE/DELETE).
+-- Mật khẩu dùng chung cho TẤT CẢ tài khoản mẫu: admin123
+-- Hash BCrypt (cost 10): $2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe
 -- =============================================================================
 
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- =============================================================================
+-- 0. ĐẢM BẢO VAI TRÒ (ROLES), QUYỀN (PERMISSIONS) & PHÂN QUYỀN (ROLE_PERMISSIONS)
+-- (Phòng trường hợp nạp file SQL trực tiếp vào DB mới trước khi khởi động Spring Boot)
+-- =============================================================================
+INSERT INTO roles (role_name, display_name, description, is_system, is_active)
+SELECT 'ADMIN', 'Quản trị viên hệ thống', 'Toàn quyền quản trị hệ thống, tài khoản, nhân sự và đa chi nhánh.', 1, 1
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE role_name = 'ADMIN');
+
+INSERT INTO roles (role_name, display_name, description, is_system, is_active)
+SELECT 'BAC_SI', 'Bác sĩ nha khoa', 'Khám lâm sàng, chẩn đoán ICD-10, lập phác đồ điều trị, kê đơn thuốc và xem lịch trực.', 1, 1
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE role_name = 'BAC_SI');
+
+INSERT INTO roles (role_name, display_name, description, is_system, is_active)
+SELECT 'LE_TAN', 'Lễ tân & Tiếp đón', 'Tiếp đón bệnh nhân, quản lý lịch hẹn, hồ sơ bệnh nhân, tra cứu hạng thẻ và CSKH.', 1, 1
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE role_name = 'LE_TAN');
+
+INSERT INTO roles (role_name, display_name, description, is_system, is_active)
+SELECT 'QUAN_LY_KHO', 'Quản lý kho vật tư', 'Quản lý tồn kho vật tư nha khoa, phiếu nhập/xuất kho và danh mục nhà cung cấp.', 1, 1
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE role_name = 'QUAN_LY_KHO');
+
+INSERT INTO roles (role_name, display_name, description, is_system, is_active)
+SELECT 'KE_TOAN', 'Kế toán & Thu ngân', 'Quản lý hóa đơn viện phí, thu tiền, công nợ bệnh nhân và xử lý hoàn tiền tại chi nhánh.', 1, 1
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE role_name = 'KE_TOAN');
+
+INSERT INTO roles (role_name, display_name, description, is_system, is_active)
+SELECT 'BENH_NHAN', 'Bệnh nhân', 'Tài khoản cổng thông tin bệnh nhân (đặt lịch hẹn trực tuyến, tra cứu hồ sơ khám cá nhân).', 1, 1
+WHERE NOT EXISTS (SELECT 1 FROM roles WHERE role_name = 'BENH_NHAN');
+
+INSERT INTO permissions (permission_code, module, description) VALUES
+('PATIENT_PROFILE_MANAGE', 'RECEPTION', 'Quản lý khách hàng: Tiếp nhận bệnh nhân & quản lý hồ sơ hành chính'),
+('RECEPTION_MEMBERSHIPS', 'RECEPTION', 'Thẻ bệnh nhân: Tra cứu thẻ thành viên & điểm tích lũy'),
+('APPOINTMENT_MANAGE', 'RECEPTION', 'Quản lý lịch hẹn: Xem danh sách, tạo & quản lý lịch hẹn khám'),
+('RECEPTION_CHECKIN', 'RECEPTION', 'Tiếp đón & Check-in: Check-in bệnh nhân & phân luồng tiếp đón'),
+('APPOINTMENT_VIEW', 'RECEPTION', 'Hàng chờ gọi số: Theo dõi hàng chờ khám tại phòng khám'),
+('RECEPTION_DISPATCH', 'RECEPTION', 'Điều phối ghế nha (Lễ tân): Bảng Kanban điều phối bệnh nhân vào ghế khám'),
+('CUSTOMER_CARE_MANAGE', 'RECEPTION', 'Chăm sóc khách hàng: Quản lý nhắc hẹn sau điều trị & CSKH'),
+('CLINICAL_DAILY_VISITS', 'CLINICAL', 'Phiên khám & Chẩn đoán: Xem danh sách ca khám & thực hiện phiên khám'),
+('CLINICAL_WORKFLOWS', 'CLINICAL', 'Quy trình kỹ thuật: Thiết lập & thực hiện quy trình kỹ thuật lâm sàng Bộ Y Tế'),
+('CLINICAL_DISPATCH', 'CLINICAL', 'Điều phối ghế điều trị: Theo dõi & điều phối ca khám ghế nha'),
+('PRESCRIPTION_WRITE', 'CLINICAL', 'Đơn thuốc & Dặn dò: Kê đơn thuốc & dặn dò bệnh nhân sau điều trị'),
+('TREATMENT_PLAN_MANAGE', 'CLINICAL', 'Kế hoạch điều trị: Lập phác đồ điều trị nha khoa nhiều giai đoạn'),
+('CLINICAL_PHOTOS', 'CLINICAL', 'Ảnh chụp lâm sàng: Xem & tải hình ảnh khoang miệng trước/sau điều trị'),
+('CLINICAL_XRAY', 'CLINICAL', 'Phim X-quang NanoPix: Trình xem và đối chiếu ảnh chụp X-quang'),
+('MEDICAL_RECORD_VIEW', 'CLINICAL', 'Hồ sơ bệnh án điện tử (EMR): Xem bệnh án điện tử EMR & lịch sử điều trị'),
+('CLINICAL_LABO', 'CLINICAL', 'Phiếu đặt xưởng Labo: Quản lý phiếu gửi mẫu chế tác răng sứ'),
+('LABO_SUPPLIERS', 'CLINICAL', 'Nhà cung cấp Labo: Quản lý danh sách đối tác xưởng gia công răng sứ'),
+('LABO_PRICING', 'CLINICAL', 'Bảng giá Labo: Quản lý đơn giá gia công phôi sứ & khí cụ nha khoa'),
+('FINANCE_DASHBOARD', 'FINANCE', 'Tổng quan viện phí: Bảng điều khiển tài chính, viện phí & công nợ khách hàng'),
+('INVOICE_CREATE', 'FINANCE', 'Hóa đơn viện phí: Lập hóa đơn viện phí mới & áp dụng voucher'),
+('FINANCE_DEBT', 'FINANCE', 'Công nợ khách hàng: Theo dõi số dư nợ viện phí & trả góp'),
+('FINANCE_DEPOSIT', 'FINANCE', 'Tiền tạm ứng (Đặt cọc): Quản lý thu/hoàn tiền đặt cọc tạm ứng của bệnh nhân'),
+('REFUND_MANAGE', 'FINANCE', 'Hoàn tiền viện phí: Tiếp nhận & xử lý yêu cầu hoàn tiền dịch vụ'),
+('PAYMENT_COLLECT', 'FINANCE', 'Lịch sử thanh toán: Thu tiền viện phí, gạch nợ & in biên lai'),
+('FINANCE_EXPENSES', 'FINANCE', 'Chi phí vận hành: Quản lý phiếu chi & chi phí hoạt động phòng khám'),
+('FINANCE_PAYROLL', 'FINANCE', 'Bảng lương nhân sự: Tính lương, phụ cấp và tổng hợp bảng lương tháng'),
+('FINANCE_PAYROLL_ADVANCES', 'FINANCE', 'Tạm ứng lương: Quản lý và phê duyệt yêu cầu tạm ứng lương nhân viên'),
+('FINANCE_COMMISSION_CONFIG', 'FINANCE', 'Cấu hình hoa hồng: Thiết lập tỷ lệ chia hoa hồng thủ thuật bác sĩ/phụ tá'),
+('FINANCE_OWNER_DISTRIBUTIONS', 'FINANCE', 'Phân chia lợi nhuận: Quản lý cổ tức và phân bổ lợi nhuận chủ đầu tư'),
+('INVENTORY_STOCK', 'INVENTORY', 'Tồn kho vật tư: Tra cứu tồn kho chi nhánh & cảnh báo chạm ngưỡng'),
+('INVENTORY_BATCHES', 'INVENTORY', 'Lô & Hạn dùng: Quản lý số lô vật tư và cảnh báo hạn sử dụng'),
+('INVENTORY_RECEIPT', 'INVENTORY', 'Phiếu nhập kho: Lập và quản lý phiếu nhập kho vật tư y tế'),
+('INVENTORY_ISSUE', 'INVENTORY', 'Phiếu xuất kho: Lập và quản lý phiếu xuất kho sử dụng điều trị'),
+('INVENTORY_TRANSFER', 'INVENTORY', 'Điều chuyển kho: Điều chuyển vật tư giữa các chi nhánh cơ sở'),
+('INVENTORY_MATERIALS', 'INVENTORY', 'Danh mục vật tư: Quản lý danh mục mặt hàng vật tư tiêu hao'),
+('INVENTORY_CATEGORIES', 'INVENTORY', 'Nhóm vật tư: Quản lý phân nhóm vật tư và đơn vị tính'),
+('SUPPLIER_MANAGE', 'INVENTORY', 'NCC & Công nợ: Quản lý danh mục nhà cung cấp & công nợ phải trả'),
+('STAFF_MANAGE', 'HR', 'Hồ sơ nhân sự: Quản lý danh sách nhân viên, chứng chỉ hành nghề & hợp đồng'),
+('SCHEDULE_MANAGE', 'HR', 'Phân ca làm việc: Xếp lịch phân ca tuần cho nhân viên chi nhánh'),
+('HR_BRANCH_ATTENDANCE', 'HR', 'Chấm công chi nhánh: Bảng tổng hợp chấm công thực tế toàn cơ sở'),
+('HR_LEAVE_APPROVE', 'HR', 'Duyệt nghỉ phép: Tiếp nhận và phê duyệt đơn xin nghỉ phép/khóa lịch nhân sự'),
+('HR_MY_ATTENDANCE', 'HR', 'Chấm công cá nhân: Check-in/Check-out hàng ngày & tra cứu lịch sử công'),
+('SCHEDULE_MY', 'HR', 'Lịch trực tuần của tôi: Xem lịch làm việc cá nhân hàng tuần'),
+('HR_LEAVE_REQUESTS', 'HR', 'Yêu cầu nghỉ / Khóa lịch: Gửi đơn xin nghỉ phép & khóa lịch khám cá nhân'),
+('ACCOUNT_MANAGE', 'SYSTEM', 'Danh sách tài khoản: Tạo tài khoản, khóa/mở khóa tài khoản nhân viên'),
+('ROLE_MANAGE', 'SYSTEM', 'Vai trò & Phân quyền: Cấu hình ma trận phân quyền vai trò hệ thống'),
+('SYSTEM_BANS', 'SYSTEM', 'Tài khoản bị cấm bình luận: Quản lý danh sách tài khoản bị khóa bình luận'),
+('BRANCH_MANAGE', 'SYSTEM', 'Quản lý cơ sở: Quản lý danh sách chi nhánh, phòng khám & ghế nha'),
+('CATALOG_SERVICES', 'SYSTEM', 'Danh mục dịch vụ: Quản lý danh mục dịch vụ nha khoa & bảng giá'),
+('CATALOG_SERVICE_CATEGORIES', 'SYSTEM', 'Nhóm dịch vụ: Quản lý phân nhóm chuyên khoa dịch vụ nha khoa'),
+('CATALOG_MEDICATIONS', 'SYSTEM', 'Danh mục thuốc: Quản lý danh mục thuốc biệt dược & liều dùng'),
+('CATALOG_ICD10', 'SYSTEM', 'Danh mục ICD-10: Quản lý bảng mã bệnh quốc tế ICD-10'),
+('CATALOG_MEMBERSHIP_TIERS', 'SYSTEM', 'Hạng thẻ & Tích điểm: Quản lý hạng thành viên & quy tắc tích điểm'),
+('CATALOG_PROMOTIONS', 'SYSTEM', 'Khuyến mãi & Voucher: Quản lý chương trình ưu đãi & mã giảm giá'),
+('CATALOG_NEWS', 'SYSTEM', 'Bài viết tin tức: Đăng tải bài viết tin tức, kiến thức nha khoa'),
+('NEWS_COMMENTS_MODERATE', 'SYSTEM', 'Kiểm duyệt bình luận: Kiểm duyệt và quản lý bình luận bài viết tin tức'),
+('SYSTEM_AUDIT', 'SYSTEM', 'Nhật ký thao tác: Nhật ký kiểm toán thao tác người dùng hệ thống'),
+('FINANCE_REPORTS', 'SYSTEM', 'Tổng quan điều hành (29.1): Báo cáo tổng quan chỉ số điều hành phòng khám'),
+('REPORT_FINANCIAL', 'SYSTEM', 'Báo cáo Tài chính & Dòng tiền (29.2): Phân tích doanh thu, thực thu và chi phí'),
+('REPORT_DEBTS', 'SYSTEM', 'Báo cáo Công nợ Bệnh nhân: Thống kê và phân tích tuổi nợ viện phí'),
+('REPORT_OPERATIONAL', 'SYSTEM', 'Báo cáo Vận hành & Nguồn khách: Thống kê lượt khám và hiệu suất bác sĩ')
+ON DUPLICATE KEY UPDATE
+    module = VALUES(module),
+    description = VALUES(description);
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.role_id, p.permission_id
+FROM roles r CROSS JOIN permissions p
+WHERE r.role_name = 'ADMIN'
+  AND p.permission_code NOT IN ('HR_MY_ATTENDANCE', 'SCHEDULE_MY', 'HR_LEAVE_REQUESTS')
+  AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.role_id AND rp.permission_id = p.permission_id);
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.role_id, p.permission_id
+FROM roles r JOIN permissions p ON p.permission_code IN (
+    'CLINICAL_DAILY_VISITS', 'CLINICAL_WORKFLOWS', 'CLINICAL_DISPATCH',
+    'PRESCRIPTION_WRITE', 'TREATMENT_PLAN_MANAGE', 'CLINICAL_PHOTOS',
+    'CLINICAL_XRAY', 'CLINICAL_LABO', 'LABO_SUPPLIERS', 'LABO_PRICING', 'MEDICAL_RECORD_VIEW',
+    'APPOINTMENT_VIEW', 'RECEPTION_MEMBERSHIPS', 'CUSTOMER_CARE_MANAGE',
+    'SCHEDULE_MY', 'HR_MY_ATTENDANCE', 'HR_LEAVE_REQUESTS'
+)
+WHERE r.role_name = 'BAC_SI'
+  AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.role_id AND rp.permission_id = p.permission_id);
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.role_id, p.permission_id
+FROM roles r JOIN permissions p ON p.permission_code IN (
+    'PATIENT_PROFILE_MANAGE', 'RECEPTION_MEMBERSHIPS', 'APPOINTMENT_MANAGE',
+    'RECEPTION_CHECKIN', 'APPOINTMENT_VIEW', 'RECEPTION_DISPATCH',
+    'CUSTOMER_CARE_MANAGE', 'SCHEDULE_MY', 'HR_MY_ATTENDANCE'
+)
+WHERE r.role_name = 'LE_TAN'
+  AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.role_id AND rp.permission_id = p.permission_id);
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.role_id, p.permission_id
+FROM roles r JOIN permissions p ON p.permission_code IN (
+    'FINANCE_DASHBOARD', 'INVOICE_CREATE', 'PAYMENT_COLLECT', 'FINANCE_DEPOSIT',
+    'FINANCE_DEBT', 'REFUND_MANAGE', 'FINANCE_EXPENSES', 'FINANCE_PAYROLL',
+    'FINANCE_PAYROLL_ADVANCES', 'FINANCE_OWNER_DISTRIBUTIONS',
+    'FINANCE_REPORTS', 'REPORT_FINANCIAL', 'REPORT_DEBTS', 'REPORT_OPERATIONAL',
+    'SCHEDULE_MY', 'HR_MY_ATTENDANCE', 'HR_LEAVE_REQUESTS'
+)
+WHERE r.role_name = 'KE_TOAN'
+  AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.role_id AND rp.permission_id = p.permission_id);
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.role_id, p.permission_id
+FROM roles r JOIN permissions p ON p.permission_code IN (
+    'INVENTORY_STOCK', 'INVENTORY_BATCHES', 'INVENTORY_RECEIPT', 'INVENTORY_ISSUE',
+    'INVENTORY_TRANSFER', 'INVENTORY_MATERIALS', 'INVENTORY_CATEGORIES', 'SUPPLIER_MANAGE',
+    'SCHEDULE_MY', 'HR_MY_ATTENDANCE'
+)
+WHERE r.role_name = 'QUAN_LY_KHO'
+  AND NOT EXISTS (SELECT 1 FROM role_permissions rp WHERE rp.role_id = r.role_id AND rp.permission_id = p.permission_id);
 
 -- =============================================================================
 -- 1. CHI NHÁNH, PHÒNG KHÁM, GHẾ NHA, CA LÀM VIỆC, TÀI KHOẢN NGÂN HÀNG & THUẾ
 -- =============================================================================
-INSERT IGNORE INTO branches (branch_code, branch_name, address, phone, email, tax_code, opening_time, closing_time, working_days, is_active, created_at, updated_at) VALUES
-('CN01', 'Cơ sở Quận 1',   '123 Nguyễn Trãi, Quận 1, TP.HCM',    '0901234567', 'cs1@dentalclinic.com', '0311000111', '08:00:00', '20:00:00', '2,3,4,5,6,7,CN', 1, NOW(), NOW()),
-('CN02', 'Cơ sở Đống Đa',  '456 Láng Hạ, Đống Đa, Hà Nội',       '0907654321', 'cs2@dentalclinic.com', '0102000222', '08:00:00', '20:00:00', '2,3,4,5,6,7,CN', 1, NOW(), NOW()),
-('CN03', 'Cơ sở Cầu Giấy', '88 Trần Thái Tông, Cầu Giấy, Hà Nội','0908889999', 'cs3@dentalclinic.com', '0103000333', '08:00:00', '20:00:00', '2,3,4,5,6,7',    1, NOW(), NOW());
+INSERT INTO branches (branch_code, branch_name, address, phone, email, tax_code, image_url, opening_time, closing_time, working_days, is_active, created_at, updated_at) VALUES
+('CN01', 'Cơ sở Quận 1',   '123 Nguyễn Trãi, Quận 1, TP.HCM',    '0901234567', 'cs1@dentalclinic.com', '0311000111', '/uploads/images/storefront.png', '08:00:00', '20:00:00', '2,3,4,5,6,7,CN', 1, NOW(), NOW()),
+('CN02', 'Cơ sở Đống Đa',  '456 Láng Hạ, Đống Đa, Hà Nội',       '0907654321', 'cs2@dentalclinic.com', '0102000222', '/uploads/images/storefront.png', '08:00:00', '20:00:00', '2,3,4,5,6,7,CN', 1, NOW(), NOW()),
+('CN03', 'Cơ sở Cầu Giấy', '88 Trần Thái Tông, Cầu Giấy, Hà Nội','0908889999', 'cs3@dentalclinic.com', '0103000333', '/uploads/images/storefront.png', '08:00:00', '20:00:00', '2,3,4,5,6,7',    1, NOW(), NOW())
+ON DUPLICATE KEY UPDATE
+    branch_name = VALUES(branch_name),
+    address = VALUES(address),
+    phone = VALUES(phone),
+    updated_at = NOW();
 
 INSERT IGNORE INTO rooms (branch_id, room_code, room_name, room_type, status)
 SELECT b.branch_id, r.room_code, r.room_name, r.room_type, 'ACTIVE'
@@ -52,10 +203,10 @@ CROSS JOIN (
 WHERE b.branch_code IN ('CN01', 'CN02', 'CN03')
   AND NOT EXISTS (SELECT 1 FROM (SELECT branch_id, shift_code FROM work_shifts) ws WHERE ws.branch_id = b.branch_id AND ws.shift_code = s.shift_code);
 
-INSERT IGNORE INTO branch_bank_accounts (branch_id, bank_bin, bank_name, bank_short_name, account_number, account_holder_name, is_default, is_active, notes, created_at)
+INSERT IGNORE INTO branch_bank_accounts (branch_id, bank_bin, bank_name, bank_short_name, account_number, account_holder_name, is_default, is_active, notes, created_at, updated_at)
 SELECT b.branch_id, '970436', 'Ngân hàng TMCP Ngoại thương Việt Nam', 'Vietcombank',
        CASE b.branch_code WHEN 'CN01' THEN '0071001234561' WHEN 'CN02' THEN '0011001234562' ELSE '0021001234563' END,
-       'NHA KHOA CUONG VIET', 1, 1, 'Tài khoản nhận thanh toán QR chi nhánh', NOW()
+       'NHA KHOA CUONG VIET', 1, 1, 'Tài khoản nhận thanh toán QR chi nhánh', NOW(), NOW()
 FROM branches b
 WHERE b.branch_code IN ('CN01', 'CN02', 'CN03')
   AND NOT EXISTS (SELECT 1 FROM (SELECT branch_id FROM branch_bank_accounts) ba WHERE ba.branch_id = b.branch_id);
@@ -70,20 +221,24 @@ WHERE b.branch_code IN ('CN01', 'CN02', 'CN03')
   AND NOT EXISTS (SELECT 1 FROM (SELECT branch_id FROM branch_tax_configs) btc WHERE btc.branch_id = b.branch_id);
 
 -- =============================================================================
--- 2. TÀI KHOẢN MẪU, GÁN ROLE (TRA CỨU TỪ BẢNG ROLES SẴN CÓ), HỒ SƠ NHÂN SỰ, CA TRỰC
+-- 2. TÀI KHOẢN MẪU (MẬT KHẨU CHUNG: admin123), GÁN ROLE, HỒ SƠ NHÂN SỰ, CA TRỰC
 -- =============================================================================
-INSERT IGNORE INTO users (username, password, email, phone_number, branch_id, user_type, status, is_active, custom_permissions_enabled, created_date) VALUES
-('admin',     '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'admin@dentalclinic.com',    '0988888888', NULL, 'STAFF', 'ACTIVE', 1, 0, NOW()),
-('bs_hoang',  '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bs.hoang@dentalclinic.com', '0901000101', (SELECT branch_id FROM branches WHERE branch_code = 'CN01' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW()),
-('bs_huong',  '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bs.huong@dentalclinic.com', '0901000102', (SELECT branch_id FROM branches WHERE branch_code = 'CN02' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW()),
-('letan_01',  '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'letan01@dentalclinic.com',  '0901000201', (SELECT branch_id FROM branches WHERE branch_code = 'CN01' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW()),
-('ketoan_01', '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'ketoan01@dentalclinic.com', '0901000301', (SELECT branch_id FROM branches WHERE branch_code = 'CN01' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW()),
-('kho_01',    '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'kho01@dentalclinic.com',    '0901000401', (SELECT branch_id FROM branches WHERE branch_code = 'CN02' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW()),
-('bn_bao',    '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'bao.pham@gmail.com',        '0916040604', (SELECT branch_id FROM branches WHERE branch_code = 'CN01' LIMIT 1), 'PATIENT', 'ACTIVE', 1, 0, NOW()),
-('bn_thao',   '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'thao.le@gmail.com',         '0916050605', (SELECT branch_id FROM branches WHERE branch_code = 'CN02' LIMIT 1), 'PATIENT', 'ACTIVE', 1, 0, NOW()),
-('bn_minh',   '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'minh.tran@gmail.com',       '0916060606', (SELECT branch_id FROM branches WHERE branch_code = 'CN02' LIMIT 1), 'PATIENT', 'ACTIVE', 1, 0, NOW());
+INSERT INTO users (username, password, email, phone_number, branch_id, user_type, status, is_active, custom_permissions_enabled, created_date, updated_at) VALUES
+('admin',     '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'admin@dentalclinic.com',    '0988888888', (SELECT branch_id FROM branches WHERE branch_code = 'CN01' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW(), NOW()),
+('bs_hoang',  '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'bs.hoang@dentalclinic.com', '0901000101', (SELECT branch_id FROM branches WHERE branch_code = 'CN01' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW(), NOW()),
+('bs_huong',  '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'bs.huong@dentalclinic.com', '0901000102', (SELECT branch_id FROM branches WHERE branch_code = 'CN02' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW(), NOW()),
+('letan_01',  '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'letan01@dentalclinic.com',  '0901000201', (SELECT branch_id FROM branches WHERE branch_code = 'CN01' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW(), NOW()),
+('ketoan_01', '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'ketoan01@dentalclinic.com', '0901000301', (SELECT branch_id FROM branches WHERE branch_code = 'CN01' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW(), NOW()),
+('kho_01',    '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'kho01@dentalclinic.com',    '0901000401', (SELECT branch_id FROM branches WHERE branch_code = 'CN02' LIMIT 1), 'STAFF',   'ACTIVE', 1, 0, NOW(), NOW()),
+('bn_bao',    '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'bao.pham@gmail.com',        '0916040604', (SELECT branch_id FROM branches WHERE branch_code = 'CN01' LIMIT 1), 'PATIENT', 'ACTIVE', 1, 0, NOW(), NOW()),
+('bn_thao',   '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'thao.le@gmail.com',         '0916050605', (SELECT branch_id FROM branches WHERE branch_code = 'CN02' LIMIT 1), 'PATIENT', 'ACTIVE', 1, 0, NOW(), NOW()),
+('bn_minh',   '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'minh.tran@gmail.com',       '0916060606', (SELECT branch_id FROM branches WHERE branch_code = 'CN02' LIMIT 1), 'PATIENT', 'ACTIVE', 1, 0, NOW(), NOW())
+ON DUPLICATE KEY UPDATE
+    password = VALUES(password),
+    status = 'ACTIVE',
+    is_active = 1,
+    updated_at = NOW();
 
--- Gán user_roles tra cứu động theo role_name (không tạo hay sửa bảng roles)
 INSERT IGNORE INTO user_roles (user_id, role_id)
 SELECT u.user_id, r.role_id
 FROM (
@@ -100,8 +255,8 @@ FROM (
 JOIN users u ON u.username = m.uname
 JOIN roles r ON UPPER(r.role_name) = m.rname;
 
-INSERT IGNORE INTO staff_profiles (user_id, staff_code, full_name, gender, dob, phone_number, email, department, position_title, specialty, practice_license_no, is_tax_resident, contract_type, has_personal_deduction, dependent_count, has_tax_commitment, base_salary, allowance_amount, insurance_salary, hire_date, status, created_at)
-SELECT u.user_id, s.staff_code, s.full_name, s.gender, s.dob, u.phone_number, u.email, s.dept, s.pos, s.spec, s.cchn, 1, 'FULL_CONTRACT', 1, 0, 0, s.base_sal, s.allow, s.ins_sal, '2025-01-01', 'ACTIVE', NOW()
+INSERT INTO staff_profiles (user_id, staff_code, full_name, gender, dob, phone_number, email, department, position_title, specialty, practice_license_no, is_tax_resident, contract_type, has_personal_deduction, dependent_count, has_tax_commitment, base_salary, allowance_amount, insurance_salary, hire_date, status, created_at, updated_at)
+SELECT u.user_id, s.staff_code, s.full_name, s.gender, s.dob, u.phone_number, u.email, s.dept, s.pos, s.spec, s.cchn, 1, 'FULL_CONTRACT', 1, 0, 0, s.base_sal, s.allow, s.ins_sal, '2025-01-01', 'ACTIVE', NOW(), NOW()
 FROM (
     SELECT 'bs_hoang'  AS uname, 'BS-SEED-01'  AS staff_code, 'BS.CKI Trần Minh Hoàng' AS full_name, 'MALE'   AS gender, '1986-04-15' AS dob, 'Lâm sàng'            AS dept, 'Bác sĩ RHM'        AS pos, 'Tiểu phẫu & Nội nha'     AS spec, '001234/BYT-CCHN' AS cchn, 25000000.00 AS base_sal, 3000000.00 AS allow, 18000000.00 AS ins_sal UNION ALL
     SELECT 'bs_huong',            'BS-SEED-02',                'BS. Đỗ Lan Hương',        'FEMALE',            '1990-09-22',            'Lâm sàng',                    'Bác sĩ RHM',               'Chỉnh nha & Thẩm mỹ',             '005678/BYT-CCHN',         22000000.00,             2500000.00,          16000000.00           UNION ALL
@@ -109,7 +264,11 @@ FROM (
     SELECT 'ketoan_01',           'KT-SEED-01',                'Phạm Thanh Thủy',         'FEMALE',            '1993-02-11',            'Tài chính - Kế toán',         'Kế toán thu ngân',         'Kế toán nội bộ',                  NULL,                      14000000.00,             2000000.00,          12000000.00           UNION ALL
     SELECT 'kho_01',              'KHO-SEED-01',               'Lê Mạnh Hùng',            'MALE',              '1994-11-05',            'Kho vật tư',                  'Thủ kho vật tư',           'Quản lý vật tư nha khoa',         NULL,                      11000000.00,             1200000.00,          9500000.00
 ) s
-JOIN users u ON u.username = s.uname;
+JOIN users u ON u.username = s.uname
+ON DUPLICATE KEY UPDATE
+    full_name = VALUES(full_name),
+    status = 'ACTIVE',
+    updated_at = NOW();
 
 INSERT IGNORE INTO staff_branch_assignments (staff_id, branch_id, role_id, is_primary, start_date, status, created_at)
 SELECT sp.staff_id, b.branch_id, r.role_id, 1, '2025-01-01', 'ACTIVE', NOW()
@@ -158,47 +317,75 @@ WHERE sp.staff_code = 'BS-SEED-01'
   AND NOT EXISTS (SELECT 1 FROM (SELECT staff_id, start_date FROM leave_requests) lr WHERE lr.staff_id = sp.staff_id AND lr.start_date = DATE_ADD(CURDATE(), INTERVAL 3 DAY));
 
 -- =============================================================================
--- 3. DANH MỤC DỊCH VỤ, ICD-10, HẠNG THẺ, KHUYẾN MÃI, NHÀ CUNG CẤP, VẬT TƯ & THUỐC
+-- 3. DANH MỤC DỊCH VỤ (ĐỦ 10 NHÓM), ICD-10, HẠNG THẺ, KHUYẾN MÃI, NHÀ CUNG CẤP, VẬT TƯ & THUỐC
 -- =============================================================================
--- Sửa lại giá trị enum ServiceType hợp lệ nếu đã lỡ chạy bản cũ (kể cả trường hợp MySQL cắt thành chuỗi rỗng '' khi ENUM không khớp)
-UPDATE service_categories SET category_type = 'CONSULTATION' WHERE category_code = 'CAT_EXAM';
-UPDATE service_categories SET category_type = 'XRAY'         WHERE category_code = 'CAT_XRAY';
-UPDATE services SET service_type = 'CONSULTATION' WHERE service_code = 'DV-KHAM-TQ';
-UPDATE services SET service_type = 'XRAY'         WHERE service_code = 'DV-XQ-QUANH';
+INSERT INTO service_categories (category_code, category_name, category_type, display_order, is_active) VALUES
+('CAT_EXAM',    'Khám & Tư vấn',               'CONSULTATION', 1, 1),
+('CAT_XRAY',    'Chẩn đoán hình ảnh X-quang',  'XRAY',         2, 1),
+('CAT_ENDO',    'Điều trị tủy & Trám răng',    'PROCEDURE',    3, 1),
+('CAT_SURG',    'Nhổ răng & Tiểu phẫu',        'PROCEDURE',    4, 1),
+('CAT_PROSTH',  'Phục hình răng sứ & Labo',    'PROCEDURE',    5, 1),
+('CAT_ORTHO',   'Chỉnh nha - Niềng răng',      'PROCEDURE',    6, 1),
+('CAT_IMPLANT', 'Cấy ghép Implant nha khoa',   'PROCEDURE',    7, 1),
+('CAT_AESTH',   'Tẩy trắng & Nha khoa thẩm mỹ','PROCEDURE',    8, 1)
+ON DUPLICATE KEY UPDATE
+    category_name = VALUES(category_name),
+    category_type = VALUES(category_type),
+    is_active = 1;
 
-INSERT IGNORE INTO service_categories (category_code, category_name, category_type, display_order, is_active) VALUES
-('CAT_EXAM',   'Khám & Tư vấn',              'CONSULTATION', 1, 1),
-('CAT_XRAY',   'Chẩn đoán hình ảnh X-quang', 'XRAY',         2, 1),
-('CAT_ENDO',   'Điều trị tủy & Trám răng',   'PROCEDURE',    3, 1),
-('CAT_SURG',   'Nhổ răng & Tiểu phẫu',       'PROCEDURE',    4, 1),
-('CAT_PROSTH', 'Phục hình răng sứ & Labo',   'PROCEDURE',    5, 1),
-('CAT_ORTHO',  'Chỉnh nha - Niềng răng',     'PROCEDURE',    6, 1);
-
-INSERT IGNORE INTO services (category_id, service_code, service_name, service_type, unit, base_price, surcharge_amount, requires_tooth, is_paraclinical, is_bookable_online, warranty_months, estimated_duration_minutes, description, status, created_at)
-SELECT sc.category_id, s.service_code, s.service_name, s.service_type, s.unit, s.base_price, 0.00, s.req_tooth, s.is_para, 1, s.warranty, s.dur, s.descr, 'ACTIVE', NOW()
+INSERT INTO services (category_id, service_code, service_name, image_url, service_type, unit, base_price, surcharge_amount, requires_tooth, is_paraclinical, is_bookable_online, warranty_months, estimated_duration_minutes, description, status, created_at)
+SELECT sc.category_id, s.service_code, s.service_name, s.img, s.service_type, s.unit, s.base_price, 0.00, s.req_tooth, s.is_para, 1, s.warranty, s.dur, s.descr, 'ACTIVE', NOW()
 FROM (
-    SELECT 'CAT_EXAM'   AS ccode, 'DV-KHAM-TQ'   AS service_code, 'Khám & Tư vấn tổng quát'               AS service_name, 'CONSULTATION' AS service_type, 'Lượt'       AS unit, 150000.00   AS base_price, 0 AS req_tooth, 0 AS is_para, NULL AS warranty, 20 AS dur, 'Khám tổng quát sức khỏe răng miệng và tư vấn phác đồ.' AS descr UNION ALL
-    SELECT 'CAT_EXAM',            'DV-CAOVOI',                    'Lấy cao răng & Đánh bóng siêu âm',                     'PROCEDURE',                    'Hàm',                300000.00,                 0,              0,          NULL,             30,        'Làm sạch mảng bám vôi răng bằng sóng siêu âm êm ái.'            UNION ALL
-    SELECT 'CAT_XRAY',            'DV-XQ-QUANH',                  'Chụp X-quang quanh chóp kỹ thuật số',                  'XRAY',                         'Phim',               100000.00,                 1,              1,          NULL,             15,        'Chụp phim X-quang kỹ thuật số khảo sát chân răng.'              UNION ALL
-    SELECT 'CAT_ENDO',            'DV-TRAM-COMP',                 'Trám răng thẩm mỹ Composite 3M',                       'PROCEDURE',                    'Răng',               450000.00,                 1,              0,          12,               30,        'Phục hồi thân răng sâu bằng vật liệu Composite 3M.'             UNION ALL
-    SELECT 'CAT_ENDO',            'DV-NOINHA-RHAM',               'Điều trị tủy răng hàm (Nội nha)',                      'PROCEDURE',                    'Răng',               1800000.00,                1,              0,          24,               45,        'Làm sạch và hàn kín hệ thống ống tủy răng hàm.'                 UNION ALL
-    SELECT 'CAT_SURG',            'DV-NHO-RKHON',                 'Tiểu phẫu nhổ răng khôn mọc lệch Piezotome',           'PROCEDURE',                    'Răng',               2500000.00,                1,              0,          NULL,             45,        'Nhổ răng khôn không sang chấn bằng máy siêu âm Piezotome.'       UNION ALL
-    SELECT 'CAT_PROSTH',          'DV-SU-ZIRCO',                  'Bọc răng sứ Zirconia cao cấp',                         'PROCEDURE',                    'Răng',               4500000.00,                1,              0,          60,               60,        'Phục hình mão răng toàn sứ Zirconia thẩm mỹ cao.'               UNION ALL
-    SELECT 'CAT_ORTHO',           'DV-NIENG-KL',                  'Niềng răng mắc cài kim loại tự buộc',                  'PROCEDURE',                    'Liệu trình',         32000000.00,               0,              0,          36,               60,        'Chỉnh nha toàn hàm với mắc cài tự buộc chuẩn quốc tế.'
+    SELECT 'CAT_EXAM'    AS ccode, 'DV-KHAM-TQ'     AS service_code, 'Khám & Tư vấn tổng quát'                     AS service_name, '/uploads/images/clinic_room.png'                                AS img, 'CONSULTATION' AS service_type, 'Lượt'       AS unit, 150000.00   AS base_price, 0 AS req_tooth, 0 AS is_para, NULL AS warranty, 20 AS dur, 'Khám tổng quát sức khỏe răng miệng và tư vấn phác đồ.' AS descr UNION ALL
+    SELECT 'CAT_EXAM',             'DV-CAOVOI',                      'Lấy cao răng & Đánh bóng siêu âm',                            '/uploads/images/clinic_treatment.png',                                   'PROCEDURE',                    'Hàm',                300000.00,                 0,              0,          NULL,             30,        'Làm sạch mảng bám vôi răng bằng sóng siêu âm êm ái.'            UNION ALL
+    SELECT 'CAT_XRAY',             'DV-XQ-QUANH',                    'Chụp X-quang quanh chóp kỹ thuật số',                         '/uploads/images/clinic_treatment.png',                                   'XRAY',                         'Phim',               100000.00,                 1,              1,          NULL,             15,        'Chụp phim X-quang kỹ thuật số khảo sát chân răng.'              UNION ALL
+    SELECT 'CAT_XRAY',             'DV-XQ-PANO',                     'Chụp X-quang toàn cảnh Panorama kỹ thuật số',                 '/uploads/images/clinic_treatment.png',                                   'XRAY',                         'Phim',               300000.00,                 0,              1,          NULL,             15,        'Chụp phim toàn cảnh 2 hàm đánh giá răng khôn và xương hàm.'      UNION ALL
+    SELECT 'CAT_ENDO',             'DV-TRAM-COMP',                   'Trám răng thẩm mỹ Composite 3M',                              '/uploads/images/clinic_treatment.png',                                   'PROCEDURE',                    'Răng',               450000.00,                 1,              0,          12,               30,        'Phục hồi thân răng sâu bằng vật liệu Composite 3M.'             UNION ALL
+    SELECT 'CAT_ENDO',             'DV-NOINHA-RHAM',                 'Điều trị tủy răng hàm (Nội nha)',                             '/uploads/images/clinic_treatment.png',                                   'PROCEDURE',                    'Răng',               1800000.00,                1,              0,          24,               45,        'Làm sạch và hàn kín hệ thống ống tủy răng hàm.'                 UNION ALL
+    SELECT 'CAT_SURG',             'DV-NHO-THUONG',                  'Nhổ răng vĩnh viễn lung lay / chân răng',                     '/uploads/images/clinic_treatment.png',                                   'PROCEDURE',                    'Răng',               500000.00,                 1,              0,          NULL,             30,        'Nhổ răng vĩnh viễn bằng kỹ thuật gây tê tại chỗ an toàn.'       UNION ALL
+    SELECT 'CAT_SURG',             'DV-NHO-RKHON',                   'Tiểu phẫu nhổ răng khôn mọc lệch Piezotome',                  '/uploads/images/clinic_treatment.png',                                   'PROCEDURE',                    'Răng',               2500000.00,                1,              0,          NULL,             45,        'Nhổ răng khôn không sang chấn bằng máy siêu âm Piezotome.'       UNION ALL
+    SELECT 'CAT_AESTH',            'DV-TAY-TRANG',                   'Tẩy trắng răng công nghệ Laser Whitening',                    '/uploads/images/whitening.png',                                          'PROCEDURE',                    'Liệu trình',         2500000.00,                0,              0,          6,                60,        'Tẩy trắng răng hoạt hóa bằng ánh sáng Laser Pola Office.'        UNION ALL
+    SELECT 'CAT_PROSTH',           'DV-SU-TITAN',                    'Bọc răng sứ hợp kim Titan CAD/CAM',                           '/uploads/services/e4f1d111-0d3a-4642-95a9-79b669c75ff7.jpg',             'PROCEDURE',                    'Răng',               2500000.00,                1,              0,          36,               60,        'Phục hình mão răng sứ Titan chịu lực nhai tốt.'                 UNION ALL
+    SELECT 'CAT_PROSTH',           'DV-SU-ZIRCO',                    'Bọc răng sứ Zirconia cao cấp',                                '/uploads/services/e4f1d111-0d3a-4642-95a9-79b669c75ff7.jpg',             'PROCEDURE',                    'Răng',               4500000.00,                1,              0,          60,               60,        'Phục hình mão răng toàn sứ Zirconia thẩm mỹ cao.'               UNION ALL
+    SELECT 'CAT_ORTHO',            'DV-NIENG-KL',                    'Niềng răng mắc cài kim loại tự buộc',                         '/uploads/images/clinic_room.png',                                        'PROCEDURE',                    'Liệu trình',         32000000.00,               0,              0,          36,               60,        'Chỉnh nha toàn hàm với mắc cài tự buộc chuẩn quốc tế.'           UNION ALL
+    SELECT 'CAT_IMPLANT',          'DV-IMP-GER',                     'Cấy ghép trụ Implant nha khoa MIS C1 (Đức)',                  '/uploads/images/clinic_treatment.png',                                   'PROCEDURE',                    'Trụ',                22000000.00,               1,              0,          120,              90,        'Phẫu thuật cấy ghép trụ Implant Titanium nguyên chất.'
 ) s
-JOIN service_categories sc ON sc.category_code = s.ccode;
+JOIN service_categories sc ON sc.category_code = s.ccode
+ON DUPLICATE KEY UPDATE
+    service_name = VALUES(service_name),
+    image_url = VALUES(image_url),
+    service_type = VALUES(service_type),
+    base_price = VALUES(base_price),
+    status = 'ACTIVE';
 
-INSERT IGNORE INTO icd10_diseases (icd10_code, disease_name_vi, disease_name_en, is_dental_common, is_active) VALUES
-('K02.1', 'Sâu ngà răng',                      'Dentine caries',     1, 1),
-('K04.0', 'Viêm tủy răng',                     'Pulpitis',           1, 1),
-('K01.1', 'Răng ngầm / Răng khôn mọc lệch',    'Impacted teeth',     1, 1),
-('K05.1', 'Viêm nướu mạn tính',                'Chronic gingivitis', 1, 1);
+INSERT INTO icd10_diseases (icd10_code, disease_name_vi, disease_name_en, is_dental_common, is_active) VALUES
+('K00.6', 'Rối loạn mọc răng (Răng sữa tồn tại lâu / mọc lệch)', 'Disturbances in tooth eruption', 1, 1),
+('K01.0', 'Răng mọc ngầm (Embedded teeth)',                      'Embedded teeth',                 1, 1),
+('K01.1', 'Răng ngầm / Răng khôn mọc lệch',                      'Impacted teeth',                 1, 1),
+('K02.0', 'Sâu men răng',                                        'Caries limited to enamel',       1, 1),
+('K02.1', 'Sâu ngà răng',                                        'Dentine caries',                 1, 1),
+('K03.0', 'Mòn răng quá mức (Mòn cổ răng)',                      'Excessive attrition of teeth',   1, 1),
+('K03.6', 'Cặn bám trên răng (Cao răng)',                        'Deposits on teeth',              1, 1),
+('K04.0', 'Viêm tủy răng',                                       'Pulpitis',                       1, 1),
+('K04.1', 'Hoại tử tủy răng',                                    'Necrosis of pulp',               1, 1),
+('K04.4', 'Viêm quanh cuống răng cấp tính',                      'Acute apical periodontitis',     1, 1),
+('K05.0', 'Viêm nướu cấp tính',                                  'Acute gingivitis',               1, 1),
+('K05.1', 'Viêm nướu mạn tính',                                  'Chronic gingivitis',             1, 1),
+('K05.3', 'Viêm nha chu mạn tính',                               'Chronic periodontitis',          1, 1),
+('K07.3', 'Răng mọc lệch vị trí (Chen chúc, thưa)',              'Anomalies of tooth position',    1, 1),
+('K08.1', 'Mất răng do tai nạn, nhổ răng hoặc bệnh nha chu',     'Loss of teeth',                  1, 1)
+ON DUPLICATE KEY UPDATE
+    disease_name_vi = VALUES(disease_name_vi),
+    is_active = 1;
 
-INSERT IGNORE INTO membership_tiers (tier_code, tier_name, min_total_spent, discount_percent, spend_per_point, point_value, display_order, is_active) VALUES
+INSERT INTO membership_tiers (tier_code, tier_name, min_total_spent, discount_percent, spend_per_point, point_value, display_order, is_active) VALUES
 ('STANDARD', 'Thành viên mới',  0.00,        0.00,  10000.00, 1000.00, 1, 1),
 ('SILVER',   'Thành viên Bạc',  5000000.00,  5.00,  10000.00, 1000.00, 2, 1),
 ('GOLD',     'Thành viên Vàng', 20000000.00, 10.00, 10000.00, 1000.00, 3, 1),
-('DIAMOND',  'Kim Cương VIP',   50000000.00, 15.00, 10000.00, 1000.00, 4, 1);
+('DIAMOND',  'Kim Cương VIP',   50000000.00, 15.00, 10000.00, 1000.00, 4, 1)
+ON DUPLICATE KEY UPDATE
+    tier_name = VALUES(tier_name),
+    is_active = 1;
 
 INSERT IGNORE INTO promotions (promo_code, promo_name, description, branch_id, promo_type, discount_value, max_discount_amount, min_bill_amount, start_date, end_date, usage_limit, used_count, is_active) VALUES
 ('CHAOHE2026', 'Ưu đãi chăm sóc răng miệng 10%', 'Giảm 10% tối đa 500.000đ cho hóa đơn từ 1.000.000đ', NULL, 'PERCENTAGE',   10.00,     500000.00, 1000000.00, DATE_SUB(CURDATE(), INTERVAL 30 DAY), DATE_ADD(CURDATE(), INTERVAL 90 DAY), 200, 1, 1),
@@ -224,7 +411,7 @@ UNION ALL
 SELECT 'MED-ALPHA', 'Alpha Choay 4.2mg', 'Alphachymotrypsin', 'Viên', 4000.00, 'Ngậm dưới lưỡi 4 viên/ngày chia 2 lần', 1, NULL;
 
 -- =============================================================================
--- 4. BỆNH NHÂN, VÍ ĐIỂM THƯỞNG, VOUCHER & TÀI LIỆU
+-- 4. BỆNH NHÂN, LIÊN KẾT TÀI KHOẢN CỔNG BỆNH NHÂN, VÍ ĐIỂM THƯỞNG, VOUCHER & TÀI LIỆU
 -- =============================================================================
 INSERT IGNORE INTO patient_profiles (user_id, patient_code, full_name, dob, gender, phone_number, address, has_allergies, allergy_details, has_underlying_disease, underlying_disease_details, medical_history_completed, preferred_branch_id, is_default, membership_tier_id, deposit_balance, customer_source, status, created_at, updated_at)
 SELECT u.user_id, p.patient_code, p.full_name, p.dob, p.gender, u.phone_number, p.addr, p.allergy, p.allergy_dt, 0, 'Không', 1, b.branch_id, 1, mt.tier_id, p.dep, p.src, 'ACTIVE', NOW(), NOW()
@@ -236,6 +423,15 @@ FROM (
 JOIN users u ON u.username = p.uname
 JOIN branches b ON b.branch_code = p.bcode
 LEFT JOIN membership_tiers mt ON mt.tier_code = p.tcode;
+
+-- Đồng bộ liên kết tài khoản bệnh nhân với hồ sơ bệnh nhân (account_patient_profiles)
+INSERT IGNORE INTO account_patient_profiles (account_id, profile_id, access_type, created_at)
+SELECT pp.user_id, pp.profile_id, CASE WHEN pp.is_default = 1 THEN 'SELF' ELSE 'DEPENDENT' END, NOW()
+FROM patient_profiles pp
+WHERE pp.user_id IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM (SELECT profile_id FROM account_patient_profiles) app WHERE app.profile_id = pp.profile_id
+  );
 
 INSERT IGNORE INTO patient_loyalty_wallets (profile_id, current_points, total_spent_amount, last_updated)
 SELECT pp.profile_id,
@@ -405,25 +601,56 @@ FROM visits v
 JOIN suppliers s ON s.supplier_code = 'NCC-LABO-AV'
 WHERE v.visit_code = 'VIS-SEED-02';
 
-INSERT IGNORE INTO clinical_workflow_templates (template_code, template_name, description, service_id, clinic_id, status, created_by, created_at)
-SELECT 'QT-NHO-RKHON', 'Quy trình tiểu phẫu nhổ răng khôn mọc lệch', 'Quy trình chuẩn 3 bước theo phác đồ Bộ Y tế', sv.service_id, b.branch_id, 'ACTIVE',
-       (SELECT user_id FROM users WHERE username = 'admin' LIMIT 1), NOW()
-FROM services sv
+INSERT INTO clinical_workflow_templates (template_code, template_name, description, service_id, clinic_id, status, created_by, created_at, updated_at)
+SELECT src.template_code, src.template_name, src.description, sv.service_id, b.branch_id, 'ACTIVE',
+       (SELECT user_id FROM users WHERE username = 'admin' LIMIT 1), NOW(), NOW()
+FROM (
+    SELECT 'QT-NHO-RKHON' template_code, 'Quy trình tiểu phẫu nhổ răng khôn mọc lệch' template_name,
+           'Quy trình chuẩn theo Quyết định 3207/QĐ-BYT của Bộ Y Tế' description, 'DV-NHO-RKHON' service_code
+    UNION ALL SELECT 'QTKT-CAOVOI', 'Quy trình kỹ thuật Lấy cao răng & Đánh bóng',
+           'Hướng dẫn kỹ thuật lấy cao răng siêu âm và đánh bóng men răng theo Quyết định 3207/QĐ-BYT', 'DV-CAOVOI'
+    UNION ALL SELECT 'QTKT-TRAM-RANG', 'Quy trình kỹ thuật Hàn răng thẩm mỹ Composite',
+           'Hướng dẫn điều trị sâu ngà răng phục hồi bằng Composite quang trùng hợp theo chuẩn Bộ Y Tế', 'DV-TRAM-COMP'
+    UNION ALL SELECT 'QTKT-TUY-RH', 'Quy trình kỹ thuật Điều trị nội nha tủy răng nhiều chân',
+           'Hướng dẫn kỹ thuật mở tủy, đo chiều dài làm việc Apex Locator, tạo hình bơm rửa và hàn bít ống tủy BYT', 'DV-NOINHA-RHAM'
+    UNION ALL SELECT 'QTKT-IMP-GER', 'Quy trình kỹ thuật Phẫu thuật Cấy ghép Implant nha khoa',
+           'Hướng dẫn quy trình kỹ thuật đặt trụ Implant trong xương hàm chuẩn Bộ Y Tế', 'DV-IMP-GER'
+    UNION ALL SELECT 'QTKT-SU-TITAN', 'Quy trình kỹ thuật Phục hình Răng sứ thẩm mỹ cố định',
+           'Hướng dẫn quy trình mài cùi, lấy dấu cao su, thử sườn và gắn phục hình răng sứ cố định', 'DV-SU-TITAN'
+) src
+JOIN services sv ON sv.service_code = src.service_code
 JOIN branches b ON b.branch_code = 'CN01'
-WHERE sv.service_code = 'DV-NHO-RKHON';
+ON DUPLICATE KEY UPDATE
+    template_name = VALUES(template_name),
+    description = VALUES(description),
+    updated_at = NOW();
 
 INSERT IGNORE INTO clinical_workflow_versions (template_id, version_number, status, flow_mode, effective_from, change_summary, created_by, created_at, published_at)
-SELECT t.template_id, 1, 'PUBLISHED', 'CONTINUOUS', CURDATE(), 'Phiên bản chuẩn hóa ban đầu', (SELECT user_id FROM users WHERE username = 'admin' LIMIT 1), NOW(), NOW()
+SELECT t.template_id, 1, 'PUBLISHED', 'CONTINUOUS', CURDATE(), 'Phiên bản chuẩn hóa theo QĐ 3207/QĐ-BYT', (SELECT user_id FROM users WHERE username = 'admin' LIMIT 1), NOW(), NOW()
 FROM clinical_workflow_templates t
-WHERE t.template_code = 'QT-NHO-RKHON'
+WHERE t.template_code IN ('QT-NHO-RKHON', 'QTKT-CAOVOI', 'QTKT-TRAM-RANG', 'QTKT-TUY-RH', 'QTKT-IMP-GER', 'QTKT-SU-TITAN')
   AND NOT EXISTS (SELECT 1 FROM (SELECT template_id, version_number FROM clinical_workflow_versions) v WHERE v.template_id = t.template_id AND v.version_number = 1);
 
 INSERT IGNORE INTO clinical_workflow_sections (version_id, section_code, section_title, content, display_order)
-SELECT v.version_id, 'I', 'Chuẩn bị vô khuẩn & Gây tê', 'Sát khuẩn ngoài mặt, gây tê tại chỗ vùng răng cần nhổ.', 1
+SELECT v.version_id, sec.section_code, sec.section_title, sec.content_text, sec.display_order
 FROM clinical_workflow_versions v
-JOIN clinical_workflow_templates t ON t.template_id = v.template_id
-WHERE t.template_code = 'QT-NHO-RKHON'
-  AND NOT EXISTS (SELECT 1 FROM (SELECT version_id, section_code FROM clinical_workflow_sections) s WHERE s.version_id = v.version_id AND s.section_code = 'I');
+JOIN clinical_workflow_templates t ON t.template_id = v.template_id AND v.version_number = 1
+CROSS JOIN (
+    SELECT 'I' section_code, 'I. ĐẠI CƯƠNG & CHỈ ĐỊNH ĐIỀU TRỊ' section_title,
+           'Áp dụng cho người bệnh có bệnh lý răng hàm mặt đã được bác sĩ khám lâm sàng và chẩn đoán xác định.' content_text, 1 display_order
+    UNION ALL SELECT 'II', 'II. CHỐNG CHỈ ĐỊNH',
+           'Chống chỉ định tạm thời với người bệnh đang sốt cao cấp tính hoặc huyết áp tăng cao chưa kiểm soát.', 2
+    UNION ALL SELECT 'III', 'III. CHUẨN BỊ (NHÂN SỰ, PHƯƠNG TIỆN & NGƯỜI BỆNH)',
+           'Bác sĩ Răng Hàm Mặt có chứng chỉ hành nghề, trợ thủ nha khoa, bộ dụng cụ vô trùng tuyệt đối.', 3
+    UNION ALL SELECT 'IV', 'IV. CÁC BƯỚC TIẾN HÀNH KỸ THUẬT',
+           'Thực hiện tuần tự từng bước lâm sàng trong danh sách bước quy trình bên dưới.', 4
+    UNION ALL SELECT 'V', 'V. THEO DÕI & CHĂM SÓC SAU THỦ THUẬT',
+           'Theo dõi toàn trạng tại phòng khám 15-30 phút sau can thiệp và dặn dò vệ sinh răng miệng.', 5
+    UNION ALL SELECT 'VI', 'VI. TAI BIẾN & HƯỚNG XỬ TRÍ',
+           'Xử trí chảy máu kéo dài, đau nhức hoặc phản ứng thuốc tê theo phác đồ cấp cứu tại chỗ.', 6
+) sec
+WHERE t.template_code IN ('QT-NHO-RKHON', 'QTKT-CAOVOI', 'QTKT-TRAM-RANG', 'QTKT-TUY-RH', 'QTKT-IMP-GER', 'QTKT-SU-TITAN')
+  AND NOT EXISTS (SELECT 1 FROM (SELECT version_id, section_code FROM clinical_workflow_sections) s WHERE s.version_id = v.version_id AND s.section_code = sec.section_code);
 
 INSERT IGNORE INTO clinical_workflow_steps (version_id, step_code, step_name, step_description, step_type, sequence_order, is_optional, requires_clinical_approval, estimated_duration_minutes, queue_priority, status)
 SELECT v.version_id, st.scode, st.sname, st.sdesc, st.stype, st.ord, 0, 0, 15, 0, 'ACTIVE'
@@ -444,18 +671,22 @@ SELECT b.branch_id, m.material_id, mb.bno, mb.exp, mb.qty, mb.price, s.supplier_
 FROM (
     SELECT 'CN02' AS bcode, 'VT-COMP-Z350' AS mcode, 'LO-COMP-2026-01' AS bno, DATE_ADD(CURDATE(), INTERVAL 365 DAY) AS exp, 25.000 AS qty, 450000.00 AS price, 'NCC-3M'        AS scode UNION ALL
     SELECT 'CN02',          'VT-TE-SEPTO',           'LO-TE-2026-01',            DATE_ADD(CURDATE(), INTERVAL 180 DAY),        12.000,        650000.00,          'NCC-SEPTODONT'          UNION ALL
-    SELECT 'CN02',          'VT-TH-GANG',            'LO-GANG-2026-01',          DATE_ADD(CURDATE(), INTERVAL 540 DAY),        50.000,        110000.00,          'NCC-3M'                 UNION ALL
+    SELECT 'CN02',          'VT-TH-GANG',            'LO-GANG-2026-01',          DATE_ADD(CURDATE(), INTERVAL 540 DAY),        48.000,        110000.00,          'NCC-3M'                 UNION ALL
     SELECT 'CN01',          'VT-COMP-Z350',          'LO-COMP-CN1-01',           DATE_ADD(CURDATE(), INTERVAL 365 DAY),        18.000,        450000.00,          'NCC-3M'
 ) mb
 JOIN branches b ON b.branch_code = mb.bcode
 JOIN materials m ON m.material_code = mb.mcode
 JOIN suppliers s ON s.supplier_code = mb.scode;
 
-INSERT IGNORE INTO branch_inventory (branch_id, material_id, current_stock, last_updated)
+INSERT INTO branch_inventory (branch_id, material_id, current_stock, last_updated)
 SELECT mb.branch_id, mb.material_id, SUM(mb.quantity_remaining), NOW()
 FROM material_batches mb
-GROUP BY mb.branch_id, mb.material_id;
+GROUP BY mb.branch_id, mb.material_id
+ON DUPLICATE KEY UPDATE
+    current_stock = VALUES(current_stock),
+    last_updated = NOW();
 
+-- Phiếu nhập kho PN-SEED-001: 25 ống VT-COMP-Z350 (11.250.000đ) + 50 hộp VT-TH-GANG (5.500.000đ) = 16.750.000đ
 INSERT IGNORE INTO stock_receipts (receipt_code, branch_id, supplier_id, supplier_invoice_no, receipt_date, total_amount, receiver_id, notes)
 SELECT 'PN-SEED-001', b.branch_id, s.supplier_id, 'HD-3M-2026-01', CURDATE(), 16750000.00, sp.staff_id, 'Nhập lô vật tư nha khoa đầu kỳ'
 FROM branches b
@@ -467,6 +698,13 @@ INSERT IGNORE INTO stock_receipt_items (receipt_id, material_id, batch_number, e
 SELECT sr.receipt_id, m.material_id, 'LO-COMP-2026-01', DATE_ADD(CURDATE(), INTERVAL 365 DAY), 25.000, 450000.00
 FROM stock_receipts sr
 JOIN materials m ON m.material_code = 'VT-COMP-Z350'
+WHERE sr.receipt_code = 'PN-SEED-001'
+  AND NOT EXISTS (SELECT 1 FROM (SELECT receipt_id, material_id FROM stock_receipt_items) sri WHERE sri.receipt_id = sr.receipt_id AND sri.material_id = m.material_id);
+
+INSERT IGNORE INTO stock_receipt_items (receipt_id, material_id, batch_number, expiry_date, quantity, unit_price)
+SELECT sr.receipt_id, m.material_id, 'LO-GANG-2026-01', DATE_ADD(CURDATE(), INTERVAL 540 DAY), 50.000, 110000.00
+FROM stock_receipts sr
+JOIN materials m ON m.material_code = 'VT-TH-GANG'
 WHERE sr.receipt_code = 'PN-SEED-001'
   AND NOT EXISTS (SELECT 1 FROM (SELECT receipt_id, material_id FROM stock_receipt_items) sri WHERE sri.receipt_id = sr.receipt_id AND sri.material_id = m.material_id);
 
@@ -492,10 +730,10 @@ FROM stock_receipts sr WHERE sr.receipt_code = 'PN-SEED-001';
 -- =============================================================================
 -- 7. TÀI CHÍNH, HÓA ĐƠN, THANH TOÁN, CHI PHÍ VẬN HÀNH, HOA HỒNG & BẢNG LƯƠNG
 -- =============================================================================
-INSERT IGNORE INTO invoices (invoice_code, invoice_type, visit_id, profile_id, branch_id, cashier_id, total_service_amount, total_medicine_amount, surcharge_amount, surcharge_paid_amount, surcharge_remaining_debt, discount_amount, promotion_discount, point_discount, points_redeemed, total_amount, total_vat_amount, paid_amount, remaining_debt, payment_status, status, issued_at, notes)
+INSERT IGNORE INTO invoices (invoice_code, invoice_type, visit_id, profile_id, branch_id, cashier_id, total_service_amount, total_medicine_amount, surcharge_amount, surcharge_paid_amount, surcharge_remaining_debt, discount_amount, promotion_discount, point_discount, points_redeemed, total_amount, total_vat_amount, paid_amount, remaining_debt, payment_status, status, issued_at, updated_at, notes)
 SELECT 'HD-SEED-001', 'SERVICE', v.visit_id, v.profile_id, v.branch_id,
        (SELECT staff_id FROM staff_profiles WHERE staff_code = 'KT-SEED-01' LIMIT 1),
-       2500000.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 2500000.00, 0.00, 1500000.00, 1000000.00, 'PARTIAL', 'CONFIRMED', NOW(), 'Hóa đơn tiểu phẫu R48 (đã thanh toán 1.5tr, còn nợ 1tr)'
+       2500000.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0, 2500000.00, 0.00, 1500000.00, 1000000.00, 'PARTIAL', 'CONFIRMED', NOW(), NOW(), 'Hóa đơn tiểu phẫu R48 (đã thanh toán 1.5tr, còn nợ 1tr)'
 FROM visits v WHERE v.visit_code = 'VIS-SEED-01';
 
 INSERT IGNORE INTO invoice_items (item_type, invoice_id, performed_id, service_id, item_name, quantity, unit, unit_price, final_amount, line_order, discount_amount, payable_amount, vat_rate, vat_amount, paid_amount, remaining_debt, payment_status)
@@ -536,9 +774,9 @@ JOIN visits v ON v.visit_id = ps.visit_id
 WHERE v.visit_code = 'VIS-SEED-01'
   AND NOT EXISTS (SELECT 1 FROM (SELECT performed_id FROM service_commissions) sc WHERE sc.performed_id = ps.performed_id);
 
-INSERT IGNORE INTO payroll_periods (period_name, branch_id, month, year, total_salary, total_base_salary, total_allowance, total_bonus, total_commission, total_deduction, total_advance_allocated, total_remaining_payable, total_gross_salary, total_insurance_employee, total_insurance_employer, total_pit_amount, status, created_at)
+INSERT IGNORE INTO payroll_periods (period_name, branch_id, month, year, total_salary, total_base_salary, total_allowance, total_bonus, total_commission, total_deduction, total_advance_allocated, total_remaining_payable, total_gross_salary, total_insurance_employee, total_insurance_employer, total_pit_amount, status, created_at, updated_at)
 SELECT CONCAT('Bảng lương T', MONTH(CURDATE()), '/', YEAR(CURDATE()), ' - CN01'), b.branch_id, MONTH(CURDATE()), YEAR(CURDATE()),
-       25000000.00, 25000000.00, 3000000.00, 0.00, 375000.00, 0.00, 0.00, 28375000.00, 28375000.00, 1890000.00, 3870000.00, 0.00, 'DRAFT', NOW()
+       25000000.00, 25000000.00, 3000000.00, 0.00, 375000.00, 0.00, 0.00, 28375000.00, 28375000.00, 1890000.00, 3870000.00, 0.00, 'DRAFT', NOW(), NOW()
 FROM branches b WHERE b.branch_code = 'CN01'
   AND NOT EXISTS (SELECT 1 FROM (SELECT branch_id, month, year FROM payroll_periods) pp WHERE pp.branch_id = b.branch_id AND pp.month = MONTH(CURDATE()) AND pp.year = YEAR(CURDATE()));
 
@@ -585,15 +823,16 @@ SELECT cct.task_id, cct.profile_id, cct.assigned_staff_id, 'PHONE_CALL', 'CONNEC
 FROM customer_care_tasks cct WHERE cct.task_code = 'CSKH-SEED-01'
   AND NOT EXISTS (SELECT 1 FROM (SELECT task_id FROM customer_care_interactions) cci WHERE cci.task_id = cct.task_id);
 
-INSERT IGNORE INTO news_articles (title, slug, summary, content, status, created_by, branch_id, created_at, published_at)
+INSERT IGNORE INTO news_articles (title, slug, summary, content, thumbnail, status, created_by, branch_id, created_at, updated_at, published_at)
 SELECT 'Hướng dẫn chăm sóc răng miệng đúng cách sau khi nhổ răng khôn', 'cham-soc-sau-nho-rang-khon-seed',
        'Những lưu ý quan trọng trong 48 giờ đầu giúp vết thương mau lành, tránh viêm ổ răng khô.',
        '<p>Sau tiểu phẫu nhổ răng khôn, bệnh nhân cần cắn chặt gạc vô trùng trong 45 phút, chườm lạnh ngoài má và ăn thức ăn mềm nguội trong 2 ngày đầu.</p>',
-       'PUBLISHED', (SELECT user_id FROM users WHERE username = 'admin' LIMIT 1), b.branch_id, NOW(), NOW()
+       '/uploads/news/36739395-8602-41ca-9833-04ae326aa20f_WIN_20241002_11_46_43_Pro.jpg',
+       'PUBLISHED', (SELECT user_id FROM users WHERE username = 'admin' LIMIT 1), b.branch_id, NOW(), NOW(), NOW()
 FROM branches b WHERE b.branch_code = 'CN01';
 
-INSERT IGNORE INTO comments (news_id, user_id, content, status, created_at)
-SELECT na.news_id, (SELECT user_id FROM users WHERE username = 'bn_bao' LIMIT 1), 'Bài viết rất hữu ích, cảm ơn bác sĩ đã hướng dẫn tận tình!', 'ACTIVE', NOW()
+INSERT IGNORE INTO comments (news_id, user_id, content, status, created_at, updated_at)
+SELECT na.news_id, (SELECT user_id FROM users WHERE username = 'bn_bao' LIMIT 1), 'Bài viết rất hữu ích, cảm ơn bác sĩ đã hướng dẫn tận tình!', 'ACTIVE', NOW(), NOW()
 FROM news_articles na WHERE na.slug = 'cham-soc-sau-nho-rang-khon-seed'
   AND NOT EXISTS (SELECT 1 FROM (SELECT news_id FROM comments) c WHERE c.news_id = na.news_id);
 
@@ -625,7 +864,6 @@ FROM users u
 JOIN branches b ON b.branch_code = 'CN01'
 WHERE u.username = 'admin'
   AND NOT EXISTS (SELECT 1 FROM (SELECT action FROM system_audit_logs) sal WHERE sal.action = 'SEED_INIT');
-
 
 -- =============================================================================
 -- 9. BỔ SUNG ĐẦY ĐỦ CÁC BẢNG CÒN LẠI (QUY TRÌNH CHI TIẾT, LÂM SÀNG, TƯƠNG TÁC, TÀI CHÍNH CHI TIẾT)
@@ -712,23 +950,23 @@ WHERE v.visit_code = 'VIS-SEED-02'
   AND NOT EXISTS (SELECT 1 FROM (SELECT visit_id, covering_doctor_id FROM doctor_cover_grants) dcg WHERE dcg.visit_id = v.visit_id AND dcg.covering_doctor_id = sp.staff_id);
 
 INSERT IGNORE INTO point_transactions (profile_id, invoice_id, payment_id, transaction_type, points, balance_after, reason, created_at)
-SELECT p.profile_id, p.invoice_id, p.payment_id, 'EARN', 150, 270, 'Tích điểm từ thanh toán hóa đơn HD-SEED-01', NOW()
-FROM payments p WHERE p.payment_code = 'PT-SEED-01'
+SELECT p.profile_id, p.invoice_id, p.payment_id, 'EARN', 150, 270, 'Tích điểm từ thanh toán hóa đơn HD-SEED-001', NOW()
+FROM payments p WHERE p.payment_code = 'PT-SEED-001'
   AND NOT EXISTS (SELECT 1 FROM (SELECT payment_id FROM point_transactions) pt WHERE pt.payment_id = p.payment_id);
 
 INSERT IGNORE INTO refunds (refund_code, idempotency_key, invoice_id, profile_id, branch_id, amount, refund_method, reason, reduce_invoice_total, refunded_by, refunded_at)
 SELECT 'HT-SEED-001', 'IDEMP-HT-SEED-001', inv.invoice_id, inv.profile_id, inv.branch_id, 100000.00, 'CASH',
        'Hoàn tiền chênh lệch chi phí vật tư phụ', 0, inv.cashier_id, NOW()
-FROM invoices inv WHERE inv.invoice_code = 'HD-SEED-01';
+FROM invoices inv WHERE inv.invoice_code = 'HD-SEED-001';
 
 INSERT IGNORE INTO invoice_audit_logs (invoice_id, action_type, old_total_amount, new_total_amount, old_discount_amount, new_discount_amount, old_paid_amount, new_paid_amount, reason, details, performed_by, performed_at)
 SELECT inv.invoice_id, 'PAYMENT', 2500000.00, 2500000.00, 0.00, 0.00, 0.00, 1500000.00,
        'Ghi nhận thanh toán đợt 1', 'Thu qua chuyển khoản PT-SEED-001', inv.cashier_id, NOW()
-FROM invoices inv WHERE inv.invoice_code = 'HD-SEED-01'
+FROM invoices inv WHERE inv.invoice_code = 'HD-SEED-001'
   AND NOT EXISTS (SELECT 1 FROM (SELECT invoice_id, action_type FROM invoice_audit_logs) ial WHERE ial.invoice_id = inv.invoice_id AND ial.action_type = 'PAYMENT');
 
-INSERT IGNORE INTO salary_advance_allocations (advance_id, item_id, allocated_amount, status, created_at)
-SELECT sa.advance_id, pi.item_id, 500000.00, 'RESERVED', NOW()
+INSERT IGNORE INTO salary_advance_allocations (advance_id, item_id, allocated_amount, status, created_at, updated_at)
+SELECT sa.advance_id, pi.item_id, 500000.00, 'RESERVED', NOW(), NOW()
 FROM salary_advances sa
 JOIN payroll_items pi ON pi.period_month = MONTH(CURDATE()) AND pi.period_year = YEAR(CURDATE())
 WHERE sa.advance_code = 'TU-SEED-001'
