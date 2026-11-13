@@ -33,8 +33,27 @@ public class DoctorRecordPageController {
     private final PatientOverviewService overviewService;
     @Autowired(required = false)
     private ClinicalPhotoService clinicalPhotoService;
+<<<<<<< Updated upstream
+=======
     @Autowired(required = false)
     private com.cvdcms.repository.UserRepository userRepository;
+    @Autowired(required = false)
+    private com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+    @Autowired(required = false)
+    private com.cvdcms.security.UrlIdCodec urlIdCodec = new com.cvdcms.security.UrlIdCodec();
+
+    private Long decodePatientRef(String patientRef) {
+        return urlIdCodec.decodePatientOrThrow(patientRef);
+    }
+
+    private Long decodeVisitRef(String visitRef) {
+        return urlIdCodec.decodeVisitOrThrow(visitRef);
+    }
+
+    private String encodePatient(Long id) {
+        return urlIdCodec.encodePatient(id);
+    }
+>>>>>>> Stashed changes
 
     public DoctorRecordPageController(DoctorRecordService records,
                                       com.cvdcms.repository.InvoiceRepository invoiceRepository,
@@ -94,11 +113,13 @@ public class DoctorRecordPageController {
         return "patient-records/list";
     }
 
-    @GetMapping("/{id}")
-    public String detail(HttpSession session, Model model, @PathVariable Long id,
+    @GetMapping("/{patientRef}")
+    public String detail(HttpSession session, Model model, @PathVariable String patientRef,
                          @RequestParam(required = false) String tab) {
+        Long id = decodePatientRef(patientRef);
         PatientView patient = records.get(session, id);
         model.addAttribute("patient", patient);
+        model.addAttribute("patientRouteId", encodePatient(id));
 
         List<VisitView> visitList = records.visits(session, id);
         model.addAttribute("visits", visitList);
@@ -137,49 +158,8 @@ public class DoctorRecordPageController {
         model.addAttribute("treatmentTimeline", records.treatmentTimeline(session, id));
         model.addAttribute("auditLogs", records.auditLogs(session, id));
 
-        // Permissions & Billing access check
-        boolean admin = records.isAdmin(session);
-        boolean isDoctor = records.isDoctor(session);
-        Long currentUserId = records.extractUserId(session);
-        boolean isAccountantOrCashier = false;
-        Object principal = session == null ? null : session.getAttribute("loggedInUser");
-        if (principal instanceof com.cvdcms.entity.User u && u.getRoles() != null) {
-            isAccountantOrCashier = u.getRoles().stream().anyMatch(r ->
-                    "KE_TOAN".equalsIgnoreCase(r.getRoleName()) || "ROLE_KE_TOAN".equalsIgnoreCase(r.getRoleName()) ||
-                    "THU_NGAN".equalsIgnoreCase(r.getRoleName()) || "ROLE_THU_NGAN".equalsIgnoreCase(r.getRoleName()) ||
-                    "ADMIN".equalsIgnoreCase(r.getRoleName()) || "ROLE_ADMIN".equalsIgnoreCase(r.getRoleName()));
-        }
-        boolean hasFinancePerm = false;
-        if (userRepository != null && currentUserId != null) {
-            hasFinancePerm = userRepository.hasActiveFinanceRole(currentUserId)
-                    || userRepository.hasActivePermission(currentUserId, "INVOICE_VIEW")
-                    || userRepository.hasActivePermission(currentUserId, "INVOICE_CREATE")
-                    || userRepository.hasActivePermission(currentUserId, "PAYMENT_COLLECT")
-                    || userRepository.hasActivePermission(currentUserId, "FINANCE_DASHBOARD")
-                    || userRepository.hasActivePermission(currentUserId, "FINANCE_DEBT");
-        }
-        boolean canViewBilling = admin || isAccountantOrCashier || hasFinancePerm;
-        boolean canManageBilling = admin || isAccountantOrCashier;
-        model.addAttribute("canManageBilling", canManageBilling);
-        model.addAttribute("canViewBilling", canViewBilling);
-        model.addAttribute("canPerformClinical", isDoctor);
-
         // Invoices and financial summary
-        List<Invoice> invoiceList = List.of();
-        if (canViewBilling) {
-            invoiceList = invoiceRepository.findByPatientProfile_ProfileIdOrderByIssuedAtDesc(id);
-            if (!admin) {
-                java.util.Set<Long> allowedBranches = records.allowedBranches(session).stream()
-                        .map(com.cvdcms.entity.Branch::getBranchId)
-                        .filter(java.util.Objects::nonNull)
-                        .collect(java.util.stream.Collectors.toSet());
-                if (!allowedBranches.isEmpty()) {
-                    invoiceList = invoiceList.stream()
-                            .filter(inv -> inv.getBranch() != null && allowedBranches.contains(inv.getBranch().getBranchId()))
-                            .toList();
-                }
-            }
-        }
+        List<Invoice> invoiceList = invoiceRepository.findByPatientProfile_ProfileIdOrderByIssuedAtDesc(id);
         model.addAttribute("invoices", invoiceList);
 
         BigDecimal totalIncurred = BigDecimal.ZERO;
@@ -197,6 +177,7 @@ public class DoctorRecordPageController {
         model.addAttribute("totalDebt", totalDebt);
 
         // Bổ sung dữ liệu hợp nhất từ PatientOverviewService
+        Long currentUserId = records.extractUserId(session);
         model.addAttribute("appointments", overviewService.getPatientAppointments(id));
         model.addAttribute("careData", overviewService.getPatientCareHistory(id, patient.branchId(), currentUserId));
         model.addAttribute("prescriptions", overviewService.getPatientPrescriptions(id));
@@ -205,56 +186,72 @@ public class DoctorRecordPageController {
         model.addAttribute("diagnoses", overviewService.getPatientDiagnoses(id));
         model.addAttribute("treatmentPlans", overviewService.getPatientTreatmentPlans(id));
 
+        // Permissions
+        boolean admin = records.isAdmin(session);
+        boolean isDoctor = records.isDoctor(session);
+        model.addAttribute("canManageBilling", admin);
+        model.addAttribute("canPerformClinical", isDoctor);
         model.addAttribute("currentTab", tab != null ? tab : "info");
         shared(model, session);
         return "patient-records/detail";
     }
 
-    @PostMapping("/{id}/health-notes")
-    public String updateHealthNotes(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/health-notes")
+    public String updateHealthNotes(HttpSession session, @PathVariable String patientRef,
                                     @RequestParam(required = false) String allergyDetails,
                                     @RequestParam(required = false) String underlyingDiseaseDetails,
                                     RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         try {
             records.updateHealthNotes(session, id, allergyDetails, underlyingDiseaseDetails);
             redirect.addFlashAttribute("documentSuccess", "Đã cập nhật thông tin dị ứng và bệnh nền thành công.");
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Không thể cập nhật: " + ex.getMessage());
         }
-        return "redirect:/doctor/patient-records/" + id;
+        return "redirect:/doctor/patient-records/" + routeRef;
     }
 
-    @PostMapping("/{id}/change-code")
-    public String changeCode(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/change-code")
+    public String changeCode(HttpSession session, @PathVariable String patientRef,
                              @RequestParam String newCode,
                              RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         try {
             records.updatePatientCode(session, id, newCode);
             redirect.addFlashAttribute("documentSuccess", "Đã đổi mã bệnh nhân thành công.");
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Không thể đổi mã: " + ex.getMessage());
         }
-        return "redirect:/doctor/patient-records/" + id;
+        return "redirect:/doctor/patient-records/" + routeRef;
     }
 
-    @PostMapping("/{id}/merge")
-    public String mergeRecords(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/merge")
+    public String mergeRecords(HttpSession session, @PathVariable String patientRef,
                                @RequestParam(required = false) String targetCode,
                                RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        records.get(session, id);
+        String routeRef = encodePatient(id);
         redirect.addFlashAttribute("documentSuccess", "Đã ghi nhận yêu cầu gộp hồ sơ.");
-        return "redirect:/doctor/patient-records/" + id;
+        return "redirect:/doctor/patient-records/" + routeRef;
     }
 
-    @GetMapping("/{id}/edit")
-    public String edit(@PathVariable Long id) {
+    @GetMapping("/{patientRef}/edit")
+    public String edit(HttpSession session, @PathVariable String patientRef) {
+        Long id = decodePatientRef(patientRef);
+        records.get(session, id);
         return "redirect:/reception/patients/" + id + "/edit";
     }
 
-    @PostMapping("/{id}/documents")
-    public String uploadDocument(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/documents")
+    public String uploadDocument(HttpSession session, @PathVariable String patientRef,
                                  @RequestParam DocumentType documentType,
                                  @RequestParam("file") MultipartFile file,
                                  RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         try {
             records.uploadDocument(session, id, documentType, file);
             redirect.addFlashAttribute("documentSuccess", "Đã tải lên bản scan giấy tờ thành công.");
@@ -263,44 +260,54 @@ public class DoctorRecordPageController {
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Không thể tải lên giấy tờ: " + ex.getMessage());
         }
-        return "redirect:/doctor/patient-records/" + id + "#info";
+        return "redirect:/doctor/patient-records/" + routeRef + "#info";
     }
 
-    @PostMapping("/{id}/documents/{documentId}/type")
-    public String updateDocumentType(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/documents/{documentId}/type")
+    public String updateDocumentType(HttpSession session, @PathVariable String patientRef,
                                      @PathVariable Long documentId,
                                      @RequestParam DocumentType newType,
                                      RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         try {
             records.updateDocumentType(session, id, documentId, newType);
             redirect.addFlashAttribute("documentSuccess", "Đã cập nhật loại giấy tờ.");
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Lỗi: " + ex.getMessage());
         }
-        return "redirect:/doctor/patient-records/" + id;
+        return "redirect:/doctor/patient-records/" + routeRef;
     }
 
-    @PostMapping("/{id}/documents/{documentId}/delete")
-    public String deleteDocument(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/documents/{documentId}/delete")
+    public String deleteDocument(HttpSession session, @PathVariable String patientRef,
                                  @PathVariable Long documentId,
                                  RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         try {
             records.deleteDocument(session, id, documentId);
             redirect.addFlashAttribute("documentSuccess", "Đã xóa bản scan giấy tờ.");
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Lỗi: " + ex.getMessage());
         }
-        return "redirect:/doctor/patient-records/" + id;
+        return "redirect:/doctor/patient-records/" + routeRef;
     }
 
-    @PostMapping("/{id}/photos")
-    public String uploadPhoto(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/photos")
+    public String uploadPhoto(HttpSession session, @PathVariable String patientRef,
                               @RequestParam(required = false) Long visitId,
                               @RequestParam(defaultValue = "BEFORE") String stage,
                               @RequestParam(defaultValue = "INTRAORAL") String category,
                               @RequestParam(required = false) String caption,
                               @RequestParam("file") MultipartFile file,
                               RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        records.get(session, id);
+        if (visitId != null && doctorVisitAccess != null) {
+            doctorVisitAccess.requireVisitRead(session, visitId);
+        }
+        String routeRef = encodePatient(id);
         try {
             if (clinicalPhotoService != null && !file.isEmpty()) {
                 PhotoStage pStage = PhotoStage.valueOf(stage.toUpperCase());
@@ -311,47 +318,59 @@ public class DoctorRecordPageController {
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Không thể tải ảnh: " + ex.getMessage());
         }
-        return "redirect:/doctor/patient-records/" + id + "#photos";
+        return "redirect:/doctor/patient-records/" + routeRef + "#photos";
     }
 
-    @PostMapping("/{id}/photos/{photoId}/edit")
-    public String editPhoto(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/photos/{photoId}/edit")
+    public String editPhoto(HttpSession session, @PathVariable String patientRef,
                             @PathVariable Long photoId,
                             @RequestParam(required = false) String caption,
                             @RequestParam(required = false) String stage,
                             @RequestParam(required = false) String category,
                             RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         try {
-            records.updatePhoto(session, photoId, caption, stage, category);
+            records.updatePhotoForPatient(session, id, photoId, caption, stage, category);
             redirect.addFlashAttribute("documentSuccess", "Đã cập nhật thông tin ảnh lâm sàng.");
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Lỗi: " + ex.getMessage());
         }
-        return "redirect:/doctor/patient-records/" + id + "#photos";
+        return "redirect:/doctor/patient-records/" + routeRef + "#photos";
     }
 
-    @PostMapping("/{id}/photos/{photoId}/delete")
-    public String deletePhoto(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/photos/{photoId}/delete")
+    public String deletePhoto(HttpSession session, @PathVariable String patientRef,
                               @PathVariable Long photoId,
                               RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         try {
-            records.deletePhoto(session, photoId);
+            records.deletePhotoForPatient(session, id, photoId);
             redirect.addFlashAttribute("documentSuccess", "Đã xóa ảnh lâm sàng thành công.");
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Lỗi: " + ex.getMessage());
         }
-        return "redirect:/doctor/patient-records/" + id + "#photos";
+        return "redirect:/doctor/patient-records/" + routeRef + "#photos";
     }
 
-    @GetMapping("/{id}/visits/{visitId}")
-    public String visit(HttpSession session, Model model, @PathVariable Long id,
-            @PathVariable Long visitId) {
-        return "redirect:/doctor/examination/" + visitId + "/diagnoses?readOnly=true&fromPatientId=" + id;
+    @GetMapping("/{patientRef}/visits/{visitRef}")
+    public String visit(HttpSession session, Model model, @PathVariable String patientRef,
+            @PathVariable String visitRef) {
+        Long id = decodePatientRef(patientRef);
+        Long visitId = decodeVisitRef(visitRef);
+        records.visit(session, id, visitId);
+        if (doctorVisitAccess != null) {
+            doctorVisitAccess.requireVisitRead(session, visitId);
+        }
+        return "redirect:/doctor/examination/" + urlIdCodec.encodeVisit(visitId)
+                + "/diagnoses?readOnly=true&fromPatientRef=" + encodePatient(id);
     }
 
-    @GetMapping("/{id}/documents/{documentId}")
-    public ResponseEntity<Resource> downloadDocument(HttpSession session, @PathVariable Long id,
+    @GetMapping("/{patientRef}/documents/{documentId}")
+    public ResponseEntity<Resource> downloadDocument(HttpSession session, @PathVariable String patientRef,
             @PathVariable Long documentId) {
+        Long id = decodePatientRef(patientRef);
         var file = records.downloadDocument(session, id, documentId);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(file.contentType()))

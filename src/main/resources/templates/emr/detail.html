@@ -27,7 +27,7 @@
                             <li class="breadcrumb-item"><a th:href="@{/doctor/patient-records}"
                                     class="text-decoration-none text-muted">Hồ sơ bệnh án</a></li>
                             <li class="breadcrumb-item"><a
-                                    th:href="${detail.record.patientId != null ? '/doctor/patient-records/' + detail.record.patientId : '/doctor/patient-records'}"
+                                    th:href="${detail.record.patientId != null ? '/doctor/patient-records/' + idCodec.encodePatient(detail.record.patientId) : '/doctor/patient-records'}"
                                     class="text-decoration-none text-muted"
                                     th:text="${@emrViewText.effective(cover, 'fullName', @emrViewText.effective(dental, 'fullName', patient['fullName']))}">Vũ
                                     Phương Anh</a></li>
@@ -40,7 +40,7 @@
                     <section class="emr-sub-header">
                         <div class="emr-sub-header__left">
                             <a class="btn btn-sm btn-outline-secondary rounded-circle p-2 d-inline-flex align-items-center justify-content-center"
-                                th:href="${detail.record.patientId != null ? '/doctor/patient-records/' + detail.record.patientId + '#medical' : '/doctor/patient-records'}"
+                                th:href="${detail.record.patientId != null ? '/doctor/patient-records/' + idCodec.encodePatient(detail.record.patientId) + '#medical' : '/doctor/patient-records'}"
                                 title="Quay lại hồ sơ bệnh nhân" style="width: 36px; height: 36px;">
                                 <i class="bi bi-arrow-left"></i>
                             </a>

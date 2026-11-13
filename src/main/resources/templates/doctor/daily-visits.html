@@ -1685,7 +1685,7 @@
             return true;
         }
 
-        function handleVisitRowDblClick(event, visitId, visitBranchId, visitBranchName, visitDoctorId) {
+        function handleVisitRowDblClick(event, visitRef, visitBranchId, visitBranchName, visitDoctorId) {
             if (isDoctorRestricted && doctorAssignedBranchId && visitBranchId && visitBranchId != doctorAssignedBranchId) {
                 if (event) {
                     event.preventDefault();
@@ -1702,7 +1702,8 @@
                 alert('⚠️ Ca khám này được phân công cho Bác sĩ khác. Bạn chỉ có quyền thao tác trên ca khám của chính mình!');
                 return false;
             }
-            window.location.href = `/doctor/examination/${visitId}/diagnoses`;
+            if (!visitRef) return false;
+            window.location.href = `/doctor/examination/${visitRef}/diagnoses`;
         }
 
         const COLUMNS_STORAGE_KEY = 'cvdcms_daily_visits_columns_v11';
@@ -2486,9 +2487,9 @@
                 const targetBranchName = escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác');
                 const isOtherDoctor = Boolean(isDoctorAccount && currentDoctorStaffId && v.doctorId && v.doctorId != currentDoctorStaffId);
                 const patientProfileUrl = v.profileId
-                    ? ((isDoctorAccount ? `/doctor/patient-records/${v.profileId}` : `/reception/patients/${v.profileId}`) + '?from=daily-visits')
+                    ? ((isDoctorAccount ? `/doctor/patient-records/${v.patientToken || v.profileId}` : `/reception/patients/${v.profileId}`) + '?from=daily-visits')
                     : '#';
-                tbodyHtml += `<tr class="dv-data-row" ondblclick="handleVisitRowDblClick(event, ${v.visitId}, ${v.branchId || 'null'}, '${targetBranchName}', ${v.doctorId || 'null'})">`;
+                tbodyHtml += `<tr class="dv-data-row" ondblclick="handleVisitRowDblClick(event, '${v.visitToken || ''}', ${v.branchId || 'null'}, '${targetBranchName}', ${v.doctorId || 'null'})">`;
 
                 orderedCols.forEach(col => {
                     const meta = colStickyMeta[col.id] || { type: 'normal' };
@@ -2524,12 +2525,12 @@
                 } else {
                     floatingActionsHtml = `
                         <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
-                            <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-equal-btn-primary" title="Mở bệnh án vào khám ngay"
+                            <a href="/doctor/examination/${v.visitToken}/diagnoses" class="dv-equal-btn-primary" title="Mở bệnh án vào khám ngay"
                                onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${targetBranchName}', ${v.doctorId || 'null'})">
                                 <i class="bi bi-heart-pulse-fill"></i>
                                 <span>Vào khám ngay</span>
                             </a>
-                            <a href="/doctor/examination/${v.visitId}/diagnoses#tab-treatment-plan" class="dv-equal-btn-secondary" title="Lập Kế hoạch & Lộ trình điều trị"
+                            <a href="/doctor/examination/${v.visitToken}/diagnoses#tab-treatment-plan" class="dv-equal-btn-secondary" title="Lập Kế hoạch & Lộ trình điều trị"
                                onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${targetBranchName}', ${v.doctorId || 'null'})">
                                 <i class="bi bi-diagram-3-fill text-primary"></i>
                                 <span>Lập phác đồ</span>
@@ -2628,7 +2629,7 @@
                     return `
                     <div class="d-flex align-items-center gap-3" style="white-space: nowrap; padding-right: 12px;">
                         <div class="dv-patient-avatar" style="width: 40px; height: 40px; min-width: 40px; font-size: 16px; border-radius: 11px;">${escapeHtml(firstLetter)}</div>
-                        <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-patient-name" style="font-size: 15.5px; font-weight: 800; white-space: nowrap;"
+                        <a href="/doctor/examination/${v.visitToken}/diagnoses" class="dv-patient-name" style="font-size: 15.5px; font-weight: 800; white-space: nowrap;"
                            onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">${escapeHtml(v.fullName)}</a>
                         <span class="dv-code-pill" style="font-size: 12.5px; padding: 4px 10px;">${escapeHtml(v.patientCode)}</span>
                         ${genderHtml}
@@ -2639,7 +2640,7 @@
                 case 'actions':
                     const isOther = Boolean(isDoctorAccount && currentDoctorStaffId && v.doctorId && v.doctorId != currentDoctorStaffId);
                     const cellProfileUrl = v.profileId
-                        ? ((isDoctorAccount ? `/doctor/patient-records/${v.profileId}` : `/reception/patients/${v.profileId}`) + '?from=daily-visits')
+                        ? ((isDoctorAccount ? `/doctor/patient-records/${v.patientToken || v.profileId}` : `/reception/patients/${v.profileId}`) + '?from=daily-visits')
                         : '#';
                     if (isOther) {
                         return `
@@ -2655,12 +2656,12 @@
                     }
                     return `
                     <div class="dv-actions-cell-always" onclick="event.stopPropagation()">
-                        <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-equal-btn-primary" title="Mở bệnh án vào khám ngay"
+                        <a href="/doctor/examination/${v.visitToken}/diagnoses" class="dv-equal-btn-primary" title="Mở bệnh án vào khám ngay"
                            onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">
                             <i class="bi bi-heart-pulse-fill"></i>
                             <span>Vào khám ngay</span>
                         </a>
-                        <a href="/doctor/examination/${v.visitId}/diagnoses#tab-treatment-plan" class="dv-equal-btn-secondary" title="Lập Kế hoạch & Lộ trình điều trị"
+                        <a href="/doctor/examination/${v.visitToken}/diagnoses#tab-treatment-plan" class="dv-equal-btn-secondary" title="Lập Kế hoạch & Lộ trình điều trị"
                            onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">
                             <i class="bi bi-diagram-3-fill text-primary"></i>
                             <span>Lập phác đồ</span>
@@ -2747,11 +2748,11 @@
                 const firstLetter = v.fullName ? v.fullName.trim().charAt(0).toUpperCase() : 'B';
                 const isOtherCard = Boolean(isDoctorAccount && currentDoctorStaffId && v.doctorId && v.doctorId != currentDoctorStaffId);
                 const cardProfileUrl = v.profileId
-                    ? ((isDoctorAccount ? `/doctor/patient-records/${v.profileId}` : `/reception/patients/${v.profileId}`) + '?from=daily-visits')
+                    ? ((isDoctorAccount ? `/doctor/patient-records/${v.patientToken || v.profileId}` : `/reception/patients/${v.profileId}`) + '?from=daily-visits')
                     : '#';
                 const actionBtnHtml = isOtherCard
                     ? `<span class="badge bg-secondary-subtle text-secondary py-2 px-3 fw-bold border" style="font-size: 12px;"><i class="bi bi-lock-fill me-1"></i>BS khác phụ trách</span>`
-                    : `<a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-hover-btn-primary"
+                    : `<a href="/doctor/examination/${v.visitToken}/diagnoses" class="dv-hover-btn-primary"
                           onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">
                            <i class="bi bi-heart-pulse-fill"></i> Vào khám ngay
                        </a>`;
@@ -2762,7 +2763,7 @@
                             <div class="d-flex align-items-center gap-3">
                                 <div class="dv-patient-avatar">${escapeHtml(firstLetter)}</div>
                                 <div>
-                                    <a href="/doctor/examination/${v.visitId}/diagnoses" class="dv-patient-name d-block"
+                                    <a href="/doctor/examination/${v.visitToken}/diagnoses" class="dv-patient-name d-block"
                                        onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">${escapeHtml(v.fullName)}</a>
                                     <div class="mt-1 d-flex align-items-center gap-2">
                                         <span class="dv-code-pill">${escapeHtml(v.patientCode)}</span>
