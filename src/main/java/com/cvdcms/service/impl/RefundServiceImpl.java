@@ -266,18 +266,19 @@ public class RefundServiceImpl implements RefundService {
                     invoice.setPaymentStatus(InvoicePaymentStatus.PAID);
                 }
 
-                // Cập nhật từng dòng chi tiết theo LIFO cho trường hợp hoàn tiền đơn thuần
+                // Cập nhật từng dòng chi tiết khi hoàn tiền kèm giảm tổng hóa đơn: Giảm nghĩa vụ tương ứng để không tạo nợ giả
                 if (invoiceItemRepository != null) {
                     List<InvoiceItem> items = invoiceItemRepository.findByInvoice_InvoiceIdOrderByLineOrderAscItemIdAsc(invoice.getInvoiceId());
                     BigDecimal unrefunded = request.getAmount();
 
-                    // Hoàn phụ thu trước nếu có
+                    // Hoàn phụ thu trước nếu có (giảm luôn giá trị phụ thu)
                     if (invoice.getSurchargePaidAmount() != null && invoice.getSurchargePaidAmount().compareTo(BigDecimal.ZERO) > 0) {
                         BigDecimal surchPaid = invoice.getSurchargePaidAmount();
                         BigDecimal surchRoll = unrefunded.min(surchPaid);
-                        invoice.setSurchargePaidAmount(surchPaid.subtract(surchRoll));
-                        BigDecimal surchDebt = invoice.getSurchargeRemainingDebt() != null ? invoice.getSurchargeRemainingDebt() : BigDecimal.ZERO;
-                        invoice.setSurchargeRemainingDebt(surchDebt.add(surchRoll));
+                        BigDecimal currentSurcharge = invoice.getSurchargeAmount() != null ? invoice.getSurchargeAmount() : BigDecimal.ZERO;
+                        invoice.setSurchargeAmount(currentSurcharge.subtract(surchRoll).max(BigDecimal.ZERO));
+                        invoice.setSurchargePaidAmount(surchPaid.subtract(surchRoll).max(BigDecimal.ZERO));
+                        invoice.setSurchargeRemainingDebt(invoice.getSurchargeAmount().subtract(invoice.getSurchargePaidAmount()).max(BigDecimal.ZERO));
                         unrefunded = unrefunded.subtract(surchRoll);
                     }
 
@@ -287,9 +288,14 @@ public class RefundServiceImpl implements RefundService {
                             BigDecimal itPaid = it.getPaidAmount() != null ? it.getPaidAmount() : BigDecimal.ZERO;
                             if (itPaid.compareTo(BigDecimal.ZERO) > 0) {
                                 BigDecimal itRollback = unrefunded.min(itPaid);
-                                BigDecimal newItPaid = itPaid.subtract(itRollback);
                                 BigDecimal payable = it.getPayableAmount() != null ? it.getPayableAmount() : (it.getFinalAmount() != null ? it.getFinalAmount() : BigDecimal.ZERO);
-                                BigDecimal newItDebt = payable.subtract(newItPaid).max(BigDecimal.ZERO);
+                                BigDecimal newPayable = payable.subtract(itRollback).max(BigDecimal.ZERO);
+                                it.setPayableAmount(newPayable);
+                                BigDecimal currentDiscount = it.getDiscountAmount() != null ? it.getDiscountAmount() : BigDecimal.ZERO;
+                                it.setDiscountAmount(currentDiscount.add(itRollback));
+
+                                BigDecimal newItPaid = itPaid.subtract(itRollback).max(BigDecimal.ZERO);
+                                BigDecimal newItDebt = newPayable.subtract(newItPaid).max(BigDecimal.ZERO);
                                 it.setPaidAmount(newItPaid);
                                 it.setRemainingDebt(newItDebt);
                                 it.setPaymentStatus(newItDebt.compareTo(BigDecimal.ZERO) == 0 ? com.cvdcms.entity.enums.InvoiceItemPaymentStatus.PAID : (newItPaid.compareTo(BigDecimal.ZERO) > 0 ? com.cvdcms.entity.enums.InvoiceItemPaymentStatus.PARTIAL : com.cvdcms.entity.enums.InvoiceItemPaymentStatus.UNPAID));

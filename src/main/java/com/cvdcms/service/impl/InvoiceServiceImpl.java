@@ -820,21 +820,76 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setAdjustmentReason(request.getReason().trim());
         invoice.setAdjustedBy(staff);
 
+        // Đồng bộ công nợ, phân bổ lại giảm giá và số tiền đã trả cho từng dòng chi tiết
+        List<InvoiceItem> items = invoiceItemRepository.findByInvoice_InvoiceIdOrderByLineOrderAscItemIdAsc(invoice.getInvoiceId());
+        if (items != null && !items.isEmpty()) {
+            BigDecimal totalDiscount = (invoice.getDiscountAmount() != null ? invoice.getDiscountAmount() : BigDecimal.ZERO)
+                    .add(invoice.getPromotionDiscount() != null ? invoice.getPromotionDiscount() : BigDecimal.ZERO)
+                    .add(invoice.getPointDiscount() != null ? invoice.getPointDiscount() : BigDecimal.ZERO);
+
+            List<InvoiceItem> services = items.stream()
+                    .filter(it -> it.getItemType() == InvoiceItemType.SERVICE)
+                    .toList();
+            BigDecimal totalServiceAmount = services.stream()
+                    .map(it -> it.getFinalAmount() != null ? it.getFinalAmount() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal allocatedDiscountSum = BigDecimal.ZERO;
+            for (int i = 0; i < services.size(); i++) {
+                InvoiceItem it = services.get(i);
+                BigDecimal lineAmount = it.getFinalAmount() != null ? it.getFinalAmount() : BigDecimal.ZERO;
+                BigDecimal itDiscount = BigDecimal.ZERO;
+                if (totalServiceAmount.compareTo(BigDecimal.ZERO) > 0 && totalDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                    if (i == services.size() - 1) {
+                        itDiscount = totalDiscount.subtract(allocatedDiscountSum);
+                    } else {
+                        itDiscount = totalDiscount.multiply(lineAmount).divide(totalServiceAmount, 2, RoundingMode.HALF_UP);
+                        allocatedDiscountSum = allocatedDiscountSum.add(itDiscount);
+                    }
+                }
+                if (itDiscount.compareTo(lineAmount) > 0) {
+                    itDiscount = lineAmount;
+                }
+                it.setDiscountAmount(itDiscount);
+                BigDecimal payable = lineAmount.subtract(itDiscount);
+                it.setPayableAmount(payable);
+            }
+
+            for (InvoiceItem it : items) {
+                if (it.getItemType() == InvoiceItemType.MEDICINE) {
+                    it.setDiscountAmount(BigDecimal.ZERO);
+                    BigDecimal payable = it.getFinalAmount() != null ? it.getFinalAmount() : BigDecimal.ZERO;
+                    it.setPayableAmount(payable);
+                }
+            }
+
+            BigDecimal unallocatedPaid = oldPaid != null ? oldPaid : BigDecimal.ZERO;
+            for (InvoiceItem it : items) {
+                BigDecimal payable = it.getPayableAmount() != null ? it.getPayableAmount() : BigDecimal.ZERO;
+                BigDecimal itAlloc = unallocatedPaid.min(payable);
+                it.setPaidAmount(itAlloc);
+                BigDecimal itDebt = payable.subtract(itAlloc).max(BigDecimal.ZERO);
+                it.setRemainingDebt(itDebt);
+                it.setPaymentStatus(itDebt.compareTo(BigDecimal.ZERO) == 0 ? InvoiceItemPaymentStatus.PAID
+                        : (itAlloc.compareTo(BigDecimal.ZERO) > 0 ? InvoiceItemPaymentStatus.PARTIAL : InvoiceItemPaymentStatus.UNPAID));
+                invoiceItemRepository.save(it);
+                unallocatedPaid = unallocatedPaid.subtract(itAlloc);
+            }
+
+            BigDecimal surchAmount = invoice.getSurchargeAmount() != null ? invoice.getSurchargeAmount() : BigDecimal.ZERO;
+            BigDecimal surchPaid = unallocatedPaid.min(surchAmount);
+            invoice.setSurchargePaidAmount(surchPaid);
+            invoice.setSurchargeRemainingDebt(surchAmount.subtract(surchPaid).max(BigDecimal.ZERO));
+        } else {
+            BigDecimal surchAmount = invoice.getSurchargeAmount() != null ? invoice.getSurchargeAmount() : BigDecimal.ZERO;
+            BigDecimal surchPaid = oldPaid != null ? oldPaid.min(surchAmount) : BigDecimal.ZERO;
+            invoice.setSurchargePaidAmount(surchPaid);
+            invoice.setSurchargeRemainingDebt(surchAmount.subtract(surchPaid).max(BigDecimal.ZERO));
+        }
+
         if (debt.signum() == 0) {
             invoice.setRemainingDebt(BigDecimal.ZERO);
             invoice.setPaymentStatus(InvoicePaymentStatus.PAID);
-            if (invoice.getSurchargeAmount() != null) {
-                invoice.setSurchargePaidAmount(invoice.getSurchargeAmount());
-                invoice.setSurchargeRemainingDebt(BigDecimal.ZERO);
-            }
-            List<InvoiceItem> items = invoiceItemRepository.findByInvoice_InvoiceIdOrderByLineOrderAscItemIdAsc(invoice.getInvoiceId());
-            if (items != null) {
-                for (InvoiceItem it : items) {
-                    it.setRemainingDebt(BigDecimal.ZERO);
-                    it.setPaymentStatus(InvoiceItemPaymentStatus.PAID);
-                    invoiceItemRepository.save(it);
-                }
-            }
         }
 
         Invoice saved = invoiceRepository.save(invoice);
@@ -1100,6 +1155,23 @@ public class InvoiceServiceImpl implements InvoiceService {
                 voucher.setStatus(VoucherStatus.USED);
                 voucher.setUsedAt(LocalDateTime.now());
                 patientVoucherRepository.save(voucher);
+
+                if (voucher.getPromotion() != null) {
+                    Long promoId = voucher.getPromotion().getPromotionId();
+                    Promotion promo = promotionRepository.findByIdForUpdate(promoId)
+                            .orElse(voucher.getPromotion());
+                    if (promo.getUsageLimit() != null && promo.getUsedCount() != null && promo.getUsedCount() >= promo.getUsageLimit()) {
+                        throw new IllegalStateException("Chương trình khuyến mãi '" + promo.getPromoName() + "' đã đạt giới hạn số lượt sử dụng tối đa.");
+                    }
+                    promo.setUsedCount((promo.getUsedCount() != null ? promo.getUsedCount() : 0) + 1);
+                    promotionRepository.save(promo);
+                }
+
+                InvoiceAuditLog voucherLog = new InvoiceAuditLog();
+                voucherLog.setInvoice(invoice);
+                voucherLog.setActionType("VOUCHER_APPLIED");
+                voucherLog.setReason("Chốt sử dụng voucher " + voucher.getVoucherCode() + " của chương trình " + (voucher.getPromotion() != null ? voucher.getPromotion().getPromoName() : ""));
+                invoiceAuditLogRepository.save(voucherLog);
             }
         }
 
@@ -1139,22 +1211,24 @@ public class InvoiceServiceImpl implements InvoiceService {
                     pointsToDeduct = invoice.getPointDiscount().divide(pointVal, 0, RoundingMode.HALF_UP).intValue();
                 }
                 if (pointsToDeduct > 0) {
-                    Optional<PatientLoyaltyWallet> walletOpt = patientLoyaltyWalletRepository.findByProfileIdForUpdate(patient.getProfileId());
-                    walletOpt.ifPresent(wallet -> {
-                        int current = wallet.getCurrentPoints() != null ? wallet.getCurrentPoints() : 0;
-                        int newBalance = Math.max(0, current - pointsToDeduct);
-                        wallet.setCurrentPoints(newBalance);
-                        patientLoyaltyWalletRepository.save(wallet);
+                    PatientLoyaltyWallet wallet = patientLoyaltyWalletRepository.findByProfileIdForUpdate(patient.getProfileId())
+                            .orElseThrow(() -> new IllegalStateException("Không tìm thấy ví điểm tích lũy của khách hàng ID: " + patient.getProfileId()));
+                    int current = wallet.getCurrentPoints() != null ? wallet.getCurrentPoints() : 0;
+                    if (current < pointsToDeduct) {
+                        throw new IllegalStateException("Số điểm trong ví (" + current + " điểm) không đủ để trừ " + pointsToDeduct + " điểm cho hóa đơn " + invoice.getInvoiceCode() + ".");
+                    }
+                    int newBalance = current - pointsToDeduct;
+                    wallet.setCurrentPoints(newBalance);
+                    patientLoyaltyWalletRepository.save(wallet);
 
-                        PointTransaction pt = new PointTransaction();
-                        pt.setPatientProfile(patient);
-                        pt.setInvoice(invoice);
-                        pt.setTransactionType(PointTransactionType.REDEEM);
-                        pt.setPoints(pointsToDeduct);
-                        pt.setBalanceAfter(newBalance);
-                        pt.setReason("Đổi " + pointsToDeduct + " điểm thanh toán hóa đơn " + invoice.getInvoiceCode());
-                        pointTransactionRepository.save(pt);
-                    });
+                    PointTransaction pt = new PointTransaction();
+                    pt.setPatientProfile(patient);
+                    pt.setInvoice(invoice);
+                    pt.setTransactionType(PointTransactionType.REDEEM);
+                    pt.setPoints(pointsToDeduct);
+                    pt.setBalanceAfter(newBalance);
+                    pt.setReason("Đổi " + pointsToDeduct + " điểm thanh toán hóa đơn " + invoice.getInvoiceCode());
+                    pointTransactionRepository.save(pt);
                 }
             }
         }
