@@ -511,7 +511,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
 
         Map<String, Long> groupCounts = new LinkedHashMap<>();
         List<String> groups = List.of(
-                "ALL", "ACTIONABLE", "TODAY", "POST_TREATMENT", "APPOINTMENT_REMINDER",
+                "ALL", "ACTIONABLE", "TODAY", "OVERDUE", "POST_TREATMENT", "APPOINTMENT_REMINDER",
                 "INSTALLMENT_REMINDER", "NO_SHOW_RECALL", "NO_SERVICE_FOLLOWUP",
                 "FEEDBACK_COMPLAINT", "ESCALATED", "COMPLETED", "CANCELLED", "MY_TASKS"
         );
@@ -2003,9 +2003,18 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             case "TODAY" -> {
                 boolean active = task.getStatus() != CustomerCareTaskStatus.COMPLETED
                         && task.getStatus() != CustomerCareTaskStatus.CANCELLED;
-                boolean dueOrOverdue = task.getDueDate() != null && !task.getDueDate().isAfter(today);
-                boolean hasRetry = latest != null && latest.getNextRetryAt() != null;
-                yield active && (dueOrOverdue || hasRetry);
+                boolean dueTodayOrOverdue = task.getDueDate() == null || !task.getDueDate().isAfter(today);
+                boolean retryTodayOrOverdue = latest != null && latest.getNextRetryAt() != null
+                        && !latest.getNextRetryAt().toLocalDate().isAfter(today);
+                yield active && (dueTodayOrOverdue || retryTodayOrOverdue);
+            }
+            case "OVERDUE" -> {
+                boolean active = task.getStatus() != CustomerCareTaskStatus.COMPLETED
+                        && task.getStatus() != CustomerCareTaskStatus.CANCELLED;
+                boolean isOverdue = task.getDueDate() != null && task.getDueDate().isBefore(today);
+                boolean retryOverdue = latest != null && latest.getNextRetryAt() != null
+                        && latest.getNextRetryAt().toLocalDate().isBefore(today);
+                yield active && (isOverdue || retryOverdue);
             }
             case "POST_TREATMENT" -> "POST_TREATMENT_FOLLOWUP".equals(careGroup)
                     || "MEDICATION_REMINDER".equals(careGroup);
