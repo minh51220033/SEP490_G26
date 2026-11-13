@@ -9,6 +9,7 @@ import com.cvdcms.entity.User;
 import com.cvdcms.entity.enums.CustomerCareTaskStatus;
 import com.cvdcms.entity.enums.NotificationType;
 import com.cvdcms.event.CustomerCareDomainEvents.CustomerCareRealtimeBroadcastEvent;
+import com.cvdcms.repository.CustomerCareTaskRepository;
 import com.cvdcms.repository.SystemNotificationRepository;
 import com.cvdcms.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ import java.util.*;
 public class CustomerCareNotificationService {
 
     private final SystemNotificationRepository notificationRepository;
+    private final CustomerCareTaskRepository taskRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final SimpMessagingTemplate messagingTemplate;
@@ -227,7 +229,20 @@ public class CustomerCareNotificationService {
         long unreadCount = notificationRepository.countByUser_UserIdAndNotificationTypeAndIsReadFalse(
                 userId, NotificationType.CUSTOMER_CARE);
 
-        List<CustomerCareNotificationDTO> items = list.stream().map(this::toDTO).toList();
+        Set<Long> taskIds = new HashSet<>();
+        for (SystemNotification n : list) {
+            if (n.getTaskId() != null) {
+                taskIds.add(n.getTaskId());
+            }
+        }
+        Map<Long, CustomerCareTask> taskMap = new HashMap<>();
+        if (!taskIds.isEmpty()) {
+            taskRepository.findAllById(taskIds).forEach(t -> taskMap.put(t.getTaskId(), t));
+        }
+
+        List<CustomerCareNotificationDTO> items = list.stream()
+                .map(n -> toDTO(n, taskMap.get(n.getTaskId())))
+                .toList();
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("unreadCount", unreadCount);
         result.put("notifications", items);
@@ -243,7 +258,8 @@ public class CustomerCareNotificationService {
             notif.setReadAt(LocalDateTime.now());
             notificationRepository.save(notif);
         }
-        return toDTO(notif);
+        CustomerCareTask task = notif.getTaskId() != null ? taskRepository.findById(notif.getTaskId()).orElse(null) : null;
+        return toDTO(notif, task);
     }
 
     @Transactional
@@ -353,13 +369,28 @@ public class CustomerCareNotificationService {
         return savedUsers;
     }
 
-    private CustomerCareNotificationDTO toDTO(SystemNotification n) {
+    private CustomerCareNotificationDTO toDTO(SystemNotification n, CustomerCareTask task) {
+        String eventType = "TASK_UPDATED";
+        String t = n.getTitle() != null ? n.getTitle().toLowerCase() : "";
+        if (t.contains("mới")) eventType = "TASK_CREATED";
+        else if (t.contains("hỗ trợ") || t.contains("chuyển")) eventType = "ESCALATED";
+        else if (t.contains("quá hạn")) eventType = "OVERDUE";
+        else if (t.contains("hẹn gọi lại")) eventType = "CALLBACK_DUE";
+        else if (t.contains("mở lại")) eventType = "TASK_REOPENED";
+        else if (t.contains("hoàn thành")) eventType = "TASK_COMPLETED";
+
         return CustomerCareNotificationDTO.builder()
                 .notificationId(n.getNotificationId())
                 .title(n.getTitle())
                 .message(n.getMessage())
                 .notificationType(n.getNotificationType() != null ? n.getNotificationType().name() : "CUSTOMER_CARE")
                 .taskId(n.getTaskId())
+                .taskCode(task != null ? task.getTaskCode() : null)
+                .patientName(task != null && task.getPatientProfile() != null ? task.getPatientProfile().getFullName() : null)
+                .patientCode(task != null && task.getPatientProfile() != null ? task.getPatientProfile().getPatientCode() : null)
+                .dueDate(task != null && task.getDueDate() != null ? task.getDueDate().toString() : null)
+                .taskStatus(task != null && task.getStatus() != null ? task.getStatus().name() : null)
+                .eventType(eventType)
                 .branchId(n.getBranchId())
                 .isRead(Boolean.TRUE.equals(n.getIsRead()))
                 .createdAt(n.getCreatedAt())

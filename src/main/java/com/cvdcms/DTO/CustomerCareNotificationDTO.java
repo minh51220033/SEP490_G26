@@ -22,6 +22,12 @@ public class CustomerCareNotificationDTO {
     private String message;
     private String notificationType;
     private Long taskId;
+    private String taskCode;
+    private String patientName;
+    private String patientCode;
+    private String dueDate;
+    private String taskStatus;
+    private String eventType;
     private Long branchId;
     private Boolean isRead;
     private LocalDateTime createdAt;
