@@ -33,6 +33,8 @@ public class PortalAppointmentService {
     private final AppointmentPolicyService policy;
     private final AppointmentLifecycleService lifecycle;
     private final AppointmentSlotService slots;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher careEventPublisher;
 
     public PortalAppointmentService(PortalAccess access, PortalAppointmentRepository appointments,
             AppointmentHistoryRepository histories, BranchRepository branches,
@@ -167,6 +169,9 @@ public class PortalAppointmentService {
         bookingRequest.setAppointment(appointment);
         bookingRequests.save(bookingRequest);
         history(appointment, user.getUserId(), "CREATE", null, snapshot(appointment), null);
+        if (careEventPublisher != null && appointment.getAppointmentId() != null) {
+            careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentUpsertedCareEvent(appointment.getAppointmentId()));
+        }
         return view(appointment);
     }
 
