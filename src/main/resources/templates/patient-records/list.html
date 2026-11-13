@@ -579,7 +579,8 @@
                     .dv-patient-cell {
                         display: flex;
                         align-items: center;
-                        justify-content: center;
+                        justify-content: flex-start;
+                        text-align: left;
                         gap: 12px;
                     }
 
@@ -1103,8 +1104,8 @@
                                         <span class="dv-col-resizer"></span>
                                     </th>
                                     <!-- GHIM CỘT HỌ VÀ TÊN (STICKY LEFT) -->
-                                    <th class="text-center dv-col-pinned-left" data-col="fullName" style="min-width: 250px;">
-                                        <div class="dv-th-inner">
+                                    <th class="text-start dv-col-pinned-left" data-col="fullName" style="min-width: 250px;">
+                                        <div class="dv-th-inner justify-content-between">
                                             <span>Họ và tên bệnh nhân</span>
                                             <button type="button" class="dv-pin-btn is-pinned"
                                                 title="Bỏ ghim cột Họ tên" onclick="togglePinColumn('fullName')">
@@ -1190,7 +1191,7 @@
                                     </td>
 
                                     <!-- 3. HỌ VÀ TÊN (STICKY LEFT) -->
-                                    <td class="text-center dv-col-pinned-left" data-col="fullName">
+                                    <td class="text-start dv-col-pinned-left" data-col="fullName">
                                         <div class="dv-patient-cell">
                                             <div class="dv-patient-avatar"
                                                 th:text="${patient.fullName != null and !patient.fullName.isBlank() ? patient.fullName.substring(0, 1).toUpperCase() : 'B'}">
