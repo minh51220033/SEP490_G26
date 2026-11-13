@@ -67,6 +67,14 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     private final ClinicalExaminationRepository clinicalExaminationRepository;
     private final ExaminationDiagnosisRepository examinationDiagnosisRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.security.UrlIdCodec urlIdCodec = new com.cvdcms.security.UrlIdCodec();
+
+    private String buildExaminationDetailUrl(Long visitId) {
+        String ref = urlIdCodec != null ? urlIdCodec.encodeVisit(visitId) : "";
+        return "/doctor/examination/" + ref + "/diagnoses#tab-instructions";
+    }
+
     public CustomerCareServiceImpl(
             CustomerCareTaskRepository taskRepository,
             CustomerCareInteractionRepository interactionRepository,
@@ -438,7 +446,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                         m.put("diagnosisText", pr.getDiagnosisText());
                         m.put("adviceNotes", pr.getAdviceNotes());
                     }
-                    m.put("examinationDetailUrl", "/doctor/examination/" + v.getVisitId() + "/diagnoses#tab-instructions");
+                    m.put("examinationDetailUrl", buildExaminationDetailUrl(v.getVisitId()));
                     return m;
                 })
                 .toList();
@@ -1668,6 +1676,16 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                     .filter(i -> i.getTask() != null && i.getTask().getBranch() != null
                             && allowedBranchIds.contains(i.getTask().getBranch().getBranchId()))
                     .toList();
+            boolean preferredInScope = patient.getPreferredBranch() != null
+                    && allowedBranchIds.contains(patient.getPreferredBranch().getBranchId());
+            boolean hasVisitInScope = visitRepository.findByPatientProfile_ProfileIdOrderByCheckInAtDesc(profileId).stream()
+                    .anyMatch(v -> v.getBranch() != null && allowedBranchIds.contains(v.getBranch().getBranchId()));
+            if (!preferredInScope && !hasVisitInScope && patientTasks.isEmpty()) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Không có quyền xem lịch sử chăm sóc bệnh nhân của cơ sở khác."
+                );
+            }
         } else if (effectiveBranchId != null) {
             patientTasks = patientTasks.stream()
                     .filter(t -> t.getBranch() != null && effectiveBranchId.equals(t.getBranch().getBranchId()))
@@ -1718,7 +1736,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         }
         String careRole = requireCareRole(userId);
         Visit visit = visitRepository.findWithDetailsById(visitId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy lượt khám #" + visitId + "."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy lượt khám phù hợp."));
 
         if (!"ADMIN".equals(careRole) && visit.getBranch() != null) {
             Set<Long> allowedBranchIds = resolveAllowedBranches(userId, careRole).stream()
@@ -1740,7 +1758,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         summary.put("completedAt", visit.getCompletedAt());
         summary.put("initialSymptoms", visit.getInitialSymptoms());
         summary.put("visitNotes", visit.getNotes());
-        summary.put("examinationDetailUrl", "/doctor/examination/" + visit.getVisitId() + "/diagnoses#tab-instructions");
+        summary.put("examinationDetailUrl", buildExaminationDetailUrl(visit.getVisitId()));
 
         if (visit.getPatientProfile() != null) {
             PatientProfile p = visit.getPatientProfile();
@@ -1870,8 +1888,23 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             bad("Dữ liệu kết quả liên hệ không được để trống.");
         }
 
+        String careRole = requireCareRole(userId);
+
         Visit visit = visitRepository.findWithDetailsById(visitId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy ca khám ID: " + visitId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy ca khám phù hợp."));
+
+        if (!"ADMIN".equals(careRole)) {
+            Set<Long> allowedBranchIds = resolveAllowedBranches(userId, careRole).stream()
+                    .map(Branch::getBranchId)
+                    .collect(Collectors.toSet());
+            Long visitBranchId = visit.getBranch() != null ? visit.getBranch().getBranchId() : null;
+            if (visitBranchId == null || !allowedBranchIds.contains(visitBranchId)) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Không có quyền ghi nhận tương tác cho ca khám của cơ sở khác."
+                );
+            }
+        }
 
         if (visit.getPatientProfile() == null) {
             bad("Ca khám không có thông tin hồ sơ bệnh nhân tương ứng.");
@@ -1883,11 +1916,13 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                 .filter(t -> t.getStatus() != CustomerCareTaskStatus.COMPLETED && t.getStatus() != CustomerCareTaskStatus.CANCELLED)
                 .findFirst().orElse(null);
 
-        // 2. Nếu không có task gắn visitId, tìm task đang mở gần nhất của bệnh nhân
+        // 2. Nếu không có task gắn visitId, tìm task đang mở gần nhất của bệnh nhân tại cùng cơ sở
         if (task == null) {
+            Long visitBranchId = visit.getBranch() != null ? visit.getBranch().getBranchId() : null;
             List<CustomerCareTask> pTasks = taskRepository.findByPatientProfileIdWithDetails(visit.getPatientProfile().getProfileId());
             task = pTasks.stream()
                     .filter(t -> t.getStatus() != CustomerCareTaskStatus.COMPLETED && t.getStatus() != CustomerCareTaskStatus.CANCELLED)
+                    .filter(t -> visitBranchId == null || (t.getBranch() != null && visitBranchId.equals(t.getBranch().getBranchId())))
                     .findFirst().orElse(null);
         }
 
@@ -1901,7 +1936,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             task.setTaskType(CustomerCareTaskType.POST_TREATMENT_FOLLOWUP);
             task.setDueDate(LocalDate.now());
             task.setStatus(CustomerCareTaskStatus.IN_PROGRESS);
-            task.setNotes("Tương tác CSKH trực tiếp tại ca khám " + (visit.getVisitCode() != null ? visit.getVisitCode() : "#" + visit.getVisitId()));
+            task.setNotes("Tương tác CSKH trực tiếp tại ca khám " + (visit.getVisitCode() != null ? visit.getVisitCode() : ""));
             task.setAssignedStaff(visit.getPrimaryDoctor());
             task = taskRepository.save(task);
         }
@@ -2180,7 +2215,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             dto.setVisitSymptoms(visit.getInitialSymptoms());
             dto.setVisitStatus(visit.getStatus() != null ? visit.getStatus().name() : null);
             dto.setVisitNotes(visit.getNotes());
-            dto.setExaminationDetailUrl("/doctor/examination/" + visit.getVisitId() + "/diagnoses#tab-instructions");
+            dto.setExaminationDetailUrl(buildExaminationDetailUrl(visit.getVisitId()));
             if (visit.getPrimaryDoctor() != null) {
                 dto.setDoctorId(visit.getPrimaryDoctor().getStaffId());
                 dto.setDoctorCode(visit.getPrimaryDoctor().getStaffCode());

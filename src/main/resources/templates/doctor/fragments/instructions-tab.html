@@ -238,7 +238,7 @@
                 </div>
                 <div style="text-align: right;">
                     <div style="font-size: 16px; font-weight: bold; color: #0f172a;">PHIẾU DẶN DÒ SAU ĐIỀU TRỊ</div>
-                    <div style="font-size: 12px; color: #64748b;" th:text="${visit != null ? 'Mã ca khám: #' + visit.visitId : ''}">Mã ca khám</div>
+                    <div style="font-size: 12px; color: #64748b;" th:text="${visit != null and visit.visitCode != null ? 'Mã ca khám: ' + visit.visitCode : ''}">Mã ca khám</div>
                 </div>
             </div>
 

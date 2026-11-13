@@ -44,6 +44,9 @@ public class GlobalModelAttributesAdvice {
     private final ObjectProvider<ServiceCatalogService> serviceCatalogServiceProvider;
     private final ObjectProvider<PatientProfileRepository> patientProfileRepositoryProvider;
 
+    @Autowired(required = false)
+    private com.cvdcms.security.UrlIdCodec urlIdCodec;
+
     public GlobalModelAttributesAdvice(UserRepository userRepository) {
         this(userRepository, null, null, null);
     }
@@ -383,6 +386,11 @@ public class GlobalModelAttributesAdvice {
         } catch (Exception ignored) {
             return Collections.emptyList();
         }
+    }
+
+    @ModelAttribute("idCodec")
+    public com.cvdcms.security.UrlIdCodec populateIdCodec() {
+        return urlIdCodec != null ? urlIdCodec : new com.cvdcms.security.UrlIdCodec();
     }
 
     private List<String> toStringList(Collection<?> col) {
