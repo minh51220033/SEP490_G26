@@ -29,6 +29,32 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     boolean existsByVoucher_VoucherIdAndStatusNot(Long voucherId, InvoiceStatus status);
 
+    boolean existsByVoucher_VoucherIdAndInvoiceIdNotAndStatusNot(Long voucherId, Long invoiceId, InvoiceStatus status);
+
+    @Query("""
+        SELECT COALESCE(SUM(i.pointsRedeemed), 0) FROM Invoice i
+        WHERE i.patientProfile.profileId = :profileId
+          AND i.status != 'CANCELLED'
+          AND i.paymentStatus != 'PAID'
+          AND (:excludeInvoiceId IS NULL OR i.invoiceId != :excludeInvoiceId)
+    """)
+    Integer sumPendingPointsRedeemedByProfileId(
+            @Param("profileId") Long profileId,
+            @Param("excludeInvoiceId") Long excludeInvoiceId
+    );
+
+    @Query("""
+        SELECT COUNT(i) FROM Invoice i
+        WHERE i.promotion.promotionId = :promoId
+          AND i.status != 'CANCELLED'
+          AND i.paymentStatus != 'PAID'
+          AND (:excludeInvoiceId IS NULL OR i.invoiceId != :excludeInvoiceId)
+    """)
+    Long countPendingInvoicesByPromotionId(
+            @Param("promoId") Long promoId,
+            @Param("excludeInvoiceId") Long excludeInvoiceId
+    );
+
     List<Invoice> findByPatientProfile_ProfileIdOrderByIssuedAtDesc(Long profileId);
 
     List<Invoice> findByPatientProfile_ProfileIdAndStatusNotOrderByIssuedAtDesc(Long profileId, InvoiceStatus status);

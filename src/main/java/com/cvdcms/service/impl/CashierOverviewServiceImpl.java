@@ -355,10 +355,20 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
                 if (p.getPrescriptionId() != null && countedPrescriptionIds.contains(p.getPrescriptionId())) {
                     continue;
                 }
-                if (allowedBranchIds != null) {
-                    // Kiểm tra cơ sở của đơn thuốc
-                    // Nếu không thuộc allowedBranchIds thì bỏ qua
-                    // (getHandedOverPrescriptions trả về branchName, kiểm tra qua repository nếu cần)
+                if (p.getPrescriptionId() != null) {
+                    // Kiểm tra cơ sở của đơn thuốc, nếu không thuộc allowedBranchIds thì bỏ qua để không đếm nhầm đơn cơ sở khác
+                    com.cvdcms.entity.Prescription pres = prescriptionRepository.findById(p.getPrescriptionId()).orElse(null);
+                    if (pres != null) {
+                        if (allowedBranchIds != null && pres.getBranch() != null && !allowedBranchIds.contains(pres.getBranch().getBranchId())) {
+                            continue;
+                        }
+                        if (pres.getPurchaseChoice() == com.cvdcms.entity.enums.PrescriptionPurchaseChoice.EXTERNAL
+                                || pres.getStatus() == PrescriptionStatus.EXTERNAL_PURCHASE
+                                || pres.getStatus() == PrescriptionStatus.CLINIC_PURCHASE_COMPLETED
+                                || pres.getStatus() == PrescriptionStatus.CANCELLED) {
+                            continue;
+                        }
+                    }
                 }
                 if (isPrescriptionEligibleForBilling(p)) {
                     standalonePrescCount++;
@@ -423,7 +433,8 @@ public class CashierOverviewServiceImpl implements CashierOverviewService {
     private boolean isPrescriptionEligibleForBilling(PrescriptionResponseDTO p) {
         if (p == null) return false;
         String status = p.getStatus();
-        if ("EXTERNAL_PURCHASE".equals(status) || "CANCELLED".equals(status) || "CLINIC_PURCHASE_COMPLETED".equals(status)) {
+        if ("EXTERNAL_PURCHASE".equals(status) || "CANCELLED".equals(status) || "CLINIC_PURCHASE_COMPLETED".equals(status)
+                || "EXTERNAL".equalsIgnoreCase(p.getPurchaseChoice())) {
             return false;
         }
         if (p.getItems() == null || p.getItems().isEmpty()) {

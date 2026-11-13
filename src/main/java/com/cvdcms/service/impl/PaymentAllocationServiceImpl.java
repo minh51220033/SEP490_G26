@@ -303,6 +303,7 @@ public class PaymentAllocationServiceImpl implements PaymentAllocationService {
 
         if (totalAllocated.compareTo(amount) != 0) {
             log.warn("Tổng tiền phân bổ ({} đ) không khớp với số tiền thanh toán ({} đ).", totalAllocated, amount);
+            throw new IllegalStateException("Tổng tiền phân bổ chi tiết (" + totalAllocated + " đ) không khớp với số tiền thanh toán (" + amount + " đ). Không thể ghi nhận thanh toán thành công.");
         }
 
         return allocations;
