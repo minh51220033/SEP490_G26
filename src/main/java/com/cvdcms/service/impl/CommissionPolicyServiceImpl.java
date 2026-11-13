@@ -67,6 +67,26 @@ public class CommissionPolicyServiceImpl implements CommissionPolicyService {
     public CommissionPolicy savePolicy(CommissionPolicyDTO dto, Long currentUserId) {
         requireCommissionPermission(currentUserId, "Bạn không có quyền tạo hoặc chỉnh sửa chính sách hoa hồng");
 
+        if (dto == null) {
+            throw new IllegalArgumentException("Dữ liệu chính sách hoa hồng không được để trống.");
+        }
+        if (dto.getPolicyName() == null || dto.getPolicyName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Tên chính sách hoa hồng không được để trống.");
+        }
+        if (dto.getCommissionType() == null) {
+            throw new IllegalArgumentException("Loại hoa hồng không được để trống.");
+        }
+        if (dto.getCommissionValue() == null) {
+            throw new IllegalArgumentException("Giá trị hoa hồng không được để trống.");
+        }
+        if (dto.getCommissionValue().compareTo(java.math.BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Giá trị hoa hồng không được âm.");
+        }
+        if (dto.getCommissionType() == com.cvdcms.entity.enums.CommissionType.PERCENTAGE
+                && dto.getCommissionValue().compareTo(new java.math.BigDecimal("100.00")) > 0) {
+            throw new IllegalArgumentException("Tỷ lệ hoa hồng phần trăm không được vượt quá 100%.");
+        }
+
         CommissionPolicy policy;
         if (dto.getPolicyId() != null) {
             policy = getPolicyById(dto.getPolicyId());
@@ -80,19 +100,22 @@ public class CommissionPolicyServiceImpl implements CommissionPolicyService {
         policy.setIsActive(dto.getIsActive() != null ? dto.getIsActive() : false); // Default OFF
 
         if (dto.getServiceId() != null) {
-            policy.setService(serviceRepository.findById(dto.getServiceId()).orElse(null));
+            policy.setService(serviceRepository.findById(dto.getServiceId())
+                    .orElseThrow(() -> new IllegalArgumentException("Dịch vụ với ID " + dto.getServiceId() + " không tồn tại.")));
         } else {
             policy.setService(null);
         }
 
         if (dto.getRoleId() != null) {
-            policy.setRole(roleRepository.findById(dto.getRoleId().intValue()).orElse(null));
+            policy.setRole(roleRepository.findById(dto.getRoleId().intValue())
+                    .orElseThrow(() -> new IllegalArgumentException("Vai trò với ID " + dto.getRoleId() + " không tồn tại.")));
         } else {
             policy.setRole(null);
         }
 
         if (dto.getStaffId() != null) {
-            policy.setStaff(staffProfileRepository.findById(dto.getStaffId()).orElse(null));
+            policy.setStaff(staffProfileRepository.findById(dto.getStaffId())
+                    .orElseThrow(() -> new IllegalArgumentException("Nhân viên với ID " + dto.getStaffId() + " không tồn tại.")));
         } else {
             policy.setStaff(null);
         }

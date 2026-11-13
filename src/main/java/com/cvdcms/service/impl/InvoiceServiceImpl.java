@@ -57,6 +57,12 @@ public class InvoiceServiceImpl implements InvoiceService {
     private MembershipTierRepository membershipTierRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.ParaclinicalOrderService paraclinicalOrderService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.AppointmentLifecycleService appointmentLifecycleService;
+
+    public void setAppointmentLifecycleService(com.cvdcms.service.AppointmentLifecycleService appointmentLifecycleService) {
+        this.appointmentLifecycleService = appointmentLifecycleService;
+    }
 
     public void setMembershipTierRepository(MembershipTierRepository membershipTierRepository) {
         this.membershipTierRepository = membershipTierRepository;
@@ -371,90 +377,77 @@ public class InvoiceServiceImpl implements InvoiceService {
                     throw new IllegalStateException("Thuốc '" + pItem.getDrugName() + "' chưa có giá bán hợp lệ trong cấu hình danh mục. Không thể phát hành hóa đơn.");
                 }
 
-                // Tích hợp kho: Kiểm tra tồn kho và xuất kho theo FEFO
+                // Tích hợp kho: Kiểm tra tồn kho và xuất kho theo FEFO (Chặn bán nếu chưa liên kết vật tư kho)
                 Medication med = pItem.getMedication();
-                if (med != null && med.getMaterial() != null) {
-                    Long matId = med.getMaterial().getMaterialId();
-                    BranchInventory inventory = branchInventoryRepository.findForUpdate(branch.getBranchId(), matId)
-                            .orElseThrow(() -> new IllegalStateException("Chi nhánh không có dữ liệu tồn kho cho vật tư/thuốc: " + pItem.getDrugName()));
+                if (med == null) {
+                    throw new IllegalStateException("Thuốc '" + pItem.getDrugName() + "' (ID: " + pItem.getItemId() + ") chưa được liên kết với danh mục dược phẩm. Chặn bán tại phòng khám.");
+                }
+                if (med.getMaterial() == null || med.getMaterial().getMaterialId() == null) {
+                    throw new IllegalStateException("Thuốc '" + pItem.getDrugName() + "' chưa được liên kết với vật tư kho. Chặn bán thuốc trong hóa đơn chung khi chưa liên kết kho.");
+                }
 
-                    BigDecimal currentStock = inventory.getCurrentStock() != null ? inventory.getCurrentStock() : BigDecimal.ZERO;
-                    if (currentStock.compareTo(requestedQty) < 0) {
-                        throw new IllegalStateException("Kho chi nhánh không đủ số lượng thuốc '" + pItem.getDrugName() + "' để xuất bán (Tồn kho: " + currentStock + ", Yêu cầu: " + requestedQty + ").");
-                    }
+                Long matId = med.getMaterial().getMaterialId();
+                BranchInventory inventory = branchInventoryRepository.findForUpdate(branch.getBranchId(), matId)
+                        .orElseThrow(() -> new IllegalStateException("Chi nhánh không có dữ liệu tồn kho cho vật tư/thuốc: " + pItem.getDrugName()));
 
-                    List<MaterialBatch> availableBatches = materialBatchRepository.findAvailableBatchesFefoForUpdate(
-                            branch.getBranchId(), matId, LocalDate.now());
+                BigDecimal currentStock = inventory.getCurrentStock() != null ? inventory.getCurrentStock() : BigDecimal.ZERO;
+                if (currentStock.compareTo(requestedQty) < 0) {
+                    throw new IllegalStateException("Kho chi nhánh không đủ số lượng thuốc '" + pItem.getDrugName() + "' để xuất bán (Tồn kho: " + currentStock + ", Yêu cầu: " + requestedQty + ").");
+                }
 
-                    BigDecimal totalBatchStock = availableBatches.stream()
-                            .map(b -> b.getQuantityRemaining() != null ? b.getQuantityRemaining() : BigDecimal.ZERO)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                List<MaterialBatch> availableBatches = materialBatchRepository.findAvailableBatchesFefoForUpdate(
+                        branch.getBranchId(), matId, LocalDate.now());
 
-                    if (totalBatchStock.compareTo(requestedQty) < 0) {
-                        throw new IllegalStateException("Tổng tồn các lô còn hạn của thuốc '" + pItem.getDrugName() + "' không đủ để xuất bán (" + totalBatchStock + " < " + requestedQty + ").");
-                    }
+                BigDecimal totalBatchStock = availableBatches.stream()
+                        .map(b -> b.getQuantityRemaining() != null ? b.getQuantityRemaining() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                    BigDecimal qtyToAllocate = requestedQty;
-                    for (MaterialBatch batch : availableBatches) {
-                        if (qtyToAllocate.compareTo(BigDecimal.ZERO) <= 0) break;
-                        BigDecimal batchRemaining = batch.getQuantityRemaining() != null ? batch.getQuantityRemaining() : BigDecimal.ZERO;
-                        if (batchRemaining.compareTo(BigDecimal.ZERO) <= 0) continue;
+                if (totalBatchStock.compareTo(requestedQty) < 0) {
+                    throw new IllegalStateException("Tổng tồn các lô còn hạn của thuốc '" + pItem.getDrugName() + "' không đủ để xuất bán (" + totalBatchStock + " < " + requestedQty + ").");
+                }
 
-                        BigDecimal takeFromBatch = batchRemaining.min(qtyToAllocate);
-                        batch.setQuantityRemaining(batchRemaining.subtract(takeFromBatch));
-                        materialBatchRepository.save(batch);
+                BigDecimal qtyToAllocate = requestedQty;
+                for (MaterialBatch batch : availableBatches) {
+                    if (qtyToAllocate.compareTo(BigDecimal.ZERO) <= 0) break;
+                    BigDecimal batchRemaining = batch.getQuantityRemaining() != null ? batch.getQuantityRemaining() : BigDecimal.ZERO;
+                    if (batchRemaining.compareTo(BigDecimal.ZERO) <= 0) continue;
 
-                        qtyToAllocate = qtyToAllocate.subtract(takeFromBatch);
+                    BigDecimal takeFromBatch = batchRemaining.min(qtyToAllocate);
+                    batch.setQuantityRemaining(batchRemaining.subtract(takeFromBatch));
+                    materialBatchRepository.save(batch);
 
-                        InvoiceItem medItem = new InvoiceItem();
-                        medItem.setInvoice(invoice);
-                        medItem.setItemType(InvoiceItemType.MEDICINE);
-                        medItem.setPrescriptionItem(pItem);
-                        medItem.setMedication(med);
-                        medItem.setBatch(batch);
-                        medItem.setItemName(pItem.getDrugName());
-                        medItem.setUnit(pItem.getUnit());
-                        medItem.setUsageInstruction(pItem.getUsageInstruction());
-                        medItem.setQuantity(takeFromBatch);
-                        medItem.setUnitPrice(unitPrice);
-                        BigDecimal lineTotal = unitPrice.multiply(takeFromBatch).setScale(2, RoundingMode.HALF_UP);
-                        medItem.setFinalAmount(lineTotal);
-                        medItem.setVatRate(BigDecimal.valueOf(5.0));
-                        medItem.setVatAmount(lineTotal.multiply(BigDecimal.valueOf(0.05)).setScale(0, RoundingMode.HALF_UP));
+                    qtyToAllocate = qtyToAllocate.subtract(takeFromBatch);
 
-                        invoiceItems.add(medItem);
-                        totalMedicineAmount = totalMedicineAmount.add(lineTotal);
-
-                        StockIssueItem issueItem = new StockIssueItem();
-                        issueItem.setIssue(stockIssue);
-                        issueItem.setMaterial(med.getMaterial());
-                        issueItem.setBatch(batch);
-                        issueItem.setQuantity(takeFromBatch);
-                        issueItem.setNotes("Xuất bán thuốc theo hóa đơn chung từ đơn " + prescription.getPrescriptionCode() + " (Thuốc: " + pItem.getDrugName() + " - Lô: " + batch.getBatchNumber() + ")");
-                        stockIssueItems.add(issueItem);
-                    }
-
-                    inventory.setCurrentStock(currentStock.subtract(requestedQty));
-                    branchInventoryRepository.save(inventory);
-                } else {
                     InvoiceItem medItem = new InvoiceItem();
                     medItem.setInvoice(invoice);
                     medItem.setItemType(InvoiceItemType.MEDICINE);
                     medItem.setPrescriptionItem(pItem);
                     medItem.setMedication(med);
+                    medItem.setBatch(batch);
                     medItem.setItemName(pItem.getDrugName());
                     medItem.setUnit(pItem.getUnit());
                     medItem.setUsageInstruction(pItem.getUsageInstruction());
-                    medItem.setQuantity(requestedQty);
+                    medItem.setQuantity(takeFromBatch);
                     medItem.setUnitPrice(unitPrice);
-                    BigDecimal lineTotal = unitPrice.multiply(requestedQty).setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal lineTotal = unitPrice.multiply(takeFromBatch).setScale(2, RoundingMode.HALF_UP);
                     medItem.setFinalAmount(lineTotal);
                     medItem.setVatRate(BigDecimal.valueOf(5.0));
                     medItem.setVatAmount(lineTotal.multiply(BigDecimal.valueOf(0.05)).setScale(0, RoundingMode.HALF_UP));
 
                     invoiceItems.add(medItem);
                     totalMedicineAmount = totalMedicineAmount.add(lineTotal);
+
+                    StockIssueItem issueItem = new StockIssueItem();
+                    issueItem.setIssue(stockIssue);
+                    issueItem.setMaterial(med.getMaterial());
+                    issueItem.setBatch(batch);
+                    issueItem.setQuantity(takeFromBatch);
+                    issueItem.setNotes("Xuất bán thuốc theo hóa đơn chung từ đơn " + prescription.getPrescriptionCode() + " (Thuốc: " + pItem.getDrugName() + " - Lô: " + batch.getBatchNumber() + ")");
+                    stockIssueItems.add(issueItem);
                 }
+
+                inventory.setCurrentStock(currentStock.subtract(requestedQty));
+                branchInventoryRepository.save(inventory);
 
                 pItem.setBoughtQuantity(boughtQty.add(requestedQty));
                 prescriptionItemRepository.save(pItem);
@@ -538,6 +531,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         if (saved.getPaymentStatus() == InvoicePaymentStatus.PAID) {
             finalizeInvoiceBenefits(saved);
+            tryCompleteVisitIfEligible(saved, cashierUserId);
         }
 
         // Ghi Audit log
@@ -664,7 +658,8 @@ public class InvoiceServiceImpl implements InvoiceService {
         );
 
         preview.setMemberDiscountAmount(benefit.memberDiscount);
-        if (patientOpt.isPresent() && patientOpt.get().getMembershipTier() != null) {
+        if (patientOpt.isPresent() && patientOpt.get().getMembershipTier() != null
+                && Boolean.TRUE.equals(patientOpt.get().getMembershipTier().getIsActive())) {
             preview.setTierName(patientOpt.get().getMembershipTier().getTierName());
             preview.setMemberDiscountPercent(patientOpt.get().getMembershipTier().getDiscountPercent());
         }
@@ -824,7 +819,30 @@ public class InvoiceServiceImpl implements InvoiceService {
                 : oldPaid.signum() > 0 ? InvoicePaymentStatus.PARTIAL : InvoicePaymentStatus.UNPAID);
         invoice.setAdjustmentReason(request.getReason().trim());
         invoice.setAdjustedBy(staff);
+
+        if (debt.signum() == 0) {
+            invoice.setRemainingDebt(BigDecimal.ZERO);
+            invoice.setPaymentStatus(InvoicePaymentStatus.PAID);
+            if (invoice.getSurchargeAmount() != null) {
+                invoice.setSurchargePaidAmount(invoice.getSurchargeAmount());
+                invoice.setSurchargeRemainingDebt(BigDecimal.ZERO);
+            }
+            List<InvoiceItem> items = invoiceItemRepository.findByInvoice_InvoiceIdOrderByLineOrderAscItemIdAsc(invoice.getInvoiceId());
+            if (items != null) {
+                for (InvoiceItem it : items) {
+                    it.setRemainingDebt(BigDecimal.ZERO);
+                    it.setPaymentStatus(InvoiceItemPaymentStatus.PAID);
+                    invoiceItemRepository.save(it);
+                }
+            }
+        }
+
         Invoice saved = invoiceRepository.save(invoice);
+
+        if (saved.getPaymentStatus() == InvoicePaymentStatus.PAID) {
+            finalizeInvoiceBenefits(saved);
+            tryCompleteVisitIfEligible(saved, staffUserId);
+        }
 
         InvoiceAuditLog log = new InvoiceAuditLog();
         log.setInvoice(saved);
@@ -856,6 +874,41 @@ public class InvoiceServiceImpl implements InvoiceService {
             return value.setScale(2, RoundingMode.UNNECESSARY);
         } catch (ArithmeticException e) {
             throw new IllegalArgumentException(fieldName + " chỉ được có tối đa 2 chữ số thập phân.");
+        }
+    }
+
+    private void tryCompleteVisitIfEligible(Invoice invoice, Long actorUserId) {
+        if (invoice == null || invoice.getVisit() == null) {
+            return;
+        }
+        Visit visit = visitRepository.findById(invoice.getVisit().getVisitId()).orElse(null);
+        if (visit == null || visit.getStatus() == VisitStatus.COMPLETED || visit.getStatus() != VisitStatus.WAITING_PAYMENT) {
+            return;
+        }
+        List<Invoice> visitInvoices = invoiceRepository.findByVisit_VisitId(visit.getVisitId());
+        if (visitInvoices != null) {
+            boolean hasOtherDebt = visitInvoices.stream().anyMatch(inv ->
+                    (invoice.getInvoiceId() == null || !inv.getInvoiceId().equals(invoice.getInvoiceId()))
+                    && inv.getStatus() != InvoiceStatus.CANCELLED
+                    && inv.getRemainingDebt() != null
+                    && inv.getRemainingDebt().compareTo(BigDecimal.ZERO) > 0);
+            if (hasOtherDebt) {
+                return;
+            }
+        }
+        List<PerformedService> unbilled = getUnbilledPerformedServices(visit.getVisitId());
+        if (unbilled != null && !unbilled.isEmpty()) {
+            return;
+        }
+        visit.setStatus(VisitStatus.COMPLETED);
+        visit.setCompletedAt(LocalDateTime.now());
+        visitRepository.saveAndFlush(visit);
+        if (appointmentLifecycleService != null && actorUserId != null) {
+            try {
+                appointmentLifecycleService.completeByVisit(visit.getVisitId(), actorUserId);
+            } catch (Exception e) {
+                log.warn("Không thể hoàn tất lịch hẹn của ca khám {}: {}", visit.getVisitId(), e.getMessage());
+            }
         }
     }
 
@@ -929,7 +982,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             PatientVoucher voucher = invoice.getVoucher();
             if (voucher.getStatus() == VoucherStatus.USED) {
                 boolean isExpired = voucher.getExpiresAt() != null && voucher.getExpiresAt().isBefore(LocalDateTime.now());
-                boolean usedByOther = invoiceRepository.existsByVoucher_VoucherIdAndStatusNot(voucher.getVoucherId(), InvoiceStatus.CANCELLED);
+                boolean usedByOther = invoiceRepository.existsByVoucher_VoucherIdAndInvoiceIdNotAndStatusNot(voucher.getVoucherId(), invoice.getInvoiceId(), InvoiceStatus.CANCELLED);
                 if (!isExpired && !usedByOther) {
                     voucher.setStatus(VoucherStatus.AVAILABLE);
                     voucher.setUsedAt(null);
@@ -1121,7 +1174,9 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     private BigDecimal resolvePointValue(PatientProfile patient) {
-        if (patient != null && patient.getMembershipTier() != null && patient.getMembershipTier().getPointValue() != null
+        if (patient != null && patient.getMembershipTier() != null
+                && Boolean.TRUE.equals(patient.getMembershipTier().getIsActive())
+                && patient.getMembershipTier().getPointValue() != null
                 && patient.getMembershipTier().getPointValue().compareTo(BigDecimal.ZERO) > 0) {
             return patient.getMembershipTier().getPointValue();
         }
@@ -1154,8 +1209,10 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw new IllegalArgumentException("Chính sách ưu đãi: Chỉ được áp dụng một trong hai hình thức: Chương trình khuyến mãi chung HOẶC Mã giảm giá (Voucher).");
         }
 
-        // 2. Chiết khấu hạng thẻ thành viên
-        if (patient != null && patient.getMembershipTier() != null && patient.getMembershipTier().getDiscountPercent() != null) {
+        // 2. Chiết khấu hạng thẻ thành viên (chỉ áp dụng cho hạng đang hoạt động)
+        if (patient != null && patient.getMembershipTier() != null
+                && Boolean.TRUE.equals(patient.getMembershipTier().getIsActive())
+                && patient.getMembershipTier().getDiscountPercent() != null) {
             BigDecimal tierPercent = patient.getMembershipTier().getDiscountPercent();
             if (tierPercent.compareTo(BigDecimal.ZERO) > 0) {
                 BigDecimal mDiscount = totalServiceAmount.multiply(tierPercent).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
@@ -1213,13 +1270,16 @@ public class InvoiceServiceImpl implements InvoiceService {
         result.manualDiscount = manual.min(remaining);
         remaining = remaining.subtract(result.manualDiscount);
 
-        // 5. Điểm tích lũy Loyalty: Tuyệt đối không giảm vượt quá số tiền còn lại của hóa đơn
+        // 5. Điểm tích lũy Loyalty: Tuyệt đối không giảm vượt quá số tiền còn lại của hóa đơn và trừ điểm chờ trên hóa đơn khác
         if (pointsToRedeem != null && pointsToRedeem > 0 && patient != null) {
             Optional<PatientLoyaltyWallet> walletOpt = patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(patient.getProfileId());
             if (walletOpt.isPresent()) {
                 PatientLoyaltyWallet wallet = walletOpt.get();
-                int maxPointsInWallet = wallet.getCurrentPoints() != null ? wallet.getCurrentPoints() : 0;
-                int redeemRequested = Math.min(pointsToRedeem, maxPointsInWallet);
+                int currentPoints = wallet.getCurrentPoints() != null ? wallet.getCurrentPoints() : 0;
+                Integer pendingPoints = invoiceRepository.sumPendingPointsRedeemedByProfileId(patient.getProfileId(), null);
+                int availablePoints = Math.max(0, currentPoints - (pendingPoints != null ? pendingPoints : 0));
+
+                int redeemRequested = Math.min(pointsToRedeem, availablePoints);
                 if (redeemRequested > 0 && remaining.compareTo(BigDecimal.ZERO) > 0) {
                     BigDecimal pointVal = resolvePointValue(patient);
                     if (pointVal.compareTo(BigDecimal.ZERO) > 0) {
@@ -1269,18 +1329,28 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (promo.getBranch() != null && (branchId == null || !promo.getBranch().getBranchId().equals(branchId))) {
             throw new IllegalStateException("Chương trình khuyến mãi chỉ áp dụng tại chi nhánh: " + promo.getBranch().getBranchName());
         }
-        if (promo.getUsageLimit() != null && (promo.getUsedCount() != null ? promo.getUsedCount() : 0) >= promo.getUsageLimit()) {
-            throw new IllegalStateException("Chương trình khuyến mãi đã đạt giới hạn lượt sử dụng.");
+        if (promo.getUsageLimit() != null) {
+            long used = promo.getUsedCount() != null ? promo.getUsedCount() : 0;
+            Long pending = invoiceRepository.countPendingInvoicesByPromotionId(promo.getPromotionId(), null);
+            if (used + (pending != null ? pending : 0) >= promo.getUsageLimit()) {
+                throw new IllegalStateException("Chương trình khuyến mãi đã đạt giới hạn lượt sử dụng (" + promo.getUsageLimit() + " lượt, bao gồm cả các hóa đơn đang chờ thanh toán).");
+            }
         }
         if (promo.getMinBillAmount() != null && totalServiceAmount.compareTo(promo.getMinBillAmount()) < 0) {
             throw new IllegalStateException("Hóa đơn (" + totalServiceAmount + " đ) chưa đạt giá trị tối thiểu " + promo.getMinBillAmount() + " đ để áp dụng khuyến mãi.");
         }
         if (promo.getApplicableTier() != null) {
             if (patient == null || patient.getMembershipTier() == null
-                    || patient.getMembershipTier().getDisplayOrder() < promo.getApplicableTier().getDisplayOrder()) {
+                    || !Boolean.TRUE.equals(patient.getMembershipTier().getIsActive())) {
                 String currentTierName = (patient != null && patient.getMembershipTier() != null) ? patient.getMembershipTier().getTierName() : "Chưa có hạng";
-                throw new IllegalStateException("Chương trình chỉ áp dụng cho bệnh nhân từ hạng " + promo.getApplicableTier().getTierName()
+                throw new IllegalStateException("Chương trình chỉ áp dụng cho bệnh nhân có hạng thành viên hoạt động từ " + promo.getApplicableTier().getTierName()
                         + " trở lên (Hạng hiện tại: " + currentTierName + ").");
+            }
+            BigDecimal patientMinSpent = patient.getMembershipTier().getMinTotalSpent() != null ? patient.getMembershipTier().getMinTotalSpent() : BigDecimal.ZERO;
+            BigDecimal promoMinSpent = promo.getApplicableTier().getMinTotalSpent() != null ? promo.getApplicableTier().getMinTotalSpent() : BigDecimal.ZERO;
+            if (patientMinSpent.compareTo(promoMinSpent) < 0) {
+                throw new IllegalStateException("Chương trình chỉ áp dụng cho bệnh nhân từ hạng " + promo.getApplicableTier().getTierName()
+                        + " trở lên (Hạng hiện tại: " + patient.getMembershipTier().getTierName() + ").");
             }
         }
         if (promo.getApplicableService() != null) {
@@ -1559,6 +1629,11 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
 
         Invoice saved = invoiceRepository.save(invoice);
+
+        if (saved.getPaymentStatus() == InvoicePaymentStatus.PAID) {
+            finalizeInvoiceBenefits(saved);
+            tryCompleteVisitIfEligible(saved, cashierUserId);
+        }
 
         // Audit log
         InvoiceAuditLog audit = new InvoiceAuditLog();

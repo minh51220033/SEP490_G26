@@ -42,4 +42,16 @@ public class CustomerCareInteractionDTO {
     private String notes;
     private LocalDateTime nextRetryAt;
     private LocalDateTime createdAt;
+
+    public String getTaskTitle() {
+        return careGroupLabel != null && !careGroupLabel.isBlank() ? careGroupLabel : (taskType != null && !taskType.isBlank() ? taskType : "Cuộc gọi CSKH");
+    }
+
+    public LocalDateTime getInteractionDate() {
+        return createdAt;
+    }
+
+    public String getResultStatus() {
+        return contactResultLabel != null && !contactResultLabel.isBlank() ? contactResultLabel : contactResult;
+    }
 }

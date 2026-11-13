@@ -115,7 +115,7 @@ public class ReportServiceImpl implements ReportService {
         // 1. Thực thu theo dòng tiền thực tế (Cash/Bank/POS - Refunds)
         BigDecimal grossRealRevenue = toBigDecimal(paymentRepository.sumRealRevenueByBranches(branchIds, startDt, endDt));
         BigDecimal totalRefund = toBigDecimal(refundRepository.sumRefundAmountByBranches(branchIds, startDt, endDt));
-        BigDecimal netRealRevenue = grossRealRevenue.subtract(totalRefund).max(BigDecimal.ZERO);
+        BigDecimal netRealRevenue = grossRealRevenue.subtract(totalRefund);
         dto.setTotalRealRevenue(netRealRevenue);
         dto.setTotalRefundAmount(totalRefund);
 
@@ -302,14 +302,14 @@ public class ReportServiceImpl implements ReportService {
         dto.setDepositWalletAmount(toBigDecimal(paymentRepository.sumDepositWalletUsedByBranches(branchIds, startDt, endDt)));
         dto.setNewDepositAmount(toBigDecimal(paymentRepository.sumAdvanceDepositByBranches(branchIds, startDt, endDt)));
 
-        // Thực thu theo dòng tiền thực tế = Cash + Bank + POS + Cọc mới
+        // Thực thu theo dòng tiền thực tế = Cash + Bank + POS + NewDeposit (không tính thanh toán từ ví cọc)
         BigDecimal grossCollected = dto.getCashAmount().add(dto.getBankTransferAmount())
                 .add(dto.getPosCardAmount()).add(dto.getNewDepositAmount());
         dto.setTotalCollected(grossCollected);
 
         // 3. Hoàn tiền & Chi phí (gồm chi phí vận hành + BHXH 21.5% phần DN chịu từ các kỳ lương đã chi trả)
         dto.setTotalRefundAmount(toBigDecimal(refundRepository.sumRefundAmountByBranches(branchIds, startDt, endDt)));
-        dto.setNetRevenue(grossCollected.subtract(dto.getTotalRefundAmount()).max(BigDecimal.ZERO));
+        dto.setNetRevenue(grossCollected.subtract(dto.getTotalRefundAmount()));
 
         BigDecimal activeExpenses = toBigDecimal(operatingExpenseRepository.sumActiveExpenses(branchIds, startDate, endDate));
         if (payrollPeriodRepository != null) {
@@ -665,7 +665,7 @@ public class ReportServiceImpl implements ReportService {
         r = writeMetricRow(sheet, s, r, "   - Tổng giảm trừ (Ưu đãi, Voucher, Điểm)", dto.getTotalDiscount(), "VNĐ", "Chiết khấu thành viên + Mã KM + Đổi điểm");
 
         // 2. Cơ cấu dòng tiền thu
-        r = writeMetricRow(sheet, s, r, "2. Tiền thực thu từ khách hàng", dto.getTotalCollected(), "VNĐ", "Tiền mặt + Chuyển khoản + POS + Nạp cọc mới");
+        r = writeMetricRow(sheet, s, r, "2. Tiền thực thu từ khách hàng", dto.getTotalCollected(), "VNĐ", "Tiền mặt + Chuyển khoản + POS (đã bao gồm nạp cọc mới, không tính ví cọc)");
         r = writeMetricRow(sheet, s, r, "   - Thu bằng Tiền mặt (CASH)", dto.getCashAmount(), "VNĐ", "Dòng tiền mặt vào quỹ phòng khám");
         r = writeMetricRow(sheet, s, r, "   - Thu qua Chuyển khoản (BANK_TRANSFER)", dto.getBankTransferAmount(), "VNĐ", "Tiền vào tài khoản ngân hàng");
         r = writeMetricRow(sheet, s, r, "   - Thu qua Thẻ POS (POS_CARD)", dto.getPosCardAmount(), "VNĐ", "Quẹt thẻ máy POS");
