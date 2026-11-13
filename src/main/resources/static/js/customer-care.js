@@ -1,6 +1,13 @@
 (() => {
     "use strict";
 
+    // Phòng ngừa lỗi ViewTransition bị hủy bởi trình duyệt (Chrome 126+ Cross-Document Transition)
+    window.addEventListener("unhandledrejection", (event) => {
+        if (event?.reason?.name === "InvalidStateError" && String(event?.reason?.message).includes("ViewTransition")) {
+            event.preventDefault();
+        }
+    });
+
     const $ = (id) => document.getElementById(id);
 
     const safeOn = (id, event, handler, options) => {
@@ -18,7 +25,7 @@
         isAdmin: false,
         branchSelectionAllowed: true,
         currentStaffId: null,
-        activeTab: "ACTIONABLE",
+        activeTab: "TODAY",
         viewMode: "LIST",
         dueFilter: "ALL",
         doctorResponseFilter: "ALL",
@@ -60,13 +67,25 @@
     };
 
     const TAB_META = {
-        ACTIONABLE: {
-            title: "Công việc CSKH cần xử lý (SCR-44.1)",
-            subtitle: "Ưu tiên theo hạn xử lý (Quá hạn -> Hôm nay -> Sắp tới) gồm công việc Chờ liên hệ và Đang chăm sóc / Hẹn gọi lại."
+        TODAY: {
+            title: "Công việc CSKH cần xử lý hôm nay",
+            subtitle: "Bao gồm công việc đến hạn hôm nay, quá hạn cần xử lý gấp và các ca đến hẹn gọi lại."
+        },
+        OVERDUE: {
+            title: "Công việc CSKH quá hạn",
+            subtitle: "Các ca chăm sóc khách hàng đã quá hạn xử lý hoặc quá thời điểm hẹn gọi lại."
         },
         ESCALATED: {
-            title: "Danh sách ca Chuyển Bác sĩ hỗ trợ chuyên môn (SCR-44.5)",
+            title: "Danh sách ca Chuyển Bác sĩ hỗ trợ chuyên môn",
             subtitle: "Theo dõi các ca cần Bác sĩ tư vấn triệu chứng/chỉ định và phân biệt ca đang chờ phản hồi với ca đã có phản hồi."
+        },
+        ALL: {
+            title: "Tất cả công việc CSKH",
+            subtitle: "Toàn bộ danh sách công việc chăm sóc khách hàng tại chi nhánh."
+        },
+        ACTIONABLE: {
+            title: "Công việc CSKH cần xử lý",
+            subtitle: "Ưu tiên theo hạn xử lý gồm công việc Chờ liên hệ và Đang chăm sóc / Hẹn gọi lại."
         },
         COMPLETED: {
             title: "Công việc CSKH đã hoàn thành",
@@ -77,7 +96,7 @@
             subtitle: "Danh sách công việc CSKH đã hủy không tiếp tục thực hiện."
         },
         HISTORY: {
-            title: "Lịch sử Chăm sóc Khách hàng (SCR-44.6)",
+            title: "Lịch sử Chăm sóc Khách hàng",
             subtitle: "Tra cứu timeline tương tác và các công việc CSKH của từng bệnh nhân."
         }
     };
@@ -258,6 +277,9 @@
                 const badgeEl = $(`badge_${grp}`);
                 if (badgeEl) badgeEl.textContent = Number(cnt || 0);
             });
+            if ($("badge_TODAY")) $("badge_TODAY").textContent = Number(groupCounts.TODAY ?? todayCount);
+            if ($("badge_OVERDUE")) $("badge_OVERDUE").textContent = Number(groupCounts.OVERDUE ?? overdue);
+            if ($("badge_ALL")) $("badge_ALL").textContent = Number(sum?.totalTasks ?? openAll);
             if ($("badge_MY_TASKS") && groupCounts.MY_TASKS == null) {
                 $("badge_MY_TASKS").textContent = Number(sum?.myTasksCount ?? 0);
             }
@@ -798,18 +820,22 @@
         allInteractions: [],
         allTasks: [],
         filteredInteractions: [],
+        viewLevel: "TASKS", // "TASKS" (Cấp 1) | "TASK_DETAIL" (Cấp 2) | "ALL_INTERACTIONS"
+        selectedTaskId: null,
         visibleLimit: 10
     };
 
-    async function openPatientHistoryDrawer(profileId) {
+    async function openPatientHistoryDrawer(profileId, targetTaskId = null) {
         const pid = Number(profileId);
         if (!pid) return;
 
         patientDrawerState.profileId = pid;
         patientDrawerState.visibleLimit = 10;
+        patientDrawerState.viewLevel = targetTaskId ? "TASK_DETAIL" : "TASKS";
+        patientDrawerState.selectedTaskId = targetTaskId ? Number(targetTaskId) : null;
 
         if ($("patientHistoryDrawerKeyword")) $("patientHistoryDrawerKeyword").value = "";
-        if ($("patientHistoryDrawerTaskFilter")) $("patientHistoryDrawerTaskFilter").value = "";
+        if ($("patientHistoryDrawerTaskFilter")) $("patientHistoryDrawerTaskFilter").value = targetTaskId ? String(targetTaskId) : "";
         if ($("patientHistoryDrawerResultFilter")) $("patientHistoryDrawerResultFilter").value = "";
 
         if ($("patientHistoryDrawerOverlay")) $("patientHistoryDrawerOverlay").style.display = "block";
@@ -821,7 +847,7 @@
         if ($("patientHistoryDrawerBranch")) $("patientHistoryDrawerBranch").textContent = "—";
         if ($("patientHistoryDrawerTotalBadge")) $("patientHistoryDrawerTotalBadge").textContent = "Đang tải...";
         if ($("patientHistoryDrawerTimeline")) {
-            $("patientHistoryDrawerTimeline").innerHTML = '<div class="p-4 text-center text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Đang tải timeline tương tác bệnh nhân...</div>';
+            $("patientHistoryDrawerTimeline").innerHTML = '<div class="p-4 text-center text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Đang tải dữ liệu chăm sóc bệnh nhân...</div>';
         }
         if ($("patientHistoryDrawerEmpty")) $("patientHistoryDrawerEmpty").hidden = true;
         if ($("patientHistoryDrawerMoreWrap")) $("patientHistoryDrawerMoreWrap").hidden = true;
@@ -848,12 +874,12 @@
             if ($("patientHistoryDrawerTaskFilter")) {
                 const taskOpts = '<option value="">Tất cả công việc CSKH (' + patientDrawerState.allTasks.length + ')</option>' +
                     patientDrawerState.allTasks.map(t =>
-                        `<option value="${escapeHtml(t.taskId)}">${escapeHtml(t.taskCode)} - ${escapeHtml(t.careGroupLabel || '')} [${escapeHtml(t.statusLabel || '')}]</option>`
+                        `<option value="${escapeHtml(t.taskId)}" ${patientDrawerState.selectedTaskId === t.taskId ? 'selected' : ''}>${escapeHtml(t.taskCode)} - ${escapeHtml(t.careGroupLabel || '')} [${escapeHtml(t.statusLabel || '')}]</option>`
                     ).join("");
                 $("patientHistoryDrawerTaskFilter").innerHTML = taskOpts;
             }
 
-            applyPatientDrawerFilters();
+            renderPatientDrawerContent();
         } catch (err) {
             if ($("patientHistoryDrawerTimeline")) {
                 $("patientHistoryDrawerTimeline").innerHTML = `<div class="p-4 text-center text-danger"><i class="bi bi-exclamation-triangle me-1"></i>${escapeHtml(err.message)}</div>`;
@@ -865,68 +891,150 @@
         if ($("patientHistoryDrawerOverlay")) $("patientHistoryDrawerOverlay").style.display = "none";
         if ($("patientHistoryDrawer")) $("patientHistoryDrawer").classList.remove("show");
         patientDrawerState.profileId = null;
+        patientDrawerState.viewLevel = "TASKS";
+        patientDrawerState.selectedTaskId = null;
     }
 
-    function applyPatientDrawerFilters() {
-        const kw = ($("patientHistoryDrawerKeyword")?.value || "").trim().toLowerCase();
-        const taskId = $("patientHistoryDrawerTaskFilter")?.value || "";
-        const result = $("patientHistoryDrawerResultFilter")?.value || "";
-
-        let filtered = patientDrawerState.allInteractions.filter(i => {
-            if (taskId && String(i.taskId) !== String(taskId)) return false;
-            if (result && i.contactResult !== result) return false;
-            if (kw) {
-                const notes = (i.notes || "").toLowerCase();
-                const staff = (i.staffName || "").toLowerCase();
-                const taskCode = (i.taskCode || "").toLowerCase();
-                if (!notes.includes(kw) && !staff.includes(kw) && !taskCode.includes(kw)) return false;
-            }
-            return true;
-        });
-
-        patientDrawerState.filteredInteractions = filtered;
-        renderPatientDrawerTimeline();
-    }
-
-    function renderPatientDrawerTimeline() {
-        const total = patientDrawerState.allInteractions.length;
-        const filtered = patientDrawerState.filteredInteractions;
-        const limit = patientDrawerState.visibleLimit;
-
-        if ($("patientHistoryDrawerTotalBadge")) {
-            $("patientHistoryDrawerTotalBadge").textContent = `${total} tương tác`;
-        }
-
+    function renderPatientDrawerContent() {
         const container = $("patientHistoryDrawerTimeline");
         const emptyEl = $("patientHistoryDrawerEmpty");
         const moreWrap = $("patientHistoryDrawerMoreWrap");
+        if (!container) return;
 
-        if (!filtered.length) {
-            if (container) container.innerHTML = "";
-            if (emptyEl) emptyEl.hidden = false;
+        const allTasks = patientDrawerState.allTasks;
+        const allInteractions = patientDrawerState.allInteractions;
+
+        // Thống kê tóm tắt
+        const openTasks = allTasks.filter(t => t.status !== "COMPLETED" && t.status !== "CANCELLED").length;
+        const completedTasks = allTasks.filter(t => t.status === "COMPLETED").length;
+
+        if ($("patientHistoryDrawerTotalBadge")) {
+            $("patientHistoryDrawerTotalBadge").textContent = `${allTasks.length} công việc · ${allInteractions.length} tương tác`;
+        }
+
+        if (patientDrawerState.viewLevel === "TASKS") {
+            if (moreWrap) moreWrap.hidden = true;
+            if (!allTasks.length) {
+                container.innerHTML = "";
+                if (emptyEl) emptyEl.hidden = false;
+                return;
+            }
+            if (emptyEl) emptyEl.hidden = true;
+
+            const headerHtml = `
+                <div class="d-flex align-items-center justify-content-between p-2 mb-3 bg-light rounded-3 border" style="font-size:12px;">
+                    <div>
+                        <span class="text-secondary">Tổng việc:</span> <strong class="text-dark">${allTasks.length}</strong> ·
+                        <span class="text-primary">Đang mở:</span> <strong class="text-primary">${openTasks}</strong> ·
+                        <span class="text-success">Hoàn thành:</span> <strong class="text-success">${completedTasks}</strong>
+                    </div>
+                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-bold" data-pdrawer-view-all-interactions="true" style="font-size:12px;">
+                        <i class="bi bi-list-stars me-1"></i>Xem toàn bộ tương tác (${allInteractions.length})
+                    </button>
+                </div>
+            `;
+
+            const cardsHtml = allTasks.map(t => {
+                const isClosed = isTaskClosed(t);
+                const taskInteractions = allInteractions.filter(i => String(i.taskId) === String(t.taskId));
+                const latest = taskInteractions.length > 0 ? taskInteractions[0] : null;
+                return `
+                    <div class="phd-task-card">
+                        <div class="phd-task-card-header">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="font-mono-code fw-bold text-dark" style="font-size:12.5px;">${escapeHtml(t.taskCode)}</span>
+                                <span class="badge bg-light text-dark border" style="font-size:11px;">${escapeHtml(t.careGroupLabel || "")}</span>
+                            </div>
+                            <span class="badge ${getStatusBadgeClass(t.status)}" style="font-size:11px;">${escapeHtml(t.statusLabel || statusLabelOf(t.status))}</span>
+                        </div>
+                        <div class="phd-task-card-body">
+                            <div class="text-secondary small mb-1">${escapeHtml(t.notes || "Không có ghi chú ban đầu.")}</div>
+                            <div class="d-flex align-items-center gap-3 text-muted" style="font-size:11.5px;">
+                                <span><i class="bi bi-person me-1"></i>${escapeHtml(t.assignedStaffName || "Chưa gán")}</span>
+                                <span><i class="bi bi-calendar-event me-1"></i>Hạn: ${escapeHtml(t.dueDate || "—")}</span>
+                            </div>
+                            ${latest ? `
+                                <div class="mt-2 p-2 bg-light rounded border-start border-3 border-primary" style="font-size:11.5px;">
+                                    <div class="text-muted small">Tương tác gần nhất (${escapeHtml(formatDateTime(latest.createdAt))}):</div>
+                                    <div class="text-dark fw-semibold">${escapeHtml(latest.notes || "—")}</div>
+                                </div>
+                            ` : '<div class="mt-2 text-muted small fst-italic">Chưa có lần tương tác nào cho ca này.</div>'}
+                        </div>
+                        <div class="phd-task-card-footer">
+                            <button type="button" class="btn btn-outline-primary btn-sm px-2 py-1" style="font-size:11.5px;" data-pdrawer-view-task-interactions="${t.taskId}">
+                                <i class="bi bi-clock-history me-1"></i>Xem tương tác (${taskInteractions.length} lần)
+                            </button>
+                            <button type="button" class="btn btn-primary btn-sm px-2 py-1" style="font-size:11.5px;" data-pdrawer-open-task="${t.taskId}">
+                                <i class="bi bi-pencil-square me-1"></i>${isClosed ? "Xem chi tiết" : "Ghi KQ / Chi tiết"}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+            container.innerHTML = headerHtml + cardsHtml;
+            return;
+        }
+
+        // Cấp 2: Chi tiết tương tác của 1 Task cụ thể hoặc Toàn bộ tương tác
+        if (emptyEl) emptyEl.hidden = true;
+
+        let interactionsToShow = [];
+        let taskTitle = "";
+        if (patientDrawerState.viewLevel === "TASK_DETAIL" && patientDrawerState.selectedTaskId) {
+            const task = allTasks.find(t => t.taskId === patientDrawerState.selectedTaskId);
+            taskTitle = task ? `${task.taskCode} - ${task.careGroupLabel || ""}` : `Công việc #${patientDrawerState.selectedTaskId}`;
+            interactionsToShow = allInteractions.filter(i => String(i.taskId) === String(patientDrawerState.selectedTaskId));
+        } else {
+            taskTitle = "Toàn bộ lịch sử tương tác tổng hợp";
+            interactionsToShow = allInteractions;
+        }
+
+        const navBackHtml = `
+            <div class="d-flex align-items-center justify-content-between p-2 mb-3 bg-light rounded-3 border">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-pdrawer-back-tasks="true" style="font-size:12px;">
+                    <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách công việc của BN
+                </button>
+                <span class="fw-bold text-dark small text-truncate ms-2" style="max-width: 260px;" title="${escapeHtml(taskTitle)}">${escapeHtml(taskTitle)}</span>
+            </div>
+        `;
+
+        if (!interactionsToShow.length) {
+            container.innerHTML = navBackHtml + '<div class="p-4 text-center text-muted">Công việc này chưa có lần tương tác nào được ghi nhận.</div>';
             if (moreWrap) moreWrap.hidden = true;
             return;
         }
 
-        if (emptyEl) emptyEl.hidden = true;
+        const limit = patientDrawerState.visibleLimit;
+        const shown = interactionsToShow.slice(0, limit);
+        const timelineHtml = renderVerticalConnectedTimeline(shown, {
+            isGeneral: false,
+            idPrefix: "vtl-pdrawer",
+            totalCount: interactionsToShow.length,
+            pageOffset: 0
+        });
 
-        const shown = filtered.slice(0, limit);
-        if (container) {
-            container.innerHTML = renderVerticalConnectedTimeline(shown, {
-                isGeneral: false,
-                idPrefix: "vtl-pdrawer",
-                totalCount: filtered.length,
-                pageOffset: 0
-            });
-        }
+        container.innerHTML = navBackHtml + timelineHtml;
 
         if (moreWrap) {
-            const hasMore = filtered.length > limit;
+            const hasMore = interactionsToShow.length > limit;
             moreWrap.hidden = !hasMore;
-            const remaining = filtered.length - limit;
+            const remaining = interactionsToShow.length - limit;
             const btn = $("patientHistoryDrawerMoreBtn");
             if (btn) btn.innerHTML = `<i class="bi bi-arrow-down-circle me-1"></i>Xem thêm ${remaining} tương tác cũ hơn`;
         }
+    }
+
+    function applyPatientDrawerFilters() {
+        const taskId = $("patientHistoryDrawerTaskFilter")?.value || "";
+        if (taskId) {
+            patientDrawerState.viewLevel = "TASK_DETAIL";
+            patientDrawerState.selectedTaskId = Number(taskId);
+        } else {
+            patientDrawerState.viewLevel = "TASKS";
+            patientDrawerState.selectedTaskId = null;
+        }
+        renderPatientDrawerContent();
     }
 
     // =========================================================================
@@ -1058,7 +1166,7 @@
     // =========================================================================
     // CẤU HÌNH CỘT BẢNG CSKH & COLUMN CUSTOMIZER (THEO CHUẨN CV-DCMS ENTERPRISE)
     // =========================================================================
-    const CC_COLUMNS_KEY = "cvdcms_cc_table_columns_v7";
+    const CC_COLUMNS_KEY = "cvdcms_cc_table_columns_v9";
     const DEFAULT_CC_COLUMNS = [
         { id: "taskCode", title: "Mã CV", width: 110, visible: true, required: true },
         { id: "patient", title: "Bệnh nhân", width: 180, visible: true, required: true },
@@ -1068,7 +1176,7 @@
         { id: "staff", title: "Phụ trách", width: 135, visible: true },
         { id: "interaction", title: "Tương tác gần nhất", width: 155, visible: true },
         { id: "status", title: "Trạng thái", width: 115, visible: true },
-        { id: "actions", title: "Thao tác", width: 285, visible: true, required: true }
+        { id: "actions", title: "Thao tác", width: 315, visible: true, required: true }
     ];
 
     let ccColumns = loadCcColumns();
@@ -1080,8 +1188,8 @@
                 const parsed = JSON.parse(raw);
                 if (Array.isArray(parsed) && parsed.length === DEFAULT_CC_COLUMNS.length) {
                     const actCol = parsed.find(c => c.id === "actions");
-                    if (actCol && (!actCol.width || actCol.width < 280)) {
-                        actCol.width = 285;
+                    if (actCol && (!actCol.width || actCol.width < 315)) {
+                        actCol.width = 315;
                     }
                     return parsed;
                 }
@@ -1456,7 +1564,7 @@
         const params = new URLSearchParams({
             page,
             size: state.pageSize,
-            tabGroup: state.activeTab === "HISTORY" ? "ACTIONABLE" : state.activeTab
+            tabGroup: state.activeTab === "HISTORY" ? "TODAY" : state.activeTab
         });
         if (state.branchId) params.set("branchId", state.branchId);
         if (state.activeTab === "ACTIONABLE" && state.dueFilter && state.dueFilter !== "ALL") {
@@ -1697,6 +1805,7 @@
         panel.classList.toggle("show");
         if (btn) btn.classList.toggle("is-open", panel.classList.contains("show"));
     };
+    window.toggleCAdvFilter = window.toggleCcAdvFilter;
 
     // =========================================================================
     // 4. MODAL LẬP LỊCH / PHÂN CÔNG CHĂM SÓC & TỰ ĐỘNG TỔNG HỢP (SCR-44.3)
@@ -2409,6 +2518,14 @@
 
     function getCalendarRange() {
         const ref = parseYmdUtc(state.calRefDate);
+        if (state.calMode === "day") {
+            const ymd = formatUtcDateYmd(ref);
+            return {
+                startDate: ymd,
+                endDate: ymd,
+                title: `Ngày ${formatYmdVi(ymd)}`
+            };
+        }
         if (state.calMode === "month") {
             const year = ref.getUTCFullYear();
             const month = ref.getUTCMonth();
@@ -2442,8 +2559,10 @@
 
         const range = getCalendarRange();
         if ($("calRangeTitle")) $("calRangeTitle").textContent = range.title;
+        if ($("calDayBtn")) $("calDayBtn").classList.toggle("active", state.calMode === "day");
         if ($("calWeekBtn")) $("calWeekBtn").classList.toggle("active", state.calMode === "week");
         if ($("calMonthBtn")) $("calMonthBtn").classList.toggle("active", state.calMode === "month");
+        if ($("calDatePicker")) $("calDatePicker").value = state.calRefDate;
 
         grid.innerHTML = '<div class="p-4 text-center text-muted" style="grid-column:1 / -1;">Đang tải lịch công việc CSKH...</div>';
 
@@ -2528,9 +2647,6 @@
         const grid = $("ccCalendarGrid");
         if (!grid) return;
 
-        const dayHeaders = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"];
-        const headerHtml = dayHeaders.map(d => `<div class="cc-cal-header">${d}</div>`).join("");
-
         const tasksByDate = {};
         state.calendarTasks.forEach(t => {
             const d = t.dueDate || (t.nextRetryAt ? String(t.nextRetryAt).slice(0, 10) : null);
@@ -2540,6 +2656,71 @@
         });
 
         const todayYmd = getVietnamTodayYmd();
+
+        if (state.calMode === "day") {
+            grid.style.gridTemplateColumns = "1fr";
+            const dayTasks = tasksByDate[range.startDate] || [];
+            if (!dayTasks.length) {
+                grid.innerHTML = '<div class="p-5 text-center text-muted">Không có công việc CSKH nào trong ngày này.</div>';
+                return;
+            }
+            grid.innerHTML = `
+                <div class="p-3">
+                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                        <div class="fw-bold text-dark" style="font-size:14.5px;">
+                            <i class="bi bi-calendar-event text-primary me-2"></i>Danh sách công việc ngày ${formatYmdVi(range.startDate)}
+                        </div>
+                        <span class="badge bg-primary px-3 py-2" style="font-size:12.5px;">${dayTasks.length} công việc</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered align-middle mb-0" style="font-size:12.5px;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 110px;">Mã CV</th>
+                                    <th style="width: 170px;">Bệnh nhân</th>
+                                    <th style="width: 150px;">Phân nhóm</th>
+                                    <th>Nội dung / Ghi chú</th>
+                                    <th style="width: 130px;">Hạn / Giờ hẹn</th>
+                                    <th style="width: 120px;">Phụ trách</th>
+                                    <th style="width: 110px;">Trạng thái</th>
+                                    <th style="width: 90px;" class="text-center">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${dayTasks.map(t => {
+                                    const timeText = t.nextRetryAt && !isTaskClosed(t) ? String(t.nextRetryAt).replace("T", " ").slice(11, 16) : "";
+                                    return `
+                                        <tr>
+                                            <td><span class="font-mono-code">${escapeHtml(t.taskCode)}</span></td>
+                                            <td>
+                                                <div class="fw-bold text-dark">${escapeHtml(t.patientName || "—")}</div>
+                                                <div class="text-muted small">${escapeHtml(t.patientPhone || "")}</div>
+                                            </td>
+                                            <td><span class="badge bg-light text-dark border">${escapeHtml(t.careGroupLabel || "")}</span></td>
+                                            <td><div class="text-truncate" style="max-width: 280px;" title="${escapeHtml(t.notes || '')}">${escapeHtml(t.notes || "—")}</div></td>
+                                            <td>${timeText ? `<span class="badge bg-warning text-dark"><i class="bi bi-alarm me-1"></i>${timeText}</span>` : escapeHtml(t.dueDate || "—")}</td>
+                                            <td><small>${escapeHtml(t.assignedStaffName || "Chưa gán")}</small></td>
+                                            <td><span class="badge ${getStatusBadgeClass(t.status)}">${escapeHtml(t.statusLabel || statusLabelOf(t.status))}</span></td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-primary btn-sm px-2 py-1" style="font-size:11px;" data-cal-task-id="${t.taskId}">
+                                                    Ghi KQ
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join("")}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        grid.style.gridTemplateColumns = "repeat(7, minmax(0, 1fr))";
+        const dayHeaders = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"];
+        const headerHtml = dayHeaders.map(d => `<div class="cc-cal-header">${d}</div>`).join("");
+
         const isWeek = state.calMode !== "month";
         const maxCards = isWeek ? 4 : 2;
         const cells = [];
@@ -2564,8 +2745,8 @@
                 : (dayNum === 1 ? `${dayNum}/${dateObj.getUTCMonth() + 1}` : String(dayNum));
 
             cells.push(`
-                <div class="cc-cal-day ${isWeek ? "is-week" : ""} ${isToday ? "is-today" : ""} ${isOutside ? "is-outside" : ""}">
-                    <div class="cc-cal-day-head">
+                <div class="cc-cal-day ${isWeek ? "is-week" : ""} ${isToday ? "is-today" : ""} ${isOutside ? "is-outside" : ""}" data-cal-day-cell="${cursor}">
+                    <div class="cc-cal-day-head" data-cal-more-date="${cursor}" style="cursor:pointer;" title="Bấm để xem danh sách chi tiết ngày này">
                         <span class="cc-cal-day-num">${dayLabel}${isToday ? ' <small class="cc-cal-today-tag">Hôm nay</small>' : ""}</span>
                         ${dayTasks.length > 0 ? `<span class="cc-cal-day-count">${dayTasks.length}</span>` : ""}
                     </div>
@@ -2580,18 +2761,88 @@
         grid.innerHTML = headerHtml + cells.join("");
     }
 
+    let currentDayTasksModalList = [];
+
+    function renderDayTasksModalContent() {
+        const listEl = $("ccDayTasksModalList");
+        if (!listEl) return;
+        const kw = ($("dayTasksModalSearch")?.value || "").trim().toLowerCase();
+        const st = $("dayTasksModalFilterStatus")?.value || "";
+        const cg = $("dayTasksModalFilterCareGroup")?.value || "";
+
+        const filtered = currentDayTasksModalList.filter(t => {
+            if (st && t.status !== st) return false;
+            if (cg && t.careGroup !== cg && t.taskType !== cg) return false;
+            if (kw) {
+                const code = (t.taskCode || "").toLowerCase();
+                const name = (t.patientName || "").toLowerCase();
+                const phone = (t.patientPhone || "").toLowerCase();
+                if (!code.includes(kw) && !name.includes(kw) && !phone.includes(kw)) return false;
+            }
+            return true;
+        });
+
+        if ($("dayTasksModalFilteredCount")) {
+            $("dayTasksModalFilteredCount").textContent = `${filtered.length} công việc`;
+        }
+
+        if (!filtered.length) {
+            listEl.innerHTML = '<div class="text-muted text-center p-4">Không có công việc nào phù hợp với bộ lọc trong ngày này.</div>';
+            return;
+        }
+
+        listEl.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered align-middle mb-0" style="font-size:12.5px;">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 110px;">Mã CV</th>
+                            <th style="width: 170px;">Bệnh nhân</th>
+                            <th style="width: 150px;">Phân nhóm</th>
+                            <th>Nội dung</th>
+                            <th style="width: 120px;">Phụ trách</th>
+                            <th style="width: 110px;">Trạng thái</th>
+                            <th style="width: 90px;" class="text-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filtered.map(t => `
+                            <tr>
+                                <td><span class="font-mono-code">${escapeHtml(t.taskCode)}</span></td>
+                                <td>
+                                    <div class="fw-bold">${escapeHtml(t.patientName || "—")}</div>
+                                    <div class="text-muted small">${escapeHtml(t.patientPhone || "")}</div>
+                                </td>
+                                <td><span class="badge bg-light text-dark border">${escapeHtml(t.careGroupLabel || "")}</span></td>
+                                <td><div class="text-truncate" style="max-width: 240px;" title="${escapeHtml(t.notes || '')}">${escapeHtml(t.notes || "—")}</div></td>
+                                <td><small>${escapeHtml(t.assignedStaffName || "Chưa gán")}</small></td>
+                                <td><span class="badge ${getStatusBadgeClass(t.status)}">${escapeHtml(t.statusLabel || statusLabelOf(t.status))}</span></td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-primary btn-sm px-2 py-1" style="font-size:11px;" data-cal-modal-task-id="${t.taskId}">
+                                        Chi tiết
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
     function openDayTasksModal(ymd) {
         const modal = $("ccDayTasksModal");
-        const listEl = $("ccDayTasksModalList");
-        if (!modal || !listEl) return;
+        if (!modal) return;
 
-        const dayTasks = state.calendarTasks.filter(t => (t.dueDate || (t.nextRetryAt ? String(t.nextRetryAt).slice(0, 10) : "")) === ymd);
+        currentDayTasksModalList = state.calendarTasks.filter(t => (t.dueDate || (t.nextRetryAt ? String(t.nextRetryAt).slice(0, 10) : "")) === ymd);
         if ($("ccDayTasksModalTitle")) $("ccDayTasksModalTitle").textContent = `Công việc CSKH ngày ${formatYmdVi(ymd)}`;
-        if ($("ccDayTasksModalSub")) $("ccDayTasksModalSub").textContent = `Tổng cộng ${dayTasks.length} công việc`;
+        if ($("ccDayTasksModalSub")) $("ccDayTasksModalSub").textContent = `Tổng cộng ${currentDayTasksModalList.length} công việc`;
 
-        listEl.innerHTML = dayTasks.length
-            ? `<div class="cc-day-modal-list">${dayTasks.map(t => renderCalendarCard(t, "", "data-cal-modal-task-id")).join("")}</div>`
-            : '<div class="text-muted text-center p-3">Không có công việc trong ngày này.</div>';
+        if ($("dayTasksModalSearch")) $("dayTasksModalSearch").value = "";
+        if ($("dayTasksModalFilterStatus")) $("dayTasksModalFilterStatus").value = "";
+        if ($("dayTasksModalFilterCareGroup")) $("dayTasksModalFilterCareGroup").value = "";
+
+        renderDayTasksModalContent();
         modal.hidden = false;
     }
 
@@ -2610,13 +2861,27 @@
         }
     }
 
+    function getNotifEventIcon(eventType) {
+        switch (eventType) {
+            case "TASK_CREATED": return '<i class="bi bi-clipboard-plus text-primary"></i>';
+            case "OVERDUE": return '<i class="bi bi-exclamation-octagon text-danger"></i>';
+            case "ESCALATED": return '<i class="bi bi-heart-pulse text-danger"></i>';
+            case "CALLBACK_DUE": return '<i class="bi bi-alarm text-warning"></i>';
+            case "TASK_REOPENED": return '<i class="bi bi-arrow-clockwise text-info"></i>';
+            case "TASK_COMPLETED": return '<i class="bi bi-check-circle text-success"></i>';
+            default: return '<i class="bi bi-bell text-secondary"></i>';
+        }
+    }
+
     function renderNotificationCenter() {
         const badge = $("ccNotifUnreadBadge");
         if (badge) {
             if (state.unreadNotifCount > 0) {
                 badge.textContent = state.unreadNotifCount > 99 ? "99+" : String(state.unreadNotifCount);
+                badge.classList.remove("d-none");
                 badge.hidden = false;
             } else {
+                badge.classList.add("d-none");
                 badge.hidden = true;
             }
         }
@@ -2628,16 +2893,26 @@
             return;
         }
 
-        list.innerHTML = state.notifications.map(n => `
-            <button type="button" class="cc-notif-item ${n.isRead ? "" : "is-unread"}"
-                    data-notif-id="${n.notificationId}" data-notif-task="${n.taskId || ""}">
-                <div class="cc-notif-item-head">
-                    <span class="cc-notif-item-title">${escapeHtml(n.title || "Thông báo CSKH")}</span>
-                    <span class="cc-notif-item-time">${escapeHtml(formatDateTime(n.createdAt))}</span>
-                </div>
-                <div class="cc-notif-item-msg">${escapeHtml(n.message || "")}</div>
-            </button>
-        `).join("");
+        list.innerHTML = state.notifications.map(n => {
+            const isUnread = !n.isRead;
+            const taskTag = n.taskCode ? `<span class="badge font-mono-code bg-light text-dark border me-1">${escapeHtml(n.taskCode)}</span>` : "";
+            const patientTag = n.patientName ? `<span class="fw-bold text-dark me-1">${escapeHtml(n.patientName)}</span>` : "";
+            return `
+                <button type="button" class="cc-notif-item ${isUnread ? "is-unread" : ""}"
+                        data-notif-id="${n.notificationId}" data-notif-task="${n.taskId || ""}">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                        <div class="d-flex align-items-center gap-1 flex-grow-1 overflow-hidden">
+                            ${isUnread ? '<span class="cc-notif-unread-dot me-1"></span>' : ''}
+                            <span class="me-1">${getNotifEventIcon(n.eventType)}</span>
+                            <span class="cc-notif-title ${isUnread ? 'fw-bold text-dark' : 'text-secondary'}" style="font-size:12.5px;">${escapeHtml(n.title || "Thông báo CSKH")}</span>
+                        </div>
+                        <span class="cc-notif-time text-muted" style="font-size:11px;white-space:nowrap;">${escapeHtml(formatDateTime(n.createdAt))}</span>
+                    </div>
+                    ${taskTag || patientTag ? `<div class="mb-1" style="font-size:11.5px;">${taskTag}${patientTag}</div>` : ''}
+                    <div class="cc-notif-msg text-secondary" style="font-size:12px;line-height:1.4;">${escapeHtml(n.message || "")}</div>
+                </button>
+            `;
+        }).join("");
     }
 
     async function handleNotificationClick(notificationId, taskId) {
@@ -2922,7 +3197,9 @@
 
         // Calendar navigation & filters
         safeOn("calPrevBtn", "click", () => {
-            if (state.calMode === "month") {
+            if (state.calMode === "day") {
+                state.calRefDate = addDaysYmd(state.calRefDate, -1);
+            } else if (state.calMode === "month") {
                 const d = parseYmdUtc(state.calRefDate);
                 d.setUTCMonth(d.getUTCMonth() - 1, 1);
                 state.calRefDate = formatUtcDateYmd(d);
@@ -2932,7 +3209,9 @@
             loadCalendar();
         });
         safeOn("calNextBtn", "click", () => {
-            if (state.calMode === "month") {
+            if (state.calMode === "day") {
+                state.calRefDate = addDaysYmd(state.calRefDate, 1);
+            } else if (state.calMode === "month") {
                 const d = parseYmdUtc(state.calRefDate);
                 d.setUTCMonth(d.getUTCMonth() + 1, 1);
                 state.calRefDate = formatUtcDateYmd(d);
@@ -2945,6 +3224,10 @@
             state.calRefDate = getVietnamTodayYmd();
             loadCalendar();
         });
+        safeOn("calDayBtn", "click", () => {
+            state.calMode = "day";
+            loadCalendar();
+        });
         safeOn("calWeekBtn", "click", () => {
             state.calMode = "week";
             loadCalendar();
@@ -2953,10 +3236,23 @@
             state.calMode = "month";
             loadCalendar();
         });
+        safeOn("calDatePicker", "change", (e) => {
+            if (e.target.value) {
+                state.calRefDate = e.target.value;
+                loadCalendar();
+            }
+        });
         safeOn("calFilterStaff", "change", () => loadCalendar());
         safeOn("calFilterDoctor", "change", () => loadCalendar());
         safeOn("calFilterCareGroup", "change", () => loadCalendar());
         safeOn("calFilterStatus", "change", () => loadCalendar());
+
+        // Day tasks modal filters
+        safeOn("dayTasksModalSearch", "input", renderDayTasksModalContent);
+        safeOn("dayTasksModalFilterStatus", "change", renderDayTasksModalContent);
+        safeOn("dayTasksModalFilterCareGroup", "change", renderDayTasksModalContent);
+        safeOn("cancelDayTasksModalBtn", "click", () => { if ($("ccDayTasksModal")) $("ccDayTasksModal").hidden = true; });
+        safeOn("closeDayTasksModalBtn", "click", () => { if ($("ccDayTasksModal")) $("ccDayTasksModal").hidden = true; });
 
         // Notification Center events
         safeOn("ccNotifBellBtn", "click", (e) => {
@@ -2975,6 +3271,7 @@
             }
         });
 
+        safeOn("btnToggleAdvFilter", "click", window.toggleCcAdvFilter);
         safeOn("openCreateTaskBtn", "click", () => openTaskFormModal());
         safeOn("refreshBtn", "click", async () => {
             await refreshAllData();
@@ -3021,6 +3318,14 @@
         safeOn("closeDayTasksModalBtn", "click", () => { $("ccDayTasksModal").hidden = true; });
         safeOn("closeReopenModalBtn", "click", () => { $("reopenModal").hidden = true; });
         safeOn("cancelReopenModalBtn", "click", () => { $("reopenModal").hidden = true; });
+
+        // KPI cards quick tab switch
+        document.querySelectorAll(".dv-kpi-card").forEach(card => {
+            card.addEventListener("click", () => {
+                const tab = card.dataset.kpiTab;
+                if (tab) switchTab(tab);
+            });
+        });
 
         // Patient History Right Offcanvas Drawer events
         safeOn("closePatientHistoryDrawerBtn", "click", closePatientHistoryDrawer);
@@ -3173,6 +3478,37 @@
                 if (profileId) {
                     openPatientHistoryDrawer(Number(profileId));
                 }
+                return;
+            }
+
+            // Patient History Drawer 2-Level Actions
+            const pdrawerTaskInteractionsBtn = e.target.closest("[data-pdrawer-view-task-interactions]");
+            if (pdrawerTaskInteractionsBtn) {
+                patientDrawerState.viewLevel = "TASK_DETAIL";
+                patientDrawerState.selectedTaskId = Number(pdrawerTaskInteractionsBtn.dataset.pdrawerViewTaskInteractions);
+                renderPatientDrawerContent();
+                return;
+            }
+
+            const pdrawerOpenTaskBtn = e.target.closest("[data-pdrawer-open-task]");
+            if (pdrawerOpenTaskBtn) {
+                await openInteractionModal(pdrawerOpenTaskBtn.dataset.pdrawerOpenTask);
+                return;
+            }
+
+            const pdrawerBackBtn = e.target.closest("[data-pdrawer-back-tasks]");
+            if (pdrawerBackBtn) {
+                patientDrawerState.viewLevel = "TASKS";
+                patientDrawerState.selectedTaskId = null;
+                renderPatientDrawerContent();
+                return;
+            }
+
+            const pdrawerAllIntBtn = e.target.closest("[data-pdrawer-view-all-interactions]");
+            if (pdrawerAllIntBtn) {
+                patientDrawerState.viewLevel = "ALL_INTERACTIONS";
+                patientDrawerState.selectedTaskId = null;
+                renderPatientDrawerContent();
                 return;
             }
 
