@@ -156,11 +156,6 @@ public class DoctorRecordService {
         Set<Long> branchIds = new HashSet<>(assignments.findActiveBranchIdsByUserId(
                 user.getUserId(), AssignmentStatus.ACTIVE));
         if (user.getBranch() != null) branchIds.add(user.getBranch().getBranchId());
-        if (branchIds.isEmpty()) {
-            branchRepository.findByIsActiveTrueOrderByBranchNameAsc().forEach(b -> {
-                if (b.getBranchId() != null) branchIds.add(b.getBranchId());
-            });
-        }
         if (branchIds.isEmpty()) throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                 "Tài khoản bác sĩ chưa được phân chi nhánh.");
         return branchIds;
@@ -190,7 +185,11 @@ public class DoctorRecordService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         Set<Long> allowed = branches(session);
         if (!isAdmin(session)) {
-            if (profile.getPreferredBranch() != null && !allowed.contains(profile.getPreferredBranch().getBranchId()))
+            boolean preferredOk = profile.getPreferredBranch() != null
+                    && allowed.contains(profile.getPreferredBranch().getBranchId());
+            boolean visitInScope = visits.forPatient(id).stream()
+                    .anyMatch(v -> v.getBranch() != null && allowed.contains(v.getBranch().getBranchId()));
+            if (!preferredOk && !visitInScope)
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
         return PatientView.from(profile);
@@ -405,11 +404,9 @@ public class DoctorRecordService {
 
     @Transactional
     public void updateHealthNotes(HttpSession session, Long patientId, String allergyDetails, String underlyingDiseaseDetails) {
+        get(session, patientId);
         PatientProfile profile = profiles.findById(patientId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        Set<Long> allowed = branches(session);
-        if (!isAdmin(session) && profile.getPreferredBranch() != null && !allowed.contains(profile.getPreferredBranch().getBranchId()))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
 
         String cleanAllergy = allergyDetails == null || allergyDetails.isBlank() ? null : allergyDetails.trim();
         String cleanUnderlying = underlyingDiseaseDetails == null || underlyingDiseaseDetails.isBlank() ? null : underlyingDiseaseDetails.trim();
@@ -425,11 +422,9 @@ public class DoctorRecordService {
         if (newCode == null || newCode.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã bệnh nhân không được để trống.");
         }
+        get(session, patientId);
         PatientProfile profile = profiles.findById(patientId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        Set<Long> allowed = branches(session);
-        if (!isAdmin(session) && profile.getPreferredBranch() != null && !allowed.contains(profile.getPreferredBranch().getBranchId()))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         profile.setPatientCode(newCode.trim().toUpperCase());
         profiles.saveAndFlush(profile);
     }
@@ -455,9 +450,18 @@ public class DoctorRecordService {
 
     @Transactional
     public void updatePhoto(HttpSession session, Long photoId, String caption, String stageStr, String categoryStr) {
+        updatePhotoForPatient(session, null, photoId, caption, stageStr, categoryStr);
+    }
+
+    @Transactional
+    public void updatePhotoForPatient(HttpSession session, Long expectedPatientId, Long photoId, String caption, String stageStr, String categoryStr) {
         ClinicalPhoto photo = photos.findById(photoId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy ảnh lâm sàng."));
-        get(session, photo.getPatientProfile().getProfileId());
+        Long actualPatientId = photo.getPatientProfile() != null ? photo.getPatientProfile().getProfileId() : null;
+        if (expectedPatientId != null && !expectedPatientId.equals(actualPatientId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy ảnh lâm sàng thuộc hồ sơ này.");
+        }
+        get(session, actualPatientId);
         if (caption != null) photo.setCaption(caption.trim());
         if (stageStr != null && !stageStr.isBlank()) {
             try { photo.setPhotoStage(PhotoStage.valueOf(stageStr.toUpperCase())); } catch (Exception ignored) {}
@@ -470,9 +474,18 @@ public class DoctorRecordService {
 
     @Transactional
     public void deletePhoto(HttpSession session, Long photoId) {
+        deletePhotoForPatient(session, null, photoId);
+    }
+
+    @Transactional
+    public void deletePhotoForPatient(HttpSession session, Long expectedPatientId, Long photoId) {
         ClinicalPhoto photo = photos.findById(photoId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy ảnh lâm sàng."));
-        get(session, photo.getPatientProfile().getProfileId());
+        Long actualPatientId = photo.getPatientProfile() != null ? photo.getPatientProfile().getProfileId() : null;
+        if (expectedPatientId != null && !expectedPatientId.equals(actualPatientId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy ảnh lâm sàng thuộc hồ sơ này.");
+        }
+        get(session, actualPatientId);
         photos.delete(photo);
     }
 

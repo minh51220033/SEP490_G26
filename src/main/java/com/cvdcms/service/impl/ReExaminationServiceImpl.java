@@ -321,6 +321,7 @@ public class ReExaminationServiceImpl implements ReExaminationService {
                 .appointmentId(appt.getAppointmentId())
                 .appointmentCode(appt.getAppointmentCode())
                 .patientId(p != null ? p.getProfileId() : null)
+                .patientToken(p != null ? new com.cvdcms.security.UrlIdCodec().encodePatient(p.getProfileId()) : null)
                 .patientCode(p != null ? p.getPatientCode() : "---")
                 .patientName(p != null ? p.getFullName() : "Chưa xác định")
                 .phoneNumber(p != null ? p.getPhoneNumber() : "---")

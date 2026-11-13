@@ -135,6 +135,7 @@ public class PatientPageController {
                          Model model, HttpSession session) {
         PatientView patient = service.get(session, id);
         model.addAttribute("patient", patient);
+        model.addAttribute("patientRouteId", String.valueOf(id));
 
         List<ReceptionVisitView> visitList = service.visits(session, id);
         model.addAttribute("visits", visitList);
@@ -359,8 +360,14 @@ public class PatientPageController {
                             @RequestParam(required = false) String stage,
                             @RequestParam(required = false) String category,
                             RedirectAttributes redirect) {
+        service.get(session, id);
         try {
             if (clinicalPhotoService != null) {
+                var existing = clinicalPhotoService.getPhotosByProfile(id).stream()
+                        .anyMatch(p -> photoId.equals(p.getPhotoId()));
+                if (!existing) {
+                    throw new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Không tìm thấy ảnh thuộc hồ sơ này.");
+                }
                 PhotoStage pStage = stage != null ? PhotoStage.valueOf(stage.toUpperCase()) : null;
                 PhotoCategory pCat = category != null ? PhotoCategory.valueOf(category.toUpperCase()) : null;
                 clinicalPhotoService.updatePhoto(photoId, caption, pStage, pCat);
@@ -376,8 +383,14 @@ public class PatientPageController {
     public String deletePhoto(HttpSession session, @PathVariable Long id,
                               @PathVariable Long photoId,
                               RedirectAttributes redirect) {
+        service.get(session, id);
         try {
             if (clinicalPhotoService != null) {
+                var existing = clinicalPhotoService.getPhotosByProfile(id).stream()
+                        .anyMatch(p -> photoId.equals(p.getPhotoId()));
+                if (!existing) {
+                    throw new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Không tìm thấy ảnh thuộc hồ sơ này.");
+                }
                 clinicalPhotoService.deletePhoto(photoId);
                 redirect.addFlashAttribute("documentSuccess", "Đã xóa ảnh lâm sàng thành công.");
             }
@@ -390,7 +403,10 @@ public class PatientPageController {
     @GetMapping("/{id}/visits/{visitId}")
     public String visit(@PathVariable Long id, @PathVariable Long visitId, Model model,
                         HttpSession session) {
-        return "redirect:/doctor/examination/" + visitId + "/diagnoses?readOnly=true&fromPatientId=" + id;
+        service.visit(session, id, visitId);
+        var codec = new com.cvdcms.security.UrlIdCodec();
+        return "redirect:/doctor/examination/" + codec.encodeVisit(visitId)
+                + "/diagnoses?readOnly=true&fromPatientRef=" + codec.encodePatient(id);
     }
 
     @GetMapping("/{id}/documents/{documentId}")

@@ -579,7 +579,8 @@
                     .dv-patient-cell {
                         display: flex;
                         align-items: center;
-                        justify-content: center;
+                        justify-content: flex-start;
+                        text-align: left;
                         gap: 12px;
                     }
 
@@ -1103,8 +1104,8 @@
                                         <span class="dv-col-resizer"></span>
                                     </th>
                                     <!-- GHIM CỘT HỌ VÀ TÊN (STICKY LEFT) -->
-                                    <th class="text-center dv-col-pinned-left" data-col="fullName" style="min-width: 250px;">
-                                        <div class="dv-th-inner">
+                                    <th class="text-start dv-col-pinned-left" data-col="fullName" style="min-width: 250px;">
+                                        <div class="dv-th-inner justify-content-between">
                                             <span>Họ và tên bệnh nhân</span>
                                             <button type="button" class="dv-pin-btn is-pinned"
                                                 title="Bỏ ghim cột Họ tên" onclick="togglePinColumn('fullName')">
@@ -1190,13 +1191,13 @@
                                     </td>
 
                                     <!-- 3. HỌ VÀ TÊN (STICKY LEFT) -->
-                                    <td class="text-center dv-col-pinned-left" data-col="fullName">
+                                    <td class="text-start dv-col-pinned-left" data-col="fullName">
                                         <div class="dv-patient-cell">
                                             <div class="dv-patient-avatar"
                                                 th:text="${patient.fullName != null and !patient.fullName.isBlank() ? patient.fullName.substring(0, 1).toUpperCase() : 'B'}">
                                                 V</div>
                                             <div>
-                                                <a th:href="${recordBasePath + '/' + patient.id}"
+                                                <a th:href="${recordBasePath + '/' + (recordBasePath == '/doctor/patient-records' ? idCodec.encodePatient(patient.id) : patient.id)}"
                                                     class="dv-patient-name" th:text="${patient.fullName}">Nguyễn Văn
                                                     An</a>
                                                 <div class="dv-patient-address"
@@ -1281,7 +1282,7 @@
                                         <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
                                             <div class="dv-action-btn-group">
                                                 <!-- Xem chi tiết hồ sơ -->
-                                                <a th:href="${recordBasePath + '/' + patient.id}"
+                                                <a th:href="${recordBasePath + '/' + (recordBasePath == '/doctor/patient-records' ? idCodec.encodePatient(patient.id) : patient.id)}"
 
                                                     class="dv-equal-btn-secondary"
                                                     title="Xem hồ sơ bệnh nhân toàn diện &amp; bệnh sử">

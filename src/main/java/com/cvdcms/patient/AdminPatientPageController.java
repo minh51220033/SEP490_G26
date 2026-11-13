@@ -92,6 +92,7 @@ public class AdminPatientPageController {
         PatientOverviewDTO patient = overviewService.getPatientOverview(id);
 
         model.addAttribute("patient", patient);
+        model.addAttribute("patientRouteId", String.valueOf(id));
         model.addAttribute("visits", overviewService.getPatientVisits(id));
         model.addAttribute("appointments", overviewService.getPatientAppointments(id));
         model.addAttribute("prescriptions", overviewService.getPatientPrescriptions(id));

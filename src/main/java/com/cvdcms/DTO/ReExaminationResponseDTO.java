@@ -23,6 +23,7 @@ public class ReExaminationResponseDTO {
 
     // Patient info
     private Long patientId;
+    private String patientToken;
     private String patientCode;
     private String patientName;
     private String phoneNumber;

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Cấu hình ca làm việc')}"></head>
+
+<body class="app-body account-page-body staff-page-body">
+<div class="app-shell">
+
+    <aside th:replace="~{fragments/sidebar :: sidebar('work-shifts')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Cấu hình ca làm việc')}"></header>
+
+        <main class="app-content">
+            <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
+            <link rel="stylesheet" th:href="@{/css/staff.css}">
+            <link rel="stylesheet" th:href="@{/css/account.css}">
+
+            <!-- TOAST MESSAGES -->
+            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3" th:if="${successMessage}">
+                <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                <div th:text="${successMessage}"></div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            </div>
+            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-3" th:if="${errorMessage}">
+                <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                <div th:text="${errorMessage}"></div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN / DOCTOR DAILY-VISITS -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div>
+                        <h1 class="dv-page-title mb-0">Cấu hình ca làm việc</h1>
+                        <p class="dv-page-subtitle">Thiết lập khung giờ Sáng / Chiều / Tối và quản lý trạng thái ca cho từng cơ sở phòng khám</p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                    <button class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                            style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;"
+                            data-bs-toggle="modal" data-bs-target="#modalCreateShift"
+                            th:disabled="${selectedBranchId == null}">
+                        <i class="bi bi-plus-lg"></i> Thêm ca mới
+                    </button>
+                </div>
+            </div>
+
+            <!-- HR TABS (Chuẩn DentalSoft) -->
+            <nav th:replace="~{fragments/hr_tabs :: hrTabs('work-shifts')}"></nav>
+
+            <!-- 3 THẺ KPI TỔNG QUAN (Đồng bộ chuẩn Quản lý tài khoản) -->
+            <div class="row g-3 mb-4" th:if="${shifts != null}">
+                <div class="col-md-4 col-sm-6">
+                    <div class="dv-kpi-card" style="--kpi-accent: #0284c7;">
+                        <div>
+                            <div class="dv-kpi-num" th:text="${#lists.size(shifts)}">0</div>
+                            <div class="dv-kpi-label">Tổng số ca làm</div>
+                            <div class="dv-kpi-sub">Khung giờ tại chi nhánh này</div>
+                        </div>
+                        <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                            <i class="bi bi-clock"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-sm-6">
+                    <div class="dv-kpi-card" style="--kpi-accent: #10b981;">
+                        <div>
+                            <div class="dv-kpi-num text-success" th:text="${shifts.?[isActive == true].size()}">0</div>
+                            <div class="dv-kpi-label">Đang hoạt động</div>
+                            <div class="dv-kpi-sub">Áp dụng cho phân ca &amp; chấm công</div>
+                        </div>
+                        <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-sm-6">
+                    <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;">
+                        <div>
+                            <div class="dv-kpi-num text-warning" th:text="${shifts.?[isActive == false].size()}">0</div>
+                            <div class="dv-kpi-label">Đã tắt / Tạm dừng</div>
+                            <div class="dv-kpi-sub">Ẩn khỏi phân ca mới</div>
+                        </div>
+                        <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                            <i class="bi bi-pause-circle-fill"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BRANCH PROMPT -->
+            <div th:if="${selectedBranchId == null}" class="text-center py-5">
+                <i class="bi bi-building text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted mt-3">Vui lòng chọn chi nhánh để xem và quản lý ca làm việc.</p>
+            </div>
+
+            <!-- BẢNG DỮ LIỆU CA LÀM (ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN) -->
+            <section th:if="${selectedBranchId != null}" class="staff-table-card">
+                <!-- THANH THÔNG TIN BẢNG (CHUẨN TÀI KHOẢN) -->
+                <div class="dv-grid-topbar">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <div class="fw-bold text-dark" style="font-size: 15px;">
+                            Hiển thị <span class="text-primary fw-bolder" th:text="${shifts != null ? #lists.size(shifts) : 0}">0</span> ca làm việc
+                            <span class="text-muted mx-1">•</span>
+                            <span class="text-secondary fw-semibold">Chi nhánh hiện tại</span>
+                        </div>
+                        <span class="badge rounded-pill px-3 py-1.5"
+                              style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700;">
+                            <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện thanh Thao tác nổi bám mép phải
+                        </span>
+                    </div>
+                </div>
+
+                <div class="dv-table-scroll-container">
+                    <table class="dv-amis-table" id="shiftTable">
+                        <thead>
+                        <tr>
+                            <th style="width: 60px; min-width: 60px;" class="text-center">
+                                <div class="dv-th-inner justify-content-center"><span>#</span></div>
+                            </th>
+                            <th style="min-width: 140px;">
+                                <div class="dv-th-inner"><span>Mã ca</span></div>
+                            </th>
+                            <th style="min-width: 240px;">
+                                <div class="dv-th-inner"><span>Tên ca làm</span></div>
+                            </th>
+                            <th style="min-width: 150px;">
+                                <div class="dv-th-inner"><span>Giờ bắt đầu</span></div>
+                            </th>
+                            <th style="min-width: 150px;">
+                                <div class="dv-th-inner"><span>Giờ kết thúc</span></div>
+                            </th>
+                            <th style="min-width: 140px;">
+                                <div class="dv-th-inner"><span>Thời lượng</span></div>
+                            </th>
+                            <th style="min-width: 180px;">
+                                <div class="dv-th-inner"><span>Trạng thái</span></div>
+                            </th>
+                            <th class="text-center" style="width: 1%;">
+                                <div class="dv-th-inner justify-content-center"><span>Thao tác nhanh</span></div>
+                            </th>
+                            <th class="dv-floating-actions-track"></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${#lists.isEmpty(shifts)}">
+                            <td colspan="9" class="text-center text-muted py-5">
+                                <i class="bi bi-clock-history me-2 fs-4"></i>Chưa có ca làm việc nào. Bấm <strong>Thêm ca mới</strong> để bắt đầu.
+                            </td>
+                        </tr>
+                        <tr th:each="s, stat : ${shifts}" class="dv-data-row">
+                            <!-- STT -->
+                            <td class="text-center text-muted fw-semibold" style="width: 60px; min-width: 60px;">
+                                <span th:text="${stat.count}">1</span>
+                            </td>
+
+                            <!-- Mã ca -->
+                            <td>
+                                <span class="chip chip--primary fw-bold" th:text="${s.shiftCode}">SANG</span>
+                            </td>
+
+                            <!-- Tên ca -->
+                            <td>
+                                <span class="fw-bold text-dark" style="font-size: 14.5px;" th:text="${s.shiftName}">Ca sáng</span>
+                            </td>
+
+                            <!-- Giờ bắt đầu -->
+                            <td>
+                                <span class="fw-semibold text-secondary">
+                                    <i class="bi bi-clock me-1 text-primary"></i>
+                                    <span th:text="${#temporals.format(s.startTime, 'HH:mm')}">08:00</span>
+                                </span>
+                            </td>
+
+                            <!-- Giờ kết thúc -->
+                            <td>
+                                <span class="fw-semibold text-secondary">
+                                    <i class="bi bi-clock-history me-1 text-muted"></i>
+                                    <span th:text="${#temporals.format(s.endTime, 'HH:mm')}">12:00</span>
+                                </span>
+                            </td>
+
+                            <!-- Thời lượng -->
+                            <td th:with="mins=${s.endTime.hour * 60 + s.endTime.minute - s.startTime.hour * 60 - s.startTime.minute}">
+                                <span class="chip" style="background: #f1f5f9; color: #475569; font-weight: 700;">
+                                    <i class="bi bi-hourglass-split me-1 text-warning"></i>
+                                    <span th:text="${mins / 60} + 'h' + (${mins % 60 > 0} ? ' ' + ${mins % 60} + 'm' : '')">4h</span>
+                                </span>
+                            </td>
+
+                            <!-- Trạng thái -->
+                            <td>
+                                <span class="badge rounded-pill px-3 py-1.5 fw-bold"
+                                      th:style="${s.isActive} ? 'background:#ecfdf5;color:#059669;font-size:12.5px;border:1px solid #a7f3d0;' : 'background:#fef2f2;color:#dc2626;font-size:12.5px;border:1px solid #fecaca;'">
+                                    <i class="bi" th:classappend="${s.isActive} ? 'bi-check-circle-fill me-1' : 'bi-pause-circle-fill me-1'"></i>
+                                    <span th:text="${s.isActive} ? 'Đang hoạt động' : 'Đã tắt'">Đang hoạt động</span>
+                                </span>
+                            </td>
+
+                            <!-- Nút tĩnh trên cột -->
+                            <td class="text-center" style="width: 1%; white-space: nowrap;">
+                                <div class="dv-actions-cell-always" onclick="event.stopPropagation()">
+                                    <!-- Nút Sửa -->
+                                    <button type="button"
+                                            class="dv-equal-btn-secondary"
+                                            title="Chỉnh sửa ca làm"
+                                            th:attr="data-shiftid=${s.shiftId},
+                                                     data-shiftcode=${s.shiftCode},
+                                                     data-shiftname=${s.shiftName},
+                                                     data-starttime=${#temporals.format(s.startTime,'HH:mm')},
+                                                     data-endtime=${#temporals.format(s.endTime,'HH:mm')}"
+                                            onclick="openEditModal(this)">
+                                        <i class="bi bi-pencil text-primary"></i>
+                                        <span>Sửa</span>
+                                    </button>
+
+                                    <!-- Nút Bật/Tắt -->
+                                    <form th:action="@{/admin/work-shifts/{id}/toggle(id=${s.shiftId})}" method="post" class="d-inline">
+                                        <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                                        <button type="submit"
+                                                th:class="${s.isActive} ? 'dv-equal-btn-danger' : 'dv-equal-btn-primary'"
+                                                th:title="${s.isActive} ? 'Tắt ca làm việc này' : 'Bật ca làm việc này'">
+                                            <i class="bi" th:classappend="${s.isActive} ? 'bi-pause-circle' : 'bi-play-circle'"></i>
+                                            <span th:text="${s.isActive} ? 'Tắt ca' : 'Bật ca'">Tắt</span>
+                                        </button>
+                                    </form>
+
+                                    <!-- Nút Xóa -->
+                                    <form th:action="@{/admin/work-shifts/{id}/delete(id=${s.shiftId})}" method="post" class="d-inline"
+                                          onsubmit="return confirm('Bạn có chắc muốn xóa ca làm này? (Chỉ xóa được khi chưa có lịch phân ca hoặc chấm công).');">
+                                        <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                                        <button type="submit" class="dv-equal-btn-secondary text-danger" title="Xóa ca">
+                                            <i class="bi bi-trash3 text-danger"></i>
+                                            <span>Xóa</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+
+                            <!-- Nút nổi khi Hover dòng (Bám mép phải chuẩn DentalSoft) -->
+                            <td class="dv-floating-actions-track">
+                                <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
+                                    <button type="button"
+                                            class="dv-equal-btn-secondary"
+                                            title="Chỉnh sửa ca làm"
+                                            th:attr="data-shiftid=${s.shiftId},
+                                                     data-shiftcode=${s.shiftCode},
+                                                     data-shiftname=${s.shiftName},
+                                                     data-starttime=${#temporals.format(s.startTime,'HH:mm')},
+                                                     data-endtime=${#temporals.format(s.endTime,'HH:mm')}"
+                                            onclick="openEditModal(this)">
+                                        <i class="bi bi-pencil text-primary"></i>
+                                        <span>Sửa</span>
+                                    </button>
+
+                                    <form th:action="@{/admin/work-shifts/{id}/toggle(id=${s.shiftId})}" method="post" class="d-inline">
+                                        <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                                        <button type="submit"
+                                                th:class="${s.isActive} ? 'dv-equal-btn-danger' : 'dv-equal-btn-primary'"
+                                                th:title="${s.isActive} ? 'Tắt ca' : 'Bật ca'">
+                                            <i class="bi" th:classappend="${s.isActive} ? 'bi-pause-circle' : 'bi-play-circle'"></i>
+                                            <span th:text="${s.isActive} ? 'Tắt' : 'Bật'">Tắt</span>
+                                        </button>
+                                    </form>
+
+                                    <form th:action="@{/admin/work-shifts/{id}/delete(id=${s.shiftId})}" method="post" class="d-inline"
+                                          onsubmit="return confirm('Bạn có chắc muốn xóa ca làm này?');">
+                                        <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                                        <button type="submit" class="dv-equal-btn-secondary text-danger" title="Xóa ca">
+                                            <i class="bi bi-trash3 text-danger"></i>
+                                            <span>Xóa</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            <!-- End table -->
+
+        </main>
+    </div>
+</div>
+
+        </main>
+    </div>
+</div>
+
+<!-- ===== MODAL TẠO CA MỚI ===== -->
+<div class="modal fade" id="modalCreateShift" tabindex="-1" aria-labelledby="modalCreateShiftLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" th:action="@{/admin/work-shifts}" method="post">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="modalCreateShiftLabel">
+                    <i class="bi bi-clock-history me-2 text-primary"></i>Thêm ca làm việc mới
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Mã ca <span class="text-danger">*</span></label>
+                    <input type="text" name="shiftCode" class="form-control" placeholder="VD: SANG, CHIEU, TOI"
+                           maxlength="20" required style="text-transform:uppercase;">
+                    <div class="form-text">Mã không dấu, không dùng lại mã đã có trong chi nhánh.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Tên ca <span class="text-danger">*</span></label>
+                    <input type="text" name="shiftName" class="form-control" placeholder="VD: Ca sáng" maxlength="50" required>
+                </div>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Giờ bắt đầu <span class="text-danger">*</span></label>
+                        <input type="time" name="startTime" class="form-control" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Giờ kết thúc <span class="text-danger">*</span></label>
+                        <input type="time" name="endTime" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Tạo ca</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ===== MODAL SỬA CA ===== -->
+<div class="modal fade" id="modalEditShift" tabindex="-1" aria-labelledby="modalEditShiftLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" id="formEditShift" th:action="@{/admin/work-shifts}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf != null}"/>
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="modalEditShiftLabel">
+                    <i class="bi bi-pencil-square me-2 text-primary"></i>Chỉnh sửa ca làm việc
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Mã ca <span class="text-danger">*</span></label>
+                    <input type="text" id="editShiftCode" name="shiftCode" class="form-control"
+                           maxlength="20" required style="text-transform:uppercase;">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Tên ca <span class="text-danger">*</span></label>
+                    <input type="text" id="editShiftName" name="shiftName" class="form-control" maxlength="50" required>
+                </div>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Giờ bắt đầu <span class="text-danger">*</span></label>
+                        <input type="time" id="editStartTime" name="startTime" class="form-control" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Giờ kết thúc <span class="text-danger">*</span></label>
+                        <input type="time" id="editEndTime" name="endTime" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openEditModal(btn) {
+        const id = btn.getAttribute('data-shiftid');
+        document.getElementById('formEditShift').action = '/admin/work-shifts/' + id + '/update';
+        document.getElementById('editShiftCode').value = btn.getAttribute('data-shiftcode');
+        document.getElementById('editShiftName').value = btn.getAttribute('data-shiftname');
+        document.getElementById('editStartTime').value = btn.getAttribute('data-starttime');
+        document.getElementById('editEndTime').value = btn.getAttribute('data-endtime');
+        new bootstrap.Modal(document.getElementById('modalEditShift')).show();
+    }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

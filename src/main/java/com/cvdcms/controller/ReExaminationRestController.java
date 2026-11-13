@@ -23,15 +23,45 @@ public class ReExaminationRestController {
 
     private final ReExaminationService reExaminationService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+
+    private jakarta.servlet.http.HttpSession currentHttpSession() {
+        var attrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        return attrs instanceof org.springframework.web.context.request.ServletRequestAttributes sra
+                ? sra.getRequest().getSession(false) : null;
+    }
+
+    private boolean isHttpRequestActive() {
+        return org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
+                instanceof org.springframework.web.context.request.ServletRequestAttributes;
+    }
+
     @PostMapping("/re-examinations")
     public ResponseEntity<ReExaminationResponseDTO> createReExamination(@RequestBody ReExaminationRequestDTO dto) {
-        log.info("REST: Creating re-examination for patient: {}", dto.getPatientProfileId());
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            jakarta.servlet.http.HttpSession session = currentHttpSession();
+            if (dto != null && dto.getVisitId() != null) {
+                doctorVisitAccess.require(session, dto.getVisitId());
+            } else if (dto != null && dto.getPatientProfileId() != null) {
+                doctorVisitAccess.requirePatientWrite(session, dto.getPatientProfileId());
+            } else {
+                doctorVisitAccess.requireAuthenticatedUser(session);
+            }
+            if (dto != null && dto.getBranchId() != null) {
+                doctorVisitAccess.requireBranch(session, dto.getBranchId());
+            }
+        }
+        log.info("REST: Creating re-examination appointment");
         ReExaminationResponseDTO response = reExaminationService.createReExamination(dto);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/re-examinations/patient/{patientId}")
     public ResponseEntity<List<ReExaminationResponseDTO>> getPatientReExaminations(@PathVariable Long patientId) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requirePatientRead(currentHttpSession(), patientId);
+        }
         return ResponseEntity.ok(reExaminationService.getReExaminationsByPatient(patientId));
     }
 
@@ -42,11 +72,21 @@ public class ReExaminationRestController {
             @RequestParam(value = "status", defaultValue = "ALL") String status,
             @RequestParam(value = "keyword", required = false) String keyword
     ) {
-        return ResponseEntity.ok(reExaminationService.getRecallsList(dateFilter, doctorId, status, keyword));
+        List<ReExaminationResponseDTO> list = reExaminationService.getRecallsList(dateFilter, doctorId, status, keyword);
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            com.cvdcms.entity.User user = doctorVisitAccess.requireAuthenticatedUser(currentHttpSession());
+            list = list.stream()
+                    .filter(item -> doctorVisitAccess.isBranchAllowed(user, item.getBranchId()))
+                    .toList();
+        }
+        return ResponseEntity.ok(list);
     }
 
     @GetMapping("/recalls/statistics")
     public ResponseEntity<Map<String, Object>> getRecallsStatistics() {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireAuthenticatedUser(currentHttpSession());
+        }
         return ResponseEntity.ok(reExaminationService.getRecallsStatistics());
     }
 
@@ -56,6 +96,9 @@ public class ReExaminationRestController {
             @RequestParam String status,
             @RequestParam(required = false) String cancelReason
     ) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireReExamination(currentHttpSession(), id);
+        }
         return ResponseEntity.ok(reExaminationService.updateAppointmentStatus(id, status, cancelReason));
     }
 
@@ -66,11 +109,21 @@ public class ReExaminationRestController {
             @RequestParam(required = false) String newTime,
             @RequestParam(defaultValue = "MORNING") PreferredSession session
     ) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireReExamination(currentHttpSession(), id);
+        }
         return ResponseEntity.ok(reExaminationService.updateAppointmentDate(id, newDate, newTime, session));
     }
 
     @PutMapping("/care-tasks")
     public ResponseEntity<Map<String, Object>> updateCareTask(@RequestBody CareTaskUpdateDTO dto) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            if (dto != null && dto.getTaskId() != null) {
+                doctorVisitAccess.requireCareTask(currentHttpSession(), dto.getTaskId());
+            } else {
+                doctorVisitAccess.requireAuthenticatedUser(currentHttpSession());
+            }
+        }
         reExaminationService.updateCareTaskStatus(dto);
         return ResponseEntity.ok(Map.of("success", true, "message", "Đã cập nhật kết quả liên hệ CSKH"));
     }
@@ -80,6 +133,9 @@ public class ReExaminationRestController {
             @PathVariable Long id,
             @RequestParam(defaultValue = "Bác sĩ / Bệnh nhân hủy hẹn") String reason
     ) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireReExamination(currentHttpSession(), id);
+        }
         reExaminationService.cancelAppointment(id, reason);
         return ResponseEntity.ok(Map.of("success", true, "message", "Đã hủy lịch hẹn tái khám"));
     }

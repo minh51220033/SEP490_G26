@@ -227,7 +227,7 @@
                                 </span>
                             </div>
                             <span class="text-muted small d-block mt-1" style="font-size: 11px;"
-                                  th:text="'Mã ca: ' + (${visit.visitCode != null ? visit.visitCode : ('VIS#' + visit.visitId)})">VIS#01</span>
+                                  th:text="'Mã ca: ' + (${visit.visitCode != null ? visit.visitCode : 'Ca khám'})">VIS01</span>
                         </div>
                     </div>
                 </div>
@@ -461,7 +461,7 @@
                                         </div>
                                         <div class="col-6">
                                             <span class="text-secondary">Mã BN / Mã ca:</span>
-                                            <span class="d-block text-dark fw-semibold" th:text="${(patient != null ? patient.patientCode : '-') + ' / ' + (visit.visitCode != null ? visit.visitCode : ('VIS#' + visit.visitId))}">BN001 / VIS01</span>
+                                            <span class="d-block text-dark fw-semibold" th:text="${(patient != null ? patient.patientCode : '-') + ' / ' + (visit.visitCode != null ? visit.visitCode : 'Ca khám')}">BN001 / VIS01</span>
                                         </div>
                                         <div class="col-6">
                                             <span class="text-secondary">Bác sĩ điều trị:</span>
