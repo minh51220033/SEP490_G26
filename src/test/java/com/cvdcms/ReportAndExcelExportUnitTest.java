@@ -288,6 +288,28 @@ public class ReportAndExcelExportUnitTest {
         assertEquals(new BigDecimal("3000000"), report.getCurrentTotalOutstandingDebt());
     }
 
+    @Test
+    @DisplayName("Báo cáo tài chính: Không cộng cọc 2 lần, truy vấn dòng tiền thực thu thanh toán hóa đơn với PaymentType.PAYMENT")
+    void testFinancialReport_DoesNotDoubleCountAdvanceDeposits() {
+        LocalDate start = LocalDate.of(2026, 11, 1);
+        LocalDate end = LocalDate.of(2026, 11, 30);
+        List<Long> branchIds = List.of(1L);
+
+        when(invoiceRepository.sumInvoiceBreakdownByBranches(any(), any(), any())).thenReturn(Collections.singletonList(new Object[]{
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO
+        }));
+        when(refundRepository.sumRefundAmountByBranches(any(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(operatingExpenseRepository.sumActiveExpenses(any(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(invoiceRepository.findAllPatientDebtsByBranches(any())).thenReturn(Collections.emptyList());
+
+        reportService.getFinancialReport(branchIds, start, end);
+
+        verify(paymentRepository).sumAmountByMethodAndBranches(eq(branchIds), eq(PaymentMethod.CASH), eq(com.cvdcms.entity.enums.PaymentType.PAYMENT), any(), any());
+        verify(paymentRepository).sumAmountByMethodAndBranches(eq(branchIds), eq(PaymentMethod.BANK_TRANSFER), eq(com.cvdcms.entity.enums.PaymentType.PAYMENT), any(), any());
+        verify(paymentRepository).sumAmountByMethodAndBranches(eq(branchIds), eq(PaymentMethod.POS_CARD), eq(com.cvdcms.entity.enums.PaymentType.PAYMENT), any(), any());
+    }
+
     // =========================================================================
     // 3. KIỂM THỬ SỐ LIỆU VẬN HÀNH & NGUỒN KHÁCH HÀNG (SCR-29.3)
     // =========================================================================

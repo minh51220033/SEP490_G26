@@ -10,6 +10,7 @@ import com.cvdcms.entity.Refund;
 import com.cvdcms.entity.Visit;
 import com.cvdcms.entity.enums.AppointmentSource;
 import com.cvdcms.entity.enums.PaymentMethod;
+import com.cvdcms.entity.enums.PaymentType;
 import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.entity.enums.VisitType;
 import com.cvdcms.repository.*;
@@ -295,10 +296,10 @@ public class ReportServiceImpl implements ReportService {
             dto.setTotalDiscount(dto.getDiscountAmount().add(dto.getPromotionDiscount()).add(dto.getPointDiscount()));
         }
 
-        // 2. Dòng tiền theo phương thức thanh toán
-        dto.setCashAmount(toBigDecimal(paymentRepository.sumAmountByMethodAndBranches(branchIds, PaymentMethod.CASH, null, startDt, endDt)));
-        dto.setBankTransferAmount(toBigDecimal(paymentRepository.sumAmountByMethodAndBranches(branchIds, PaymentMethod.BANK_TRANSFER, null, startDt, endDt)));
-        dto.setPosCardAmount(toBigDecimal(paymentRepository.sumAmountByMethodAndBranches(branchIds, PaymentMethod.POS_CARD, null, startDt, endDt)));
+        // 2. Dòng tiền theo phương thức thanh toán (chỉ tính PaymentType.PAYMENT cho các phương thức thanh toán viện phí, không cộng trùng khoản nạp cọc ADVANCE_DEPOSIT)
+        dto.setCashAmount(toBigDecimal(paymentRepository.sumAmountByMethodAndBranches(branchIds, PaymentMethod.CASH, PaymentType.PAYMENT, startDt, endDt)));
+        dto.setBankTransferAmount(toBigDecimal(paymentRepository.sumAmountByMethodAndBranches(branchIds, PaymentMethod.BANK_TRANSFER, PaymentType.PAYMENT, startDt, endDt)));
+        dto.setPosCardAmount(toBigDecimal(paymentRepository.sumAmountByMethodAndBranches(branchIds, PaymentMethod.POS_CARD, PaymentType.PAYMENT, startDt, endDt)));
         dto.setDepositWalletAmount(toBigDecimal(paymentRepository.sumDepositWalletUsedByBranches(branchIds, startDt, endDt)));
         dto.setNewDepositAmount(toBigDecimal(paymentRepository.sumAdvanceDepositByBranches(branchIds, startDt, endDt)));
 
