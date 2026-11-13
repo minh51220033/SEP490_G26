@@ -17,6 +17,7 @@ import org.springframework.ui.Model;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -68,8 +69,17 @@ class DispatchControllerTest {
         Branch branch = new Branch();
         branch.setBranchId(1L);
         DispatchService.Board board = new DispatchService.Board(
-                1L, List.of(branch), allVisits, doctors,
-                Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), Map.of(), List.of()
+                1L,
+                List.of(branch),
+                allVisits,
+                doctors,
+                List.of(),       // rooms
+                List.of(),       // chairs
+                List.of(),       // queue
+                LocalDate.now(), // day
+                Map.of(),        // requests
+                Map.of(),        // issued
+                Map.of()         // queueInfo
         );
 
         when(service.board(session, 1L)).thenReturn(board);

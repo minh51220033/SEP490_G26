@@ -33,6 +33,7 @@
         },
 
         currentTaskDetail: null,
+        tasksById: {},
         tasksAbortController: null,
         keywordDebounceTimer: null
     };
@@ -471,17 +472,17 @@
     // =========================================================================
     // CẤU HÌNH CỘT BẢNG CSKH & COLUMN CUSTOMIZER (THEO CHUẨN CV-DCMS ENTERPRISE)
     // =========================================================================
-    const CC_COLUMNS_KEY = "cvdcms_cc_table_columns_v5";
+    const CC_COLUMNS_KEY = "cvdcms_cc_table_columns_v6";
     const DEFAULT_CC_COLUMNS = [
-        { id: "taskCode", title: "Mã CV", width: 120, visible: true, required: true },
-        { id: "patient", title: "Bệnh nhân", width: 220, visible: true, required: true },
-        { id: "careGroup", title: "Phân nhóm & Nguồn", width: 200, visible: true },
-        { id: "due", title: "Hạn / Gọi lại", width: 150, visible: true },
-        { id: "notes", title: "Chẩn đoán & Lời dặn", width: 280, visible: true },
-        { id: "staff", title: "Phụ trách", width: 160, visible: true },
-        { id: "interaction", title: "Tương tác gần nhất", width: 170, visible: true },
-        { id: "status", title: "Trạng thái", width: 140, visible: true },
-        { id: "actions", title: "Thao tác", width: 330, visible: true, required: true }
+        { id: "taskCode", title: "Mã CV", width: 110, visible: true, required: true },
+        { id: "patient", title: "Bệnh nhân", width: 185, visible: true, required: true },
+        { id: "careGroup", title: "Phân nhóm & Nguồn", width: 165, visible: true },
+        { id: "due", title: "Hạn / Gọi lại", width: 125, visible: true },
+        { id: "notes", title: "Chẩn đoán & Lời dặn", width: 250, visible: true },
+        { id: "staff", title: "Phụ trách", width: 135, visible: true },
+        { id: "interaction", title: "Tương tác gần nhất", width: 155, visible: true },
+        { id: "status", title: "Trạng thái", width: 115, visible: true },
+        { id: "actions", title: "Thao tác", width: 290, visible: true, required: true }
     ];
 
     let ccColumns = loadCcColumns();
@@ -493,8 +494,8 @@
                 const parsed = JSON.parse(raw);
                 if (Array.isArray(parsed) && parsed.length === DEFAULT_CC_COLUMNS.length) {
                     const actCol = parsed.find(c => c.id === "actions");
-                    if (actCol && (!actCol.width || actCol.width < 330)) {
-                        actCol.width = 330;
+                    if (actCol && (!actCol.width || actCol.width < 280)) {
+                        actCol.width = 290;
                     }
                     return parsed;
                 }
@@ -509,16 +510,32 @@
         } catch (e) {}
     }
 
+    function getStickyPatientLeft(visibleCols) {
+        const tc = visibleCols.find(c => c.id === "taskCode");
+        return tc ? Number(tc.width || 110) : 0;
+    }
+
     function renderCcTableHeader() {
         const theadTr = $("ccTasksHeaderRow");
         if (!theadTr) return;
         theadTr.innerHTML = "";
 
         const visibleCols = ccColumns.filter(c => c.visible);
+        const patientLeft = getStickyPatientLeft(visibleCols);
+
         visibleCols.forEach((col, idx) => {
             const th = document.createElement("th");
             th.style.width = col.width + "px";
             th.style.minWidth = col.width + "px";
+            th.style.maxWidth = col.width + "px";
+            if (col.id === "taskCode") {
+                th.className = "cc-col-sticky-taskcode";
+            } else if (col.id === "patient") {
+                th.className = "cc-col-sticky-patient";
+                th.style.left = patientLeft + "px";
+            } else if (col.id === "actions") {
+                th.className = "cc-col-sticky-actions text-center";
+            }
             th.innerHTML = `
                 <div class="dv-th-inner">
                     <span class="cell-ellipsis" title="${col.title}">${col.title}</span>
@@ -527,11 +544,6 @@
             `;
             theadTr.appendChild(th);
         });
-
-        // Track Thao tác nổi bám mép phải khi cuộn ngang (chuẩn 100% /doctor/daily-visits)
-        const trackTh = document.createElement("th");
-        trackTh.className = "dv-floating-actions-track";
-        theadTr.appendChild(trackTh);
 
         setupCcColResizers();
     }
@@ -712,12 +724,66 @@
         }
     };
 
+    function openContentPreviewModal(taskId) {
+        const t = state.tasksById[String(taskId)];
+        const modal = $("ccContentPreviewModal");
+        if (!t || !modal) return;
+
+        const subEl = $("ccPreviewModalSub");
+        if (subEl) {
+            subEl.textContent = `${t.taskCode || ""} · ${t.patientName || ""} (${t.patientCode || ""}) · SĐT: ${t.patientPhone || "—"}`;
+        }
+
+        const sections = [];
+        if (t.notes) {
+            sections.push(`
+                <div class="p-3 rounded-3 border bg-light">
+                    <div class="fw-bold text-secondary small text-uppercase mb-1">Ghi chú công việc CSKH</div>
+                    <div class="text-dark">${escapeHtml(t.notes)}</div>
+                </div>
+            `);
+        }
+        if (t.diagnosisSummary) {
+            sections.push(`
+                <div class="p-3 rounded-3 border bg-white">
+                    <div class="fw-bold text-dark small text-uppercase mb-1">Chẩn đoán lâm sàng</div>
+                    <div class="text-dark">${escapeHtml(t.diagnosisSummary)}</div>
+                </div>
+            `);
+        }
+        const instr = t.treatmentInstructions || t.prescriptionAdvice;
+        if (instr) {
+            sections.push(`
+                <div class="p-3 rounded-3 border" style="background:#f0f9ff;border-color:#bae6fd !important;">
+                    <div class="fw-bold small text-uppercase mb-1" style="color:#0369a1;">Lời dặn &amp; Hướng dẫn sau điều trị</div>
+                    <div style="color:#0c4a6e;">${escapeHtml(instr)}</div>
+                </div>
+            `);
+        }
+        if (t.doctorResponse) {
+            sections.push(`
+                <div class="p-3 rounded-3 border" style="background:#f0fdf4;border-color:#bbf7d0 !important;">
+                    <div class="fw-bold small text-uppercase mb-1" style="color:#15803d;">Phản hồi chuyên môn (${escapeHtml(t.escalatedToDoctorName || "Bác sĩ")})</div>
+                    <div style="color:#166534;">${escapeHtml(t.doctorResponse)}</div>
+                </div>
+            `);
+        }
+        if (!sections.length) {
+            sections.push('<div class="text-muted">Chưa có nội dung chẩn đoán hoặc ghi chú bổ sung.</div>');
+        }
+
+        const bodyEl = $("ccPreviewModalBody");
+        if (bodyEl) bodyEl.innerHTML = sections.join("");
+        modal.hidden = false;
+    }
+
     async function loadTasks(page = state.page) {
         state.page = page;
         renderCcTableHeader();
         const visibleCols = ccColumns.filter(c => c.visible);
+        const patientLeft = getStickyPatientLeft(visibleCols);
         const tbody = $("tasksTableBody");
-        tbody.innerHTML = `<tr><td colspan="${visibleCols.length + 1}" class="empty">Đang tải danh sách công việc CSKH...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">Đang tải danh sách công việc CSKH...</td></tr>`;
 
         if (state.tasksAbortController) {
             state.tasksAbortController.abort();
@@ -740,11 +806,19 @@
 
         try {
             const data = await request(`/api/customer-care/tasks?${params}`, { signal: controller.signal });
-            const rows = Array.isArray(data?.content) ? data.content : [];
-            state.totalPages = Number(data?.totalPages || 0);
-            const totalElements = Number(data?.totalElements || 0);
+            const rows = Array.isArray(data?.content) ? data.content : (Array.isArray(data) ? data : []);
+            const pageMeta = data?.page && typeof data.page === "object" ? data.page : data;
+            const totalElements = Number(pageMeta?.totalElements ?? data?.totalElements ?? rows.length ?? 0);
+            state.totalPages = Number(pageMeta?.totalPages ?? data?.totalPages ?? (totalElements > 0 ? Math.ceil(totalElements / state.pageSize) : 0));
 
-            if ($("tasksTotalBadge")) $("tasksTotalBadge").textContent = `${totalElements} công việc`;
+            state.tasksById = {};
+            rows.forEach(item => {
+                if (item && item.taskId != null) {
+                    state.tasksById[String(item.taskId)] = item;
+                }
+            });
+
+            if ($("tasksTotalBadge")) $("tasksTotalBadge").textContent = totalElements.toLocaleString("vi-VN");
 
             if (!rows.length) {
                 tbody.innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">Không có công việc CSKH nào phù hợp với bộ lọc hiện tại.</td></tr>`;
@@ -755,19 +829,20 @@
             tbody.innerHTML = rows.map(t => {
                 const cells = [];
                 visibleCols.forEach(col => {
+                    const sizeStyle = `width:${col.width}px;min-width:${col.width}px;max-width:${col.width}px;`;
                     if (col.id === "taskCode") {
                         cells.push(`
-                            <td style="width:${col.width}px;">
+                            <td class="cc-col-sticky-taskcode" style="${sizeStyle}">
                                 <span class="font-mono-code">${escapeHtml(t.taskCode)}</span>
-                                <div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(t.branchCode || "")}</div>
+                                <div class="cc-clamp-1" style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(t.branchCode || "")}</div>
                             </td>
                         `);
                     } else if (col.id === "patient") {
                         cells.push(`
-                            <td class="patient-cell" style="width:${col.width}px;">
-                                <span class="cell-ellipsis" title="${escapeHtml(t.patientName)}"><strong>${escapeHtml(t.patientName)}</strong></span>
-                                <small>Mã BN: <span class="font-mono-code" style="font-size:11px;padding:1px 5px;">${escapeHtml(t.patientCode)}</span></small>
-                                <small>SĐT: ${escapeHtml(t.patientPhone || "—")}</small>
+                            <td class="patient-cell cc-col-sticky-patient" style="${sizeStyle}left:${patientLeft}px;">
+                                <div class="cc-clamp-1 fw-bold text-dark" title="${escapeHtml(t.patientName)}">${escapeHtml(t.patientName)}</div>
+                                <small class="cc-clamp-1">Mã BN: <span class="font-mono-code" style="font-size:10.5px;padding:1px 4px;">${escapeHtml(t.patientCode)}</span></small>
+                                <small class="cc-clamp-1">SĐT: ${escapeHtml(t.patientPhone || "—")}</small>
                             </td>
                         `);
                     } else if (col.id === "careGroup") {
@@ -783,90 +858,105 @@
                         if (t.prescriptionCode) refs.push(`<span class="source-ref">Thuốc: <strong>${escapeHtml(t.prescriptionCode)}</strong></span>`);
                         if (t.appointmentCode) refs.push(`<span class="source-ref">Hẹn: <strong>${escapeHtml(t.appointmentCode)}</strong></span>`);
                         cells.push(`
-                            <td style="width:${col.width}px;">
+                            <td style="${sizeStyle}">
                                 <span class="badge ${getCareGroupBadgeClass(t.careGroup)}">${escapeHtml(t.careGroupLabel)}</span>
-                                <div style="margin-top:3px;">${refs.join(" ")}</div>
-                                ${t.doctorName ? `<div style="font-size:11px;color:#475569;margin-top:2px;">BS: <strong>${escapeHtml(t.doctorName)}</strong></div>` : ""}
+                                ${refs.length ? `<div class="cc-clamp-1" style="margin-top:3px;" title="${escapeHtml([t.visitCode, t.prescriptionCode, t.appointmentCode].filter(Boolean).join(' · '))}">${refs.join(" ")}</div>` : ""}
+                                ${t.doctorName ? `<div class="cc-clamp-1" style="font-size:11px;color:#475569;margin-top:2px;" title="BS: ${escapeHtml(t.doctorName)}">BS: <strong>${escapeHtml(t.doctorName)}</strong></div>` : ""}
                             </td>
                         `);
                     } else if (col.id === "due") {
                         const dueTag = t.overdue
                             ? '<span class="due-tag due-overdue">Quá hạn</span>'
-                            : (t.dueToday ? '<span class="due-tag due-today">Đến hạn hôm nay</span>' : "");
+                            : (t.dueToday ? '<span class="due-tag due-today">Hôm nay</span>' : "");
                         const retryHtml = t.nextRetryAt
-                            ? `<span class="retry-tag">Gọi lại: ${escapeHtml(formatDateTime(t.nextRetryAt))}</span>`
+                            ? `<span class="retry-tag cc-clamp-1" title="Gọi lại: ${escapeHtml(formatDateTime(t.nextRetryAt))}">Gọi lại: ${escapeHtml(formatDateTime(t.nextRetryAt))}</span>`
                             : "";
                         cells.push(`
-                            <td style="width:${col.width}px;">
+                            <td style="${sizeStyle}">
                                 <strong>${escapeHtml(t.dueDate || "—")}</strong>
-                                <div>${dueTag}</div>
+                                ${dueTag ? `<div>${dueTag}</div>` : ""}
                                 ${retryHtml}
                             </td>
                         `);
                     } else if (col.id === "notes") {
-                        const diagHtml = t.diagnosisSummary
-                            ? `<div style="font-size:11.5px;color:#1e293b;margin-top:3px;" class="cell-ellipsis" title="${escapeHtml(t.diagnosisSummary)}"><strong>CĐ:</strong> ${escapeHtml(t.diagnosisSummary)}</div>`
-                            : "";
                         const instructionsText = t.treatmentInstructions || t.prescriptionAdvice;
-                        const instructionsHtml = instructionsText
-                            ? `<div style="font-size:11.5px;color:#0369a1;margin-top:3px;background:#f0f9ff;padding:2px 6px;border-radius:4px;" class="cell-ellipsis" title="${escapeHtml(instructionsText)}"><strong>Lời dặn:</strong> ${escapeHtml(instructionsText)}</div>`
+                        const primaryText = t.notes || t.diagnosisSummary || instructionsText || "—";
+                        const tooltipParts = [
+                            t.notes ? `Ghi chú: ${t.notes}` : null,
+                            t.diagnosisSummary ? `Chẩn đoán: ${t.diagnosisSummary}` : null,
+                            instructionsText ? `Lời dặn: ${instructionsText}` : null,
+                            t.doctorResponse ? `Phản hồi BS: ${t.doctorResponse}` : null
+                        ].filter(Boolean);
+                        const fullTooltip = tooltipParts.join("\n");
+
+                        let secondaryHtml = "";
+                        if (t.doctorResponse) {
+                            secondaryHtml = `<div class="cc-notes-subpill is-doc cc-clamp-1"><strong>BS ${escapeHtml(t.escalatedToDoctorName || "")}:</strong> ${escapeHtml(t.doctorResponse)}</div>`;
+                        } else if (t.status === "ESCALATED_TO_DOCTOR") {
+                            secondaryHtml = `<div class="cc-notes-subpill is-wait cc-clamp-1">Chờ BS ${escapeHtml(t.escalatedToDoctorName || "")} phản hồi</div>`;
+                        } else if (instructionsText && primaryText !== instructionsText) {
+                            secondaryHtml = `<div class="cc-notes-subpill cc-clamp-1"><strong>Lời dặn:</strong> ${escapeHtml(instructionsText)}</div>`;
+                        } else if (t.diagnosisSummary && primaryText !== t.diagnosisSummary) {
+                            secondaryHtml = `<div class="cc-notes-subpill cc-clamp-1"><strong>CĐ:</strong> ${escapeHtml(t.diagnosisSummary)}</div>`;
+                        }
+
+                        const hasLongOrMore = tooltipParts.length > 1 || String(primaryText).length > 52 || String(instructionsText || "").length > 48;
+                        const moreLinkHtml = hasLongOrMore
+                            ? `<span class="cc-notes-more-link"><i class="bi bi-eye"></i> Xem chi tiết</span>`
                             : "";
-                        const docReplyHtml = t.doctorResponse
-                            ? `<div class="doc-reply-snippet cell-ellipsis" title="${escapeHtml(t.doctorResponse)}"><strong>BS ${escapeHtml(t.escalatedToDoctorName || "")}:</strong> ${escapeHtml(t.doctorResponse)}</div>`
-                            : (t.status === "ESCALATED_TO_DOCTOR"
-                                ? `<div class="retry-tag" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c;">Chờ Bác sĩ ${escapeHtml(t.escalatedToDoctorName || "")} phản hồi</div>`
-                                : "");
+
                         cells.push(`
-                            <td style="width:${col.width}px;">
-                                <div class="cell-ellipsis" title="${escapeHtml(t.notes || "—")}">${escapeHtml(t.notes || "—")}</div>
-                                ${diagHtml}
-                                ${instructionsHtml}
-                                ${docReplyHtml}
+                            <td style="${sizeStyle}">
+                                <div class="cc-notes-block" data-preview-task="${t.taskId}" title="${escapeHtml(fullTooltip ? fullTooltip + "\n\n(Nhấn để xem đầy đủ)" : "Nhấn để xem chi tiết")}">
+                                    <div class="cc-notes-primary cc-clamp-2">${escapeHtml(primaryText)}</div>
+                                    ${secondaryHtml}
+                                    ${moreLinkHtml}
+                                </div>
                             </td>
-                        `);
-                    } else if (col.id === "staff") {
+                        `);                    } else if (col.id === "staff") {
                         cells.push(`
-                            <td style="width:${col.width}px;">
-                                <div><small style="color:#64748b;">CSKH:</small> <strong>${escapeHtml(t.assignedStaffName || "Chưa gán")}</strong></div>
-                                ${t.escalatedToDoctorName ? `<div style="margin-top:2px;color:#b91c1c;"><small>Bác sĩ:</small> <strong>${escapeHtml(t.escalatedToDoctorName)}</strong></div>` : ""}
+                            <td style="${sizeStyle}">
+                                <div class="cc-clamp-1" title="CSKH: ${escapeHtml(t.assignedStaffName || "Chưa gán")}"><small style="color:#64748b;">CSKH:</small> <strong>${escapeHtml(t.assignedStaffName || "Chưa gán")}</strong></div>
+                                ${t.escalatedToDoctorName ? `<div class="cc-clamp-1" style="margin-top:2px;color:#b91c1c;" title="BS: ${escapeHtml(t.escalatedToDoctorName)}"><small>BS:</small> <strong>${escapeHtml(t.escalatedToDoctorName)}</strong></div>` : ""}
                             </td>
                         `);
                     } else if (col.id === "interaction") {
                         cells.push(`
-                            <td style="width:${col.width}px;">
+                            <td style="${sizeStyle}">
                                 ${formatChannelBadge(t.lastChannel, t.lastContactResult)}
-                                ${t.lastContactAt ? `<div style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(formatDateTime(t.lastContactAt))} (${t.interactionCount} lần)</div>` : ""}
+                                ${t.lastContactAt ? `<div class="cc-clamp-1" style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(formatDateTime(t.lastContactAt))} (${t.interactionCount} lần)</div>` : ""}
                             </td>
                         `);
                     } else if (col.id === "status") {
                         cells.push(`
-                            <td style="width:${col.width}px;">
+                            <td style="${sizeStyle}">
                                 <span class="badge ${getStatusBadgeClass(t.status)}">${escapeHtml(t.statusLabel)}</span>
                             </td>
                         `);
                     } else if (col.id === "actions") {
+                        const showDocReply = (t.status === "ESCALATED_TO_DOCTOR" || t.escalatedToDoctorId) && (state.careRole === "BAC_SI" || state.careRole === "ADMIN");
                         const actBtns = `
-                            <button type="button" class="btn btn-primary btn-sm fw-bold px-2.5 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ" style="font-size:12px;background:linear-gradient(135deg, #0284c7, #2563eb);border:none;">
+                            <button type="button" class="btn btn-primary btn-sm" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ" style="background:linear-gradient(135deg, #0284c7, #2563eb);border:none;">
                                 <i class="bi bi-pencil-square"></i> Ghi KQ
                             </button>
-                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn" style="font-size:12px;">
+                            <button type="button" class="btn btn-outline-danger btn-sm" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn">
                                 <i class="bi bi-arrow-up-right-circle"></i> Chuyển BS
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân" style="font-size:12px;">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân">
                                 <i class="bi bi-clock-history"></i> Lịch sử
                             </button>
-                            ${(t.status === "ESCALATED_TO_DOCTOR" || t.escalatedToDoctorId) && (state.careRole === "BAC_SI" || state.careRole === "ADMIN") ? `
-                                <button type="button" class="btn btn-danger btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn" style="font-size:12px;">
+                            ${showDocReply ? `
+                                <button type="button" class="btn btn-danger btn-sm" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn">
                                     <i class="bi bi-chat-dots-fill"></i> Phản hồi
                                 </button>
                             ` : ""}
-                            <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1 rounded-2 shadow-xs" data-edit-task="${t.taskId}" title="Sửa / Phân công lại" style="font-size:12px;">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-edit-task="${t.taskId}" title="Sửa / Phân công lại">
                                 <i class="bi bi-pencil"></i>
                             </button>
                         `;
                         cells.push(`
-                            <td class="text-center" style="width:${col.width}px;min-width:${col.width}px;">
-                                <div class="d-flex align-items-center justify-content-center gap-1.5 flex-wrap" onclick="event.stopPropagation()">
+                            <td class="text-center cc-col-sticky-actions" style="${sizeStyle}">
+                                <div class="cc-action-btn-group" onclick="event.stopPropagation()">
                                     ${actBtns}
                                 </div>
                             </td>
@@ -874,39 +964,13 @@
                     }
                 });
 
-                // Cụm nút nổi bám mép phải viewport khi hover dòng (chuẩn 100% theo /doctor/daily-visits)
-                const floatingBarHtml = `
-                    <td class="dv-floating-actions-track">
-                        <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
-                            <button type="button" class="btn btn-primary btn-sm fw-bold px-2.5 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-record-interaction="${t.taskId}" title="Chi tiết & Ghi kết quả liên hệ" style="font-size:12px;background:linear-gradient(135deg, #0284c7, #2563eb);border:none;">
-                                <i class="bi bi-pencil-square"></i> Ghi KQ
-                            </button>
-                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-escalate-task="${t.taskId}" title="Chuyển Bác sĩ hỗ trợ chuyên môn" style="font-size:12px;">
-                                <i class="bi bi-arrow-up-right-circle"></i> Chuyển BS
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân" style="font-size:12px;">
-                                <i class="bi bi-clock-history"></i> Lịch sử
-                            </button>
-                            ${(t.status === "ESCALATED_TO_DOCTOR" || t.escalatedToDoctorId) && (state.careRole === "BAC_SI" || state.careRole === "ADMIN") ? `
-                                <button type="button" class="btn btn-danger btn-sm fw-bold px-2 py-1 rounded-2 shadow-xs d-inline-flex align-items-center gap-1" data-doctor-response="${t.taskId}" title="Bác sĩ nhập phản hồi chuyên môn" style="font-size:12px;">
-                                    <i class="bi bi-chat-dots-fill"></i> Phản hồi
-                                </button>
-                            ` : ""}
-                            <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1 rounded-2 shadow-xs" data-edit-task="${t.taskId}" title="Sửa / Phân công lại" style="font-size:12px;">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-                cells.push(floatingBarHtml);
-
                 return `<tr class="dv-data-row">${cells.join("")}</tr>`;
             }).join("");
 
             renderCcPagination(totalElements, page, state.totalPages);
         } catch (err) {
             if (err.name === "AbortError") return;
-            tbody.innerHTML = `<tr><td colspan="${visibleCols.length + 1}" class="empty">${escapeHtml(err.message)}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${visibleCols.length}" class="empty">${escapeHtml(err.message)}</td></tr>`;
             showMessage(err.message, "error");
         }
     }
@@ -1550,9 +1614,8 @@
         });
         safeOn("filterStaffId", "change", () => loadTasks(0));
         safeOn("filterStatus", "change", () => loadTasks(0));
-
-        safeOn("tasksPrevBtn", "click", () => loadTasks(Math.max(0, state.page - 1)));
-        safeOn("tasksNextBtn", "click", () => loadTasks(state.page + 1));
+        safeOn("filterFromDate", "change", () => loadTasks(0));
+        safeOn("filterToDate", "change", () => loadTasks(0));
 
         safeOn("openCreateTaskBtn", "click", () => openTaskFormModal());
         safeOn("autoGenerateBtn", "click", handleAutoGenerateTasks);
@@ -1594,6 +1657,8 @@
         safeOn("cancelEscalateModalBtn", "click", () => { $("escalateModal").hidden = true; });
         safeOn("closeDoctorResponseModalBtn", "click", () => { $("doctorResponseModal").hidden = true; });
         safeOn("cancelDoctorResponseModalBtn", "click", () => { $("doctorResponseModal").hidden = true; });
+        safeOn("closeContentPreviewModalBtn", "click", () => { $("ccContentPreviewModal").hidden = true; });
+        safeOn("cancelContentPreviewModalBtn", "click", () => { $("ccContentPreviewModal").hidden = true; });
 
         // Đảm bảo click vào bên trong dialog không bao giờ kích hoạt đóng backdrop
         document.querySelectorAll(".cc-modal-dialog, .modal-dialog").forEach(dialog => {
@@ -1602,7 +1667,7 @@
             });
         });
 
-        ["taskFormModal", "interactionModal", "escalateModal", "doctorResponseModal"].forEach(modalId => {
+        ["taskFormModal", "interactionModal", "escalateModal", "doctorResponseModal", "ccContentPreviewModal"].forEach(modalId => {
             const modalEl = $(modalId);
             if (modalEl) {
                 modalEl.addEventListener("click", (e) => {
@@ -1613,7 +1678,7 @@
 
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape") {
-                ["taskFormModal", "interactionModal", "escalateModal", "doctorResponseModal"].forEach(modalId => {
+                ["taskFormModal", "interactionModal", "escalateModal", "doctorResponseModal", "ccContentPreviewModal"].forEach(modalId => {
                     const modalEl = $(modalId);
                     if (modalEl && !modalEl.hidden) modalEl.hidden = true;
                 });
@@ -1623,6 +1688,11 @@
         // Delegated actions in tables
         // Dùng capture phase: wrapper nút có onclick="event.stopPropagation()" (chặn click mở dòng) sẽ chặn bubble lên body
         document.body.addEventListener("click", async (e) => {
+            const previewEl = e.target.closest("[data-preview-task]");
+            if (previewEl) {
+                openContentPreviewModal(previewEl.dataset.previewTask);
+                return;
+            }
             const recordBtn = e.target.closest("[data-record-interaction]");
             if (recordBtn) {
                 await openInteractionModal(recordBtn.dataset.recordInteraction);
