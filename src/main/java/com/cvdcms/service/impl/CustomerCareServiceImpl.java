@@ -8,14 +8,17 @@ import com.cvdcms.service.CustomerCareService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -41,9 +44,16 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     private static final String TAG_INSTALLMENT = "[TRA_GOP] ";
     private static final String TAG_NO_SERVICE = "[KHONG_DICH_VU] ";
     private static final String TAG_FEEDBACK = "[PHAN_ANH] ";
+    private static final ZoneId CLINIC_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     // Bộ đếm tuần tự đảm bảo sinh mã công việc (task_code <= 20 ký tự) không bị trùng lặp
     private static final AtomicLong TASK_CODE_SEQ = new AtomicLong(System.currentTimeMillis() % 100000000L);
+
+    @Autowired(required = false)
+    private com.cvdcms.service.CustomerCareNotificationService notificationService;
+
+    @Autowired(required = false)
+    private com.cvdcms.service.SystemAuditLogService systemAuditLogService;
 
     private final CustomerCareTaskRepository taskRepository;
     private final CustomerCareInteractionRepository interactionRepository;
@@ -469,13 +479,21 @@ public class CustomerCareServiceImpl implements CustomerCareService {
 
         List<CustomerCareTask> tasks = taskRepository.findAllByBranchWithDetails(effectiveBranchId);
         Map<Long, List<CustomerCareInteraction>> interactionsByTask = loadInteractionsMapByBranch(effectiveBranchId);
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        Long currentStaffId = userId != null
+                ? staffRepository.findByUser_UserId(userId).map(StaffProfile::getStaffId).orElse(null)
+                : null;
 
         long totalTasks = tasks.size();
         long pendingCount = 0L;
         long inProgressCount = 0L;
         long dueTodayCount = 0L;
         long overdueCount = 0L;
+        long upcomingCount = 0L;
+        long actionableOverdueCount = 0L;
+        long actionableTodayCount = 0L;
+        long actionableUpcomingCount = 0L;
+        long myTasksCount = 0L;
         long retryPendingCount = 0L;
         long escalatedCount = 0L;
         long waitingDoctorResponseCount = 0L;
@@ -485,9 +503,9 @@ public class CustomerCareServiceImpl implements CustomerCareService {
 
         Map<String, Long> groupCounts = new LinkedHashMap<>();
         List<String> groups = List.of(
-                "ALL", "TODAY", "POST_TREATMENT", "APPOINTMENT_REMINDER",
+                "ALL", "ACTIONABLE", "TODAY", "POST_TREATMENT", "APPOINTMENT_REMINDER",
                 "INSTALLMENT_REMINDER", "NO_SHOW_RECALL", "NO_SERVICE_FOLLOWUP",
-                "FEEDBACK_COMPLAINT", "ESCALATED"
+                "FEEDBACK_COMPLAINT", "ESCALATED", "COMPLETED", "CANCELLED", "MY_TASKS"
         );
         groups.forEach(g -> groupCounts.put(g, 0L));
 
@@ -496,22 +514,19 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             CustomerCareInteraction latest = taskInteractions.isEmpty() ? null : taskInteractions.get(0);
 
             CustomerCareTaskStatus st = t.getStatus();
-            boolean isActive = st == CustomerCareTaskStatus.PENDING
-                    || st == CustomerCareTaskStatus.IN_PROGRESS
-                    || st == CustomerCareTaskStatus.ESCALATED_TO_DOCTOR;
+            boolean isActionable = st == CustomerCareTaskStatus.PENDING || st == CustomerCareTaskStatus.IN_PROGRESS;
+            boolean isActive = isActionable || st == CustomerCareTaskStatus.ESCALATED_TO_DOCTOR;
 
             if (st == CustomerCareTaskStatus.PENDING) pendingCount++;
             if (st == CustomerCareTaskStatus.IN_PROGRESS) inProgressCount++;
             if (st == CustomerCareTaskStatus.COMPLETED) completedCount++;
             if (st == CustomerCareTaskStatus.CANCELLED) cancelledCount++;
 
-            if (st == CustomerCareTaskStatus.ESCALATED_TO_DOCTOR || t.getEscalatedToDoctor() != null) {
-                if (st == CustomerCareTaskStatus.ESCALATED_TO_DOCTOR) {
-                    escalatedCount++;
-                }
+            if (st == CustomerCareTaskStatus.ESCALATED_TO_DOCTOR) {
+                escalatedCount++;
                 if (t.getDoctorResponse() != null && !t.getDoctorResponse().isBlank()) {
                     doctorRespondedCount++;
-                } else if (st == CustomerCareTaskStatus.ESCALATED_TO_DOCTOR) {
+                } else {
                     waitingDoctorResponseCount++;
                 }
             }
@@ -519,9 +534,18 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             if (isActive && t.getDueDate() != null) {
                 if (t.getDueDate().isEqual(today)) {
                     dueTodayCount++;
+                    if (isActionable) actionableTodayCount++;
                 } else if (t.getDueDate().isBefore(today)) {
                     overdueCount++;
+                    if (isActionable) actionableOverdueCount++;
+                } else {
+                    upcomingCount++;
+                    if (isActionable) actionableUpcomingCount++;
                 }
+            }
+
+            if (isActive && currentStaffId != null && isTaskAssignedToStaff(t, currentStaffId)) {
+                myTasksCount++;
             }
 
             if (isActive && latest != null && latest.getNextRetryAt() != null) {
@@ -529,13 +553,18 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             }
 
             for (String grp : groups) {
-                if (matchesTabGroup(t, latest, grp, today)) {
+                if ("MY_TASKS".equals(grp)) {
+                    if (isActive && currentStaffId != null && isTaskAssignedToStaff(t, currentStaffId)) {
+                        groupCounts.put(grp, groupCounts.get(grp) + 1L);
+                    }
+                } else if (matchesTabGroup(t, latest, grp, today)) {
                     groupCounts.put(grp, groupCounts.get(grp) + 1L);
                 }
             }
         }
 
         long dueOrOverdueTotal = dueTodayCount + overdueCount;
+        long openAllCount = pendingCount + inProgressCount + escalatedCount;
         int completionRate = totalTasks > 0
                 ? (int) Math.round((completedCount * 100.0) / totalTasks)
                 : 0;
@@ -546,9 +575,15 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         summary.put("pendingCount", pendingCount);
         summary.put("inProgressCount", inProgressCount);
         summary.put("activeTasks", pendingCount + inProgressCount);
+        summary.put("openAllCount", openAllCount);
         summary.put("dueOrOverdueTasks", dueOrOverdueTotal);
         summary.put("dueTodayTasks", dueTodayCount);
         summary.put("overdueTasks", overdueCount);
+        summary.put("upcomingTasks", upcomingCount);
+        summary.put("actionableOverdueCount", actionableOverdueCount);
+        summary.put("actionableTodayCount", actionableTodayCount);
+        summary.put("actionableUpcomingCount", actionableUpcomingCount);
+        summary.put("myTasksCount", myTasksCount);
         summary.put("retryPendingCount", retryPendingCount);
         summary.put("escalatedTasks", escalatedCount);
         summary.put("waitingDoctorResponseCount", waitingDoctorResponseCount);
@@ -577,6 +612,27 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             String keyword,
             Pageable pageable,
             Long userId) {
+        return searchTasks(branchId, tabGroup, status, assignedStaffId, escalatedToDoctorId,
+                fromDate, toDate, keyword, null, null, null, false, pageable, userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CustomerCareTaskDTO> searchTasks(
+            Long branchId,
+            String tabGroup,
+            String status,
+            Long assignedStaffId,
+            Long escalatedToDoctorId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            String keyword,
+            String dueFilter,
+            String careGroupFilter,
+            String doctorResponseFilter,
+            Boolean myTasksOnly,
+            Pageable pageable,
+            Long userId) {
 
         Long effectiveBranchId = resolveAndAuthorizeBranchId(branchId, userId, false);
         if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
@@ -586,18 +642,137 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         List<CustomerCareTask> allTasks = taskRepository.findAllByBranchWithDetails(effectiveBranchId);
         Map<Long, List<CustomerCareInteraction>> interactionsByTask = loadInteractionsMapByBranch(effectiveBranchId);
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        Long currentStaffId = Boolean.TRUE.equals(myTasksOnly) || "MY_TASKS".equalsIgnoreCase(tabGroup)
+                ? (userId != null ? staffRepository.findByUser_UserId(userId).map(StaffProfile::getStaffId).orElse(null) : null)
+                : null;
+
+        List<CustomerCareTask> matchedTasks = filterTasks(
+                allTasks, interactionsByTask, today,
+                tabGroup, status, assignedStaffId, escalatedToDoctorId,
+                fromDate, toDate, keyword, dueFilter, careGroupFilter,
+                doctorResponseFilter, myTasksOnly, currentStaffId
+        );
+
+        // Sắp xếp ưu tiên: Quá hạn lên đầu, đến Hôm nay, rồi Sắp tới; sau đó theo taskId desc
+        matchedTasks.sort((a, b) -> {
+            int pA = resolveSortPriority(a, today);
+            int pB = resolveSortPriority(b, today);
+            if (pA != pB) return Integer.compare(pA, pB);
+            if (a.getDueDate() != null && b.getDueDate() != null && !a.getDueDate().equals(b.getDueDate())) {
+                return a.getDueDate().compareTo(b.getDueDate());
+            }
+            return Long.compare(b.getTaskId() != null ? b.getTaskId() : 0L, a.getTaskId() != null ? a.getTaskId() : 0L);
+        });
+
+        int total = matchedTasks.size();
+        int start = (int) pageable.getOffset();
+        if (start >= total) {
+            return new PageImpl<>(List.of(), pageable, total);
+        }
+        int end = Math.min(start + pageable.getPageSize(), total);
+        List<CustomerCareTaskDTO> pageContent = matchedTasks.subList(start, end).stream()
+                .map(task -> toTaskDTO(task, interactionsByTask.getOrDefault(task.getTaskId(), List.of()), false))
+                .toList();
+        return new PageImpl<>(pageContent, pageable, total);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CustomerCareTaskDTO> getCalendarTasks(
+            Long branchId,
+            LocalDate startDate,
+            LocalDate endDate,
+            Long assignedStaffId,
+            Long escalatedToDoctorId,
+            String careGroupFilter,
+            String status,
+            Boolean myTasksOnly,
+            Long userId) {
+
+        Long effectiveBranchId = resolveAndAuthorizeBranchId(branchId, userId, false);
+        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+            bad("Ngày bắt đầu không được lớn hơn ngày kết thúc.");
+        }
+
+        List<CustomerCareTask> allTasks = taskRepository.findAllByBranchWithDetails(effectiveBranchId);
+        Map<Long, List<CustomerCareInteraction>> interactionsByTask = loadInteractionsMapByBranch(effectiveBranchId);
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        Long currentStaffId = Boolean.TRUE.equals(myTasksOnly)
+                ? (userId != null ? staffRepository.findByUser_UserId(userId).map(StaffProfile::getStaffId).orElse(null) : null)
+                : null;
+
+        List<CustomerCareTask> matched = filterTasks(
+                allTasks, interactionsByTask, today,
+                "ALL", status, assignedStaffId, escalatedToDoctorId,
+                startDate, endDate, null, null, careGroupFilter,
+                null, myTasksOnly, currentStaffId
+        );
+
+        return matched.stream()
+                .map(task -> toTaskDTO(task, interactionsByTask.getOrDefault(task.getTaskId(), List.of()), false))
+                .toList();
+    }
+
+    private List<CustomerCareTask> filterTasks(
+            List<CustomerCareTask> allTasks,
+            Map<Long, List<CustomerCareInteraction>> interactionsByTask,
+            LocalDate today,
+            String tabGroup,
+            String status,
+            Long assignedStaffId,
+            Long escalatedToDoctorId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            String keyword,
+            String dueFilter,
+            String careGroupFilter,
+            String doctorResponseFilter,
+            Boolean myTasksOnly,
+            Long currentStaffId) {
+
         String normGroup = trimToNull(tabGroup) == null ? "ALL" : tabGroup.trim().toUpperCase(Locale.ROOT);
         String normStatus = trimToNull(status) == null ? null : status.trim().toUpperCase(Locale.ROOT);
         String normKeyword = trimToNull(keyword) == null ? null : keyword.trim().toLowerCase(Locale.ROOT);
+        String normDue = trimToNull(dueFilter) == null ? null : dueFilter.trim().toUpperCase(Locale.ROOT);
+        String normCareGroup = trimToNull(careGroupFilter) == null ? null : careGroupFilter.trim().toUpperCase(Locale.ROOT);
+        String normDocResp = trimToNull(doctorResponseFilter) == null ? null : doctorResponseFilter.trim().toUpperCase(Locale.ROOT);
 
         List<CustomerCareTask> matchedTasks = new ArrayList<>();
         for (CustomerCareTask task : allTasks) {
             List<CustomerCareInteraction> taskInteractions = interactionsByTask.getOrDefault(task.getTaskId(), List.of());
             CustomerCareInteraction latest = taskInteractions.isEmpty() ? null : taskInteractions.get(0);
 
-            if (!matchesTabGroup(task, latest, normGroup, today)) {
+            if ("MY_TASKS".equals(normGroup)) {
+                boolean isActive = task.getStatus() != CustomerCareTaskStatus.COMPLETED
+                        && task.getStatus() != CustomerCareTaskStatus.CANCELLED;
+                if (!isActive || currentStaffId == null || !isTaskAssignedToStaff(task, currentStaffId)) {
+                    continue;
+                }
+            } else if (!matchesTabGroup(task, latest, normGroup, today)) {
                 continue;
+            }
+
+            if (Boolean.TRUE.equals(myTasksOnly)) {
+                if (currentStaffId == null || !isTaskAssignedToStaff(task, currentStaffId)) {
+                    continue;
+                }
+            }
+            if (normCareGroup != null && !"ALL".equals(normCareGroup)) {
+                if (!matchesTabGroup(task, latest, normCareGroup, today)) {
+                    continue;
+                }
+            }
+            if (normDue != null && !"ALL".equals(normDue)) {
+                String bucket = resolveDueBucket(task, today);
+                if (!normDue.equals(bucket)) {
+                    continue;
+                }
+            }
+            if (normDocResp != null && !"ALL".equals(normDocResp)) {
+                boolean hasResp = task.getDoctorResponse() != null && !task.getDoctorResponse().isBlank();
+                if ("WAITING".equals(normDocResp) && hasResp) continue;
+                if ("RESPONDED".equals(normDocResp) && !hasResp) continue;
             }
             if (normStatus != null && !task.getStatus().name().equalsIgnoreCase(normStatus)) {
                 continue;
@@ -624,17 +799,33 @@ public class CustomerCareServiceImpl implements CustomerCareService {
 
             matchedTasks.add(task);
         }
+        return matchedTasks;
+    }
 
-        int total = matchedTasks.size();
-        int start = (int) pageable.getOffset();
-        if (start >= total) {
-            return new PageImpl<>(List.of(), pageable, total);
-        }
-        int end = Math.min(start + pageable.getPageSize(), total);
-        List<CustomerCareTaskDTO> pageContent = matchedTasks.subList(start, end).stream()
-                .map(task -> toTaskDTO(task, interactionsByTask.getOrDefault(task.getTaskId(), List.of()), false))
-                .toList();
-        return new PageImpl<>(pageContent, pageable, total);
+    private boolean isTaskAssignedToStaff(CustomerCareTask t, Long staffId) {
+        if (staffId == null) return false;
+        boolean isAssignee = t.getAssignedStaff() != null && staffId.equals(t.getAssignedStaff().getStaffId());
+        boolean isEscalatedDoc = t.getEscalatedToDoctor() != null && staffId.equals(t.getEscalatedToDoctor().getStaffId());
+        return isAssignee || isEscalatedDoc;
+    }
+
+    private String resolveDueBucket(CustomerCareTask t, LocalDate today) {
+        if (t.getStatus() == CustomerCareTaskStatus.COMPLETED) return "COMPLETED";
+        if (t.getStatus() == CustomerCareTaskStatus.CANCELLED) return "CANCELLED";
+        if (t.getDueDate() == null) return "TODAY";
+        if (t.getDueDate().isBefore(today)) return "OVERDUE";
+        if (t.getDueDate().isEqual(today)) return "TODAY";
+        return "UPCOMING";
+    }
+
+    private int resolveSortPriority(CustomerCareTask t, LocalDate today) {
+        return switch (resolveDueBucket(t, today)) {
+            case "OVERDUE" -> 1;
+            case "TODAY" -> 2;
+            case "UPCOMING" -> 3;
+            case "COMPLETED" -> 4;
+            default -> 5;
+        };
     }
 
     @Override
@@ -710,7 +901,12 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         attachOptionalLinks(task, dto.getVisitId(), dto.getAppointmentId(), dto.getPrescriptionId());
 
         CustomerCareTask saved = taskRepository.save(task);
-        return toTaskDTO(saved != null ? saved : task, List.of(), true);
+        CustomerCareTask resultTask = saved != null ? saved : task;
+        if (notificationService != null) {
+            String actorName = resolveActorDisplayName(userId);
+            notificationService.notifyTaskCreated(resultTask, userId, actorName, false);
+        }
+        return toTaskDTO(resultTask, List.of(), true);
     }
 
     private void assertNoActiveDuplicateTask(
@@ -774,6 +970,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         CustomerCareTask task = taskRepository.findByIdWithDetails(taskId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy công việc CSKH."));
         assertCanAccessTask(task, userId);
+        assertTaskOpenForProcessing(task, "chỉnh sửa / phân công lại");
 
         if (dto.getProfileId() != null && dto.getProfileId() > 0) {
             PatientProfile patient = patientRepository.findById(dto.getProfileId())
@@ -807,8 +1004,12 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         attachOptionalLinks(task, dto.getVisitId(), dto.getAppointmentId(), dto.getPrescriptionId());
 
         CustomerCareTask saved = taskRepository.save(task);
+        CustomerCareTask resultTask = saved != null ? saved : task;
+        if (notificationService != null) {
+            notificationService.notifyTaskUpdated(resultTask, userId, resolveActorDisplayName(userId));
+        }
         List<CustomerCareInteraction> interactions = interactionRepository.findByTaskIdWithDetails(taskId);
-        return toTaskDTO(saved != null ? saved : task, interactions, true);
+        return toTaskDTO(resultTask, interactions, true);
     }
 
     @Override
@@ -958,6 +1159,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         CustomerCareTask task = taskRepository.findByIdWithDetails(taskId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy công việc CSKH."));
         assertCanAccessTask(task, userId);
+        assertTaskOpenForProcessing(task, "ghi nhận thêm kết quả liên hệ");
 
         InteractionChannel channel = parseChannel(dto.getChannel());
         ContactResult contactResult = parseContactResult(dto.getContactResult());
@@ -1021,6 +1223,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
 
         taskRepository.save(task);
 
+        if (notificationService != null) {
+            notificationService.notifyTaskUpdated(task, userId, resolveActorDisplayName(userId));
+        }
+
         List<CustomerCareInteraction> updatedInteractions = interactionRepository.findByTaskIdWithDetails(taskId);
         return toTaskDTO(task, updatedInteractions, true);
     }
@@ -1050,6 +1256,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         CustomerCareTask task = taskRepository.findByIdWithDetails(taskId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy công việc CSKH."));
         assertCanAccessTask(task, userId);
+        assertTaskOpenForProcessing(task, "chuyển Bác sĩ");
 
         StaffProfile doctor = staffRepository.findById(dto.getEscalatedToDoctorId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy hồ sơ Bác sĩ được chọn."));
@@ -1058,11 +1265,33 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         }
 
         task.setEscalatedToDoctor(doctor);
-        task.setEscalatedAt(LocalDateTime.now());
+        task.setEscalatedAt(LocalDateTime.now(CLINIC_ZONE));
         task.setStatus(CustomerCareTaskStatus.ESCALATED_TO_DOCTOR);
-        task.setNotes(reason);
+        task.setEscalationReason(reason);
+        task.setEscalatedByUserId(userId);
+        // Bảo toàn task.notes (ghi chú gốc / lời dặn ban đầu) - không ghi đè bằng lý do chuyển BS!
 
         taskRepository.save(task);
+
+        // Ghi nhận mốc lịch sử chuyển Bác sĩ vào customer_care_interactions để không mất dữ liệu các lần chuyển trước
+        StaffProfile performer = userId != null ? staffRepository.findByUser_UserId(userId).orElse(null) : null;
+        if (performer == null) {
+            performer = task.getAssignedStaff() != null ? task.getAssignedStaff() : resolveDefaultCareStaff(userId, task.getBranch().getBranchId());
+        }
+        if (performer != null) {
+            CustomerCareInteraction escalationLog = new CustomerCareInteraction();
+            escalationLog.setTask(task);
+            escalationLog.setPatientProfile(task.getPatientProfile());
+            escalationLog.setStaff(performer);
+            escalationLog.setChannel(InteractionChannel.IN_PERSON);
+            escalationLog.setContactResult(ContactResult.CONNECTED);
+            escalationLog.setNotes("[Chuyển BS: " + doctor.getFullName() + "] " + reason);
+            interactionRepository.save(escalationLog);
+        }
+
+        if (notificationService != null) {
+            notificationService.notifyEscalatedToDoctor(task, doctor, userId, resolveActorDisplayName(userId));
+        }
 
         List<CustomerCareInteraction> interactions = interactionRepository.findByTaskIdWithDetails(taskId);
         return toTaskDTO(task, interactions, true);
@@ -1096,6 +1325,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                     "Chỉ Bác sĩ hoặc Admin tại cơ sở mới có quyền nhập phản hồi / chỉ định chuyên môn (doctor_response)."
             );
         }
+        assertTaskOpenForProcessing(task, "cập nhật phản hồi chuyên môn");
 
         task.setDoctorResponse(responseText);
         if (task.getEscalatedAt() == null) {
@@ -1116,6 +1346,119 @@ public class CustomerCareServiceImpl implements CustomerCareService {
 
         taskRepository.save(task);
 
+        // Ghi nhận mốc lịch sử phản hồi của Bác sĩ vào customer_care_interactions (không ghi đè lịch sử gọi cũ)
+        StaffProfile responder = userId != null ? staffRepository.findByUser_UserId(userId).orElse(null) : null;
+        if (responder == null) {
+            responder = task.getEscalatedToDoctor() != null ? task.getEscalatedToDoctor() : resolveDefaultCareStaff(userId, task.getBranch().getBranchId());
+        }
+        if (responder != null) {
+            CustomerCareInteraction docLog = new CustomerCareInteraction();
+            docLog.setTask(task);
+            docLog.setPatientProfile(task.getPatientProfile());
+            docLog.setStaff(responder);
+            docLog.setChannel(InteractionChannel.IN_PERSON);
+            docLog.setContactResult(ContactResult.CONNECTED);
+            docLog.setNotes("[Phản hồi BS - " + formatStatusLabel(task.getStatus()) + "] " + responseText);
+            interactionRepository.save(docLog);
+        }
+
+        if (notificationService != null) {
+            String docName = responder != null ? responder.getFullName() : resolveActorDisplayName(userId);
+            notificationService.notifyDoctorResponded(task, userId, docName);
+        }
+
+        List<CustomerCareInteraction> interactions = interactionRepository.findByTaskIdWithDetails(taskId);
+        return toTaskDTO(task, interactions, true);
+    }
+
+    /**
+     * Khóa xử lý đối với công việc đã đóng (COMPLETED / CANCELLED).
+     * Chỉ chặn đúng công việc có taskId tương ứng, không ảnh hưởng các công việc khác của cùng bệnh nhân.
+     */
+    private void assertTaskOpenForProcessing(CustomerCareTask task, String actionLabel) {
+        if (task == null || task.getStatus() == null) return;
+        if (task.getStatus() == CustomerCareTaskStatus.COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Công việc " + task.getTaskCode() + " đã hoàn thành và được đóng, không thể " + actionLabel
+                            + ". Nếu thực sự cần, vui lòng liên hệ Quản trị viên để mở lại công việc.");
+        }
+        if (task.getStatus() == CustomerCareTaskStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Công việc " + task.getTaskCode() + " đã bị hủy, không thể " + actionLabel + ".");
+        }
+    }
+
+    // =========================================================================
+    // 6B. MỞ LẠI CÔNG VIỆC ĐÃ HOÀN THÀNH (CHỈ ADMIN) - CÓ LÝ DO & AUDIT LOG
+    // =========================================================================
+
+    @Override
+    @Transactional
+    public CustomerCareTaskDTO reopenTask(Long taskId, String reason, Long userId, String ipAddress) {
+        if (taskId == null || taskId <= 0) {
+            bad("Mã công việc CSKH không hợp lệ.");
+        }
+        String safeReason = trimToNull(reason);
+        if (safeReason == null || safeReason.length() < 5) {
+            bad("Vui lòng nhập lý do mở lại công việc (ít nhất 5 ký tự).");
+        }
+        if (safeReason.length() > 1000) {
+            bad("Lý do mở lại công việc tối đa 1000 ký tự.");
+        }
+
+        CustomerCareTask task = taskRepository.findByIdWithDetails(taskId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy công việc CSKH."));
+        String careRole = assertCanAccessTask(task, userId);
+        if (!"ADMIN".equals(careRole)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Chỉ Quản trị viên (Admin) mới có quyền mở lại công việc CSKH đã hoàn thành.");
+        }
+        if (task.getStatus() != CustomerCareTaskStatus.COMPLETED) {
+            bad("Chỉ có thể mở lại công việc đang ở trạng thái Đã hoàn thành.");
+        }
+
+        String oldStatus = task.getStatus().name();
+        LocalDateTime reopenedAt = LocalDateTime.now(CLINIC_ZONE);
+        task.setStatus(CustomerCareTaskStatus.IN_PROGRESS);
+        taskRepository.save(task);
+
+        String actorName = resolveActorDisplayName(userId);
+
+        // Ghi nhận mốc mở lại vào lịch sử công việc (bản ghi độc lập, không ghi đè lịch sử cũ)
+        StaffProfile performer = userId != null ? staffRepository.findByUser_UserId(userId).orElse(null) : null;
+        if (performer == null) {
+            performer = task.getAssignedStaff();
+        }
+        if (performer != null) {
+            CustomerCareInteraction reopenLog = new CustomerCareInteraction();
+            reopenLog.setTask(task);
+            reopenLog.setPatientProfile(task.getPatientProfile());
+            reopenLog.setStaff(performer);
+            reopenLog.setChannel(InteractionChannel.IN_PERSON);
+            reopenLog.setContactResult(ContactResult.CONNECTED);
+            reopenLog.setNotes("[Mở lại công việc - " + actorName + "] " + safeReason);
+            interactionRepository.save(reopenLog);
+        }
+
+        if (systemAuditLogService != null) {
+            User actor = userId != null ? userRepository.findById(userId).orElse(null) : null;
+            Map<String, Object> oldVal = new LinkedHashMap<>();
+            oldVal.put("taskCode", task.getTaskCode());
+            oldVal.put("status", oldStatus);
+            Map<String, Object> newVal = new LinkedHashMap<>();
+            newVal.put("taskCode", task.getTaskCode());
+            newVal.put("status", task.getStatus().name());
+            newVal.put("reopenReason", safeReason);
+            newVal.put("reopenedBy", actorName);
+            newVal.put("reopenedAt", reopenedAt.toString());
+            systemAuditLogService.logAction(actor, task.getBranch(), "CUSTOMER_CARE_TASK_REOPEN",
+                    "customer_care_tasks", task.getTaskId(), ipAddress, oldVal, newVal);
+        }
+
+        if (notificationService != null) {
+            notificationService.notifyTaskReopened(task, safeReason, userId, actorName);
+        }
+
         List<CustomerCareInteraction> interactions = interactionRepository.findByTaskIdWithDetails(taskId);
         return toTaskDTO(task, interactions, true);
     }
@@ -1123,6 +1466,180 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     // =========================================================================
     // 7. LỊCH SỬ CHĂM SÓC BỆNH NHÂN TIMELINE (SCR-44.6) & TÓM TẮT CA KHÁM LÂM SÀNG
     // =========================================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CustomerCareInteractionDTO> searchInteractions(
+            Long branchId,
+            Long profileId,
+            String keyword,
+            String timeRange,
+            LocalDate fromDate,
+            LocalDate toDate,
+            Long staffId,
+            Long doctorId,
+            String channel,
+            String contactResult,
+            String careGroupFilter,
+            Pageable pageable,
+            Long userId) {
+
+        String careRole = requireCareRole(userId);
+        Long effectiveBranchId = resolveAndAuthorizeBranchId(branchId, userId, false);
+
+        List<CustomerCareInteraction> list = interactionRepository.findInteractionsWithDetails(effectiveBranchId, profileId);
+
+        if (!"ADMIN".equals(careRole)) {
+            Set<Long> allowedBranchIds = resolveAllowedBranches(userId, careRole).stream()
+                    .map(Branch::getBranchId)
+                    .collect(Collectors.toSet());
+            list = list.stream()
+                    .filter(i -> i.getTask() != null && i.getTask().getBranch() != null
+                            && allowedBranchIds.contains(i.getTask().getBranch().getBranchId()))
+                    .toList();
+        }
+
+        // Tính toán khoảng thời gian theo múi giờ Việt Nam (Asia/Ho_Chi_Minh)
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        LocalDate rangeStart = null;
+        LocalDate rangeEnd = null;
+
+        String tr = timeRange != null ? timeRange.trim().toUpperCase(Locale.ROOT) : "ALL";
+        switch (tr) {
+            case "TODAY" -> {
+                rangeStart = today;
+                rangeEnd = today;
+            }
+            case "YESTERDAY" -> {
+                rangeStart = today.minusDays(1);
+                rangeEnd = today.minusDays(1);
+            }
+            case "THIS_WEEK" -> {
+                int daysFromMon = (today.getDayOfWeek().getValue() + 6) % 7;
+                rangeStart = today.minusDays(daysFromMon);
+                rangeEnd = rangeStart.plusDays(6);
+            }
+            case "LAST_WEEK" -> {
+                int daysFromMon = (today.getDayOfWeek().getValue() + 6) % 7;
+                rangeStart = today.minusDays(daysFromMon + 7);
+                rangeEnd = rangeStart.plusDays(6);
+            }
+            case "THIS_MONTH" -> {
+                rangeStart = today.withDayOfMonth(1);
+                rangeEnd = today.withDayOfMonth(today.lengthOfMonth());
+            }
+            case "LAST_MONTH" -> {
+                LocalDate lastMonth = today.minusMonths(1);
+                rangeStart = lastMonth.withDayOfMonth(1);
+                rangeEnd = lastMonth.withDayOfMonth(lastMonth.lengthOfMonth());
+            }
+            case "CUSTOM" -> {
+                rangeStart = fromDate;
+                rangeEnd = toDate;
+            }
+            default -> {
+                rangeStart = fromDate;
+                rangeEnd = toDate;
+            }
+        }
+
+        if (rangeStart != null && rangeEnd != null && rangeStart.isAfter(rangeEnd)) {
+            LocalDate temp = rangeStart;
+            rangeStart = rangeEnd;
+            rangeEnd = temp;
+        }
+
+        final LocalDate finalStart = rangeStart;
+        final LocalDate finalEnd = rangeEnd;
+        final String normKeyword = keyword != null && !keyword.isBlank() ? keyword.trim().toLowerCase(Locale.ROOT) : null;
+        final String normChannel = channel != null && !channel.isBlank() && !"ALL".equalsIgnoreCase(channel) ? channel.trim() : null;
+        final String normResult = contactResult != null && !contactResult.isBlank() && !"ALL".equalsIgnoreCase(contactResult) ? contactResult.trim() : null;
+        final String normCareGroup = careGroupFilter != null && !careGroupFilter.isBlank() && !"ALL".equalsIgnoreCase(careGroupFilter) ? careGroupFilter.trim() : null;
+
+        List<CustomerCareInteraction> matched = list.stream().filter(i -> {
+            // Lọc ngày
+            if (i.getCreatedAt() != null) {
+                LocalDate createdDate = i.getCreatedAt().atZone(ZoneId.systemDefault())
+                        .withZoneSameInstant(CLINIC_ZONE).toLocalDate();
+                if (finalStart != null && createdDate.isBefore(finalStart)) return false;
+                if (finalEnd != null && createdDate.isAfter(finalEnd)) return false;
+            }
+
+            // Lọc nhân viên thực hiện
+            if (staffId != null && staffId > 0) {
+                if (i.getStaff() == null || !staffId.equals(i.getStaff().getStaffId())) return false;
+            }
+
+            // Lọc Bác sĩ (Bác sĩ nhận chuyển giao hoặc Bác sĩ điều trị/kê đơn/lịch hẹn liên kết với ca)
+            if (doctorId != null && doctorId > 0) {
+                CustomerCareTask t = i.getTask();
+                boolean isDoctor = t != null && (
+                        (t.getEscalatedToDoctor() != null && doctorId.equals(t.getEscalatedToDoctor().getStaffId()))
+                        || (t.getVisit() != null && t.getVisit().getPrimaryDoctor() != null && doctorId.equals(t.getVisit().getPrimaryDoctor().getStaffId()))
+                        || (t.getPrescription() != null && t.getPrescription().getDoctor() != null && doctorId.equals(t.getPrescription().getDoctor().getStaffId()))
+                        || (t.getAppointment() != null && t.getAppointment().getDoctor() != null && doctorId.equals(t.getAppointment().getDoctor().getStaffId()))
+                );
+                if (!isDoctor) return false;
+            }
+
+            // Lọc Kênh / Hình thức
+            if (normChannel != null) {
+                if (i.getChannel() == null || !i.getChannel().name().equalsIgnoreCase(normChannel)) return false;
+            }
+
+            // Lọc Kết quả
+            if (normResult != null) {
+                if (i.getContactResult() == null || !i.getContactResult().name().equalsIgnoreCase(normResult)) return false;
+            }
+
+            // Lọc Nhóm CSKH
+            if (normCareGroup != null) {
+                if (i.getTask() == null) return false;
+                String group = resolveCareGroup(i.getTask());
+                if (!group.equalsIgnoreCase(normCareGroup)) {
+                    if ("POST_TREATMENT".equalsIgnoreCase(normCareGroup) && !"POST_TREATMENT_FOLLOWUP".equalsIgnoreCase(group)) return false;
+                    else if (!group.equalsIgnoreCase(normCareGroup)) return false;
+                }
+            }
+
+            // Lọc từ khóa: Tên BN, Mã BN, SĐT, Mã công việc, Ghi chú
+            if (normKeyword != null) {
+                boolean hit = false;
+                PatientProfile p = i.getPatientProfile();
+                if (p != null) {
+                    if (p.getFullName() != null && p.getFullName().toLowerCase(Locale.ROOT).contains(normKeyword)) hit = true;
+                    else if (p.getPatientCode() != null && p.getPatientCode().toLowerCase(Locale.ROOT).contains(normKeyword)) hit = true;
+                    else if (p.getPhoneNumber() != null && p.getPhoneNumber().toLowerCase(Locale.ROOT).contains(normKeyword)) hit = true;
+                }
+                if (!hit && i.getTask() != null && i.getTask().getTaskCode() != null
+                        && i.getTask().getTaskCode().toLowerCase(Locale.ROOT).contains(normKeyword)) {
+                    hit = true;
+                }
+                if (!hit && i.getNotes() != null && i.getNotes().toLowerCase(Locale.ROOT).contains(normKeyword)) {
+                    hit = true;
+                }
+                if (!hit && i.getStaff() != null && i.getStaff().getFullName() != null
+                        && i.getStaff().getFullName().toLowerCase(Locale.ROOT).contains(normKeyword)) {
+                    hit = true;
+                }
+                if (!hit) return false;
+            }
+
+            return true;
+        }).toList();
+
+        int total = matched.size();
+        int page = pageable != null ? pageable.getPageNumber() : 0;
+        int size = pageable != null ? pageable.getPageSize() : 10;
+        int fromIndex = Math.min(page * size, total);
+        int toIndex = Math.min(fromIndex + size, total);
+
+        List<CustomerCareInteractionDTO> dtos = matched.subList(fromIndex, toIndex).stream()
+                .map(this::toInteractionDTO)
+                .toList();
+
+        return new PageImpl<>(dtos, pageable != null ? pageable : PageRequest.of(page, size), total);
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -1444,6 +1961,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         String upperTab = tabGroup.toUpperCase(Locale.ROOT);
 
         return switch (upperTab) {
+            case "ACTIONABLE" -> task.getStatus() == CustomerCareTaskStatus.PENDING
+                    || task.getStatus() == CustomerCareTaskStatus.IN_PROGRESS;
+            case "COMPLETED" -> task.getStatus() == CustomerCareTaskStatus.COMPLETED;
+            case "CANCELLED" -> task.getStatus() == CustomerCareTaskStatus.CANCELLED;
             case "TODAY" -> {
                 boolean active = task.getStatus() != CustomerCareTaskStatus.COMPLETED
                         && task.getStatus() != CustomerCareTaskStatus.CANCELLED;
@@ -1459,8 +1980,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             case "NO_SERVICE_FOLLOWUP" -> "NO_SERVICE_FOLLOWUP".equals(careGroup);
             case "FEEDBACK_COMPLAINT" -> "FEEDBACK_COMPLAINT".equals(careGroup)
                     || task.getStatus() == CustomerCareTaskStatus.ESCALATED_TO_DOCTOR;
-            case "ESCALATED" -> task.getStatus() == CustomerCareTaskStatus.ESCALATED_TO_DOCTOR
-                    || task.getEscalatedToDoctor() != null;
+            case "ESCALATED" -> task.getStatus() == CustomerCareTaskStatus.ESCALATED_TO_DOCTOR;
             default -> careGroup.equalsIgnoreCase(upperTab);
         };
     }
@@ -1705,13 +2225,19 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         }
         dto.setEscalatedAt(t.getEscalatedAt());
         dto.setDoctorResponse(t.getDoctorResponse());
+        dto.setEscalationReason(t.getEscalationReason());
+        dto.setEscalatedByUserId(t.getEscalatedByUserId());
+        if (t.getEscalatedByUserId() != null) {
+            dto.setEscalatedByName(resolveActorDisplayName(t.getEscalatedByUserId()));
+        }
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
         dto.setDueDate(t.getDueDate());
         boolean isActive = t.getStatus() != CustomerCareTaskStatus.COMPLETED
                 && t.getStatus() != CustomerCareTaskStatus.CANCELLED;
         dto.setOverdue(isActive && t.getDueDate() != null && t.getDueDate().isBefore(today));
         dto.setDueToday(isActive && t.getDueDate() != null && t.getDueDate().isEqual(today));
+        dto.setDueBucket(resolveDueBucket(t, today));
 
         dto.setStatus(t.getStatus() != null ? t.getStatus().name() : "PENDING");
         dto.setStatusLabel(formatStatusLabel(t.getStatus()));
@@ -1958,6 +2484,13 @@ public class CustomerCareServiceImpl implements CustomerCareService {
 
     private static String trimToNull(String s) {
         return s == null || s.isBlank() ? null : s.trim();
+    }
+
+    private String resolveActorDisplayName(Long userId) {
+        if (userId == null) return "Hệ thống";
+        return staffRepository.findByUser_UserId(userId)
+                .map(StaffProfile::getFullName)
+                .orElseGet(() -> userRepository.findById(userId).map(User::getUsername).orElse("Nhân viên #" + userId));
     }
 
     private static void bad(String message) {

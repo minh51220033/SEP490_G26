@@ -47,6 +47,8 @@ public class ReceptionAppointmentService {
     private final AppointmentSlotService slots;
     private final PatientService patientService;
     private final Validator validator;
+    @Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher careEventPublisher;
 
     @Autowired
     public ReceptionAppointmentService(PatientAccess access, ReceptionAppointmentRepository appointments,
@@ -369,6 +371,9 @@ public class ReceptionAppointmentService {
         a.setStatus(Boolean.TRUE.equals(request.isTentative()) ? AppointmentStatus.PENDING : AppointmentStatus.CONFIRMED);
         appointments.saveAndFlush(a);
         history(a, scope.user().getUserId(), "CREATE", null, snapshot(a), null);
+        if (careEventPublisher != null && a.getAppointmentId() != null) {
+            careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentUpsertedCareEvent(a.getAppointmentId()));
+        }
         return view(a);
     }
 
@@ -491,6 +496,9 @@ public class ReceptionAppointmentService {
         lifecycle.transition(a, AppointmentStatus.CONFIRMED, AppointmentLifecycleAction.CONFIRM);
         appointments.saveAndFlush(a);
         history(a, scope.user().getUserId(), "CONFIRM", old, snapshot(a), null);
+        if (careEventPublisher != null && a.getAppointmentId() != null) {
+            careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentUpsertedCareEvent(a.getAppointmentId()));
+        }
         return view(a);
     }
 
@@ -536,7 +544,9 @@ public class ReceptionAppointmentService {
             if (reminder.getTaskType() == CustomerCareTaskType.APPOINTMENT_REMINDER
                     && reminder.getStatus() != CustomerCareTaskStatus.COMPLETED)
                 reminder.setStatus(CustomerCareTaskStatus.CANCELLED);
-        if (!careTasks.existsByAppointment_AppointmentIdAndTaskType(id, CustomerCareTaskType.NO_SHOW_RECALL)) {
+        if (careEventPublisher != null && id != null) {
+            careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentNoShowCareEvent(id));
+        } else if (!careTasks.existsByAppointment_AppointmentIdAndTaskType(id, CustomerCareTaskType.NO_SHOW_RECALL)) {
             CustomerCareTask task = new CustomerCareTask();
             task.setTaskCode("NS" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase());
             task.setAppointment(a); task.setPatientProfile(a.getPatientProfile()); task.setBranch(a.getBranch());
