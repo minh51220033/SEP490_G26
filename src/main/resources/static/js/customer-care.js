@@ -377,11 +377,11 @@
             const meds = Array.isArray(exam.prescriptionItems) && exam.prescriptionItems.length
                 ? exam.prescriptionItems.map(i => `${i.drugName} (${i.dosage || ""})`).join(", ")
                 : null;
-            const detailUrl = exam.examinationDetailUrl || `/doctor/examination/${vid}/diagnoses#tab-instructions`;
+            const detailUrl = exam.examinationDetailUrl || (exam.visitToken ? `/doctor/examination/${exam.visitToken}/diagnoses#tab-instructions` : '#');
 
             previewEl.innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-                    <strong>Hồ sơ Ca khám ${escapeHtml(exam.visitCode || "#" + vid)} (${escapeHtml(exam.visitStatus || "—")}) · BS: ${escapeHtml(exam.doctor?.fullName || "—")}</strong>
+                    <strong>Hồ sơ Ca khám ${escapeHtml(exam.visitCode || "---")} (${escapeHtml(exam.visitStatus || "—")}) · BS: ${escapeHtml(exam.doctor?.fullName || "—")}</strong>
                     <a href="${escapeHtml(detailUrl)}" target="_blank" rel="noopener" class="button button-secondary button-sm">
                         Xem Chẩn đoán &amp; Lời dặn
                     </a>
@@ -773,7 +773,7 @@
                     } else if (col.id === "careGroup") {
                         const refs = [];
                         if (t.visitCode) {
-                            const examUrl = t.examinationDetailUrl || (t.visitId ? `/doctor/examination/${t.visitId}/diagnoses#tab-instructions` : null);
+                            const examUrl = t.examinationDetailUrl || (t.visitToken ? `/doctor/examination/${t.visitToken}/diagnoses#tab-instructions` : null);
                             if (examUrl) {
                                 refs.push(`<a class="source-ref" href="${escapeHtml(examUrl)}" target="_blank" rel="noopener" title="Xem hồ sơ khám">Ca: <strong>${escapeHtml(t.visitCode)}</strong></a>`);
                             } else {
@@ -1078,7 +1078,7 @@
             return;
         }
 
-        const examUrl = t.examinationDetailUrl || (t.visitId ? `/doctor/examination/${t.visitId}/diagnoses#tab-instructions` : null);
+        const examUrl = t.examinationDetailUrl || (t.visitToken ? `/doctor/examination/${t.visitToken}/diagnoses#tab-instructions` : null);
         const diagHtml = (Array.isArray(t.diagnoses) && t.diagnoses.length)
             ? `<ul style="margin:4px 0 0 18px;padding:0;">` + t.diagnoses.map(d =>
                 `<li><strong>[${escapeHtml(d.diagnosisType || "MAIN")}]</strong> ${d.icd10Code ? `<code>${escapeHtml(d.icd10Code)}</code> - ` : ""}${escapeHtml(d.diagnosisText || "")}${d.toothNumbers ? ` <em>(Răng: ${escapeHtml(d.toothNumbers)})</em>` : ""}</li>`
@@ -1312,7 +1312,7 @@
             const t = await request(`/api/customer-care/tasks/${taskId}`);
             $("doctorResponseForm").reset();
             $("docRespTaskId").value = t.taskId;
-            const examUrl = t.examinationDetailUrl || (t.visitId ? `/doctor/examination/${t.visitId}/diagnoses#tab-instructions` : null);
+            const examUrl = t.examinationDetailUrl || (t.visitToken ? `/doctor/examination/${t.visitToken}/diagnoses#tab-instructions` : null);
             $("docRespTaskSummary").innerHTML = `
                 <div><strong>Mã CV:</strong> <span class="code">${escapeHtml(t.taskCode)}</span> · <strong>Bệnh nhân:</strong> ${escapeHtml(t.patientName)} (${escapeHtml(t.patientPhone || "—")})</div>
                 <div style="margin-top:4px;"><strong>Bác sĩ phụ trách:</strong> ${escapeHtml(t.escalatedToDoctorName || t.doctorName || "—")} · <strong>Chuyển lúc:</strong> ${escapeHtml(formatDateTime(t.escalatedAt))}</div>
@@ -1419,7 +1419,7 @@
             `).join("") : '<p class="empty">Bệnh nhân này chưa có lịch sử tương tác liên hệ nào.</p>';
 
             $("patientTasksContainer").innerHTML = tasks.length ? tasks.map(t => {
-                const examUrl = t.examinationDetailUrl || (t.visitId ? `/doctor/examination/${t.visitId}/diagnoses#tab-instructions` : null);
+                const examUrl = t.examinationDetailUrl || (t.visitToken ? `/doctor/examination/${t.visitToken}/diagnoses#tab-instructions` : null);
                 return `
                 <div class="patient-task-card">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
