@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -52,6 +53,35 @@ public interface CustomerCareService {
             Long userId
     );
 
+    Page<CustomerCareTaskDTO> searchTasks(
+            Long branchId,
+            String tabGroup,
+            String status,
+            Long assignedStaffId,
+            Long escalatedToDoctorId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            String keyword,
+            String dueFilter,
+            String careGroupFilter,
+            String doctorResponseFilter,
+            Boolean myTasksOnly,
+            Pageable pageable,
+            Long userId
+    );
+
+    List<CustomerCareTaskDTO> getCalendarTasks(
+            Long branchId,
+            LocalDate startDate,
+            LocalDate endDate,
+            Long assignedStaffId,
+            Long escalatedToDoctorId,
+            String careGroupFilter,
+            String status,
+            Boolean myTasksOnly,
+            Long userId
+    );
+
     /**
      * Xem chi tiết một công việc CSKH kèm lịch sử tương tác và dữ liệu khám lâm sàng / lời dặn (SCR-44.4).
      */
@@ -87,6 +117,30 @@ public interface CustomerCareService {
      * Bác sĩ nhập phản hồi chuyên môn cho ca CSKH được chuyển đến (SCR-44.5).
      */
     CustomerCareTaskDTO submitDoctorResponse(Long taskId, CustomerCareEscalateDTO dto, Long userId);
+
+    /**
+     * Mở lại công việc CSKH đã hoàn thành (chỉ ADMIN), bắt buộc lý do, ghi Audit Log và thông báo liên quan.
+     */
+    CustomerCareTaskDTO reopenTask(Long taskId, String reason, Long userId, String ipAddress);
+
+    /**
+     * Tìm kiếm và phân trang lịch sử tương tác CSKH (SCR-44.6 Lịch sử chung & Lịch sử bệnh nhân)
+     * hỗ trợ tìm theo từ khóa (tên, mã BN, SĐT, mã CV, ghi chú), khoảng thời gian VN, nhân viên, bác sĩ, kênh, kết quả, nhóm CSKH.
+     */
+    Page<CustomerCareInteractionDTO> searchInteractions(
+            Long branchId,
+            Long profileId,
+            String keyword,
+            String timeRange,
+            LocalDate fromDate,
+            LocalDate toDate,
+            Long staffId,
+            Long doctorId,
+            String channel,
+            String contactResult,
+            String careGroupFilter,
+            Pageable pageable,
+            Long userId);
 
     /**
      * Lấy toàn bộ lịch sử tương tác và công việc chăm sóc của một bệnh nhân theo dạng Timeline (SCR-44.6).

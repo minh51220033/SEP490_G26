@@ -29,6 +29,8 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     private final VisitRepository visitRepository;
     private final StaffProfileRepository staffProfileRepository;
     private final PatientProfileRepository patientProfileRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher careEventPublisher;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -182,6 +184,9 @@ public class PrescriptionServiceImpl implements PrescriptionService {
 
         Prescription saved = prescriptionRepository.save(prescription);
         log.info("Đã tạo đơn thuốc thành công: ID = {}, Code = {}", saved.getPrescriptionId(), saved.getPrescriptionCode());
+        if (careEventPublisher != null && saved.getPrescriptionId() != null) {
+            careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.PrescriptionCreatedCareEvent(saved.getPrescriptionId()));
+        }
         return mapToPrescriptionResponseDTO(saved);
     }
 
