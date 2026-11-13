@@ -27,8 +27,42 @@ public class LaboRestController {
     private final LaboOrderService laboOrderService;
     private final SupplierRepository supplierRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+
+    private jakarta.servlet.http.HttpSession currentHttpSession() {
+        var attrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        return attrs instanceof org.springframework.web.context.request.ServletRequestAttributes sra
+                ? sra.getRequest().getSession(false) : null;
+    }
+
+    private boolean isHttpRequestActive() {
+        return org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
+                instanceof org.springframework.web.context.request.ServletRequestAttributes;
+    }
+
+    private void authorizeLaboCreate(LaboOrderRequestDTO request) {
+        if (doctorVisitAccess == null || !isHttpRequestActive()) {
+            return;
+        }
+        jakarta.servlet.http.HttpSession session = currentHttpSession();
+        if (request != null && request.getVisitId() != null) {
+            doctorVisitAccess.require(session, request.getVisitId());
+        } else if (request != null && request.getProfileId() != null) {
+            doctorVisitAccess.requirePatientWrite(session, request.getProfileId());
+        } else {
+            doctorVisitAccess.requireAuthenticatedUser(session);
+        }
+        if (request != null && request.getBranchId() != null) {
+            doctorVisitAccess.requireBranch(session, request.getBranchId());
+        }
+    }
+
     @GetMapping("/visit/{visitId}")
     public ResponseEntity<Map<String, Object>> getOrdersByVisit(@PathVariable Long visitId) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireVisitRead(currentHttpSession(), visitId);
+        }
         List<LaboOrderResponseDTO> list = laboOrderService.getOrdersByVisit(visitId);
         Map<String, Object> stats = laboOrderService.getLaboStatistics(visitId, null);
 
@@ -41,6 +75,9 @@ public class LaboRestController {
 
     @GetMapping("/patient/{profileId}")
     public ResponseEntity<Map<String, Object>> getOrdersByPatient(@PathVariable Long profileId) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requirePatientRead(currentHttpSession(), profileId);
+        }
         List<LaboOrderResponseDTO> list = laboOrderService.getOrdersByPatient(profileId);
         Map<String, Object> stats = laboOrderService.getLaboStatistics(null, profileId);
 
@@ -59,7 +96,24 @@ public class LaboRestController {
             @RequestParam(value = "visitId", required = false) Long visitId,
             @RequestParam(value = "profileId", required = false) Long profileId
     ) {
+        com.cvdcms.entity.User currentUser = null;
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            jakarta.servlet.http.HttpSession session = currentHttpSession();
+            currentUser = doctorVisitAccess.requireAuthenticatedUser(session);
+            if (visitId != null) {
+                doctorVisitAccess.requireVisitRead(session, visitId);
+            }
+            if (profileId != null) {
+                doctorVisitAccess.requirePatientRead(session, profileId);
+            }
+        }
         List<LaboOrderResponseDTO> list = laboOrderService.getAllOrders(keyword, status, supplierId, visitId, profileId);
+        if (currentUser != null && doctorVisitAccess != null) {
+            final com.cvdcms.entity.User filterUser = currentUser;
+            list = list.stream()
+                    .filter(o -> doctorVisitAccess.isBranchAllowed(filterUser, o.getBranchId()))
+                    .toList();
+        }
         Map<String, Object> stats = laboOrderService.getLaboStatistics(visitId, profileId);
 
         Map<String, Object> res = new HashMap<>();
@@ -71,11 +125,14 @@ public class LaboRestController {
 
     @GetMapping("/{laboId}")
     public ResponseEntity<Map<String, Object>> getOrderById(@PathVariable Long laboId) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireLaboOrder(currentHttpSession(), laboId, false);
+        }
         LaboOrderResponseDTO order = laboOrderService.getOrderById(laboId);
         if (order == null) {
             Map<String, Object> err = new HashMap<>();
             err.put("success", false);
-            err.put("message", "Không tìm thấy phiếu đặt xưởng ID: " + laboId);
+            err.put("message", "Không tìm thấy phiếu đặt xưởng.");
             return ResponseEntity.status(404).body(err);
         }
         Map<String, Object> res = new HashMap<>();
@@ -86,6 +143,7 @@ public class LaboRestController {
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> createOrderJson(@RequestBody LaboOrderRequestDTO request) {
+        authorizeLaboCreate(request);
         Map<String, Object> res = new HashMap<>();
         try {
             LaboOrderResponseDTO created = laboOrderService.createOrder(request, null);
@@ -106,6 +164,7 @@ public class LaboRestController {
             @ModelAttribute LaboOrderRequestDTO request,
             @RequestParam(value = "imageFile", required = false) MultipartFile imageFile
     ) {
+        authorizeLaboCreate(request);
         Map<String, Object> res = new HashMap<>();
         try {
             LaboOrderResponseDTO created = laboOrderService.createOrder(request, imageFile);
@@ -126,6 +185,9 @@ public class LaboRestController {
             @PathVariable Long laboId,
             @RequestBody LaboOrderRequestDTO request
     ) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireLaboOrder(currentHttpSession(), laboId, true);
+        }
         Map<String, Object> res = new HashMap<>();
         try {
             LaboOrderResponseDTO updated = laboOrderService.updateOrder(laboId, request, null);
@@ -146,6 +208,9 @@ public class LaboRestController {
             @PathVariable Long laboId,
             @RequestBody Map<String, String> body
     ) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireLaboOrder(currentHttpSession(), laboId, true);
+        }
         Map<String, Object> res = new HashMap<>();
         try {
             String statusStr = body.get("status");
@@ -170,6 +235,9 @@ public class LaboRestController {
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "directUrl", required = false) String directUrl
     ) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireLaboOrder(currentHttpSession(), laboId, true);
+        }
         Map<String, Object> res = new HashMap<>();
         try {
             LaboOrderResponseDTO updated = laboOrderService.uploadImage(laboId, file, directUrl);
@@ -187,6 +255,9 @@ public class LaboRestController {
 
     @DeleteMapping("/{laboId}")
     public ResponseEntity<Map<String, Object>> deleteOrder(@PathVariable Long laboId) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireLaboOrder(currentHttpSession(), laboId, true);
+        }
         Map<String, Object> res = new HashMap<>();
         try {
             laboOrderService.deleteOrder(laboId);
@@ -203,6 +274,9 @@ public class LaboRestController {
 
     @GetMapping("/suppliers")
     public ResponseEntity<Map<String, Object>> getSuppliers() {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireAuthenticatedUser(currentHttpSession());
+        }
         List<Supplier> suppliers = supplierRepository.findAll();
         Map<String, Object> res = new HashMap<>();
         res.put("success", true);

@@ -150,7 +150,7 @@
                                 <span class="badge bg-success-subtle text-success border border-success-subtle py-1.5 px-2.5 rounded-pill d-inline-flex align-items-center gap-1.5">
                                     <i class="bi bi-heart-pulse-fill"></i><span>Bác sĩ đang khám</span>
                                 </span>
-                                <a th:href="@{/doctor/examination/{id}/treatment(id=${t.visit.visitId})}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1.5" target="_blank" title="Xem ca khám">
+                                <a th:href="@{/doctor/examination/{id}/treatment(id=${idCodec.encodeVisit(t.visit.visitId)})}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1.5" target="_blank" title="Xem ca khám">
                                     <i class="bi bi-box-arrow-up-right"></i><span>Xem ca khám</span>
                                 </a>
                             </th:block>

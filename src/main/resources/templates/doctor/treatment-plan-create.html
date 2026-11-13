@@ -348,7 +348,7 @@
                             <ol class="breadcrumb mb-0">
                                 <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
                                 <li class="breadcrumb-item"><a th:href="@{/doctor/daily-visits}">DS Khám</a></li>
-                                <li class="breadcrumb-item"><a th:href="${visit != null ? '/doctor/examination/' + visit.visitId + '/diagnoses' : '/doctor/examination'}">Khám &amp; Điều trị</a></li>
+                                <li class="breadcrumb-item"><a th:href="${visit != null ? '/doctor/examination/' + idCodec.encodeVisit(visit.visitId) + '/diagnoses' : '/doctor/examination'}">Khám &amp; Điều trị</a></li>
                                 <li class="breadcrumb-item active" aria-current="page">Lập Kế hoạch &amp; Lộ trình</li>
                             </ol>
                         </nav>
@@ -555,7 +555,7 @@
                         Dữ liệu kế hoạch &amp; lộ trình sẽ được lưu trực tiếp vào cơ sở dữ liệu bệnh án.
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <a th:href="@{'/doctor/examination/' + ${visit.visitId} + '/diagnoses#tab-treatment-plan'}"
+                        <a th:href="@{'/doctor/examination/' + ${idCodec.encodeVisit(visit.visitId)} + '/diagnoses#tab-treatment-plan'}"
                            class="btn btn-outline-secondary px-3.5 py-2 fw-semibold rounded-pill">
                             Hủy &amp; Quay lại ca khám
                         </a>
@@ -579,6 +579,7 @@
 <script th:inline="javascript">
     /*<![CDATA[*/
     const CURRENT_VISIT_ID = /*[[${visit.visitId}]]*/ 0;
+    const CURRENT_VISIT_TOKEN = /*[[${idCodec.encodeVisit(visit.visitId)}]]*/ '';
     const CURRENT_PATIENT_ID = /*[[${patient != null ? patient.profileId : 0}]]*/ 0;
     const CURRENT_BRANCH_ID = /*[[${visit.branch != null ? visit.branch.branchId : 0}]]*/ 0;
     const PRESELECTED_DIAG_ID = /*[[${preselectedDiagId}]]*/ null;
@@ -1135,7 +1136,7 @@
                         <div class="small mt-1 text-secondary" style="max-width: 500px; margin: 0 auto;">
                             Bác sĩ bắt buộc phải hoàn thành bước <strong>Chẩn đoán bệnh (ICD-10 / Sơ đồ răng)</strong> ở màn khám bệnh trước khi lập kế hoạch điều trị.
                         </div>
-                        <a href="/doctor/examination/${CURRENT_VISIT_ID}/diagnoses" class="btn btn-sm btn-primary mt-3 rounded-pill px-3 shadow-xs">
+                        <a href="/doctor/examination/${CURRENT_VISIT_TOKEN}/diagnoses" class="btn btn-sm btn-primary mt-3 rounded-pill px-3 shadow-xs">
                             <i class="bi bi-arrow-left me-1"></i> Quay lại Bàn khám để thêm Chẩn đoán
                         </a>
                     </td>
@@ -2040,7 +2041,7 @@
                 btnSave.innerHTML = '<i class="bi bi-check-lg me-1"></i> Đã lưu thành công!';
 
                 setTimeout(() => {
-                    window.location.href = `/doctor/examination/${CURRENT_VISIT_ID}/diagnoses#tab-treatment-plan`;
+                    window.location.href = `/doctor/examination/${CURRENT_VISIT_TOKEN}/diagnoses#tab-treatment-plan`;
                 }, 700);
             } else {
                 alert('Lỗi lưu kế hoạch: ' + (result.message || 'Không thể lưu vào cơ sở dữ liệu!'));
