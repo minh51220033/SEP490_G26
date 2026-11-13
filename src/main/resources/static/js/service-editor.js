@@ -2,7 +2,7 @@
 document.addEventListener("DOMContentLoaded", function () {
     "use strict";
 
-    const form = document.getElementById("serviceFormElement");
+    const form = document.getElementById("serviceFormElement") || document.getElementById("createServiceForm");
     if (!form) return;
 
     const uploadUrl = form.dataset.uploadUrl || "/admin/services/upload/image";

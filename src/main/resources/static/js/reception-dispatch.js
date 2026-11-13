@@ -251,8 +251,7 @@
         openModalSafe(transferModalEl);
     }
 
-    function handleOpenK80PrintModal(btn) {
-        const k80ModalEl = document.getElementById('k80TicketModal');
+    function populateTicketData(btn) {
         const ticketNumber = btn.dataset.ticketNumber || '01';
         const patientName = btn.dataset.patientName || '—';
         const patientCode = btn.dataset.patientCode || '—';
@@ -295,13 +294,29 @@
                 priBadgeEl.className = 'd-none';
             }
         }
+    }
 
+    function handleOpenK80PrintModal(btn) {
+        const k80ModalEl = document.getElementById('k80TicketModal');
+        populateTicketData(btn);
         openModalSafe(k80ModalEl);
     }
 
-    function printK80ReceiptInPlace() {
-        const printable = document.getElementById('k80PrintableArea');
-        if (!printable) return;
+    function printA6ReceiptInPlace() {
+        const num = document.getElementById('k80TicketNumber')?.textContent?.trim() || '01';
+        const room = document.getElementById('k80RoomDisplay')?.textContent?.trim() || 'Phòng khám';
+        const pCode = document.getElementById('k80PatientCode')?.textContent?.trim() || '—';
+        const pName = document.getElementById('k80PatientName')?.textContent?.trim() || '—';
+        const docName = document.getElementById('k80DoctorName')?.textContent?.trim() || 'Theo điều phối';
+        const chair = document.getElementById('k80ChairName')?.textContent?.trim() || 'Ghế tiêu chuẩn';
+        const time = document.getElementById('k80IssuedTime')?.textContent?.trim() || '--:--';
+        const priBadge = document.getElementById('k80PriorityBadge');
+        let badgeHtml = '';
+        if (priBadge && !priBadge.classList.contains('d-none')) {
+            const isEmg = priBadge.classList.contains('bg-danger');
+            badgeHtml = `<div class="badge-urgent ${isEmg ? 'badge-emergency' : 'badge-priority'}">${priBadge.textContent}</div>`;
+        }
+
         let iframe = document.getElementById('k80HiddenPrintFrame');
         if (!iframe) {
             iframe = document.createElement('iframe');
@@ -314,19 +329,163 @@
             iframe.style.border = '0';
             document.body.appendChild(iframe);
         }
+
         const doc = iframe.contentWindow.document;
         doc.open();
-        doc.write(`<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>In phiếu K80</title>
-            <style>
-                @page { size: 80mm auto; margin: 2mm; }
-                body { font-family: Arial, sans-serif; width: 74mm; margin: 0 auto; padding: 4px; text-align: center; color: #000; }
-                table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 6px; }
-                td { padding: 3px 0; }
-            </style>
-        </head><body>${printable.innerHTML}</body></html>`);
+        doc.write(`<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Phiếu khám A6 - Nha Khoa Cường Việt</title>
+    <style>
+        @page {
+            size: 105mm 148mm;
+            margin: 5mm 6mm;
+        }
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            background: #fff;
+            font-family: Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #0f172a;
+        }
+        .a6-ticket-box {
+            width: 100%;
+            max-width: 93mm;
+            margin: 0 auto;
+            padding: 8px 10px;
+            text-align: center;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+        }
+        .clinic-title {
+            font-size: 13.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0 0 2px;
+        }
+        .clinic-subtitle {
+            font-size: 10.5px;
+            color: #64748b;
+            padding-bottom: 6px;
+            border-bottom: 1.5px dashed #cbd5e1;
+            margin-bottom: 8px;
+        }
+        .ticket-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #475569;
+            margin-top: 4px;
+        }
+        .ticket-number {
+            font-size: 56px;
+            font-weight: 900;
+            line-height: 1;
+            color: #0284c7;
+            margin: 6px 0;
+            letter-spacing: 1.5px;
+        }
+        .badge-urgent {
+            display: inline-block;
+            padding: 4px 12px;
+            font-size: 11.5px;
+            font-weight: 800;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        .badge-emergency {
+            background: #ef4444;
+            color: #fff;
+        }
+        .badge-priority {
+            background: #f59e0b;
+            color: #000;
+        }
+        .room-box {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 8px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            text-align: left;
+            margin: 8px 0;
+        }
+        table tr {
+            border-bottom: 1px dashed #e2e8f0;
+        }
+        table tr:last-child {
+            border-bottom: none;
+        }
+        td {
+            padding: 5px 2px;
+        }
+        .td-label {
+            color: #64748b;
+            width: 35%;
+            font-weight: 500;
+        }
+        .td-val {
+            text-align: right;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .footer-note {
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1.5px dashed #cbd5e1;
+            font-size: 11px;
+            color: #64748b;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="a6-ticket-box">
+        <div class="clinic-title">Phòng Khám Nha Khoa Cường Việt</div>
+        <div class="clinic-subtitle">Hệ thống Nha khoa Kỹ thuật cao CV-DCMS</div>
+        <div class="ticket-label">SỐ THỨ TỰ KHÁM</div>
+        <div class="ticket-number">${num}</div>
+        ${badgeHtml}
+        <div class="room-box">${room}</div>
+        <table>
+            <tbody>
+                <tr><td class="td-label">Mã BN:</td><td class="td-val" style="font-family: monospace;">${pCode}</td></tr>
+                <tr><td class="td-label">Họ và tên:</td><td class="td-val">${pName}</td></tr>
+                <tr><td class="td-label">Bác sĩ:</td><td class="td-val" style="color: #0284c7;">${docName}</td></tr>
+                <tr><td class="td-label">Ghế nha:</td><td class="td-val">${chair}</td></tr>
+                <tr><td class="td-label">Thời gian:</td><td class="td-val" style="color: #64748b; font-weight: normal;">${time}</td></tr>
+            </tbody>
+        </table>
+        <div class="footer-note">
+            <div>Vui lòng theo dõi màn hình TV hoặc lắng nghe loa gọi số.</div>
+            <div>Cảm ơn Quý khách đã tin tưởng và đồng hành cùng Nha Khoa Cường Việt!</div>
+            <div style="font-weight: bold; margin-top: 3px;">Phiếu chỉ có giá trị trong ngày.</div>
+        </div>
+    </div>
+</body>
+</html>`);
         doc.close();
-        iframe.contentWindow.focus();
-        iframe.contentWindow.print();
+        setTimeout(() => {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        }, 120);
     }
 
     function handleOpenRowDrawer(row) {
@@ -469,14 +628,16 @@
 
         const btnPrintK80 = e.target.closest('.btn-print-k80');
         if (btnPrintK80) {
-            handleOpenK80PrintModal(btnPrintK80);
+            e.preventDefault();
+            populateTicketData(btnPrintK80);
+            printA6ReceiptInPlace();
             return;
         }
 
         const btnPrintNow = e.target.closest('#btnPrintK80Now');
         if (btnPrintNow) {
             e.preventDefault();
-            printK80ReceiptInPlace();
+            printA6ReceiptInPlace();
             return;
         }
 

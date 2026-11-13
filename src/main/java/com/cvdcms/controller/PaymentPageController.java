@@ -934,6 +934,8 @@ public class PaymentPageController {
             @RequestParam(required = false) Long branchId,
             @RequestParam(required = false) InvoicePaymentStatus paymentStatus,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             Model model,
@@ -948,8 +950,11 @@ public class PaymentPageController {
 
         Long effectiveBranchId = (branchId != null) ? resolveBranchId(branchId, currentUserId) : null;
 
+        LocalDateTime startDt = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime endDt = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
+
         Pageable pageable = PageRequest.of(page, size);
-        Page<PatientDebtSummaryDTO> debtPage = debtService.getPatientDebts(effectiveBranchId, allowedBranchIds, paymentStatus, keyword, pageable);
+        Page<PatientDebtSummaryDTO> debtPage = debtService.getPatientDebts(effectiveBranchId, allowedBranchIds, paymentStatus, keyword, startDt, endDt, pageable);
 
         model.addAttribute("patientDebts", debtPage.getContent());
         model.addAttribute("currentPage", page);
@@ -959,6 +964,8 @@ public class PaymentPageController {
         model.addAttribute("selectedBranchId", effectiveBranchId);
         model.addAttribute("selectedPaymentStatus", paymentStatus);
         model.addAttribute("keyword", keyword);
+        model.addAttribute("startDate", startDate);
+        model.addAttribute("endDate", endDate);
 
         return "finance/payments/debts";
     }

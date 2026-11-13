@@ -18,85 +18,17 @@
       <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
       <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
 
-      <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN QUẢN LÝ CƠ SỞ -->
-      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-        <div class="d-flex align-items-center gap-3">
-          <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
-            <i class="bi bi-tags-fill"></i>
-          </div>
-          <div>
-            <h1 class="dv-page-title mb-0">Quản lý danh mục dịch vụ</h1>
-            <p class="dv-page-subtitle">Quản lý danh mục kỹ thuật, bảng giá dịch vụ điều trị và phân loại chuyên khoa</p>
-          </div>
-        </div>
+      <!-- BREADCRUMB & BỘ CHỌN CƠ SỞ PHÍA TRÊN CÙNG -->
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a th:href="@{/admin/services/categories}">Quản lý danh mục</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Danh mục dịch vụ</li>
+          </ol>
+        </nav>
         <div class="d-flex align-items-center gap-2">
           <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-          <a th:href="@{/admin/services}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
-            <i class="bi bi-arrow-clockwise"></i> Làm mới
-          </a>
-          <button type="button" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createServiceModal" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
-            <i class="bi bi-plus-lg"></i> Thêm mới dịch vụ
-          </button>
-        </div>
-      </div>
-
-      <!-- 4 THẺ KPI TỔNG QUAN -->
-      <div class="row g-3 mb-4">
-        <div class="col-xl-3 col-sm-6">
-          <a th:href="@{/admin/services(categoryId=${selectedCategoryId})}" class="text-decoration-none">
-            <div class="dv-kpi-card" style="--kpi-accent: #0284c7;" th:classappend="${selectedStatus == null} ? 'active-kpi' : ''">
-              <div>
-                <div class="dv-kpi-num" th:text="${totalServicesCount ?: #lists.size(services)}">0</div>
-                <div class="dv-kpi-label">Tổng số dịch vụ</div>
-                <div class="dv-kpi-sub">Toàn bộ danh mục kỹ thuật</div>
-              </div>
-              <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
-                <i class="bi bi-tags-fill"></i>
-              </div>
-            </div>
-          </a>
-        </div>
-        <div class="col-xl-3 col-sm-6">
-          <a th:href="@{/admin/services(status='ACTIVE',categoryId=${selectedCategoryId})}" class="text-decoration-none">
-            <div class="dv-kpi-card" style="--kpi-accent: #10b981;" th:classappend="${selectedStatus != null and selectedStatus.name() == 'ACTIVE'} ? 'active-kpi' : ''">
-              <div>
-                <div class="dv-kpi-num text-success" th:text="${activeServicesCount ?: 0}">0</div>
-                <div class="dv-kpi-label">Đang sử dụng</div>
-                <div class="dv-kpi-sub">Sẵn sàng chỉ định điều trị</div>
-              </div>
-              <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
-                <i class="bi bi-check2-circle"></i>
-              </div>
-            </div>
-          </a>
-        </div>
-        <div class="col-xl-3 col-sm-6">
-          <a th:href="@{/admin/services/categories}" class="text-decoration-none">
-            <div class="dv-kpi-card" style="--kpi-accent: #6366f1;">
-              <div>
-                <div class="dv-kpi-num" style="color: #4f46e5;" th:text="${totalCategoriesCount ?: #lists.size(categories)}">0</div>
-                <div class="dv-kpi-label">Nhóm dịch vụ</div>
-                <div class="dv-kpi-sub">Phân nhóm chuyên khoa &amp; kỹ thuật</div>
-              </div>
-              <div class="dv-kpi-icon" style="background: #e0e7ff; color: #4f46e5;">
-                <i class="bi bi-grid-3x3-gap-fill"></i>
-              </div>
-            </div>
-          </a>
-        </div>
-        <div class="col-xl-3 col-sm-6">
-          <a th:href="@{/admin/services(status='INACTIVE',categoryId=${selectedCategoryId})}" class="text-decoration-none">
-            <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;" th:classappend="${selectedStatus != null and selectedStatus.name() == 'INACTIVE'} ? 'active-kpi' : ''">
-              <div>
-                <div class="dv-kpi-num text-warning" th:text="${inactiveServicesCount ?: 0}">0</div>
-                <div class="dv-kpi-label">Ngừng sử dụng</div>
-                <div class="dv-kpi-sub">Tạm ngưng cung cấp cho bệnh nhân</div>
-              </div>
-              <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
-                <i class="bi bi-pause-circle-fill"></i>
-              </div>
-            </div>
-          </a>
         </div>
       </div>
 
@@ -186,6 +118,17 @@
                  class="btn btn-outline-secondary">
                 Bỏ lọc
               </a>
+            </div>
+
+            <!-- 5. Nút Thêm mới dịch vụ -->
+            <div class="col-12 col-md-auto ms-md-auto d-flex align-items-center justify-content-end gap-2">
+              <button type="button"
+                      class="btn btn-primary"
+                      data-bs-toggle="modal"
+                      data-bs-target="#createServiceModal">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
+                Thêm mới dịch vụ
+              </button>
             </div>
 
           </div>
@@ -515,13 +458,16 @@
 
 <!-- Modal Them Dich Vu Moi -->
 <div class="modal fade" id="createServiceModal" tabindex="-1" aria-labelledby="createServiceModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content shadow border-0" style="border-radius: 12px; overflow: hidden;">
-      <form th:action="@{/admin/services}" method="post" id="createServiceForm">
+      <form th:action="@{/admin/services}"
+            th:attr="data-upload-url=@{/admin/services/upload/image}"
+            method="post"
+            id="createServiceForm">
         <div class="modal-header border-bottom py-3 px-4">
           <h5 class="modal-title fw-bold text-dark d-flex align-items-center" id="createServiceModalLabel">
             <i class="bi bi-tools text-primary me-2 fs-5"></i>
-            <span>Th&#234;m d&#7883;ch v&#7903; m&#7899;i</span>
+            <span>Th&#234;m d&#7883;ch v&#7909; m&#7899;i</span>
           </h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
@@ -530,7 +476,7 @@
             <!-- Ma dich vu -->
             <div class="col-md-4">
               <label for="modalServiceCode" class="form-label fw-semibold text-dark small">
-                M&#227; d&#7883;ch v&#7903; <span class="text-danger">*</span>
+                M&#227; d&#7883;ch v&#7909; <span class="text-danger">*</span>
               </label>
               <input id="modalServiceCode" type="text" name="serviceCode" class="form-control"
                      th:value="${serviceForm?.serviceCode}"
@@ -543,7 +489,7 @@
             <!-- Ten dich vu -->
             <div class="col-md-8">
               <label for="modalServiceName" class="form-label fw-semibold text-dark small">
-                T&#234;n d&#7883;ch v&#7903; <span class="text-danger">*</span>
+                T&#234;n d&#7883;ch v&#7909; <span class="text-danger">*</span>
               </label>
               <input id="modalServiceName" type="text" name="serviceName" class="form-control"
                      th:value="${serviceForm?.serviceName}"
@@ -553,10 +499,10 @@
             <!-- Nhom dich vu -->
             <div class="col-md-6">
               <label for="modalServiceCategory" class="form-label fw-semibold text-dark small">
-                Nh&#243;m d&#7883;ch v&#7903; <span class="text-danger">*</span>
+                Nh&#243;m d&#7883;ch v&#7909; <span class="text-danger">*</span>
               </label>
               <select id="modalServiceCategory" name="categoryId" class="form-select" required>
-                <option value="">-- Ch&#7885;n nh&#243;m d&#7883;ch v&#7903; --</option>
+                <option value="">-- Ch&#7885;n nh&#243;m d&#7883;ch v&#7909; --</option>
                 <option th:each="category : ${categories}"
                         th:if="${category.isActive == true}"
                         th:value="${category.categoryId}"
@@ -570,7 +516,7 @@
             <!-- Loai dich vu -->
             <div class="col-md-6">
               <label for="modalServiceType" class="form-label fw-semibold text-dark small">
-                Lo&#7841;i d&#7883;ch v&#7903; <span class="text-danger">*</span>
+                Lo&#7841;i d&#7883;ch v&#7909; <span class="text-danger">*</span>
               </label>
               <select id="modalServiceType" name="serviceType" class="form-select" required>
                 <option value="">-- Ch&#7885;n lo&#7841;i --</option>
@@ -579,7 +525,7 @@
                 <option value="XRAY" th:selected="${serviceForm?.serviceType?.name() == 'XRAY'}">X-Ray</option>
                 <option value="CONSULTATION" th:selected="${serviceForm?.serviceType?.name() == 'CONSULTATION'}">Kh&#225;m / T&#432; v&#7845;n</option>
               </select>
-              <div class="form-text text-muted small">T&#7921; &#273;&#7891;ng ch&#7885;n theo nh&#243;m d&#7883;ch v&#7903;</div>
+              <div class="form-text text-muted small">T&#7921; &#273;&#7897;ng ch&#7885;n theo nh&#243;m d&#7883;ch v&#7909;</div>
             </div>
 
             <!-- Don vi tinh -->
@@ -626,7 +572,7 @@
             <!-- Thoi han bao hanh -->
             <div class="col-md-6">
               <label for="modalServiceWarranty" class="form-label fw-semibold text-dark small">
-                Th&#7801;i h&#7841;n b&#7843;o h&#224;nh (th&#225;ng)
+                Th&#7901;i h&#7841;n b&#7843;o h&#224;nh (th&#225;ng)
               </label>
               <input id="modalServiceWarranty" type="number" name="warrantyMonths" class="form-control"
                      th:value="${serviceForm?.warrantyMonths}" min="0" placeholder="VD: 12 (th&#225;ng)">
@@ -647,7 +593,7 @@
                          class="form-check-input"
                          th:checked="${serviceForm?.requiresTooth == true}">
                   <label for="modalRequiresTooth" class="form-check-label text-dark small fw-semibold">
-                    B&#7855;t bu&#7895;c ch&#7885;n v&#7883; tr&#237; r&#259;ng
+                    B&#7855;t bu&#7897;c ch&#7885;n v&#7883; tr&#237; r&#259;ng
                   </label>
                 </div>
                 <div class="form-check mb-0">
@@ -662,13 +608,97 @@
               </div>
             </div>
 
+            <!-- Hinh anh dich vu -->
+            <div class="col-12">
+              <label class="form-label fw-semibold text-dark small">
+                Hình ảnh dịch vụ
+              </label>
+
+              <input type="hidden" id="imageUrl" name="imageUrl" th:value="${serviceForm?.imageUrl}">
+              <input type="file"
+                     id="serviceImageFile"
+                     accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                     hidden>
+
+              <div id="serviceImageUploadError"
+                   class="alert alert-danger py-2 px-3 mb-2 small"
+                   role="alert"
+                   hidden>
+              </div>
+
+              <div id="serviceImageUploadStatus"
+                   class="alert alert-info py-2 px-3 mb-2 small"
+                   role="status"
+                   hidden>
+                <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>
+                Đang tải ảnh dịch vụ lên hệ thống...
+              </div>
+
+              <div id="serviceImageDropZone"
+                   class="svc-image-box"
+                   role="button"
+                   tabindex="0"
+                   aria-label="Chọn hình ảnh dịch vụ">
+
+                <div id="serviceImagePlaceholder"
+                     class="svc-image-placeholder"
+                     th:hidden="${serviceForm != null and serviceForm.imageUrl != null and !#strings.isEmpty(serviceForm.imageUrl)}">
+                  <div class="svc-image-placeholder__icon">
+                    <i class="bi bi-image" aria-hidden="true"></i>
+                  </div>
+                  <div class="svc-image-placeholder__info">
+                    <div class="fw-semibold text-dark">Chưa có ảnh dịch vụ</div>
+                    <div class="text-muted small">
+                      Hỗ trợ định dạng JPG, JPEG, PNG, WEBP (tối đa 5MB). Nhấn hoặc kéo thả ảnh vào đây.
+                    </div>
+                  </div>
+                  <button type="button"
+                          id="selectServiceImageBtn"
+                          class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-upload me-1" aria-hidden="true"></i>
+                    Chọn ảnh từ máy tính
+                  </button>
+                </div>
+
+                <div id="serviceImagePreviewBox"
+                     class="svc-image-preview"
+                     th:hidden="${serviceForm == null or serviceForm.imageUrl == null or #strings.isEmpty(serviceForm.imageUrl)}">
+                  <div class="svc-image-preview__thumb">
+                    <img id="serviceImagePreview"
+                         th:src="${serviceForm?.imageUrl}"
+                         alt="Ảnh xem trước dịch vụ">
+                  </div>
+                  <div class="svc-image-preview__meta">
+                    <div class="fw-semibold text-dark mb-1">Ảnh đại diện dịch vụ</div>
+                    <div class="text-muted small mb-2">
+                      Ảnh này sẽ hiển thị trên danh mục quản trị và trang bảng giá dịch vụ của khách hàng.
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                      <button type="button"
+                              id="changeServiceImageBtn"
+                              class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>
+                        Thay đổi ảnh
+                      </button>
+                      <button type="button"
+                              id="removeServiceImageBtn"
+                              class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash me-1" aria-hidden="true"></i>
+                        Xóa ảnh
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Mo ta -->
             <div class="col-12">
               <label for="modalServiceDesc" class="form-label fw-semibold text-dark small">
-                M&#244; t&#7843; d&#7883;ch v&#7903;
+                M&#244; t&#7843; d&#7883;ch v&#7909;
               </label>
               <textarea id="modalServiceDesc" name="description" class="form-control" rows="2"
-                        placeholder="N&#7897;i dung gi&#7899;i thi&#7879;u chi ti&#7871;t v&#7873; d&#7883;ch v&#7903;..."
+                        placeholder="N&#7897;i dung gi&#7899;i thi&#7879;u chi ti&#7871;t v&#7873; d&#7883;ch v&#7909;..."
                         th:text="${serviceForm?.description}"></textarea>
             </div>
           </div>
@@ -676,7 +706,7 @@
         <div class="modal-footer border-top py-2 px-4 bg-light">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">&#272;&#243;ng</button>
           <button type="submit" class="btn btn-primary">
-            <i class="bi bi-check-lg me-1"></i>Th&#234;m d&#7883;ch v&#7903;
+            <i class="bi bi-check-lg me-1"></i>Th&#234;m d&#7883;ch v&#7909;
           </button>
         </div>
       </form>
@@ -687,6 +717,7 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/service-editor.js}"></script>
 <script th:inline="javascript">
   document.addEventListener("DOMContentLoaded", function () {
     // Tu dong dong bo Loai dich vu theo Nhom dich vu duoc chon

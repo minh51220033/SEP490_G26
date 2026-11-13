@@ -183,7 +183,8 @@ public class FinanceFt24Ft25Ft32UnitTest {
         );
         Page<PatientDebtSummaryDTO> page = new PageImpl<>(List.of(dto));
 
-        when(invoiceRepository.findPatientDebtsByBranch(eq(1L), any(), any(), any()))
+        when(invoiceRepository.findPatientDebtsByBranch(
+                eq(1L), any(), any(), any(), any(), any()))
                 .thenReturn(page);
 
         Page<PatientDebtSummaryDTO> result = debtService.getPatientDebts(1L, List.of(1L), null, null, PageRequest.of(0, 10));

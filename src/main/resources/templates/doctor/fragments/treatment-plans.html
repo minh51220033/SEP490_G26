@@ -990,7 +990,7 @@
                                 </div>
                                 <div class="tp-col-resizer" data-resize-col="status" title="Kéo để thay đổi độ rộng cột"></div>
                             </th>
-                            <th data-col-id="actions" data-default-width="235" data-min-width="210" class="text-center tp-col-pinned-right" style="width: 235px;">
+                            <th data-col-id="actions" data-default-width="235" data-min-width="210" class="text-center" style="width: 235px;">
                                 <div class="tp-th-inner justify-content-center">
                                     <span class="tp-th-title">Thao tác</span>
                                 </div>
@@ -1096,7 +1096,7 @@
                                         </ul>
                                     </div>
                                 </td>
-                                <td data-col-id="actions" class="text-center tp-col-pinned-right">
+                                <td data-col-id="actions" class="text-center">
                                     <div class="d-flex align-items-center justify-content-center gap-2 flex-nowrap">
                                         <a th:if="${visit != null}"
                                            th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create?planId=' + ${plan.planId}}"
@@ -1213,7 +1213,7 @@
     <script th:src="@{/js/doctor/treatment-plan.js}"></script>
     <script>
         (function () {
-            const TP_STORAGE_KEY = 'cvdcms_tp_grid_config_v1';
+            const TP_STORAGE_KEY = 'cvdcms_tp_grid_config_v2';
             const TP_DEFAULT_COLS = [
                 { id: 'planCode', label: 'Mã KHĐT', visible: true, pinned: 'left', width: 135, minWidth: 110 },
                 { id: 'planName', label: 'Tên phác đồ / Kế hoạch điều trị', visible: true, pinned: false, width: 320, minWidth: 200 },
@@ -1221,7 +1221,7 @@
                 { id: 'progress', label: 'Tiến độ điều trị', visible: true, pinned: false, width: 180, minWidth: 140 },
                 { id: 'cost', label: 'Giá dự kiến (Tạm tính)', visible: true, pinned: false, width: 175, minWidth: 145 },
                 { id: 'status', label: 'Trạng thái', visible: true, pinned: false, width: 155, minWidth: 130 },
-                { id: 'actions', label: 'Thao tác', visible: true, pinned: 'right', width: 235, minWidth: 210 }
+                { id: 'actions', label: 'Thao tác', visible: true, pinned: false, width: 235, minWidth: 210 }
             ];
 
             let tpCols = loadTpColConfig();
@@ -1243,7 +1243,7 @@
                             merged.push({
                                 ...base,
                                 visible: base.id === 'actions' ? true : (s.visible !== false),
-                                pinned: base.id === 'actions' ? 'right' : (s.pinned === 'left' || s.pinned === true ? 'left' : false),
+                                pinned: base.id === 'actions' ? false : (s.pinned === 'left' || s.pinned === true ? 'left' : false),
                                 width: Math.max(Number(s.width) || base.width, base.minWidth)
                             });
                             defMap.delete(s.id);
@@ -1263,9 +1263,9 @@
             }
 
             function getOrderedTpCols() {
-                const left = tpCols.filter(c => c.pinned === 'left' || c.pinned === true);
-                const right = tpCols.filter(c => c.pinned === 'right');
-                const mid = tpCols.filter(c => c.pinned !== 'left' && c.pinned !== true && c.pinned !== 'right');
+                const left = tpCols.filter(c => c.id !== 'actions' && (c.pinned === 'left' || c.pinned === true));
+                const right = tpCols.filter(c => c.id === 'actions');
+                const mid = tpCols.filter(c => c.id !== 'actions' && c.pinned !== 'left' && c.pinned !== true);
                 return [...left, ...mid, ...right];
             }
 

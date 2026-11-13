@@ -209,6 +209,43 @@
         });
     }
 
+    /**
+     * Điền nhanh khoảng ngày vào 2 input Từ ngày / Đến ngày cho các bộ lọc Thu ngân
+     */
+    window.setFinanceQuickDate = function (fromId, toId, preset) {
+        const fromInput = document.getElementById(fromId);
+        const toInput = document.getElementById(toId);
+        if (!fromInput || !toInput) return;
+
+        const pad = (n) => String(n).padStart(2, '0');
+        const toIsoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+        const now = new Date();
+        if (preset === 'today') {
+            const todayStr = toIsoDate(now);
+            fromInput.value = todayStr;
+            toInput.value = todayStr;
+        } else if (preset === 'yesterday') {
+            const y = new Date(now);
+            y.setDate(y.getDate() - 1);
+            const yStr = toIsoDate(y);
+            fromInput.value = yStr;
+            toInput.value = yStr;
+        } else if (preset === 'week') {
+            const past = new Date(now);
+            past.setDate(past.getDate() - 6);
+            fromInput.value = toIsoDate(past);
+            toInput.value = toIsoDate(now);
+        } else if (preset === 'month') {
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            fromInput.value = toIsoDate(startOfMonth);
+            toInput.value = toIsoDate(now);
+        } else if (preset === 'clear') {
+            fromInput.value = '';
+            toInput.value = '';
+        }
+    };
+
     // Khởi chạy khi DOM sẵn sàng
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initCashierTabs);

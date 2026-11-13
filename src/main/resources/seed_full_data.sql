@@ -156,6 +156,17 @@ WHERE r.role_name = 'QUAN_LY_KHO'
 -- =============================================================================
 -- 1. CHI NHÁNH, PHÒNG KHÁM, GHẾ NHA, CA LÀM VIỆC, TÀI KHOẢN NGÂN HÀNG & THUẾ
 -- =============================================================================
+INSERT IGNORE INTO branches (branch_code, branch_name, address, phone, email, tax_code, opening_time, closing_time, working_days, is_active, created_at, updated_at)
+SELECT src.branch_code, src.branch_name, src.address, src.phone, src.email, src.tax_code, src.opening_time, src.closing_time, src.working_days, 1, NOW(), NOW()
+FROM (
+    SELECT 'CN01' AS branch_code, 'Cơ sở Quận 1'  AS branch_name, '123 Nguyễn Trãi, Quận 1, TP.HCM'     AS address, '0901234567' AS phone, 'cs1@dentalclinic.com' AS email, '0311000111' AS tax_code, '08:00:00' AS opening_time, '20:00:00' AS closing_time, '2,3,4,5,6,7,CN' AS working_days UNION ALL
+    SELECT 'CN02',                 'Cơ sở Đống Đa',               '456 Láng Hạ, Đống Đa, Hà Nội',                 '0907654321',          'cs2@dentalclinic.com',          '0102000222',             '08:00:00',                 '20:00:00',                '2,3,4,5,6,7,CN'                UNION ALL
+    SELECT 'CN03',                 'Cơ sở Cầu Giấy',              '88 Trần Thái Tông, Cầu Giấy, Hà Nội',          '0908889999',          'cs3@dentalclinic.com',          '0103000333',             '08:00:00',                 '20:00:00',                '2,3,4,5,6,7'
+) src
+WHERE NOT (
+    src.branch_code = 'CN01'
+    AND EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CS-MAU-01')
+);
 INSERT INTO branches (branch_code, branch_name, address, phone, email, tax_code, image_url, opening_time, closing_time, working_days, is_active, created_at, updated_at) VALUES
 ('CN01', 'Cơ sở Quận 1',   '123 Nguyễn Trãi, Quận 1, TP.HCM',    '0901234567', 'cs1@dentalclinic.com', '0311000111', '/uploads/images/storefront.png', '08:00:00', '20:00:00', '2,3,4,5,6,7,CN', 1, NOW(), NOW()),
 ('CN02', 'Cơ sở Đống Đa',  '456 Láng Hạ, Đống Đa, Hà Nội',       '0907654321', 'cs2@dentalclinic.com', '0102000222', '/uploads/images/storefront.png', '08:00:00', '20:00:00', '2,3,4,5,6,7,CN', 1, NOW(), NOW()),
@@ -168,8 +179,7 @@ ON DUPLICATE KEY UPDATE
 
 INSERT IGNORE INTO rooms (branch_id, room_code, room_name, room_type, status)
 SELECT b.branch_id, r.room_code, r.room_name, r.room_type, 'ACTIVE'
-FROM branches b
-JOIN (
+FROM (
     SELECT 'CN01' AS bcode, 'P101' AS room_code, 'Phòng Khám Tổng quát 1'      AS room_name, 'EXAM'      AS room_type UNION ALL
     SELECT 'CN01',          'P102',              'Phòng Điều trị & Tiểu phẫu',               'TREATMENT'              UNION ALL
     SELECT 'CN01',          'P103',              'Phòng Chỉnh nha & Thẩm mỹ',                'TREATMENT'              UNION ALL
@@ -177,7 +187,8 @@ JOIN (
     SELECT 'CN02',          'P201',              'Phòng Khám Tổng quát Đống Đa',             'EXAM'                   UNION ALL
     SELECT 'CN02',          'P202',              'Phòng Điều trị Đống Đa',                   'TREATMENT'              UNION ALL
     SELECT 'CN03',          'P301',              'Phòng Khám Cầu Giấy',                      'EXAM'
-) r ON b.branch_code = r.bcode;
+) r
+JOIN branches b ON b.branch_code = IF(r.bcode = 'CN01' AND NOT EXISTS (SELECT 1 FROM (SELECT branch_code FROM branches) eb WHERE eb.branch_code = 'CN01'), 'CS-MAU-01', r.bcode);
 
 INSERT IGNORE INTO dental_chairs (branch_id, room_id, chair_code, chair_name, status)
 SELECT b.branch_id, rm.room_id, c.chair_code, c.chair_name, c.status

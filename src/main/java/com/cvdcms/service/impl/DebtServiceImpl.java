@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
@@ -42,6 +43,19 @@ public class DebtServiceImpl implements DebtService {
             String keyword,
             Pageable pageable
     ) {
+        return getPatientDebts(branchId, allowedBranchIds, paymentStatus, keyword, null, null, pageable);
+    }
+
+    @Override
+    public Page<PatientDebtSummaryDTO> getPatientDebts(
+            Long branchId,
+            List<Long> allowedBranchIds,
+            InvoicePaymentStatus paymentStatus,
+            String keyword,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            Pageable pageable
+    ) {
         // Nếu kế toán không có chi nhánh nào được phân công, từ chối và trả về rỗng ngay lập tức
         if (allowedBranchIds != null && allowedBranchIds.isEmpty()) {
             return Page.empty(pageable);
@@ -55,17 +69,17 @@ public class DebtServiceImpl implements DebtService {
             if (allowedBranchIds != null && !allowedBranchIds.contains(branchId)) {
                 return Page.empty(pageable);
             }
-            return invoiceRepository.findPatientDebtsByBranch(branchId, paymentStatus, kw, pageable);
+            return invoiceRepository.findPatientDebtsByBranch(branchId, paymentStatus, kw, startDate, endDate, pageable);
         }
 
         // Nếu branchId == null:
         // Với non-admin: chỉ truy vấn trong các chi nhánh được phân công
         if (allowedBranchIds != null) {
-            return invoiceRepository.findPatientDebtsByBranches(allowedBranchIds, paymentStatus, kw, pageable);
+            return invoiceRepository.findPatientDebtsByBranches(allowedBranchIds, paymentStatus, kw, startDate, endDate, pageable);
         }
 
         // Với Admin: truy vấn toàn hệ thống
-        return invoiceRepository.findPatientDebtsByBranch(null, paymentStatus, kw, pageable);
+        return invoiceRepository.findPatientDebtsByBranch(null, paymentStatus, kw, startDate, endDate, pageable);
     }
 
     @Override

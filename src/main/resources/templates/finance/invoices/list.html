@@ -131,6 +131,7 @@
                         <a th:href="@{/invoices}" class="fin-btn fin-btn-outline" title="Đặt lại bộ lọc"><i class="bi bi-arrow-clockwise"></i> Đặt lại</a>
                     </div>
                 </form>
+                <div th:replace="~{fragments/cashier-tabs :: quickDateBar('startDate', 'endDate')}"></div>
             </div>
 
             <!-- Table Card -->
@@ -240,6 +241,7 @@
                                             th:data-patient="${inv.patientProfile.fullName}"
                                             th:data-branch-id="${inv.branch.branchId}"
                                             th:data-profile-id="${inv.patientProfile.profileId}"
+                                            th:data-deposit-balance="${inv.patientProfile.depositBalance != null ? inv.patientProfile.depositBalance : 0}"
                                             onclick="openQuickPayModal(this)"
                                             title="Thu ti&#7873;n h&#243;a &#273;&#417;n">
                                         <i class="bi bi-cash-stack"></i> <span>Thu ti&#7873;n</span>
@@ -293,8 +295,13 @@
             <input type="hidden" id="qpInvoiceId">
             <div class="mb-3">
                 <label class="form-label text-muted small fw-bold">HÓA ĐƠN &amp; BỆNH NHÂN</label>
-                <div class="p-2 border rounded bg-light">
-                    <span id="qpInvoiceCode" class="fw-bold text-dark"></span> - <span id="qpPatientName"></span>
+                <div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <span id="qpInvoiceCode" class="fw-bold text-dark"></span> - <span id="qpPatientName"></span>
+                    </div>
+                    <span id="qpDepositBadge" class="badge bg-success-subtle text-success border border-success-subtle">
+                        Ví tạm ứng: 0 đ
+                    </span>
                 </div>
             </div>
             <div class="mb-3">
@@ -311,7 +318,7 @@
                     <option value="CASH">💵 Tiền mặt</option>
                     <option value="BANK_TRANSFER">🏦 Chuyển khoản ngân hàng (VietQR)</option>
                     <option value="POS_CARD">💳 Quẹt thẻ máy POS</option>
-                    <option value="DEPOSIT_WALLET">👛 Trừ vào ví tiền cọc / tạm ứng</option>
+                    <option id="qpDepositOption" value="DEPOSIT_WALLET">👛 Ví tiền tạm ứng (Số dư: 0 đ)</option>
                 </select>
             </div>
 
@@ -374,14 +381,23 @@
         const patient = btn.getAttribute('data-patient');
         const branchId = btn.getAttribute('data-branch-id');
         const profileId = btn.getAttribute('data-profile-id');
+        const depositBalance = parseFloat(btn.getAttribute('data-deposit-balance')) || 0;
+        const formattedDeposit = new Intl.NumberFormat('vi-VN').format(depositBalance) + ' đ';
 
         document.getElementById('qpInvoiceId').value = invId;
         document.getElementById('qpBranchId').value = branchId || '';
         document.getElementById('qpProfileId').value = profileId || '';
         document.getElementById('qpInvoiceCode').textContent = code;
         document.getElementById('qpPatientName').textContent = patient;
+        document.getElementById('qpDepositBadge').textContent = 'Ví tạm ứng: ' + formattedDeposit;
         document.getElementById('qpRemainingDebt').textContent = new Intl.NumberFormat('vi-VN').format(debt) + ' đ';
         document.getElementById('qpAmount').value = debt;
+        document.getElementById('qpMethod').value = 'CASH';
+        const depositOpt = document.getElementById('qpDepositOption');
+        if (depositOpt) {
+            depositOpt.textContent = '👛 Ví tiền tạm ứng (Số dư: ' + formattedDeposit + ')';
+            depositOpt.disabled = depositBalance <= 0;
+        }
         document.getElementById('qpError').style.display = 'none';
         document.getElementById('qpRef').value = '';
         document.getElementById('qpNotes').value = '';

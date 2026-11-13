@@ -35,6 +35,8 @@ public class PatientPageController {
     private final PatientOverviewService overviewService;
     @Autowired(required = false)
     private ClinicalPhotoService clinicalPhotoService;
+    @Autowired(required = false)
+    private com.cvdcms.repository.UserRepository userRepository;
 
     public PatientPageController(PatientService service,
                                  com.cvdcms.repository.InvoiceRepository invoiceRepository,
@@ -171,8 +173,57 @@ public class PatientPageController {
         model.addAttribute("treatmentTimeline", service.treatmentTimeline(session, id));
         model.addAttribute("auditLogs", service.auditLogs(session, id));
 
+        // Bổ sung các model dữ liệu hợp nhất
+        Object principal = session == null ? null : session.getAttribute("loggedInUser");
+        Long currentUserId = null;
+        if (principal instanceof com.cvdcms.entity.User u) {
+            currentUserId = u.getUserId();
+        }
+
+        // Billing permission & branch scope check
+        var scope = service.scope(session);
+        boolean isAdmin = scope.admin();
+        boolean canManageBilling = false;
+        boolean canViewBilling = false;
+        if (isAdmin) {
+            canManageBilling = true;
+            canViewBilling = true;
+        } else if (principal instanceof com.cvdcms.entity.User user) {
+            if (user.getRoles() != null) {
+                canManageBilling = user.getRoles().stream()
+                        .anyMatch(r -> "KE_TOAN".equalsIgnoreCase(r.getRoleName()) ||
+                                       "ROLE_KE_TOAN".equalsIgnoreCase(r.getRoleName()) ||
+                                       "ADMIN".equalsIgnoreCase(r.getRoleName()) ||
+                                       "ROLE_ADMIN".equalsIgnoreCase(r.getRoleName()) ||
+                                       "THU_NGAN".equalsIgnoreCase(r.getRoleName()) ||
+                                       "ROLE_THU_NGAN".equalsIgnoreCase(r.getRoleName()));
+            }
+            if (userRepository != null && currentUserId != null) {
+                canViewBilling = canManageBilling
+                        || userRepository.hasActiveFinanceRole(currentUserId)
+                        || userRepository.hasActivePermission(currentUserId, "INVOICE_VIEW")
+                        || userRepository.hasActivePermission(currentUserId, "INVOICE_CREATE")
+                        || userRepository.hasActivePermission(currentUserId, "PAYMENT_COLLECT")
+                        || userRepository.hasActivePermission(currentUserId, "FINANCE_DASHBOARD")
+                        || userRepository.hasActivePermission(currentUserId, "FINANCE_DEBT");
+            } else {
+                canViewBilling = canManageBilling;
+            }
+        }
+        model.addAttribute("canManageBilling", canManageBilling);
+        model.addAttribute("canViewBilling", canViewBilling);
+
         // Invoices and financial summary
-        List<Invoice> invoiceList = invoiceRepository.findByPatientProfile_ProfileIdOrderByIssuedAtDesc(id);
+        List<Invoice> invoiceList = List.of();
+        if (canViewBilling) {
+            invoiceList = invoiceRepository.findByPatientProfile_ProfileIdOrderByIssuedAtDesc(id);
+            if (!isAdmin && scope.branchIds() != null && !scope.branchIds().isEmpty()) {
+                java.util.Set<Long> allowedBranchIds = scope.branchIds();
+                invoiceList = invoiceList.stream()
+                        .filter(inv -> inv.getBranch() != null && allowedBranchIds.contains(inv.getBranch().getBranchId()))
+                        .toList();
+            }
+        }
         model.addAttribute("invoices", invoiceList);
 
         BigDecimal totalIncurred = BigDecimal.ZERO;
@@ -189,12 +240,6 @@ public class PatientPageController {
         model.addAttribute("totalPaid", totalPaid);
         model.addAttribute("totalDebt", totalDebt);
 
-        // Bổ sung các model dữ liệu hợp nhất
-        Object principal = session == null ? null : session.getAttribute("loggedInUser");
-        Long currentUserId = null;
-        if (principal instanceof com.cvdcms.entity.User u) {
-            currentUserId = u.getUserId();
-        }
         model.addAttribute("appointments", overviewService.getPatientAppointments(id));
         model.addAttribute("careData", overviewService.getPatientCareHistory(id, patient.branchId(), currentUserId));
         model.addAttribute("prescriptions", overviewService.getPatientPrescriptions(id));
@@ -205,19 +250,6 @@ public class PatientPageController {
         boolean isDoctor = checkDoctorRole(session);
         model.addAttribute("canPerformClinical", isDoctor);
         model.addAttribute("currentTab", tab != null ? tab : "info");
-
-        // Billing permission: only true for accounting/cashier roles
-        boolean canManageBilling = false;
-        if (principal instanceof com.cvdcms.entity.User user && user.getRoles() != null) {
-            canManageBilling = user.getRoles().stream()
-                    .anyMatch(r -> "KE_TOAN".equalsIgnoreCase(r.getRoleName()) ||
-                                   "ROLE_KE_TOAN".equalsIgnoreCase(r.getRoleName()) ||
-                                   "ADMIN".equalsIgnoreCase(r.getRoleName()) ||
-                                   "ROLE_ADMIN".equalsIgnoreCase(r.getRoleName()) ||
-                                   "THU_NGAN".equalsIgnoreCase(r.getRoleName()) ||
-                                   "ROLE_THU_NGAN".equalsIgnoreCase(r.getRoleName()));
-        }
-        model.addAttribute("canManageBilling", canManageBilling);
         boolean canManageAdministrative = canManageAdmin(session);
         boolean canViewClinical = canViewClinicalRecords(session);
         shared(model, "/reception/patients", "patients", canManageAdministrative, canViewClinical);

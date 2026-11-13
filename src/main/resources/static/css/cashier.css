@@ -264,10 +264,8 @@
     white-space: nowrap;
 }
 
-/* Tắt triệt để thanh nổi floating action bar trên bảng thu ngân để không bị tràn mép thẻ */
-table[data-enhanced-table="cashier-pending-patients"] ~ .enhanced-floating-actions,
-table[data-disable-floating-actions="true"] ~ .enhanced-floating-actions,
-.enhanced-floating-actions {
+/* Chỉ tắt floating action bar đối với bảng gắn tường minh data-disable-floating-actions="true" */
+table[data-disable-floating-actions="true"] ~ .enhanced-floating-actions {
     display: none !important;
     opacity: 0 !important;
     visibility: hidden !important;

@@ -1,60 +1,110 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/head :: head('Hoàn thiện hồ sơ bệnh nhân')}"></head>
-<body class="app-body">
-<div class="app-shell">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#1a2f6e">
+    <title>Hoàn thiện hồ sơ bệnh nhân | CV-DCMS</title>
 
-<style>
-    .cm-wrap {
-        max-width: 1020px;
-        margin: 0 auto;
-    }
-    .cm-banner {
-        background: linear-gradient(135deg, #0f172a 0%, #0284c7 100%);
-        color: #ffffff;
-        border-radius: 12px;
-        padding: 20px 24px;
-        margin-bottom: 20px;
-    }
-    .cm-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-        padding: 22px;
-        margin-bottom: 18px;
-    }
-    .cm-grid-2 {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 16px;
-    }
-    @media (max-width: 768px) {
-        .cm-grid-2 {
-            grid-template-columns: 1fr;
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link th:href="@{/css/layout.css}" rel="stylesheet">
+    <link th:href="@{/css/auth.css}" rel="stylesheet">
+
+    <style>
+        .onboarding-main {
+            max-width: 880px;
+            width: 100%;
+            overflow-y: auto;
+            padding: 32px 24px;
         }
-    }
-</style>
+        .onboarding-card {
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+            padding: 32px;
+        }
+        .profile-block {
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 22px;
+            margin-bottom: 20px;
+            transition: all 0.2s ease;
+        }
+        .profile-block:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        }
+        .cm-grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        @media (max-width: 768px) {
+            .cm-grid-2 {
+                grid-template-columns: 1fr;
+            }
+            .onboarding-main {
+                padding: 16px 12px;
+            }
+            .onboarding-card {
+                padding: 20px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
 
-<aside th:replace="~{fragments/sidebar :: sidebar('profile')}"></aside>
-<div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+<div class="auth">
+    <aside th:replace="~{fragments/auth :: hero}"></aside>
 
-<div class="app-main">
-    <header th:replace="~{fragments/header :: appTopbar('Hoàn thiện hồ sơ bệnh nhân')}"></header>
+    <main class="auth-main onboarding-main">
+        <div class="auth-main__mobile-brand mb-3">
+            <a th:replace="~{fragments/logo :: logo('dark')}"></a>
+        </div>
 
-    <main class="app-content">
-        <div class="cm-wrap">
+        <section class="onboarding-card" aria-labelledby="onboarding-title">
+            <!-- 1. TIẾN TRÌNH ONBOARDING 3 BƯỚC -->
+            <div class="d-flex align-items-center justify-content-between mb-4 pb-3 border-bottom flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                        <i class="bi bi-check-lg"></i>
+                    </span>
+                    <span class="small fw-semibold text-muted text-decoration-line-through">1. Tạo tài khoản</span>
+                </div>
+                <i class="bi bi-chevron-right text-muted opacity-50 d-none d-sm-inline"></i>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                        2
+                    </span>
+                    <span class="small fw-bold text-primary">2. Hồ sơ bệnh nhân</span>
+                </div>
+                <i class="bi bi-chevron-right text-muted opacity-50 d-none d-sm-inline"></i>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge rounded-circle bg-light text-secondary border d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                        3
+                    </span>
+                    <span class="small text-muted">3. Đặt lịch khám</span>
+                </div>
+            </div>
 
-            <div class="cm-banner">
-                <h2 class="h5 fw-bold mb-1">
-                    <i class="bi bi-stars me-1"></i>Chào mừng bạn đến với Hệ thống Nha khoa CV-DCMS!
+            <!-- 2. TIÊU ĐỀ & CHÀO MỪNG -->
+            <div class="mb-4">
+                <h2 id="onboarding-title" class="fw-bold text-dark fs-4 mb-1">
+                    <i class="bi bi-person-vcard text-primary me-2"></i>Hoàn thiện hồ sơ bệnh nhân
                 </h2>
-                <p class="mb-0 small opacity-75">
-                    Vui lòng hoàn thiện thông tin hồ sơ bệnh nhân mặc định của bạn (và có thể thêm hồ sơ người thân nếu muốn) để bắt đầu đặt lịch khám.
+                <p class="text-muted small mb-0">
+                    Chào mừng bạn đến với <strong>CV-DCMS</strong>! Vui lòng hoàn thiện hồ sơ bệnh nhân mặc định của bạn (và có thể thêm người thân nếu muốn) để bắt đầu đặt lịch khám.
                 </p>
             </div>
 
-            <div th:if="${error != null}" class="alert alert-danger d-flex align-items-center gap-2 mb-3 shadow-sm" role="alert" style="border-radius:10px;">
+            <div th:if="${error != null}" class="alert alert-danger d-flex align-items-center gap-2 mb-3 shadow-sm rounded-3" role="alert">
                 <i class="bi bi-exclamation-triangle-fill fs-5"></i>
                 <span th:text="${error}">Đã xảy ra lỗi.</span>
             </div>
@@ -65,10 +115,10 @@
                   id="completeForm">
 
                 <div id="profilesContainer">
-                    <div class="cm-card profile-block" data-index="0">
-                        <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom">
+                    <div class="profile-block" data-index="0">
+                        <div class="d-flex align-items-center justify-content-between pb-2 mb-3 border-bottom">
                             <h3 class="h6 fw-bold text-primary mb-0 profile-heading">
-                                <i class="bi bi-person-check-fill me-1"></i>Hồ sơ 1 (Hồ sơ mặc định của bạn)
+                                <i class="bi bi-person-check-fill me-2"></i>Hồ sơ 1 (Hồ sơ mặc định của bạn)
                             </h3>
                             <button type="button"
                                     class="btn btn-sm btn-outline-danger remove-profile-btn"
@@ -80,15 +130,15 @@
 
                         <div class="cm-grid-2 mb-3">
                             <div>
-                                <label class="form-label fw-semibold">Họ và tên <span class="text-danger">*</span></label>
-                                <input type="text" name="profiles[0].fullName" class="form-control" maxlength="100" required>
+                                <label class="form-label small fw-semibold text-dark">Họ và tên <span class="text-danger">*</span></label>
+                                <input type="text" name="profiles[0].fullName" class="form-control" maxlength="100" placeholder="Nguyễn Văn A" required>
                             </div>
                             <div>
-                                <label class="form-label fw-semibold">Ngày sinh</label>
+                                <label class="form-label small fw-semibold text-dark">Ngày sinh</label>
                                 <input type="date" name="profiles[0].dob" class="form-control">
                             </div>
                             <div>
-                                <label class="form-label fw-semibold">Giới tính <span class="text-danger">*</span></label>
+                                <label class="form-label small fw-semibold text-dark">Giới tính <span class="text-danger">*</span></label>
                                 <select name="profiles[0].gender" class="form-select" required>
                                     <option value="">-- Chọn giới tính --</option>
                                     <option value="Nam">Nam</option>
@@ -97,7 +147,7 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="form-label fw-semibold">Cơ sở khám ưu tiên <span class="text-danger">*</span></label>
+                                <label class="form-label small fw-semibold text-dark">Cơ sở khám ưu tiên <span class="text-danger">*</span></label>
                                 <select name="profiles[0].branchId" class="form-select" required>
                                     <option value="">-- Chọn cơ sở khám --</option>
                                     <option th:each="b : ${branches}"
@@ -107,63 +157,59 @@
                                 </select>
                             </div>
                             <div style="grid-column: 1 / -1;">
-                                <label class="form-label fw-semibold">Địa chỉ <span class="text-danger">*</span></label>
-                                <input type="text" name="profiles[0].address" class="form-control" maxlength="255" required>
+                                <label class="form-label small fw-semibold text-dark">Địa chỉ thường trú <span class="text-danger">*</span></label>
+                                <input type="text" name="profiles[0].address" class="form-control" maxlength="255" placeholder="Số nhà, đường, phường/xã, quận/huyện..." required>
                             </div>
                         </div>
 
-                        <div class="mb-3 p-3 bg-light rounded-3 border">
-                            <label class="form-label fw-semibold mb-2">Tiền sử bệnh nền <span class="text-danger">*</span></label>
+                        <div class="mb-3 p-3 bg-white rounded-3 border">
+                            <label class="form-label small fw-semibold text-dark mb-2">Tiền sử bệnh nền / Dị ứng thuốc <span class="text-danger">*</span></label>
                             <div class="d-flex gap-4 mb-2">
-                                <label class="d-inline-flex align-items-center gap-2">
+                                <label class="d-inline-flex align-items-center gap-2 cursor-pointer">
                                     <input type="radio"
                                            name="profiles[0].hasUnderlyingDisease"
                                            value="false"
                                            checked
                                            onchange="toggleDiseaseField(this, false)">
-                                    <span>Không</span>
+                                    <span class="small">Không có bệnh nền</span>
                                 </label>
-                                <label class="d-inline-flex align-items-center gap-2">
+                                <label class="d-inline-flex align-items-center gap-2 cursor-pointer">
                                     <input type="radio"
                                            name="profiles[0].hasUnderlyingDisease"
                                            value="true"
                                            onchange="toggleDiseaseField(this, true)">
-                                    <span class="text-danger fw-semibold">Có bệnh nền</span>
+                                    <span class="small text-danger fw-semibold">Có bệnh nền / Dị ứng</span>
                                 </label>
                             </div>
-                            <div class="disease-details-wrap" style="display:none;">
-                                <label class="form-label fw-semibold">Mô tả chi tiết bệnh nền <span class="text-danger">*</span></label>
+                            <div class="disease-details-wrap mt-2" style="display:none;">
+                                <label class="form-label small fw-semibold text-dark">Mô tả chi tiết bệnh nền / Dị ứng <span class="text-danger">*</span></label>
                                 <textarea name="profiles[0].underlyingDiseaseDetails"
                                           rows="2"
                                           maxlength="1000"
                                           class="form-control"
-                                          placeholder="Nhập thông tin bệnh nền hoặc dị ứng thuốc..."></textarea>
+                                          placeholder="Nhập bệnh nền (tim mạch, huyết áp, tiểu đường...) hoặc dị ứng kháng sinh..."></textarea>
                             </div>
                         </div>
 
                         <div>
-                            <label class="form-label fw-semibold">Ảnh đại diện (Tùy chọn — JPG, PNG, WebP tối đa 5MB)</label>
+                            <label class="form-label small fw-semibold text-dark">Ảnh đại diện (Tùy chọn — JPG, PNG, WebP tối đa 5MB)</label>
                             <input type="file" name="profiles[0].avatar" accept="image/jpeg,image/png,image/webp" class="form-control">
                         </div>
                     </div>
                 </div>
 
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-3">
-                    <button type="button" class="btn btn-outline-primary fw-semibold" onclick="addProfileBlock()">
-                        <i class="bi bi-person-plus me-1"></i> Thêm hồ sơ người thân khác
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mt-4 pt-2 border-top">
+                    <button type="button" class="btn btn-outline-primary fw-semibold d-inline-flex align-items-center gap-2 rounded-3" onclick="addProfileBlock()">
+                        <i class="bi bi-person-plus-fill"></i><span>Thêm hồ sơ người thân khác</span>
                     </button>
 
-                    <button type="submit" class="btn btn-primary px-4 fw-semibold">
-                        <i class="bi bi-check2-circle me-1"></i> Hoàn tất &amp; Lưu hồ sơ
+                    <button type="submit" class="btn btn-primary px-4 py-2 fw-bold d-inline-flex align-items-center gap-2 rounded-3 shadow-sm" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                        <i class="bi bi-check2-circle"></i><span>Hoàn tất &amp; Bắt đầu sử dụng</span>
                     </button>
                 </div>
             </form>
-
-        </div>
+        </section>
     </main>
-
-    <footer th:replace="~{fragments/footer :: appFooter}"></footer>
-</div>
 </div>
 
 <script>
@@ -223,8 +269,8 @@
             var heading = block.querySelector('.profile-heading');
             if (heading) {
                 heading.innerHTML = idx === 0
-                    ? '<i class="bi bi-person-check-fill me-1"></i>Hồ sơ 1 (Hồ sơ mặc định của bạn)'
-                    : '<i class="bi bi-person-plus-fill me-1"></i>Hồ sơ ' + (idx + 1) + ' (Người thân)';
+                    ? '<i class="bi bi-person-check-fill me-2"></i>Hồ sơ 1 (Hồ sơ mặc định của bạn)'
+                    : '<i class="bi bi-person-plus-fill me-2"></i>Hồ sơ ' + (idx + 1) + ' (Người thân)';
             }
             var removeBtn = block.querySelector('.remove-profile-btn');
             if (removeBtn) {
