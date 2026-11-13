@@ -33,8 +33,7 @@ public class DoctorRecordPageController {
     private final PatientOverviewService overviewService;
     @Autowired(required = false)
     private ClinicalPhotoService clinicalPhotoService;
-<<<<<<< Updated upstream
-=======
+
     @Autowired(required = false)
     private com.cvdcms.repository.UserRepository userRepository;
     @Autowired(required = false)
@@ -53,7 +52,6 @@ public class DoctorRecordPageController {
     private String encodePatient(Long id) {
         return urlIdCodec.encodePatient(id);
     }
->>>>>>> Stashed changes
 
     public DoctorRecordPageController(DoctorRecordService records,
                                       com.cvdcms.repository.InvoiceRepository invoiceRepository,
