@@ -495,6 +495,18 @@
                         width: 100%;
                     }
 
+                    th.text-center .dv-th-inner {
+                        justify-content: center;
+                        position: relative;
+                    }
+
+                    th.text-center .dv-th-inner .dv-pin-btn {
+                        position: absolute;
+                        right: 0;
+                        top: 50%;
+                        transform: translateY(-50%);
+                    }
+
                     /* =========================================================================
                    HOVER FLOATING ACTIONS BAR (NÚT NỔI DI CHUYỂN THEO MÀN HÌNH CHUẨN DAILY VISITS)
                    ========================================================================= */
@@ -567,6 +579,7 @@
                     .dv-patient-cell {
                         display: flex;
                         align-items: center;
+                        justify-content: center;
                         gap: 12px;
                     }
 
@@ -916,15 +929,16 @@
 
                             <!-- Right Side: Primary Add Button -->
                             <div class="d-flex align-items-center gap-2"
-     th:if="${canManageAdministrative == null or canManageAdministrative}">
-    <!-- Primary Add Patient Button -->
-    <button type="button"
-            class="dv-btn-add-patient"
-            onclick="openAddPatientModal()">
-        <i class="bi bi-person-plus-fill fs-5"></i>
-        <span>Thêm bệnh nhân</span>
-    </button>
-</div>
+                                th:if="${canManageAdministrative == null or canManageAdministrative}">
+                                <!-- Primary Add Patient Button -->
+                                <button type="button"
+                                    class="dv-btn-add-patient"
+                                    onclick="openAddPatientModal()">
+                                    <i class="bi bi-person-plus-fill fs-5"></i>
+                                    <span>Thêm bệnh nhân</span>
+                                </button>
+                            </div>
+                        </div>
 
                         <!-- QUICK SEGMENT TABS (Chuẩn AMIS ProTable) -->
                         <div
@@ -1078,7 +1092,7 @@
                                         </div>
                                         <span class="dv-col-resizer"></span>
                                     </th>
-                                    <th data-col="code" style="width: 120px;">
+                                    <th class="text-center" data-col="code" style="width: 120px;">
                                         <div class="dv-th-inner">
                                             <span>Mã BN</span>
                                             <button type="button" class="dv-pin-btn" title="Ghim cột Mã BN"
@@ -1089,7 +1103,7 @@
                                         <span class="dv-col-resizer"></span>
                                     </th>
                                     <!-- GHIM CỘT HỌ VÀ TÊN (STICKY LEFT) -->
-                                    <th class="dv-col-pinned-left" data-col="fullName" style="min-width: 250px;">
+                                    <th class="text-center dv-col-pinned-left" data-col="fullName" style="min-width: 250px;">
                                         <div class="dv-th-inner">
                                             <span>Họ và tên bệnh nhân</span>
                                             <button type="button" class="dv-pin-btn is-pinned"
@@ -1119,7 +1133,7 @@
                                         </div>
                                         <span class="dv-col-resizer"></span>
                                     </th>
-                                    <th data-col="phone" style="width: 130px;">
+                                    <th class="text-center" data-col="phone" style="width: 130px;">
                                         <div class="dv-th-inner">
                                             <span>Điện thoại</span>
                                             <button type="button" class="dv-pin-btn" title="Ghim cột Điện thoại"
@@ -1139,7 +1153,7 @@
                                         </div>
                                         <span class="dv-col-resizer"></span>
                                     </th>
-                                    <th data-col="source" style="width: 140px;">
+                                    <th class="text-center" data-col="source" style="width: 140px;">
                                         <div class="dv-th-inner">
                                             <span>Nguồn</span>
                                             <button type="button" class="dv-pin-btn" title="Ghim cột Nguồn"
@@ -1171,12 +1185,12 @@
                                         th:text="${currentPage * pageSize + stat.count}">1</td>
 
                                     <!-- 2. MÃ BN -->
-                                    <td data-col="code">
+                                    <td class="text-center" data-col="code">
                                         <span class="dv-code-pill" th:text="${patient.code}">BN123456</span>
                                     </td>
 
                                     <!-- 3. HỌ VÀ TÊN (STICKY LEFT) -->
-                                    <td class="dv-col-pinned-left" data-col="fullName">
+                                    <td class="text-center dv-col-pinned-left" data-col="fullName">
                                         <div class="dv-patient-cell">
                                             <div class="dv-patient-avatar"
                                                 th:text="${patient.fullName != null and !patient.fullName.isBlank() ? patient.fullName.substring(0, 1).toUpperCase() : 'B'}">
@@ -1206,10 +1220,10 @@
                                         1990</td>
 
                                     <!-- 6. ĐIỆN THOẠI -->
-                                    <td data-col="phone">
+                                    <td class="text-center" data-col="phone">
                                         <a th:if="${patient.phoneNumber != null}"
                                             th:href="${'tel:' + patient.phoneNumber}"
-                                            class="text-decoration-none fw-bold" style="color: #0284c7;"
+                                            class="text-decoration-none fw-bold text-dark" style="color: #0f172a;"
                                             th:text="${patient.phoneNumber}">0912345678</a>
                                         <span th:unless="${patient.phoneNumber != null}" class="text-muted">—</span>
                                     </td>
@@ -1228,7 +1242,7 @@
                                     </td>
 
                                     <!-- 8. NGUỒN KHÁCH HÀNG (SỬA LỖI CÚ PHÁP THYMELEAF BẰNG TH:SWITCH ĐẢM BẢO DUY NHẤT 1 BADGE NHẬN DIỆN) -->
-                                    <td data-col="source" th:switch="${patient.customerSourceDisplay}">
+                                    <td class="text-center" data-col="source" th:switch="${patient.customerSourceDisplay}">
                                         <span th:case="'Facebook'" class="source-tag facebook">
                                             <i class="bi bi-facebook"></i> Facebook
                                         </span>

@@ -509,11 +509,16 @@
             }
             doctor.disabled = false;
             if (advDoctor) advDoctor.disabled = false;
-            const list = await request(`/doctors?branchId=${encodeURIComponent(branch.value)}&date=${dateInput.value}`);
-            list.forEach(d => {
-                doctor.appendChild(option(d.id, d.name));
-                if (advDoctor) advDoctor.appendChild(option(d.id, d.name));
-            });
+            try {
+                const res = await request(`/doctors?branchId=${encodeURIComponent(branch.value)}&date=${dateInput.value}`);
+                const list = Array.isArray(res) ? res : (Array.isArray(res?.doctors) ? res.doctors : []);
+                list.forEach(d => {
+                    doctor.appendChild(option(d.id, d.name));
+                    if (advDoctor) advDoctor.appendChild(option(d.id, d.name));
+                });
+            } catch (err) {
+                console.warn('Không tải được danh sách bác sĩ:', err);
+            }
         }
 
         // Sort BS Button
@@ -546,14 +551,23 @@
                 $('viewCalendarBtn')?.classList.remove('active', 'btn-primary');
                 $('viewCalendarBtn')?.classList.add('btn-outline-secondary');
                 if (radioModeList) radioModeList.checked = true;
-            } else {
-                $('listViewContainer').style.display = 'none';
-                $('calendarViewContainer').style.display = 'block';
-                $('viewCalendarBtn')?.classList.add('active', 'btn-primary');
-                $('viewCalendarBtn')?.classList.remove('btn-outline-secondary');
-                $('viewListBtn')?.classList.remove('active', 'btn-primary');
-                $('viewListBtn')?.classList.add('btn-outline-secondary');
-                if (radioModeCalendar) radioModeCalendar.checked = true;
+                applyFiltersAndRender();
+                return;
+            }
+            $('listViewContainer').style.display = 'none';
+            $('calendarViewContainer').style.display = 'block';
+            $('viewCalendarBtn')?.classList.add('active', 'btn-primary');
+            $('viewCalendarBtn')?.classList.remove('btn-outline-secondary');
+            $('viewListBtn')?.classList.remove('active', 'btn-primary');
+            $('viewListBtn')?.classList.add('btn-outline-secondary');
+            if (radioModeCalendar) radioModeCalendar.checked = true;
+            if (currentPeriod === 'day') {
+                currentPeriod = 'week';
+                if ($('advFilterDateOp')) $('advFilterDateOp').value = 'THIS_WEEK';
+                updateDateDisplay();
+                syncPeriodButtons();
+                load().catch(e => error(e.message));
+                return;
             }
             applyFiltersAndRender();
         }
@@ -674,20 +688,25 @@
             const params = new URLSearchParams({ start, end });
             if (branch.value) params.set('branchId', branch.value);
 
-            const list = await request(`/calendar?${params}`);
-            currentAppointments = list || [];
+            try {
+                const res = await request(`/calendar?${params}`);
+                currentAppointments = Array.isArray(res) ? res : (Array.isArray(res?.appointments) ? res.appointments : []);
+            } catch (e) {
+                currentAppointments = [];
+            }
             updateKpisFromList(currentAppointments);
             applyFiltersAndRender();
         }
 
         function updateKpisFromList(list) {
-            const totalCount = list.length;
-            const pendingCount = list.filter(a => a.status === 'PENDING').length;
-            const confirmedCount = list.filter(a => a.status === 'CONFIRMED').length;
-            const checkedInCount = list.filter(a => a.status === 'CHECKED_IN').length;
-            const completedCount = list.filter(a => a.status === 'COMPLETED').length;
-            const noShowCount = list.filter(a => a.status === 'NO_SHOW').length;
-            const cancelledCount = list.filter(a => a.status === 'CANCELLED').length;
+            const arr = Array.isArray(list) ? list : [];
+            const totalCount = arr.length;
+            const pendingCount = arr.filter(a => a.status === 'PENDING').length;
+            const confirmedCount = arr.filter(a => a.status === 'CONFIRMED').length;
+            const checkedInCount = arr.filter(a => a.status === 'CHECKED_IN').length;
+            const completedCount = arr.filter(a => a.status === 'COMPLETED').length;
+            const noShowCount = arr.filter(a => a.status === 'NO_SHOW').length;
+            const cancelledCount = arr.filter(a => a.status === 'CANCELLED').length;
 
             if ($('kpiTotal')) $('kpiTotal').textContent = totalCount;
             if ($('kpiPending')) $('kpiPending').textContent = pendingCount;
@@ -822,7 +841,7 @@
 
         // Apply search, scope, KPI, session, doctor filter and render active view (List or Calendar)
         function applyFiltersAndRender() {
-            let list = [...currentAppointments];
+            let list = Array.isArray(currentAppointments) ? [...currentAppointments] : [];
             const activeTags = [];
 
             // 1. Doctor filter
@@ -1514,8 +1533,9 @@
                 return;
             }
             try {
-                const list = await request(`/doctors?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`);
-                select.replaceChildren(option('', '-- Chọn bác sĩ phụ trách --'));
+                const res = await request(`/doctors?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`);
+                const list = Array.isArray(res) ? res : (Array.isArray(res?.doctors) ? res.doctors : []);
+                select.replaceChildren(option('', list.length ? '-- Chọn bác sĩ phụ trách --' : '-- Không có bác sĩ trực ca này --'));
                 list.forEach(d => select.appendChild(option(d.id, `BS. ${d.name}${d.specialty ? ` · ${d.specialty}` : ''}`)));
                 select.disabled = false;
                 const sessNames = { MORNING: 'Ca Sáng', AFTERNOON: 'Ca Chiều', EVENING: 'Ca Tối' };
@@ -1523,8 +1543,8 @@
                     ? `Có ${list.length} bác sĩ trực (${sessNames[session] || 'Ca Sáng'}) ngày ${dateLabel(date)}.`
                     : `Chưa có bác sĩ phân ca trực ngày ${dateLabel(date)}.`;
             } catch (err) {
-                select.replaceChildren(option('', 'Không tải được danh sách bác sĩ'));
-                if (help) help.textContent = err.message || 'Không tải được danh sách bác sĩ trực.';
+                select.replaceChildren(option('', '-- Chưa có bác sĩ trực --'));
+                if (help) help.textContent = 'Chưa có bác sĩ phân ca trực hoặc tạm thời không tải được.';
             }
         }
 
@@ -1858,8 +1878,9 @@
                 return;
             }
             try {
-                const list = await request(`/doctors?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`);
-                select.replaceChildren(option('', '-- Chưa chỉ định bác sĩ --'));
+                const res = await request(`/doctors?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`);
+                const list = Array.isArray(res) ? res : (Array.isArray(res?.doctors) ? res.doctors : []);
+                select.replaceChildren(option('', list.length ? '-- Chưa chỉ định bác sĩ --' : '-- Không có bác sĩ trực ca này --'));
                 list.forEach(d => select.appendChild(option(d.id, `BS. ${d.name}${d.specialty ? ` · ${d.specialty}` : ''}`)));
                 if (selectedDoctorId && [...select.options].some(o => o.value === String(selectedDoctorId))) {
                     select.value = String(selectedDoctorId);
@@ -1875,7 +1896,7 @@
             } catch (err) {
                 select.replaceChildren(option('', '-- Chưa chỉ định bác sĩ --'));
                 select.disabled = false;
-                if (help) help.textContent = err.message || 'Không tải được danh sách bác sĩ trực.';
+                if (help) help.textContent = 'Chưa có bác sĩ phân ca trực hoặc tạm thời không tải được.';
             }
         }
 
@@ -2050,25 +2071,122 @@
                 }
             }
 
-            let list = Array.isArray(filteredList) ? filteredList : currentAppointments;
+            let list = Array.isArray(filteredList) ? filteredList : (Array.isArray(currentAppointments) ? currentAppointments : []);
             if (isMonth) {
                 const params = new URLSearchParams({ start: iso(first), end: iso(last) });
                 if (branch.value) params.set('branchId', branch.value);
                 if (doctor.value) params.set('doctorId', doctor.value);
                 try {
-                    list = await request(`/calendar?${params}`);
+                    const res = await request(`/calendar?${params}`);
+                    list = Array.isArray(res) ? res : (Array.isArray(res?.appointments) ? res.appointments : []);
                 } catch (e) {
-                    list = currentAppointments;
+                    list = Array.isArray(currentAppointments) ? currentAppointments : [];
                 }
             }
+            list = Array.isArray(list) ? list : [];
 
             const grid = $('calendarGrid');
             if (!grid) return;
             grid.replaceChildren();
-            grid.classList.toggle('is-week', !isMonth);
-            grid.style.gridTemplateColumns = isDay ? 'minmax(0, 1fr)' : 'repeat(7, minmax(0, 1fr))';
+            grid.classList.toggle('is-week', !isMonth && !isDay);
+            grid.classList.toggle('is-day', isDay);
 
-            if (!isDay) {
+            const sessBadgeMap = {
+                MORNING: { text: 'Sáng', cls: 'morning', full: 'Ca Sáng', hours: '08:00 – 12:00', icon: 'bi-sunrise-fill' },
+                AFTERNOON: { text: 'Chiều', cls: 'afternoon', full: 'Ca Chiều', hours: '13:30 – 17:30', icon: 'bi-sun-fill' },
+                EVENING: { text: 'Tối', cls: 'evening', full: 'Ca Tối', hours: '17:30 – 20:30', icon: 'bi-moon-stars-fill' }
+            };
+
+            const buildRichCalendarCard = (a, showSessionBadge) => {
+                const event = document.createElement('div');
+                event.className = 'calendar-event';
+                event.dataset.status = a.status;
+                const sessKey = resolveAppointmentSession(a);
+                const badgeInfo = sessBadgeMap[sessKey] || sessBadgeMap.MORNING;
+                const statusMeta = getStatusMeta(a.status);
+                const timeText = a.expectedTime ? a.expectedTime.slice(0, 5) : 'Linh động';
+                const doctorText = a.doctorName ? (a.doctorName.startsWith('BS') ? a.doctorName : `BS. ${a.doctorName}`) : 'Chưa chỉ định BS';
+                const serviceText = a.serviceName || a.symptoms || 'Khám tổng quát';
+
+                event.innerHTML = `
+                    <div class="cal-card-top">
+                        <div class="d-flex align-items-center gap-1 min-w-0">
+                            ${showSessionBadge ? `<span class="cal-session-badge ${badgeInfo.cls} m-0">${badgeInfo.text}</span>` : ''}
+                            <span class="fw-bold font-monospace" style="font-size: 11.5px;">${escapeHtml(timeText)}</span>
+                        </div>
+                        <span class="badge" style="font-size: 10px; padding: 2px 6px; border-radius: 999px; background: rgba(15,23,42,0.08); color: inherit; font-weight: 700;">${escapeHtml(statusMeta.label)}</span>
+                    </div>
+                    <div class="cal-card-patient text-truncate">${escapeHtml(a.patientName || a.patientCode)}</div>
+                    <div class="cal-card-meta">
+                        <span class="text-truncate" style="max-width: 100%;"><i class="bi bi-bandaid me-1 opacity-75"></i>${escapeHtml(serviceText)}</span>
+                        <span class="text-truncate" style="max-width: 100%;"><i class="bi bi-person-badge me-1 opacity-75"></i>${escapeHtml(doctorText)}</span>
+                    </div>
+                `;
+                event.title = `${a.patientName || a.patientCode} · ${badgeInfo.full} (${timeText}) · ${doctorText} · ${serviceText}`;
+                event.addEventListener('click', () => openQuickStatusModal(a));
+                return event;
+            };
+
+            // 1. CHẾ ĐỘ NGÀY: Chia 3 cột Ca Sáng / Ca Chiều / Ca Tối cân đối (kiểu bảng lịch trực)
+            if (isDay) {
+                const dayIso = iso(first);
+                const dayEvents = list.filter(a => a.date === dayIso);
+                grid.style.gridTemplateColumns = 'repeat(3, minmax(0, 1fr))';
+
+                ['MORNING', 'AFTERNOON', 'EVENING'].forEach(sessKey => {
+                    const info = sessBadgeMap[sessKey];
+                    const shiftEvents = dayEvents
+                        .filter(a => resolveAppointmentSession(a) === sessKey)
+                        .sort((l, r) => (l.expectedTime || '99:99').localeCompare(r.expectedTime || '99:99'));
+
+                    const col = document.createElement('div');
+                    col.className = 'cal-shift-column';
+
+                    const head = document.createElement('div');
+                    head.className = 'cal-shift-column-head';
+                    head.innerHTML = `
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="cal-shift-icon-wrap ${info.cls}"><i class="bi ${info.icon}"></i></span>
+                            <div>
+                                <div class="fw-bold text-dark" style="font-size: 13.5px; line-height: 1.15;">${info.full}</div>
+                                <div class="text-muted" style="font-size: 11.5px;">${info.hours}</div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge rounded-pill ${shiftEvents.length ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-light text-muted border'}">${shiftEvents.length} ca</span>
+                        </div>
+                    `;
+                    const addBtn = document.createElement('button');
+                    addBtn.type = 'button';
+                    addBtn.className = 'cal-quick-add';
+                    addBtn.title = `Đặt lịch nhanh vào ${info.full} ngày ${dateLabel(dayIso)}`;
+                    addBtn.innerHTML = '<i class="bi bi-plus"></i>';
+                    addBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openCreateModalWith(dayIso, sessKey);
+                    });
+                    head.lastElementChild.appendChild(addBtn);
+                    col.appendChild(head);
+
+                    if (!shiftEvents.length) {
+                        const empty = document.createElement('div');
+                        empty.className = 'cal-shift-empty';
+                        empty.innerHTML = `<i class="bi bi-calendar2 text-secondary opacity-50 fs-5 mb-1"></i><span>Chưa có lịch hẹn ${info.full.toLowerCase()}</span>`;
+                        col.appendChild(empty);
+                    } else {
+                        shiftEvents.forEach(a => col.appendChild(buildRichCalendarCard(a, false)));
+                    }
+
+                    grid.appendChild(col);
+                });
+                return;
+            }
+
+            // 2. CHẾ ĐỘ TUẦN & THÁNG: 7 CỘT THẺ BO GÓC KIỂU LỊCH TRỰC
+            grid.style.gridTemplateColumns = 'repeat(7, minmax(0, 1fr))';
+            const weekDayUpper = ['CHỦ NHẬT', 'THỨ HAI', 'THỨ BA', 'THỨ TƯ', 'THỨ NĂM', 'THỨ SÁU', 'THỨ BẢY'];
+
+            if (isMonth) {
                 ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'].forEach(label => {
                     const header = document.createElement('div');
                     header.className = 'appointment-calendar-header';
@@ -2078,8 +2196,7 @@
             }
 
             let current = new Date(first);
-            const isWeek = !isMonth && !isDay;
-            const maxVisible = isMonth ? 4 : 6;
+            const maxVisible = isMonth ? 3 : 5;
 
             while (current <= last) {
                 const dayIso = iso(current);
@@ -2092,15 +2209,19 @@
                     dayCell.classList.add('is-today');
                 }
 
-                const events = list.filter(a => a.date === dayIso);
+                const events = list.filter(a => a.date === dayIso)
+                    .sort((l, r) => (l.expectedTime || '99:99').localeCompare(r.expectedTime || '99:99'));
                 const dayHeader = document.createElement('div');
-                dayHeader.className = 'd-flex justify-content-between align-items-center mb-1.5 pb-1 border-bottom';
-                dayHeader.innerHTML = `
-                    <span class="calendar-day-number mb-0 fw-bold">
-                        ${isDay ? escapeHtml(formatDayWithWeekday(dayIso)) : `${current.getUTCDate()}/${current.getUTCMonth() + 1}`}
-                        ${events.length ? `<span class="badge bg-light text-primary border ms-1">${events.length} ca</span>` : ''}
-                    </span>
-                `;
+                dayHeader.className = 'cal-day-card-head';
+                const dd = String(current.getUTCDate()).padStart(2, '0');
+                const mm = String(current.getUTCMonth() + 1).padStart(2, '0');
+                dayHeader.innerHTML = isMonth
+                    ? `<div><span class="cal-day-date-num" style="font-size: 13px;">${dd}/${mm}</span>${events.length ? `<span class="badge bg-primary-subtle text-primary ms-1" style="font-size:10px;">${events.length}</span>` : ''}</div>`
+                    : `<div>
+                            <div class="cal-day-weekday">${weekDayUpper[current.getUTCDay()]}</div>
+                            <div class="cal-day-date-num">${dd}/${mm} ${events.length ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1 align-middle" style="font-size:10px;">${events.length} ca</span>` : ''}</div>
+                       </div>`;
+
                 const quickAddDayBtn = document.createElement('button');
                 quickAddDayBtn.type = 'button';
                 quickAddDayBtn.className = 'cal-quick-add';
@@ -2113,38 +2234,19 @@
                 dayHeader.appendChild(quickAddDayBtn);
                 dayCell.appendChild(dayHeader);
 
-                // Cả hai chế độ xem Tuần và Tháng đều thiết kế thống nhất theo dạng ô lịch:
-                // Hiển thị thời gian theo Ca (Sáng / Chiều / Tối) thay vì giờ, không chia rãnh ca rối mắt
-                const visibleEvents = isDay ? events : events.slice(0, maxVisible);
-                visibleEvents.forEach(a => {
-                    const event = document.createElement('div');
-                    event.className = 'calendar-event';
-                    event.dataset.status = a.status;
-                    event.style.cursor = 'pointer';
+                if (!events.length && !isMonth) {
+                    const empty = document.createElement('div');
+                    empty.className = 'text-center text-muted my-auto py-4 small opacity-75';
+                    empty.textContent = 'Trống lịch';
+                    dayCell.appendChild(empty);
+                } else {
+                    events.slice(0, maxVisible).forEach(a => dayCell.appendChild(buildRichCalendarCard(a, true)));
+                }
 
-                    const sessKey = resolveAppointmentSession(a);
-                    const sessBadgeMap = {
-                        MORNING: { text: 'Sáng', cls: 'morning', full: 'Ca Sáng (08:00–12:00)' },
-                        AFTERNOON: { text: 'Chiều', cls: 'afternoon', full: 'Ca Chiều (13:30–17:30)' },
-                        EVENING: { text: 'Tối', cls: 'evening', full: 'Ca Tối (17:30–20:30)' }
-                    };
-                    const badgeInfo = sessBadgeMap[sessKey] || { text: 'Sáng', cls: 'morning', full: 'Ca Sáng' };
-
-                    const statusMeta = getStatusMeta(a.status);
-                    event.innerHTML = `
-                        <span class="cal-session-badge">${badgeInfo.text}</span>
-                        <span class="text-truncate fw-medium flex-grow-1">${escapeHtml(a.patientName || a.patientCode)}</span>
-                        <span class="badge ms-1" style="font-size: 9.5px; padding: 1.5px 5px; border-radius: 4px; background: rgba(0,0,0,0.08); color: inherit; font-weight: 600;">${statusMeta.label}</span>
-                    `;
-                    event.title = `${a.patientName || a.patientCode} · ${badgeInfo.full} · ${a.doctorName || 'Chưa chỉ định BS'}${a.serviceName ? ' · ' + a.serviceName : ''}`;
-                    event.addEventListener('click', () => openQuickStatusModal(a));
-                    dayCell.appendChild(event);
-                });
-
-                if (!isDay && events.length > maxVisible) {
+                if (events.length > maxVisible) {
                     const more = document.createElement('button');
                     more.type = 'button';
-                    more.className = 'calendar-more text-primary small cursor-pointer border-0 bg-transparent p-0 mt-1 fw-semibold';
+                    more.className = 'calendar-more text-primary small cursor-pointer border-0 bg-transparent p-0 mt-1 fw-semibold text-start';
                     more.textContent = `+${events.length - maxVisible} ca khác`;
                     more.addEventListener('click', (ev) => {
                         ev.preventDefault();
@@ -2227,8 +2329,13 @@
             const select = $('calendarDoctor'); select.replaceChildren(option('', 'Tất cả bác sĩ'));
             select.disabled = !branch.value;
             if (!branch.value) return;
-            const doctors = await request(`/doctors?branchId=${encodeURIComponent(branch.value)}&date=${encodeURIComponent(date.value)}`);
-            doctors.forEach(d => select.appendChild(option(d.id, d.name)));
+            try {
+                const res = await request(`/doctors?branchId=${encodeURIComponent(branch.value)}&date=${encodeURIComponent(date.value)}`);
+                const doctors = Array.isArray(res) ? res : (Array.isArray(res?.doctors) ? res.doctors : []);
+                doctors.forEach(d => select.appendChild(option(d.id, d.name)));
+            } catch (err) {
+                console.warn('Không tải được danh sách bác sĩ:', err);
+            }
         }
         function move(direction) {
             const current = fromDate(date.value);

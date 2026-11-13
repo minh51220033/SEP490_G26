@@ -381,6 +381,15 @@
 
     <!-- Actions -->
     <div class="tv-actions">
+      <a th:href="@{/reception/queue(branchId=${branchId})}"
+         class="tv-btn"
+         style="text-decoration: none;"
+         onclick="if (window.history.length > 1 && document.referrer) { window.history.back(); return false; }"
+         title="Quay lại màn hình Hàng chờ">
+        <i class="bi bi-arrow-left"></i>
+        <span>Quay lại</span>
+      </a>
+
       <button id="soundToggle" class="tv-btn tv-sound-btn" type="button" title="Bật hoặc tắt âm thanh đọc số">
         <i id="soundIcon" class="bi bi-volume-mute-fill"></i>
         <span id="soundText">Bật âm thanh</span>

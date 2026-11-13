@@ -60,8 +60,9 @@ public class SecurityConfig {
                                     && !path.startsWith("/api/reception/check-ins/");
                         })
                 )
-                // Keep the browser's unload permission policy used by the shared layout.
+                // Keep the browser's unload permission policy used by the shared layout & allow same-origin iframe printing.
                 .headers(headers -> headers
+                        .frameOptions(frame -> frame.sameOrigin())
                         .permissionsPolicy(permissions -> permissions
                                 .policy("unload=*")
                         )

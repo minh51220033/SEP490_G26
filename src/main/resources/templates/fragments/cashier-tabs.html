@@ -10,5 +10,21 @@
     <div th:replace="~{fragments/finance-tabs :: financeTabs('customer', ${activeTab})}"></div>
 </div>
 
+<!-- Phím tắt chọn nhanh khoảng thời gian dùng chung cho các bộ lọc Thu ngân -->
+<div th:fragment="quickDateBar(fromInputId, toInputId)"
+     class="d-flex align-items-center gap-2 mt-2 pt-2 border-top flex-wrap" style="font-size: 12px;">
+    <span class="text-muted fw-semibold me-1"><i class="bi bi-lightning-charge text-warning"></i> Chọn nhanh ngày:</span>
+    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn"
+            th:attr="onclick=|window.setFinanceQuickDate('${fromInputId}','${toInputId}','today')|">Hôm nay</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn"
+            th:attr="onclick=|window.setFinanceQuickDate('${fromInputId}','${toInputId}','yesterday')|">Hôm qua</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn"
+            th:attr="onclick=|window.setFinanceQuickDate('${fromInputId}','${toInputId}','week')|">7 ngày qua</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn"
+            th:attr="onclick=|window.setFinanceQuickDate('${fromInputId}','${toInputId}','month')|">Tháng này</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn"
+            th:attr="onclick=|window.setFinanceQuickDate('${fromInputId}','${toInputId}','clear')|">Xóa ngày</button>
+</div>
+
 </body>
 </html>

@@ -95,6 +95,15 @@ public class Appointment {
     @Transient
     private AppointmentStatus originalStatus;
 
+    @Transient
+    public String getNotes() {
+        return null;
+    }
+
+    public void setNotes(String notes) {
+        // Compatibility no-op for notes
+    }
+
     @PostLoad
     public void postLoad() {
         this.originalStatus = this.status;

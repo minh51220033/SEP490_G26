@@ -605,8 +605,13 @@ public class ReceptionAppointmentService {
     }
     private void history(Appointment a, Long actorId, String action, String old, String value, String reason) {
         AppointmentHistory h = new AppointmentHistory();
-        h.setAppointment(a); h.setActorUserId(actorId); h.setAction(action);
-        h.setOldValue(old); h.setNewValue(value); h.setReason(reason);
+        h.setAppointment(a);
+        // Fallback actorUserId = 1L (system/admin) cho job tự động không có phiên đăng nhập (như ReceptionNoShowJob)
+        h.setActorUserId(actorId != null ? actorId : 1L);
+        h.setAction(action);
+        h.setOldValue(old);
+        h.setNewValue(value);
+        h.setReason(reason);
         histories.save(h);
     }
     private AppointmentView view(Appointment a) {

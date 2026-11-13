@@ -362,10 +362,6 @@
                         <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-2 rounded-pill fw-bold">
                             <i class="bi bi-eye-fill me-1"></i>Chế độ Chỉ xem (Không chỉnh sửa)
                         </span>
-                        <a th:href="${patientRecordBackUrl != null ? patientRecordBackUrl : '/doctor/patient-records/' + (fromPatientId != null ? fromPatientId : (patient != null ? patient.profileId : 0)) + '#tab-treatment'}"
-                           class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5">
-                            <i class="bi bi-arrow-left"></i> Quay lại Hồ sơ bệnh nhân
-                        </a>
                     </div>
 
                     <!-- THANH CÔNG CỤ -->
@@ -445,9 +441,9 @@
                                 <i class="bi bi-lock-fill"></i>
                                 <span>Chế độ Chỉ xem Chi tiết lượt khám</span>
                             </span>
-                            <a th:href="@{/emr/records(query=${visit.visitCode})}"
-                               class="btn btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs"
-                               title="Xem bệnh án điện tử EMR của ca khám này">
+                            <a th:href="${'/doctor/patient-records/' + (fromPatientId != null ? fromPatientId : (patient != null ? patient.profileId : (visit != null and visit.patientProfile != null ? visit.patientProfile.profileId : 0))) + '#emr'}"
+                               class="btn btn-outline-primary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2 shadow-xs"
+                               title="Xem bệnh án điện tử EMR của bệnh nhân">
                                 <i class="bi bi-file-earmark-medical text-primary"></i>
                                 <span>Bệnh án EMR</span>
                             </a>
@@ -562,27 +558,6 @@
             <!-- TAB CONTENT CONTAINER (CHUYỂN ĐỔI TAB & KÉO CUỘN ĐỘC LẬP) -->
             <!-- ========================================================= -->
             <div class="df-tab-content-container p-3 p-md-4" id="mainTabContainer" style="background: #f8fafc; min-height: 80vh;">
-
-                <!-- BANNER CHẾ ĐỘ CHỈ XEM CHI TIẾT LƯỢT KHÁM -->
-                <div th:if="${isReadOnlyView == true}" class="alert alert-info border border-info-subtle d-flex flex-wrap align-items-center justify-content-between p-3 rounded-3 mb-3 shadow-xs">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="bg-info text-white rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
-                            <i class="bi bi-eye-fill fs-5"></i>
-                        </div>
-                        <div>
-                            <div class="fw-bold text-dark">
-                                CHI TIẾT LƯỢT KHÁM — CHẾ ĐỘ CHỈ XEM (READ-ONLY)
-                            </div>
-                            <div class="text-secondary small mt-0.5">
-                                Bạn đang tra cứu toàn bộ dữ liệu khám lâm sàng, chẩn đoán, kế hoạch điều trị, dịch vụ, đơn thuốc và phim ảnh của lượt khám <strong th:text="${visit != null ? visit.visitCode : ''}">VIS</strong>. Mọi chức năng thêm, sửa, xóa đã được vô hiệu hóa.
-                            </div>
-                        </div>
-                    </div>
-                    <a th:href="${patientRecordBackUrl != null ? patientRecordBackUrl : '/doctor/patient-records/' + (fromPatientId != null ? fromPatientId : (patient != null ? patient.profileId : 0)) + '#tab-treatment'}"
-                       class="btn btn-sm btn-primary rounded-pill fw-bold px-3 py-1.5 mt-2 mt-md-0">
-                        <i class="bi bi-arrow-left me-1"></i> Quay lại Hồ sơ bệnh nhân
-                    </a>
-                </div>
 
                 <!-- TAB 1: THÔNG TIN BỆNH NHÂN -->
                 <div class="df-tab-pane" id="tab-patient-info" style="display: none;">
