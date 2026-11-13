@@ -42,6 +42,7 @@ public class PermissionDataInitializer implements ApplicationRunner {
 
     @Transactional
     public void syncAllPermissionsAndDefaultRoles() {
+        ensureDefaultSystemRolesExist();
         Map<String, Permission> permissionMap = seedStaticPermissions();
         seedDefaultRolePermissions(permissionMap);
     }
@@ -235,6 +236,37 @@ public class PermissionDataInitializer implements ApplicationRunner {
             }
 
             if (modified) {
+                roleRepository.save(role);
+            }
+        }
+    }
+
+    private void ensureDefaultSystemRolesExist() {
+        record RoleSeed(String roleName, String displayName, String description) {}
+        List<RoleSeed> defaultRoles = List.of(
+                new RoleSeed("ADMIN", "Quản trị viên hệ thống",
+                        "Toàn quyền quản trị hệ thống, tài khoản, nhân sự và đa chi nhánh."),
+                new RoleSeed("BAC_SI", "Bác sĩ nha khoa",
+                        "Khám lâm sàng, chẩn đoán ICD-10, lập phác đồ điều trị, kê đơn thuốc và xem lịch trực."),
+                new RoleSeed("LE_TAN", "Lễ tân & Tiếp đón",
+                        "Tiếp đón bệnh nhân, quản lý lịch hẹn, hồ sơ bệnh nhân, tra cứu hạng thẻ và CSKH."),
+                new RoleSeed("QUAN_LY_KHO", "Quản lý kho vật tư",
+                        "Quản lý tồn kho vật tư nha khoa, phiếu nhập/xuất kho và danh mục nhà cung cấp."),
+                new RoleSeed("KE_TOAN", "Kế toán & Thu ngân",
+                        "Quản lý hóa đơn viện phí, thu tiền, công nợ bệnh nhân và xử lý hoàn tiền tại chi nhánh."),
+                new RoleSeed("BENH_NHAN", "Bệnh nhân",
+                        "Tài khoản cổng thông tin bệnh nhân (đặt lịch hẹn trực tuyến, tra cứu hồ sơ khám cá nhân).")
+        );
+
+        for (RoleSeed seed : defaultRoles) {
+            if (!roleRepository.existsByRoleNameIgnoreCase(seed.roleName())
+                    && !roleRepository.existsByRoleNameIgnoreCase("ROLE_" + seed.roleName())) {
+                Role role = new Role();
+                role.setRoleName(seed.roleName());
+                role.setDisplayName(seed.displayName());
+                role.setDescription(seed.description());
+                role.setIsSystem(true);
+                role.setIsActive(true);
                 roleRepository.save(role);
             }
         }
