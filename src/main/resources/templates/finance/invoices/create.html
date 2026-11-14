@@ -33,8 +33,10 @@
                             giao.</p>
                     </div>
                     <div>
-                        <a th:href="@{/invoices}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-left"></i> Quay
-                            lại danh sách hóa đơn</a>
+                        <a th:href="${returnUrl != null and !returnUrl.isBlank() ? returnUrl : '/invoices'}" class="fin-btn fin-btn-outline">
+                            <i class="bi bi-arrow-left"></i>
+                            <span th:text="${returnUrl != null and !returnUrl.isBlank() ? 'Quay lại' : 'Quay lại danh sách hóa đơn'}">Quay lại danh sách hóa đơn</span>
+                        </a>
                     </div>
                 </div>
 
@@ -73,6 +75,7 @@
                 <!-- Form Lập Hóa Đơn Chung -->
                 <form th:action="@{/invoices/create}" method="post" id="invoiceForm">
                     <!-- Hidden inputs -->
+                    <input type="hidden" name="returnUrl" th:value="${returnUrl}" id="hiddenReturnUrl">
                     <input type="hidden" name="visitId" th:value="${selectedVisit != null ? selectedVisit.visitId : ''}"
                         id="hiddenVisitId">
                     <input type="hidden" name="profileId"
@@ -82,6 +85,7 @@
                         id="hiddenBranchId">
                     <input type="hidden" name="prescriptionId" id="hiddenPrescriptionId"
                         th:value="${handedOverPrescriptions != null and !handedOverPrescriptions.isEmpty() ? handedOverPrescriptions[0].prescriptionId : ''}">
+                    <input type="hidden" name="buyMedicineAtClinic" id="hiddenBuyMedicineAtClinic" value="false">
 
                     <div class="fin-grid-2col">
                         <!-- Cột trái: Thông tin ca khám, Dịch vụ thực hiện, Đơn thuốc bàn giao, Ghi chú -->
@@ -93,8 +97,13 @@
                                 </h4>
 
                                 <div th:if="${selectedVisit == null}" class="alert alert-warning">
-                                    <i class="bi bi-exclamation-circle me-1"></i> Chưa chọn lượt khám. Vui lòng chọn một
-                                    ca khám đang chờ thanh toán ở menu phía trên để lập hóa đơn.
+                                    <i class="bi bi-exclamation-circle me-1"></i>
+                                    <span th:if="${handedOverPrescriptions != null and !handedOverPrescriptions.isEmpty()}">
+                                        Chưa có ca khám đang chờ thanh toán (<code>WAITING_PAYMENT</code>). Nếu bệnh nhân chỉ mua thuốc theo đơn bên dưới, bạn có thể bật <strong>Bệnh nhân mua thuốc tại phòng khám</strong> hoặc bấm <strong>Lập hóa đơn thuốc riêng</strong> để phát hành hóa đơn ngay.
+                                    </span>
+                                    <span th:if="${handedOverPrescriptions == null or handedOverPrescriptions.isEmpty()}">
+                                        Chưa chọn lượt khám. Vui lòng chọn một ca khám đang chờ thanh toán ở menu phía trên để lập hóa đơn.
+                                    </span>
                                 </div>
 
                                 <div th:if="${selectedPatient != null}" class="row g-3">
@@ -257,7 +266,8 @@
                                         th:text="${handedOverPrescriptions.size()} + ' đơn thuốc'">0 đơn thuốc</span>
                                 </div>
 
-                                <div th:each="pr : ${handedOverPrescriptions}" class="prescription-container mb-3">
+                                <div th:each="pr : ${handedOverPrescriptions}" class="prescription-container mb-3"
+                                    th:data-presc-id="${pr.prescriptionId}">
                                     <div
                                         class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-2 border-bottom gap-2">
                                         <div>
@@ -274,6 +284,13 @@
                                                 th:text="${pr.statusDisplay}">Chờ tiếp nhận</span>
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
+                                            <!-- Nút lập hóa đơn thuốc riêng -->
+                                            <a th:if="${pr.status != 'EXTERNAL_PURCHASE' and pr.status != 'CLINIC_PURCHASE_COMPLETED'}"
+                                                th:href="@{/invoices/create-medicine(prescriptionId=${pr.prescriptionId}, returnUrl=${returnUrl})}"
+                                                class="fin-btn fin-btn-sm btn-outline-primary">
+                                                <i class="bi bi-receipt"></i> Lập hóa đơn thuốc riêng
+                                            </a>
+
                                             <!-- Nút ghi nhận tự mua ngoài (mở modal) -->
                                             <button
                                                 th:if="${pr.status != 'EXTERNAL_PURCHASE' and pr.status != 'CLINIC_PURCHASE_COMPLETED'}"
@@ -304,12 +321,13 @@
                                     <div th:if="${pr.status != 'EXTERNAL_PURCHASE' and pr.status != 'CLINIC_PURCHASE_COMPLETED'}"
                                         class="p-2 px-3 mb-3 bg-light rounded border d-flex align-items-center">
                                         <div class="form-check form-switch m-0 d-flex align-items-center">
-                                            <input class="form-check-input me-2" type="checkbox"
-                                                id="chkBuyMedicineAtClinic" name="buyMedicineAtClinic" value="true"
+                                            <input class="form-check-input me-2 chk-buy-medicine" type="checkbox"
+                                                th:id="'chkBuyMedicineAtClinic_' + ${pr.prescriptionId}"
+                                                th:data-presc-id="${pr.prescriptionId}"
                                                 onchange="onToggleBuyMedicine(this)"
                                                 style="cursor: pointer; width: 2.2em; height: 1.2em;">
                                             <label class="form-check-label fw-bold text-primary m-0"
-                                                for="chkBuyMedicineAtClinic" style="cursor: pointer;">
+                                                th:for="'chkBuyMedicineAtClinic_' + ${pr.prescriptionId}" style="cursor: pointer;">
                                                 <i class="bi bi-capsule-pill me-1"></i> Bệnh nhân mua thuốc tại phòng
                                                 khám
                                             </label>
@@ -326,13 +344,13 @@
                                     </div>
 
                                     <!-- Bảng danh sách các thuốc trong đơn: Đồng bộ phong cách với bảng dịch vụ -->
-                                    <div class="fin-table-wrapper" id="medTableWrapper"
+                                    <div class="fin-table-wrapper"
                                         th:style="${pr.status == 'EXTERNAL_PURCHASE' or pr.status == 'CLINIC_PURCHASE_COMPLETED'} ? 'opacity: 0.6;' : ''">
-                                        <table class="fin-table" id="medicineItemsTable">
+                                        <table class="fin-table medicine-items-table">
                                             <thead>
                                                 <tr>
                                                     <th style="width: 40px;">
-                                                        <input type="checkbox" id="checkAllMedItems" disabled
+                                                        <input type="checkbox" class="check-all-med-items" disabled
                                                             onchange="toggleAllMedItems(this)">
                                                     </th>
                                                     <th>Tên thuốc &amp; Hướng dẫn dùng</th>
@@ -506,10 +524,10 @@
                                 <div class="mt-4 d-grid gap-2">
                                     <button type="submit" id="btnSubmitInvoice"
                                         class="fin-btn fin-btn-primary py-3 fs-6"
-                                        th:disabled="${selectedVisit == null or (#lists.isEmpty(unbilledServices) and (handedOverPrescriptions == null or #lists.isEmpty(handedOverPrescriptions)))}">
-                                        <i class="bi bi-check2-circle fs-5"></i> XÁC NHẬN PHÁT HÀNH HÓA ĐƠN CHUNG
+                                        th:disabled="${(selectedVisit == null or #lists.isEmpty(unbilledServices)) and (handedOverPrescriptions == null or #lists.isEmpty(handedOverPrescriptions))}">
+                                        <i class="bi bi-check2-circle fs-5"></i> <span id="btnSubmitInvoiceText">XÁC NHẬN PHÁT HÀNH HÓA ĐƠN CHUNG</span>
                                     </button>
-                                    <a th:href="@{/invoices}" class="fin-btn fin-btn-outline">Hủy bỏ</a>
+                                    <a th:href="${returnUrl != null and !returnUrl.isBlank() ? returnUrl : '/invoices'}" class="fin-btn fin-btn-outline">Hủy bỏ</a>
                                 </div>
                             </div>
                         </div>
@@ -677,6 +695,7 @@
                         th:value="${selectedVisit != null ? selectedVisit.visitId : ''}">
                     <input type="hidden" name="profileId"
                         th:value="${selectedPatient != null ? selectedPatient.profileId : ''}">
+                    <input type="hidden" name="returnUrl" th:value="${returnUrl}">
                 </form>
 
                 <!-- Modal Xác nhận Bệnh nhân tự mua ngoài (Nằm NGOÀI invoiceForm, ngăn chặn nested form) -->
@@ -689,6 +708,7 @@
                                 th:value="${selectedVisit != null ? selectedVisit.visitId : ''}">
                             <input type="hidden" name="profileId"
                                 th:value="${selectedPatient != null ? selectedPatient.profileId : ''}">
+                            <input type="hidden" name="returnUrl" th:value="${returnUrl}">
                             <div class="modal-content">
                                 <div class="modal-header bg-secondary text-white">
                                     <h5 class="modal-title" id="modalChoiceExternalLabel">
@@ -734,7 +754,13 @@
 
         function onSelectWaitingVisit(visitId) {
             if (visitId) {
-                window.location.href = '/invoices/create?visitId=' + visitId;
+                const returnUrlInput = document.getElementById('hiddenReturnUrl');
+                const returnUrl = returnUrlInput ? returnUrlInput.value : '';
+                let url = '/invoices/create?visitId=' + encodeURIComponent(visitId);
+                if (returnUrl) {
+                    url += '&returnUrl=' + encodeURIComponent(returnUrl);
+                }
+                window.location.href = url;
             }
         }
 
@@ -796,20 +822,18 @@
             row.querySelector('.item-line-total').setAttribute('data-val', lineTotal);
         }
 
-        // Quản lý Thuốc
-        function onToggleBuyMedicine(checkbox) {
-            const isBuying = checkbox.checked;
-            const masterMedCheck = document.getElementById('checkAllMedItems');
+        // Quản lý Thuốc (Scope theo từng đơn thuốc để không xung đột khi có nhiều đơn)
+        function setContainerBuyState(container, isBuying) {
+            if (!container) return;
+            const masterMedCheck = container.querySelector('.check-all-med-items');
             if (masterMedCheck) {
                 masterMedCheck.disabled = !isBuying;
                 masterMedCheck.checked = isBuying;
             }
-
-            document.querySelectorAll('.med-item-row').forEach(row => {
+            container.querySelectorAll('.med-item-row').forEach(row => {
                 const cb = row.querySelector('.med-item-checkbox');
                 const qtyInput = row.querySelector('.med-item-qty');
                 const remaining = parseFloat(row.getAttribute('data-remaining')) || 0;
-
                 if (isBuying && remaining > 0) {
                     cb.disabled = false;
                     cb.checked = true;
@@ -821,14 +845,40 @@
                 }
                 recalculateMedicineRowTotal(row);
             });
+        }
 
+        function onToggleBuyMedicine(checkbox) {
+            const isBuying = checkbox.checked;
+            const currentContainer = checkbox.closest('.prescription-container');
+            const prescId = checkbox.getAttribute('data-presc-id') || (currentContainer ? currentContainer.getAttribute('data-presc-id') : '');
+
+            if (isBuying) {
+                // Chỉ cho phép mua tại PK cho 1 đơn thuốc mỗi lần lập hóa đơn để khớp prescriptionId
+                document.querySelectorAll('.chk-buy-medicine').forEach(other => {
+                    if (other !== checkbox && other.checked) {
+                        other.checked = false;
+                        setContainerBuyState(other.closest('.prescription-container'), false);
+                    }
+                });
+                const hiddenPresc = document.getElementById('hiddenPrescriptionId');
+                if (hiddenPresc && prescId) hiddenPresc.value = prescId;
+            }
+
+            const hiddenBuy = document.getElementById('hiddenBuyMedicineAtClinic');
+            if (hiddenBuy) {
+                hiddenBuy.value = isBuying ? 'true' : 'false';
+            }
+
+            setContainerBuyState(currentContainer, isBuying);
             updateSubmitButtonState();
             triggerRecalculate();
         }
 
         function toggleAllMedItems(masterCheckbox) {
+            const container = masterCheckbox.closest('.prescription-container');
+            if (!container) return;
             const isChecked = masterCheckbox.checked;
-            document.querySelectorAll('.med-item-row').forEach(row => {
+            container.querySelectorAll('.med-item-row').forEach(row => {
                 const cb = row.querySelector('.med-item-checkbox');
                 const qtyInput = row.querySelector('.med-item-qty');
                 const remaining = parseFloat(row.getAttribute('data-remaining')) || 0;
@@ -845,7 +895,9 @@
             document.querySelectorAll('.med-item-row').forEach(row => {
                 const cb = row.querySelector('.med-item-checkbox');
                 const qtyInput = row.querySelector('.med-item-qty');
-                qtyInput.disabled = !cb.checked;
+                if (cb && qtyInput) {
+                    qtyInput.disabled = !cb.checked;
+                }
             });
             updateSubmitButtonState();
             triggerRecalculate();
@@ -879,18 +931,32 @@
 
         function updateSubmitButtonState() {
             const checkedServices = document.querySelectorAll('.item-checkbox:checked').length;
-            const chkBuyMed = document.getElementById('chkBuyMedicineAtClinic');
-            const isBuyingMed = chkBuyMed && chkBuyMed.checked;
-            const checkedMeds = isBuyingMed ? document.querySelectorAll('.med-item-checkbox:checked').length : 0;
-            const visitId = document.getElementById('hiddenVisitId').value;
+            const activeSwitch = document.querySelector('.chk-buy-medicine:checked');
+            const activeContainer = activeSwitch ? activeSwitch.closest('.prescription-container') : null;
+            const checkedMeds = activeContainer ? activeContainer.querySelectorAll('.med-item-checkbox:checked').length : 0;
+            const visitId = document.getElementById('hiddenVisitId')?.value;
+            const prescId = document.getElementById('hiddenPrescriptionId')?.value;
+
+            const hiddenBuy = document.getElementById('hiddenBuyMedicineAtClinic');
+            if (hiddenBuy) {
+                hiddenBuy.value = (activeSwitch && checkedMeds > 0) ? 'true' : 'false';
+            }
 
             const btnSubmit = document.getElementById('btnSubmitInvoice');
+            const btnText = document.getElementById('btnSubmitInvoiceText');
             if (btnSubmit) {
-                btnSubmit.disabled = !visitId || (checkedServices === 0 && checkedMeds === 0);
+                const canSubmitServiceOrMixed = Boolean(visitId) && (checkedServices > 0 || checkedMeds > 0);
+                const canSubmitMedicineOnly = !visitId && checkedServices === 0 && Boolean(prescId) && checkedMeds > 0;
+                btnSubmit.disabled = !(canSubmitServiceOrMixed || canSubmitMedicineOnly);
+            }
+            if (btnText) {
+                btnText.textContent = (checkedServices === 0 && checkedMeds > 0)
+                    ? 'XÁC NHẬN PHÁT HÀNH HÓA ĐƠN THUỐC'
+                    : 'XÁC NHẬN PHÁT HÀNH HÓA ĐƠN CHUNG';
             }
         }
 
-        // Tính toán xem trước bằng backend Preview API
+        // Tính toán xem trước bằng backend Preview API (có fallback tính tạm ở client nếu API preview lỗi)
         function onPointsInputChanged(input) {
             const val = parseInt(input.value) || 0;
             const max = parseInt(input.max);
@@ -900,13 +966,26 @@
             triggerRecalculate();
         }
 
+        function applyClientFallbackTotals(clientServiceTotal, clientMedicineTotal) {
+            const total = (clientServiceTotal || 0) + (clientMedicineTotal || 0);
+            document.getElementById('lblTotalService').textContent = formatMoney(clientServiceTotal);
+            document.getElementById('lblTotalMedicine').textContent = formatMoney(clientMedicineTotal);
+            document.getElementById('lblMemberDiscount').textContent = '-0 đ';
+            document.getElementById('lblPromoDiscount').textContent = '-0 đ';
+            document.getElementById('lblPointDiscount').textContent = '-0 đ';
+            document.getElementById('lblFinalPay').textContent = formatMoney(total);
+            document.getElementById('lblPointsEarnable').textContent = '+' + Math.floor((clientServiceTotal || 0) / 10000) + ' điểm';
+        }
+
         async function triggerRecalculate() {
             const profileId = document.getElementById('hiddenProfileId').value;
             const visitId = document.getElementById('hiddenVisitId').value;
+            const branchId = document.getElementById('hiddenBranchId')?.value;
             const prescInput = document.getElementById('hiddenPrescriptionId');
             const prescriptionId = prescInput ? prescInput.value : null;
-            const chkBuyMed = document.getElementById('chkBuyMedicineAtClinic');
-            const buyMedicine = chkBuyMed && chkBuyMed.checked;
+            const activeSwitch = document.querySelector('.chk-buy-medicine:checked');
+            const activeContainer = activeSwitch ? activeSwitch.closest('.prescription-container') : null;
+            const buyMedicine = Boolean(activeSwitch);
 
             const promoId = document.getElementById('promotionId').value;
             const voucherId = document.getElementById('voucherId').value;
@@ -914,12 +993,15 @@
             const manualDiscount = parseFloat(document.getElementById('manualDiscount').value) || 0;
 
             const items = [];
+            let clientServiceTotal = 0;
             document.querySelectorAll('.item-row').forEach(row => {
                 const cb = row.querySelector('.item-checkbox');
                 if (cb && cb.checked) {
                     const psId = row.querySelector('.prop-performed-id').value;
                     const unitPrice = parseFloat(row.querySelector('.item-price').value) || 0;
                     const qty = parseFloat(row.querySelector('.item-qty').value) || 1;
+                    const lineVal = parseFloat(row.querySelector('.item-line-total')?.getAttribute('data-val')) || (unitPrice * qty);
+                    clientServiceTotal += lineVal;
                     items.push({
                         performedId: parseInt(psId),
                         unitPrice: unitPrice,
@@ -929,12 +1011,15 @@
             });
 
             const medicineItems = [];
-            if (buyMedicine) {
-                document.querySelectorAll('.med-item-row').forEach(row => {
+            let clientMedicineTotal = 0;
+            if (buyMedicine && activeContainer) {
+                activeContainer.querySelectorAll('.med-item-row').forEach(row => {
                     const cb = row.querySelector('.med-item-checkbox');
                     if (cb && cb.checked) {
                         const prescItemId = row.querySelector('.prop-med-prescription-item-id').value;
                         const qty = parseFloat(row.querySelector('.med-item-qty').value) || 1;
+                        const unitPrice = parseFloat(row.getAttribute('data-unit-price')) || 0;
+                        clientMedicineTotal += (unitPrice * qty);
                         medicineItems.push({
                             prescriptionItemId: parseInt(prescItemId),
                             quantity: qty
@@ -944,17 +1029,14 @@
             }
 
             if (items.length === 0 && medicineItems.length === 0) {
-                document.getElementById('lblTotalService').textContent = '0 đ';
-                document.getElementById('lblTotalMedicine').textContent = '0 đ';
-                document.getElementById('lblMemberDiscount').textContent = '-0 đ';
-                document.getElementById('lblPromoDiscount').textContent = '-0 đ';
-                document.getElementById('lblPointDiscount').textContent = '-0 đ';
-                document.getElementById('lblFinalPay').textContent = '0 đ';
-                document.getElementById('lblPointsEarnable').textContent = '+0 điểm';
+                applyClientFallbackTotals(0, 0);
                 const hint = document.getElementById('pointDiscountHint');
                 if (hint) hint.textContent = 'Điểm dùng không bao giờ vượt quá số tiền phải trả của hóa đơn.';
                 return;
             }
+
+            // Hiển thị ngay tổng tạm tính trên client để UI phản hồi tức thì
+            applyClientFallbackTotals(clientServiceTotal, clientMedicineTotal);
 
             try {
                 const resp = await fetch('/api/invoices/preview', {
@@ -963,6 +1045,7 @@
                     body: JSON.stringify({
                         profileId: profileId ? parseInt(profileId) : null,
                         visitId: visitId ? parseInt(visitId) : null,
+                        branchId: branchId ? parseInt(branchId) : null,
                         promotionId: promoId ? parseInt(promoId) : null,
                         voucherId: voucherId ? parseInt(voucherId) : null,
                         pointsToRedeem: points,
@@ -1009,9 +1092,10 @@
         // Xử lý gửi form: Chỉ gửi và đánh chỉ số tuần tự cho các dòng ĐƯỢC CHỌN, vô hiệu hóa các dòng bỏ chọn
         document.getElementById('invoiceForm').addEventListener('submit', function (e) {
             const checkedServices = document.querySelectorAll('.item-checkbox:checked');
-            const chkBuyMed = document.getElementById('chkBuyMedicineAtClinic');
-            const isBuyingMed = chkBuyMed && chkBuyMed.checked;
-            const checkedMeds = isBuyingMed ? document.querySelectorAll('.med-item-checkbox:checked') : [];
+            const activeSwitch = document.querySelector('.chk-buy-medicine:checked');
+            const activeContainer = activeSwitch ? activeSwitch.closest('.prescription-container') : null;
+            const isBuyingMed = Boolean(activeSwitch);
+            const checkedMeds = activeContainer ? activeContainer.querySelectorAll('.med-item-checkbox:checked') : [];
 
             if (checkedServices.length === 0 && checkedMeds.length === 0) {
                 e.preventDefault();
@@ -1040,13 +1124,14 @@
                 }
             });
 
-            // Xử lý index dòng thuốc
+            // Xử lý index dòng thuốc (chỉ gửi các dòng thuộc đơn thuốc đang bật công tắc)
             let medIndex = 0;
             document.querySelectorAll('.med-item-row').forEach(row => {
+                const inActiveContainer = activeContainer && activeContainer.contains(row);
                 const cb = row.querySelector('.med-item-checkbox');
                 const idInput = row.querySelector('.prop-med-prescription-item-id');
                 const qtyInput = row.querySelector('.med-item-qty');
-                if (isBuyingMed && cb && cb.checked) {
+                if (isBuyingMed && inActiveContainer && cb && cb.checked) {
                     idInput.disabled = false;
                     idInput.setAttribute('name', 'medicineItems[' + medIndex + '].prescriptionItemId');
                     qtyInput.disabled = false;

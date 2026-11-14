@@ -394,7 +394,7 @@
                                                     <span th:if="${v.unbilledPrescriptionCount > 0}" class="badge bg-info-subtle text-info border" th:text="${v.unbilledPrescriptionCount} + ' đơn thuốc'"></span>
                                                 </td>
                                                 <td class="text-center">
-                                                    <a th:href="@{/invoices/create(visitId=${v.visitId})}" class="btn btn-sm btn-primary">
+                                                    <a th:href="@{/invoices/create(visitId=${v.visitId}, returnUrl='/payments/dashboard')}" class="btn btn-sm btn-primary">
                                                         <i class="bi bi-file-earmark-plus"></i> Lập hóa đơn ca này
                                                     </a>
                                                 </td>
@@ -499,7 +499,7 @@
                                   class="badge bg-light text-muted border px-3 py-2">Chưa xếp hạng</span>
                         </div>
                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <a th:href="@{/invoices/create(profileId=${patient.profileId})}"
+                            <a th:href="@{/invoices/create(profileId=${patient.profileId}, returnUrl='/payments/patient/' + ${patient.profileId})}"
                                class="fin-btn fin-btn-primary fin-btn-sm"
                                title="Lập hóa đơn cho bệnh nhân đang chọn">
                                 <i class="bi bi-file-earmark-plus"></i> Lập hóa đơn
@@ -678,7 +678,7 @@
                                     </tr>
                                     <tr th:each="inv : ${invoiceRows}">
                                         <td>
-                                            <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}"
+                                            <a th:href="@{/invoices/{id}(id=${inv.invoiceId}, returnUrl='/payments/patient/' + ${patient.profileId})}"
                                                class="fw-bold text-primary" th:text="${inv.invoiceCode}">HD001</a>
                                         </td>
                                         <td class="text-center">
@@ -712,7 +712,7 @@
                                         </td>
                                         <td class="text-center">
                                             <div class="fin-table-actions">
-                                                <a th:href="@{/invoices/{id}(id=${inv.invoiceId})}"
+                                                <a th:href="@{/invoices/{id}(id=${inv.invoiceId}, returnUrl='/payments/patient/' + ${patient.profileId})}"
                                                    class="fin-table-btn fin-table-btn-view" title="Xem thông tin">
                                                     <i class="bi bi-eye"></i> <span>Xem thông tin</span>
                                                 </a>
@@ -1269,7 +1269,7 @@
                                 <td th:text="${#temporals.format(rf.refundedAt, 'dd/MM/yyyy HH:mm')}">24/10/2026</td>
                                 <td>
                                     <span th:if="${rf.invoice != null}">
-                                        <a th:href="@{/invoices/{id}(id=${rf.invoice.invoiceId})}" class="text-primary fw-bold text-decoration-none" th:text="'HĐ: ' + ${rf.invoice.invoiceCode}">HĐ01</a>
+                                        <a th:href="@{/invoices/{id}(id=${rf.invoice.invoiceId}, returnUrl='/payments/patient/' + ${patient.profileId})}" class="text-primary fw-bold text-decoration-none" th:text="'HĐ: ' + ${rf.invoice.invoiceCode}">HĐ01</a>
                                     </span>
                                     <span th:if="${rf.invoice == null}" class="badge bg-warning text-dark">Ví tạm ứng</span>
                                 </td>

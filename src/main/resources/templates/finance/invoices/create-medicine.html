@@ -29,11 +29,12 @@
                     <p>Khởi tạo hóa đơn thuốc độc lập từ đơn thuốc được bác sĩ kê. Hỗ trợ mua toàn bộ hoặc mua một phần đơn thuốc.</p>
                 </div>
                 <div class="d-flex gap-2">
-                    <a th:href="@{/invoices/create(visitId=${selectedVisit != null ? selectedVisit.visitId : ''})}" class="fin-btn fin-btn-outline">
+                    <a th:href="@{/invoices/create(visitId=${selectedVisit != null ? selectedVisit.visitId : ''}, returnUrl=${returnUrl})}" class="fin-btn fin-btn-outline">
                         <i class="bi bi-arrow-left"></i> Quay lại ca khám
                     </a>
-                    <a th:href="@{/invoices}" class="fin-btn fin-btn-outline">
-                        <i class="bi bi-receipt"></i> Danh sách hóa đơn
+                    <a th:href="${returnUrl != null and !returnUrl.isBlank() ? returnUrl : '/invoices'}" class="fin-btn fin-btn-outline">
+                        <i class="bi bi-receipt"></i>
+                        <span th:text="${returnUrl != null and !returnUrl.isBlank() ? 'Quay lại' : 'Danh sách hóa đơn'}">Danh sách hóa đơn</span>
                     </a>
                 </div>
             </div>
@@ -86,6 +87,7 @@
 
             <!-- Form Lập Hóa Đơn Thuốc -->
             <form th:action="@{/invoices/create-medicine}" method="post" id="medicineInvoiceForm">
+                <input type="hidden" name="returnUrl" th:value="${returnUrl}">
                 <input type="hidden" name="prescriptionId" th:value="${prescription.prescriptionId}" id="hiddenPrescriptionId">
 
                 <div class="fin-grid-2col">
