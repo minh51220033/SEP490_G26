@@ -20,4 +20,6 @@ public interface PointTransactionRepository extends JpaRepository<PointTransacti
     boolean existsByInvoice_InvoiceIdAndTransactionType(Long invoiceId, com.cvdcms.entity.enums.PointTransactionType transactionType);
 
     boolean existsByInvoice_InvoiceIdAndTransactionTypeAndPointsGreaterThan(Long invoiceId, com.cvdcms.entity.enums.PointTransactionType transactionType, Integer points);
+
+    boolean existsByReasonContaining(String keyword);
 }

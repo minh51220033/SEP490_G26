@@ -32,6 +32,24 @@ public class ReceptionMembershipController {
     private final UserRepository userRepository;
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
     private final com.cvdcms.repository.PatientProfileRepository patientProfileRepository;
+    private final com.cvdcms.repository.MembershipTierRepository membershipTierRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ReceptionMembershipController(
+            LoyaltyService loyaltyService,
+            BranchRepository branchRepository,
+            UserRepository userRepository,
+            StaffBranchAssignmentRepository staffBranchAssignmentRepository,
+            com.cvdcms.repository.PatientProfileRepository patientProfileRepository,
+            com.cvdcms.repository.MembershipTierRepository membershipTierRepository
+    ) {
+        this.loyaltyService = loyaltyService;
+        this.branchRepository = branchRepository;
+        this.userRepository = userRepository;
+        this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
+        this.patientProfileRepository = patientProfileRepository;
+        this.membershipTierRepository = membershipTierRepository;
+    }
 
     public ReceptionMembershipController(
             LoyaltyService loyaltyService,
@@ -40,11 +58,7 @@ public class ReceptionMembershipController {
             StaffBranchAssignmentRepository staffBranchAssignmentRepository,
             com.cvdcms.repository.PatientProfileRepository patientProfileRepository
     ) {
-        this.loyaltyService = loyaltyService;
-        this.branchRepository = branchRepository;
-        this.userRepository = userRepository;
-        this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
-        this.patientProfileRepository = patientProfileRepository;
+        this(loyaltyService, branchRepository, userRepository, staffBranchAssignmentRepository, patientProfileRepository, null);
     }
 
     private void addLayoutAttributes(HttpSession session, Model model) {
@@ -96,6 +110,10 @@ public class ReceptionMembershipController {
     public String searchMemberships(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) String tierCode,
+            @RequestParam(required = false) String pointRange,
+            @RequestParam(required = false) String spentRange,
+            @RequestParam(required = false) String sortBy,
             Model model,
             HttpSession session
     ) {
@@ -128,13 +146,77 @@ public class ReceptionMembershipController {
             }
         }
 
+        List<MemberCardDTO> cards = loyaltyService.searchMemberCards(keyword, effectiveBranchId);
+
+        // Filter by tierCode
+        if (tierCode != null && !tierCode.trim().isEmpty() && !"ALL".equalsIgnoreCase(tierCode.trim())) {
+            String targetTier = tierCode.trim();
+            cards = cards.stream()
+                    .filter(c -> c.getTierCode() != null && c.getTierCode().equalsIgnoreCase(targetTier))
+                    .toList();
+        }
+
+        // Filter by pointRange
+        if (pointRange != null && !pointRange.trim().isEmpty() && !"ALL".equalsIgnoreCase(pointRange.trim())) {
+            String pRange = pointRange.trim();
+            cards = cards.stream().filter(c -> {
+                int pts = c.getCurrentPoints() != null ? c.getCurrentPoints() : 0;
+                return switch (pRange) {
+                    case "HAS_POINTS" -> pts > 0;
+                    case "HIGH_POINTS" -> pts >= 500;
+                    case "ZERO_POINTS" -> pts == 0;
+                    default -> true;
+                };
+            }).toList();
+        }
+
+        // Filter by spentRange
+        if (spentRange != null && !spentRange.trim().isEmpty() && !"ALL".equalsIgnoreCase(spentRange.trim())) {
+            String sRange = spentRange.trim();
+            cards = cards.stream().filter(c -> {
+                java.math.BigDecimal spent = c.getTotalSpentAmount() != null ? c.getTotalSpentAmount() : java.math.BigDecimal.ZERO;
+                return switch (sRange) {
+                    case "HAS_SPENT" -> spent.compareTo(java.math.BigDecimal.ZERO) > 0;
+                    case "GT_5M" -> spent.compareTo(new java.math.BigDecimal("5000000")) >= 0;
+                    case "GT_20M" -> spent.compareTo(new java.math.BigDecimal("20000000")) >= 0;
+                    case "GT_50M" -> spent.compareTo(new java.math.BigDecimal("50000000")) >= 0;
+                    default -> true;
+                };
+            }).toList();
+        }
+
+        // Sorting
+        if (sortBy != null && !sortBy.trim().isEmpty() && !"DEFAULT".equalsIgnoreCase(sortBy.trim())) {
+            List<MemberCardDTO> mutableCards = new java.util.ArrayList<>(cards);
+            switch (sortBy.trim()) {
+                case "POINTS_DESC" -> mutableCards.sort((a, b) -> Integer.compare(
+                        b.getCurrentPoints() != null ? b.getCurrentPoints() : 0,
+                        a.getCurrentPoints() != null ? a.getCurrentPoints() : 0));
+                case "SPENT_DESC" -> mutableCards.sort((a, b) -> {
+                    java.math.BigDecimal sa = a.getTotalSpentAmount() != null ? a.getTotalSpentAmount() : java.math.BigDecimal.ZERO;
+                    java.math.BigDecimal sb = b.getTotalSpentAmount() != null ? b.getTotalSpentAmount() : java.math.BigDecimal.ZERO;
+                    return sb.compareTo(sa);
+                });
+                case "NAME_ASC" -> mutableCards.sort((a, b) -> {
+                    String na = a.getFullName() != null ? a.getFullName() : "";
+                    String nb = b.getFullName() != null ? b.getFullName() : "";
+                    return na.compareToIgnoreCase(nb);
+                });
+                default -> {}
+            }
+            cards = mutableCards;
+        }
+
         model.addAttribute("branches", allowedBranches);
         model.addAttribute("selectedBranchId", effectiveBranchId);
         model.addAttribute("keyword", keyword);
         model.addAttribute("isAdmin", isAdmin);
-
-        List<MemberCardDTO> cards = loyaltyService.searchMemberCards(keyword, effectiveBranchId);
+        model.addAttribute("tiers", membershipTierRepository != null ? membershipTierRepository.findByIsActiveTrueOrderByMinTotalSpentAsc() : java.util.Collections.emptyList());
         model.addAttribute("memberCards", cards);
+        model.addAttribute("selectedTierCode", tierCode);
+        model.addAttribute("selectedPointRange", pointRange);
+        model.addAttribute("selectedSpentRange", spentRange);
+        model.addAttribute("selectedSortBy", sortBy);
 
         return "reception/memberships/search";
     }

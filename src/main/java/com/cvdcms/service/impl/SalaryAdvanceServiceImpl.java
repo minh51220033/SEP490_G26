@@ -122,6 +122,13 @@ public class SalaryAdvanceServiceImpl implements SalaryAdvanceService {
             throw new IllegalArgumentException("Nhân viên " + staff.getFullName() + " hiện không ở trạng thái hoạt động (ACTIVE)");
         }
 
+        if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.valueOf(1000)) < 0) {
+            throw new IllegalArgumentException("Số tiền tạm ứng tối thiểu là 1.000 VNĐ");
+        }
+        if (dto.getReason() == null || dto.getReason().trim().isEmpty()) {
+            throw new IllegalArgumentException("Lý do tạm ứng không được để trống");
+        }
+
         Branch branch = branchRepository.findById(dto.getBranchId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chi nhánh"));
 
@@ -271,7 +278,7 @@ public class SalaryAdvanceServiceImpl implements SalaryAdvanceService {
                 currentUserId, branchId, AssignmentStatus.ACTIVE);
         if (!hasAssignment) {
             boolean isMultiBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(currentUserId, AssignmentStatus.ACTIVE).isEmpty()
-                    && userRepository.findById(currentUserId).map(u -> u.getBranch() == null || branchId.equals(u.getBranch().getBranchId())).orElse(false);
+                    && userRepository.findById(currentUserId).map(u -> u.getBranch() != null && branchId.equals(u.getBranch().getBranchId())).orElse(false);
             if (!isMultiBranch) {
                 throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh này");
             }

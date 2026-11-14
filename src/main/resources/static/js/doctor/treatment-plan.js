@@ -699,9 +699,13 @@ if (document.readyState === 'loading') {
  * Bật / tắt hiển thị khối lộ trình chi tiết từng bước
  */
 function togglePlanInlineRoadmap(planId) {
+    if (!planId) return;
     const roadmapRow = document.getElementById(`plan-roadmap-row-${planId}`);
     const chevron = document.getElementById(`chevron-plan-${planId}`);
-    if (!roadmapRow) return;
+    if (!roadmapRow) {
+        console.warn(`Không tìm thấy khối lộ trình #plan-roadmap-row-${planId}`);
+        return;
+    }
 
     if (!roadmapRow.dataset.rendered || roadmapRow.dataset.rendered !== "true") {
         let planData = (window.INITIAL_TREATMENT_PLANS || []).find(p => String(p.planId) === String(planId));
@@ -714,8 +718,18 @@ function togglePlanInlineRoadmap(planId) {
                 .then(dto => {
                     roadmapRow.innerHTML = renderPlanInlineRoadmapHtml(dto);
                     roadmapRow.dataset.rendered = "true";
+                    roadmapRow.style.display = 'block';
+                    if (chevron) {
+                        chevron.classList.remove('bi-chevron-down');
+                        chevron.classList.add('bi-chevron-up');
+                    }
+                    setTimeout(() => {
+                        const targetTop = roadmapRow.getBoundingClientRect().top + window.pageYOffset - 90;
+                        window.scrollTo({ top: targetTop, behavior: 'smooth' });
+                    }, 50);
                 })
                 .catch(e => console.error(e));
+            return;
         }
     }
 
@@ -732,7 +746,11 @@ function togglePlanInlineRoadmap(planId) {
             chevron.classList.remove('bi-chevron-down');
             chevron.classList.add('bi-chevron-up');
         }
-        roadmapRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Cuộn màn hình mượt mà xuống ngay vị trí khối lộ trình
+        setTimeout(() => {
+            const targetTop = roadmapRow.getBoundingClientRect().top + window.pageYOffset - 90;
+            window.scrollTo({ top: targetTop, behavior: 'smooth' });
+        }, 50);
     } else {
         roadmapRow.style.display = 'none';
         if (chevron) {
@@ -741,6 +759,7 @@ function togglePlanInlineRoadmap(planId) {
         }
     }
 }
+window.togglePlanInlineRoadmap = togglePlanInlineRoadmap;
 
 /**
  * Cập nhật giao diện inline khi thay đổi trạng thái

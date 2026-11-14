@@ -28,4 +28,15 @@ public interface TreatmentPlanService {
     TreatmentPlanResponseDTO handoverToAccounting(Long planId);
 
     AiParsePlanResponseDTO parsePlanWithAi(AiParsePlanRequestDTO request);
+
+    List<com.cvdcms.DTO.TreatmentPlanInstallmentDTO> getPlanInstallments(Long planId);
+
+    TreatmentPlanResponseDTO saveInstallments(Long planId, List<com.cvdcms.DTO.TreatmentPlanInstallmentDTO> installmentDTOs);
+
+    TreatmentPlanResponseDTO recordInstallmentPayment(Long planId, java.math.BigDecimal amount, Long invoiceId);
+
+    com.cvdcms.DTO.TreatmentPlanInstallmentDTO markReminderSent(Long installmentId, String notes);
+
+    org.springframework.data.domain.Page<com.cvdcms.DTO.TreatmentPlanInstallmentDTO> searchUpcomingInstallments(
+            Long branchId, java.time.LocalDate startDate, java.time.LocalDate endDate, String status, String keyword, org.springframework.data.domain.Pageable pageable);
 }

@@ -38,6 +38,7 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
         this.branchTaxConfigRepository = null;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
     public TaxCalculationServiceImpl(
             TaxPolicyRepository taxPolicyRepository,
             BranchTaxConfigRepository branchTaxConfigRepository
@@ -162,7 +163,8 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
         }
 
         // Hợp đồng thử việc, thời vụ, CTV, vãng lai (< 3 tháng)
-        if (contractType == StaffContractType.FULL_TIME_PROBATION
+        if (contractType == StaffContractType.PROBATION_OR_CASUAL
+                || contractType == StaffContractType.FULL_TIME_PROBATION
                 || contractType == StaffContractType.PART_TIME_HOURLY
                 || contractType == StaffContractType.COLLABORATOR) {
 

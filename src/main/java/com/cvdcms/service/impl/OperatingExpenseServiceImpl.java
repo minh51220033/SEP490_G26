@@ -227,13 +227,7 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
             throw new IllegalArgumentException("Bắt buộc nhập lý do chỉnh sửa phiếu chi.");
         }
 
-        if (dto.getBranchId() != null && !dto.getBranchId().equals(expense.getBranch().getBranchId())) {
-            validateBranchAccess(dto.getBranchId(), currentUserId);
-            Branch newBranch = branchRepository.findById(dto.getBranchId())
-                    .orElseThrow(() -> new IllegalArgumentException("Chi nhánh mới không tồn tại"));
-            expense.setBranch(newBranch);
-        }
-
+        // Lưu đúng dữ liệu trước khi sửa (bao gồm chi nhánh cũ trước khi cập nhật sang chi nhánh mới)
         BigDecimal oldAmount = expense.getAmount();
         String oldCategory = expense.getCategory();
         LocalDate oldExpenseDate = expense.getExpenseDate();
@@ -241,6 +235,13 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
         RefundMethod oldMethod = expense.getPaymentMethod();
         String oldDescription = expense.getDescription();
         Long oldBranchId = expense.getBranch() != null ? expense.getBranch().getBranchId() : null;
+
+        if (dto.getBranchId() != null && (expense.getBranch() == null || !dto.getBranchId().equals(expense.getBranch().getBranchId()))) {
+            validateBranchAccess(dto.getBranchId(), currentUserId);
+            Branch newBranch = branchRepository.findById(dto.getBranchId())
+                    .orElseThrow(() -> new IllegalArgumentException("Chi nhánh mới không tồn tại"));
+            expense.setBranch(newBranch);
+        }
 
         expense.setCategory(dto.getCategory().trim());
         expense.setAmount(dto.getAmount());
@@ -363,7 +364,7 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
                 currentUserId, branchId, AssignmentStatus.ACTIVE);
         if (!hasAssignment) {
             boolean isMultiBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(currentUserId, AssignmentStatus.ACTIVE).isEmpty()
-                    && userRepository.findById(currentUserId).map(u -> u.getBranch() == null || branchId.equals(u.getBranch().getBranchId())).orElse(false);
+                    && userRepository.findById(currentUserId).map(u -> u.getBranch() != null && branchId.equals(u.getBranch().getBranchId())).orElse(false);
             if (!isMultiBranch) {
                 throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh này");
             }

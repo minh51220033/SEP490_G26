@@ -2312,4 +2312,246 @@ public class FinanceWorkflowUnitTest {
         assertEquals(1, result.size(), "Chi dung 1 dich vu du dieu kien lap hoa don");
         assertEquals(23L, result.get(0).getPerformedId());
     }
+
+    @Test
+    @DisplayName("Fix 2: Dieu chinh hoa don con no phai dong bo cong no tung dong chi tiet")
+    void testAdjustInvoice_RemainingDebt_SynchronizesItemLines() {
+        Invoice inv = new Invoice();
+        inv.setInvoiceId(100L);
+        inv.setInvoiceCode("HD-TEST-100");
+        inv.setTotalAmount(new BigDecimal("1000000"));
+        inv.setTotalServiceAmount(new BigDecimal("1000000"));
+        inv.setPaidAmount(new BigDecimal("400000"));
+        inv.setRemainingDebt(new BigDecimal("600000"));
+        inv.setStatus(InvoiceStatus.CONFIRMED);
+        inv.setPaymentStatus(InvoicePaymentStatus.PARTIAL);
+        inv.setBranch(mockBranch);
+
+        InvoiceItem it1 = new InvoiceItem();
+        it1.setItemId(1L);
+        it1.setItemType(InvoiceItemType.SERVICE);
+        it1.setFinalAmount(new BigDecimal("500000"));
+        it1.setDiscountAmount(BigDecimal.ZERO);
+        it1.setPayableAmount(new BigDecimal("500000"));
+        it1.setPaidAmount(new BigDecimal("400000"));
+        it1.setRemainingDebt(new BigDecimal("100000"));
+        it1.setPaymentStatus(InvoiceItemPaymentStatus.PARTIAL);
+        it1.setLineOrder(1);
+
+        InvoiceItem it2 = new InvoiceItem();
+        it2.setItemId(2L);
+        it2.setItemType(InvoiceItemType.SERVICE);
+        it2.setFinalAmount(new BigDecimal("500000"));
+        it2.setDiscountAmount(BigDecimal.ZERO);
+        it2.setPayableAmount(new BigDecimal("500000"));
+        it2.setPaidAmount(BigDecimal.ZERO);
+        it2.setRemainingDebt(new BigDecimal("500000"));
+        it2.setPaymentStatus(InvoiceItemPaymentStatus.UNPAID);
+        it2.setLineOrder(2);
+
+        when(invoiceRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(inv));
+        when(invoiceItemRepository.findByInvoice_InvoiceIdOrderByLineOrderAscItemIdAsc(100L)).thenReturn(List.of(it1, it2));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(i -> i.getArgument(0));
+        when(invoiceItemRepository.save(any(InvoiceItem.class))).thenAnswer(i -> i.getArgument(0));
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+
+        InvoiceAdjustmentRequestDTO req = new InvoiceAdjustmentRequestDTO();
+        req.setNewDiscountAmount(new BigDecimal("200000")); // discount becomes 200k, new total = 800k, debt = 400k
+        req.setNewTotalAmount(new BigDecimal("800000"));
+        req.setReason("Giam gia dac biet cho khach hang");
+
+        invoiceService.adjustInvoice(100L, req, 1L);
+
+        assertEquals(0, new BigDecimal("400000").compareTo(inv.getRemainingDebt()));
+        // Item 1: payable 400k (500k - 100k discount), paid 400k, debt 0
+        assertEquals(0, new BigDecimal("400000").compareTo(it1.getPayableAmount()));
+        assertEquals(0, new BigDecimal("400000").compareTo(it1.getPaidAmount()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(it1.getRemainingDebt()));
+        assertEquals(InvoiceItemPaymentStatus.PAID, it1.getPaymentStatus());
+
+        // Item 2: payable 400k (500k - 100k discount), paid 0k, debt 400k
+        assertEquals(0, new BigDecimal("400000").compareTo(it2.getPayableAmount()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(it2.getPaidAmount()));
+        assertEquals(0, new BigDecimal("400000").compareTo(it2.getRemainingDebt()));
+        assertEquals(InvoiceItemPaymentStatus.UNPAID, it2.getPaymentStatus());
+
+        // Synchronized: it1.debt + it2.debt == inv.remainingDebt
+        assertEquals(0, inv.getRemainingDebt().compareTo(it1.getRemainingDebt().add(it2.getRemainingDebt())));
+    }
+
+    @Test
+    @DisplayName("Fix 3: Dieu chinh ve tra du phai cap nhat payableAmount va paidAmount tuong ung")
+    void testAdjustInvoice_DebtBecomesZero_UpdatesPayableAndPaidAmounts() {
+        Invoice inv = new Invoice();
+        inv.setInvoiceId(101L);
+        inv.setInvoiceCode("HD-TEST-101");
+        inv.setTotalAmount(new BigDecimal("1000000"));
+        inv.setTotalServiceAmount(new BigDecimal("1000000"));
+        inv.setPaidAmount(new BigDecimal("800000"));
+        inv.setRemainingDebt(new BigDecimal("200000"));
+        inv.setStatus(InvoiceStatus.CONFIRMED);
+        inv.setPaymentStatus(InvoicePaymentStatus.PARTIAL);
+        inv.setBranch(mockBranch);
+
+        InvoiceItem it = new InvoiceItem();
+        it.setItemId(10L);
+        it.setItemType(InvoiceItemType.SERVICE);
+        it.setFinalAmount(new BigDecimal("1000000"));
+        it.setDiscountAmount(BigDecimal.ZERO);
+        it.setPayableAmount(new BigDecimal("1000000"));
+        it.setPaidAmount(new BigDecimal("800000"));
+        it.setRemainingDebt(new BigDecimal("200000"));
+        it.setPaymentStatus(InvoiceItemPaymentStatus.PARTIAL);
+        it.setLineOrder(1);
+
+        when(invoiceRepository.findByIdForUpdate(101L)).thenReturn(Optional.of(inv));
+        when(invoiceItemRepository.findByInvoice_InvoiceIdOrderByLineOrderAscItemIdAsc(101L)).thenReturn(List.of(it));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(i -> i.getArgument(0));
+        when(invoiceItemRepository.save(any(InvoiceItem.class))).thenAnswer(i -> i.getArgument(0));
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+
+        InvoiceAdjustmentRequestDTO req = new InvoiceAdjustmentRequestDTO();
+        req.setNewDiscountAmount(new BigDecimal("200000")); // new total = 800k, oldPaid = 800k -> debt = 0
+        req.setNewTotalAmount(new BigDecimal("800000"));
+        req.setReason("Mien giam phan cong no con lai");
+
+        invoiceService.adjustInvoice(101L, req, 1L);
+
+        assertEquals(0, BigDecimal.ZERO.compareTo(inv.getRemainingDebt()));
+        assertEquals(InvoicePaymentStatus.PAID, inv.getPaymentStatus());
+
+        // Invariant: payableAmount == paidAmount + remainingDebt, and both equal 800,000
+        assertEquals(0, new BigDecimal("800000").compareTo(it.getPayableAmount()), "PayableAmount phai duoc cap nhat giam tuong ung discount");
+        assertEquals(0, new BigDecimal("800000").compareTo(it.getPaidAmount()), "PaidAmount phai bang payableAmount khi hoa don da tra du");
+        assertEquals(0, BigDecimal.ZERO.compareTo(it.getRemainingDebt()));
+        assertEquals(InvoiceItemPaymentStatus.PAID, it.getPaymentStatus());
+    }
+
+    @Test
+    @DisplayName("Fix 4: Hoan tien kem giam tong hoa don khong duoc tao no gia o dong chi tiet")
+    void testRefund_WithReduceInvoiceTotal_DoesNotCreateFalseDebtOnItems() {
+        refundService.setInvoiceItemRepository(invoiceItemRepository);
+        refundService.setVisitRepository(visitRepository);
+
+        Invoice inv = new Invoice();
+        inv.setInvoiceId(102L);
+        inv.setInvoiceCode("HD-TEST-102");
+        inv.setTotalAmount(new BigDecimal("1000000"));
+        inv.setTotalServiceAmount(new BigDecimal("1000000"));
+        inv.setDiscountAmount(BigDecimal.ZERO);
+        inv.setPaidAmount(new BigDecimal("1000000"));
+        inv.setRemainingDebt(BigDecimal.ZERO);
+        inv.setStatus(InvoiceStatus.CONFIRMED);
+        inv.setPaymentStatus(InvoicePaymentStatus.PAID);
+        inv.setBranch(mockBranch);
+        inv.setPatientProfile(mockPatient);
+
+        InvoiceItem it = new InvoiceItem();
+        it.setItemId(20L);
+        it.setItemType(InvoiceItemType.SERVICE);
+        it.setFinalAmount(new BigDecimal("1000000"));
+        it.setDiscountAmount(BigDecimal.ZERO);
+        it.setPayableAmount(new BigDecimal("1000000"));
+        it.setPaidAmount(new BigDecimal("1000000"));
+        it.setRemainingDebt(BigDecimal.ZERO);
+        it.setPaymentStatus(InvoiceItemPaymentStatus.PAID);
+        it.setLineOrder(1);
+
+        when(invoiceRepository.findByIdForUpdate(102L)).thenReturn(Optional.of(inv));
+        when(invoiceItemRepository.findByInvoice_InvoiceIdOrderByLineOrderAscItemIdAsc(102L)).thenReturn(List.of(it));
+        when(refundRepository.save(any(Refund.class))).thenAnswer(i -> i.getArgument(0));
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(i -> i.getArgument(0));
+        when(invoiceItemRepository.save(any(InvoiceItem.class))).thenAnswer(i -> i.getArgument(0));
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockAccountantUser));
+        when(staffProfileRepository.findByUser_UserId(1L)).thenReturn(Optional.of(mockAccountantStaff));
+        when(userRepository.hasActiveAdminRole(1L)).thenReturn(true);
+
+        RefundRequestDTO req = new RefundRequestDTO();
+        req.setInvoiceId(102L);
+        req.setAmount(new BigDecimal("200000"));
+        req.setRefundMethod(RefundMethod.CASH);
+        req.setReason("Hoan bot tien dich vu do giam quy trinh");
+        req.setReduceInvoiceTotal(true);
+        req.setIdempotencyKey("IDEM-REF-102");
+
+        refundService.processRefund(req, 1L);
+
+        assertEquals(0, new BigDecimal("800000").compareTo(inv.getTotalAmount()));
+        assertEquals(0, new BigDecimal("800000").compareTo(inv.getPaidAmount()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(inv.getRemainingDebt()));
+        assertEquals(InvoicePaymentStatus.PAID, inv.getPaymentStatus());
+
+        // Item line must not have false debt
+        assertEquals(0, new BigDecimal("800000").compareTo(it.getPayableAmount()));
+        assertEquals(0, new BigDecimal("800000").compareTo(it.getPaidAmount()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(it.getRemainingDebt()), "Khong duoc tao cong no gia tren dong chi tiet khi giam tong hoa don");
+        assertEquals(InvoiceItemPaymentStatus.PAID, it.getPaymentStatus());
+    }
+
+    @Test
+    @DisplayName("Fix 5: finalizeInvoiceBenefits phai nem IllegalStateException khi vi khong du diem")
+    void testFinalizeInvoiceBenefits_InsufficientPoints_ThrowsIllegalStateException() {
+        Invoice inv = new Invoice();
+        inv.setInvoiceId(103L);
+        inv.setInvoiceCode("HD-TEST-103");
+        inv.setStatus(InvoiceStatus.CONFIRMED);
+        inv.setPointDiscount(new BigDecimal("100000"));
+        inv.setPointsRedeemed(100);
+        inv.setPatientProfile(mockPatient);
+
+        when(pointTransactionRepository.existsByInvoice_InvoiceIdAndTransactionType(103L, PointTransactionType.REDEEM))
+                .thenReturn(false);
+
+        PatientLoyaltyWallet wallet = new PatientLoyaltyWallet();
+        wallet.setPatientProfile(mockPatient);
+        wallet.setCurrentPoints(20); // only 20 points, but pointsRedeemed is 100
+        when(patientLoyaltyWalletRepository.findByProfileIdForUpdate(mockPatient.getProfileId()))
+                .thenReturn(Optional.of(wallet));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> {
+            invoiceService.finalizeInvoiceBenefits(inv);
+        });
+        assertTrue(ex.getMessage().contains("không đủ để trừ"));
+    }
+
+    @Test
+    @DisplayName("Fix 6: finalizeInvoiceBenefits voi voucher phai tang usedCount cua Promotion cha")
+    void testFinalizeInvoiceBenefits_WithVoucher_IncrementsPromotionUsedCount() {
+        Promotion promo = new Promotion();
+        promo.setPromotionId(50L);
+        promo.setPromoCode("PROMO50");
+        promo.setPromoName("Khuyen mai he");
+        promo.setUsedCount(5);
+        promo.setUsageLimit(10);
+
+        PatientVoucher voucher = new PatientVoucher();
+        voucher.setVoucherId(300L);
+        voucher.setVoucherCode("VOUCHER-300");
+        voucher.setStatus(VoucherStatus.AVAILABLE);
+        voucher.setPromotion(promo);
+
+        Invoice inv = new Invoice();
+        inv.setInvoiceId(104L);
+        inv.setInvoiceCode("HD-TEST-104");
+        inv.setStatus(InvoiceStatus.CONFIRMED);
+        inv.setVoucher(voucher);
+
+        when(patientVoucherRepository.save(any(PatientVoucher.class))).thenAnswer(i -> i.getArgument(0));
+        when(promotionRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(promo));
+        when(promotionRepository.save(any(Promotion.class))).thenAnswer(i -> i.getArgument(0));
+
+        invoiceService.finalizeInvoiceBenefits(inv);
+
+        assertEquals(VoucherStatus.USED, voucher.getStatus());
+        assertNotNull(voucher.getUsedAt());
+        assertEquals(6, promo.getUsedCount(), "usedCount cua promotion cha phai duoc tang them 1 khi voucher duoc chot");
+        verify(promotionRepository).save(promo);
+    }
 }

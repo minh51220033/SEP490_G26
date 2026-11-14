@@ -230,9 +230,21 @@ public class DoctorRecordPageController {
                                @RequestParam(required = false) String targetCode,
                                RedirectAttributes redirect) {
         Long id = decodePatientRef(patientRef);
-        records.get(session, id);
         String routeRef = encodePatient(id);
-        redirect.addFlashAttribute("documentSuccess", "Đã ghi nhận yêu cầu gộp hồ sơ.");
+        if (targetCode == null || targetCode.isBlank()) {
+            redirect.addFlashAttribute("documentError", "Vui lòng nhập mã hồ sơ bệnh nhân cần gộp.");
+            return "redirect:/doctor/patient-records/" + routeRef;
+        }
+        try {
+            PatientView current = records.get(session, id);
+            if (targetCode.trim().equalsIgnoreCase(current.code())) {
+                redirect.addFlashAttribute("documentError", "Mã hồ sơ phụ cần gộp phải khác mã hồ sơ hiện tại.");
+                return "redirect:/doctor/patient-records/" + routeRef;
+            }
+            redirect.addFlashAttribute("documentError", "Chức năng tự động gộp dữ liệu hồ sơ lâm sàng đang tạm khóa để đảm bảo toàn vẹn dữ liệu EMR và hóa đơn đã lập. Vui lòng liên hệ Quản trị viên chi nhánh để thực hiện quy trình gộp đối soát.");
+        } catch (Exception ex) {
+            redirect.addFlashAttribute("documentError", "Không thể thực hiện yêu cầu gộp hồ sơ: " + ex.getMessage());
+        }
         return "redirect:/doctor/patient-records/" + routeRef;
     }
 

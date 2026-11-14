@@ -205,6 +205,11 @@ public class LoyaltyServiceImpl implements LoyaltyService {
             return null; // Không cộng điểm cho giao dịch 0 đ
         }
 
+        // Chống cộng điểm lặp cho cùng một giao dịch thanh toán
+        if (payment.getPaymentId() != null && pointTransactionRepository.existsByPayment_PaymentId(payment.getPaymentId())) {
+            return null;
+        }
+
         // Lấy hoặc tạo ví với khóa cập nhật
         PatientLoyaltyWallet wallet = patientLoyaltyWalletRepository.findByProfileIdForUpdate(patient.getProfileId())
                 .orElseGet(() -> {
@@ -261,6 +266,11 @@ public class LoyaltyServiceImpl implements LoyaltyService {
 
         PatientProfile patient = refund.getPatientProfile();
         if (patient == null) {
+            return null;
+        }
+
+        // Chống trừ điểm lặp cho cùng một phiếu hoàn tiền
+        if (refund.getRefundCode() != null && pointTransactionRepository.existsByReasonContaining(refund.getRefundCode())) {
             return null;
         }
 

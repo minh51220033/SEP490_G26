@@ -36,6 +36,20 @@ public class RefundServiceImpl implements RefundService {
     private final UserRepository userRepository;
     private final com.cvdcms.service.LoyaltyService loyaltyService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private InvoiceItemRepository invoiceItemRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private VisitRepository visitRepository;
+
+    public void setInvoiceItemRepository(InvoiceItemRepository invoiceItemRepository) {
+        this.invoiceItemRepository = invoiceItemRepository;
+    }
+
+    public void setVisitRepository(VisitRepository visitRepository) {
+        this.visitRepository = visitRepository;
+    }
+
     @org.springframework.beans.factory.annotation.Autowired
     public RefundServiceImpl(
             RefundRepository refundRepository,
@@ -251,6 +265,57 @@ public class RefundServiceImpl implements RefundService {
                 } else {
                     invoice.setPaymentStatus(InvoicePaymentStatus.PAID);
                 }
+
+                // Cập nhật từng dòng chi tiết khi hoàn tiền kèm giảm tổng hóa đơn: Giảm nghĩa vụ tương ứng để không tạo nợ giả
+                if (invoiceItemRepository != null) {
+                    List<InvoiceItem> items = invoiceItemRepository.findByInvoice_InvoiceIdOrderByLineOrderAscItemIdAsc(invoice.getInvoiceId());
+                    BigDecimal unrefunded = request.getAmount();
+
+                    // Hoàn phụ thu trước nếu có (giảm luôn giá trị phụ thu)
+                    if (invoice.getSurchargePaidAmount() != null && invoice.getSurchargePaidAmount().compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal surchPaid = invoice.getSurchargePaidAmount();
+                        BigDecimal surchRoll = unrefunded.min(surchPaid);
+                        BigDecimal currentSurcharge = invoice.getSurchargeAmount() != null ? invoice.getSurchargeAmount() : BigDecimal.ZERO;
+                        invoice.setSurchargeAmount(currentSurcharge.subtract(surchRoll).max(BigDecimal.ZERO));
+                        invoice.setSurchargePaidAmount(surchPaid.subtract(surchRoll).max(BigDecimal.ZERO));
+                        invoice.setSurchargeRemainingDebt(invoice.getSurchargeAmount().subtract(invoice.getSurchargePaidAmount()).max(BigDecimal.ZERO));
+                        unrefunded = unrefunded.subtract(surchRoll);
+                    }
+
+                    if (items != null && !items.isEmpty() && unrefunded.compareTo(BigDecimal.ZERO) > 0) {
+                        for (int i = items.size() - 1; i >= 0 && unrefunded.compareTo(BigDecimal.ZERO) > 0; i--) {
+                            InvoiceItem it = items.get(i);
+                            BigDecimal itPaid = it.getPaidAmount() != null ? it.getPaidAmount() : BigDecimal.ZERO;
+                            if (itPaid.compareTo(BigDecimal.ZERO) > 0) {
+                                BigDecimal itRollback = unrefunded.min(itPaid);
+                                BigDecimal payable = it.getPayableAmount() != null ? it.getPayableAmount() : (it.getFinalAmount() != null ? it.getFinalAmount() : BigDecimal.ZERO);
+                                BigDecimal newPayable = payable.subtract(itRollback).max(BigDecimal.ZERO);
+                                it.setPayableAmount(newPayable);
+                                BigDecimal currentDiscount = it.getDiscountAmount() != null ? it.getDiscountAmount() : BigDecimal.ZERO;
+                                it.setDiscountAmount(currentDiscount.add(itRollback));
+
+                                BigDecimal newItPaid = itPaid.subtract(itRollback).max(BigDecimal.ZERO);
+                                BigDecimal newItDebt = newPayable.subtract(newItPaid).max(BigDecimal.ZERO);
+                                it.setPaidAmount(newItPaid);
+                                it.setRemainingDebt(newItDebt);
+                                it.setPaymentStatus(newItDebt.compareTo(BigDecimal.ZERO) == 0 ? com.cvdcms.entity.enums.InvoiceItemPaymentStatus.PAID : (newItPaid.compareTo(BigDecimal.ZERO) > 0 ? com.cvdcms.entity.enums.InvoiceItemPaymentStatus.PARTIAL : com.cvdcms.entity.enums.InvoiceItemPaymentStatus.UNPAID));
+                                invoiceItemRepository.save(it);
+                                unrefunded = unrefunded.subtract(itRollback);
+                            }
+                        }
+                    }
+                }
+
+                // Mở lại lượt khám nếu trước đó đã COMPLETED mà nay phát sinh nợ lại
+                if (invoice.getRemainingDebt().compareTo(BigDecimal.ZERO) > 0 && invoice.getVisit() != null && visitRepository != null) {
+                    Visit visit = invoice.getVisit();
+                    if (visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.COMPLETED) {
+                        visit.setStatus(com.cvdcms.entity.enums.VisitStatus.WAITING_PAYMENT);
+                        visit.setCompletedAt(null);
+                        visitRepository.save(visit);
+                    }
+                }
+
                 invoiceRepository.save(invoice);
 
                 // Lưu Audit 1: REFUND
@@ -284,6 +349,51 @@ public class RefundServiceImpl implements RefundService {
                 } else {
                     invoice.setPaymentStatus(InvoicePaymentStatus.PAID);
                 }
+
+                // Cập nhật từng dòng chi tiết theo LIFO cho trường hợp hoàn tiền đơn thuần
+                if (invoiceItemRepository != null) {
+                    List<InvoiceItem> items = invoiceItemRepository.findByInvoice_InvoiceIdOrderByLineOrderAscItemIdAsc(invoice.getInvoiceId());
+                    BigDecimal unrefunded = request.getAmount();
+
+                    // Hoàn phụ thu trước nếu có
+                    if (invoice.getSurchargePaidAmount() != null && invoice.getSurchargePaidAmount().compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal surchPaid = invoice.getSurchargePaidAmount();
+                        BigDecimal surchRoll = unrefunded.min(surchPaid);
+                        invoice.setSurchargePaidAmount(surchPaid.subtract(surchRoll));
+                        BigDecimal surchDebt = invoice.getSurchargeRemainingDebt() != null ? invoice.getSurchargeRemainingDebt() : BigDecimal.ZERO;
+                        invoice.setSurchargeRemainingDebt(surchDebt.add(surchRoll));
+                        unrefunded = unrefunded.subtract(surchRoll);
+                    }
+
+                    if (items != null && !items.isEmpty() && unrefunded.compareTo(BigDecimal.ZERO) > 0) {
+                        for (int i = items.size() - 1; i >= 0 && unrefunded.compareTo(BigDecimal.ZERO) > 0; i--) {
+                            InvoiceItem it = items.get(i);
+                            BigDecimal itPaid = it.getPaidAmount() != null ? it.getPaidAmount() : BigDecimal.ZERO;
+                            if (itPaid.compareTo(BigDecimal.ZERO) > 0) {
+                                BigDecimal itRollback = unrefunded.min(itPaid);
+                                BigDecimal newItPaid = itPaid.subtract(itRollback);
+                                BigDecimal payable = it.getPayableAmount() != null ? it.getPayableAmount() : (it.getFinalAmount() != null ? it.getFinalAmount() : BigDecimal.ZERO);
+                                BigDecimal newItDebt = payable.subtract(newItPaid).max(BigDecimal.ZERO);
+                                it.setPaidAmount(newItPaid);
+                                it.setRemainingDebt(newItDebt);
+                                it.setPaymentStatus(newItDebt.compareTo(BigDecimal.ZERO) == 0 ? com.cvdcms.entity.enums.InvoiceItemPaymentStatus.PAID : (newItPaid.compareTo(BigDecimal.ZERO) > 0 ? com.cvdcms.entity.enums.InvoiceItemPaymentStatus.PARTIAL : com.cvdcms.entity.enums.InvoiceItemPaymentStatus.UNPAID));
+                                invoiceItemRepository.save(it);
+                                unrefunded = unrefunded.subtract(itRollback);
+                            }
+                        }
+                    }
+                }
+
+                // Mở lại lượt khám nếu trước đó đã COMPLETED mà nay phát sinh nợ lại
+                if (invoice.getRemainingDebt().compareTo(BigDecimal.ZERO) > 0 && invoice.getVisit() != null && visitRepository != null) {
+                    Visit visit = invoice.getVisit();
+                    if (visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.COMPLETED) {
+                        visit.setStatus(com.cvdcms.entity.enums.VisitStatus.WAITING_PAYMENT);
+                        visit.setCompletedAt(null);
+                        visitRepository.save(visit);
+                    }
+                }
+
                 invoiceRepository.save(invoice);
 
                 InvoiceAuditLog log = new InvoiceAuditLog();

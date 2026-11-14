@@ -73,12 +73,36 @@ public class TreatmentPlan {
     @Column(name = "sent_to_accounting_at")
     private LocalDateTime sentToAccountingAt;
 
+    @Column(name = "is_installment")
+    private Boolean isInstallment = false;
+
+    public Boolean getIsInstallment() {
+        return Boolean.TRUE.equals(this.isInstallment);
+    }
+
+    @Column(name = "total_paid_amount", nullable = false, precision = 15, scale = 2)
+    private BigDecimal totalPaidAmount = BigDecimal.ZERO;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
+    @org.hibernate.annotations.BatchSize(size = 50)
     private List<TreatmentPlanStage> stages = new ArrayList<>();
+
+    @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("installmentOrder ASC")
+    @org.hibernate.annotations.BatchSize(size = 50)
+    private List<TreatmentPlanInstallment> installments = new ArrayList<>();
+
+    @Transient
+    public BigDecimal getRemainingCost() {
+        BigDecimal total = getEstimatedCost();
+        BigDecimal paid = this.totalPaidAmount != null ? this.totalPaidAmount : BigDecimal.ZERO;
+        BigDecimal diff = total.subtract(paid);
+        return diff.compareTo(BigDecimal.ZERO) > 0 ? diff : BigDecimal.ZERO;
+    }
 
     @Transient
     public BigDecimal getEstimatedCost() {
