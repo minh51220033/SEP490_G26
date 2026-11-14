@@ -829,7 +829,7 @@
                         <th:block th:if="${canManageAdministrative}">
                             <a class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-1 fw-semibold shadow-xs"
                                 style="height: 36px; padding: 4px 12px; border-radius: 8px; font-size: 13.5px; border-color: #cbd5e1; background: #fff; color: #1e293b;"
-                                th:href="${recordBasePath + '/' + patient.id + '/edit'}">
+                                th:href="${recordBasePath + '/' + (patientRouteId != null ? patientRouteId : (recordBasePath == '/doctor/patient-records' ? idCodec.encodePatient(patient.id) : patient.id)) + '/edit'}">
                                 <i class="bi bi-pencil" style="font-size: 13px;"></i> Sửa hồ sơ
                             </a>
                         </th:block>
@@ -1009,11 +1009,6 @@
                             data-bs-target="#tab-instructions" type="button" role="tab" aria-controls="tab-instructions"
                             aria-selected="false">Lời dặn</button>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="tab-billing-btn" data-bs-toggle="tab"
-                            data-bs-target="#tab-billing" type="button" role="tab" aria-controls="tab-billing"
-                            aria-selected="false">Thanh toán</button>
-                    </li>
 
                     <!-- TAB DROPDOWN "THÊM ▾" CHUẨN DENTALSOFT -->
                     <li class="nav-item dropdown">
@@ -1075,7 +1070,7 @@
                                             <i class="bi bi-folder-symlink me-1"></i>Gộp HS
                                         </button>
                                         <a th:if="${canManageAdministrative}"
-                                            th:href="${recordBasePath + '/' + patient.id + '/edit'}"
+                                            th:href="${recordBasePath + '/' + (patientRouteId != null ? patientRouteId : (recordBasePath == '/doctor/patient-records' ? idCodec.encodePatient(patient.id) : patient.id)) + '/edit'}"
                                             class="btn btn-primary btn-sm text-white" title="Chỉnh sửa hồ sơ">
                                             <i class="bi bi-pencil me-1"></i>Sửa
                                         </a>
@@ -1284,7 +1279,7 @@
                                                         <div class="btn-group btn-group-sm">
                                                             <a class="btn btn-outline-primary btn-sm py-0 px-2"
                                                                 target="_blank" rel="noopener"
-                                                                th:href="${recordBasePath + '/' + patient.id + '/documents/' + doc.id}"
+                                                                th:href="${recordBasePath + '/' + (patientRouteId != null ? patientRouteId : (recordBasePath == '/doctor/patient-records' ? idCodec.encodePatient(patient.id) : patient.id)) + '/documents/' + doc.id}"
                                                                 title="Xem file">
                                                                 <i class="bi bi-eye"></i>
                                                             </a>
@@ -1474,7 +1469,7 @@
                                                 <td class="text-center text-muted fw-bold" th:text="${stat.count}">1
                                                 </td>
                                                 <td class="text-nowrap">
-                                                    <a th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${item.visitId}, readOnly=true, fromPatientId=${patient.id})}"
+                                                    <a th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${idCodec.encodeVisit(item.visitId)}, readOnly=true, fromPatientRef=${idCodec.encodePatient(patient.id)})}"
                                                         class="dv-code-pill mb-1"
                                                         th:text="${item.visitCode}">VIS-001</a>
                                                     <div class="text-muted small fw-semibold d-flex align-items-center gap-1 mt-1">
@@ -1567,7 +1562,7 @@
                                                     </form>
                                                 </td>
                                                 <td class="text-center">
-                                                    <a th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${item.visitId}, readOnly=true, fromPatientId=${patient.id})}"
+                                                    <a th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${idCodec.encodeVisit(item.visitId)}, readOnly=true, fromPatientRef=${idCodec.encodePatient(patient.id)})}"
                                                         class="dv-equal-btn-primary"
                                                         title="Xem chi tiết lượt khám (Chế độ Chỉ xem)">
                                                         <i class="bi bi-eye-fill"></i>
@@ -1576,7 +1571,7 @@
                                                 </td>
                                                 <td class="dv-floating-actions-track">
                                                     <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
-                                                        <a th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${item.visitId}, readOnly=true, fromPatientId=${patient.id})}"
+                                                        <a th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${idCodec.encodeVisit(item.visitId)}, readOnly=true, fromPatientRef=${idCodec.encodePatient(patient.id)})}"
                                                             class="dv-equal-btn-primary"
                                                             title="Xem chi tiết lượt khám (Chế độ Chỉ xem)">
                                                             <i class="bi bi-eye-fill"></i>
@@ -1916,7 +1911,7 @@
                                             </td>
                                             <td class="text-nowrap">
                                                 <a th:if="${emr.visitId != null}"
-                                                    th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${emr.visitId}, readOnly=true, fromPatientId=${patient.id})}"
+                                                    th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${idCodec.encodeVisit(emr.visitId)}, readOnly=true, fromPatientRef=${idCodec.encodePatient(patient.id)})}"
                                                     class="dv-code-pill"
                                                     title="Xem chi tiết lượt khám (Chỉ xem)">
                                                     <i class="bi bi-box-arrow-up-right text-primary"></i>
@@ -2695,6 +2690,8 @@
                         </div>
                     </div>
 
+<<<<<<< Updated upstream
+=======
                     <!-- -----------------------------------------------------------------
                      TAB 10: HÓA ĐƠN & THANH TOÁN (TRA CỨU VIỆN PHÍ & HÓA ĐƠN)
                      ----------------------------------------------------------------- -->
@@ -2892,7 +2889,7 @@
                                                             </span>
                                                         </td>
                                                         <td data-column-key="actions" class="text-center text-nowrap">
-                                                            <a th:href="@{/invoices/{id}(id=${inv.invoiceId}, returnUrl=${recordBasePath + '/' + patient.id + '?tab=billing'})}"
+                                                            <a th:href="@{/invoices/{id}(id=${inv.invoiceId}, returnUrl=${recordBasePath + '/' + (patientRouteId != null ? patientRouteId : (recordBasePath == '/doctor/patient-records' ? idCodec.encodePatient(patient.id) : patient.id)) + '?tab=billing'})}"
                                                                class="dv-equal-btn-primary"
                                                                title="Xem chi tiết hóa đơn">
                                                                 <i class="bi bi-eye-fill"></i>
@@ -2929,6 +2926,7 @@
                         </div>
                     </div>
 
+>>>>>>> Stashed changes
                 </div>
             </main>
         </div>
@@ -2943,7 +2941,7 @@
         aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg rounded-4">
-                <form th:action="${recordBasePath + '/' + patient.id + '/health-notes'}" method="post">
+                <form th:action="${recordBasePath + '/' + (patientRouteId != null ? patientRouteId : (recordBasePath == '/doctor/patient-records' ? idCodec.encodePatient(patient.id) : patient.id)) + '/health-notes'}" method="post">
                     <div class="modal-header bg-light border-bottom">
                         <h5 class="modal-title fw-bold text-dark" id="healthNotesModalLabel">
                             <i class="bi bi-shield-exclamation text-danger me-2"></i>Cập nhật thông tin Dị ứng &amp;
@@ -2984,7 +2982,7 @@
         aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg rounded-4">
-                <form th:action="${recordBasePath + '/' + patient.id + '/change-code'}" method="post">
+                <form th:action="${recordBasePath + '/' + (patientRouteId != null ? patientRouteId : (recordBasePath == '/doctor/patient-records' ? idCodec.encodePatient(patient.id) : patient.id)) + '/change-code'}" method="post">
                     <div class="modal-header bg-light border-bottom">
                         <h5 class="modal-title fw-bold text-dark" id="changeCodeModalLabel">
                             <i class="bi bi-arrow-left-right text-primary me-2"></i>Đổi mã bệnh nhân
@@ -3015,7 +3013,7 @@
         aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg rounded-4">
-                <form th:action="${recordBasePath + '/' + patient.id + '/merge'}" method="post">
+                <form th:action="${recordBasePath + '/' + (patientRouteId != null ? patientRouteId : (recordBasePath == '/doctor/patient-records' ? idCodec.encodePatient(patient.id) : patient.id)) + '/merge'}" method="post">
                     <div class="modal-header bg-light border-bottom">
                         <h5 class="modal-title fw-bold text-dark" id="mergePatientModalLabel">
                             <i class="bi bi-folder-symlink text-primary me-2"></i>Gộp hồ sơ bệnh nhân trùng lặp
@@ -3049,7 +3047,7 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg rounded-4">
                 <form method="post" enctype="multipart/form-data"
-                    th:action="${recordBasePath + '/' + patient.id + '/documents'}">
+                    th:action="${recordBasePath + '/' + (patientRouteId != null ? patientRouteId : (recordBasePath == '/doctor/patient-records' ? idCodec.encodePatient(patient.id) : patient.id)) + '/documents'}">
                     <div class="modal-header bg-light border-bottom">
                         <h5 class="modal-title fw-bold text-dark" id="uploadDocumentModalLabel">
                             <i class="bi bi-cloud-arrow-up-fill text-primary me-2"></i>Tải lên bản scan CCCD / BHYT
@@ -3131,7 +3129,7 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg rounded-4">
                 <form method="post" enctype="multipart/form-data"
-                    th:action="${recordBasePath + '/' + patient.id + '/photos'}">
+                    th:action="${recordBasePath + '/' + (patientRouteId != null ? patientRouteId : (recordBasePath == '/doctor/patient-records' ? idCodec.encodePatient(patient.id) : patient.id)) + '/photos'}">
                     <div class="modal-header bg-light border-bottom">
                         <h5 class="modal-title fw-bold text-dark" id="uploadPhotoModalLabel">
                             <i class="bi bi-camera-fill text-primary me-2"></i>Tải lên ảnh lâm sàng mới
@@ -4446,6 +4444,7 @@
         /*<![CDATA[*/
         const recordBasePath = /*[[${recordBasePath}]]*/ '/doctor/patient-records';
         const patientId = /*[[${patient.id}]]*/ 0;
+        const patientRouteId = /*[[${patientRouteId}]]*/ (patientId ? String(patientId) : '0');
         const patientCode = /*[[${patient.code}]]*/ '';
         const patientBranchId = /*[[${patient.branchId}]]*/ null;
         const canManageBilling = /*[[${canManageBilling}]]*/ false;
@@ -4466,8 +4465,7 @@
             labo: /*[[${laboOrders != null ? laboOrders.size() : 0}]]*/ 0,
             photos: /*[[${photos != null ? photos.size() : 0}]]*/ 0,
             instructions: 0,
-            invoices: /*[[${invoices != null ? invoices.size() : 0}]]*/ 0,
-            billing: /*[[${invoices != null ? invoices.size() : 0}]]*/ 0
+            invoices: /*[[${invoices != null ? invoices.size() : 0}]]*/ 0
         };
 
         // Ánh xạ linh hoạt giữa hash cũ/ngắn và tab ID chính thống
@@ -4483,7 +4481,7 @@
             if (clean === 'labo') return 'tab-labo';
             if (clean === 'photos') return 'tab-photos';
             if (clean === 'instructions') return 'tab-instructions';
-            if (clean === 'invoices' || clean === 'billing') return 'tab-billing';
+            if (clean === 'invoices' || clean === 'billing') return 'tab-info';
             if (clean === 'audit') return 'tab-treatment';
             if (!clean.startsWith('tab-')) {
                 clean = 'tab-' + clean;
@@ -4639,7 +4637,6 @@
 
             // Tự động gắn .dv-seg-count cho mọi nút phân loại & dòng thông báo lọc rỗng
             initSegmentCountsAndEmptyFilterRows();
-            filterInvoiceTable();
         });
 
         function toggleTableFilterEmptyRow(tableSelector, dataRowSelector, visibleCount) {
@@ -4879,7 +4876,6 @@
             } else if (prefix === 'treatment') {
                 const st = document.getElementById('treatmentStatusFilter')?.value;
                 if (st && st !== 'ALL') active++;
-
             } else if (prefix === 'audit') {
                 const ent = document.getElementById('auditEntityFilter')?.value;
                 const act = document.getElementById('auditActionFilter')?.value;
@@ -5107,41 +5103,7 @@
             }
         }
 
-        // 6. Bộ lọc & Phân trang Hóa đơn & Thanh toán
-        let invoiceCurrentPage = 1;
-        let invoicePageSize = 10;
-        let invoiceFilteredRows = [];
-
-        function changeInvoicePageSize(size) {
-            invoicePageSize = parseInt(size, 10) || 10;
-            invoiceCurrentPage = 1;
-            filterInvoiceTable();
-        }
-
-        function goToInvoicePage(page) {
-            invoiceCurrentPage = page;
-            renderInvoicePageRows();
-        }
-
-        function resetInvoiceFilters() {
-            const searchEl = document.getElementById("invoiceSearchInput");
-            if (searchEl) {
-                searchEl.value = '';
-                toggleClearBtn(searchEl);
-            }
-            const statusEl = document.getElementById("invoiceStatusFilter");
-            if (statusEl) statusEl.value = '';
-            const fromEl = document.getElementById("invoiceFromDate");
-            if (fromEl) fromEl.value = '';
-            const toEl = document.getElementById("invoiceToDate");
-            if (toEl) toEl.value = '';
-            const presetEl = document.getElementById("invoiceDatePreset");
-            if (presetEl) presetEl.value = 'ALL';
-            invoiceCurrentPage = 1;
-            filterInvoiceTable();
-            updateAdvFilterBadge('invoice');
-        }
-
+        // 6. Bộ lọc Hóa đơn & Viện phí
         function setInvoiceStatusSegment(statusVal, btn) {
             const statusSelect = document.getElementById("invoiceStatusFilter");
             if (statusSelect) statusSelect.value = statusVal || '';
@@ -5149,7 +5111,6 @@
             document.querySelectorAll("#invoiceStatusSegment .dv-seg-btn").forEach(b => {
                 b.classList.toggle("active", (b.getAttribute("data-status") || '') === (statusVal || ''));
             });
-            invoiceCurrentPage = 1;
             filterInvoiceTable();
         }
 
@@ -5158,84 +5119,36 @@
             const query = searchEl ? searchEl.value.trim().toLowerCase() : '';
             const statusEl = document.getElementById("invoiceStatusFilter");
             const status = statusEl ? statusEl.value.toUpperCase() : '';
+            const typeEl = document.getElementById("invoiceTypeFilter");
+            const type = typeEl ? typeEl.value.toUpperCase() : '';
             const fromDate = document.getElementById("invoiceFromDate")?.value || '';
             const toDate = document.getElementById("invoiceToDate")?.value || '';
 
             const rows = document.querySelectorAll("#invoiceTable tbody tr.invoice-row");
-            invoiceFilteredRows = [];
+            let visibleCount = 0;
 
             rows.forEach(row => {
                 const text = row.innerText.toLowerCase();
                 const rowStatus = (row.getAttribute("data-status") || '').toUpperCase();
+                const rowType = (row.getAttribute("data-type") || '').toUpperCase();
                 const rowDate = row.getAttribute("data-date") || '';
 
                 const matchesQuery = !query || text.includes(query);
                 const matchesStatus = !status || rowStatus === status;
+                const matchesType = !type || rowType === type;
                 const matchesDate = matchesDateRange(rowDate, fromDate, toDate);
 
-                if (matchesQuery && matchesStatus && matchesDate) {
-                    invoiceFilteredRows.push(row);
+                if (matchesQuery && matchesStatus && matchesType && matchesDate) {
+                    row.style.display = "";
+                    visibleCount++;
                 } else {
                     row.style.display = "none";
                 }
             });
 
             const countEl = document.getElementById("invoiceVisibleCount");
-            if (countEl) countEl.innerText = invoiceFilteredRows.length;
-            const totalCountEl = document.getElementById("invoiceTotalCount");
-            if (totalCountEl) totalCountEl.innerText = invoiceFilteredRows.length;
-
-            renderInvoicePageRows();
-            toggleTableFilterEmptyRow("#invoiceTable", "tr.invoice-row", invoiceFilteredRows.length);
-        }
-
-        function renderInvoicePageRows() {
-            const total = invoiceFilteredRows.length;
-            const totalPages = Math.ceil(total / invoicePageSize) || 1;
-            if (invoiceCurrentPage > totalPages) invoiceCurrentPage = totalPages;
-            if (invoiceCurrentPage < 1) invoiceCurrentPage = 1;
-
-            const startIdx = (invoiceCurrentPage - 1) * invoicePageSize;
-            const endIdx = startIdx + invoicePageSize;
-
-            invoiceFilteredRows.forEach((row, idx) => {
-                if (idx >= startIdx && idx < endIdx) {
-                    row.style.display = "";
-                } else {
-                    row.style.display = "none";
-                }
-            });
-
-            const controlsEl = document.getElementById("invoicePaginationControls");
-            const footerEl = document.getElementById("invoicePaginationFooter");
-            if (!controlsEl) return;
-            if (total === 0) {
-                if (footerEl) footerEl.style.display = "none";
-                return;
-            }
-            if (footerEl) footerEl.style.display = "flex";
-
-            let html = '';
-            const prevDisabled = invoiceCurrentPage <= 1 ? 'disabled' : '';
-            html += `<button type="button" class="btn btn-sm btn-outline-secondary ${prevDisabled}" onclick="goToInvoicePage(${invoiceCurrentPage - 1})" ${prevDisabled ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button>`;
-
-            for (let i = 1; i <= totalPages; i++) {
-                if (totalPages > 7) {
-                    if (i > 1 && i < totalPages && Math.abs(i - invoiceCurrentPage) > 2) {
-                        if (i === 2 || i === totalPages - 1) {
-                            html += `<span class="px-1 text-muted">...</span>`;
-                        }
-                        continue;
-                    }
-                }
-                const activeCls = i === invoiceCurrentPage ? 'btn-primary text-white fw-bold' : 'btn-outline-secondary';
-                html += `<button type="button" class="btn btn-sm ${activeCls}" onclick="goToInvoicePage(${i})">${i}</button>`;
-            }
-
-            const nextDisabled = invoiceCurrentPage >= totalPages ? 'disabled' : '';
-            html += `<button type="button" class="btn btn-sm btn-outline-secondary ${nextDisabled}" onclick="goToInvoicePage(${invoiceCurrentPage + 1})" ${nextDisabled ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`;
-
-            controlsEl.innerHTML = html;
+            if (countEl) countEl.innerText = visibleCount;
+            toggleTableFilterEmptyRow("#invoiceTable", "tr.invoice-row", visibleCount);
         }
 
         // 7. Lightbox phóng to ảnh
@@ -5250,7 +5163,7 @@
         // 8. Modal Sửa ảnh
         function openEditPhotoModal(photoId, caption, stage, category) {
             const form = document.getElementById("editPhotoForm");
-            form.action = `${recordBasePath}/${patientId}/photos/${photoId}/edit`;
+            form.action = `${recordBasePath}/${patientRouteId}/photos/${photoId}/edit`;
             document.getElementById("editPhotoCaption").value = caption || '';
             document.getElementById("editPhotoStage").value = stage || 'BEFORE';
             document.getElementById("editPhotoCategory").value = category || 'INTRAORAL';
@@ -5260,14 +5173,14 @@
         // 9. Modal Xóa ảnh
         function openDeletePhotoModal(photoId) {
             const form = document.getElementById("deletePhotoForm");
-            form.action = `${recordBasePath}/${patientId}/photos/${photoId}/delete`;
+            form.action = `${recordBasePath}/${patientRouteId}/photos/${photoId}/delete`;
             new bootstrap.Modal(document.getElementById("deletePhotoModal")).show();
         }
 
         // 10. Modal Đổi loại giấy tờ scan
         function openChangeDocTypeModal(docId, currentType) {
             const form = document.getElementById("changeDocTypeForm");
-            form.action = `${recordBasePath}/${patientId}/documents/${docId}/type`;
+            form.action = `${recordBasePath}/${patientRouteId}/documents/${docId}/type`;
             document.getElementById("selectDocType").value = currentType || 'ID_CARD';
             new bootstrap.Modal(document.getElementById("changeDocTypeModal")).show();
         }
@@ -5275,7 +5188,7 @@
         // 11. Modal Xóa giấy tờ scan
         function openDeleteDocModal(docId) {
             const form = document.getElementById("deleteDocForm");
-            form.action = `${recordBasePath}/${patientId}/documents/${docId}/delete`;
+            form.action = `${recordBasePath}/${patientRouteId}/documents/${docId}/delete`;
             new bootstrap.Modal(document.getElementById("deleteDocModal")).show();
         }
 

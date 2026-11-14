@@ -51,6 +51,8 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     private com.cvdcms.service.ParaclinicalOrderService paraclinicalOrderService;
     @Autowired(required = false)
     private com.cvdcms.repository.ParaclinicalOrderItemRepository paraclinicalOrderItemRepository;
+    @Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher careEventPublisher;
 
     @Autowired
     public DiagnosisServiceImpl(
@@ -455,6 +457,12 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         } else {
             // Không có dịch vụ/thuốc phát sinh chi phí -> Hoàn tất ca khám trực tiếp
             visit.setStatus(VisitStatus.COMPLETED);
+            if (visit.getCompletedAt() == null) {
+                visit.setCompletedAt(LocalDateTime.now());
+            }
+            if (careEventPublisher != null && visit.getVisitId() != null) {
+                careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.VisitCompletedCareEvent(visit.getVisitId()));
+            }
         }
 
         if (dentalChairs != null && visit.getChairId() != null) {

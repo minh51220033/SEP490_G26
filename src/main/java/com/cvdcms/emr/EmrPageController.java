@@ -21,6 +21,9 @@ import java.nio.charset.StandardCharsets;
 public class EmrPageController {
     private final EmrModuleService service;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.security.UrlIdCodec urlIdCodec;
+
     public EmrPageController(EmrModuleService service) {
         this.service = service;
     }
@@ -161,7 +164,8 @@ public class EmrPageController {
             redirect.addFlashAttribute("documentError", message(ex));
         }
         if (patientId != null) {
-            return "redirect:/doctor/patient-records/" + patientId + "#medical";
+            String ref = urlIdCodec != null ? urlIdCodec.encodePatient(patientId) : String.valueOf(patientId);
+            return "redirect:/doctor/patient-records/" + ref + "#medical";
         }
         return "redirect:/doctor/patient-records";
     }

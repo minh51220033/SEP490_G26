@@ -778,7 +778,7 @@
 
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <a th:if="${!isClinicalLocked and visit != null}"
-                   th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create'}"
+                   th:href="@{'/doctor/examination/' + ${idCodec.encodeVisit(visit.visitId)} + '/treatment-plans/create'}"
                    class="df-btn-add-plan text-decoration-none border-0 text-white">
                     <i class="bi bi-plus-lg me-1"></i>
                     <span>Lập kế hoạch</span>
@@ -1015,7 +1015,7 @@
                                         Bác sĩ có thể lập kế hoạch và phác đồ điều trị chi tiết theo từng giai đoạn, dự kiến chi phí và liên kết trực tiếp với dịch vụ thực hiện tại ghế.
                                     </p>
                                     <a th:if="${!isClinicalLocked and visit != null}"
-                                       th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create'}"
+                                       th:href="@{'/doctor/examination/' + ${idCodec.encodeVisit(visit.visitId)} + '/treatment-plans/create'}"
                                        class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
                                        style="background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); border: none; font-size: 14.5px;">
                                         <i class="bi bi-plus-circle-fill"></i>
@@ -1117,8 +1117,9 @@
                                 <td data-col-id="actions" class="text-center">
                                     <div class="d-flex align-items-center justify-content-center gap-2 flex-nowrap">
                                         <a th:if="${visit != null}"
-                                           th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create?planId=' + ${plan.planId}}"
+                                           th:href="@{'/doctor/examination/' + ${idCodec.encodeVisit(visit.visitId)} + '/treatment-plans/create?planId=' + ${plan.planId}}"
                                            class="df-btn-plan-detail text-decoration-none"
+                                           
                                            title="Xem chi tiết &amp; cập nhật kế hoạch này">
                                             <i class="bi bi-pencil-square"></i>
                                             <span>Chi tiết</span>
@@ -1142,8 +1143,10 @@
                                 <td class="tp-floating-actions-track">
                                     <div class="tp-floating-actions-bar" onclick="event.stopPropagation()">
                                         <a th:if="${visit != null}"
-                                           th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create?planId=' + ${plan.planId}}"
+
+                                           th:href="@{'/doctor/examination/' + ${idCodec.encodeVisit(visit.visitId)} + '/treatment-plans/create?planId=' + ${plan.planId}}"
                                            class="df-btn-plan-detail text-decoration-none"
+
                                            title="Xem chi tiết &amp; cập nhật kế hoạch này">
                                             <i class="bi bi-pencil-square"></i>
                                             <span>Chi tiết</span>

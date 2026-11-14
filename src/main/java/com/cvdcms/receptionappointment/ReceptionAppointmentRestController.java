@@ -43,6 +43,11 @@ public class ReceptionAppointmentRestController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return appointments.sessionLoad(session, branchId, date);
     }
+    @GetMapping("/sessions")
+    public List<AppointmentPolicyService.SessionWindowInfo> sessions(HttpSession session,
+            @RequestParam Long branchId) {
+        return appointments.sessions(session, branchId);
+    }
     @GetMapping("/slots")
     public List<ReceptionAppointmentService.SlotOption> slots(HttpSession session, @RequestParam Long branchId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,

@@ -195,6 +195,36 @@ public class PublicBookingRestController {
     }
 
     /**
+     * Endpoint lấy danh sách ca khám và giờ làm việc cấu hình thực tế của chi nhánh.
+     */
+    @GetMapping("/sessions")
+    public ResponseEntity<List<Map<String, Object>>> getSessions(@RequestParam Long branchId) {
+        Branch branch = branchRepository.findById(branchId).orElse(null);
+        if (branch == null) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+        List<AppointmentPolicyService.SessionWindowInfo> list = appointmentPolicyService.sessionWindows(branch);
+        List<Map<String, Object>> result = new ArrayList<>();
+        LocalTime now = LocalTime.now(AppointmentPolicyService.CLINIC_ZONE);
+        for (var s : list) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("session", s.session().name());
+            item.put("name", s.sessionName());
+            item.put("startTime", s.startTime() != null ? s.startTime().toString().substring(0, 5) : "");
+            item.put("endTime", s.endTime() != null ? s.endTime().toString().substring(0, 5) : "");
+            item.put("label", s.label());
+            item.put("active", s.active());
+            boolean endedToday = s.endTime() != null && !now.isBefore(s.endTime());
+            if (branch.getClosingTime() != null && !now.isBefore(branch.getClosingTime())) {
+                endedToday = true;
+            }
+            item.put("endedToday", endedToday);
+            result.add(item);
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    /**
      * Tiếp nhận đăng ký lịch khám trực tuyến từ Drawer trên trang chủ.
      * Áp dụng đầy đủ quy tắc kiểm tra bác sĩ trực, công suất ca khám và ràng buộc chính sách.
      */

@@ -70,7 +70,7 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
         LEFT JOIN FETCH v.primaryDoctor d
         WHERE (:start IS NULL OR v.checkInAt >= :start)
           AND (:end IS NULL OR v.checkInAt <= :end)
-          AND (:status IS NULL OR v.status = :status)
+          AND ((:status IS NOT NULL AND v.status = :status) OR (:status IS NULL AND v.status != com.cvdcms.entity.enums.VisitStatus.CANCELLED))
           AND (:branchId IS NULL OR b.branchId = :branchId)
           AND (
               :search IS NULL OR :search = ''

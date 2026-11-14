@@ -388,7 +388,7 @@
                         <li class="breadcrumb-item"><a th:href="@{/dashboard}" style="color: #64748b; text-decoration: none;">Trang chủ</a></li>
                         <li class="breadcrumb-item"><a th:href="@{/daily-visits}" style="color: #64748b; text-decoration: none;">Ca khám trong ngày</a></li>
                         <li class="breadcrumb-item">
-                            <a th:href="${recordBasePath + '/' + patient.id}" style="color: #0284c7; text-decoration: none; font-weight: 600;" th:text="${patient.fullName}">Hồ sơ bệnh nhân</a>
+                            <a th:href="${recordBasePath + '/' + (patientRouteId != null ? patientRouteId : (recordBasePath == '/doctor/patient-records' ? idCodec.encodePatient(patient.id) : patient.id))}" style="color: #0284c7; text-decoration: none; font-weight: 600;" th:text="${patient.fullName}">Hồ sơ bệnh nhân</a>
                         </li>
                         <li class="breadcrumb-item active" style="color: #0f172a; font-weight: 700;" th:text="'Lượt khám ' + ${detail.visit.code}">Lượt khám</li>
                     </ol>
@@ -419,7 +419,7 @@
                         <!-- CỤM NÚT HÀNH ĐỘNG CHÍNH (R3 YÊU CẦU ĐẶC BIỆT) -->
                         <div class="d-flex align-items-center gap-2 flex-wrap">
                             <!-- NÚT 1: Mở màn hình Khám & Điều trị -->
-                            <a th:href="@{/doctor/examination/{id}/diagnoses(id=${detail.visit.id})}" class="dv-btn-action dv-btn-white" title="Chuyển sang màn hình Khám lâm sàng & Điều trị">
+                            <a th:href="@{/doctor/examination/{id}/diagnoses(id=${idCodec.encodeVisit(detail.visit.id)})}" class="dv-btn-action dv-btn-white" title="Chuyển sang màn hình Khám lâm sàng & Điều trị">
                                 <i class="bi bi-clipboard2-pulse fs-5 text-primary"></i>
                                 <span>Khám & Điều trị</span>
                             </a>
@@ -435,7 +435,7 @@
                             </a>
 
                             <!-- NÚT 3: Quay về Hồ sơ bệnh nhân -->
-                            <a th:href="${recordBasePath + '/' + patient.id}" class="dv-btn-action dv-btn-outline-white" title="Quay lại Hồ sơ bệnh nhân">
+                            <a th:href="${recordBasePath + '/' + (patientRouteId != null ? patientRouteId : (recordBasePath == '/doctor/patient-records' ? idCodec.encodePatient(patient.id) : patient.id))}" class="dv-btn-action dv-btn-outline-white" title="Quay lại Hồ sơ bệnh nhân">
                                 <i class="bi bi-arrow-left"></i>
                                 <span>Hồ sơ BN</span>
                             </a>

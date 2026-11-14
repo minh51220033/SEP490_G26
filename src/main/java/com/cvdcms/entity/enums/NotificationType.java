@@ -5,5 +5,6 @@ public enum NotificationType {
     LAB_RESULT,
     LEAVE_APPROVAL,
     PAYROLL,
-    SYSTEM
+    SYSTEM,
+    CUSTOMER_CARE
 }

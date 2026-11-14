@@ -16,13 +16,13 @@ INSERT INTO membership_tiers (tier_id, tier_code, tier_name, min_total_spent, di
 ON DUPLICATE KEY UPDATE tier_name = VALUES(tier_name);
 
 -- 2. TÀI KHOẢN NGƯỜI DÙNG MẪU (USERS: Bác sĩ, Bệnh nhân)
--- Mật khẩu mặc định: Hieu1811 (Hash Bcrypt: $2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe)
+-- Mật khẩu mặc định: Hieu1811 (Hash Bcrypt: $2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe)
 INSERT INTO users (user_id, username, password, email, phone_number, status, is_active, created_date) VALUES
-(2, 'bacsi_nam',     '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'nam.le@dentalclinic.com',   '0911223344', 'ACTIVE', 1, NOW()),
-(3, 'bacsi_hoa',     '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'hoa.tran@dentalclinic.com', '0922334455', 'ACTIVE', 1, NOW()),
-(4, 'patient_an',    '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'an.nguyen@gmail.com',       '0987654321', 'ACTIVE', 1, NOW()),
-(5, 'patient_binh',  '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'binh.tran@gmail.com',      '0912345678', 'ACTIVE', 1, NOW()),
-(6, 'patient_cuong', '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'cuong.le@gmail.com',       '0903998877', 'ACTIVE', 1, NOW())
+(2, 'bacsi_nam',     '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'nam.le@dentalclinic.com',   '0911223344', 'ACTIVE', 1, NOW()),
+(3, 'bacsi_hoa',     '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'hoa.tran@dentalclinic.com', '0922334455', 'ACTIVE', 1, NOW()),
+(4, 'patient_an',    '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'an.nguyen@gmail.com',       '0987654321', 'ACTIVE', 1, NOW()),
+(5, 'patient_binh',  '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'binh.tran@gmail.com',      '0912345678', 'ACTIVE', 1, NOW()),
+(6, 'patient_cuong', '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'cuong.le@gmail.com',       '0903998877', 'ACTIVE', 1, NOW())
 ON DUPLICATE KEY UPDATE email = VALUES(email), phone_number = VALUES(phone_number);
 
 -- 3. GÁN VAI TRÒ NGƯỜI DÙNG (USER_ROLES)
@@ -94,7 +94,7 @@ ON DUPLICATE KEY UPDATE service_name = VALUES(service_name), base_price = VALUES
 
 -- 11. HỒ SƠ PHỤ TÁ / TRỢ THỦ NHA KHOA (ĐÚNG MẪU IMAGE 7: PHẠM THỊ DUNG)
 INSERT INTO users (user_id, username, password, email, phone_number, status, is_active, created_date) VALUES
-(7, 'trothu_dung', '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe', 'dung.pham@dentalclinic.com', '0933445566', 'ACTIVE', 1, NOW())
+(7, 'trothu_dung', '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe', 'dung.pham@dentalclinic.com', '0933445566', 'ACTIVE', 1, NOW())
 ON DUPLICATE KEY UPDATE email = VALUES(email);
 
 INSERT INTO user_roles (user_id, role_id) VALUES
