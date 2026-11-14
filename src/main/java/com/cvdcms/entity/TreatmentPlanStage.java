@@ -52,5 +52,7 @@ public class TreatmentPlanStage {
     private LocalDate expectedEndDate;
 
     @OneToMany(mappedBy = "stage", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("planItemId ASC")
+    @org.hibernate.annotations.BatchSize(size = 50)
     private List<TreatmentPlanItem> items = new ArrayList<>();
 }

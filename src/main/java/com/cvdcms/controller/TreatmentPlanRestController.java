@@ -135,6 +135,39 @@ public class TreatmentPlanRestController {
     }
 
     /**
+     * Cập nhật nội dung, dịch vụ, giai đoạn và lộ trình chia đợt của kế hoạch điều trị
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updatePlan(@PathVariable Long id, @RequestBody TreatmentPlanRequestDTO request) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            jakarta.servlet.http.HttpSession session = currentHttpSession();
+            doctorVisitAccess.requireTreatmentPlanWrite(session, id);
+            if (request != null && request.getBranchId() != null) {
+                doctorVisitAccess.requireBranch(session, request.getBranchId());
+            }
+        }
+        try {
+            TreatmentPlanResponseDTO updated = treatmentPlanService.updatePlan(id, request);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Đã cập nhật kế hoạch điều trị thành công!");
+            response.put("data", updated);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (Exception e) {
+            log.error("Internal error updatePlan: ", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Lỗi máy chủ khi cập nhật kế hoạch điều trị: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    /**
      * Chuyển kế hoạch điều trị sang bộ phận Kế toán xử lý
      */
     @PostMapping("/{id}/handover-accounting")
@@ -278,17 +311,24 @@ public class TreatmentPlanRestController {
                 }
             }
 
-            BigDecimal unitPrice = (item.getEstimatedPrice() != null && item.getEstimatedPrice().compareTo(BigDecimal.ZERO) > 0)
-                    ? item.getEstimatedPrice()
-                    : (item.getService() != null && item.getService().getBasePrice() != null
-                        ? item.getService().getBasePrice()
-                        : BigDecimal.ZERO);
+            boolean isInstallmentPlan = Boolean.TRUE.equals(item.getPlan().getIsInstallment());
+            BigDecimal unitPrice = isInstallmentPlan
+                    ? BigDecimal.ZERO
+                    : ((item.getEstimatedPrice() != null && item.getEstimatedPrice().compareTo(BigDecimal.ZERO) > 0)
+                        ? item.getEstimatedPrice()
+                        : (item.getService() != null && item.getService().getBasePrice() != null
+                            ? item.getService().getBasePrice()
+                            : BigDecimal.ZERO));
             BigDecimal qty = item.getQuantity() != null ? item.getQuantity() : BigDecimal.ONE;
-            BigDecimal finalPrice = unitPrice.multiply(qty);
+            BigDecimal finalPrice = isInstallmentPlan ? BigDecimal.ZERO : unitPrice.multiply(qty);
 
             String stepDisplayName = item.getStepName() != null && !item.getStepName().isBlank()
                     ? item.getStepName()
                     : (item.getService() != null ? item.getService().getServiceName() : "Bước thủ thuật");
+            String stageSuffix = item.getStage() != null ? " (" + item.getStage().getStageName() + ")" : "";
+            String clinicalNotes = isInstallmentPlan
+                    ? "Đã bao gồm trong KHĐT: " + stepDisplayName + stageSuffix
+                    : "Từ KHDT: " + stepDisplayName + stageSuffix;
 
             PerformedServiceRequestDTO req = PerformedServiceRequestDTO.builder()
                     .visitId(visitId)
@@ -302,7 +342,7 @@ public class TreatmentPlanRestController {
                     .doctorId(docId)
                     .assistantId(assistantId)
                     .planItemId(itemId)
-                    .clinicalNotes("Từ KHDT: " + stepDisplayName + (item.getStage() != null ? " (" + item.getStage().getStageName() + ")" : ""))
+                    .clinicalNotes(clinicalNotes)
                     .build();
 
             PerformedServiceResponseDTO ps = performedServiceService.createPerformedService(req);
@@ -310,7 +350,9 @@ public class TreatmentPlanRestController {
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("message", "Đã thực hiện dịch vụ trong ca khám hôm nay & hoàn tất bước trong lộ trình!");
+            response.put("message", isInstallmentPlan
+                    ? "Đã ghi nhận thủ thuật vào ca khám (0 đ — đã nằm trong gói phác đồ trả theo đợt)!"
+                    : "Đã thực hiện dịch vụ trong ca khám hôm nay & hoàn tất bước trong lộ trình!");
             response.put("performedService", ps);
             response.put("plan", planDto);
             return ResponseEntity.ok(response);
@@ -379,6 +421,9 @@ public class TreatmentPlanRestController {
      */
     @GetMapping("/{id}/installments")
     public ResponseEntity<List<TreatmentPlanInstallmentDTO>> getInstallments(@PathVariable Long id) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireTreatmentPlanRead(currentHttpSession(), id);
+        }
         return ResponseEntity.ok(treatmentPlanService.getPlanInstallments(id));
     }
 
@@ -389,6 +434,9 @@ public class TreatmentPlanRestController {
     public ResponseEntity<?> saveInstallments(
             @PathVariable Long id,
             @RequestBody List<TreatmentPlanInstallmentDTO> installmentDTOs) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireTreatmentPlanWrite(currentHttpSession(), id);
+        }
         try {
             TreatmentPlanResponseDTO updated = treatmentPlanService.saveInstallments(id, installmentDTOs);
             Map<String, Object> response = new HashMap<>();
@@ -411,6 +459,9 @@ public class TreatmentPlanRestController {
     public ResponseEntity<?> recordInstallmentPayment(
             @PathVariable Long id,
             @RequestBody InstallmentPaymentRequestDTO request) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireTreatmentPlanWrite(currentHttpSession(), id);
+        }
         try {
             TreatmentPlanResponseDTO updated = treatmentPlanService.recordInstallmentPayment(
                     id, request.getAmount(), null);
@@ -434,6 +485,9 @@ public class TreatmentPlanRestController {
     public ResponseEntity<?> markReminderSent(
             @PathVariable Long installmentId,
             @RequestBody(required = false) Map<String, String> body) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireTreatmentInstallment(currentHttpSession(), installmentId);
+        }
         try {
             String notes = body != null ? body.get("notes") : null;
             TreatmentPlanInstallmentDTO updated = treatmentPlanService.markReminderSent(installmentId, notes);
@@ -462,9 +516,39 @@ public class TreatmentPlanRestController {
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        Long scopedBranchId = branchId;
+        java.util.Set<Long> allowedBranches = null;
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            jakarta.servlet.http.HttpSession session = currentHttpSession();
+            com.cvdcms.entity.User user = doctorVisitAccess.requireAuthenticatedUser(session);
+            if (branchId != null) {
+                doctorVisitAccess.requireBranch(session, branchId);
+            } else {
+                allowedBranches = doctorVisitAccess.resolveAccessibleBranchIds(user);
+                if (allowedBranches != null) {
+                    if (allowedBranches.isEmpty()) {
+                        return ResponseEntity.ok(org.springframework.data.domain.Page.empty());
+                    }
+                    if (allowedBranches.size() == 1) {
+                        scopedBranchId = allowedBranches.iterator().next();
+                    }
+                }
+            }
+        }
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        if (allowedBranches != null && allowedBranches.size() > 1 && scopedBranchId == null) {
+            org.springframework.data.domain.Page<TreatmentPlanInstallmentDTO> allAllowed = treatmentPlanService.searchUpcomingInstallments(
+                    null, startDate, endDate, status, keyword, org.springframework.data.domain.PageRequest.of(0, 500));
+            java.util.Set<Long> filterSet = allowedBranches;
+            List<TreatmentPlanInstallmentDTO> filtered = allAllowed.getContent().stream()
+                    .filter(item -> item.getBranchId() != null && filterSet.contains(item.getBranchId()))
+                    .toList();
+            int fromIdx = Math.min(page * size, filtered.size());
+            int toIdx = Math.min(fromIdx + size, filtered.size());
+            return ResponseEntity.ok(new org.springframework.data.domain.PageImpl<>(filtered.subList(fromIdx, toIdx), pageable, filtered.size()));
+        }
         org.springframework.data.domain.Page<TreatmentPlanInstallmentDTO> result = treatmentPlanService.searchUpcomingInstallments(
-                branchId, startDate, endDate, status, keyword, pageable);
+                scopedBranchId, startDate, endDate, status, keyword, pageable);
         return ResponseEntity.ok(result);
     }
 }

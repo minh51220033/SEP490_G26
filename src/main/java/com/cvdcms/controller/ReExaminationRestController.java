@@ -139,4 +139,12 @@ public class ReExaminationRestController {
         reExaminationService.cancelAppointment(id, reason);
         return ResponseEntity.ok(Map.of("success", true, "message", "Đã hủy lịch hẹn tái khám"));
     }
+
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
+    public ResponseEntity<Map<String, Object>> handleValidationError(RuntimeException ex) {
+        return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", ex.getMessage() != null ? ex.getMessage() : "Yêu cầu không hợp lệ."
+        ));
+    }
 }

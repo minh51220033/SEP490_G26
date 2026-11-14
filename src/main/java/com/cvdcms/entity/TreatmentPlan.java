@@ -89,6 +89,7 @@ public class TreatmentPlan {
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("stageOrder ASC")
     @org.hibernate.annotations.BatchSize(size = 50)
     private List<TreatmentPlanStage> stages = new ArrayList<>();
 

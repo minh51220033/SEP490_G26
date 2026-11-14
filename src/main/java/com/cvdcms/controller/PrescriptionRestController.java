@@ -61,6 +61,8 @@ public class PrescriptionRestController {
             doctorVisitAccess.require(session, request.getVisitId());
         } else if (request != null && request.getPatientId() != null) {
             doctorVisitAccess.requirePatientWrite(session, request.getPatientId());
+        } else {
+            doctorVisitAccess.requireAuthenticatedUser(session);
         }
         try {
             PrescriptionResponseDTO created = prescriptionService.createPrescription(request);
