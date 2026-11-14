@@ -33,24 +33,42 @@ public class EmrViewText {
             Map.entry("MAIN", "Chính"), Map.entry("SECONDARY", "Phụ"),
             Map.entry("DOCTOR", "Bác sĩ"), Map.entry("PATIENT", "Người bệnh"),
             Map.entry("HEALTHY", "Khỏe mạnh"), Map.entry("NORMAL", "Bình thường"),
-            Map.entry("MEDIUM", "Trung bình"));
+            Map.entry("MEDIUM", "Trung bình"),
+            Map.entry("BEFORE", "Trước điều trị"),
+            Map.entry("DURING", "Trong quá trình"),
+            Map.entry("AFTER", "Sau điều trị"),
+            Map.entry("INTRAORAL", "Trong miệng"),
+            Map.entry("EXTRAORAL", "Ngoài mặt / Chân dung"),
+            Map.entry("SMILE", "Nụ cười"),
+            Map.entry("OCCLUSAL", "Mặt nhai"),
+            Map.entry("OTHER", "Phim X-Quang / Panorama / CT"),
+            Map.entry("XRAY", "Phim X-Quang / CT"),
+            Map.entry("PANORAMIC", "Phim toàn cảnh Panorama"),
+            Map.entry("CEPHALOMETRIC", "Phim sọ nghiêng Cephalo"),
+            Map.entry("CT_CONEBEAM", "Phim CT ConeBeam 3D"));
 
     public String date(Object value) {
-        if (value == null || value.toString().isBlank()) return "—";
+        if (value == null || value.toString().isBlank())
+            return "—";
         String raw = value.toString();
-        try { return LocalDate.parse(raw.substring(0, 10)).format(DATE); }
-        catch (RuntimeException ex) { return raw; }
+        try {
+            return LocalDate.parse(raw.substring(0, 10)).format(DATE);
+        } catch (RuntimeException ex) {
+            return raw;
+        }
     }
 
     public String number(Object value) {
-        if (value == null) return "";
+        if (value == null)
+            return "";
         if (value instanceof java.math.BigDecimal bd) {
             return bd.compareTo(java.math.BigDecimal.ZERO) == 0
                     ? "0"
                     : bd.stripTrailingZeros().toPlainString();
         }
         String raw = value.toString().trim();
-        if (raw.isEmpty()) return "";
+        if (raw.isEmpty())
+            return "";
         try {
             java.math.BigDecimal bd = new java.math.BigDecimal(raw);
             return bd.compareTo(java.math.BigDecimal.ZERO) == 0
@@ -62,7 +80,8 @@ public class EmrViewText {
     }
 
     public String label(Object value) {
-        if (value == null) return "—";
+        if (value == null)
+            return "—";
         String raw = value.toString();
         return LABELS.getOrDefault(raw, raw.replace('_', ' '));
     }

@@ -17,6 +17,8 @@ public interface ClinicalPhotoService {
 
     ClinicalPhotoResponseDTO uploadPhoto(Long profileId, Long visitId, PhotoStage stage, PhotoCategory category, String caption, MultipartFile file) throws IOException;
 
+    ClinicalPhotoResponseDTO registerPhotoForOrderItem(Long orderItemId, PhotoStage stage, PhotoCategory category, String caption, String imageUrl);
+
     void deletePhoto(Long photoId) throws IOException;
 
     ClinicalPhotoResponseDTO updatePhoto(Long photoId, String caption, PhotoStage stage, PhotoCategory category);

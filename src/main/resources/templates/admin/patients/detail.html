@@ -812,7 +812,35 @@
                         <div class="dental-toolbar">
                             <div>
                                 <h5 class="h6 fw-bold mb-0 text-dark"><i class="bi bi-images text-primary me-2"></i>Thư viện ảnh lâm sàng &amp; Phim X-quang</h5>
-                                <span class="text-secondary small">Lưu trữ ảnh nụ cười trước/sau, ảnh nội nha và phim cận chóp, Panorama đối soát.</span>
+                                <span class="text-secondary small">Phân loại theo giai đoạn điều trị (Trước / Trong / Sau) kết hợp góc chụp và phim X-Quang.</span>
+                            </div>
+                        </div>
+
+                        <div id="adminPhotoFilterBar" class="d-flex flex-wrap justify-content-between align-items-center gap-2 p-2 px-3 mb-3 bg-light border rounded-3"
+                             th:classappend="${#lists.isEmpty(photos)} ? ' d-none'">
+                            <div class="btn-group btn-group-sm flex-wrap" id="adminPhotoStageSegment" role="group" aria-label="Lọc giai đoạn ảnh">
+                                <button type="button" class="btn btn-primary active" data-stage="ALL" onclick="setAdminPhotoStage('ALL', this)">Tất cả</button>
+                                <button type="button" class="btn btn-outline-secondary" data-stage="BEFORE" onclick="setAdminPhotoStage('BEFORE', this)">Trước ĐT</button>
+                                <button type="button" class="btn btn-outline-secondary" data-stage="DURING" onclick="setAdminPhotoStage('DURING', this)">Trong ĐT</button>
+                                <button type="button" class="btn btn-outline-secondary" data-stage="AFTER" onclick="setAdminPhotoStage('AFTER', this)">Sau ĐT</button>
+                                <button type="button" class="btn btn-outline-secondary" data-stage="XRAY" onclick="setAdminPhotoStage('XRAY', this)">X-Quang / CT</button>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <select id="adminPhotoCategoryFilter" class="form-select form-select-sm" style="width: auto; min-width: 185px;" onchange="filterAdminPhotos()">
+                                    <option value="ALL">Tất cả phân loại</option>
+                                    <option value="INTRAORAL">Trong miệng (Intraoral)</option>
+                                    <option value="EXTRAORAL">Ngoài mặt / Chân dung</option>
+                                    <option value="SMILE">Nụ cười (Smile)</option>
+                                    <option value="OCCLUSAL">Mặt nhai (Occlusal)</option>
+                                    <option value="OTHER">Phim X-Quang / Panorama / CT</option>
+                                </select>
+                                <select id="adminPhotoVisitFilter" class="form-select form-select-sm" style="width: auto; min-width: 170px;" onchange="filterAdminPhotos()">
+                                    <option value="ALL">Tất cả ca khám</option>
+                                    <option th:each="v : ${visits}"
+                                            th:value="${v.code}"
+                                            th:text="|Ca ${v.code} (${v.checkInAt != null ? #temporals.format(v.checkInAt, 'dd/MM/yyyy') : '—'})|">VIS001</option>
+                                </select>
+                                <span class="text-muted small text-nowrap">Hiển thị: <strong id="adminPhotoVisibleCount" class="text-primary" th:text="${photos != null ? photos.size() : 0}">0</strong></span>
                             </div>
                         </div>
 
@@ -825,17 +853,32 @@
                             </button>
                         </div>
 
-                        <div class="photo-grid" th:unless="${#lists.isEmpty(photos)}">
-                            <div class="photo-card" th:each="photo : ${photos}">
+                        <div id="adminPhotosFilterEmpty" class="text-center py-4 border rounded bg-light text-muted small d-none">
+                            Không có ảnh hoặc phim phù hợp bộ lọc đã chọn.
+                        </div>
+
+                        <div class="photo-grid" id="adminPhotoGrid" th:unless="${#lists.isEmpty(photos)}">
+                            <div class="photo-card" th:each="photo : ${photos}"
+                                 th:data-stage="${photo.photoStage != null ? photo.photoStage.name() : 'BEFORE'}"
+                                 th:data-category="${photo.photoCategory != null ? photo.photoCategory.name() : 'INTRAORAL'}"
+                                 th:data-visit="${photo.visitCode != null ? photo.visitCode : ''}">
                                 <div class="photo-img-wrap" onclick="window.open(this.querySelector('img').src, '_blank')">
                                     <img th:src="${photo.imageUrl}" th:alt="${photo.caption ?: 'Ảnh lâm sàng'}">
                                 </div>
                                 <div class="photo-meta border-top">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="badge bg-primary-subtle text-primary" th:text="${photo.photoCategoryText ?: (photo.photoCategory ?: 'Ảnh lâm sàng')}">TRƯỚC ĐIỀU TRỊ</span>
+                                    <div class="d-flex flex-wrap gap-1 mb-1">
+                                        <span class="badge"
+                                              th:classappend="${photo.photoStage != null and photo.photoStage.name() == 'AFTER' ? 'bg-success-subtle text-success border border-success-subtle' : (photo.photoStage != null and photo.photoStage.name() == 'DURING' ? 'bg-info-subtle text-info-emphasis border border-info-subtle' : 'bg-warning-subtle text-warning-emphasis border border-warning-subtle')}"
+                                              th:text="${@emrViewText.label(photo.photoStage != null ? photo.photoStage.name() : 'BEFORE')}">Trước điều trị</span>
+                                        <span class="badge"
+                                              th:classappend="${photo.photoCategory != null and photo.photoCategory.name() == 'OTHER' ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle'}"
+                                              th:text="${photo.photoCategoryText ?: @emrViewText.label(photo.photoCategory != null ? photo.photoCategory.name() : 'INTRAORAL')}">Trong miệng</span>
+                                    </div>
+                                    <div class="small text-dark fw-semibold text-truncate mb-1" th:text="${photo.caption ?: 'Ảnh chụp lâm sàng'}">Ảnh khớp cắn</div>
+                                    <div class="d-flex justify-content-between align-items-center text-muted" style="font-size: 11px;">
+                                        <span class="font-monospace" th:text="${photo.visitCode != null ? photo.visitCode : 'Chung'}">VIS-001</span>
                                         <small class="text-muted" th:text="${photo.capturedAtFormatted != null ? photo.capturedAtFormatted : (photo.capturedAt != null ? #temporals.format(photo.capturedAt, 'dd/MM/yyyy') : '—')}">01/01/2026</small>
                                     </div>
-                                    <div class="small text-dark fw-semibold text-truncate" th:text="${photo.caption ?: 'Ảnh chụp lâm sàng'}">Ảnh khớp cắn</div>
                                 </div>
                             </div>
                         </div>
@@ -1037,7 +1080,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="uploadPhotoForm" onsubmit="handlePhotoUpload(event)">
+            <form id="uploadPhotoForm" novalidate onsubmit="handlePhotoUpload(event)">
                 <div class="modal-body p-4">
                     <div id="photoUploadAlert" class="alert alert-danger d-none py-2 px-3 small mb-3"></div>
 
@@ -1052,35 +1095,46 @@
                     </div>
 
                     <div class="row g-2 mb-3">
+                        <div class="col-12">
+                            <label for="photoVisitIdInput" class="form-label small fw-semibold text-dark">Ca khám liên kết <span class="text-danger">*</span></label>
+                            <select id="photoVisitIdInput" class="form-select form-select-sm">
+                                <option th:if="${#lists.isEmpty(visits)}" value="">-- Bệnh nhân chưa có ca khám --</option>
+                                <option th:each="v : ${visits}"
+                                        th:value="${v.id}"
+                                        th:text="|Ca khám ${v.code} (${v.checkInAt != null ? #temporals.format(v.checkInAt, 'dd/MM/yyyy') : '—'})|">VIS001</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label small fw-semibold text-dark">Phân loại ảnh *</label>
-                            <select id="photoCategoryInput" class="form-select form-select-sm" required>
-                                <option value="INTRAORAL" selected>Ảnh trong miệng</option>
-                                <option value="EXTRAORAL">Ảnh ngoài mặt / Nụ cười</option>
-                                <option value="XRAY">Phim X-quang cận chóp</option>
-                                <option value="PANORAMIC">Phim toàn cảnh Panorama</option>
-                                <option value="CEPHALOMETRIC">Phim sọ nghiêng Cephalo</option>
-                                <option value="CT_CONEBEAM">Phim cắt lớp CT ConeBeam 3D</option>
+                            <label for="photoStageInput" class="form-label small fw-semibold text-dark">Giai đoạn điều trị <span class="text-danger">*</span></label>
+                            <select id="photoStageInput" class="form-select form-select-sm" required>
+                                <option value="BEFORE" selected>Trước điều trị (Before)</option>
+                                <option value="DURING">Trong quá trình (During)</option>
+                                <option value="AFTER">Sau điều trị (After)</option>
                             </select>
                         </div>
                         <div class="col-6">
-                            <label class="form-label small fw-semibold text-dark">Giai đoạn điều trị *</label>
-                            <select id="photoStageInput" class="form-select form-select-sm" required>
-                                <option value="BEFORE" selected>Trước điều trị</option>
-                                <option value="DURING">Trong điều trị</option>
-                                <option value="AFTER">Sau điều trị</option>
+                            <label for="photoCategoryInput" class="form-label small fw-semibold text-dark">Phân loại ảnh / phim <span class="text-danger">*</span></label>
+                            <select id="photoCategoryInput" class="form-select form-select-sm" required>
+                                <option value="INTRAORAL" selected>Trong miệng (Intraoral)</option>
+                                <option value="EXTRAORAL">Ngoài mặt / Chân dung</option>
+                                <option value="SMILE">Nụ cười (Smile)</option>
+                                <option value="OCCLUSAL">Mặt nhai (Occlusal)</option>
+                                <option value="OTHER">Phim X-Quang / Panorama / CT</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-semibold text-dark">Mô tả / Ghi chú ảnh</label>
+                        <label for="photoCaptionInput" class="form-label small fw-semibold text-dark">Mô tả / Ghi chú ảnh</label>
                         <input type="text" id="photoCaptionInput" class="form-control form-control-sm" placeholder="Ví dụ: Răng cửa R11, R21 trước trám composite...">
                     </div>
                 </div>
                 <div class="modal-footer bg-light py-2 px-4 border-top">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
-                    <button type="submit" id="btnSubmitPhoto" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1.5">
+                    <button type="submit" id="btnSubmitPhoto" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2">
                         <i class="bi bi-cloud-arrow-up-fill"></i> Tải lên ngay
                     </button>
                 </div>
@@ -1126,19 +1180,67 @@
         }
 
         if (cleanTabId === 'appointments') {
-            slot.innerHTML = '<a href="/reception/appointments?profileId=' + patientId + '" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1.5">' +
+            slot.innerHTML = '<a href="/reception/appointments?profileId=' + patientId + '" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2">' +
                 '<i class="bi bi-calendar-plus"></i> Thêm lịch hẹn</a>';
         } else if (cleanTabId === 'photos') {
-            slot.innerHTML = '<button type="button" onclick="openPhotoUploadModal()" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1.5">' +
+            slot.innerHTML = '<button type="button" onclick="openPhotoUploadModal()" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2">' +
                 '<i class="bi bi-camera-fill"></i> Thêm phim ảnh</button>';
         } else if (cleanTabId === 'invoices') {
-            slot.innerHTML = '<a href="/invoices/create?profileId=' + patientId + '" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1.5">' +
+            slot.innerHTML = '<a href="/invoices/create?profileId=' + patientId + '" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2">' +
                 '<i class="bi bi-plus-circle"></i> Lập hóa đơn</a>';
         } else if (cleanTabId === 'prescriptions') {
             if (canPerformClinical) {
-                slot.innerHTML = '<a href="/doctor/prescriptions/new?profileId=' + patientId + '" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1.5">' +
+                slot.innerHTML = '<a href="/doctor/prescriptions/new?profileId=' + patientId + '" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2">' +
                     '<i class="bi bi-capsule"></i> Kê đơn thuốc</a>';
             }
+        }
+    }
+
+    var currentAdminPhotoStage = 'ALL';
+    function setAdminPhotoStage(stageVal, btn) {
+        currentAdminPhotoStage = stageVal || 'ALL';
+        document.querySelectorAll('#adminPhotoStageSegment button').forEach(function (b) {
+            var active = (b.getAttribute('data-stage') || '') === currentAdminPhotoStage;
+            b.classList.toggle('btn-primary', active);
+            b.classList.toggle('active', active);
+            b.classList.toggle('btn-outline-secondary', !active);
+        });
+        filterAdminPhotos();
+    }
+
+    function filterAdminPhotos() {
+        var catEl = document.getElementById('adminPhotoCategoryFilter');
+        var visitEl = document.getElementById('adminPhotoVisitFilter');
+        var catVal = catEl ? catEl.value : 'ALL';
+        var visitVal = visitEl ? visitEl.value : 'ALL';
+        var cards = document.querySelectorAll('#adminPhotoGrid .photo-card');
+        var visibleCount = 0;
+
+        cards.forEach(function (card) {
+            var stage = (card.getAttribute('data-stage') || 'BEFORE').toUpperCase();
+            var cat = (card.getAttribute('data-category') || 'INTRAORAL').toUpperCase();
+            var visit = card.getAttribute('data-visit') || '';
+
+            var matchesStage = true;
+            if (currentAdminPhotoStage === 'XRAY') {
+                matchesStage = (cat === 'OTHER' || cat === 'XRAY');
+            } else if (currentAdminPhotoStage !== 'ALL') {
+                matchesStage = (stage === currentAdminPhotoStage);
+            }
+            var matchesCat = (catVal === 'ALL') || (cat === catVal);
+            var matchesVisit = (visitVal === 'ALL') || (visit === visitVal);
+
+            var show = matchesStage && matchesCat && matchesVisit;
+            card.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+
+        var countEl = document.getElementById('adminPhotoVisibleCount');
+        if (countEl) countEl.textContent = visibleCount;
+
+        var emptyFilter = document.getElementById('adminPhotosFilterEmpty');
+        if (emptyFilter) {
+            emptyFilter.classList.toggle('d-none', visibleCount > 0 || cards.length === 0);
         }
     }
 
@@ -1148,6 +1250,10 @@
         if (modalEl) {
             var modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
             document.getElementById('uploadPhotoForm').reset();
+            var visitSelect = document.getElementById('photoVisitIdInput');
+            if (visitSelect && visitSelect.options.length > 0 && visitSelect.options[0].value) {
+                visitSelect.selectedIndex = 0;
+            }
             var alertEl = document.getElementById('photoUploadAlert');
             if (alertEl) { alertEl.classList.add('d-none'); alertEl.textContent = ''; }
             var previewWrap = document.getElementById('photoPreviewWrap');
@@ -1174,13 +1280,26 @@
     async function handlePhotoUpload(e) {
         e.preventDefault();
         var fileInput = document.getElementById('photoFileInput');
+        var visitSelect = document.getElementById('photoVisitIdInput');
+        var visitId = visitSelect ? visitSelect.value : '';
+        var alertEl = document.getElementById('photoUploadAlert');
+
         if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-            alert('Vui lòng chọn 1 tệp hình ảnh để tải lên!');
+            if (alertEl) {
+                alertEl.textContent = 'Vui lòng chọn 1 tệp hình ảnh để tải lên.';
+                alertEl.classList.remove('d-none');
+            }
+            return;
+        }
+        if (!visitId) {
+            if (alertEl) {
+                alertEl.textContent = 'Ảnh lâm sàng cần gắn với một ca khám của bệnh nhân.';
+                alertEl.classList.remove('d-none');
+            }
             return;
         }
 
         var btnSubmit = document.getElementById('btnSubmitPhoto');
-        var alertEl = document.getElementById('photoUploadAlert');
         btnSubmit.disabled = true;
         btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang tải lên...';
         if (alertEl) alertEl.classList.add('d-none');
@@ -1189,6 +1308,7 @@
             var formData = new FormData();
             formData.append('file', fileInput.files[0]);
             formData.append('profileId', patientId);
+            formData.append('visitId', visitId);
             formData.append('category', document.getElementById('photoCategoryInput').value);
             formData.append('stage', document.getElementById('photoStageInput').value);
             formData.append('caption', document.getElementById('photoCaptionInput').value.trim());
@@ -1206,7 +1326,7 @@
 
                 // Cập nhật bộ đếm & vị trí nút đúng trạng thái mới (Requirement 3)
                 window.tabRecordCounts.photos = (window.tabRecordCounts.photos || 0) + 1;
-                
+
                 // Cập nhật badge trên tab
                 var tabBtn = document.getElementById('tab-photos-btn');
                 if (tabBtn) {
@@ -1222,43 +1342,95 @@
                     }
                 }
 
-                // Ẩn thông báo trống
+                // Ẩn thông báo trống & hiện thanh lọc
                 var emptyBox = document.getElementById('photosEmptyState');
                 if (emptyBox) emptyBox.style.display = 'none';
+                var filterBar = document.getElementById('adminPhotoFilterBar');
+                if (filterBar) filterBar.classList.remove('d-none');
 
                 // Thêm thẻ ảnh vào lưới ảnh
-                var grid = document.querySelector('#photos .photo-grid');
+                var grid = document.getElementById('adminPhotoGrid') || document.querySelector('#photos .photo-grid');
                 if (!grid) {
                     grid = document.createElement('div');
+                    grid.id = 'adminPhotoGrid';
                     grid.className = 'photo-grid';
                     var panel = document.querySelector('#photos .patient-tab-panel');
                     if (panel) panel.appendChild(grid);
                 }
-                
+
                 var photoData = json.data || {};
+                var stageCode = photoData.photoStage || document.getElementById('photoStageInput').value || 'BEFORE';
+                var catCode = photoData.photoCategory || document.getElementById('photoCategoryInput').value || 'INTRAORAL';
+                var stageLabel = stageCode === 'AFTER' ? 'Sau điều trị' : (stageCode === 'DURING' ? 'Trong quá trình' : 'Trước điều trị');
+                var stageCls = stageCode === 'AFTER'
+                    ? 'badge bg-success-subtle text-success border border-success-subtle'
+                    : (stageCode === 'DURING'
+                        ? 'badge bg-info-subtle text-info-emphasis border border-info-subtle'
+                        : 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle');
+                var catCls = catCode === 'OTHER'
+                    ? 'badge bg-danger-subtle text-danger border border-danger-subtle'
+                    : 'badge bg-primary-subtle text-primary border border-primary-subtle';
+
                 var newCard = document.createElement('div');
                 newCard.className = 'photo-card';
-                newCard.innerHTML = 
-                    '<div class="photo-img-wrap" onclick="window.open(\'' + (photoData.imageUrl || '') + '\', \'_blank\')">' +
-                        '<img src="' + (photoData.imageUrl || '') + '" alt="' + (photoData.caption || 'Ảnh lâm sàng') + '">' +
-                    '</div>' +
-                    '<div class="photo-meta border-top">' +
-                        '<div class="d-flex justify-content-between align-items-center mb-1">' +
-                            '<span class="badge bg-primary-subtle text-primary">' + (photoData.photoCategoryText || photoData.photoCategory || 'LÂM SÀNG') + '</span>' +
-                            '<small class="text-muted">' + (photoData.capturedAtFormatted || 'Vừa xong') + '</small>' +
-                        '</div>' +
-                        '<div class="small text-dark fw-semibold text-truncate">' + (photoData.caption || 'Ảnh lâm sàng') + '</div>' +
-                    '</div>';
+                newCard.setAttribute('data-stage', stageCode);
+                newCard.setAttribute('data-category', catCode);
+                newCard.setAttribute('data-visit', photoData.visitCode || '');
+
+                var wrap = document.createElement('div');
+                wrap.className = 'photo-img-wrap';
+                wrap.addEventListener('click', function () {
+                    if (photoData.imageUrl) window.open(photoData.imageUrl, '_blank');
+                });
+                var img = document.createElement('img');
+                img.src = photoData.imageUrl || '';
+                img.alt = photoData.caption || 'Ảnh lâm sàng';
+                wrap.appendChild(img);
+
+                var meta = document.createElement('div');
+                meta.className = 'photo-meta border-top';
+
+                var badgesRow = document.createElement('div');
+                badgesRow.className = 'd-flex flex-wrap gap-1 mb-1';
+                var stageSpan = document.createElement('span');
+                stageSpan.className = stageCls;
+                stageSpan.textContent = stageLabel;
+                var catSpan = document.createElement('span');
+                catSpan.className = catCls;
+                catSpan.textContent = photoData.photoCategoryText || photoData.photoCategory || 'Ảnh lâm sàng';
+                badgesRow.appendChild(stageSpan);
+                badgesRow.appendChild(catSpan);
+
+                var captionDiv = document.createElement('div');
+                captionDiv.className = 'small text-dark fw-semibold text-truncate mb-1';
+                captionDiv.textContent = photoData.caption || 'Ảnh lâm sàng';
+
+                var footerDiv = document.createElement('div');
+                footerDiv.className = 'd-flex justify-content-between align-items-center text-muted';
+                footerDiv.style.fontSize = '11px';
+                var visitSpan = document.createElement('span');
+                visitSpan.className = 'font-monospace';
+                visitSpan.textContent = photoData.visitCode || 'Chung';
+                var dateSmall = document.createElement('small');
+                dateSmall.className = 'text-muted';
+                dateSmall.textContent = photoData.capturedAtFormatted || 'Vừa xong';
+                footerDiv.appendChild(visitSpan);
+                footerDiv.appendChild(dateSmall);
+
+                meta.appendChild(badgesRow);
+                meta.appendChild(captionDiv);
+                meta.appendChild(footerDiv);
+
+                newCard.appendChild(wrap);
+                newCard.appendChild(meta);
                 grid.insertBefore(newCard, grid.firstChild);
 
-                // Cập nhật lại nút thêm lên góc trên bên phải
+                filterAdminPhotos();
                 updateSubheadActionButton('photos');
             } else {
                 if (alertEl) {
                     alertEl.textContent = json.message || 'Lỗi khi tải ảnh lên máy chủ. Vui lòng thử lại!';
                     alertEl.classList.remove('d-none');
-                } else {
-                    alert(json.message || 'Lỗi khi tải ảnh lên.');
                 }
             }
         } catch (err) {
@@ -1266,8 +1438,6 @@
             if (alertEl) {
                 alertEl.textContent = 'Lỗi kết nối máy chủ khi tải ảnh: ' + err.message;
                 alertEl.classList.remove('d-none');
-            } else {
-                alert('Lỗi kết nối máy chủ: ' + err.message);
             }
         } finally {
             btnSubmit.disabled = false;

@@ -464,10 +464,17 @@ public class DoctorRecordService {
         get(session, actualPatientId);
         if (caption != null) photo.setCaption(caption.trim());
         if (stageStr != null && !stageStr.isBlank()) {
-            try { photo.setPhotoStage(PhotoStage.valueOf(stageStr.toUpperCase())); } catch (Exception ignored) {}
+            try { photo.setPhotoStage(PhotoStage.valueOf(stageStr.trim().toUpperCase())); } catch (Exception ignored) {}
         }
         if (categoryStr != null && !categoryStr.isBlank()) {
-            try { photo.setPhotoCategory(PhotoCategory.valueOf(categoryStr.toUpperCase())); } catch (Exception ignored) {}
+            String normalizedCat = categoryStr.trim().toUpperCase();
+            if ("XRAY".equals(normalizedCat) || "PANORAMIC".equals(normalizedCat)
+                    || "CEPHALOMETRIC".equals(normalizedCat) || "CT_CONEBEAM".equals(normalizedCat)
+                    || "CT".equals(normalizedCat)) {
+                photo.setPhotoCategory(PhotoCategory.OTHER);
+            } else {
+                try { photo.setPhotoCategory(PhotoCategory.valueOf(normalizedCat)); } catch (Exception ignored) {}
+            }
         }
         photos.saveAndFlush(photo);
     }

@@ -67,11 +67,11 @@ public class ClinicalPhotoResponseDTO {
                     catText = "Mặt nhai";
                     break;
                 case EXTRAORAL:
-                    catText = "Mặt ngoài / Chân dung";
+                    catText = "Ngoài mặt / Chân dung";
                     break;
                 case OTHER:
                 default:
-                    catText = "Khác";
+                    catText = "Phim X-Quang / Panorama / CT";
                     break;
             }
         }

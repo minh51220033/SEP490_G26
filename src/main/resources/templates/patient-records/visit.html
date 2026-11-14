@@ -22,7 +22,7 @@
                         --vc-primary-dark: #0369a1;
                         --vc-primary-soft: #e0f2fe;
                         --vc-surface: #ffffff;
-                        --vc-bg: #f4f7fb;
+                        --vc-bg: #f8fafc;
                         --vc-border: #e2e8f0;
                         --vc-text: #0f172a;
                         --vc-text-2: #334155;
@@ -31,16 +31,13 @@
 
                     .visit-cockpit-main {
                         background: var(--vc-bg) !important;
-                        padding: 10px 16px !important;
-                        gap: 8px !important;
+                        padding: 12px 18px !important;
+                        gap: 10px !important;
                         min-height: 100vh;
                     }
 
                     @media (min-width: 992px) {
                         .visit-cockpit-main {
-                            height: 100vh;
-                            max-height: 100vh;
-                            overflow: hidden;
                             display: flex;
                             flex-direction: column;
                         }
@@ -50,31 +47,36 @@
                         .vc-header-right {
                             flex-wrap: nowrap;
                         }
+                        .vc-col-left {
+                            position: sticky;
+                            top: 14px;
+                            align-self: start;
+                        }
                     }
 
-                    /* Compact Top Header + Integrated Tab Bar (frame modeled cleanly without vertical overflow) */
+                    /* Compact Header + Integrated Tab Bar */
                     .vc-header-shell {
                         background: var(--vc-surface);
                         border: 1px solid var(--vc-border);
                         border-radius: 14px;
-                        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+                        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
                         flex-shrink: 0;
                         overflow: hidden;
                     }
 
                     .vc-header-top {
-                        padding: 7px 14px;
+                        padding: 10px 16px;
                         display: flex;
                         align-items: center;
                         justify-content: space-between;
-                        gap: 10px;
+                        gap: 12px;
                         flex-wrap: wrap;
                     }
 
                     .vc-patient-identity {
                         display: flex;
                         align-items: center;
-                        gap: 10px;
+                        gap: 11px;
                         min-width: 0;
                         flex: 1 1 auto;
                     }
@@ -82,31 +84,31 @@
                     .vc-avatar {
                         width: 38px;
                         height: 38px;
-                        border-radius: 11px;
-                        background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
-                        color: #ffffff;
+                        border-radius: 10px;
+                        background: #e0f2fe;
+                        color: #0369a1;
+                        border: 1px solid #bae6fd;
                         font-size: 15px;
-                        font-weight: 800;
+                        font-weight: 700;
                         display: flex;
                         align-items: center;
                         justify-content: center;
                         flex-shrink: 0;
-                        box-shadow: 0 3px 8px rgba(2, 132, 199, 0.24);
                     }
 
                     .vc-title-row {
                         display: flex;
                         align-items: center;
-                        gap: 7px;
+                        gap: 8px;
                         flex-wrap: wrap;
                     }
 
                     .vc-patient-name {
                         font-size: 16px;
-                        font-weight: 800;
+                        font-weight: 700;
                         color: var(--vc-text);
                         margin: 0;
-                        line-height: 1.2;
+                        line-height: 1.25;
                     }
 
                     .vc-code-chip {
@@ -116,25 +118,25 @@
                         padding: 2px 8px;
                         border-radius: 6px;
                         font-size: 11.5px;
-                        font-weight: 700;
+                        font-weight: 600;
                         font-family: "JetBrains Mono", monospace;
-                        background: var(--vc-primary-soft);
-                        color: var(--vc-primary-dark);
-                        border: 1px solid #bae6fd;
+                        background: #f1f5f9;
+                        color: #334155;
+                        border: 1px solid #e2e8f0;
                         white-space: nowrap;
                     }
 
                     .vc-visit-chip {
-                        background: #f1f5f9;
-                        color: #1e293b;
-                        border: 1px solid #cbd5e1;
+                        background: var(--vc-primary-soft);
+                        color: var(--vc-primary-dark);
+                        border-color: #bae6fd;
                     }
 
                     .vc-meta-line {
-                        font-size: 12px;
+                        font-size: 12.5px;
                         color: var(--vc-muted);
                         font-weight: 500;
-                        margin-top: 2px;
+                        margin-top: 3px;
                         display: flex;
                         align-items: center;
                         gap: 6px;
@@ -144,7 +146,7 @@
                     .vc-header-right {
                         display: flex;
                         align-items: center;
-                        gap: 7px;
+                        gap: 8px;
                         flex-wrap: wrap;
                         flex-shrink: 0;
                     }
@@ -153,11 +155,11 @@
                         display: inline-flex;
                         align-items: center;
                         gap: 6px;
-                        padding: 4px 9px;
+                        padding: 4px 10px;
                         border-radius: 999px;
                         font-size: 11.5px;
-                        font-weight: 700;
-                        max-width: 200px;
+                        font-weight: 600;
+                        max-width: 220px;
                         white-space: nowrap;
                         overflow: hidden;
                         text-overflow: ellipsis;
@@ -175,20 +177,14 @@
                         border: 1px solid #fde68a;
                     }
 
-                    .vc-alert-pill.is-safe {
-                        background: #f0fdf4;
-                        color: #15803d;
-                        border: 1px solid #bbf7d0;
-                    }
-
                     .vc-btn-sm {
                         display: inline-flex;
                         align-items: center;
                         gap: 6px;
-                        padding: 5px 10px;
+                        padding: 6px 12px;
                         border-radius: 8px;
-                        font-size: 12px;
-                        font-weight: 700;
+                        font-size: 12.5px;
+                        font-weight: 600;
                         text-decoration: none;
                         white-space: nowrap;
                         transition: all 0.15s ease;
@@ -204,21 +200,34 @@
                         color: #0f172a;
                     }
 
+                    .vc-btn-tonal {
+                        background: #eff6ff;
+                        color: #1d4ed8;
+                        border-color: #bfdbfe;
+                    }
+
+                    .vc-btn-tonal:hover {
+                        background: #dbeafe;
+                        border-color: #93c5fd;
+                        color: #1e40af;
+                    }
+
                     .vc-btn-primary {
-                        background: linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%);
+                        background: #0284c7;
                         color: #ffffff;
-                        border-color: transparent;
+                        border-color: #0284c7;
                     }
 
                     .vc-btn-primary:hover {
+                        background: #0369a1;
+                        border-color: #0369a1;
                         color: #ffffff;
-                        filter: brightness(1.06);
                     }
 
                     .vc-btn-emerald {
                         background: #ecfdf5;
                         color: #047857;
-                        border-color: #6ee7b7;
+                        border-color: #a7f3d0;
                     }
 
                     .vc-btn-emerald:hover {
@@ -234,22 +243,22 @@
                         gap: 12px;
                         padding: 0 16px;
                         border-top: 1px solid #f1f5f9;
-                        background: #fafcff;
+                        background: #ffffff;
                         overflow-x: auto;
                     }
 
                     .vc-tabs {
                         display: flex;
                         align-items: center;
-                        gap: 4px;
+                        gap: 8px;
                     }
 
                     .vc-tab-btn {
                         position: relative;
                         border: none;
                         background: transparent;
-                        padding: 6px 12px;
-                        font-size: 12.5px;
+                        padding: 8px 10px;
+                        font-size: 13px;
                         font-weight: 600;
                         color: var(--vc-muted);
                         display: inline-flex;
@@ -272,21 +281,21 @@
                     .vc-tab-btn.is-active::after {
                         content: "";
                         position: absolute;
-                        left: 8px;
-                        right: 8px;
+                        left: 6px;
+                        right: 6px;
                         bottom: 0;
-                        height: 2.5px;
-                        border-radius: 3px 3px 0 0;
+                        height: 2px;
+                        border-radius: 2px 2px 0 0;
                         background: var(--vc-primary);
                     }
 
                     .vc-tab-badge {
-                        background: #e2e8f0;
-                        color: #334155;
+                        background: #f1f5f9;
+                        color: #475569;
                         border-radius: 999px;
                         padding: 1px 7px;
                         font-size: 11px;
-                        font-weight: 700;
+                        font-weight: 600;
                     }
 
                     .vc-tab-btn.is-active .vc-tab-badge {
@@ -314,132 +323,113 @@
                         min-height: 0;
                     }
 
-                    /* Bento Grid for Single-Screen View */
+                    /* Adaptive Clinical Summary Grid (Carbon / Polaris layout) */
                     .vc-bento-grid {
-                        flex: 1;
-                        min-height: 0;
                         display: grid;
-                        grid-template-columns: minmax(0, 1.32fr) minmax(0, 1fr);
-                        gap: 10px;
+                        grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.25fr);
+                        gap: 14px;
+                        align-items: start;
                     }
 
                     .vc-col-left {
                         display: flex;
                         flex-direction: column;
-                        gap: 10px;
-                        min-height: 0;
+                        gap: 12px;
+                        min-width: 0;
                     }
 
                     .vc-col-right {
-                        display: grid;
-                        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
-                        gap: 10px;
-                        min-height: 0;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 12px;
+                        min-width: 0;
                     }
 
                     @media (max-width: 991.98px) {
                         .vc-bento-grid {
                             grid-template-columns: 1fr;
                         }
-                        .vc-col-right {
-                            grid-template-rows: auto auto;
-                        }
                     }
 
-                    /* Bento Card */
+                    /* Bento Card & Compact Empty Micro-State */
                     .vc-card {
                         background: var(--vc-surface);
                         border: 1px solid var(--vc-border);
                         border-radius: 14px;
-                        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.035);
+                        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
                         display: flex;
                         flex-direction: column;
-                        min-height: 0;
                         overflow: hidden;
                     }
 
-                    .vc-fdi-card {
-                        flex-shrink: 0;
+                    .vc-card-micro {
+                        background: var(--vc-surface);
+                        border: 1px solid var(--vc-border);
+                        border-radius: 12px;
+                        padding: 12px 16px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 12px;
+                        flex-wrap: wrap;
                     }
 
-                    .vc-card-grow {
-                        flex: 1;
-                        min-height: 0;
+                    .vc-card-micro-status {
+                        font-size: 12.5px;
+                        color: var(--vc-muted);
                     }
 
                     .vc-card-head {
-                        padding: 7px 12px;
+                        padding: 10px 14px;
                         border-bottom: 1px solid #f1f5f9;
                         display: flex;
                         align-items: center;
                         justify-content: space-between;
-                        gap: 6px;
+                        gap: 8px;
                         flex-shrink: 0;
                         background: #ffffff;
                     }
 
                     .vc-card-title {
-                        font-size: 12.5px;
-                        font-weight: 800;
+                        font-size: 13.5px;
+                        font-weight: 700;
                         color: var(--vc-text);
-                        letter-spacing: 0.3px;
+                        letter-spacing: -0.01em;
                         display: inline-flex;
                         align-items: center;
                         gap: 7px;
-                        text-transform: uppercase;
                         margin: 0;
                     }
 
                     .vc-card-body {
-                        flex: 1;
-                        min-height: 0;
-                        overflow-y: auto;
-                        padding: 8px 12px;
-                    }
-
-                    .vc-card-body::-webkit-scrollbar {
-                        width: 5px;
-                        height: 5px;
-                    }
-                    .vc-card-body::-webkit-scrollbar-thumb {
-                        background: #cbd5e1;
-                        border-radius: 999px;
-                    }
-                    .vc-card-body::-webkit-scrollbar-track {
-                        background: transparent;
+                        padding: 10px 14px;
                     }
 
                     .vc-card-foot {
-                        padding: 6px 12px;
+                        padding: 8px 14px;
                         border-top: 1px solid #f1f5f9;
                         background: #f8fafc;
                         flex-shrink: 0;
                     }
 
-                    /* FDI Anatomical Chart (Reused from doctor/fragments/icd10-diagnosis.html & diagnosis.css) */
+                    /* FDI Anatomical Chart */
                     .vc-fdi-stage-wrap {
                         display: flex;
                         justify-content: center;
                         align-items: center;
-                        padding: 4px 10px;
+                        padding: 8px 14px;
                         background: #ffffff;
                     }
 
                     .fdi-chart-stage {
                         position: relative;
                         width: 100%;
-                        max-width: min(540px, calc(22.5vh * 850 / 343));
+                        max-width: 520px;
                         aspect-ratio: 850 / 343;
                         user-select: none;
                         border-radius: 6px;
                         overflow: hidden;
                         background: #ffffff;
-                    }
-
-                    @media (max-width: 991.98px) {
-                        .fdi-chart-stage {
-                            max-width: 540px;
-                        }
                     }
 
                     .fdi-chart-stage img {
@@ -587,7 +577,7 @@
                         border-color: #0284c7;
                     }
 
-                    /* Compact List Rows inside Plans, Diagnoses, Prescriptions */
+                    /* Compact Hairline List Rows inside Plans, Diagnoses, Prescriptions */
                     .vc-plan-row,
                     .vc-diag-row,
                     .vc-drug-row {
@@ -595,17 +585,18 @@
                         align-items: flex-start;
                         justify-content: space-between;
                         gap: 10px;
-                        padding: 7px 9px;
-                        border-radius: 9px;
-                        border: 1px solid #eef2f6;
-                        background: #ffffff;
+                        padding: 8px 8px;
+                        border-radius: 8px;
+                        border: 1px solid transparent;
+                        border-bottom-color: #f1f5f9;
+                        background: transparent;
                         transition: background 0.12s ease, border-color 0.12s ease;
                     }
 
-                    .vc-plan-row + .vc-plan-row,
-                    .vc-diag-row + .vc-diag-row,
-                    .vc-drug-row + .vc-drug-row {
-                        margin-top: 6px;
+                    .vc-plan-row:last-child,
+                    .vc-diag-row:last-child,
+                    .vc-drug-row:last-child {
+                        border-bottom-color: transparent;
                     }
 
                     .vc-diag-row:hover,
@@ -625,8 +616,8 @@
                         justify-content: center;
                         padding: 2px 7px;
                         border-radius: 6px;
-                        font-size: 11.5px;
-                        font-weight: 800;
+                        font-size: 11px;
+                        font-weight: 700;
                         background: #e0f2fe;
                         color: #0369a1;
                         white-space: nowrap;
@@ -640,7 +631,7 @@
                         padding: 2px 8px;
                         border-radius: 999px;
                         font-size: 11px;
-                        font-weight: 700;
+                        font-weight: 600;
                         white-space: nowrap;
                     }
 
@@ -757,15 +748,14 @@
                                     <span th:text="${patient.gender != null ? patient.gender : '—'}">Nữ</span>
                                     <span th:if="${snap['patient']['age'] != null}">&middot; <span th:text="${snap['patient']['age'] + ' tuổi'}">34 tuổi</span></span>
                                     <span th:if="${patient.phoneNumber != null and !#strings.isEmpty(patient.phoneNumber)}">&middot; <span th:text="${patient.phoneNumber}">0901234567</span></span>
-                                    <span th:if="${visit.branchName != null}">&middot; <span th:text="${visit.branchName}">Chi nhánh</span></span>
-                                    <span th:if="${visit.checkInAt != null}">&middot; <i class="bi bi-clock text-primary"></i> <span th:text="${#temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm')}">14/11/2026 09:00</span></span>
-                                    <span>&middot; <strong class="text-dark" th:text="${visit.doctorName != null ? visit.doctorName : 'Chưa gán BS'}">BS. Phụ trách</strong></span>
+                                    <span th:if="${visit.checkInAt != null}">&middot; <span th:text="${#temporals.format(visit.checkInAt, 'dd/MM/yyyy HH:mm')}">14/11/2026 09:00</span></span>
+                                    <span>&middot; <strong class="text-dark fw-semibold" th:text="${visit.doctorName != null ? visit.doctorName : 'Chưa gán BS'}">BS. Phụ trách</strong></span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="vc-header-right">
-                            <!-- Cảnh báo dị ứng / bệnh nền gọn bên phải -->
+                            <!-- Cảnh báo dị ứng / bệnh nền: chỉ hiện khi có nguy cơ lâm sàng -->
                             <span th:if="${snap['patient']['hasAllergies']}"
                                   class="vc-alert-pill is-danger"
                                   th:with="allergyTxt=${snap['patient']['allergyDetails'] != null and !#strings.isEmpty(snap['patient']['allergyDetails']) ? snap['patient']['allergyDetails'] : 'Có tiền sử dị ứng'}"
@@ -780,12 +770,8 @@
                                 <i class="bi bi-heart-pulse-fill"></i>
                                 <span th:text="'Bệnh nền: ' + ${diseaseTxt}">Bệnh nền</span>
                             </span>
-                            <span th:if="${!snap['patient']['hasAllergies'] and !snap['patient']['hasUnderlyingDisease'] and !snap['patient']['hasCardiovascularDisease']}"
-                                  class="vc-alert-pill is-safe">
-                                <i class="bi bi-shield-check"></i>
-                                <span>Không dị ứng</span>
-                            </span>
 
+                            <!-- Secondary Left -> Primary Right -->
                             <a th:href="${backPatientUrl}" class="vc-btn-sm">
                                 <i class="bi bi-arrow-left"></i>
                                 <span>Hồ sơ BN</span>
@@ -793,7 +779,7 @@
 
                             <a th:if="${emrRecord != null and canViewClinical}"
                                th:href="@{/emr/records/{id}(id=${emrRecord.recordId})}"
-                               class="vc-btn-sm vc-btn-emerald">
+                               class="vc-btn-sm vc-btn-tonal">
                                 <i class="bi bi-journal-medical"></i>
                                 <span>BAĐT</span>
                             </a>
@@ -810,33 +796,28 @@
                     <div class="vc-tab-strip">
                         <div class="vc-tabs" role="tablist">
                             <button type="button" class="vc-tab-btn is-active" data-vc-tab="overview">
-                                <i class="bi bi-grid-1x2-fill"></i>
-                                <span>Tổng quan lượt khám</span>
+                                <i class="bi bi-grid-1x2"></i>
+                                <span>Tổng quan điều trị</span>
                             </button>
-                            <button type="button" class="vc-tab-btn" data-vc-tab="clinical">
-                                <i class="bi bi-heart-pulse"></i>
-                                <span>Lâm sàng &amp; Thủ thuật</span>
-                                <span class="vc-tab-badge" th:text="${snap['performedServices'] != null ? #lists.size(snap['performedServices']) : 0}">0</span>
-                            </button>
-                            <button type="button" class="vc-tab-btn" data-vc-tab="media">
+                            <button type="button" class="vc-tab-btn" data-vc-tab="media"
+                                    th:with="mediaCnt=${(snap['photos'] != null ? #lists.size(snap['photos']) : 0) + (snap['xrays'] != null ? #lists.size(snap['xrays']) : 0)}">
                                 <i class="bi bi-images"></i>
-                                <span>X-Quang, Ảnh &amp; BAĐT</span>
-                                <span class="vc-tab-badge"
-                                      th:text="${(snap['photos'] != null ? #lists.size(snap['photos']) : 0) + (snap['xrays'] != null ? #lists.size(snap['xrays']) : 0)}">0</span>
+                                <span>Phim ảnh &amp; BAĐT</span>
+                                <span th:if="${mediaCnt > 0}" class="vc-tab-badge" th:text="${mediaCnt}">0</span>
                             </button>
                         </div>
 
                         <div class="small text-muted d-none d-md-flex align-items-center gap-2 py-1">
                             <span th:if="${snap['clinical']['chiefComplaint'] != null and !#strings.isEmpty(snap['clinical']['chiefComplaint'])}"
-                                  class="text-truncate" style="max-width: 340px;"
+                                  class="text-truncate" style="max-width: 360px; font-size: 12px;"
                                   th:title="${snap['clinical']['chiefComplaint']}">
-                                <strong class="text-dark">Lý do khám:</strong>
+                                <span class="text-secondary fw-semibold">Lý do khám:</span>
                                 <span th:text="${snap['clinical']['chiefComplaint']}">Đau răng hàm dưới</span>
                             </span>
                             <span th:if="${(snap['clinical']['chiefComplaint'] == null or #strings.isEmpty(snap['clinical']['chiefComplaint'])) and visit.initialSymptoms != null and !#strings.isEmpty(visit.initialSymptoms)}"
-                                  class="text-truncate" style="max-width: 340px;"
+                                  class="text-truncate" style="max-width: 360px; font-size: 12px;"
                                   th:title="${visit.initialSymptoms}">
-                                <strong class="text-dark">Triệu chứng:</strong>
+                                <span class="text-secondary fw-semibold">Triệu chứng:</span>
                                 <span th:text="${visit.initialSymptoms}">Đau răng</span>
                             </span>
                         </div>
@@ -850,21 +831,21 @@
                     <section class="vc-pane is-active" id="vc-pane-overview">
                         <div class="vc-bento-grid">
 
-                            <!-- CỘT TRÁI: TRÊN = SƠ ĐỒ RĂNG (CODE CŨ) | DƯỚI = KẾ HOẠCH ĐIỀU TRỊ -->
+                            <!-- CỘT TRÁI: SƠ ĐỒ RĂNG FDI -->
                             <div class="vc-col-left">
 
-                                <!-- 1. SƠ ĐỒ RĂNG - FDI -->
+                                <!-- 1. SƠ ĐỒ RĂNG FDI -->
                                 <div class="vc-card vc-fdi-card">
                                     <div class="vc-card-head">
                                         <h2 class="vc-card-title">
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
                                                 <path d="M12 2C8 2 6 4 6 7c0 4 2 8 3 13 0 .6.4 1 1 1h.5c.6 0 1-.4 1-1v-4c0-.6.4-1 1-1s1 .4 1 1v4c0 .6.4 1 1 1h.5c.6 0 1-.4 1-1 1-5 3-9 3-13 0-3-2-5-6-5z"></path>
                                             </svg>
-                                            <span>Sơ đồ răng - FDI</span>
+                                            <span>Sơ đồ răng FDI</span>
                                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill"
-                                                  id="vcToothCountBadge">0 răng</span>
+                                                  id="vcToothCountBadge" style="display: none;">0 răng</span>
                                         </h2>
-                                        <div class="vc-legend">
+                                        <div class="vc-legend" id="vcToothLegend" style="display: none;">
                                             <span class="vc-legend-item"><span class="vc-legend-dot" style="background: #ef4444;"></span>CĐ chính</span>
                                             <span class="vc-legend-item"><span class="vc-legend-dot" style="background: #f59e0b;"></span>Kèm theo</span>
                                             <span class="vc-legend-item"><span class="vc-legend-dot" style="background: #0284c7;"></span>Phân biệt</span>
@@ -917,310 +898,347 @@
                                     <!-- Thanh chi tiết răng inline (click chọn răng không cần scroll) -->
                                     <div class="vc-tooth-inspector" id="vcToothInspector">
                                         <div class="d-flex align-items-center gap-2 text-truncate min-w-0" id="vcToothInspectorContent">
-                                            <span class="text-muted"><i class="bi bi-hand-index-thumb me-1 text-primary"></i>Nhấn vào răng trên sơ đồ để xem chi tiết bệnh lý &amp; thủ thuật.</span>
+                                            <span class="text-muted">Chưa ghi nhận bệnh lý hoặc thủ thuật trên răng.</span>
                                         </div>
                                         <div class="d-flex align-items-center gap-1 flex-shrink-0" id="vcToothQuickChips"></div>
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- CỘT PHẢI: THEO QUY TRÌNH LÂM SÀNG (1. CHẨN ĐOÁN & THỦ THUẬT -> 2. KẾ HOẠCH -> 3. ĐƠN THUỐC) -->
+                            <div class="vc-col-right">
+
+                                <!-- 1. CHẨN ĐOÁN & THỦ THUẬT -->
+                                <th:block th:with="diagCnt=${snap['diagnoses'] != null ? #lists.size(snap['diagnoses']) : 0},
+                                                   svcCnt=${snap['performedServices'] != null ? #lists.size(snap['performedServices']) : 0},
+                                                   hasSummary=${snap['clinical']['summaryAssessment'] != null and !#strings.isEmpty(snap['clinical']['summaryAssessment'])},
+                                                   hasRightTop=${diagCnt > 0 or svcCnt > 0 or hasSummary}">
+                                    <div th:if="${!hasRightTop}" class="vc-card-micro">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <h2 class="vc-card-title">
+                                                <i class="bi bi-clipboard2-pulse text-primary"></i>
+                                                <span>Chẩn đoán &amp; Thủ thuật</span>
+                                            </h2>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <span class="vc-card-micro-status">Chưa ghi nhận chẩn đoán hoặc thủ thuật</span>
+                                            <a th:if="${canPerformClinical}"
+                                               th:href="@{/doctor/examination/{id}/diagnoses(id=${idCodec.encodeVisit(visit.id)})}"
+                                               class="vc-btn-sm vc-btn-tonal py-1 px-2" style="font-size: 12px;">
+                                                Ghi nhận
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    <div th:if="${hasRightTop}"
+                                         class="vc-card"
+                                         id="vcRightTopCard"
+                                         th:data-diag-count="${diagCnt}"
+                                         th:data-svc-count="${svcCnt}">
+                                        <div class="vc-card-head">
+                                            <h2 class="vc-card-title">
+                                                <i class="bi bi-clipboard2-pulse text-primary"></i>
+                                                <span>Chẩn đoán &amp; Thủ thuật</span>
+                                            </h2>
+                                            <div class="vc-mini-switcher">
+                                                <button type="button" class="vc-mini-btn is-active" id="vcRightTopDiagBtn" onclick="switchRightTop('diag', this)">
+                                                    Chẩn đoán (<span th:text="${diagCnt}">0</span>)
+                                                </button>
+                                                <button type="button" class="vc-mini-btn" id="vcRightTopSvcBtn" onclick="switchRightTop('svc', this)">
+                                                    Thủ thuật (<span th:text="${svcCnt}">0</span>)
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="vc-card-body">
+                                            <!-- Pane: Chẩn đoán ICD-10 -->
+                                            <div id="vcRightTopDiag">
+                                                <div th:if="${hasSummary}"
+                                                     class="px-2 py-2 mb-2 rounded-3 small"
+                                                     style="background: #f0f9ff; color: #0c4a6e;">
+                                                    <i class="bi bi-journal-check me-1 text-primary"></i>
+                                                    <strong class="me-1">Nhận định:</strong>
+                                                    <span th:text="${snap['clinical']['summaryAssessment']}">Nhận định lâm sàng</span>
+                                                </div>
+
+                                                <div th:if="${diagCnt == 0}" class="text-muted small py-2">
+                                                    Chưa có chẩn đoán được ghi nhận.
+                                                </div>
+
+                                                <div th:if="${diagCnt > 0}">
+                                                    <div th:each="d : ${snap['diagnoses']}"
+                                                         class="vc-diag-row"
+                                                         th:data-teeth="${d['toothNumbers'] != null ? d['toothNumbers'] : ''}"
+                                                         th:data-icd="${d['icd10Code'] != null ? d['icd10Code'] : ''}"
+                                                         th:data-type="${d['type'] != null ? d['type'] : 'SECONDARY'}"
+                                                         th:data-text="${d['diagnosisText'] != null ? d['diagnosisText'] : ''}"
+                                                         onclick="highlightTeethFromDiag(this)"
+                                                         style="cursor: pointer;">
+                                                        <div class="d-flex align-items-start gap-2 min-w-0">
+                                                            <span class="vc-tooth-pill"
+                                                                  th:with="rawTooth=${d['toothNumbers'] != null ? #strings.trim(d['toothNumbers']) : ''},
+                                                                           toothLower=${#strings.toLowerCase(rawTooth)}"
+                                                                  th:text="${!#strings.isEmpty(rawTooth) ? ((#strings.startsWith(toothLower, 'r') or #strings.contains(toothLower, 'hàm') or #strings.contains(toothLower, 'toàn') or #strings.contains(toothLower, 'chung')) ? rawTooth : 'R' + rawTooth) : (d['icd10Code'] != null and #strings.startsWith(d['icd10Code'], 'K01') ? 'R8' : 'Hàm')}">R46</span>
+                                                            <div class="min-w-0">
+                                                                <div class="d-flex align-items-center gap-1 flex-wrap">
+                                                                    <span class="font-monospace fw-semibold text-primary" style="font-size: 11.5px;"
+                                                                          th:if="${d['icd10Code'] != null}" th:text="'[' + ${d['icd10Code']} + ']'">[K02.1]</span>
+                                                                    <span class="fw-semibold text-dark" style="font-size: 12.5px;" th:text="${d['diagnosisText']}">Sâu ngà răng</span>
+                                                                </div>
+                                                                <div th:if="${d['notes'] != null and !#strings.isEmpty(d['notes'])}"
+                                                                     class="text-muted mt-1" style="font-size: 11.5px;"
+                                                                     th:text="${d['notes']}">Ghi chú</div>
+                                                            </div>
+                                                        </div>
+                                                        <span class="vc-status-badge flex-shrink-0"
+                                                              th:classappend="${d['type'] == 'MAIN' ? 'vc-status-rose' : (d['type'] == 'DIFFERENTIAL' ? 'vc-status-sky' : 'vc-status-amber')}"
+                                                              th:text="${d['type'] == 'MAIN' ? 'Chính' : (d['type'] == 'DIFFERENTIAL' ? 'Phân biệt' : 'Kèm theo')}">Chính</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Pane: Thủ thuật đã làm -->
+                                            <div id="vcRightTopSvc" style="display: none;">
+                                                <div th:if="${svcCnt == 0}" class="text-muted small py-2">
+                                                    Chưa có thủ thuật được thực hiện.
+                                                </div>
+                                                <div th:if="${svcCnt > 0}">
+                                                    <div th:each="svc : ${snap['performedServices']}"
+                                                         class="vc-plan-row vc-svc-item"
+                                                         th:classappend="${svc['status'] == 'CANCELLED' ? 'opacity-50' : ''}"
+                                                         th:data-teeth="${svc['toothNumbers'] != null ? svc['toothNumbers'] : ''}"
+                                                         th:data-status="${svc['status'] != null ? svc['status'] : ''}"
+                                                         th:data-label="${svc['serviceName'] != null ? svc['serviceName'] : ''}"
+                                                         onclick="highlightTeethFromAttr(this.getAttribute('data-teeth'), this)"
+                                                         style="cursor: pointer;">
+                                                        <div class="d-flex align-items-start gap-2 min-w-0">
+                                                            <span class="vc-tooth-pill" style="background: #d1fae5; color: #065f46;"
+                                                                  th:with="rawTooth=${svc['toothNumbers'] != null ? #strings.trim(svc['toothNumbers']) : ''},
+                                                                           toothLower=${#strings.toLowerCase(rawTooth)}"
+                                                                  th:text="${!#strings.isEmpty(rawTooth) ? ((#strings.startsWith(toothLower, 'r') or #strings.contains(toothLower, 'hàm') or #strings.contains(toothLower, 'toàn') or #strings.contains(toothLower, 'chung')) ? rawTooth : 'R' + rawTooth) : 'Chung'}">R16</span>
+                                                            <div class="min-w-0">
+                                                                <div class="d-flex align-items-center gap-1 flex-wrap">
+                                                                    <span class="fw-semibold text-dark" style="font-size: 12.5px;" th:text="${svc['serviceName']}">Trám răng Composite</span>
+                                                                    <span th:if="${svc['quantity'] != null and @emrViewText.number(svc['quantity']) != '1'}"
+                                                                          class="text-muted fw-semibold" style="font-size: 11px;"
+                                                                          th:text="'×' + ${@emrViewText.number(svc['quantity'])}">×2</span>
+                                                                </div>
+                                                                <div class="text-muted" style="font-size: 11px;">
+                                                                    <span th:text="${svc['doctorName'] != null ? svc['doctorName'] : '—'}">BS. Quân</span>
+                                                                    <span th:if="${svc['completedAt'] != null and #strings.length(svc['completedAt']) >= 16}"
+                                                                          th:text="' · ' + ${#strings.substring(svc['completedAt'], 11, 16)}"> · 10:15</span>
+                                                                    <span th:if="${svc['clinicalNotes'] != null and !#strings.isEmpty(svc['clinicalNotes'])}"
+                                                                          th:text="' · ' + ${svc['clinicalNotes']}"> · Ghi chú</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="text-end flex-shrink-0">
+                                                            <div class="fw-bold text-primary" style="font-size: 12.5px;"
+                                                                 th:text="${svc['finalPrice'] != null ? #numbers.formatDecimal(svc['finalPrice'], 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">350.000 đ</div>
+                                                            <span class="vc-status-badge" style="font-size: 10px;"
+                                                                  th:classappend="${svc['status'] == 'COMPLETED' ? 'vc-status-emerald' : (svc['status'] == 'CANCELLED' ? 'vc-status-rose' : 'vc-status-amber')}"
+                                                                  th:text="${@emrViewText.label(svc['status'])}">Hoàn thành</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </th:block>
 
                                 <!-- 2. KẾ HOẠCH ĐIỀU TRỊ & BÁO GIÁ -->
-                                <div class="vc-card vc-card-grow">
-                                    <div class="vc-card-head">
-                                        <div class="d-flex align-items-center gap-2 min-w-0">
-                                            <h2 class="vc-card-title text-nowrap">
-                                                <i class="bi bi-diagram-3-fill text-primary"></i>
-                                                <span>Kế hoạch điều trị</span>
-                                            </h2>
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill"
-                                                  th:text="${treatmentPlans != null ? #lists.size(treatmentPlans) : 0}">0</span>
-                                            <select th:if="${treatmentPlans != null and #lists.size(treatmentPlans) > 1}"
-                                                    id="vcPlanSelector"
-                                                    class="form-select form-select-sm py-0 px-2 fw-semibold"
-                                                    style="font-size: 11.5px; max-width: 210px; border-color: #cbd5e1;"
-                                                    onchange="selectVisitPlan(this.value)">
-                                                <option th:each="p, stat : ${treatmentPlans}"
-                                                        th:value="${stat.index}"
-                                                        th:text="${p.planCode + ' - ' + p.planName}">KHDT-001</option>
-                                            </select>
+                                <th:block th:with="hasPlans=${treatmentPlans != null and !#lists.isEmpty(treatmentPlans)},
+                                                   hasPlanSummary=${snap['treatmentSummary'] != null and !#strings.isEmpty(snap['treatmentSummary'])},
+                                                   hasPlanArea=${hasPlans or hasPlanSummary}">
+                                    <div th:if="${!hasPlanArea}" class="vc-card-micro">
+                                        <h2 class="vc-card-title text-nowrap">
+                                            <i class="bi bi-diagram-3 text-primary"></i>
+                                            <span>Kế hoạch điều trị</span>
+                                        </h2>
+                                        <span class="vc-card-micro-status">Chưa lập kế hoạch điều trị</span>
+                                    </div>
+
+                                    <div th:if="${hasPlanArea}" class="vc-card">
+                                        <div class="vc-card-head">
+                                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                                <h2 class="vc-card-title text-nowrap">
+                                                    <i class="bi bi-diagram-3 text-primary"></i>
+                                                    <span>Kế hoạch điều trị</span>
+                                                </h2>
+                                                <select th:if="${hasPlans and #lists.size(treatmentPlans) > 1}"
+                                                        id="vcPlanSelector"
+                                                        class="form-select form-select-sm py-0 px-2 fw-semibold"
+                                                        style="font-size: 11.5px; max-width: 210px; border-color: #cbd5e1;"
+                                                        onchange="selectVisitPlan(this.value)">
+                                                    <option th:each="p, stat : ${treatmentPlans}"
+                                                            th:value="${stat.index}"
+                                                            th:text="${p.planCode + ' - ' + p.planName}">KHDT-001</option>
+                                                </select>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2 flex-shrink-0"
+                                                 th:if="${hasPlans}"
+                                                 id="vcActivePlanBadges">
+                                                <span class="text-muted fw-semibold" style="font-size: 11.5px;" id="vcPlanDoctorBadge"
+                                                      th:text="${treatmentPlans[0].doctor != null ? treatmentPlans[0].doctor.fullName : '---'}">BS</span>
+                                                <span class="vc-status-badge vc-status-sky" id="vcPlanStatusBadge"
+                                                      th:switch="${treatmentPlans[0].status != null ? treatmentPlans[0].status.name() : 'DRAFT'}">
+                                                    <span th:case="'COMPLETED'">Hoàn thành</span>
+                                                    <span th:case="'IN_PROGRESS'">Đang điều trị</span>
+                                                    <span th:case="'ACCEPTED'">Đã duyệt</span>
+                                                    <span th:case="'PROPOSED'">Đề xuất</span>
+                                                    <span th:case="'CANCELLED'">Đã hủy</span>
+                                                    <span th:case="*">Nháp</span>
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div class="d-flex align-items-center gap-1 flex-shrink-0"
-                                             th:if="${treatmentPlans != null and !#lists.isEmpty(treatmentPlans)}"
-                                             id="vcActivePlanBadges">
-                                            <span class="badge bg-light text-primary border fw-semibold" style="font-size: 11px;" id="vcPlanDoctorBadge"
-                                                  th:text="${treatmentPlans[0].doctor != null ? treatmentPlans[0].doctor.fullName : '---'}">BS</span>
-                                            <span class="vc-status-badge vc-status-sky" id="vcPlanStatusBadge"
-                                                  th:switch="${treatmentPlans[0].status != null ? treatmentPlans[0].status.name() : 'DRAFT'}">
-                                                <span th:case="'COMPLETED'">Hoàn thành</span>
-                                                <span th:case="'IN_PROGRESS'">Đang điều trị</span>
-                                                <span th:case="'ACCEPTED'">Đã duyệt</span>
-                                                <span th:case="'PROPOSED'">Đề xuất</span>
-                                                <span th:case="'CANCELLED'">Đã hủy</span>
-                                                <span th:case="*">Nháp</span>
+
+                                        <div class="vc-card-body">
+                                            <div th:if="${!hasPlans and hasPlanSummary}"
+                                                 class="p-2 rounded-3 bg-light small text-dark"
+                                                 th:text="${snap['treatmentSummary']}">Tóm tắt hướng điều trị</div>
+
+                                            <div th:if="${hasPlans}">
+                                                <div th:each="p, pStat : ${treatmentPlans}"
+                                                     class="vc-plan-block"
+                                                     th:style="${pStat.index == 0 ? '' : 'display: none;'}"
+                                                     th:data-plan-idx="${pStat.index}"
+                                                     th:data-plan-doctor="${p.doctor != null ? p.doctor.fullName : '---'}"
+                                                     th:data-plan-status="${p.status != null ? p.status.name() : 'DRAFT'}"
+                                                     th:data-est="${p.estimatedCost != null ? #numbers.formatDecimal(p.estimatedCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}"
+                                                     th:data-paid="${p.totalPaidAmount != null ? #numbers.formatDecimal(p.totalPaidAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}"
+                                                     th:data-rem="${p.remainingCost != null ? #numbers.formatDecimal(p.remainingCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+
+                                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-1 pb-2 border-bottom" style="font-size: 12px; border-color: #f1f5f9 !important;">
+                                                        <div class="fw-semibold text-dark text-truncate">
+                                                            <span class="font-monospace text-primary me-1" th:text="${p.planCode}">KHDT</span>
+                                                            <span th:text="${p.planName}">Tên phác đồ</span>
+                                                        </div>
+                                                        <span th:if="${p.startDate != null or p.expectedEndDate != null}" class="text-muted text-nowrap" style="font-size: 11px;">
+                                                            <span th:text="${p.startDate != null ? #temporals.format(p.startDate, 'dd/MM/yyyy') : '—'}">--/--</span>
+                                                            &rarr;
+                                                            <span th:text="${p.expectedEndDate != null ? #temporals.format(p.expectedEndDate, 'dd/MM/yyyy') : '—'}">--/--</span>
+                                                        </span>
+                                                    </div>
+
+                                                    <div th:if="${p.stages == null or #lists.isEmpty(p.stages)}" class="text-muted small fst-italic py-2">
+                                                        Phác đồ chưa có giai đoạn chi tiết.
+                                                    </div>
+
+                                                    <th:block th:if="${p.stages != null and !#lists.isEmpty(p.stages)}">
+                                                        <th:block th:each="st : ${p.stages}">
+                                                            <div th:if="${st.items == null or #lists.isEmpty(st.items)}" class="vc-plan-row">
+                                                                <div class="d-flex align-items-center gap-2 min-w-0">
+                                                                    <span class="vc-tooth-pill" style="background: #f1f5f9; color: #334155;">GĐ</span>
+                                                                    <div class="min-w-0">
+                                                                        <div class="fw-semibold text-dark small text-truncate" th:text="${st.stageName}">Giai đoạn</div>
+                                                                        <div class="text-muted" style="font-size: 11px;" th:if="${st.expectedEndDate != null}"
+                                                                             th:text="'Dự kiến: ' + ${#temporals.format(st.expectedEndDate, 'dd/MM/yyyy')}">Dự kiến</div>
+                                                                    </div>
+                                                                </div>
+                                                                <span class="vc-status-badge vc-status-slate"
+                                                                      th:text="${st.status != null ? st.status.name() : 'PENDING'}">PENDING</span>
+                                                            </div>
+
+                                                            <div th:each="it : ${st.items}"
+                                                                 class="vc-plan-row vc-plan-item"
+                                                                 th:classappend="${it.status != null and it.status.name() == 'CANCELLED' ? 'opacity-50' : ''}"
+                                                                 th:data-teeth="${it.toothNumbers != null ? it.toothNumbers : ''}"
+                                                                 th:data-label="${it.stepName != null and !#strings.isEmpty(it.stepName) ? it.stepName : (it.service != null ? it.service.serviceName : 'Thủ thuật')}"
+                                                                 th:data-status="${it.status != null ? it.status.name() : 'PLANNED'}"
+                                                                 onclick="highlightTeethFromAttr(this.getAttribute('data-teeth'), this)"
+                                                                 style="cursor: pointer;">
+                                                                <div class="d-flex align-items-center gap-2 min-w-0">
+                                                                    <span class="vc-tooth-pill"
+                                                                          th:with="rawTooth=${it.toothNumbers != null ? #strings.trim(it.toothNumbers) : ''},
+                                                                                   toothLower=${#strings.toLowerCase(rawTooth)}"
+                                                                          th:text="${!#strings.isEmpty(rawTooth) ? ((#strings.startsWith(toothLower, 'r') or #strings.contains(toothLower, 'hàm') or #strings.contains(toothLower, 'toàn') or #strings.contains(toothLower, 'chung')) ? rawTooth : 'R' + rawTooth) : 'Chung'}">R16</span>
+                                                                    <div class="min-w-0">
+                                                                        <div class="fw-semibold text-dark text-truncate" style="font-size: 12.5px;"
+                                                                             th:classappend="${it.status != null and it.status.name() == 'CANCELLED' ? 'text-decoration-line-through' : ''}"
+                                                                             th:text="${it.stepName != null and !#strings.isEmpty(it.stepName) ? it.stepName : (it.service != null ? it.service.serviceName : 'Thủ thuật')}">Trám răng composite</div>
+                                                                        <div class="d-flex align-items-center gap-2 text-muted" style="font-size: 11px;">
+                                                                            <span class="text-truncate" th:text="${st.stageName}">Giai đoạn 1</span>
+                                                                            <span>&middot;</span>
+                                                                            <span th:classappend="${it.status != null and it.status.name() == 'COMPLETED' ? 'text-success fw-semibold' : (it.status != null and it.status.name() == 'IN_PROGRESS' ? 'text-primary fw-semibold' : (it.status != null and it.status.name() == 'CANCELLED' ? 'text-danger fw-semibold' : 'text-secondary'))}"
+                                                                                  th:text="${it.status != null and it.status.name() == 'COMPLETED' ? 'Đã làm' : (it.status != null and it.status.name() == 'IN_PROGRESS' ? 'Đang làm' : (it.status != null and it.status.name() == 'CANCELLED' ? 'Đã hủy' : 'Kế hoạch'))}">Kế hoạch</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="text-end flex-shrink-0">
+                                                                    <div class="fw-bold text-dark" style="font-size: 13px;"
+                                                                         th:text="${it.estimatedPrice != null ? #numbers.formatDecimal(it.quantity != null ? it.estimatedPrice.multiply(it.quantity) : it.estimatedPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">600,000 đ</div>
+                                                                    <div class="text-muted" style="font-size: 10.5px;"
+                                                                         th:if="${it.quantity != null and it.quantity.stripTrailingZeros().toPlainString() != '1'}"
+                                                                         th:text="${it.quantity.stripTrailingZeros().toPlainString() + (it.estimatedPrice != null ? ' × ' + #numbers.formatDecimal(it.estimatedPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '')}">2 × 300,000 đ</div>
+                                                                </div>
+                                                            </div>
+                                                        </th:block>
+                                                    </th:block>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="vc-card-foot d-flex align-items-center justify-content-between gap-2 flex-wrap"
+                                             th:if="${hasPlans}">
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <span class="small fw-semibold text-secondary" style="font-size: 12px;">Tổng dự tính</span>
+                                                <span class="vc-status-badge vc-status-emerald" id="vcPlanPaidText"
+                                                      th:text="'Đã trả: ' + ${treatmentPlans[0].totalPaidAmount != null ? #numbers.formatDecimal(treatmentPlans[0].totalPaidAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">Đã trả: 0 đ</span>
+                                                <span class="vc-status-badge vc-status-amber" id="vcPlanRemText"
+                                                      th:text="'Còn lại: ' + ${treatmentPlans[0].remainingCost != null ? #numbers.formatDecimal(treatmentPlans[0].remainingCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">Còn lại: 0 đ</span>
+                                            </div>
+                                            <div class="vc-total-val" id="vcPlanEstTotal"
+                                                 th:text="${treatmentPlans[0].estimatedCost != null ? #numbers.formatDecimal(treatmentPlans[0].estimatedCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</div>
+                                        </div>
+                                    </div>
+                                </th:block>
+
+                                <!-- 3. ĐƠN THUỐC -->
+                                <th:block th:with="hasRx=${snap['prescriptions'] != null and !#lists.isEmpty(snap['prescriptions'])},
+                                                   hasFu=${followUps != null and !#lists.isEmpty(followUps) and followUps[0].date != null}">
+                                    <div th:if="${!hasRx}" class="vc-card-micro">
+                                        <h2 class="vc-card-title text-nowrap">
+                                            <i class="bi bi-capsule-pill text-danger"></i>
+                                            <span>Đơn thuốc</span>
+                                        </h2>
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <span class="vc-card-micro-status">Chưa kê đơn thuốc</span>
+                                            <span th:if="${hasFu}" class="vc-status-badge vc-status-sky">
+                                                <i class="bi bi-calendar-check"></i>
+                                                <span th:text="'Tái khám: ' + ${#temporals.format(followUps[0].date, 'dd/MM/yyyy')}">Tái khám</span>
                                             </span>
                                         </div>
                                     </div>
 
-                                    <div class="vc-card-body">
-                                        <div th:if="${treatmentPlans == null or #lists.isEmpty(treatmentPlans)}">
-                                            <div th:if="${snap['treatmentSummary'] != null and !#strings.isEmpty(snap['treatmentSummary'])}"
-                                                 class="p-2 rounded-3 border bg-light small text-dark"
-                                                 th:text="${snap['treatmentSummary']}">Tóm tắt hướng điều trị</div>
-                                            <div th:unless="${snap['treatmentSummary'] != null and !#strings.isEmpty(snap['treatmentSummary'])}"
-                                                 class="vc-empty-compact">
-                                                <i class="bi bi-diagram-3 fs-4 mb-1 opacity-50"></i>
-                                                <span>Chưa có kế hoạch điều trị cho bệnh nhân này.</span>
+                                    <div th:if="${hasRx}" class="vc-card">
+                                        <div class="vc-card-head">
+                                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                                <h2 class="vc-card-title text-nowrap">
+                                                    <i class="bi bi-capsule-pill text-danger"></i>
+                                                    <span>Đơn thuốc</span>
+                                                </h2>
+                                                <select th:if="${#lists.size(snap['prescriptions']) > 1}"
+                                                        id="vcRxSelector"
+                                                        class="form-select form-select-sm py-0 px-2 fw-semibold"
+                                                        style="font-size: 11.5px; max-width: 155px; border-color: #cbd5e1;"
+                                                        onchange="selectVisitPrescription(this.value)">
+                                                    <option th:each="rx, rxStat : ${snap['prescriptions']}"
+                                                            th:value="${rxStat.index}"
+                                                            th:text="${rx['prescriptionCode']}">TOA-001</option>
+                                                </select>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-1 flex-shrink-0"
+                                                 th:with="firstSt=${snap['prescriptions'][0]['status']}">
+                                                <span th:if="${#lists.size(snap['prescriptions']) == 1}"
+                                                      class="vc-code-chip" id="vcRxCodeBadge"
+                                                      th:text="${snap['prescriptions'][0]['prescriptionCode']}">TOA001</span>
+                                                <span class="vc-status-badge" id="vcRxStatusBadge"
+                                                      th:classappend="${firstSt == 'DISPENSED' or firstSt == 'CLINIC_PURCHASE_COMPLETED' ? 'vc-status-emerald' : (firstSt == 'CANCELLED' ? 'vc-status-rose' : (firstSt == 'PENDING' or firstSt == 'CLINIC_PURCHASE_PARTIAL' ? 'vc-status-amber' : 'vc-status-sky'))}"
+                                                      th:text="${firstSt == 'DISPENSED' ? 'Đã cấp phát' : (firstSt == 'CLINIC_PURCHASE_COMPLETED' ? 'Đã mua tại PK' : (firstSt == 'CLINIC_PURCHASE_PARTIAL' ? 'Mua một phần' : (firstSt == 'EXTERNAL_PURCHASE' ? 'Mua ngoài' : (firstSt == 'PENDING' ? 'Chờ cấp phát' : @emrViewText.label(firstSt)))))}">Chờ cấp phát</span>
                                             </div>
                                         </div>
 
-                                        <div th:if="${treatmentPlans != null and !#lists.isEmpty(treatmentPlans)}">
-                                            <div th:each="p, pStat : ${treatmentPlans}"
-                                                 class="vc-plan-block"
-                                                 th:style="${pStat.index == 0 ? '' : 'display: none;'}"
-                                                 th:data-plan-idx="${pStat.index}"
-                                                 th:data-plan-doctor="${p.doctor != null ? p.doctor.fullName : '---'}"
-                                                 th:data-plan-status="${p.status != null ? p.status.name() : 'DRAFT'}"
-                                                 th:data-est="${p.estimatedCost != null ? #numbers.formatDecimal(p.estimatedCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}"
-                                                 th:data-paid="${p.totalPaidAmount != null ? #numbers.formatDecimal(p.totalPaidAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}"
-                                                 th:data-rem="${p.remainingCost != null ? #numbers.formatDecimal(p.remainingCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
-
-                                                <div class="d-flex align-items-center justify-content-between gap-2 mb-2 pb-1 border-bottom" style="font-size: 12px;">
-                                                    <div class="fw-bold text-dark text-truncate">
-                                                        <span class="font-monospace text-primary me-1" th:text="${p.planCode}">KHDT</span>
-                                                        <span th:text="${p.planName}">Tên phác đồ</span>
-                                                    </div>
-                                                    <span class="text-muted text-nowrap" style="font-size: 11px;">
-                                                        <span th:text="${p.startDate != null ? #temporals.format(p.startDate, 'dd/MM/yyyy') : '—'}">--/--</span>
-                                                        &rarr;
-                                                        <span th:text="${p.expectedEndDate != null ? #temporals.format(p.expectedEndDate, 'dd/MM/yyyy') : '—'}">--/--</span>
-                                                    </span>
-                                                </div>
-
-                                                <div th:if="${p.stages == null or #lists.isEmpty(p.stages)}" class="text-muted small fst-italic py-2">
-                                                    Phác đồ chưa có giai đoạn chi tiết.
-                                                </div>
-
-                                                <th:block th:if="${p.stages != null and !#lists.isEmpty(p.stages)}">
-                                                    <th:block th:each="st : ${p.stages}">
-                                                        <div th:if="${st.items == null or #lists.isEmpty(st.items)}" class="vc-plan-row">
-                                                            <div class="d-flex align-items-center gap-2 min-w-0">
-                                                                <span class="vc-tooth-pill" style="background: #f1f5f9; color: #334155;">GĐ</span>
-                                                                <div class="min-w-0">
-                                                                    <div class="fw-bold text-dark small text-truncate" th:text="${st.stageName}">Giai đoạn</div>
-                                                                    <div class="text-muted" style="font-size: 11px;" th:if="${st.expectedEndDate != null}"
-                                                                         th:text="'Dự kiến: ' + ${#temporals.format(st.expectedEndDate, 'dd/MM/yyyy')}">Dự kiến</div>
-                                                                </div>
-                                                            </div>
-                                                            <span class="vc-status-badge vc-status-slate"
-                                                                  th:text="${st.status != null ? st.status.name() : 'PENDING'}">PENDING</span>
-                                                        </div>
-
-                                                        <div th:each="it : ${st.items}"
-                                                             class="vc-plan-row vc-plan-item"
-                                                             th:classappend="${it.status != null and it.status.name() == 'CANCELLED' ? 'opacity-50' : ''}"
-                                                             th:data-teeth="${it.toothNumbers != null ? it.toothNumbers : ''}"
-                                                             th:data-label="${it.stepName != null and !#strings.isEmpty(it.stepName) ? it.stepName : (it.service != null ? it.service.serviceName : 'Thủ thuật')}"
-                                                             th:data-status="${it.status != null ? it.status.name() : 'PLANNED'}"
-                                                             onclick="highlightTeethFromAttr(this.getAttribute('data-teeth'), this)"
-                                                             style="cursor: pointer;">
-                                                            <div class="d-flex align-items-center gap-2 min-w-0">
-                                                                <span class="vc-tooth-pill"
-                                                                      th:with="rawTooth=${it.toothNumbers != null ? #strings.trim(it.toothNumbers) : ''},
-                                                                               toothLower=${#strings.toLowerCase(rawTooth)}"
-                                                                      th:text="${!#strings.isEmpty(rawTooth) ? ((#strings.startsWith(toothLower, 'r') or #strings.contains(toothLower, 'hàm') or #strings.contains(toothLower, 'toàn') or #strings.contains(toothLower, 'chung')) ? rawTooth : 'R' + rawTooth) : 'Chung'}">R16</span>
-                                                                <div class="min-w-0">
-                                                                    <div class="fw-bold text-dark text-truncate" style="font-size: 12.5px;"
-                                                                         th:classappend="${it.status != null and it.status.name() == 'CANCELLED' ? 'text-decoration-line-through' : ''}"
-                                                                         th:text="${it.stepName != null and !#strings.isEmpty(it.stepName) ? it.stepName : (it.service != null ? it.service.serviceName : 'Thủ thuật')}">Trám răng composite</div>
-                                                                    <div class="d-flex align-items-center gap-2 text-muted" style="font-size: 11px;">
-                                                                        <span class="text-truncate" th:text="${st.stageName}">Giai đoạn 1</span>
-                                                                        <span>&middot;</span>
-                                                                        <span th:classappend="${it.status != null and it.status.name() == 'COMPLETED' ? 'text-success fw-bold' : (it.status != null and it.status.name() == 'IN_PROGRESS' ? 'text-primary fw-bold' : (it.status != null and it.status.name() == 'CANCELLED' ? 'text-danger fw-bold' : 'text-secondary'))}"
-                                                                              th:text="${it.status != null and it.status.name() == 'COMPLETED' ? 'Đã làm' : (it.status != null and it.status.name() == 'IN_PROGRESS' ? 'Đang làm' : (it.status != null and it.status.name() == 'CANCELLED' ? 'Đã hủy' : 'Kế hoạch'))}">Kế hoạch</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="text-end flex-shrink-0">
-                                                                <div class="fw-bold text-dark" style="font-size: 13px;"
-                                                                     th:text="${it.estimatedPrice != null ? #numbers.formatDecimal(it.quantity != null ? it.estimatedPrice.multiply(it.quantity) : it.estimatedPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">600,000 đ</div>
-                                                                <div class="text-muted" style="font-size: 10.5px;" th:if="${it.quantity != null}"
-                                                                     th:text="${'SL: ' + it.quantity.stripTrailingZeros().toPlainString() + (it.estimatedPrice != null ? ' × ' + #numbers.formatDecimal(it.estimatedPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '')}">SL: 1</div>
-                                                            </div>
-                                                        </div>
-                                                    </th:block>
-                                                </th:block>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="vc-card-foot d-flex align-items-center justify-content-between gap-2 flex-wrap"
-                                         th:if="${treatmentPlans != null and !#lists.isEmpty(treatmentPlans)}">
-                                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                                            <span class="small fw-bold text-secondary text-uppercase" style="font-size: 11px; letter-spacing: 0.4px;">TỔNG DỰ TÍNH</span>
-                                            <span class="vc-status-badge vc-status-emerald" id="vcPlanPaidText"
-                                                  th:text="'Đã trả: ' + ${treatmentPlans[0].totalPaidAmount != null ? #numbers.formatDecimal(treatmentPlans[0].totalPaidAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">Đã trả: 0 đ</span>
-                                            <span class="vc-status-badge vc-status-amber" id="vcPlanRemText"
-                                                  th:text="'Còn lại: ' + ${treatmentPlans[0].remainingCost != null ? #numbers.formatDecimal(treatmentPlans[0].remainingCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">Còn lại: 0 đ</span>
-                                        </div>
-                                        <div class="vc-total-val" id="vcPlanEstTotal"
-                                             th:text="${treatmentPlans[0].estimatedCost != null ? #numbers.formatDecimal(treatmentPlans[0].estimatedCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- CỘT PHẢI: TRÊN = CHẨN ĐOÁN | DƯỚI = ĐƠN THUỐC -->
-                            <div class="vc-col-right">
-
-                                <!-- 3. CHẨN ĐOÁN (VÀ CHUYỂN NHANH THỦ THUẬT ĐÃ LÀM) -->
-                                <div class="vc-card">
-                                    <div class="vc-card-head">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <h2 class="vc-card-title">
-                                                <i class="bi bi-clipboard2-pulse-fill text-primary"></i>
-                                                <span>Chẩn đoán</span>
-                                            </h2>
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill"
-                                                  th:text="${snap['diagnoses'] != null ? #lists.size(snap['diagnoses']) : 0}">0</span>
-                                        </div>
-                                        <div class="vc-mini-switcher">
-                                            <button type="button" class="vc-mini-btn is-active" onclick="switchRightTop('diag', this)">Chẩn đoán</button>
-                                            <button type="button" class="vc-mini-btn" onclick="switchRightTop('svc', this)">
-                                                Thủ thuật (<span th:text="${snap['performedServices'] != null ? #lists.size(snap['performedServices']) : 0}">0</span>)
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div class="vc-card-body">
-                                        <!-- Pane: Chẩn đoán ICD-10 -->
-                                        <div id="vcRightTopDiag">
-                                            <div th:if="${snap['clinical']['summaryAssessment'] != null and !#strings.isEmpty(snap['clinical']['summaryAssessment'])}"
-                                                 class="px-2 py-1 mb-2 rounded-3 border small"
-                                                 style="background: #f0f9ff; border-color: #bae6fd !important; color: #0c4a6e;">
-                                                <i class="bi bi-journal-check me-1 text-primary"></i>
-                                                <strong class="me-1">Nhận định:</strong>
-                                                <span th:text="${snap['clinical']['summaryAssessment']}">Nhận định lâm sàng</span>
-                                            </div>
-
-                                            <div th:if="${snap['diagnoses'] == null or #lists.isEmpty(snap['diagnoses'])}" class="vc-empty-compact">
-                                                <i class="bi bi-clipboard-x fs-4 mb-1 opacity-50"></i>
-                                                <span>Chưa có chẩn đoán nào được ghi nhận trong lượt khám này.</span>
-                                            </div>
-
-                                            <div th:unless="${snap['diagnoses'] == null or #lists.isEmpty(snap['diagnoses'])}">
-                                                <div th:each="d : ${snap['diagnoses']}"
-                                                     class="vc-diag-row"
-                                                     th:data-teeth="${d['toothNumbers'] != null ? d['toothNumbers'] : ''}"
-                                                     th:data-icd="${d['icd10Code'] != null ? d['icd10Code'] : ''}"
-                                                     th:data-type="${d['type'] != null ? d['type'] : 'SECONDARY'}"
-                                                     th:data-text="${d['diagnosisText'] != null ? d['diagnosisText'] : ''}"
-                                                     onclick="highlightTeethFromDiag(this)"
-                                                     style="cursor: pointer;">
-                                                    <div class="d-flex align-items-start gap-2 min-w-0">
-                                                        <span class="vc-tooth-pill"
-                                                              th:with="rawTooth=${d['toothNumbers'] != null ? #strings.trim(d['toothNumbers']) : ''},
-                                                                       toothLower=${#strings.toLowerCase(rawTooth)}"
-                                                              th:text="${!#strings.isEmpty(rawTooth) ? ((#strings.startsWith(toothLower, 'r') or #strings.contains(toothLower, 'hàm') or #strings.contains(toothLower, 'toàn') or #strings.contains(toothLower, 'chung')) ? rawTooth : 'R' + rawTooth) : (d['icd10Code'] != null and #strings.startsWith(d['icd10Code'], 'K01') ? 'R8' : 'Hàm')}">R46</span>
-                                                        <div class="min-w-0">
-                                                            <div class="d-flex align-items-center gap-1 flex-wrap">
-                                                                <span class="font-monospace fw-bold text-primary" style="font-size: 11.5px;"
-                                                                      th:if="${d['icd10Code'] != null}" th:text="'[' + ${d['icd10Code']} + ']'">[K02.1]</span>
-                                                                <span class="fw-bold text-dark" style="font-size: 12.5px;" th:text="${d['diagnosisText']}">Sâu ngà răng</span>
-                                                            </div>
-                                                            <div th:if="${d['notes'] != null and !#strings.isEmpty(d['notes'])}"
-                                                                 class="text-muted mt-1" style="font-size: 11.5px;"
-                                                                 th:text="${d['notes']}">Ghi chú</div>
-                                                        </div>
-                                                    </div>
-                                                    <span class="vc-status-badge flex-shrink-0"
-                                                          th:classappend="${d['type'] == 'MAIN' ? 'vc-status-rose' : (d['type'] == 'DIFFERENTIAL' ? 'vc-status-sky' : 'vc-status-amber')}"
-                                                          th:text="${d['type'] == 'MAIN' ? 'Chính' : (d['type'] == 'DIFFERENTIAL' ? 'Phân biệt' : 'Kèm theo')}">Chính</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Pane: Thủ thuật đã làm (Quick switch without scrolling) -->
-                                        <div id="vcRightTopSvc" style="display: none;">
-                                            <div th:if="${snap['performedServices'] == null or #lists.isEmpty(snap['performedServices'])}" class="vc-empty-compact">
-                                                <i class="bi bi-tools fs-4 mb-1 opacity-50"></i>
-                                                <span>Chưa ghi nhận dịch vụ / thủ thuật trong ca khám này.</span>
-                                            </div>
-                                            <div th:unless="${snap['performedServices'] == null or #lists.isEmpty(snap['performedServices'])}">
-                                                <div th:each="svc : ${snap['performedServices']}"
-                                                     class="vc-plan-row vc-svc-item"
-                                                     th:classappend="${svc['status'] == 'CANCELLED' ? 'opacity-50' : ''}"
-                                                     th:data-teeth="${svc['toothNumbers'] != null ? svc['toothNumbers'] : ''}"
-                                                     th:data-status="${svc['status'] != null ? svc['status'] : ''}"
-                                                     th:data-label="${svc['serviceName'] != null ? svc['serviceName'] : ''}"
-                                                     onclick="highlightTeethFromAttr(this.getAttribute('data-teeth'), this)"
-                                                     style="cursor: pointer;">
-                                                    <div class="d-flex align-items-start gap-2 min-w-0">
-                                                        <span class="vc-tooth-pill" style="background: #d1fae5; color: #065f46;"
-                                                              th:with="rawTooth=${svc['toothNumbers'] != null ? #strings.trim(svc['toothNumbers']) : ''},
-                                                                       toothLower=${#strings.toLowerCase(rawTooth)}"
-                                                              th:text="${!#strings.isEmpty(rawTooth) ? ((#strings.startsWith(toothLower, 'r') or #strings.contains(toothLower, 'hàm') or #strings.contains(toothLower, 'toàn') or #strings.contains(toothLower, 'chung')) ? rawTooth : 'R' + rawTooth) : 'Chung'}">R16</span>
-                                                        <div class="min-w-0">
-                                                            <div class="fw-bold text-dark" style="font-size: 12.5px;" th:text="${svc['serviceName']}">Trám răng Composite</div>
-                                                            <div class="text-muted" style="font-size: 11px;">
-                                                                <span th:text="${svc['doctorName'] != null ? svc['doctorName'] : '—'}">BS. Quân</span>
-                                                                <span th:if="${svc['clinicalNotes'] != null and !#strings.isEmpty(svc['clinicalNotes'])}"
-                                                                      th:text="' · ' + ${svc['clinicalNotes']}"> · Ghi chú</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="text-end flex-shrink-0">
-                                                        <div class="fw-bold text-primary" style="font-size: 12.5px;"
-                                                             th:text="${svc['finalPrice'] != null ? #numbers.formatDecimal(svc['finalPrice'], 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">350.000 đ</div>
-                                                        <span class="vc-status-badge" style="font-size: 10px;"
-                                                              th:classappend="${svc['status'] == 'COMPLETED' ? 'vc-status-emerald' : (svc['status'] == 'CANCELLED' ? 'vc-status-rose' : 'vc-status-amber')}"
-                                                              th:text="${@emrViewText.label(svc['status'])}">Hoàn thành</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- 4. ĐƠN THUỐC -->
-                                <div class="vc-card">
-                                    <div class="vc-card-head">
-                                        <div class="d-flex align-items-center gap-2 min-w-0">
-                                            <h2 class="vc-card-title text-nowrap">
-                                                <i class="bi bi-capsule-pill text-danger"></i>
-                                                <span>Đơn thuốc</span>
-                                            </h2>
-                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill"
-                                                  th:text="${snap['prescriptions'] != null ? #lists.size(snap['prescriptions']) : 0}">0</span>
-                                            <select th:if="${snap['prescriptions'] != null and #lists.size(snap['prescriptions']) > 1}"
-                                                    id="vcRxSelector"
-                                                    class="form-select form-select-sm py-0 px-2 fw-semibold"
-                                                    style="font-size: 11.5px; max-width: 145px; border-color: #cbd5e1;"
-                                                    onchange="selectVisitPrescription(this.value)">
-                                                <option th:each="rx, rxStat : ${snap['prescriptions']}"
-                                                        th:value="${rxStat.index}"
-                                                        th:text="${rx['prescriptionCode']}">TOA-001</option>
-                                            </select>
-                                        </div>
-                                        <div class="d-flex align-items-center gap-1 flex-shrink-0"
-                                             th:if="${snap['prescriptions'] != null and !#lists.isEmpty(snap['prescriptions'])}"
-                                             th:with="firstSt=${snap['prescriptions'][0]['status']}">
-                                            <span class="vc-code-chip" id="vcRxCodeBadge"
-                                                  th:text="${snap['prescriptions'][0]['prescriptionCode']}">TOA001</span>
-                                            <span class="vc-status-badge" id="vcRxStatusBadge"
-                                                  th:classappend="${firstSt == 'DISPENSED' or firstSt == 'CLINIC_PURCHASE_COMPLETED' ? 'vc-status-emerald' : (firstSt == 'CANCELLED' ? 'vc-status-rose' : (firstSt == 'PENDING' or firstSt == 'CLINIC_PURCHASE_PARTIAL' ? 'vc-status-amber' : 'vc-status-sky'))}"
-                                                  th:text="${firstSt == 'DISPENSED' ? 'Đã cấp phát' : (firstSt == 'CLINIC_PURCHASE_COMPLETED' ? 'Đã mua tại PK' : (firstSt == 'CLINIC_PURCHASE_PARTIAL' ? 'Mua một phần' : (firstSt == 'EXTERNAL_PURCHASE' ? 'Mua ngoài' : (firstSt == 'PENDING' ? 'Chờ cấp phát' : @emrViewText.label(firstSt)))))}">Chờ cấp phát</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="vc-card-body">
-                                        <div th:if="${snap['prescriptions'] == null or #lists.isEmpty(snap['prescriptions'])}" class="vc-empty-compact">
-                                            <i class="bi bi-prescription2 fs-4 mb-1 opacity-50"></i>
-                                            <span>Bác sĩ chưa kê đơn thuốc trong lượt khám này.</span>
-                                            <div th:if="${followUps != null and !#lists.isEmpty(followUps) and followUps[0].date != null}" class="mt-2 px-2 py-1 rounded-pill bg-primary-subtle text-primary fw-semibold" style="font-size: 11.5px;">
-                                                <i class="bi bi-calendar-check me-1"></i>
-                                                <span th:text="'Hẹn tái khám: ' + ${#temporals.format(followUps[0].date, 'dd/MM/yyyy')}">Hẹn tái khám</span>
-                                            </div>
-                                        </div>
-
-                                        <div th:unless="${snap['prescriptions'] == null or #lists.isEmpty(snap['prescriptions'])}">
+                                        <div class="vc-card-body">
                                             <div th:each="p, rxStat : ${snap['prescriptions']}"
                                                  class="vc-rx-block"
                                                  th:with="rxSt=${p['status']},
@@ -1245,7 +1263,7 @@
                                                               th:text="${itemStat.count}">1</span>
                                                         <div class="min-w-0">
                                                             <div class="d-flex align-items-center gap-1 flex-wrap">
-                                                                <strong class="text-dark" style="font-size: 12.5px;" th:text="${item['drugName']}">Amoxicillin 500mg</strong>
+                                                                <strong class="text-dark fw-semibold" style="font-size: 12.5px;" th:text="${item['drugName']}">Amoxicillin 500mg</strong>
                                                                 <span class="text-muted" style="font-size: 11px;"
                                                                       th:if="${item['dosage'] != null and !#strings.isEmpty(item['dosage'])}"
                                                                       th:text="'(' + ${item['dosage']} + ')'">(500mg)</span>
@@ -1256,203 +1274,117 @@
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <span class="badge bg-light text-primary border fw-bold text-nowrap flex-shrink-0"
-                                                          style="font-size: 11.5px;"
+                                                    <span class="vc-code-chip flex-shrink-0"
+                                                          style="font-family: inherit; font-weight: 700; color: #0369a1; background: #f0f9ff; border-color: #bae6fd;"
                                                           th:text="${(item['quantity'] != null ? @emrViewText.number(item['quantity']) : '') + (item['unit'] != null and !#strings.isEmpty(item['unit']) ? ' ' + item['unit'] : '')}">10 Viên</span>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <div class="vc-card-foot"
-                                         id="vcRxFooter"
-                                         th:if="${snap['prescriptions'] != null and !#lists.isEmpty(snap['prescriptions'])}"
-                                         th:with="firstAdvice=${snap['prescriptions'][0]['adviceNotes'] != null ? #strings.trim(snap['prescriptions'][0]['adviceNotes']) : ''},
-                                                  rawFollowup=${snap['prescriptions'][0]['followupDate'] != null ? #strings.trim(snap['prescriptions'][0]['followupDate']) : ''},
-                                                  fmtRxFollowup=${!#strings.isEmpty(rawFollowup) and rawFollowup != '—' and rawFollowup != '-' ? @emrViewText.date(rawFollowup) : ''},
-                                                  cleanRxFollowup=${fmtRxFollowup != '—' and fmtRxFollowup != '-' ? fmtRxFollowup : ''},
-                                                  defaultFollowup=${followUps != null and !#lists.isEmpty(followUps) and followUps[0].date != null ? #temporals.format(followUps[0].date, 'dd/MM/yyyy') : ''},
-                                                  firstFollowup=${!#strings.isEmpty(cleanRxFollowup) ? cleanRxFollowup : defaultFollowup}"
-                                         th:style="${(!#strings.isEmpty(firstAdvice) or !#strings.isEmpty(firstFollowup)) ? 'font-size: 11.5px;' : 'font-size: 11.5px; display: none;'}"
-                                         th:data-default-followup="${defaultFollowup}">
-                                        <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-                                            <div class="text-secondary text-truncate" id="vcRxAdviceLine"
-                                                 th:style="${!#strings.isEmpty(firstAdvice) ? '' : 'display: none;'}"
-                                                 th:title="${firstAdvice}">
-                                                <strong class="text-dark"><i class="bi bi-chat-quote text-primary me-1"></i>Lời dặn:</strong>
-                                                <span id="vcRxAdviceText" th:text="${firstAdvice}">Uống đủ liều</span>
-                                            </div>
-                                            <div class="fw-bold text-primary text-nowrap" id="vcRxFollowupLine"
-                                                 th:style="${!#strings.isEmpty(firstFollowup) ? '' : 'display: none;'}">
-                                                <i class="bi bi-calendar-event me-1"></i>
-                                                <span id="vcRxFollowupText" th:text="${!#strings.isEmpty(firstFollowup) ? 'Tái khám: ' + firstFollowup : ''}">Tái khám</span>
+                                        <div class="vc-card-foot"
+                                             id="vcRxFooter"
+                                             th:with="firstAdvice=${snap['prescriptions'][0]['adviceNotes'] != null ? #strings.trim(snap['prescriptions'][0]['adviceNotes']) : ''},
+                                                      rawFollowup=${snap['prescriptions'][0]['followupDate'] != null ? #strings.trim(snap['prescriptions'][0]['followupDate']) : ''},
+                                                      fmtRxFollowup=${!#strings.isEmpty(rawFollowup) and rawFollowup != '—' and rawFollowup != '-' ? @emrViewText.date(rawFollowup) : ''},
+                                                      cleanRxFollowup=${fmtRxFollowup != '—' and fmtRxFollowup != '-' ? fmtRxFollowup : ''},
+                                                      defaultFollowup=${hasFu ? #temporals.format(followUps[0].date, 'dd/MM/yyyy') : ''},
+                                                      firstFollowup=${!#strings.isEmpty(cleanRxFollowup) ? cleanRxFollowup : defaultFollowup}"
+                                             th:style="${(!#strings.isEmpty(firstAdvice) or !#strings.isEmpty(firstFollowup)) ? 'font-size: 11.5px;' : 'font-size: 11.5px; display: none;'}"
+                                             th:data-default-followup="${defaultFollowup}">
+                                            <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                                                <div class="text-secondary text-truncate" id="vcRxAdviceLine"
+                                                     th:style="${!#strings.isEmpty(firstAdvice) ? '' : 'display: none;'}"
+                                                     th:title="${firstAdvice}">
+                                                    <strong class="text-dark"><i class="bi bi-chat-quote text-primary me-1"></i>Lời dặn:</strong>
+                                                    <span id="vcRxAdviceText" th:text="${firstAdvice}">Uống đủ liều</span>
+                                                </div>
+                                                <div class="fw-bold text-primary text-nowrap" id="vcRxFollowupLine"
+                                                     th:style="${!#strings.isEmpty(firstFollowup) ? '' : 'display: none;'}">
+                                                    <i class="bi bi-calendar-event me-1"></i>
+                                                    <span id="vcRxFollowupText" th:text="${!#strings.isEmpty(firstFollowup) ? 'Tái khám: ' + firstFollowup : ''}">Tái khám</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </th:block>
 
                             </div>
                         </div>
                     </section>
 
-                    <!-- TAB 2: LÂM SÀNG, SINH HIỆU & THỦ THUẬT ĐẦY ĐỦ -->
-                    <section class="vc-pane" id="vc-pane-clinical">
-                        <div class="vc-secondary-scroll">
-                            <div class="row g-3 mx-0">
-                                <div class="col-12">
-                                    <div class="vc-card">
-                                        <div class="vc-card-head">
-                                            <h2 class="vc-card-title"><i class="bi bi-activity text-primary"></i> Dấu hiệu sinh tồn &amp; Khám lâm sàng</h2>
-                                            <span class="small text-muted" th:if="${snap['visit']['doctorLicense'] != null}" th:text="'CCHN: ' + ${snap['visit']['doctorLicense']}">CCHN</span>
-                                        </div>
-                                        <div class="p-3">
-                                            <div class="row g-2 mb-3">
-                                                <div class="col-6 col-md">
-                                                    <div class="p-2 rounded-3 border bg-light text-center">
-                                                        <div class="text-muted" style="font-size: 11px;">Mạch (bpm)</div>
-                                                        <div class="fw-bold fs-6 text-dark" th:text="${snap['vitalSigns']['pulse'] != null and !#strings.isEmpty('' + snap['vitalSigns']['pulse']) ? snap['vitalSigns']['pulse'] : '—'}">—</div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-6 col-md">
-                                                    <div class="p-2 rounded-3 border bg-light text-center">
-                                                        <div class="text-muted" style="font-size: 11px;">Huyết áp (mmHg)</div>
-                                                        <div class="fw-bold fs-6 text-dark" th:text="${snap['vitalSigns']['bloodPressure'] != null and !#strings.isEmpty('' + snap['vitalSigns']['bloodPressure']) ? snap['vitalSigns']['bloodPressure'] : '—'}">—</div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-6 col-md">
-                                                    <div class="p-2 rounded-3 border bg-light text-center">
-                                                        <div class="text-muted" style="font-size: 11px;">Nhiệt độ (°C)</div>
-                                                        <div class="fw-bold fs-6 text-dark" th:text="${snap['vitalSigns']['temperature'] != null and !#strings.isEmpty('' + snap['vitalSigns']['temperature']) ? snap['vitalSigns']['temperature'] : '—'}">—</div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-6 col-md">
-                                                    <div class="p-2 rounded-3 border bg-light text-center">
-                                                        <div class="text-muted" style="font-size: 11px;">Nhịp thở</div>
-                                                        <div class="fw-bold fs-6 text-dark" th:text="${snap['vitalSigns']['respiratoryRate'] != null and !#strings.isEmpty('' + snap['vitalSigns']['respiratoryRate']) ? snap['vitalSigns']['respiratoryRate'] : '—'}">—</div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-12 col-md">
-                                                    <div class="p-2 rounded-3 border bg-light text-center">
-                                                        <div class="text-muted" style="font-size: 11px;">Cân nặng (kg)</div>
-                                                        <div class="fw-bold fs-6 text-dark" th:text="${snap['vitalSigns']['weight'] != null and !#strings.isEmpty('' + snap['vitalSigns']['weight']) ? snap['vitalSigns']['weight'] : '—'}">—</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="row g-2" style="font-size: 13px;">
-                                                <div class="col-md-6">
-                                                    <div class="p-2 rounded-3 border bg-white h-100">
-                                                        <div class="fw-bold text-dark mb-1">Lý do khám &amp; Bệnh sử</div>
-                                                        <div class="text-secondary" th:text="${snap['clinical']['chiefComplaint'] != null and !#strings.isEmpty(snap['clinical']['chiefComplaint']) ? snap['clinical']['chiefComplaint'] : (visit.initialSymptoms != null ? visit.initialSymptoms : 'Chưa ghi nhận')}">—</div>
-                                                        <div class="text-muted small mt-1" th:if="${snap['clinical']['historyIllness'] != null and !#strings.isEmpty(snap['clinical']['historyIllness'])}" th:text="${snap['clinical']['historyIllness']}"></div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="p-2 rounded-3 border bg-white h-100">
-                                                        <div class="fw-bold text-dark mb-1">Khám ngoài miệng, trong miệng &amp; Nha chu</div>
-                                                        <div class="small text-secondary" th:if="${snap['clinical']['extraoralExam'] != null}" th:text="'Ngoài miệng: ' + ${snap['clinical']['extraoralExam']}"></div>
-                                                        <div class="small text-secondary" th:if="${snap['clinical']['intraoralExam'] != null}" th:text="'Trong miệng: ' + ${snap['clinical']['intraoralExam']}"></div>
-                                                        <div class="small text-secondary" th:if="${snap['clinical']['periodontalStatus'] != null}" th:text="'Nha chu: ' + ${snap['clinical']['periodontalStatus']}"></div>
-                                                        <div class="small text-muted" th:if="${snap['clinical']['extraoralExam'] == null and snap['clinical']['intraoralExam'] == null and snap['clinical']['periodontalStatus'] == null}">Chưa ghi nhận chi tiết khám.</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="col-12">
-                                    <div class="vc-card">
-                                        <div class="vc-card-head">
-                                            <h2 class="vc-card-title"><i class="bi bi-tools text-primary"></i> Dịch vụ &amp; Thủ thuật đã thực hiện</h2>
-                                        </div>
-                                        <div class="p-3">
-                                            <div th:if="${snap['performedServices'] == null or #lists.isEmpty(snap['performedServices'])}" class="text-muted text-center py-3 small">
-                                                Chưa có dịch vụ hoặc thủ thuật được thực hiện trong lượt khám này.
-                                            </div>
-                                            <div th:unless="${snap['performedServices'] == null or #lists.isEmpty(snap['performedServices'])}" class="table-responsive">
-                                                <table class="table table-sm table-hover align-middle mb-0" style="font-size: 13px;">
-                                                    <thead class="table-light">
-                                                        <tr>
-                                                            <th>#</th>
-                                                            <th>Dịch vụ / Thủ thuật</th>
-                                                            <th>Răng</th>
-                                                            <th class="text-center">SL</th>
-                                                            <th class="text-end">Đơn giá</th>
-                                                            <th class="text-end">Thành tiền</th>
-                                                            <th>Bác sĩ</th>
-                                                            <th>Giờ</th>
-                                                            <th class="text-center">Trạng thái</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr th:each="svc, st : ${snap['performedServices']}">
-                                                            <td class="text-muted fw-bold" th:text="${st.count}">1</td>
-                                                            <td>
-                                                                <div class="fw-bold text-dark" th:text="${svc['serviceName']}">Dịch vụ</div>
-                                                                <div class="small text-muted font-monospace" th:if="${svc['serviceCode'] != null}" th:text="${svc['serviceCode']}">DV01</div>
-                                                            </td>
-                                                            <td>
-                                                                <span th:if="${svc['toothNumbers'] != null and !#strings.isEmpty(svc['toothNumbers'])}" class="vc-tooth-pill" th:text="${svc['toothNumbers']}">16</span>
-                                                                <span th:unless="${svc['toothNumbers'] != null and !#strings.isEmpty(svc['toothNumbers'])}" class="text-muted">—</span>
-                                                            </td>
-                                                            <td class="text-center fw-bold" th:text="${svc['quantity'] != null ? @emrViewText.number(svc['quantity']) : '1'}">1</td>
-                                                            <td class="text-end" th:text="${svc['unitPrice'] != null ? #numbers.formatDecimal(svc['unitPrice'], 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</td>
-                                                            <td class="text-end fw-bold text-primary" th:text="${svc['finalPrice'] != null ? #numbers.formatDecimal(svc['finalPrice'], 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</td>
-                                                            <td th:text="${svc['doctorName'] != null ? svc['doctorName'] : '—'}">—</td>
-                                                            <td class="text-muted small" th:text="${svc['completedAt'] != null and #strings.length(svc['completedAt']) >= 16 ? #strings.substring(svc['completedAt'], 11, 16) : '—'}">—</td>
-                                                            <td class="text-center">
-                                                                <span class="vc-status-badge"
-                                                                      th:classappend="${svc['status'] == 'COMPLETED' ? 'vc-status-emerald' : (svc['status'] == 'CANCELLED' ? 'vc-status-rose' : 'vc-status-amber')}"
-                                                                      th:text="${@emrViewText.label(svc['status'])}">Hoàn thành</span>
-                                                            </td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- TAB 3: X-QUANG, HÌNH ẢNH, LABO & BAĐT -->
+                    <!-- TAB 2: PHIM ẢNH, X-QUANG, TÁI KHÁM & BAĐT -->
                     <section class="vc-pane" id="vc-pane-media">
                         <div class="vc-secondary-scroll">
                             <div class="row g-3 mx-0">
                                 <div class="col-lg-8">
                                     <div class="vc-card h-100">
-                                        <div class="vc-card-head">
+                                        <div class="vc-card-head flex-wrap gap-2">
                                             <h2 class="vc-card-title"><i class="bi bi-images text-primary"></i> Phim X-Quang &amp; Ảnh lâm sàng</h2>
+                                            <div th:unless="${(snap['photos'] == null or #lists.isEmpty(snap['photos'])) and (snap['xrays'] == null or #lists.isEmpty(snap['xrays']))}"
+                                                 class="d-flex align-items-center gap-2 flex-wrap">
+                                                <div class="vc-mini-switcher" id="vcPhotoStageBar">
+                                                    <button type="button" class="vc-mini-btn is-active" data-stage="ALL" onclick="vcSetPhotoStage('ALL', this)">Tất cả</button>
+                                                    <button type="button" class="vc-mini-btn" data-stage="BEFORE" onclick="vcSetPhotoStage('BEFORE', this)">Trước ĐT</button>
+                                                    <button type="button" class="vc-mini-btn" data-stage="DURING" onclick="vcSetPhotoStage('DURING', this)">Trong ĐT</button>
+                                                    <button type="button" class="vc-mini-btn" data-stage="AFTER" onclick="vcSetPhotoStage('AFTER', this)">Sau ĐT</button>
+                                                    <button type="button" class="vc-mini-btn" data-stage="XRAY" onclick="vcSetPhotoStage('XRAY', this)">X-Quang / CT</button>
+                                                </div>
+                                                <select id="vcPhotoCategoryFilter" class="form-select form-select-sm"
+                                                        style="width: auto; min-width: 150px; font-size: 11.5px; padding: 3px 26px 3px 8px;"
+                                                        onchange="vcFilterPhotos()">
+                                                    <option value="ALL">Tất cả phân loại</option>
+                                                    <option value="INTRAORAL">Trong miệng</option>
+                                                    <option value="EXTRAORAL">Ngoài mặt / Chân dung</option>
+                                                    <option value="SMILE">Nụ cười</option>
+                                                    <option value="OCCLUSAL">Mặt nhai</option>
+                                                    <option value="OTHER">Phim X-Quang / Panorama / CT</option>
+                                                </select>
+                                            </div>
                                         </div>
                                         <div class="p-3">
                                             <div th:if="${(snap['photos'] == null or #lists.isEmpty(snap['photos'])) and (snap['xrays'] == null or #lists.isEmpty(snap['xrays']))}"
                                                  class="text-muted text-center py-4 small">
-                                                Không có ảnh lâm sàng hoặc phim X-quang nào trong lượt khám này.
+                                                Chưa có ảnh lâm sàng hoặc phim X-quang trong lượt khám này.
                                             </div>
                                             <div th:unless="${(snap['photos'] == null or #lists.isEmpty(snap['photos'])) and (snap['xrays'] == null or #lists.isEmpty(snap['xrays']))}"
-                                                 class="vc-photo-grid">
+                                                 id="vcPhotoGrid" class="vc-photo-grid">
                                                 <div th:each="photo : ${snap['photos']}" class="vc-photo-card"
+                                                     th:data-stage="${photo['stage'] != null ? photo['stage'] : 'BEFORE'}"
+                                                     th:data-category="${photo['category'] != null ? photo['category'] : 'INTRAORAL'}"
                                                      th:data-photo-url="${photo['imageUrl']}"
-                                                     th:data-photo-caption="${photo['caption'] != null ? photo['caption'] : 'Ảnh lâm sàng'}"
+                                                     th:data-photo-caption="${(photo['caption'] != null and !#strings.isEmpty(photo['caption']) ? photo['caption'] : 'Ảnh lâm sàng') + ' · ' + @emrViewText.label(photo['stage'] ?: 'BEFORE') + ' · ' + @emrViewText.label(photo['category'] ?: 'INTRAORAL')}"
                                                      onclick="openImageModal(this.getAttribute('data-photo-url'), this.getAttribute('data-photo-caption'))">
                                                     <img th:src="${photo['imageUrl']}" class="vc-photo-img" alt="Ảnh lâm sàng">
                                                     <div class="p-2">
-                                                        <span class="vc-status-badge vc-status-sky mb-1" th:text="${@emrViewText.label(photo['stage'])}">Ảnh</span>
-                                                        <div class="small fw-semibold text-truncate" th:text="${photo['caption'] != null ? photo['caption'] : 'Ảnh chụp ca khám'}">Ảnh</div>
+                                                        <div class="d-flex flex-wrap gap-1 mb-1">
+                                                            <span class="vc-status-badge"
+                                                                  th:classappend="${photo['stage'] == 'BEFORE' ? 'vc-status-amber' : (photo['stage'] == 'DURING' ? 'vc-status-sky' : 'vc-status-emerald')}"
+                                                                  th:text="${@emrViewText.label(photo['stage'] ?: 'BEFORE')}">Trước điều trị</span>
+                                                            <span class="vc-status-badge"
+                                                                  th:classappend="${(photo['category'] == 'OTHER' or photo['category'] == 'XRAY') ? 'vc-status-rose' : 'vc-status-slate'}"
+                                                                  th:text="${@emrViewText.label(photo['category'] ?: 'INTRAORAL')}">Trong miệng</span>
+                                                        </div>
+                                                        <div class="small fw-semibold text-truncate" th:text="${photo['caption'] != null and !#strings.isEmpty(photo['caption']) ? photo['caption'] : 'Ảnh chụp ca khám'}">Ảnh</div>
                                                     </div>
                                                 </div>
-                                                <div th:each="xray : ${snap['xrays']}" class="vc-photo-card"
+                                                <div th:each="xray : ${snap['xrays']}" class="vc-photo-card vc-xray-card"
+                                                     data-stage="BEFORE"
+                                                     data-category="OTHER"
                                                      th:data-photo-url="${xray['imageUrl']}"
-                                                     th:data-photo-caption="'Phim X-quang · ' + ${xray['studyUid']}"
+                                                     th:data-photo-caption="'Phim X-Quang / CT · ' + ${xray['studyUid']}"
                                                      onclick="openImageModal(this.getAttribute('data-photo-url'), this.getAttribute('data-photo-caption'))">
                                                     <img th:src="${xray['imageUrl']}" class="vc-photo-img" alt="Phim X-quang">
                                                     <div class="p-2">
-                                                        <span class="vc-status-badge vc-status-rose mb-1">X-Quang</span>
+                                                        <div class="d-flex flex-wrap gap-1 mb-1">
+                                                            <span class="vc-status-badge vc-status-amber">Trước điều trị</span>
+                                                            <span class="vc-status-badge vc-status-rose">Phim X-Quang / CT</span>
+                                                        </div>
                                                         <div class="small font-monospace text-truncate" th:text="${xray['studyUid']}">UID</div>
                                                     </div>
                                                 </div>
+                                            </div>
+                                            <div id="vcPhotoFilterEmpty" class="text-muted text-center py-4 small d-none">
+                                                Không có ảnh hoặc phim phù hợp bộ lọc đã chọn.
                                             </div>
                                         </div>
                                     </div>
@@ -1461,7 +1393,7 @@
                                 <div class="col-lg-4">
                                     <div class="vc-card mb-3">
                                         <div class="vc-card-head">
-                                            <h2 class="vc-card-title"><i class="bi bi-journal-medical text-primary"></i> Bệnh án Điện tử (BAĐT)</h2>
+                                            <h2 class="vc-card-title"><i class="bi bi-journal-medical text-primary"></i> Bệnh án điện tử</h2>
                                             <span th:if="${emrRecord != null}" class="vc-status-badge vc-status-emerald" th:text="${@emrViewText.label(emrRecord.status)}">Bản nháp</span>
                                             <span th:unless="${emrRecord != null}" class="vc-status-badge vc-status-slate">Chưa tạo</span>
                                         </div>
@@ -1471,19 +1403,19 @@
                                                 <div class="text-muted mb-3"
                                                      th:text="'Phiên bản v' + ${emrRecord.currentVersionNumber} + (${emrRecord.updatedAt != null ? ' · ' + #temporals.format(emrRecord.updatedAt, 'dd/MM/yyyy HH:mm') : ''})">v1</div>
                                                 <div class="d-flex gap-2 flex-wrap">
-                                                    <a th:if="${canViewClinical}" th:href="@{/emr/records/{id}(id=${emrRecord.recordId})}" class="vc-btn-sm vc-btn-primary">
-                                                        <i class="bi bi-eye"></i> Xem BAĐT
+                                                    <a th:if="${canViewClinical}" th:href="@{/emr/records/{id}(id=${emrRecord.recordId})}" class="vc-btn-sm vc-btn-tonal">
+                                                        <i class="bi bi-eye"></i> Mở BAĐT
                                                     </a>
                                                     <form th:if="${(canManageEmr != null ? canManageEmr : canPerformClinical) and emrRecord.status != null and (emrRecord.status.name() == 'DRAFT' or emrRecord.status.name() == 'AMENDMENT_DRAFT' or emrRecord.status.name() == 'READY_TO_LOCK')}"
                                                           th:action="@{/emr/records/{id}/sync(id=${emrRecord.recordId})}" method="post" class="d-inline">
-                                                        <button type="submit" class="vc-btn-sm"><i class="bi bi-arrow-repeat"></i> Đồng bộ lại</button>
+                                                        <button type="submit" class="vc-btn-sm"><i class="bi bi-arrow-repeat"></i> Đồng bộ</button>
                                                     </form>
                                                 </div>
                                             </div>
                                             <div th:unless="${emrRecord != null}">
-                                                <p class="text-muted mb-2">Lượt khám này chưa khởi tạo Bệnh án điện tử.</p>
-                                                <a th:if="${canManageEmr != null ? canManageEmr : canPerformClinical}" th:href="@{/emr/records/from-visit/{id}(id=${visit.id})}" class="vc-btn-sm vc-btn-primary">
-                                                    <i class="bi bi-plus-circle"></i> Tạo BAĐT ngay
+                                                <p class="text-muted mb-2">Lượt khám chưa khởi tạo Bệnh án điện tử.</p>
+                                                <a th:if="${canManageEmr != null ? canManageEmr : canPerformClinical}" th:href="@{/emr/records/from-visit/{id}(id=${visit.id})}" class="vc-btn-sm vc-btn-tonal">
+                                                    <i class="bi bi-plus-circle"></i> Tạo BAĐT
                                                 </a>
                                             </div>
                                         </div>
@@ -1495,8 +1427,8 @@
                                         </div>
                                         <div class="p-3 small">
                                             <div th:if="${followUps == null or #lists.isEmpty(followUps)}" class="text-muted">Chưa có lịch hẹn tiếp theo.</div>
-                                            <div th:each="fu : ${followUps}" class="p-2 rounded-3 border bg-light mb-2">
-                                                <div class="d-flex justify-content-between align-items-center">
+                                            <div th:each="fu : ${followUps}" class="py-2 border-bottom" style="border-color: #f1f5f9 !important;">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
                                                     <strong class="text-primary" th:text="${#temporals.format(fu.date, 'dd/MM/yyyy')}">14/11/2026</strong>
                                                     <span class="vc-status-badge vc-status-sky" th:text="${fu.expectedTime != null ? fu.expectedTime : 'Chưa xếp giờ'}">09:00</span>
                                                 </div>
@@ -1690,7 +1622,14 @@
                                 }
                             });
                             const countEl = document.getElementById('vcToothCountBadge');
-                            if (countEl) countEl.textContent = toothStateMap.size + ' răng';
+                            const legendEl = document.getElementById('vcToothLegend');
+                            if (countEl) {
+                                countEl.textContent = toothStateMap.size + ' răng';
+                                countEl.style.display = toothStateMap.size > 0 ? '' : 'none';
+                            }
+                            if (legendEl) {
+                                legendEl.style.display = toothStateMap.size > 0 ? 'inline-flex' : 'none';
+                            }
                         }
 
                         function clearSelectionState() {
@@ -1761,8 +1700,12 @@
                             if (!tid) {
                                 const hint = document.createElement('span');
                                 hint.className = 'text-muted';
-                                hint.innerHTML = '<i class="bi bi-hand-index-thumb me-1 text-primary"></i>';
-                                hint.appendChild(document.createTextNode('Nhấn vào răng trên sơ đồ để xem chi tiết bệnh lý & thủ thuật.'));
+                                if (toothStateMap.size === 0) {
+                                    hint.textContent = 'Chưa ghi nhận bệnh lý hoặc thủ thuật trên răng.';
+                                } else {
+                                    hint.innerHTML = '<i class="bi bi-hand-index-thumb me-1 text-primary"></i>';
+                                    hint.appendChild(document.createTextNode('Nhấn vào răng trên sơ đồ để xem chi tiết bệnh lý & thủ thuật.'));
+                                }
                                 box.appendChild(hint);
                                 return;
                             }
@@ -1989,7 +1932,75 @@
                             }
                         };
 
+                        let vcCurrentPhotoStage = 'ALL';
+                        function deduplicateVisitXrayCards() {
+                            const clinicalCards = document.querySelectorAll('#vcPhotoGrid .vc-photo-card:not(.vc-xray-card)');
+                            const existingUrls = new Set();
+                            clinicalCards.forEach(c => {
+                                const url = (c.getAttribute('data-photo-url') || '').trim();
+                                if (url) existingUrls.add(url);
+                            });
+                            document.querySelectorAll('#vcPhotoGrid .vc-xray-card').forEach(xc => {
+                                const url = (xc.getAttribute('data-photo-url') || '').trim();
+                                if (url && existingUrls.has(url)) {
+                                    xc.setAttribute('data-duplicate', '1');
+                                    xc.style.display = 'none';
+                                }
+                            });
+                        }
+
+                        window.vcSetPhotoStage = function (stageVal, btn) {
+                            vcCurrentPhotoStage = stageVal || 'ALL';
+                            document.querySelectorAll('#vcPhotoStageBar .vc-mini-btn').forEach(b => {
+                                b.classList.toggle('is-active', (b.getAttribute('data-stage') || '') === vcCurrentPhotoStage);
+                            });
+                            vcFilterPhotos();
+                        };
+
+                        window.vcFilterPhotos = function () {
+                            const catSelect = document.getElementById('vcPhotoCategoryFilter');
+                            const catVal = catSelect ? catSelect.value : 'ALL';
+                            const cards = document.querySelectorAll('#vcPhotoGrid .vc-photo-card');
+                            let visibleCount = 0;
+
+                            cards.forEach(card => {
+                                if (card.getAttribute('data-duplicate') === '1') {
+                                    card.style.display = 'none';
+                                    return;
+                                }
+                                const stage = (card.getAttribute('data-stage') || 'BEFORE').toUpperCase();
+                                const cat = (card.getAttribute('data-category') || 'INTRAORAL').toUpperCase();
+                                let matchesStage = true;
+                                if (vcCurrentPhotoStage === 'XRAY') {
+                                    matchesStage = (cat === 'OTHER' || cat === 'XRAY');
+                                } else if (vcCurrentPhotoStage !== 'ALL') {
+                                    matchesStage = (stage === vcCurrentPhotoStage);
+                                }
+                                const matchesCat = (catVal === 'ALL') || (cat === catVal);
+                                const show = matchesStage && matchesCat;
+                                card.style.display = show ? '' : 'none';
+                                if (show) visibleCount++;
+                            });
+
+                            const emptyEl = document.getElementById('vcPhotoFilterEmpty');
+                            if (emptyEl) {
+                                emptyEl.classList.toggle('d-none', visibleCount > 0 || cards.length === 0);
+                            }
+                        };
+
+                        deduplicateVisitXrayCards();
                         rebuildToothChartForPlan(0);
+
+                        // Tự động mở tab Thủ thuật nếu lượt khám chưa có Chẩn đoán nhưng đã có Thủ thuật
+                        const rightTopCard = document.getElementById('vcRightTopCard');
+                        if (rightTopCard) {
+                            const diagCnt = Number(rightTopCard.getAttribute('data-diag-count') || 0);
+                            const svcCnt = Number(rightTopCard.getAttribute('data-svc-count') || 0);
+                            const svcBtn = document.getElementById('vcRightTopSvcBtn');
+                            if (diagCnt === 0 && svcCnt > 0 && svcBtn) {
+                                switchRightTop('svc', svcBtn);
+                            }
+                        }
                     })();
                 </script>
             </main>
