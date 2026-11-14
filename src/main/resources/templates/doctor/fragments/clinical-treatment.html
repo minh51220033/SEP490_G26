@@ -1868,17 +1868,17 @@
             <td style="padding: 16px;"><span class="df-list-code" style="font-size: 13.5px; padding: 5px 12px;">${d.icd10Code}</span></td>
             <td style="padding: 16px;">
                 <div class="fw-bold text-dark" style="font-size: 15px;">${d.diagnosisText || ''}</div>
-                ${d.diseaseNameEn ? `<div class="text-muted mt-0.5" style="font-size: 12.5px;">${d.diseaseNameEn}</div>` : ''}
+                ${d.diseaseNameEn ? `<div class="text-muted mt-1" style="font-size: 12.5px;">${d.diseaseNameEn}</div>` : ''}
             </td>
             <td style="padding: 16px;">${badgeHtml}</td>
             <td style="padding: 16px;"><span class="text-secondary" style="font-size: 13.5px; font-weight: 500;">${notesDisplay}</span></td>
             <td class="text-center" style="padding: 16px 20px;">
-                <div class="d-inline-flex align-items-center justify-content-center gap-1.5">
-                    <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-xs" style="font-size: 12px;" title="Xem chi tiết & tô màu răng trên sơ đồ FDI" onclick="event.stopPropagation(); inspectDiagnosisRow(this.closest('tr'))">
+                <div class="d-inline-flex align-items-center justify-content-center gap-1">
+                    <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-xs" style="font-size: 12px;" title="Xem chi tiết & tô màu răng trên sơ đồ FDI" onclick="event.stopPropagation(); inspectDiagnosisRow(this.closest('tr'))">
                         <i class="bi bi-eye-fill"></i>
                         <span>Chi tiết</span>
                     </button>
-                    <button type="button" class="btn btn-primary rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" style="font-size: 12.5px; background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd;" title="Chuyển ngay chẩn đoán & vị trí răng này sang Lập Kế hoạch điều trị (SCR-15.2)" onclick="event.stopPropagation(); openPlanModalForSingleDiagRow(this.closest('tr'))">
+                    <button type="button" class="btn btn-primary rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-xs" style="font-size: 12.5px; background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd;" title="Chuyển ngay chẩn đoán & vị trí răng này sang Lập Kế hoạch điều trị (SCR-15.2)" onclick="event.stopPropagation(); openPlanModalForSingleDiagRow(this.closest('tr'))">
                         <i class="bi bi-diagram-3-fill"></i>
                         <span>Lập phác đồ</span>
                     </button>
@@ -3163,34 +3163,48 @@
         };
 
         const submitBtn = document.getElementById('submitPrescBtn');
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+        const sendPrescriptionRequest = async (isRetry) => {
+            if (isRetry) {
+                payload.confirmAllergyWarning = true;
+            }
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+            }
 
-        fetch('/api/doctor/prescriptions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-        .then(res => {
-            if (!res.ok) {
-                return res.json().then(err => { throw new Error(err.message || 'Lỗi khi lưu đơn thuốc'); });
+            try {
+                const res = await fetch('/api/doctor/prescriptions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const msg = result.message || 'Lỗi khi lưu đơn thuốc';
+                    if (!isRetry && msg.startsWith('Cảnh báo dị ứng:')) {
+                        if (confirm(msg + '\n\nBác sĩ có xác nhận tiếp tục kê đơn thuốc này không?')) {
+                            await sendPrescriptionRequest(true);
+                            return;
+                        }
+                    }
+                    throw new Error(msg);
+                }
+                showToast('Đã kê đơn thuốc thành công!');
+                addPrescriptionRowToTable(result.data);
+                if (prescModalInstance) {
+                    prescModalInstance.hide();
+                }
+            } catch (err) {
+                showToast(err.message, true);
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Lưu đơn thuốc';
+                }
             }
-            return res.json();
-        })
-        .then(result => {
-            showToast('Đã kê đơn thuốc thành công!');
-            addPrescriptionRowToTable(result.data);
-            if (prescModalInstance) {
-                prescModalInstance.hide();
-            }
-        })
-        .catch(err => {
-            showToast(err.message, true);
-        })
-        .finally(() => {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Lưu đơn thuốc';
-        });
+        };
+
+        sendPrescriptionRequest(false);
     }
 
     function addPrescriptionRowToTable(pr) {
