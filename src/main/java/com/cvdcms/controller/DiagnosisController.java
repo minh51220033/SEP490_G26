@@ -68,6 +68,8 @@ public class DiagnosisController {
     private com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.ClinicalQueueTicketRepository clinicalQueueTicketRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.security.UrlIdCodec urlIdCodec = new com.cvdcms.security.UrlIdCodec();
 
     public void setDoctorCoverGrantRepository(com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository) {
         this.doctorCoverGrantRepository = doctorCoverGrantRepository;
@@ -75,6 +77,35 @@ public class DiagnosisController {
 
     public void setClinicalQueueTicketRepository(com.cvdcms.repository.ClinicalQueueTicketRepository clinicalQueueTicketRepository) {
         this.clinicalQueueTicketRepository = clinicalQueueTicketRepository;
+    }
+
+    private String encodeVisit(Long visitId) {
+        return urlIdCodec != null ? urlIdCodec.encodeVisit(visitId) : "";
+    }
+
+    private String encodePatient(Long patientId) {
+        return urlIdCodec != null ? urlIdCodec.encodePatient(patientId) : "";
+    }
+
+    private Long decodeVisitRef(String visitRef) {
+        if (urlIdCodec == null) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
+        }
+        return urlIdCodec.decodeVisitOrThrow(visitRef);
+    }
+
+    private Long decodePatientRef(String patientRef) {
+        if (urlIdCodec == null) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
+        }
+        return urlIdCodec.decodePatientOrThrow(patientRef);
+    }
+
+    private List<Branch> filterAccessibleBranches(List<Branch> branches, boolean isDoctorRestricted, Branch assignedBranch) {
+        if (isDoctorRestricted && assignedBranch != null) {
+            return List.of(assignedBranch);
+        }
+        return branches;
     }
 
     private User getLoggedInUser(jakarta.servlet.http.HttpSession session) {
@@ -135,7 +166,11 @@ public class DiagnosisController {
                 : "";
 
         model.addAttribute("activeMenu", "daily-visits");
-        model.addAttribute("branches", branchRepository.findAll());
+        List<Branch> allBranches = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
+        if (allBranches.isEmpty()) {
+            allBranches = branchRepository.findAll();
+        }
+        model.addAttribute("branches", filterAccessibleBranches(allBranches, isDoctorRestricted, assignedBranch));
         model.addAttribute("selectedBranchId", branchId);
         model.addAttribute("isDoctorRestricted", isDoctorRestricted);
         model.addAttribute("doctorAssignedBranchId", assignedBranch != null ? assignedBranch.getBranchId() : null);
@@ -241,7 +276,7 @@ public class DiagnosisController {
         }
 
         if (visitId != null) {
-            String redirectUrl = "redirect:/doctor/examination/" + visitId + "/diagnoses";
+            String redirectUrl = "redirect:/doctor/examination/" + encodeVisit(visitId) + "/diagnoses";
             List<String> queryParams = new ArrayList<>();
             if (branchId != null) {
                 queryParams.add("branchId=" + branchId);
@@ -250,7 +285,7 @@ public class DiagnosisController {
                 queryParams.add("readOnly=true");
             }
             if (fromPatientId != null) {
-                queryParams.add("fromPatientId=" + fromPatientId);
+                queryParams.add("fromPatientRef=" + encodePatient(fromPatientId));
             }
             if (!queryParams.isEmpty()) {
                 redirectUrl += "?" + String.join("&", queryParams);
@@ -262,28 +297,50 @@ public class DiagnosisController {
         return renderEmptyDiagnosisPage(branchId, session, model);
     }
 
-    @GetMapping("/doctor/examination/patient/{patientId}")
+    @GetMapping("/doctor/examination/patient/{patientRef}")
     public String examinationByPatient(
-            @PathVariable("patientId") Long patientId,
-            @RequestParam(value = "newVisit", defaultValue = "false") boolean forceNewVisit
+            @PathVariable("patientRef") String patientRef,
+            @RequestParam(value = "newVisit", defaultValue = "false") boolean forceNewVisit,
+            jakarta.servlet.http.HttpSession session
     ) {
+        Long patientId = decodePatientRef(patientRef);
+        doctorVisitAccess.requirePatientWrite(session, patientId);
+
+        User currentUser = getLoggedInUser(session);
+        boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+        Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
+        StaffProfile currentDoctor = currentUser != null
+                ? staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null)
+                : null;
+
         if (!forceNewVisit) {
             Optional<Visit> activeVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(
                     patientId,
                     List.of(VisitStatus.IN_EXAM, VisitStatus.WAITING, VisitStatus.IN_TREATMENT, VisitStatus.WAITING_PARACLINICAL, VisitStatus.WAITING_RESULT, VisitStatus.WAITING_PAYMENT)
             );
             if (activeVisitOpt.isPresent()) {
-                return "redirect:/doctor/examination/" + activeVisitOpt.get().getVisitId() + "/diagnoses";
+                Visit av = activeVisitOpt.get();
+                if (isAdmin || assignedBranch == null || (av.getBranch() != null && av.getBranch().getBranchId().equals(assignedBranch.getBranchId()))) {
+                    return "redirect:/doctor/examination/" + encodeVisit(av.getVisitId()) + "/diagnoses";
+                }
             }
             Optional<Visit> latestVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdOrderByCheckInAtDesc(patientId);
             if (latestVisitOpt.isPresent()) {
-                return "redirect:/doctor/examination/" + latestVisitOpt.get().getVisitId() + "/diagnoses";
+                Visit lv = latestVisitOpt.get();
+                if (isAdmin || assignedBranch == null || (lv.getBranch() != null && lv.getBranch().getBranchId().equals(assignedBranch.getBranchId()))) {
+                    return "redirect:/doctor/examination/" + encodeVisit(lv.getVisitId()) + "/diagnoses";
+                }
             }
         }
 
-        // Tạo ca khám mới nếu chưa có
         PatientProfile patient = patientProfileRepository.findById(patientId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bệnh nhân ID: " + patientId));
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Không tìm thấy hồ sơ bệnh nhân phù hợp."));
+
+        if (!isAdmin && currentDoctor == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Chỉ tài khoản bác sĩ mới được mở ca khám mới.");
+        }
 
         Visit newVisit = new Visit();
         newVisit.setPatientProfile(patient);
@@ -291,8 +348,13 @@ public class DiagnosisController {
         newVisit.setStatus(VisitStatus.IN_EXAM);
         newVisit.setVisitType(com.cvdcms.entity.enums.VisitType.WALK_IN);
         newVisit.setInitialSymptoms("Khám và điều trị tại ghế theo yêu cầu");
-        newVisit.setBranch(patient.getPreferredBranch() != null ? patient.getPreferredBranch() : branchRepository.findAll().stream().findFirst().orElse(null));
-        newVisit.setPrimaryDoctor(staffProfileRepository.findAll().stream().filter(s -> s.getStaffCode() != null && s.getStaffCode().startsWith("BS")).findFirst().orElse(null));
+        Branch resolvedBranch = (!isAdmin && assignedBranch != null)
+                ? assignedBranch
+                : (patient.getPreferredBranch() != null ? patient.getPreferredBranch() : branchRepository.findAll().stream().findFirst().orElse(null));
+        newVisit.setBranch(resolvedBranch);
+        newVisit.setPrimaryDoctor(currentDoctor != null
+                ? currentDoctor
+                : staffProfileRepository.findAll().stream().filter(s -> s.getStaffCode() != null && s.getStaffCode().startsWith("BS")).findFirst().orElse(null));
         long count = visitRepository.count() + 1;
         String genCode = "VIS" + (10000 + count);
         if (visitRepository.findByVisitCode(genCode).isPresent()) {
@@ -302,7 +364,7 @@ public class DiagnosisController {
         newVisit = visitRepository.save(newVisit);
         examinations.ensureForAssignedVisit(newVisit.getVisitId());
 
-        return "redirect:/doctor/examination/" + newVisit.getVisitId() + "/diagnoses";
+        return "redirect:/doctor/examination/" + encodeVisit(newVisit.getVisitId()) + "/diagnoses";
     }
 
     public String examinationDiagnoses(
@@ -312,15 +374,32 @@ public class DiagnosisController {
             RedirectAttributes redirectAttributes,
             Model model
     ) {
-        return examinationDiagnoses(visitId, branchIdParam, false, null, session, redirectAttributes, model);
+        return examinationDiagnosesInternal(visitId, branchIdParam, false, null, session, redirectAttributes, model);
     }
 
-    @GetMapping({"/doctor/examination/{visitId}/diagnoses", "/doctor/examination/{visitId}/treatment"})
+    @GetMapping({"/doctor/examination/{visitRef}/diagnoses", "/doctor/examination/{visitRef}/treatment"})
     public String examinationDiagnoses(
-            @PathVariable("visitId") Long visitId,
+            @PathVariable("visitRef") String visitRef,
             @RequestParam(value = "branchId", required = false) Long branchIdParam,
             @RequestParam(value = "readOnly", required = false, defaultValue = "false") boolean readOnly,
+            @RequestParam(value = "fromPatientRef", required = false) String fromPatientRef,
             @RequestParam(value = "fromPatientId", required = false) Long fromPatientId,
+            jakarta.servlet.http.HttpSession session,
+            RedirectAttributes redirectAttributes,
+            Model model
+    ) {
+        Long visitId = decodeVisitRef(visitRef);
+        Long resolvedFromPatientId = (fromPatientRef != null && !fromPatientRef.isBlank())
+                ? decodePatientRef(fromPatientRef)
+                : fromPatientId;
+        return examinationDiagnosesInternal(visitId, branchIdParam, readOnly, resolvedFromPatientId, session, redirectAttributes, model);
+    }
+
+    private String examinationDiagnosesInternal(
+            Long visitId,
+            Long branchIdParam,
+            boolean readOnly,
+            Long fromPatientId,
             jakarta.servlet.http.HttpSession session,
             RedirectAttributes redirectAttributes,
             Model model
@@ -379,6 +458,13 @@ public class DiagnosisController {
             if (statusChanged) {
                 visitRepository.save(visit);
             }
+        } else {
+            doctorVisitAccess.requireVisitRead(session, visitId);
+            if (fromPatientId != null && visit.getPatientProfile() != null
+                    && !fromPatientId.equals(visit.getPatientProfile().getProfileId())) {
+                throw new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN, "Thông tin ca khám không khớp hồ sơ bệnh nhân.");
+            }
         }
 
         List<DiagnosisResponseDTO> diagnoses = diagnosisService.getDiagnosesByVisitId(visitId);
@@ -386,6 +472,17 @@ public class DiagnosisController {
         List<Visit> otherVisits = (isDoctorRestricted && assignedBranch != null)
                 ? visitRepository.findRecentVisitsByStatusesAndBranch(List.of(VisitStatus.values()), assignedBranch.getBranchId())
                 : visitRepository.findAll();
+        if (!isAdmin && currentDoctor != null) {
+            final Long docStaffId = currentDoctor.getStaffId();
+            java.util.Set<Long> coveredIds = doctorCoverGrantRepository != null
+                    ? doctorCoverGrantRepository.findActiveCoveredVisitIds(docStaffId, LocalDateTime.now())
+                    : java.util.Collections.emptySet();
+            otherVisits = otherVisits.stream()
+                    .filter(v -> v.getVisitId().equals(visitId)
+                            || (v.getPrimaryDoctor() != null && docStaffId.equals(v.getPrimaryDoctor().getStaffId()))
+                            || coveredIds.contains(v.getVisitId()))
+                    .toList();
+        }
 
         // FT16: Dịch vụ thực hiện thực tế
         List<PerformedServiceResponseDTO> performedServices = performedServiceService.getPerformedServicesByVisitId(visitId);
@@ -510,10 +607,13 @@ public class DiagnosisController {
                 useReceptionPath = true;
             }
         }
-        String baseRecordPath = useReceptionPath ? "/reception/patients" : "/doctor/patient-records";
-        String patientRecordBackUrl = (resolvedFromPatientId != null ? baseRecordPath + "/" + resolvedFromPatientId : baseRecordPath) + "#tab-treatment";
+        String patientRecordBackUrl = useReceptionPath
+                ? (resolvedFromPatientId != null ? "/reception/patients/" + resolvedFromPatientId : "/reception/patients") + "#tab-treatment"
+                : (resolvedFromPatientId != null ? "/doctor/patient-records/" + encodePatient(resolvedFromPatientId) : "/doctor/patient-records") + "#tab-treatment";
         model.addAttribute("patientRecordBackUrl", patientRecordBackUrl);
         model.addAttribute("readonlySidebarMenu", useReceptionPath ? "patients" : "doctor-records");
+        model.addAttribute("visitToken", encodeVisit(visitId));
+        model.addAttribute("patientToken", visit.getPatientProfile() != null ? encodePatient(visit.getPatientProfile().getProfileId()) : "");
 
         com.cvdcms.DTO.ClinicalCompletionCheckDTO clinicalCheck = null;
         try {
@@ -562,6 +662,7 @@ public class DiagnosisController {
             selectedBranch = branches.get(0);
         }
 
+        branches = filterAccessibleBranches(branches, isDoctorRestricted, assignedBranch);
         model.addAttribute("branches", branches);
         model.addAttribute("selectedBranchId", selectedBranchId);
         model.addAttribute("selectedBranch", selectedBranch);
@@ -578,10 +679,21 @@ public class DiagnosisController {
     /**
      * SCR-15.2: Trang chuyen dung Lap Ke hoach & Lo trinh dieu tri (lien ket da chan doan, chuan Bo Y te)
      */
-    @GetMapping("/doctor/examination/{visitId}/treatment-plans/create")
-    public String showCreateTreatmentPlanPage(
-            @PathVariable("visitId") Long visitId,
+    @GetMapping("/doctor/examination/{visitRef}/treatment-plans/create")
+    public String showCreateTreatmentPlanPageByRef(
+            @PathVariable("visitRef") String visitRef,
             @RequestParam(value = "diagId", required = false) Long preselectedDiagId,
+            jakarta.servlet.http.HttpSession session,
+            Model model
+    ) {
+        Long visitId = decodeVisitRef(visitRef);
+        doctorVisitAccess.require(session, visitId);
+        return showCreateTreatmentPlanPage(visitId, preselectedDiagId, model);
+    }
+
+    public String showCreateTreatmentPlanPage(
+            Long visitId,
+            Long preselectedDiagId,
             Model model
     ) {
         jakarta.servlet.http.HttpServletRequest request = null;
@@ -592,6 +704,9 @@ public class DiagnosisController {
             }
         } catch (Exception ignored) {}
         jakarta.servlet.http.HttpSession session = request != null ? request.getSession(false) : null;
+        if (request != null && doctorVisitAccess != null) {
+            doctorVisitAccess.require(session, visitId);
+        }
 
         User currentUser = getLoggedInUser(session);
         boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
@@ -606,7 +721,7 @@ public class DiagnosisController {
         try {
             visit = diagnosisService.getVisitOrThrow(visitId);
         } catch (IllegalArgumentException ex) {
-            log.warn("Không tìm thấy ca khám ID={}: {}. Tự động chuyển hướng về trang ca khám.", visitId, ex.getMessage());
+            log.warn("Không tìm thấy ca khám phù hợp ({}). Tự động chuyển hướng về trang ca khám.", ex.getMessage());
             return "redirect:/doctor/diagnoses";
         }
 
@@ -620,9 +735,22 @@ public class DiagnosisController {
         List<Visit> allVisits = (isDoctorRestricted && assignedBranch != null)
                 ? visitRepository.findRecentVisitsByStatusesAndBranch(List.of(VisitStatus.values()), assignedBranch.getBranchId())
                 : visitRepository.findAll();
+        if (!isAdmin && currentDoctor != null) {
+            final Long docStaffId = currentDoctor.getStaffId();
+            java.util.Set<Long> coveredIds = doctorCoverGrantRepository != null
+                    ? doctorCoverGrantRepository.findActiveCoveredVisitIds(docStaffId, LocalDateTime.now())
+                    : java.util.Collections.emptySet();
+            allVisits = allVisits.stream()
+                    .filter(v -> v.getVisitId().equals(visitId)
+                            || (v.getPrimaryDoctor() != null && docStaffId.equals(v.getPrimaryDoctor().getStaffId()))
+                            || coveredIds.contains(v.getVisitId()))
+                    .toList();
+        }
 
         model.addAttribute("visit", visit);
+        model.addAttribute("visitToken", encodeVisit(visitId));
         model.addAttribute("patient", visit.getPatientProfile());
+        model.addAttribute("patientToken", visit.getPatientProfile() != null ? encodePatient(visit.getPatientProfile().getProfileId()) : "");
         model.addAttribute("diagnoses", diagnoses);
         model.addAttribute("preselectedDiagId", preselectedDiagId);
         model.addAttribute("activeServices", activeServices);
@@ -731,6 +859,7 @@ public class DiagnosisController {
         model.addAttribute("clinicalCheck", null);
         model.addAttribute("pageTitle", "Bàn khám bệnh - DentalFlow");
         model.addAttribute("activeMenu", "examination");
+        branches = filterAccessibleBranches(branches, isDoctorRestricted, assignedBranch);
         model.addAttribute("branches", branches);
         model.addAttribute("selectedBranchId", selectedBranchId);
         model.addAttribute("selectedBranch", selectedBranch);

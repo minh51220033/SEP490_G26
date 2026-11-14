@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ClinicalQueueTicketRepository extends JpaRepository<QueueTicket, Long> {
+    List<QueueTicket> findByVisitVisitId(Long visitId);
+
     List<QueueTicket> findByVisitVisitIdAndQueueType(Long visitId, QueueType type);
 
     List<QueueTicket> findByVisitVisitIdInAndQueueTypeOrderByTicketIdDesc(Collection<Long> visitIds, QueueType type);

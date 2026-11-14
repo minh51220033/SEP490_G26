@@ -9,7 +9,7 @@ WHERE NOT EXISTS (SELECT 1 FROM roles WHERE role_name = 'LE_TAN');
 
 INSERT INTO users (username, password, email, phone_number, branch_id,
                    user_type, status, is_active, created_date)
-SELECT 'reception_ft07', '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe',
+SELECT 'reception_ft07', '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe',
        'reception.ft07@dentalclinic.test', '0907700007', b.branch_id,
        'STAFF', 'ACTIVE', 1, NOW()
 FROM branches b WHERE b.branch_code = 'CN01'

@@ -41,6 +41,15 @@ public class AppointmentSlotService {
         if (branch == null || date == null || session == null || session == PreferredSession.ANY) return List.of();
         Range range = range(branch, session);
         if (!range.active || !range.start.isBefore(range.end)) return List.of();
+        if (date.equals(LocalDate.now(AppointmentPolicyService.CLINIC_ZONE))) {
+            LocalTime now = LocalTime.now(AppointmentPolicyService.CLINIC_ZONE);
+            if (branch.getClosingTime() != null && !now.isBefore(branch.getClosingTime())) {
+                return List.of();
+            }
+            if (!now.isBefore(range.end)) {
+                return List.of();
+            }
+        }
         AppointmentPolicyService.Availability availability = policy.availability(branch, date, session,
                 excludeId, actorType);
         if (availability == null || !availability.available()
@@ -93,12 +102,22 @@ public class AppointmentSlotService {
             Long doctorId, int durationMinutes, Long excludeId, LocalTime requested,
             AppointmentActorType actorType) {
         validateDuration(durationMinutes);
-        if (requested == null) {
-            return null;
-        }
         Range range = range(branch, session);
         if (!range.active) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Buổi khám không hoạt động tại chi nhánh.");
+        }
+
+        if (requested == null) {
+            if (date != null && date.equals(LocalDate.now(AppointmentPolicyService.CLINIC_ZONE))) {
+                LocalTime now = LocalTime.now(AppointmentPolicyService.CLINIC_ZONE);
+                if (branch != null && branch.getClosingTime() != null && !now.isBefore(branch.getClosingTime())) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Phòng khám đã đóng cửa trong ngày hôm nay.");
+                }
+                if (!now.isBefore(range.end)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Ca khám trong ngày đã kết thúc.");
+                }
+            }
+            return null;
         }
         if (requested.isBefore(range.start) || requested.isAfter(range.end)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -161,24 +180,8 @@ public class AppointmentSlotService {
     }
 
     private Range range(Branch branch, PreferredSession session) {
-        return windows.findByBranch_BranchIdAndPreferredSession(branch.getBranchId(), session)
-                .map(w -> {
-                    LocalTime end = w.getEndTime();
-                    if (session == PreferredSession.EVENING) {
-                        if (end == null || end.isBefore(LocalTime.of(23, 30))) {
-                            end = LocalTime.of(23, 30);
-                        }
-                    } else if (branch.getClosingTime() != null && branch.getClosingTime().isAfter(end)) {
-                        end = branch.getClosingTime();
-                    }
-                    return new Range(w.getStartTime(), end, Boolean.TRUE.equals(w.getIsActive()));
-                })
-                .orElseGet(() -> switch (session) {
-                    case MORNING -> new Range(LocalTime.of(8, 0), LocalTime.NOON, true);
-                    case AFTERNOON -> new Range(LocalTime.of(13, 30), LocalTime.of(17, 30), true);
-                    case EVENING -> new Range(LocalTime.of(18, 0), LocalTime.of(23, 30), true);
-                    default -> new Range(LocalTime.MAX, LocalTime.MIN, false);
-                });
+        AppointmentPolicyService.SessionRange sr = policy.sessionRange(branch, session);
+        return new Range(sr.start(), sr.end(), sr.active());
     }
 
     private static void validateDuration(int minutes) {

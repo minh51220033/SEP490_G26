@@ -55,6 +55,11 @@ public class DispatchService {
 
     @Transactional
     public Board board(HttpSession session, Long requestedBranch) {
+        return board(session, requestedBranch, null);
+    }
+
+    @Transactional
+    public Board board(HttpSession session, Long requestedBranch, LocalDate requestedDay) {
         var scope = access.require(session);
         List<Branch> options = branches.findAll().stream()
                 .filter(b -> Boolean.TRUE.equals(b.getIsActive()) && scope.permits(b.getBranchId()))
@@ -62,7 +67,7 @@ public class DispatchService {
         if (options.isEmpty()) throw fail(HttpStatus.FORBIDDEN, "Không có chi nhánh được phân công.");
         Long branchId = requestedBranch == null ? options.get(0).getBranchId() : requestedBranch;
         checkBranch(session, branchId);
-        LocalDate day = LocalDate.now(ZONE);
+        LocalDate day = requestedDay != null ? requestedDay : LocalDate.now(ZONE);
         LocalTime now = LocalTime.now(ZONE);
         List<Visit> dayVisits = visits.today(branchId, day.atStartOfDay(), day.plusDays(1).atStartOfDay());
         List<StaffSchedule> todaySchedules = schedules.findTodaySchedules(branchId, day);
@@ -246,12 +251,15 @@ public class DispatchService {
     @Transactional
     public void assign(HttpSession session, Long branchId, Long visitId, Long doctorId, Long roomId, Long chairId,
             String reason) {
-        branch(session, branchId);
+        Branch branchObj = branch(session, branchId);
         Visit visit = visit(branchId, visitId);
         if (visit.getStatus() != VisitStatus.WAITING && visit.getStatus() != VisitStatus.WAITING_RESULT)
             throw fail(HttpStatus.CONFLICT, "Chỉ phân công lượt khám đang chờ hoặc chờ kết quả cận lâm sàng.");
         LocalDate today = LocalDate.now(ZONE);
         LocalTime now = LocalTime.now(ZONE);
+        if (branchObj != null && branchObj.getClosingTime() != null && !now.isBefore(branchObj.getClosingTime())) {
+            throw fail(HttpStatus.CONFLICT, "Chi nhánh đã đóng cửa, không thể điều phối tiếp nhận khám.");
+        }
         List<StaffProfile> available = findAvailableDoctors(branchId, today, now);
         if (available.isEmpty()) {
             throw fail(HttpStatus.CONFLICT, "Chi nhánh hiện không có bác sĩ nào đang trong ca trực tiếp nhận khám.");
@@ -595,6 +603,19 @@ public class DispatchService {
         public List<TicketRow> tickets() { return queue(); }
         public int maxDoctorQueueLimit() { return MAX_DOCTOR_QUEUE_LIMIT; }
         public int getMaxDoctorQueueLimit() { return MAX_DOCTOR_QUEUE_LIMIT; }
+        public Map<Long, String> getRoomNames() { return roomNames(); }
+        public Map<Long, String> getChairNames() { return chairNames(); }
+        public Map<Long, Long> getTicketIds() { return ticketIds(); }
+        public Map<Long, String> getIssued() { return issued(); }
+        public Map<Long, DoctorRequest> getRequests() { return requests(); }
+        public Map<Long, DoctorQueueInfo> getQueueInfo() { return queueInfo(); }
+        public List<DoctorOption> getDoctors() { return doctors(); }
+        public List<Visit> getVisits() { return visits(); }
+        public List<Branch> getBranches() { return branches(); }
+        public List<Room> getRooms() { return rooms(); }
+        public List<DentalChair> getChairs() { return chairs(); }
+        public Long getBranchId() { return branchId(); }
+        public LocalDate getDay() { return day(); }
 
         public Board(Long branchId, List<Branch> branches, List<Visit> visits, List<DoctorOption> doctors,
                      List<Room> rooms, List<DentalChair> chairs, List<TicketRow> queue, LocalDate day,

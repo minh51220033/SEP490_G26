@@ -5,7 +5,7 @@
     THANH TAB NGANG CHO PHÂN HỆ QUẢN LÝ NHÂN SỰ
     Kiểu dáng Compact Pill Buttons chuẩn DentalSoft (Đồng bộ phân hệ Chi phí & Thu nhập)
     Điều hướng chuẩn 100%, bảo toàn CSS và chống xung đột giật màn hình
-    active: 'staffs' | 'schedules' | 'attendance' | 'leaves'
+    active: 'staffs' | 'schedules' | 'attendance' | 'leaves' | 'work-shifts'
 -->
 <nav th:fragment="hrTabs(active)" class="hr-tabs-nav" aria-label="Phân hệ Quản lý nhân sự">
     <style>
@@ -85,6 +85,17 @@
                th:classappend="${active == 'schedules'} ? 'active' : ''">
                 <i class="bi bi-calendar-range" aria-hidden="true"></i>
                 <span>Phân ca làm việc</span>
+            </a>
+        </li>
+
+        <!-- 2b. Cấu hình ca làm việc -->
+        <li class="hr-tab-item"
+            th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'SCHEDULE_MANAGE'))}">
+            <a th:href="@{/admin/work-shifts}"
+               class="hr-tab-btn"
+               th:classappend="${active == 'work-shifts'} ? 'active' : ''">
+                <i class="bi bi-clock-history" aria-hidden="true"></i>
+                <span>Cấu hình ca làm</span>
             </a>
         </li>
 

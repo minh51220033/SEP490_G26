@@ -46,13 +46,15 @@ public class ClinicalWorkflowRestController {
     public ResponseEntity<WorkflowTemplateResponseDTO> saveWorkflow(
             @RequestBody WorkflowTemplateRequestDTO requestDTO,
             HttpSession session) {
-        User user = (User) session.getAttribute("loggedInUser");
-        Long userId = user != null ? user.getUserId() : 1L;
+        doctorVisitAccess.requireAuthenticatedUser(session);
+        Long userId = requireUserId(session);
         return ResponseEntity.ok(workflowService.saveTemplate(requestDTO, userId));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteWorkflow(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteWorkflow(@PathVariable Long id, HttpSession session) {
+        doctorVisitAccess.requireAuthenticatedUser(session);
+        requireUserId(session);
         workflowService.deleteTemplate(id);
         return ResponseEntity.noContent().build();
     }
@@ -74,7 +76,7 @@ public class ClinicalWorkflowRestController {
     /** SCR-43.1: tổng quan quy trình của lượt khám + dịch vụ có thể khởi tạo quy trình. */
     @GetMapping("/execution/visit/{visitId}")
     public ResponseEntity<WorkflowVisitOverviewDTO> getVisitOverview(@PathVariable Long visitId, HttpSession session) {
-        requireUserId(session);
+        doctorVisitAccess.requireVisitRead(session, visitId);
         return ResponseEntity.ok(workflowService.getVisitOverview(visitId));
     }
 
@@ -137,7 +139,7 @@ public class ClinicalWorkflowRestController {
     public ResponseEntity<List<WorkflowHistoryEntryDTO>> getExecutionHistory(
             @PathVariable Long executionId,
             HttpSession session) {
-        requireUserId(session);
+        doctorVisitAccess.requireWorkflowExecutionRead(session, executionId);
         return ResponseEntity.ok(workflowService.getExecutionHistory(executionId));
     }
 

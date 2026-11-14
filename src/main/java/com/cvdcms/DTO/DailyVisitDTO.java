@@ -11,8 +11,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class DailyVisitDTO {
     private Long visitId;
+    private String visitToken;
     private String visitCode;
     private Long profileId;
+    private String patientToken;
     private String patientCode;
     private String fullName;
     private String phoneNumber;

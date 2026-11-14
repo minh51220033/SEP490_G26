@@ -35,11 +35,28 @@ public class TreatmentPlanRestController {
     private final VisitRepository visitRepository;
     private final com.cvdcms.repository.PerformedServiceRepository performedServiceRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+
+    private jakarta.servlet.http.HttpSession currentHttpSession() {
+        var attrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        return attrs instanceof org.springframework.web.context.request.ServletRequestAttributes sra
+                ? sra.getRequest().getSession(false) : null;
+    }
+
+    private boolean isHttpRequestActive() {
+        return org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
+                instanceof org.springframework.web.context.request.ServletRequestAttributes;
+    }
+
     /**
      * Lấy danh sách kế hoạch điều trị theo hồ sơ bệnh nhân
      */
     @GetMapping
     public ResponseEntity<List<TreatmentPlanResponseDTO>> getPlansByPatient(@RequestParam Long patientId) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requirePatientRead(currentHttpSession(), patientId);
+        }
         List<TreatmentPlanResponseDTO> list = treatmentPlanService.getPlansByPatientId(patientId);
         return ResponseEntity.ok(list);
     }
@@ -49,6 +66,9 @@ public class TreatmentPlanRestController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<TreatmentPlanResponseDTO> getPlanById(@PathVariable Long id) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireTreatmentPlanRead(currentHttpSession(), id);
+        }
         TreatmentPlanResponseDTO dto = treatmentPlanService.getPlanById(id);
         return ResponseEntity.ok(dto);
     }
@@ -58,6 +78,17 @@ public class TreatmentPlanRestController {
      */
     @PostMapping
     public ResponseEntity<?> createPlan(@RequestBody TreatmentPlanRequestDTO request) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            jakarta.servlet.http.HttpSession session = currentHttpSession();
+            if (request != null && request.getPatientId() != null) {
+                doctorVisitAccess.requirePatientWrite(session, request.getPatientId());
+            } else {
+                doctorVisitAccess.requireAuthenticatedUser(session);
+            }
+            if (request != null && request.getBranchId() != null) {
+                doctorVisitAccess.requireBranch(session, request.getBranchId());
+            }
+        }
         try {
             TreatmentPlanResponseDTO created = treatmentPlanService.createPlan(request);
             Map<String, Object> response = new HashMap<>();
@@ -85,6 +116,9 @@ public class TreatmentPlanRestController {
      */
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestParam String status) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireTreatmentPlanWrite(currentHttpSession(), id);
+        }
         try {
             TreatmentPlanResponseDTO updated = treatmentPlanService.updatePlanStatus(id, status);
             Map<String, Object> response = new HashMap<>();
@@ -105,6 +139,9 @@ public class TreatmentPlanRestController {
      */
     @PostMapping("/{id}/handover-accounting")
     public ResponseEntity<?> handoverToAccounting(@PathVariable Long id) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireTreatmentPlanWrite(currentHttpSession(), id);
+        }
         try {
             TreatmentPlanResponseDTO updated = treatmentPlanService.handoverToAccounting(id);
             Map<String, Object> response = new HashMap<>();
@@ -118,10 +155,10 @@ public class TreatmentPlanRestController {
             error.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(error);
         } catch (Exception e) {
-            log.error("Lỗi khi chuyển kế hoạch điều trị ID {} sang Kế toán: ", id, e);
+            log.error("Lỗi khi chuyển kế hoạch điều trị sang Kế toán: ", e);
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
-            error.put("message", "Lỗi máy chủ khi chuyển kế hoạch sang Kế toán: " + e.getMessage());
+            error.put("message", "Lỗi máy chủ khi chuyển kế hoạch sang Kế toán.");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
@@ -131,6 +168,9 @@ public class TreatmentPlanRestController {
      */
     @PutMapping("/stages/{stageId}/status")
     public ResponseEntity<?> updateStageStatus(@PathVariable Long stageId, @RequestParam String status) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireTreatmentStage(currentHttpSession(), stageId);
+        }
         try {
             TreatmentPlanResponseDTO updatedPlan = treatmentPlanService.updateStageStatus(stageId, status);
             Map<String, Object> response = new HashMap<>();
@@ -152,6 +192,9 @@ public class TreatmentPlanRestController {
      */
     @PutMapping("/items/{itemId}/status")
     public ResponseEntity<?> updateItemStatus(@PathVariable Long itemId, @RequestParam String status) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireTreatmentPlanItem(currentHttpSession(), itemId);
+        }
         try {
             TreatmentPlanResponseDTO updatedPlan = treatmentPlanService.updateItemStatus(itemId, status);
             Map<String, Object> response = new HashMap<>();
@@ -177,9 +220,14 @@ public class TreatmentPlanRestController {
             @RequestParam Long visitId,
             @RequestParam(required = false) Long doctorId,
             @RequestParam(required = false) Long assistantId) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            jakarta.servlet.http.HttpSession session = currentHttpSession();
+            doctorVisitAccess.requireTreatmentPlanItem(session, itemId);
+            doctorVisitAccess.require(session, visitId);
+        }
         try {
             com.cvdcms.entity.TreatmentPlanItem item = treatmentPlanItemRepository.findById(itemId)
-                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bước thủ thuật với ID: " + itemId));
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bước thủ thuật phù hợp."));
 
             if (item.getStatus() == com.cvdcms.entity.enums.TreatmentPlanItemStatus.COMPLETED) {
                 return ResponseEntity.badRequest().body(Map.of(
@@ -198,7 +246,7 @@ public class TreatmentPlanRestController {
             }
 
             com.cvdcms.entity.Visit visit = visitRepository.findById(visitId)
-                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám với ID: " + visitId));
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám phù hợp."));
 
             if (visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.WAITING_PAYMENT ||
                 visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.COMPLETED) {
@@ -280,6 +328,9 @@ public class TreatmentPlanRestController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletePlan(@PathVariable Long id) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireTreatmentPlanWrite(currentHttpSession(), id);
+        }
         try {
             treatmentPlanService.deletePlan(id);
             Map<String, Object> response = new HashMap<>();
@@ -299,6 +350,9 @@ public class TreatmentPlanRestController {
      */
     @PostMapping("/ai-parse")
     public ResponseEntity<?> parseWithAi(@RequestBody AiParsePlanRequestDTO request) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireAuthenticatedUser(currentHttpSession());
+        }
         try {
             AiParsePlanResponseDTO parsed = treatmentPlanService.parsePlanWithAi(request);
             Map<String, Object> response = new HashMap<>();

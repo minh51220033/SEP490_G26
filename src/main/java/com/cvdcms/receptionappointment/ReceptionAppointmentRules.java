@@ -63,6 +63,10 @@ public class ReceptionAppointmentRules {
         return policy.sessionEnded(branch, date, session, now);
     }
 
+    public List<AppointmentPolicyService.SessionWindowInfo> sessionWindows(Branch branch) {
+        return policy.sessionWindows(branch);
+    }
+
     private DoctorOption doctorOption(AppointmentPolicyService.DoctorOption option) {
         return new DoctorOption(option.id(), option.name(), option.specialty(), option.remaining());
     }
