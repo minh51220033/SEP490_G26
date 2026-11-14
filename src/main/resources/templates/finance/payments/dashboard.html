@@ -1037,7 +1037,9 @@
                         <span class="badge bg-primary px-3 py-2 rounded-pill font-monospace" th:text="${treatmentPlans.size()} + ' kế hoạch'">0 kế hoạch</span>
                     </div>
 
-                    <div th:each="tp : ${treatmentPlans}" class="border rounded-3 p-3 mb-4 bg-white" style="box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);">
+                    <div th:each="tp : ${treatmentPlans}"
+                         th:with="nextInst=${tp.getNextUnpaidInstallment()}, isScheduleLocked=${tp.isScheduleLocked()}, isFullyPaid=${tp.isFullyPaid()}"
+                         class="border rounded-3 p-3 mb-4 bg-white" style="box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);">
                         <!-- Header thông tin kế hoạch -->
                         <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 pb-3 border-bottom">
                             <div>
@@ -1055,25 +1057,38 @@
                             <!-- Thao tác nhanh cho kế hoạch -->
                             <div class="d-flex align-items-center gap-2">
                                 <button type="button" class="fin-btn fin-btn-sm fin-btn-outline"
+                                        th:if="${!isScheduleLocked}"
                                         th:data-plan-id="${tp.planId}"
                                         th:data-plan-code="${tp.planCode}"
                                         th:data-estimated="${tp.getEstimatedCost()}"
                                         onclick="openSplitModal(this.getAttribute('data-plan-id'), this.getAttribute('data-plan-code'), this.getAttribute('data-estimated'))"
-                                        title="Cấu hình chia đợt nhanh">
+                                        title="Cấu hình chia đợt (chỉ khả dụng khi chưa phát sinh thanh toán)">
                                     <i class="bi bi-sliders"></i>
                                     <span>Cấu hình chia đợt</span>
                                 </button>
+                                <span th:if="${isScheduleLocked and !isFullyPaid}"
+                                      class="badge bg-light text-secondary border px-2 py-2"
+                                      title="Kế hoạch đã phát sinh thu tiền, lộ trình chia đợt đã được khóa cứng">
+                                    <i class="bi bi-lock-fill me-1"></i>Đã khóa lộ trình
+                                </span>
                                 <button type="button" class="fin-btn fin-btn-sm fin-btn-primary"
+                                        th:if="${!isFullyPaid and tp.getRemainingCost() != null and tp.getRemainingCost().signum() > 0}"
                                         th:data-plan-id="${tp.planId}"
                                         th:data-plan-code="${tp.planCode}"
                                         th:data-plan-name="${tp.planName}"
                                         th:data-remaining="${tp.getRemainingCost()}"
-                                        th:data-suggested="${tp.installments != null and !tp.installments.isEmpty() ? tp.installments.get(0).expectedAmount : tp.getRemainingCost()}"
-                                        onclick="openInstallmentPayModal(this.getAttribute('data-plan-id'), this.getAttribute('data-plan-code'), this.getAttribute('data-plan-name'), this.getAttribute('data-remaining'), this.getAttribute('data-suggested'), 'Đợt tiếp theo')"
-                                        title="Thu tiền đợt này">
+                                        th:data-suggested="${nextInst != null and nextInst.getRemainingAmount() != null and nextInst.getRemainingAmount().signum() > 0 ? nextInst.getRemainingAmount() : tp.getRemainingCost()}"
+                                        th:data-phase="${nextInst != null ? nextInst.phaseName : 'Tất toán phác đồ'}"
+                                        th:data-branch-id="${tp.branch != null ? tp.branch.branchId : currentBranchId}"
+                                        onclick="openInstallmentPayModal(this.getAttribute('data-plan-id'), this.getAttribute('data-plan-code'), this.getAttribute('data-plan-name'), this.getAttribute('data-remaining'), this.getAttribute('data-suggested'), this.getAttribute('data-phase'), this.getAttribute('data-branch-id'))"
+                                        title="Thu tiền đợt hiện tại">
                                     <i class="bi bi-cash-coin"></i>
                                     <span>Thu tiền đợt này</span>
                                 </button>
+                                <span th:if="${isFullyPaid or tp.getRemainingCost() == null or tp.getRemainingCost().signum() <= 0}"
+                                      class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Đã hoàn thành thanh toán
+                                </span>
                             </div>
                         </div>
 
@@ -1098,7 +1113,8 @@
                                 </div>
                             </div>
                             <div class="col-md-3"
-                                 th:with="payPct=${(tp.getEstimatedCost() != null and tp.getEstimatedCost().signum() > 0 and tp.totalPaidAmount != null) ? (tp.totalPaidAmount.doubleValue() * 100.0 / tp.getEstimatedCost().doubleValue() + 0.5).intValue() : 0}">
+                                 th:with="rawPct=${(tp.getEstimatedCost() != null and tp.getEstimatedCost().signum() > 0 and tp.totalPaidAmount != null) ? (tp.totalPaidAmount.doubleValue() * 100.0 / tp.getEstimatedCost().doubleValue() + 0.5).intValue() : 0},
+                                          payPct=${rawPct > 100 ? 100 : (rawPct < 0 ? 0 : rawPct)}">
                                 <div class="p-3 bg-light rounded-3 border">
                                     <div class="d-flex justify-content-between text-muted small fw-medium">
                                         <span>Tiến độ thu:</span>
@@ -1164,7 +1180,8 @@
                                         <span th:unless="${inst.reminded == true}" class="badge bg-light text-muted border">Chưa nhắc</span>
                                     </td>
                                     <td class="text-center">
-                                        <div class="d-inline-flex gap-1 align-items-center">
+                                        <div th:if="${(inst.status == null or inst.status.name() != 'PAID') and !isFullyPaid and tp.getRemainingCost() != null and tp.getRemainingCost().signum() > 0}"
+                                             class="d-inline-flex gap-1 align-items-center">
                                             <!-- Nút nhắc hẹn -->
                                             <button type="button" class="btn btn-sm btn-outline-warning py-1 px-2"
                                                     title="Mẫu tin nhắn &amp; Nhắc bệnh nhân"
@@ -1179,19 +1196,30 @@
                                                     onclick="openInstallmentReminderModal(this.getAttribute('data-inst-id'), this.getAttribute('data-order'), this.getAttribute('data-phase'), this.getAttribute('data-date'), this.getAttribute('data-expected'), this.getAttribute('data-patient-name'), this.getAttribute('data-patient-phone'), this.getAttribute('data-plan-name'))">
                                                 <i class="bi bi-bell-fill"></i>
                                             </button>
-                                            <!-- Nút thu tiền đợt -->
+                                            <!-- Chỉ cho thu đúng đợt hiện tại chưa hoàn tất (xong đợt nào ra đợt đó) -->
                                             <button type="button" class="btn btn-sm btn-primary py-1 px-2 fw-semibold"
-                                                    title="Thu tiền cho đợt này (không fix cứng)"
+                                                    th:if="${nextInst != null and inst.installmentId == nextInst.installmentId}"
+                                                    title="Thu tiền cho đợt hiện tại"
                                                     th:data-plan-id="${tp.planId}"
                                                     th:data-plan-code="${tp.planCode}"
                                                     th:data-plan-name="${tp.planName}"
                                                     th:data-remaining="${tp.getRemainingCost()}"
                                                     th:data-suggested="${inst.getRemainingAmount() != null and inst.getRemainingAmount().signum() > 0 ? inst.getRemainingAmount() : inst.expectedAmount}"
                                                     th:data-phase="${inst.phaseName}"
-                                                    onclick="openInstallmentPayModal(this.getAttribute('data-plan-id'), this.getAttribute('data-plan-code'), this.getAttribute('data-plan-name'), this.getAttribute('data-remaining'), this.getAttribute('data-suggested'), this.getAttribute('data-phase'))">
+                                                    th:data-branch-id="${tp.branch != null ? tp.branch.branchId : currentBranchId}"
+                                                    onclick="openInstallmentPayModal(this.getAttribute('data-plan-id'), this.getAttribute('data-plan-code'), this.getAttribute('data-plan-name'), this.getAttribute('data-remaining'), this.getAttribute('data-suggested'), this.getAttribute('data-phase'), this.getAttribute('data-branch-id'))">
                                                 <i class="bi bi-cash me-1"></i>Thu
                                             </button>
+                                            <span th:if="${nextInst == null or inst.installmentId != nextInst.installmentId}"
+                                                  class="badge bg-light text-secondary border"
+                                                  title="Cần hoàn tất đợt trước đó">
+                                                Chờ đợt trước
+                                            </span>
                                         </div>
+                                        <span th:unless="${(inst.status == null or inst.status.name() != 'PAID') and !isFullyPaid and tp.getRemainingCost() != null and tp.getRemainingCost().signum() > 0}"
+                                              class="text-success small fw-semibold">
+                                            <i class="bi bi-check2-all me-1"></i>Hoàn tất
+                                        </span>
                                     </td>
                                 </tr>
                                 </tbody>
@@ -1203,6 +1231,7 @@
                             <i class="bi bi-calendar2-range text-muted fs-3 d-block mb-1"></i>
                             <div class="text-muted small mb-2">Kế hoạch này chưa thiết lập lộ trình trả theo đợt.</div>
                             <button type="button" class="fin-btn fin-btn-sm fin-btn-outline"
+                                    th:if="${!isScheduleLocked}"
                                     th:data-plan-id="${tp.planId}"
                                     th:data-plan-code="${tp.planCode}"
                                     th:data-estimated="${tp.getEstimatedCost()}"
@@ -1267,6 +1296,7 @@
             </div>
             <div class="modal-body p-4">
                 <input type="hidden" id="instPayPlanId">
+                <input type="hidden" id="instPayBranchId" th:value="${currentBranchId}">
                 
                 <div class="p-3 bg-light rounded-3 border mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-1">
@@ -1646,7 +1676,8 @@
                             nhận:</label>
                         <select id="depositBranchSelect" name="branchId" class="form-select" required>
                             <option th:each="b : ${branches}" th:value="${b.branchId}"
-                                    th:text="${b.branchName}"></option>
+                                    th:text="${b.branchName}"
+                                    th:selected="${currentBranchId != null and b.branchId == currentBranchId}"></option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -2328,6 +2359,10 @@
                         container: 'dashboardInstPayQrContainer',
                         methodSelect: 'instPayMethodSelect',
                         amountInput: 'instPayAmountInput',
+                        branchId: () => {
+                            const b = document.getElementById('instPayBranchId');
+                            return (b && b.value) ? b.value : /*[[${currentBranchId}]]*/ null;
+                        },
                         profileId: () => /*[[${patient != null ? patient.profileId : null}]]*/ null,
                         bankAccountIdInput: 'instPayBankAccountId',
                         expectedContentInput: 'instPayExpectedTransferContent'
@@ -2369,9 +2404,13 @@
         return match ? decodeURIComponent(match[1]) : '';
     }
 
-    window.openInstallmentPayModal = function(planId, planCode, planName, remainingDebt, suggestedAmount, phaseName) {
+    window.openInstallmentPayModal = function(planId, planCode, planName, remainingDebt, suggestedAmount, phaseName, branchId) {
         const idEl = document.getElementById('instPayPlanId');
         if (idEl) idEl.value = planId || '';
+        const branchEl = document.getElementById('instPayBranchId');
+        if (branchEl) {
+            branchEl.value = branchId || /*[[${currentBranchId}]]*/ '';
+        }
         const codeEl = document.getElementById('instPayPlanCode');
         if (codeEl) codeEl.innerText = planCode || '';
         const nameEl = document.getElementById('instPayPlanName');
@@ -2381,12 +2420,15 @@
 
         window.CURRENT_REMAINING_DEBT = Number(remainingDebt || 0);
         window.CURRENT_SUGGESTED_AMOUNT = Number(suggestedAmount || 0);
-        if (window.CURRENT_SUGGESTED_AMOUNT <= 0) window.CURRENT_SUGGESTED_AMOUNT = window.CURRENT_REMAINING_DEBT;
+        if (window.CURRENT_SUGGESTED_AMOUNT <= 0 || window.CURRENT_SUGGESTED_AMOUNT > window.CURRENT_REMAINING_DEBT) {
+            window.CURRENT_SUGGESTED_AMOUNT = window.CURRENT_REMAINING_DEBT;
+        }
 
         const debtDisp = document.getElementById('instPayRemainingDebtDisplay');
         if (debtDisp) debtDisp.innerText = formatVnd(window.CURRENT_REMAINING_DEBT);
         const amtInput = document.getElementById('instPayAmountInput');
         if (amtInput) {
+            amtInput.max = window.CURRENT_REMAINING_DEBT > 0 ? window.CURRENT_REMAINING_DEBT : '';
             amtInput.value = window.CURRENT_SUGGESTED_AMOUNT;
             amtInput.dispatchEvent(new Event('input'));
         }
@@ -2443,8 +2485,16 @@
         const notes = document.getElementById('instPayNotesInput').value;
         const transRef = document.getElementById('instPayTransRef')?.value;
 
+        if (window.CURRENT_REMAINING_DEBT <= 0) {
+            alert('Kế hoạch điều trị này đã thu đủ, không thể thu thêm!');
+            return;
+        }
         if (amount <= 0) {
             alert('Vui lòng nhập số tiền thanh toán lớn hơn 0!');
+            return;
+        }
+        if (amount > window.CURRENT_REMAINING_DEBT) {
+            alert('Số tiền thanh toán không được vượt quá số tiền còn lại cần thu (' + formatVnd(window.CURRENT_REMAINING_DEBT) + ')!');
             return;
         }
 

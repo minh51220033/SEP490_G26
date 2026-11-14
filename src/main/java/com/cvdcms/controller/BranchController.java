@@ -44,14 +44,17 @@ public class BranchController {
     private final BranchService branchService;
     private final RoomService roomService;
     private final DentalChairService chairService;
+    private final com.cvdcms.service.BranchBankAccountService branchBankAccountService;
 
     public BranchController(
             BranchService branchService,
             RoomService roomService,
-            DentalChairService chairService) {
+            DentalChairService chairService,
+            com.cvdcms.service.BranchBankAccountService branchBankAccountService) {
         this.branchService = branchService;
         this.roomService = roomService;
         this.chairService = chairService;
+        this.branchBankAccountService = branchBankAccountService;
     }
 
     // Đưa thông tin người dùng từ session vào model để layout chung (sidebar, topbar) hiển thị đúng.
@@ -196,6 +199,8 @@ public class BranchController {
         model.addAttribute("chairStatuses", ChairStatus.values());
         model.addAttribute("managers", branchService.getPotentialManagers());
         model.addAttribute("managerDisplayMap", branchService.getManagerDisplayMap());
+        model.addAttribute("bankAccounts", branchBankAccountService.getAccountsByBranch(id));
+        model.addAttribute("popularBanks", AdminBankAccountController.POPULAR_BANKS);
 
         return "branch/detail";
     }

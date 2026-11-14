@@ -118,6 +118,7 @@ public class AdminBankAccountController {
     @PostMapping("/create")
     public String createBankAccount(
             @ModelAttribute BranchBankAccountDTO dto,
+            @RequestParam(required = false) String returnUrl,
             HttpServletRequest request,
             HttpSession session,
             RedirectAttributes redirectAttributes
@@ -133,6 +134,9 @@ public class AdminBankAccountController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Không thể thêm tài khoản: " + e.getMessage());
         }
+        if (returnUrl != null && !returnUrl.isBlank()) {
+            return "redirect:" + returnUrl;
+        }
         return "redirect:/admin/bank-accounts" + (dto.getBranchId() != null ? "?branchId=" + dto.getBranchId() : "");
     }
 
@@ -140,6 +144,7 @@ public class AdminBankAccountController {
     public String updateBankAccount(
             @PathVariable Long id,
             @ModelAttribute BranchBankAccountDTO dto,
+            @RequestParam(required = false) String returnUrl,
             HttpServletRequest request,
             HttpSession session,
             RedirectAttributes redirectAttributes
@@ -155,6 +160,9 @@ public class AdminBankAccountController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Không thể cập nhật tài khoản: " + e.getMessage());
         }
+        if (returnUrl != null && !returnUrl.isBlank()) {
+            return "redirect:" + returnUrl;
+        }
         return "redirect:/admin/bank-accounts" + (dto.getBranchId() != null ? "?branchId=" + dto.getBranchId() : "");
     }
 
@@ -163,6 +171,7 @@ public class AdminBankAccountController {
             @PathVariable Long id,
             @RequestParam boolean active,
             @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) String returnUrl,
             HttpServletRequest request,
             HttpSession session,
             RedirectAttributes redirectAttributes
@@ -179,6 +188,9 @@ public class AdminBankAccountController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Không thể thay đổi trạng thái: " + e.getMessage());
         }
+        if (returnUrl != null && !returnUrl.isBlank()) {
+            return "redirect:" + returnUrl;
+        }
         return "redirect:/admin/bank-accounts" + (branchId != null ? "?branchId=" + branchId : "");
     }
 
@@ -186,6 +198,7 @@ public class AdminBankAccountController {
     public String setDefault(
             @PathVariable Long id,
             @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) String returnUrl,
             HttpServletRequest request,
             HttpSession session,
             RedirectAttributes redirectAttributes
@@ -201,6 +214,9 @@ public class AdminBankAccountController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Không thể đặt mặc định: " + e.getMessage());
         }
+        if (returnUrl != null && !returnUrl.isBlank()) {
+            return "redirect:" + returnUrl;
+        }
         return "redirect:/admin/bank-accounts" + (branchId != null ? "?branchId=" + branchId : "");
     }
 
@@ -208,6 +224,7 @@ public class AdminBankAccountController {
     public String deleteAccount(
             @PathVariable Long id,
             @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) String returnUrl,
             HttpServletRequest request,
             HttpSession session,
             RedirectAttributes redirectAttributes
@@ -222,6 +239,9 @@ public class AdminBankAccountController {
             redirectAttributes.addFlashAttribute("successMessage", "Xóa tài khoản ngân hàng thành công!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        if (returnUrl != null && !returnUrl.isBlank()) {
+            return "redirect:" + returnUrl;
         }
         return "redirect:/admin/bank-accounts" + (branchId != null ? "?branchId=" + branchId : "");
     }
