@@ -8,6 +8,7 @@ import com.cvdcms.patient.PatientService;
 import com.cvdcms.patient.PatientView;
 import com.cvdcms.patient.ReceptionPatientRecord;
 import com.cvdcms.patient.ReceptionPatientRepository;
+import com.cvdcms.reception.ReceptionVisitRepository;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.AppointmentConflictDetectionService;
 import com.cvdcms.service.AppointmentLifecycleService;
@@ -47,6 +48,12 @@ public class ReceptionAppointmentService {
     private final AppointmentSlotService slots;
     private final PatientService patientService;
     private final Validator validator;
+
+    @Autowired(required = false)
+    private ReceptionVisitRepository receptionVisits;
+
+    @Autowired(required = false)
+    private ClinicalQueueTicketRepository clinicalQueueTickets;
 
     @Autowired
     public ReceptionAppointmentService(PatientAccess access, ReceptionAppointmentRepository appointments,
@@ -197,6 +204,13 @@ public class ReceptionAppointmentService {
         PatientAccess.Scope scope = access.require(session);
         Branch branch = requireBranch(scope, branchId);
         return rules.dayLoadOverview(branch, date);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppointmentPolicyService.SessionWindowInfo> sessions(HttpSession session, Long branchId) {
+        PatientAccess.Scope scope = access.require(session);
+        Branch branch = requireBranch(scope, branchId);
+        return rules.sessionWindows(branch);
     }
 
     @Transactional(readOnly = true)
@@ -514,6 +528,23 @@ public class ReceptionAppointmentService {
             if (task.getTaskType() == CustomerCareTaskType.APPOINTMENT_REMINDER
                     && task.getStatus() != CustomerCareTaskStatus.COMPLETED)
                 task.setStatus(CustomerCareTaskStatus.CANCELLED);
+        if (receptionVisits != null) {
+            receptionVisits.findByAppointmentId(id).ifPresent(v -> {
+                if (v.getStatus() != VisitStatus.COMPLETED) {
+                    v.setStatus(VisitStatus.CANCELLED);
+                    receptionVisits.saveAndFlush(v);
+                    if (clinicalQueueTickets != null && v.getVisitId() != null) {
+                        List<QueueTicket> tickets = clinicalQueueTickets.findByVisitVisitId(v.getVisitId());
+                        for (QueueTicket t : tickets) {
+                            t.setStatus(QueueStatus.CANCELLED);
+                        }
+                        if (!tickets.isEmpty()) {
+                            clinicalQueueTickets.saveAll(tickets);
+                        }
+                    }
+                }
+            });
+        }
         return view(a);
     }
 
