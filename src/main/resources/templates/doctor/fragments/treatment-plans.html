@@ -1038,7 +1038,18 @@
                                     <span class="tp-code-pill" th:text="${plan.planCode}">KHDT1001</span>
                                 </td>
                                 <td data-col-id="planName">
-                                    <div class="fw-bold text-dark" style="font-size: 13.5px; line-height: 1.45;" th:text="${plan.planName}">
+                                    <a th:if="${visit != null}"
+                                       th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create?planId=' + ${plan.planId}}"
+                                       class="fw-bold text-primary text-decoration-none"
+                                       style="font-size: 13.5px; line-height: 1.45;"
+                                       th:text="${plan.planName}"
+                                       title="Nhấn để mở / cập nhật lộ trình kế hoạch này">
+                                        Phác đồ Cấy ghép Implant
+                                    </a>
+                                    <div th:unless="${visit != null}"
+                                         class="fw-bold text-dark"
+                                         style="font-size: 13.5px; line-height: 1.45;"
+                                         th:text="${plan.planName}">
                                         Phác đồ Cấy ghép Implant
                                     </div>
                                 </td>
@@ -1076,6 +1087,13 @@
                                               th:title="${plan.sentToAccountingAt != null ? 'Đã lưu và đồng bộ Kế toán: ' + plan.sentToAccountingAt : 'Đã lưu và đồng bộ Kế toán'}">
                                             <i class="bi bi-check2-all text-success"></i>Đã lưu Kế toán
                                         </span>
+                                        <div th:if="${plan.isInstallment}" class="mt-1">
+                                            <span class="badge bg-info-subtle text-info border border-info d-inline-flex align-items-center gap-1 py-1 px-2"
+                                                  style="font-size: 11px;"
+                                                  th:title="'Tổng đã thu: ' + (${plan.totalPaidAmount != null ? #numbers.formatDecimal(plan.totalPaidAmount, 0, 'COMMA', 0, 'POINT') : '0'}) + ' đ'">
+                                                <i class="bi bi-calendar2-range"></i>Trả theo đợt (<span th:text="${plan.installments != null ? plan.installments.size() : 0}">0</span> đợt)
+                                            </span>
+                                        </div>
                                     </div>
                                 </td>
                                 <td data-col-id="status" class="text-center" th:id="'plan-status-cell-' + ${plan.planId}">
@@ -1100,13 +1118,13 @@
                                     <div class="d-flex align-items-center justify-content-center gap-2 flex-nowrap">
                                         <a th:if="${visit != null}"
                                            th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create?planId=' + ${plan.planId}}"
-                                           class="df-btn-plan-detail"
+                                           class="df-btn-plan-detail text-decoration-none"
                                            title="Xem chi tiết &amp; cập nhật kế hoạch này">
                                             <i class="bi bi-pencil-square"></i>
                                             <span>Chi tiết</span>
                                         </a>
                                         <button type="button" class="df-btn-roadmap"
-                                                title="Xem &amp; cập nhật lộ trình các bước lâm sàng (SCR-15.3)"
+                                                title="Xem &amp; cuộn xuống lộ trình các bước lâm sàng bên dưới (SCR-15.3)"
                                                 th:data-id="${plan.planId}"
                                                 onclick="togglePlanInlineRoadmap(this.getAttribute('data-id'))">
                                             <i class="bi bi-diagram-3-fill"></i>
@@ -1125,13 +1143,13 @@
                                     <div class="tp-floating-actions-bar" onclick="event.stopPropagation()">
                                         <a th:if="${visit != null}"
                                            th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create?planId=' + ${plan.planId}}"
-                                           class="df-btn-plan-detail"
+                                           class="df-btn-plan-detail text-decoration-none"
                                            title="Xem chi tiết &amp; cập nhật kế hoạch này">
                                             <i class="bi bi-pencil-square"></i>
                                             <span>Chi tiết</span>
                                         </a>
                                         <button type="button" class="df-btn-roadmap"
-                                                title="Xem &amp; cập nhật lộ trình các bước lâm sàng"
+                                                title="Xem &amp; cuộn xuống lộ trình các bước lâm sàng bên dưới"
                                                 th:data-id="${plan.planId}"
                                                 onclick="togglePlanInlineRoadmap(this.getAttribute('data-id'))">
                                             <i class="bi bi-diagram-3-fill"></i>

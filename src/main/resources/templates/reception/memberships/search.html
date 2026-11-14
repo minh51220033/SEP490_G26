@@ -6,12 +6,373 @@
     <link rel="stylesheet" th:href="@{/css/finance.css}">
     <link rel="stylesheet" th:href="@{/css/membership.css}">
     <style>
-        .vip-card-box {
-            background: #fff;
+        /* =========================================================================
+           1. TOOLBAR & ADVANCED FILTER PANEL (Chuẩn /doctor/daily-visits & Rule 7)
+           ========================================================================= */
+        .dv-toolbar-card {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+            margin-bottom: 20px;
+        }
+
+        .dv-search-box {
+            position: relative;
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .dv-search-box input {
+            width: 100%;
+            height: 44px;
+            padding: 9px 38px 9px 42px;
+            border: 1.5px solid #cbd5e1;
             border-radius: 12px;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-            transition: all 0.2s ease;
-            border: 1px solid #e9ecef;
+            font-size: 14.5px;
+            font-weight: 500;
+            color: #0f172a;
+            background: #f8fafc;
+            transition: all 0.2s;
+        }
+
+        .dv-search-box input:focus {
+            background: #ffffff;
+            border-color: #0284c7;
+            box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.14);
+            outline: none;
+        }
+
+        .dv-search-box .search-lead-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+            font-size: 16px;
+            pointer-events: none;
+        }
+
+        .dv-search-box .search-clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: #e2e8f0;
+            color: #475569;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            font-size: 12px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .dv-search-box .search-clear-btn:hover {
+            background: #cbd5e1;
+            color: #0f172a;
+        }
+
+        /* Quick Filter Segmented Controls */
+        .dv-quick-segment {
+            display: inline-flex;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .dv-seg-btn {
+            border: none;
+            background: transparent;
+            color: #475569;
+            font-size: 13.5px;
+            font-weight: 700;
+            padding: 7px 14px;
+            border-radius: 9px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            text-decoration: none;
+        }
+
+        .dv-seg-btn:hover {
+            color: #0f172a;
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        .dv-seg-btn.active {
+            background: #ffffff;
+            color: #0284c7;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+        }
+
+        .dv-seg-count {
+            font-size: 11.5px;
+            font-weight: 800;
+            padding: 1px 7px;
+            border-radius: 20px;
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        .dv-seg-btn.active .dv-seg-count {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
+        /* Nút Lọc nâng cao & Badge chớp đỏ */
+        .dv-adv-filter-btn {
+            height: 44px;
+            padding: 0 16px;
+            border-radius: 12px;
+            border: 1.5px solid #cbd5e1;
+            background: #ffffff;
+            color: #0f172a;
+            font-size: 14px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            white-space: nowrap;
+        }
+
+        .dv-adv-filter-btn:hover,
+        .dv-adv-filter-btn.is-open {
+            border-color: #0284c7;
+            color: #0284c7;
+            background: #f0f9ff;
+        }
+
+        .dv-adv-filter-btn.has-active-filters {
+            border-color: #0284c7;
+            background: #f0f9ff;
+            color: #0369a1;
+        }
+
+        @keyframes dvRedPulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.75); transform: scale(1); }
+            50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); transform: scale(1.08); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
+        }
+
+        .dv-filter-pulse-badge {
+            background: #ef4444;
+            color: #ffffff;
+            font-size: 11.5px;
+            font-weight: 800;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 5px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            animation: dvRedPulse 1.5s infinite;
+            border: 2px solid #ffffff;
+        }
+
+        /* Khung Lọc Nâng Cao Mở Rộng */
+        .dv-adv-filter-panel {
+            display: none;
+            margin-top: 16px;
+            padding-top: 18px;
+            border-top: 1.5px dashed #cbd5e1;
+            animation: dvFadeSlideDown 0.2s ease-out;
+        }
+
+        .dv-adv-filter-panel.show {
+            display: block;
+        }
+
+        @keyframes dvFadeSlideDown {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .dv-adv-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .dv-adv-control {
+            height: 40px;
+            border-radius: 10px;
+            border: 1.5px solid #cbd5e1;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #0f172a;
+            padding: 6px 12px;
+            background: #ffffff;
+            width: 100%;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .dv-adv-control:focus {
+            border-color: #0284c7;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
+            outline: none;
+        }
+
+        /* Switch Chế độ xem Thẻ / Bảng */
+        .dv-view-toggle-group {
+            display: inline-flex;
+            background: #f1f5f9;
+            padding: 3px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .dv-view-toggle-btn {
+            border: none;
+            background: transparent;
+            color: #64748b;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .dv-view-toggle-btn.active {
+            background: #ffffff;
+            color: #0284c7;
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+        }
+
+        /* =========================================================================
+           2. BẢNG DỮ LIỆU CHUẨN MISA AMIS (.dv-grid-card + .dv-amis-table)
+           ========================================================================= */
+        .dv-grid-card {
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .dv-grid-topbar {
+            padding: 14px 20px;
+            background: #f8fafc;
+            border-bottom: 1.5px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .dv-table-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .dv-amis-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 13.5px;
+        }
+
+        .dv-amis-table thead th {
+            background: #f1f5f9;
+            color: #334155;
+            font-size: 12.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            padding: 14px 16px;
+            border-bottom: 2px solid #cbd5e1;
+            border-right: 1px solid #e2e8f0;
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        .dv-amis-table tbody tr.dv-data-row td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #f1f5f9;
+            vertical-align: middle;
+            color: #1e293b;
+            background: #ffffff;
+            transition: background-color 0.12s ease;
+        }
+
+        .dv-amis-table tbody tr.dv-data-row:hover td {
+            background: #f0f9ff !important;
+        }
+
+        .dv-code-pill {
+            font-family: 'JetBrains Mono', Consolas, monospace;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: #f1f5f9;
+            color: #0369a1;
+            border: 1px solid #cbd5e1;
+            white-space: nowrap;
+        }
+
+        .dv-patient-name {
+            font-size: 14.5px;
+            font-weight: 700;
+            color: #0f172a;
+            text-decoration: none;
+            line-height: 1.3;
+        }
+
+        .dv-patient-name:hover {
+            color: #0284c7;
+            text-decoration: underline;
+        }
+
+        .dv-avatar-circle {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 15px;
+            color: #ffffff;
+            background: linear-gradient(135deg, #0284c7 0%, #1d4ed8 100%);
+            flex-shrink: 0;
+        }
+
+        /* =========================================================================
+           3. CHẾ ĐỘ THẺ VIP CARD BOX (Grid View sang trọng)
+           ========================================================================= */
+        .vip-card-box {
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            border: 1.5px solid #e2e8f0;
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -20,32 +381,58 @@
 
         .vip-card-box:hover {
             transform: translateY(-3px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+            border-color: #0284c7;
         }
 
         .vip-card-header {
-            padding: 16px;
-            color: #fff;
+            padding: 16px 18px;
+            color: #ffffff;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .card-tier-diamond {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0284c7 100%);
         }
 
         .card-tier-gold {
-            background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
-            color: #2b2b2b !important;
+            background: linear-gradient(135deg, #b45309 0%, #f59e0b 50%, #fbbf24 100%);
+            color: #1e293b !important;
         }
 
         .card-tier-silver {
-            background: linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%);
+            background: linear-gradient(135deg, #475569 0%, #64748b 50%, #94a3b8 100%);
         }
 
         .card-tier-standard {
-            background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        }
+
+        /* Pill trạng thái Hạng thẻ */
+        .tier-badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .tier-pill-diamond { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+        .tier-pill-gold { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .tier-pill-silver { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+        .tier-pill-standard { background: #f8fafc; color: #334155; border: 1px solid #e2e8f0; }
+
+        /* Empty state */
+        .dv-empty-box {
+            padding: 60px 24px;
+            text-align: center;
+            background: #ffffff;
+            border-radius: 16px;
+            border: 1.5px dashed #cbd5e1;
         }
     </style>
 </head>
@@ -60,9 +447,9 @@
 
             <main class="app-content finance-page membership-page">
                 <div th:replace="~{fragments/membership-tabs :: membershipTabs('cards')}"></div>
+
                 <!-- Alert Messages -->
-                <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4"
-                    role="alert">
+                <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-4" role="alert">
                     <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
@@ -71,12 +458,12 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
 
-                <!-- 4 THẺ KPI TỔNG QUAN -->
+                <!-- 1. 4 THẺ KPI TỔNG QUAN (Đồng bộ chuẩn /doctor/daily-visits) -->
                 <div class="row g-3 mb-4">
                     <div class="col-xl-3 col-sm-6">
                         <div class="dv-kpi-card" style="--kpi-accent: #0284c7;">
                             <div>
-                                <div class="dv-kpi-num" th:text="${#lists.size(memberCards)}">0</div>
+                                <div class="dv-kpi-num" id="kpiTotalCards" th:text="${#lists.size(memberCards)}">0</div>
                                 <div class="dv-kpi-label">Tổng số thẻ</div>
                                 <div class="dv-kpi-sub">Hồ sơ hội viên tìm thấy</div>
                             </div>
@@ -88,7 +475,7 @@
                     <div class="col-xl-3 col-sm-6">
                         <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;">
                             <div>
-                                <div class="dv-kpi-num text-warning"
+                                <div class="dv-kpi-num text-warning" id="kpiVipCards"
                                     th:text="${#lists.size(memberCards.?[tierCode == 'GOLD' or tierCode == 'DIAMOND'])}">
                                     0</div>
                                 <div class="dv-kpi-label">Hạng VIP (Vàng/KC)</div>
@@ -102,10 +489,10 @@
                     <div class="col-xl-3 col-sm-6">
                         <div class="dv-kpi-card" style="--kpi-accent: #6366f1;">
                             <div>
-                                <div class="dv-kpi-num" style="color: #4f46e5;"
+                                <div class="dv-kpi-num" id="kpiStandardCards" style="color: #4f46e5;"
                                     th:text="${#lists.size(memberCards.?[tierCode == 'SILVER' or tierCode == 'STANDARD'])}">
                                     0</div>
-                                <div class="dv-kpi-label">Hạng Tiêu chuẩn/Bạc</div>
+                                <div class="dv-kpi-label">Tiêu chuẩn / Bạc</div>
                                 <div class="dv-kpi-sub">Hội viên đang tích lũy</div>
                             </div>
                             <div class="dv-kpi-icon" style="background: #e0e7ff; color: #4f46e5;">
@@ -116,10 +503,10 @@
                     <div class="col-xl-3 col-sm-6">
                         <div class="dv-kpi-card" style="--kpi-accent: #10b981;">
                             <div>
-                                <div class="dv-kpi-num text-success"
+                                <div class="dv-kpi-num text-success" id="kpiActivePointsCards"
                                     th:text="${#lists.size(memberCards.?[currentPoints > 0])}">0</div>
                                 <div class="dv-kpi-label">Có điểm khả dụng</div>
-                                <div class="dv-kpi-sub">Sẵn sàng đổi quà &amp; giảm giá</div>
+                                <div class="dv-kpi-sub">Sẵn sàng đổi quà &amp; ưu đãi</div>
                             </div>
                             <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
                                 <i class="bi bi-coin"></i>
@@ -128,47 +515,176 @@
                     </div>
                 </div>
 
-                <!-- Bộ lọc & Tìm kiếm Bệnh nhân -->
-                <div class="dv-toolbar-card mb-4"
-                    style="background: #fff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 16px 20px;">
-                    <form th:action="@{/reception/memberships}" method="get" class="row g-3 align-items-center">
-                        <input type="hidden" name="branchId" th:value="${selectedBranchId}">
-                        <div class="col-md-9">
-                            <div class="input-group">
-                                <span class="input-group-text bg-white border-end-0"
-                                    style="border-color: #cbd5e1; border-radius: 10px 0 0 10px; height: 44px;">
-                                    <i class="bi bi-search text-muted"></i>
-                                </span>
-                                <input type="text" id="keyword" name="keyword" class="form-control border-start-0"
-                                    style="border-color: #cbd5e1; border-radius: 0 10px 10px 0; height: 44px; font-size: 14px;"
-                                    th:value="${keyword}"
-                                    placeholder="Tìm kiếm thẻ hội viên theo mã bệnh nhân, họ tên hoặc số điện thoại...">
+                <!-- 2. TOOLBAR & BỘ LỌC CHUẨN GỌN (Chuẩn Rule 7 & /doctor/daily-visits) -->
+                <div class="dv-toolbar-card">
+                    <form id="cardFilterForm" th:action="@{/reception/memberships}" method="get" onsubmit="event.preventDefault(); applyCardFilters();">
+                        <input type="hidden" name="branchId" id="formBranchId" th:value="${selectedBranchId}">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                            <!-- Ô tìm kiếm từ khóa bên trái -->
+                            <div class="dv-search-box">
+                                <i class="bi bi-search search-lead-icon"></i>
+                                <input type="text" id="cardSearchInput" name="keyword" th:value="${keyword}"
+                                    placeholder="Tìm theo Mã BN, Họ tên, Số điện thoại..."
+                                    autocomplete="off"
+                                    oninput="handleCardSearchInput(this.value)">
+                                <button type="button" class="search-clear-btn" id="cardClearSearchBtn"
+                                    onclick="clearCardSearchInput()" title="Xóa từ khóa">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+
+                            <!-- Quick Segmented Controls (Lọc nhanh hạng thẻ) -->
+                            <div class="dv-quick-segment" aria-label="Bộ lọc nhanh theo hạng">
+                                <button type="button" class="dv-seg-btn" th:classappend="${(selectedTierCode == null or selectedTierCode == '' or selectedTierCode == 'ALL') and (selectedPointRange == null or selectedPointRange != 'HAS_POINTS') ? 'active' : ''}" data-seg="ALL" onclick="setQuickTier('ALL')">
+                                    Tất cả <span class="dv-seg-count" id="segCountAll" th:text="${#lists.size(memberCards)}">0</span>
+                                </button>
+                                <button type="button" class="dv-seg-btn" th:classappend="${selectedTierCode == 'DIAMOND' ? 'active' : ''}" data-seg="DIAMOND" onclick="setQuickTier('DIAMOND')">
+                                    <i class="bi bi-gem text-primary"></i> Kim Cương <span class="dv-seg-count" id="segCountDiamond" th:text="${#lists.size(memberCards.?[tierCode == 'DIAMOND'])}">0</span>
+                                </button>
+                                <button type="button" class="dv-seg-btn" th:classappend="${selectedTierCode == 'GOLD' ? 'active' : ''}" data-seg="GOLD" onclick="setQuickTier('GOLD')">
+                                    <i class="bi bi-award text-warning"></i> Vàng <span class="dv-seg-count" id="segCountGold" th:text="${#lists.size(memberCards.?[tierCode == 'GOLD'])}">0</span>
+                                </button>
+                                <button type="button" class="dv-seg-btn" th:classappend="${selectedTierCode == 'SILVER' ? 'active' : ''}" data-seg="SILVER" onclick="setQuickTier('SILVER')">
+                                    Bạc <span class="dv-seg-count" id="segCountSilver" th:text="${#lists.size(memberCards.?[tierCode == 'SILVER'])}">0</span>
+                                </button>
+                                <button type="button" class="dv-seg-btn" th:classappend="${selectedTierCode == 'STANDARD' ? 'active' : ''}" data-seg="STANDARD" onclick="setQuickTier('STANDARD')">
+                                    Tiêu chuẩn <span class="dv-seg-count" id="segCountStandard" th:text="${#lists.size(memberCards.?[tierCode == 'STANDARD'])}">0</span>
+                                </button>
+                                <button type="button" class="dv-seg-btn" th:classappend="${selectedPointRange == 'HAS_POINTS' ? 'active' : ''}" data-seg="HAS_POINTS" onclick="setQuickTier('HAS_POINTS')">
+                                    <i class="bi bi-coin text-success"></i> Có điểm <span class="dv-seg-count" id="segCountPoints" th:text="${#lists.size(memberCards.?[currentPoints > 0])}">0</span>
+                                </button>
+                            </div>
+
+                            <!-- Nút Thao tác & Lọc bên phải -->
+                            <div class="d-flex align-items-center gap-2 ms-auto">
+                                <!-- Chuyển đổi chế độ xem Thẻ / Bảng -->
+                                <div class="dv-view-toggle-group">
+                                    <button type="button" class="dv-view-toggle-btn active" id="btnViewGrid" onclick="switchViewMode('grid')" title="Chế độ xem dạng Thẻ VIP">
+                                        <i class="bi bi-grid-fill"></i> <span>Thẻ</span>
+                                    </button>
+                                    <button type="button" class="dv-view-toggle-btn" id="btnViewTable" onclick="switchViewMode('table')" title="Chế độ xem dạng Bảng dữ liệu">
+                                        <i class="bi bi-table"></i> <span>Bảng</span>
+                                    </button>
+                                </div>
+
+                                <!-- Nút Lọc nâng cao có badge chớp đỏ -->
+                                <button type="button" class="dv-adv-filter-btn" id="btnToggleAdvFilter" onclick="toggleCardAdvFilter()">
+                                    <i class="bi bi-funnel-fill"></i>
+                                    <span>Lọc nâng cao</span>
+                                    <span class="dv-filter-pulse-badge" id="advFilterActiveBadge" style="display: none;">0</span>
+                                    <i class="bi bi-chevron-down small ms-1" id="advFilterChevron"></i>
+                                </button>
                             </div>
                         </div>
-                        <div class="col-md-3 d-flex gap-2">
-                            <button type="submit"
-                                class="btn btn-primary fw-bold px-4 flex-grow-1 rounded-3 shadow-sm d-inline-flex align-items-center justify-content-center gap-2"
-                                style="height: 44px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
-                                <i class="bi bi-search"></i> Tra cứu
-                            </button>
-                            <a th:href="@{/reception/memberships}"
-                                class="btn btn-outline-secondary fw-semibold px-3 rounded-3 shadow-sm d-inline-flex align-items-center justify-content-center"
-                                style="height: 44px;" title="Xóa bộ lọc">
-                                <i class="bi bi-arrow-clockwise"></i>
-                            </a>
+
+                        <!-- KHUNG LỌC NÂNG CAO MỞ RỘNG (Ẩn/Hiện mượt mà) -->
+                        <div class="dv-adv-filter-panel" id="advFilterPanel">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div class="fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 14.5px;">
+                                    <i class="bi bi-sliders2-vertical text-primary"></i>
+                                    <span>Bộ lọc chuyên sâu Thẻ thành viên &amp; Điểm tích lũy</span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-link text-danger fw-bold text-decoration-none p-0" onclick="resetAllCardFilters()">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại bộ lọc
+                                </button>
+                            </div>
+
+                            <div class="row g-3">
+                                <!-- 1. Hạng thành viên -->
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="dv-adv-label" for="advTierSelect">
+                                        <i class="bi bi-award text-primary"></i> Hạng thành viên
+                                    </label>
+                                    <select class="form-select dv-adv-control" id="advTierSelect" name="tierCode" onchange="applyCardFilters()">
+                                        <option value="ALL">-- Tất cả hạng thẻ --</option>
+                                        <option th:each="t : ${tiers}"
+                                                th:value="${t.tierCode}"
+                                                th:text="${t.tierName + ' (Ưu đãi ' + t.discountPercent + '%)'}"
+                                                th:selected="${selectedTierCode != null and selectedTierCode == t.tierCode}">
+                                            Hạng thẻ
+                                        </option>
+                                        <option th:if="${tiers == null or #lists.isEmpty(tiers)}" value="DIAMOND">Kim Cương (DIAMOND)</option>
+                                        <option th:if="${tiers == null or #lists.isEmpty(tiers)}" value="GOLD">Vàng (GOLD)</option>
+                                        <option th:if="${tiers == null or #lists.isEmpty(tiers)}" value="SILVER">Bạc (SILVER)</option>
+                                        <option th:if="${tiers == null or #lists.isEmpty(tiers)}" value="STANDARD">Tiêu chuẩn (STANDARD)</option>
+                                    </select>
+                                </div>
+
+                                <!-- 2. Cơ sở điều trị -->
+                                <div class="col-lg-3 col-md-6">
+                                    <label class="dv-adv-label" for="advBranchSelect">
+                                        <i class="bi bi-geo-alt text-primary"></i> Cơ sở đăng ký
+                                    </label>
+                                    <select class="form-select dv-adv-control" id="advBranchSelect" name="branchId" onchange="applyCardFilters()">
+                                        <option value="">-- Tất cả cơ sở --</option>
+                                        <option th:each="b : ${branches}"
+                                                th:value="${b.branchId}"
+                                                th:text="${b.branchName}"
+                                                th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">
+                                            Cơ sở 1
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <!-- 3. Lọc theo Điểm tích lũy -->
+                                <div class="col-lg-2 col-md-6">
+                                    <label class="dv-adv-label" for="advPointSelect">
+                                        <i class="bi bi-coin text-warning"></i> Điểm tích lũy
+                                    </label>
+                                    <select class="form-select dv-adv-control" id="advPointSelect" name="pointRange" onchange="applyCardFilters()">
+                                        <option value="ALL" th:selected="${selectedPointRange == null or selectedPointRange == 'ALL'}">Tất cả điểm</option>
+                                        <option value="HAS_POINTS" th:selected="${selectedPointRange == 'HAS_POINTS'}">Có điểm (&gt; 0 điểm)</option>
+                                        <option value="HIGH_POINTS" th:selected="${selectedPointRange == 'HIGH_POINTS'}">Điểm cao (&ge; 500 điểm)</option>
+                                        <option value="ZERO_POINTS" th:selected="${selectedPointRange == 'ZERO_POINTS'}">Chưa có điểm (= 0)</option>
+                                    </select>
+                                </div>
+
+                                <!-- 4. Lọc theo Tổng chi tiêu -->
+                                <div class="col-lg-2 col-md-6">
+                                    <label class="dv-adv-label" for="advSpentSelect">
+                                        <i class="bi bi-cash-stack text-success"></i> Tổng chi tiêu
+                                    </label>
+                                    <select class="form-select dv-adv-control" id="advSpentSelect" name="spentRange" onchange="applyCardFilters()">
+                                        <option value="ALL" th:selected="${selectedSpentRange == null or selectedSpentRange == 'ALL'}">Tất cả chi tiêu</option>
+                                        <option value="HAS_SPENT" th:selected="${selectedSpentRange == 'HAS_SPENT'}">Đã phát sinh (&gt; 0 đ)</option>
+                                        <option value="GT_5M" th:selected="${selectedSpentRange == 'GT_5M'}">&ge; 5.000.000 đ</option>
+                                        <option value="GT_20M" th:selected="${selectedSpentRange == 'GT_20M'}">&ge; 20.000.000 đ</option>
+                                        <option value="GT_50M" th:selected="${selectedSpentRange == 'GT_50M'}">&ge; 50.000.000 đ</option>
+                                    </select>
+                                </div>
+
+                                <!-- 5. Sắp xếp thứ tự -->
+                                <div class="col-lg-2 col-md-6">
+                                    <label class="dv-adv-label" for="advSortSelect">
+                                        <i class="bi bi-sort-down text-primary"></i> Sắp xếp thứ tự
+                                    </label>
+                                    <select class="form-select dv-adv-control" id="advSortSelect" name="sortBy" onchange="applyCardFilters()">
+                                        <option value="DEFAULT" th:selected="${selectedSortBy == null or selectedSortBy == 'DEFAULT'}">Mặc định</option>
+                                        <option value="POINTS_DESC" th:selected="${selectedSortBy == 'POINTS_DESC'}">Điểm cao nhất &darr;</option>
+                                        <option value="SPENT_DESC" th:selected="${selectedSortBy == 'SPENT_DESC'}">Chi tiêu nhiều nhất &darr;</option>
+                                        <option value="NAME_ASC" th:selected="${selectedSortBy == 'NAME_ASC'}">Họ tên A-Z &uarr;</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
 
-                <!-- Grid Thẻ thành viên Bệnh nhân -->
-                <div class="row g-4" th:if="${not #lists.isEmpty(memberCards)}">
-                    <div class="col-lg-4 col-md-6" th:each="card : ${memberCards}">
+                <!-- 3A. CHẾ ĐỘ XEM THẺ (GRID VIEW - Mặc định) -->
+                <div id="cardsGridView" class="row g-4" th:if="${not #lists.isEmpty(memberCards)}">
+                    <div class="col-lg-4 col-md-6 card-item-col"
+                         th:each="card : ${memberCards}"
+                         th:data-keyword="${#strings.toLowerCase((card.fullName != null ? card.fullName : '') + ' ' + (card.patientCode != null ? card.patientCode : '') + ' ' + (card.phoneNumber != null ? card.phoneNumber : ''))}"
+                         th:data-tier="${card.tierCode != null ? card.tierCode : 'STANDARD'}"
+                         th:data-branch-id="${card.preferredBranchId != null ? card.preferredBranchId : ''}"
+                         th:data-points="${card.currentPoints != null ? card.currentPoints : 0}"
+                         th:data-spent="${card.totalSpentAmount != null ? card.totalSpentAmount : 0}">
                         <div class="vip-card-box h-100">
                             <!-- Header thẻ VIP với gradient tương ứng hạng -->
                             <div class="vip-card-header"
                                 th:classappend="${card.tierCode == 'DIAMOND' ? 'card-tier-diamond' : (card.tierCode == 'GOLD' ? 'card-tier-gold' : (card.tierCode == 'SILVER' ? 'card-tier-silver' : 'card-tier-standard'))}">
                                 <div>
-                                    <span class="badge bg-dark bg-opacity-50 text-white me-1"
+                                    <span class="badge bg-dark bg-opacity-50 text-white me-1 font-monospace"
                                         th:text="${card.patientCode}">BN0001</span>
                                     <h6 class="fw-bold m-0 mt-1" th:text="${card.fullName}">Nguyễn Văn A</h6>
                                 </div>
@@ -183,46 +699,44 @@
                             <!-- Thân thẻ -->
                             <div class="p-3">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="text-muted small"><i class="bi bi-telephone me-1"></i>Số điện
-                                        thoại:</span>
-                                    <strong th:text="${card.phoneNumber}">0987654321</strong>
+                                    <span class="text-muted small"><i class="bi bi-telephone me-1"></i>Số điện thoại:</span>
+                                    <strong th:text="${card.phoneNumber != null ? card.phoneNumber : '-'}">0987654321</strong>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="text-muted small"><i class="bi bi-geo-alt me-1"></i>Cơ sở đăng
-                                        ký:</span>
-                                    <span class="text-truncate text-end" style="max-width: 180px;"
-                                        th:text="${card.preferredBranchName ?: 'Chưa chọn'}">Cơ sở 1</span>
+                                    <span class="text-muted small"><i class="bi bi-geo-alt me-1"></i>Cơ sở đăng ký:</span>
+                                    <span class="text-truncate text-end fw-semibold text-secondary" style="max-width: 180px;"
+                                        th:text="${card.preferredBranchName ?: 'Toàn hệ thống'}">Cơ sở 1</span>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="text-muted small"><i class="bi bi-cash-stack me-1"></i>Tổng chi tiêu
-                                        tích lũy:</span>
+                                    <span class="text-muted small"><i class="bi bi-cash-stack me-1"></i>Tổng chi tiêu:</span>
                                     <strong class="text-primary"
-                                        th:text="${#numbers.formatDecimal(card.totalSpentAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0
-                                        đ</strong>
+                                        th:text="${#numbers.formatDecimal(card.totalSpentAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
                                 </div>
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span class="text-muted small"><i class="bi bi-coin me-1"></i>Điểm tích lũy hiện
-                                        có:</span>
-                                    <span class="badge bg-info text-dark fs-6"
+                                    <span class="text-muted small"><i class="bi bi-coin me-1"></i>Điểm tích lũy:</span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold fs-6"
                                         th:text="${card.currentPoints} + ' điểm'">0 điểm</span>
                                 </div>
 
                                 <!-- Tiến trình thăng hạng -->
                                 <div class="mb-1 d-flex justify-content-between small text-muted">
-                                    <span>Tiến độ lên <strong th:text="${card.nextTierName}">Bạch Kim</strong>:</span>
-                                    <span th:text="${card.progressPercent} + '%'">0%</span>
+                                    <span>Tiến độ lên <strong class="text-dark" th:text="${card.nextTierName != null ? card.nextTierName : 'Hạng tối đa'}">Bạch Kim</strong>:</span>
+                                    <span class="fw-bold text-primary" th:text="${card.progressPercent} + '%'">0%</span>
                                 </div>
-                                <div class="progress" style="height: 8px;">
+                                <div class="progress" style="height: 8px; border-radius: 4px;">
                                     <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning"
                                         role="progressbar" th:style="'width: ' + ${card.progressPercent} + '%'"
                                         th:aria-valuenow="${card.progressPercent}" aria-valuemin="0"
                                         aria-valuemax="100"></div>
                                 </div>
                                 <div class="mt-1 text-end text-muted" style="font-size: 11px;"
-                                    th:if="${card.amountNeededForNextTier > 0}">
+                                    th:if="${card.amountNeededForNextTier != null and card.amountNeededForNextTier > 0}">
                                     Còn thiếu <strong class="text-danger"
-                                        th:text="${#numbers.formatDecimal(card.amountNeededForNextTier, 0, 'COMMA', 0, 'POINT')} + ' đ'">0
-                                        đ</strong>
+                                        th:text="${#numbers.formatDecimal(card.amountNeededForNextTier, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                </div>
+                                <div class="mt-1 text-end text-muted" style="font-size: 11px;"
+                                    th:if="${card.amountNeededForNextTier == null or card.amountNeededForNextTier <= 0}">
+                                    <span class="text-success fw-semibold"><i class="bi bi-check2-circle me-1"></i>Đã đạt hạng cao nhất</span>
                                 </div>
                             </div>
 
@@ -237,17 +751,428 @@
                     </div>
                 </div>
 
-                <!-- Trạng thái trống -->
-                <div th:if="${#lists.isEmpty(memberCards)}" class="fin-card text-center py-5">
+                <!-- 3B. CHẾ ĐỘ XEM BẢNG CHUẨN MISA AMIS (TABLE VIEW) -->
+                <div id="cardsTableView" class="dv-grid-card" style="display: none;" th:if="${not #lists.isEmpty(memberCards)}">
+                    <div class="dv-grid-topbar">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-table text-primary fs-5"></i>
+                            <h5 class="fw-bold m-0 text-dark">Danh sách Thẻ hội viên &amp; Điểm tích lũy</h5>
+                        </div>
+                        <span class="badge bg-secondary-subtle text-secondary border px-3 py-2 fw-medium" id="tableRowCounter">
+                            Hiển thị <span id="tableShowingCount" th:text="${#lists.size(memberCards)}">0</span> thẻ
+                        </span>
+                    </div>
+
+                    <div class="dv-table-scroll-container">
+                        <table class="dv-amis-table" id="cardsAmisTable">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" style="width: 50px;">STT</th>
+                                    <th>Bệnh nhân</th>
+                                    <th style="width: 140px;">Số điện thoại</th>
+                                    <th>Cơ sở đăng ký</th>
+                                    <th class="text-center" style="width: 170px;">Hạng thẻ &amp; Ưu đãi</th>
+                                    <th class="text-end" style="width: 140px;">Điểm khả dụng</th>
+                                    <th class="text-end" style="width: 160px;">Tổng chi tiêu</th>
+                                    <th style="width: 220px;">Tiến trình lên hạng</th>
+                                    <th class="text-center" style="width: 140px;">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="dv-data-row card-item-row"
+                                    th:each="card, stat : ${memberCards}"
+                                    th:data-keyword="${#strings.toLowerCase((card.fullName != null ? card.fullName : '') + ' ' + (card.patientCode != null ? card.patientCode : '') + ' ' + (card.phoneNumber != null ? card.phoneNumber : ''))}"
+                                    th:data-tier="${card.tierCode != null ? card.tierCode : 'STANDARD'}"
+                                    th:data-branch-id="${card.preferredBranchId != null ? card.preferredBranchId : ''}"
+                                    th:data-points="${card.currentPoints != null ? card.currentPoints : 0}"
+                                    th:data-spent="${card.totalSpentAmount != null ? card.totalSpentAmount : 0}">
+                                    <td class="text-center text-muted fw-semibold rowIndexCell" th:text="${stat.index + 1}">1</td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="dv-avatar-circle" th:text="${card.fullName != null and !card.fullName.isEmpty() ? #strings.substring(card.fullName, 0, 1) : 'BN'}">BN</div>
+                                            <div>
+                                                <a th:href="@{/reception/memberships/{id}(id=${card.profileId})}"
+                                                   class="dv-patient-name"
+                                                   th:text="${card.fullName}">Nguyễn Văn A</a>
+                                                <div class="mt-1 d-flex align-items-center gap-2">
+                                                    <span class="dv-code-pill font-monospace" th:text="${card.patientCode}">BN0001</span>
+                                                    <span class="text-muted small" th:text="${card.gender ?: ''}">Nam</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong class="text-dark" th:text="${card.phoneNumber ?: '-'}">0987654321</strong>
+                                    </td>
+                                    <td>
+                                        <span class="text-secondary fw-semibold" th:text="${card.preferredBranchName ?: 'Toàn hệ thống'}">Cơ sở 1</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="tier-badge-pill"
+                                              th:classappend="${card.tierCode == 'DIAMOND' ? 'tier-pill-diamond' : (card.tierCode == 'GOLD' ? 'tier-pill-gold' : (card.tierCode == 'SILVER' ? 'tier-pill-silver' : 'tier-pill-standard'))}">
+                                            <i class="bi" th:classappend="${card.tierCode == 'DIAMOND' ? 'bi-gem' : (card.tierCode == 'GOLD' ? 'bi-award' : 'bi-credit-card')}"></i>
+                                            <span th:text="${card.tierName}">Vàng</span>
+                                        </span>
+                                        <div class="small text-muted mt-1" style="font-size: 11px;" th:text="'Giảm ' + ${card.discountPercent} + '%'">Giảm 10%</div>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold fs-6"
+                                              th:text="${card.currentPoints} + ' đ'">0 đ</span>
+                                    </td>
+                                    <td class="text-end fw-bold text-primary"
+                                        th:text="${#numbers.formatDecimal(card.totalSpentAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td>
+                                        <div class="d-flex justify-content-between small text-muted mb-1">
+                                            <span th:text="'Lên ' + (${card.nextTierName != null ? card.nextTierName : 'Đỉnh'})">Lên Bạch Kim</span>
+                                            <strong class="text-dark" th:text="${card.progressPercent} + '%'">0%</strong>
+                                        </div>
+                                        <div class="progress" style="height: 6px; border-radius: 3px;">
+                                            <div class="progress-bar bg-warning" role="progressbar"
+                                                 th:style="'width: ' + ${card.progressPercent} + '%'"></div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <a th:href="@{/reception/memberships/{id}(id=${card.profileId})}"
+                                           class="fin-btn fin-btn-sm fin-btn-primary"
+                                           title="Xem chi tiết lịch sử điểm & Quyền lợi">
+                                            <i class="bi bi-clock-history"></i> Chi tiết
+                                        </a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 4. TRẠNG THÁI TRỐNG (EMPTY STATE MINH HỌA) -->
+                <div id="cardsEmptyState" class="dv-empty-box" style="display: none;" th:classappend="${#lists.isEmpty(memberCards)} ? 'd-block' : ''">
                     <i class="bi bi-search fs-1 text-muted d-block mb-3"></i>
-                    <h5 class="fw-bold text-dark">Không tìm thấy thông tin thẻ thành viên nào</h5>
-                    <p class="text-muted mb-3">Hãy thử thay đổi từ khóa tìm kiếm hoặc lọc theo cơ sở khác.</p>
-                    <a th:href="@{/reception/memberships}" class="fin-btn fin-btn-outline">Làm mới danh sách</a>
+                    <h5 class="fw-bold text-dark">Không tìm thấy thẻ hội viên nào phù hợp</h5>
+                    <p class="text-muted mb-3">Hãy thử thay đổi từ khóa tìm kiếm, mức hạng hoặc điều chỉnh các tiêu chí trong Bộ lọc nâng cao.</p>
+                    <button type="button" class="fin-btn fin-btn-outline" onclick="resetAllCardFilters()">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Đặt lại toàn bộ bộ lọc
+                    </button>
                 </div>
             </main>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- JAVASCRIPT BỘ LỌC TỐI ƯU TỨC THỜI (Chuẩn /doctor/daily-visits & Rule 7) -->
+    <script>
+        // Quản lý an toàn viewMode trong localStorage
+        function getSavedViewMode() {
+            try {
+                return localStorage.getItem('memberCardsViewMode') || 'grid';
+            } catch (e) {
+                return 'grid';
+            }
+        }
+
+        function setSavedViewMode(mode) {
+            try {
+                localStorage.setItem('memberCardsViewMode', mode);
+            } catch (e) {}
+        }
+
+        let searchDebounceTimer = null;
+
+        function handleCardSearchInput(val) {
+            clearTimeout(searchDebounceTimer);
+            const clearBtn = document.getElementById('cardClearSearchBtn');
+            if (clearBtn) clearBtn.style.display = val ? 'flex' : 'none';
+
+            searchDebounceTimer = setTimeout(() => {
+                applyCardFilters();
+            }, 180);
+        }
+
+        function clearCardSearchInput() {
+            const inp = document.getElementById('cardSearchInput');
+            if (inp) inp.value = '';
+            const clearBtn = document.getElementById('cardClearSearchBtn');
+            if (clearBtn) clearBtn.style.display = 'none';
+            applyCardFilters();
+        }
+
+        function toggleCardAdvFilter() {
+            const panel = document.getElementById('advFilterPanel');
+            const btn = document.getElementById('btnToggleAdvFilter');
+            const chev = document.getElementById('advFilterChevron');
+            if (!panel || !btn) return;
+            const isShown = panel.classList.toggle('show');
+            btn.classList.toggle('is-open', isShown);
+            if (chev) {
+                chev.className = isShown ? 'bi bi-chevron-up small ms-1' : 'bi bi-chevron-down small ms-1';
+            }
+        }
+
+        function setQuickTier(seg) {
+            // Cập nhật trạng thái active trên các nút Quick Segment
+            document.querySelectorAll('.dv-seg-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-seg') === seg);
+            });
+
+            const tierSelect = document.getElementById('advTierSelect');
+            const pointSelect = document.getElementById('advPointSelect');
+
+            if (seg === 'ALL') {
+                if (tierSelect) tierSelect.value = 'ALL';
+                if (pointSelect && pointSelect.value === 'HAS_POINTS') pointSelect.value = 'ALL';
+            } else if (seg === 'HAS_POINTS') {
+                if (tierSelect) tierSelect.value = 'ALL';
+                if (pointSelect) pointSelect.value = 'HAS_POINTS';
+            } else {
+                if (tierSelect) tierSelect.value = seg;
+                if (pointSelect && pointSelect.value === 'HAS_POINTS') pointSelect.value = 'ALL';
+            }
+
+            applyCardFilters();
+        }
+
+        function switchViewMode(mode) {
+            setSavedViewMode(mode);
+
+            const gridContainer = document.getElementById('cardsGridView');
+            const tableContainer = document.getElementById('cardsTableView');
+            const btnGrid = document.getElementById('btnViewGrid');
+            const btnTable = document.getElementById('btnViewTable');
+
+            if (mode === 'table') {
+                if (gridContainer) gridContainer.style.display = 'none';
+                if (tableContainer) tableContainer.style.display = 'block';
+                if (btnGrid) btnGrid.classList.remove('active');
+                if (btnTable) btnTable.classList.add('active');
+            } else {
+                if (gridContainer) gridContainer.style.display = 'flex';
+                if (tableContainer) tableContainer.style.display = 'none';
+                if (btnGrid) btnGrid.classList.add('active');
+                if (btnTable) btnTable.classList.remove('active');
+            }
+        }
+
+        function resetAllCardFilters() {
+            clearCardSearchInput();
+
+            document.querySelectorAll('.dv-seg-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-seg') === 'ALL');
+            });
+
+            const tierSel = document.getElementById('advTierSelect');
+            if (tierSel) tierSel.value = 'ALL';
+
+            const branchSel = document.getElementById('advBranchSelect');
+            if (branchSel) branchSel.value = '';
+
+            const pointSel = document.getElementById('advPointSelect');
+            if (pointSel) pointSel.value = 'ALL';
+
+            const spentSel = document.getElementById('advSpentSelect');
+            if (spentSel) spentSel.value = 'ALL';
+
+            const sortSel = document.getElementById('advSortSelect');
+            if (sortSel) sortSel.value = 'DEFAULT';
+
+            applyCardFilters();
+        }
+
+        function applyCardFilters() {
+            const kw = (document.getElementById('cardSearchInput')?.value || '').toLowerCase().trim();
+            const tierSel = document.getElementById('advTierSelect');
+            const branchSel = document.getElementById('advBranchSelect');
+            const pointSel = document.getElementById('advPointSelect');
+            const spentSel = document.getElementById('advSpentSelect');
+            const sortSel = document.getElementById('advSortSelect');
+
+            const tierVal = (tierSel?.value || 'ALL').trim();
+            const branchVal = (branchSel?.value || '').trim();
+            const pointVal = (pointSel?.value || 'ALL').trim();
+            const spentVal = (spentSel?.value || 'ALL').trim();
+            const sortVal = (sortSel?.value || 'DEFAULT').trim();
+
+            // Đồng bộ trạng thái active trên các nút Quick Segment nếu người dùng chọn từ dropdown
+            const activeSegBtn = document.querySelector('.dv-seg-btn.active');
+            let currentQuickTier = activeSegBtn ? activeSegBtn.getAttribute('data-seg') : 'ALL';
+
+            if (tierVal !== 'ALL') {
+                currentQuickTier = tierVal;
+                document.querySelectorAll('.dv-seg-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.getAttribute('data-seg') === tierVal);
+                });
+            } else if (pointVal === 'HAS_POINTS') {
+                currentQuickTier = 'HAS_POINTS';
+                document.querySelectorAll('.dv-seg-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.getAttribute('data-seg') === 'HAS_POINTS');
+                });
+            } else if (currentQuickTier !== 'ALL' && currentQuickTier !== 'HAS_POINTS' && tierVal === 'ALL') {
+                currentQuickTier = 'ALL';
+                document.querySelectorAll('.dv-seg-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.getAttribute('data-seg') === 'ALL');
+                });
+            }
+
+            // Tính số lượng bộ lọc nâng cao đang áp dụng
+            let activeFiltersCount = 0;
+            if (tierVal && tierVal !== 'ALL') activeFiltersCount++;
+            if (branchVal) activeFiltersCount++;
+            if (pointVal && pointVal !== 'ALL') activeFiltersCount++;
+            if (spentVal && spentVal !== 'ALL') activeFiltersCount++;
+            if (sortVal && sortVal !== 'DEFAULT') activeFiltersCount++;
+
+            const badge = document.getElementById('advFilterActiveBadge');
+            const advBtn = document.getElementById('btnToggleAdvFilter');
+            if (badge) {
+                badge.innerText = activeFiltersCount;
+                badge.style.display = activeFiltersCount > 0 ? 'inline-flex' : 'none';
+            }
+            if (advBtn) {
+                advBtn.classList.toggle('has-active-filters', activeFiltersCount > 0);
+            }
+
+            const gridCards = Array.from(document.querySelectorAll('.card-item-col'));
+            const tableRows = Array.from(document.querySelectorAll('.card-item-row'));
+
+            let visibleCount = 0;
+            let totalMatchingGeneral = 0;
+            let countDiamond = 0;
+            let countGold = 0;
+            let countSilver = 0;
+            let countStandard = 0;
+            let countPoints = 0;
+
+            const evaluateItem = (el) => {
+                const elKw = el.getAttribute('data-keyword') || '';
+                const elTier = (el.getAttribute('data-tier') || 'STANDARD').toUpperCase();
+                const elBId = (el.getAttribute('data-branch-id') || '').trim();
+                const elPts = parseInt(el.getAttribute('data-points') || '0', 10);
+                const elSpent = parseFloat(el.getAttribute('data-spent') || '0');
+
+                // 1. Bộ lọc chung (Keyword, Branch, Spent)
+                let matchGeneral = true;
+                if (kw && !elKw.includes(kw)) matchGeneral = false;
+                if (branchVal && elBId && elBId !== branchVal) matchGeneral = false;
+                if (branchVal && !elBId) matchGeneral = false;
+
+                if (spentVal === 'HAS_SPENT' && elSpent <= 0) matchGeneral = false;
+                if (spentVal === 'GT_5M' && elSpent < 5000000) matchGeneral = false;
+                if (spentVal === 'GT_20M' && elSpent < 20000000) matchGeneral = false;
+                if (spentVal === 'GT_50M' && elSpent < 50000000) matchGeneral = false;
+
+                // 2. Bộ lọc Hạng thẻ & Điểm (Tier & Points)
+                let matchTierAndPoints = true;
+                if (currentQuickTier === 'HAS_POINTS') {
+                    if (elPts <= 0) matchTierAndPoints = false;
+                } else if (currentQuickTier !== 'ALL') {
+                    if (elTier !== currentQuickTier.toUpperCase()) matchTierAndPoints = false;
+                }
+
+                if (tierVal !== 'ALL') {
+                    if (elTier !== tierVal.toUpperCase()) matchTierAndPoints = false;
+                }
+
+                if (pointVal === 'HAS_POINTS' && elPts <= 0) matchTierAndPoints = false;
+                if (pointVal === 'HIGH_POINTS' && elPts < 500) matchTierAndPoints = false;
+                if (pointVal === 'ZERO_POINTS' && elPts !== 0) matchTierAndPoints = false;
+
+                return {
+                    matchGeneral,
+                    isVisible: matchGeneral && matchTierAndPoints,
+                    tier: elTier,
+                    points: elPts
+                };
+            };
+
+            // Lọc và đếm trên Grid
+            gridCards.forEach(col => {
+                const res = evaluateItem(col);
+                col.style.display = res.isVisible ? 'block' : 'none';
+
+                if (res.matchGeneral) {
+                    totalMatchingGeneral++;
+                    if (res.tier === 'DIAMOND') countDiamond++;
+                    else if (res.tier === 'GOLD') countGold++;
+                    else if (res.tier === 'SILVER') countSilver++;
+                    else countStandard++;
+
+                    if (res.points > 0) countPoints++;
+                }
+
+                if (res.isVisible) {
+                    visibleCount++;
+                }
+            });
+
+            // Lọc trên Table & cập nhật STT
+            let rowIndex = 1;
+            tableRows.forEach(row => {
+                const res = evaluateItem(row);
+                row.style.display = res.isVisible ? '' : 'none';
+                if (res.isVisible) {
+                    const sttCell = row.querySelector('.rowIndexCell');
+                    if (sttCell) sttCell.innerText = rowIndex++;
+                }
+            });
+
+            // Sắp xếp thứ tự
+            if (sortVal !== 'DEFAULT') {
+                const sortFn = (a, b) => {
+                    const ptsA = parseInt(a.getAttribute('data-points') || '0', 10);
+                    const ptsB = parseInt(b.getAttribute('data-points') || '0', 10);
+                    const spentA = parseFloat(a.getAttribute('data-spent') || '0');
+                    const spentB = parseFloat(b.getAttribute('data-spent') || '0');
+                    const nameA = a.querySelector('.vip-card-header h6, .dv-patient-name')?.innerText || '';
+                    const nameB = b.querySelector('.vip-card-header h6, .dv-patient-name')?.innerText || '';
+
+                    if (sortVal === 'POINTS_DESC') return ptsB - ptsA;
+                    if (sortVal === 'SPENT_DESC') return spentB - spentA;
+                    if (sortVal === 'NAME_ASC') return nameA.localeCompare(nameB, 'vi');
+                    return 0;
+                };
+
+                const gridParent = document.getElementById('cardsGridView');
+                if (gridParent) gridCards.sort(sortFn).forEach(c => gridParent.appendChild(c));
+
+                const tbody = document.querySelector('#cardsAmisTable tbody');
+                if (tbody) tableRows.sort(sortFn).forEach(r => tbody.appendChild(r));
+            }
+
+            // Cập nhật bộ đếm hiển thị trên các Quick Segment Buttons
+            const elAll = document.getElementById('segCountAll');
+            if (elAll) elAll.innerText = totalMatchingGeneral;
+
+            const elDia = document.getElementById('segCountDiamond');
+            if (elDia) elDia.innerText = countDiamond;
+
+            const elGld = document.getElementById('segCountGold');
+            if (elGld) elGld.innerText = countGold;
+
+            const elSil = document.getElementById('segCountSilver');
+            if (elSil) elSil.innerText = countSilver;
+
+            const elStd = document.getElementById('segCountStandard');
+            if (elStd) elStd.innerText = countStandard;
+
+            const elPts = document.getElementById('segCountPoints');
+            if (elPts) elPts.innerText = countPoints;
+
+            // Cập nhật bộ đếm trên bảng và KPI kết quả tìm kiếm
+            const showingSpan = document.getElementById('tableShowingCount');
+            if (showingSpan) showingSpan.innerText = visibleCount;
+
+            const kpiTotal = document.getElementById('kpiTotalCards');
+            if (kpiTotal) kpiTotal.innerText = visibleCount;
+
+            // Cập nhật trạng thái rỗng
+            const emptyBox = document.getElementById('cardsEmptyState');
+            if (emptyBox) {
+                emptyBox.style.display = visibleCount === 0 ? 'block' : 'none';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            switchViewMode(getSavedViewMode());
+            applyCardFilters();
+        });
+    </script>
 </body>
 
 </html>

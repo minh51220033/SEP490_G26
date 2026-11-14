@@ -11,6 +11,8 @@ import com.cvdcms.service.GeminiAiService;
 import com.cvdcms.service.TreatmentPlanService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     private final GeminiAiService geminiAiService;
     private final PerformedServiceRepository performedServiceRepository;
     private final InvoiceItemRepository invoiceItemRepository;
+    private final TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
@@ -221,6 +224,38 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         plan.setTotalEstimatedCost(overallCost);
         plan.setFinalEstimatedCost(request.getFinalEstimatedCost() != null && request.getFinalEstimatedCost().compareTo(BigDecimal.ZERO) > 0 
                 ? request.getFinalEstimatedCost() : overallCost);
+
+        plan.setIsInstallment(Boolean.TRUE.equals(request.getIsInstallment()));
+        plan.setTotalPaidAmount(BigDecimal.ZERO);
+
+        if (Boolean.TRUE.equals(request.getIsInstallment()) && request.getInstallments() != null && !request.getInstallments().isEmpty()) {
+            int order = 1;
+            for (TreatmentPlanInstallmentDTO instReq : request.getInstallments()) {
+                TreatmentPlanInstallment inst = new TreatmentPlanInstallment();
+                inst.setPlan(plan);
+                inst.setInstallmentOrder(instReq.getInstallmentOrder() != null ? instReq.getInstallmentOrder() : order++);
+                inst.setPhaseName(instReq.getPhaseName() != null && !instReq.getPhaseName().isBlank()
+                        ? instReq.getPhaseName() : "Đợt " + inst.getInstallmentOrder());
+                if (instReq.getExpectedDateRaw() != null && !instReq.getExpectedDateRaw().isBlank()) {
+                    try {
+                        inst.setExpectedDate(LocalDate.parse(instReq.getExpectedDateRaw()));
+                    } catch (Exception ignored) {}
+                } else if (instReq.getExpectedDate() != null && !instReq.getExpectedDate().isBlank()) {
+                    try {
+                        inst.setExpectedDate(LocalDate.parse(instReq.getExpectedDate(), DATE_FORMATTER));
+                    } catch (Exception ignored) {
+                        try {
+                            inst.setExpectedDate(LocalDate.parse(instReq.getExpectedDate()));
+                        } catch (Exception ignored2) {}
+                    }
+                }
+                inst.setExpectedAmount(instReq.getExpectedAmount() != null ? instReq.getExpectedAmount() : BigDecimal.ZERO);
+                inst.setPaidAmount(BigDecimal.ZERO);
+                inst.setStatus(com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.PENDING);
+                inst.setNotes(instReq.getNotes());
+                plan.getInstallments().add(inst);
+            }
+        }
 
         // Nút Lưu Kế hoạch điều trị tự động kích hoạt logic chuyển kế toán
         plan.setSentToAccounting(true);
@@ -539,6 +574,25 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             planStatus = (completedStages > 0 || completedItems > 0) ? TreatmentPlanStatus.IN_PROGRESS : TreatmentPlanStatus.ACCEPTED;
         }
 
+        List<TreatmentPlanInstallmentDTO> installmentDTOs = new ArrayList<>();
+        TreatmentPlanInstallmentDTO nextInstDTO = null;
+        if (p.getInstallments() != null) {
+            for (TreatmentPlanInstallment inst : p.getInstallments()) {
+                TreatmentPlanInstallmentDTO instDTO = mapInstallmentToDTO(inst, p);
+                installmentDTOs.add(instDTO);
+                if (nextInstDTO == null && (inst.getStatus() == com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.PENDING
+                        || inst.getStatus() == com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.PARTIAL
+                        || inst.getStatus() == com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.OVERDUE)) {
+                    nextInstDTO = instDTO;
+                }
+            }
+        }
+
+        BigDecimal totalPaid = p.getTotalPaidAmount() != null ? p.getTotalPaidAmount() : BigDecimal.ZERO;
+        BigDecimal estCost = p.getEstimatedCost();
+        BigDecimal remainingCost = estCost.subtract(totalPaid);
+        if (remainingCost.compareTo(BigDecimal.ZERO) < 0) remainingCost = BigDecimal.ZERO;
+
         return TreatmentPlanResponseDTO.builder()
                 .planId(p.getPlanId())
                 .planCode(p.getPlanCode())
@@ -568,8 +622,182 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 .totalItems(totalItems)
                 .completedItems(completedItems)
                 .progressPercent(progressPercent)
+                .isInstallment(Boolean.TRUE.equals(p.getIsInstallment()))
+                .totalPaidAmount(totalPaid)
+                .remainingCost(remainingCost)
+                .nextInstallment(nextInstDTO)
+                .installments(installmentDTOs)
                 .stages(stageDTOs)
                 .build();
+    }
+
+    private TreatmentPlanInstallmentDTO mapInstallmentToDTO(TreatmentPlanInstallment inst, TreatmentPlan plan) {
+        if (inst == null) return null;
+        PatientProfile pat = plan != null ? plan.getPatientProfile() : null;
+        Branch branch = plan != null ? plan.getBranch() : null;
+        BigDecimal expected = inst.getExpectedAmount() != null ? inst.getExpectedAmount() : BigDecimal.ZERO;
+        BigDecimal paid = inst.getPaidAmount() != null ? inst.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal remaining = expected.subtract(paid);
+        if (remaining.compareTo(BigDecimal.ZERO) < 0) remaining = BigDecimal.ZERO;
+
+        return TreatmentPlanInstallmentDTO.builder()
+                .installmentId(inst.getInstallmentId())
+                .planId(plan != null ? plan.getPlanId() : null)
+                .planCode(plan != null ? plan.getPlanCode() : null)
+                .planName(plan != null ? plan.getPlanName() : null)
+                .patientId(pat != null ? pat.getProfileId() : null)
+                .patientCode(pat != null ? pat.getPatientCode() : null)
+                .patientName(pat != null ? pat.getFullName() : null)
+                .patientPhone(pat != null ? pat.getPhoneNumber() : null)
+                .branchId(branch != null ? branch.getBranchId() : null)
+                .branchName(branch != null ? branch.getBranchName() : null)
+                .installmentOrder(inst.getInstallmentOrder())
+                .phaseName(inst.getPhaseName())
+                .expectedDate(inst.getExpectedDate() != null ? inst.getExpectedDate().format(DATE_FORMATTER) : null)
+                .expectedDateRaw(inst.getExpectedDate() != null ? inst.getExpectedDate().toString() : null)
+                .expectedAmount(expected)
+                .paidAmount(paid)
+                .remainingAmount(remaining)
+                .status(inst.getStatus() != null ? inst.getStatus().name() : "PENDING")
+                .statusDisplayName(inst.getStatus() != null ? inst.getStatus().getDisplayName() : "Chưa thanh toán")
+                .statusBadgeClass(inst.getStatus() != null ? inst.getStatus().getBadgeClass() : "badge bg-secondary")
+                .notes(inst.getNotes())
+                .reminded(Boolean.TRUE.equals(inst.getReminded()))
+                .remindedAt(inst.getRemindedAt() != null ? inst.getRemindedAt().format(DATE_TIME_FORMATTER) : null)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TreatmentPlanInstallmentDTO> getPlanInstallments(Long planId) {
+        TreatmentPlan plan = treatmentPlanRepository.findByIdWithDetails(planId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kế hoạch điều trị ID: " + planId));
+        return plan.getInstallments().stream()
+                .map(inst -> mapInstallmentToDTO(inst, plan))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public TreatmentPlanResponseDTO saveInstallments(Long planId, List<TreatmentPlanInstallmentDTO> installmentDTOs) {
+        TreatmentPlan plan = treatmentPlanRepository.findByIdWithDetails(planId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kế hoạch điều trị ID: " + planId));
+        plan.setIsInstallment(true);
+        plan.getInstallments().clear();
+        if (installmentDTOs != null) {
+            int order = 1;
+            for (TreatmentPlanInstallmentDTO dto : installmentDTOs) {
+                TreatmentPlanInstallment inst = new TreatmentPlanInstallment();
+                inst.setPlan(plan);
+                inst.setInstallmentOrder(dto.getInstallmentOrder() != null ? dto.getInstallmentOrder() : order++);
+                inst.setPhaseName(dto.getPhaseName() != null && !dto.getPhaseName().isBlank()
+                        ? dto.getPhaseName() : "Đợt " + inst.getInstallmentOrder());
+                if (dto.getExpectedDateRaw() != null && !dto.getExpectedDateRaw().isBlank()) {
+                    try {
+                        inst.setExpectedDate(LocalDate.parse(dto.getExpectedDateRaw()));
+                    } catch (Exception ignored) {}
+                } else if (dto.getExpectedDate() != null && !dto.getExpectedDate().isBlank()) {
+                    try {
+                        inst.setExpectedDate(LocalDate.parse(dto.getExpectedDate(), DATE_FORMATTER));
+                    } catch (Exception e1) {
+                        try {
+                            inst.setExpectedDate(LocalDate.parse(dto.getExpectedDate()));
+                        } catch (Exception ignored) {}
+                    }
+                }
+                inst.setExpectedAmount(dto.getExpectedAmount() != null ? dto.getExpectedAmount() : BigDecimal.ZERO);
+                inst.setPaidAmount(BigDecimal.ZERO);
+                inst.setStatus(com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.PENDING);
+                inst.setNotes(dto.getNotes());
+                plan.getInstallments().add(inst);
+            }
+        }
+        recalculateInstallmentsInternal(plan);
+        TreatmentPlan saved = treatmentPlanRepository.save(plan);
+        return mapToResponseDTO(saved);
+    }
+
+    @Override
+    @Transactional
+    public TreatmentPlanResponseDTO recordInstallmentPayment(Long planId, BigDecimal amount, Long invoiceId) {
+        TreatmentPlan plan = treatmentPlanRepository.findByIdWithDetails(planId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kế hoạch điều trị ID: " + planId));
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Số tiền thanh toán phải lớn hơn 0!");
+        }
+
+        BigDecimal currentPaid = plan.getTotalPaidAmount() != null ? plan.getTotalPaidAmount() : BigDecimal.ZERO;
+        plan.setTotalPaidAmount(currentPaid.add(amount));
+
+        recalculateInstallmentsInternal(plan);
+
+        TreatmentPlan saved = treatmentPlanRepository.save(plan);
+        log.info("Ghi nhận thanh toán {} đ cho Kế hoạch điều trị ID: {}. Tổng đã thu: {} đ",
+                amount, planId, saved.getTotalPaidAmount());
+        return mapToResponseDTO(saved);
+    }
+
+    private void recalculateInstallmentsInternal(TreatmentPlan plan) {
+        if (plan.getInstallments() == null || plan.getInstallments().isEmpty()) {
+            return;
+        }
+
+        BigDecimal unallocated = plan.getTotalPaidAmount() != null ? plan.getTotalPaidAmount() : BigDecimal.ZERO;
+        LocalDate today = LocalDate.now();
+
+        for (TreatmentPlanInstallment inst : plan.getInstallments()) {
+            BigDecimal expected = inst.getExpectedAmount() != null ? inst.getExpectedAmount() : BigDecimal.ZERO;
+            if (unallocated.compareTo(BigDecimal.ZERO) <= 0) {
+                inst.setPaidAmount(BigDecimal.ZERO);
+                if (inst.getExpectedDate() != null && inst.getExpectedDate().isBefore(today)) {
+                    inst.setStatus(com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.OVERDUE);
+                } else {
+                    inst.setStatus(com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.PENDING);
+                }
+            } else if (unallocated.compareTo(expected) >= 0) {
+                inst.setPaidAmount(expected);
+                inst.setStatus(com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.PAID);
+                unallocated = unallocated.subtract(expected);
+            } else {
+                inst.setPaidAmount(unallocated);
+                inst.setStatus(com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.PARTIAL);
+                unallocated = BigDecimal.ZERO;
+            }
+        }
+
+        if (unallocated.compareTo(BigDecimal.ZERO) > 0 && !plan.getInstallments().isEmpty()) {
+            TreatmentPlanInstallment last = plan.getInstallments().get(plan.getInstallments().size() - 1);
+            last.setPaidAmount(last.getPaidAmount().add(unallocated));
+        }
+    }
+
+    @Override
+    @Transactional
+    public TreatmentPlanInstallmentDTO markReminderSent(Long installmentId, String notes) {
+        TreatmentPlanInstallment inst = treatmentPlanInstallmentRepository.findById(installmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đợt thanh toán ID: " + installmentId));
+        inst.setReminded(true);
+        inst.setRemindedAt(LocalDateTime.now());
+        if (notes != null && !notes.isBlank()) {
+            inst.setNotes((inst.getNotes() != null ? inst.getNotes() + " | " : "") + notes);
+        }
+        TreatmentPlanInstallment saved = treatmentPlanInstallmentRepository.save(inst);
+        return mapInstallmentToDTO(saved, saved.getPlan());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TreatmentPlanInstallmentDTO> searchUpcomingInstallments(
+            Long branchId, LocalDate startDate, LocalDate endDate, String statusStr, String keyword, Pageable pageable) {
+        com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus status = null;
+        if (statusStr != null && !statusStr.isBlank() && !"ALL".equalsIgnoreCase(statusStr)) {
+            try {
+                status = com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.valueOf(statusStr.toUpperCase());
+            } catch (Exception ignored) {}
+        }
+        Page<TreatmentPlanInstallment> page = treatmentPlanInstallmentRepository.searchUpcomingInstallments(
+                branchId, startDate, endDate, status, keyword, pageable);
+        return page.map(inst -> mapInstallmentToDTO(inst, inst.getPlan()));
     }
 
     private String extractDiagnosisFromNotes(String notes) {

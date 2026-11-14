@@ -926,6 +926,7 @@ public class PaymentPageController {
         populateUserAndSidebar(model, session, "debts");
         model.addAttribute("detail", detail);
         model.addAttribute("branchId", branchId);
+        model.addAttribute("treatmentPlans", treatmentPlanRepository != null ? treatmentPlanRepository.findByProfileIdWithDetails(profileId) : java.util.Collections.emptyList());
         return "finance/payments/debt-detail";
     }
 

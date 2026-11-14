@@ -50,6 +50,49 @@
                     </table>
                 </div>
             </section>
+
+            <!-- Kế hoạch điều trị & Trả theo đợt (Chuẩn DentalSoft) -->
+            <section th:if="${treatmentPlans != null and !#lists.isEmpty(treatmentPlans)}" class="fin-card">
+                <h3 class="h5 d-flex align-items-center gap-2">
+                    <i class="bi bi-calendar2-check-fill text-primary"></i>
+                    <span>Kế hoạch điều trị &amp; Thanh toán theo đợt (DentalSoft)</span>
+                </h3>
+                <div class="fin-table-wrapper mt-3">
+                    <table class="fin-table">
+                        <thead>
+                            <tr>
+                                <th>Mã KHDT</th>
+                                <th>Tên phác đồ</th>
+                                <th>Bác sĩ</th>
+                                <th class="text-end">Chi phí phác đồ</th>
+                                <th class="text-end">Đã thu</th>
+                                <th class="text-end">Còn lại</th>
+                                <th class="text-center">Hình thức</th>
+                                <th class="text-center">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="tp : ${treatmentPlans}">
+                                <td><span class="badge bg-primary-subtle text-primary border font-monospace" th:text="${tp.planCode}">KHDT</span></td>
+                                <td class="fw-semibold text-dark" th:text="${tp.planName}">Phác đồ</td>
+                                <td th:text="${tp.doctor != null ? tp.doctor.fullName : '-'}">BS</td>
+                                <td class="text-end fw-semibold text-muted" th:text="${#numbers.formatDecimal(tp.getEstimatedCost(), 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                                <td class="text-end fw-bold text-success" th:text="${#numbers.formatDecimal(tp.totalPaidAmount != null ? tp.totalPaidAmount : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                                <td class="text-end fw-bold text-danger" th:text="${#numbers.formatDecimal(tp.getRemainingCost(), 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                                <td class="text-center">
+                                    <span class="badge" th:classappend="${tp.isInstallment == true} ? 'bg-info-subtle text-info border' : 'bg-light text-secondary border'"
+                                          th:text="${tp.isInstallment == true ? 'Trả theo đợt' : '1 lần'}">Trả theo đợt</span>
+                                </td>
+                                <td class="text-center">
+                                    <a class="fin-btn fin-btn-outline fin-btn-sm" th:href="@{/payments/dashboard(patientId=${detail.profileId})}">
+                                        <i class="bi bi-eye"></i> Xem lộ trình &amp; Thu tiền
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </main>
     </div>
 </div>

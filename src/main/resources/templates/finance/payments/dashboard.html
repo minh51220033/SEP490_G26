@@ -478,7 +478,7 @@
             <div th:if="${patient != null}">
                 <!-- Thanh điều hướng quay lại danh sách -->
                 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                    <a th:href="@{/payments/dashboard}" class="fin-btn fin-btn-outline d-inline-flex align-items-center gap-1.5 shadow-xs">
+                    <a th:href="@{/payments/dashboard}" class="fin-btn fin-btn-outline d-inline-flex align-items-center gap-2 shadow-xs">
                         <i class="bi bi-arrow-left"></i> <span>Quay lại Danh sách Bệnh nhân chờ</span>
                     </a>
                     <span class="text-muted small">Chi tiết hồ sơ tài chính &amp; Lịch sử giao dịch bệnh nhân</span>
@@ -1019,42 +1019,197 @@
                                     </ul>
                                 </nav>
                             </div>
-                <!-- Kế hoạch điều trị liên quan (FT15 / SCR-24.2) -->
+                        </div>
+                    </div>
+                </div>
+                <!-- Kế hoạch điều trị & Quản lý Trả theo đợt (Chuẩn DentalSoft) -->
                 <div th:if="${treatmentPlans != null and !#lists.isEmpty(treatmentPlans)}" class="fin-card mt-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h4 class="fw-bold m-0 text-dark">
-                            <i class="bi bi-journal-medical text-primary me-2"></i> Kế hoạch điều trị liên quan
-                        </h4>
-                        <span class="badge bg-secondary" th:text="${treatmentPlans.size()} + ' kế hoạch'">0 kế hoạch</span>
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <h4 class="fw-bold m-0 text-dark d-flex align-items-center gap-2">
+                                <i class="bi bi-calendar2-check-fill text-primary"></i>
+                                <span>Kế hoạch điều trị &amp; Thanh toán theo đợt (Chuẩn DentalSoft)</span>
+                            </h4>
+                            <div class="text-muted small mt-1">
+                                Theo dõi lộ trình chia đợt, nhắc hẹn chuẩn bị tiền cho bệnh nhân &amp; thu tiền linh hoạt (không fix cứng số tiền).
+                            </div>
+                        </div>
+                        <span class="badge bg-primary px-3 py-2 rounded-pill font-monospace" th:text="${treatmentPlans.size()} + ' kế hoạch'">0 kế hoạch</span>
                     </div>
-                    <div class="alert alert-info py-2 px-3 small mb-3">
-                        <i class="bi bi-info-circle me-1"></i> Lưu ý: Chi phí dự kiến của kế hoạch điều trị chưa lập hóa đơn KHÔNG được tính vào công nợ hiện tại.
-                    </div>
-                    <div class="fin-table-wrapper">
-                        <table class="fin-table">
-                            <thead>
-                            <tr>
-                                <th>Mã kế hoạch</th>
-                                <th>Tên lộ trình điều trị</th>
-                                <th>Bác sĩ phụ trách</th>
-                                <th class="text-end">Dự kiến chi phí</th>
-                                <th class="text-center">Trạng thái</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:each="tp : ${treatmentPlans}">
-                                <td>
-                                    <strong class="text-primary" th:text="${tp.planCode}">KH001</strong>
-                                </td>
-                                <td th:text="${tp.planName}">Chỉnh nha mắc cài kim loại</td>
-                                <td th:text="${tp.doctor != null ? tp.doctor.fullName : 'Chưa phân công'}">BS. Nguyễn Văn B</td>
-                                <td class="text-end fw-bold text-muted" th:text="${#numbers.formatDecimal(tp.finalEstimatedCost, 0, 'COMMA', 0, 'POINT')} + ' đ'">15.000.000 đ</td>
-                                <td class="text-center">
-                                    <span class="badge bg-light text-dark border" th:text="${tp.status}">ACTIVE</span>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
+
+                    <div th:each="tp : ${treatmentPlans}" class="border rounded-3 p-3 mb-4 bg-white" style="box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);">
+                        <!-- Header thông tin kế hoạch -->
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 pb-3 border-bottom">
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                                    <span class="badge bg-primary-subtle text-primary border font-monospace fw-bold px-2 py-1" th:text="${tp.planCode}">KHDT</span>
+                                    <h5 class="fw-bold text-dark m-0" th:text="${tp.planName}">Chỉnh nha mắc cài</h5>
+                                    <span class="badge bg-light text-secondary border font-monospace" th:text="${tp.status}">ACCEPTED</span>
+                                </div>
+                                <div class="text-muted small">
+                                    <span>Bác sĩ phụ trách: <strong class="text-dark" th:text="${tp.doctor != null ? tp.doctor.fullName : 'Chưa phân công'}">BS</strong></span>
+                                    <span class="mx-2">&bull;</span>
+                                    <span>Hình thức: <span class="badge" th:classappend="${tp.isInstallment == true} ? 'bg-info-subtle text-info border' : 'bg-light text-secondary border'" th:text="${tp.isInstallment == true ? 'Trả theo đợt (Trả góp)' : 'Thanh toán 1 lần'}">Trả theo đợt</span></span>
+                                </div>
+                            </div>
+                            <!-- Thao tác nhanh cho kế hoạch -->
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="fin-btn fin-btn-sm fin-btn-outline"
+                                        th:data-plan-id="${tp.planId}"
+                                        th:data-plan-code="${tp.planCode}"
+                                        th:data-estimated="${tp.getEstimatedCost()}"
+                                        onclick="openSplitModal(this.getAttribute('data-plan-id'), this.getAttribute('data-plan-code'), this.getAttribute('data-estimated'))"
+                                        title="Cấu hình chia đợt nhanh">
+                                    <i class="bi bi-sliders"></i>
+                                    <span>Cấu hình chia đợt</span>
+                                </button>
+                                <button type="button" class="fin-btn fin-btn-sm fin-btn-primary"
+                                        th:data-plan-id="${tp.planId}"
+                                        th:data-plan-code="${tp.planCode}"
+                                        th:data-plan-name="${tp.planName}"
+                                        th:data-remaining="${tp.getRemainingCost()}"
+                                        th:data-suggested="${tp.installments != null and !tp.installments.isEmpty() ? tp.installments.get(0).expectedAmount : tp.getRemainingCost()}"
+                                        onclick="openInstallmentPayModal(this.getAttribute('data-plan-id'), this.getAttribute('data-plan-code'), this.getAttribute('data-plan-name'), this.getAttribute('data-remaining'), this.getAttribute('data-suggested'), 'Đợt tiếp theo')"
+                                        title="Thu tiền đợt này">
+                                    <i class="bi bi-cash-coin"></i>
+                                    <span>Thu tiền đợt này</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Thẻ chỉ số tài chính của kế hoạch -->
+                        <div class="row g-3 my-2">
+                            <div class="col-md-3">
+                                <div class="p-3 bg-light rounded-3 border">
+                                    <div class="text-muted small fw-medium">Tổng chi phí phác đồ:</div>
+                                    <div class="fw-bold text-dark fs-5 mt-1" th:text="${#numbers.formatDecimal(tp.getEstimatedCost() != null ? tp.getEstimatedCost() : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">25.000.000 đ</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="p-3 bg-success-subtle rounded-3 border border-success-subtle">
+                                    <div class="text-success small fw-semibold">Tổng đã thu thực tế:</div>
+                                    <div class="fw-bold text-success fs-5 mt-1" th:text="${#numbers.formatDecimal(tp.totalPaidAmount != null ? tp.totalPaidAmount : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="p-3 bg-danger-subtle rounded-3 border border-danger-subtle">
+                                    <div class="text-danger small fw-semibold">Còn lại cần thu:</div>
+                                    <div class="fw-bold text-danger fs-5 mt-1" th:text="${#numbers.formatDecimal(tp.getRemainingCost() != null ? tp.getRemainingCost() : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">25.000.000 đ</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3"
+                                 th:with="payPct=${(tp.getEstimatedCost() != null and tp.getEstimatedCost().signum() > 0 and tp.totalPaidAmount != null) ? (tp.totalPaidAmount.doubleValue() * 100.0 / tp.getEstimatedCost().doubleValue() + 0.5).intValue() : 0}">
+                                <div class="p-3 bg-light rounded-3 border">
+                                    <div class="d-flex justify-content-between text-muted small fw-medium">
+                                        <span>Tiến độ thu:</span>
+                                        <strong class="text-primary" th:text="${payPct} + '%'">0%</strong>
+                                    </div>
+                                    <div class="progress mt-2" style="height: 6px;">
+                                        <div class="progress-bar bg-success" role="progressbar"
+                                             th:style="'width: ' + ${payPct} + '%'"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bảng lộ trình các đợt theo chuẩn .fin-table-wrapper & .fin-table -->
+                        <div th:if="${tp.installments != null and !#lists.isEmpty(tp.installments)}" class="fin-table-wrapper mt-3">
+                            <table class="fin-table">
+                                <thead>
+                                <tr>
+                                    <th class="text-center" style="width: 55px;">Đợt</th>
+                                    <th>Hạng mục / Nội dung đợt</th>
+                                    <th style="width: 130px;">Ngày dự kiến</th>
+                                    <th class="text-end" style="width: 140px;">Dự kiến thu</th>
+                                    <th class="text-end" style="width: 140px;">Đã thu</th>
+                                    <th class="text-end" style="width: 140px;">Còn thiếu</th>
+                                    <th class="text-center" style="width: 140px;">Trạng thái</th>
+                                    <th class="text-center" style="width: 110px;">Nhắc hẹn</th>
+                                    <th class="text-center" style="width: 140px;">Thao tác</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="inst : ${tp.installments}">
+                                    <td class="text-center fw-bold text-muted font-monospace" th:text="${inst.installmentOrder}">1</td>
+                                    <td>
+                                        <span class="fw-semibold text-dark" th:text="${inst.phaseName}">Đợt 1</span>
+                                        <div th:if="${inst.notes != null and !#strings.isEmpty(inst.notes)}" class="text-muted small" th:text="${inst.notes}"></div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold" th:text="${inst.expectedDate != null ? #temporals.format(inst.expectedDate, 'dd/MM/yyyy') : '---'}">15/11/2026</span>
+                                    </td>
+                                    <td class="text-end fw-semibold text-muted" th:text="${#numbers.formatDecimal(inst.expectedAmount != null ? inst.expectedAmount : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">5.000.000 đ</td>
+                                    <td class="text-end fw-bold text-success" th:text="${#numbers.formatDecimal(inst.paidAmount != null ? inst.paidAmount : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="text-end fw-bold" th:classappend="${inst.getRemainingAmount() != null and inst.getRemainingAmount().signum() > 0} ? 'text-danger' : 'text-muted'"
+                                        th:text="${#numbers.formatDecimal(inst.getRemainingAmount() != null ? inst.getRemainingAmount() : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'">5.000.000 đ</td>
+                                    <td class="text-center">
+                                        <span th:if="${inst.status != null and inst.status.name() == 'PAID'}" class="fin-badge fin-badge-paid">
+                                            <i class="bi bi-check-circle-fill"></i> Đã hoàn tất
+                                        </span>
+                                        <span th:if="${inst.status != null and inst.status.name() == 'PARTIAL'}" class="fin-badge fin-badge-partial">
+                                            <i class="bi bi-clock-history"></i> Đóng 1 phần
+                                        </span>
+                                        <span th:if="${inst.status != null and inst.status.name() == 'PENDING'}" class="fin-badge fin-badge-unpaid">
+                                            <i class="bi bi-hourglass-split"></i> Chưa đóng
+                                        </span>
+                                        <span th:if="${inst.status != null and inst.status.name() == 'OVERDUE'}" class="fin-badge fin-badge-unpaid" style="background:#fee2e2; color:#991b1b; font-weight:700;">
+                                            <i class="bi bi-exclamation-triangle-fill"></i> Quá hạn
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span th:if="${inst.reminded == true}" class="badge bg-success-subtle text-success border border-success-subtle"
+                                              th:title="${inst.remindedAt != null ? 'Đã nhắc lúc: ' + #temporals.format(inst.remindedAt, 'dd/MM/yyyy HH:mm') : 'Đã nhắc'}">
+                                            <i class="bi bi-check-all me-1"></i>Đã nhắc
+                                        </span>
+                                        <span th:unless="${inst.reminded == true}" class="badge bg-light text-muted border">Chưa nhắc</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-inline-flex gap-1 align-items-center">
+                                            <!-- Nút nhắc hẹn -->
+                                            <button type="button" class="btn btn-sm btn-outline-warning py-1 px-2"
+                                                    title="Mẫu tin nhắn &amp; Nhắc bệnh nhân"
+                                                    th:data-inst-id="${inst.installmentId}"
+                                                    th:data-order="${inst.installmentOrder}"
+                                                    th:data-phase="${inst.phaseName}"
+                                                    th:data-date="${inst.expectedDate != null ? #temporals.format(inst.expectedDate, 'dd/MM/yyyy') : ''}"
+                                                    th:data-expected="${inst.expectedAmount}"
+                                                    th:data-patient-name="${patient != null ? patient.fullName : ''}"
+                                                    th:data-patient-phone="${patient != null ? patient.phoneNumber : ''}"
+                                                    th:data-plan-name="${tp.planName}"
+                                                    onclick="openInstallmentReminderModal(this.getAttribute('data-inst-id'), this.getAttribute('data-order'), this.getAttribute('data-phase'), this.getAttribute('data-date'), this.getAttribute('data-expected'), this.getAttribute('data-patient-name'), this.getAttribute('data-patient-phone'), this.getAttribute('data-plan-name'))">
+                                                <i class="bi bi-bell-fill"></i>
+                                            </button>
+                                            <!-- Nút thu tiền đợt -->
+                                            <button type="button" class="btn btn-sm btn-primary py-1 px-2 fw-semibold"
+                                                    title="Thu tiền cho đợt này (không fix cứng)"
+                                                    th:data-plan-id="${tp.planId}"
+                                                    th:data-plan-code="${tp.planCode}"
+                                                    th:data-plan-name="${tp.planName}"
+                                                    th:data-remaining="${tp.getRemainingCost()}"
+                                                    th:data-suggested="${inst.getRemainingAmount() != null and inst.getRemainingAmount().signum() > 0 ? inst.getRemainingAmount() : inst.expectedAmount}"
+                                                    th:data-phase="${inst.phaseName}"
+                                                    onclick="openInstallmentPayModal(this.getAttribute('data-plan-id'), this.getAttribute('data-plan-code'), this.getAttribute('data-plan-name'), this.getAttribute('data-remaining'), this.getAttribute('data-suggested'), this.getAttribute('data-phase'))">
+                                                <i class="bi bi-cash me-1"></i>Thu
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Nếu chưa có đợt -->
+                        <div th:if="${tp.installments == null or #lists.isEmpty(tp.installments)}" class="p-3 bg-light rounded-3 text-center my-3 border border-dashed">
+                            <i class="bi bi-calendar2-range text-muted fs-3 d-block mb-1"></i>
+                            <div class="text-muted small mb-2">Kế hoạch này chưa thiết lập lộ trình trả theo đợt.</div>
+                            <button type="button" class="fin-btn fin-btn-sm fin-btn-outline"
+                                    th:data-plan-id="${tp.planId}"
+                                    th:data-plan-code="${tp.planCode}"
+                                    th:data-estimated="${tp.getEstimatedCost()}"
+                                    onclick="openSplitModal(this.getAttribute('data-plan-id'), this.getAttribute('data-plan-code'), this.getAttribute('data-estimated'))">
+                                <i class="bi bi-magic me-1"></i> Thiết lập chia đợt ngay (DentalSoft Auto-Split)
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -1099,6 +1254,211 @@
                     </div>
                 </div>
             </div>
+
+<!-- MODAL THU TIỀN TRẢ THEO ĐỢT (Chuẩn DentalSoft) -->
+<div class="modal fade" id="installmentPayModal" tabindex="-1" aria-labelledby="installmentPayModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow border-0 rounded-3">
+            <div class="modal-header bg-primary text-white py-3 px-4 rounded-top-3">
+                <h5 class="modal-title fw-bold" id="installmentPayModalLabel">
+                    <i class="bi bi-cash-coin me-2"></i>Thu tiền Phân kỳ / Trả theo đợt
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="instPayPlanId">
+                
+                <div class="p-3 bg-light rounded-3 border mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="badge bg-primary-subtle text-primary border font-monospace" id="instPayPlanCode">KHDT</span>
+                        <span class="badge bg-success-subtle text-success border" id="instPayPhaseTarget">Đợt 1</span>
+                    </div>
+                    <h6 class="fw-bold text-dark m-0" id="instPayPlanName">Chỉnh nha mắc cài</h6>
+                    <div class="d-flex justify-content-between text-muted small mt-2 pt-2 border-top">
+                        <span>Còn nợ toàn phác đồ:</span>
+                        <strong class="text-danger fs-6" id="instPayRemainingDebtDisplay">0 đ</strong>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-dark mb-1">Số tiền thực tế bệnh nhân đóng hôm nay (VNĐ): <span class="text-danger">*</span></label>
+                    <div class="input-group input-group-lg">
+                        <input type="number" class="form-control fw-bold text-primary" id="instPayAmountInput" placeholder="Nhập số tiền..." min="1000" step="50000">
+                        <span class="input-group-text fw-bold">đ</span>
+                    </div>
+                    <!-- Nút chọn nhanh số tiền -->
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnQuickPayExpected" onclick="setPayAmountFromSuggested()">Đúng dự kiến</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPayAmount(1000000)">1.000.000 đ</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPayAmount(2000000)">2.000.000 đ</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPayAmount(5000000)">5.000.000 đ</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" id="btnQuickPayAll" onclick="setPayAmountFromRemaining()">Tất toán</button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-muted small mb-1">Hình thức thanh toán:</label>
+                    <select class="form-select" id="instPayMethodSelect">
+                        <option value="CASH">Tiền mặt</option>
+                        <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
+                        <option id="instPayDepositOption" value="DEPOSIT_WALLET"
+                                th:disabled="${patient == null or patient.depositBalance == null or patient.depositBalance <= 0}"
+                                th:text="'Ví tiền tạm ứng (Số dư: ' + (${patient != null and patient.depositBalance != null ? #numbers.formatDecimal(patient.depositBalance, 0, 'COMMA', 0, 'POINT') : 0}) + ' đ)'">
+                            Ví tiền tạm ứng (Số dư: 0 đ)
+                        </option>
+                        <option value="POS_CARD">Thẻ POS</option>
+                    </select>
+                </div>
+
+                <input type="hidden" id="instPayBankAccountId" name="bankAccountId">
+                <input type="hidden" id="instPayExpectedTransferContent" name="expectedTransferContent">
+                <div id="dashboardInstPayQrContainer" class="mb-3" style="display: none;"></div>
+
+                <div class="mb-3" id="instPayTransRefGroup">
+                    <label for="instPayTransRef" class="form-label fw-semibold text-muted small mb-1">Mã giao dịch / Tham chiếu:</label>
+                    <input type="text" id="instPayTransRef" class="form-control form-control-sm"
+                           placeholder="Mã giao dịch ngân hàng / hóa đơn đối soát...">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-muted small mb-1">Ghi chú phiếu thu:</label>
+                    <input type="text" class="form-control form-control-sm" id="instPayNotesInput" placeholder="VD: Thu tiền đợt siết răng tháng 1...">
+                </div>
+
+                <div class="alert alert-info py-2 px-3 small m-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-info-circle text-primary fs-5"></i>
+                    <span><strong>Quy tắc DentalSoft:</strong> Không fix cứng số tiền. Hệ thống sẽ tự động trừ lũy kế vào các đợt theo thứ tự.</span>
+                </div>
+            </div>
+            <div class="modal-footer bg-light px-4 py-3 rounded-bottom-3">
+                <button type="button" class="fin-btn fin-btn-outline" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" class="fin-btn fin-btn-primary" id="btnSubmitInstPay" onclick="submitInstallmentPayment()">
+                    <i class="bi bi-check2-circle me-1"></i>Xác nhận Thu tiền
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL NHẮC LỊCH THANH TOÁN (Lễ tân CSKH - Chuẩn DentalSoft) -->
+<div class="modal fade" id="installmentReminderModal" tabindex="-1" aria-labelledby="installmentReminderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow border-0 rounded-3">
+            <div class="modal-header bg-warning text-dark py-3 px-4 rounded-top-3">
+                <h5 class="modal-title fw-bold" id="installmentReminderModalLabel">
+                    <i class="bi bi-bell-fill me-2"></i>Nhắc lịch Hẹn &amp; Chuẩn bị tiền (Lễ tân)
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="remindInstId">
+                <div class="p-3 bg-light rounded-3 border mb-3">
+                    <div class="row g-2 small">
+                        <div class="col-6">Bệnh nhân: <strong class="text-dark" id="remindPatientName">---</strong></div>
+                        <div class="col-6">SĐT: <strong class="text-primary" id="remindPatientPhone">---</strong></div>
+                        <div class="col-6">Đợt cần thu: <strong class="text-dark" id="remindPhaseName">Đợt 1</strong></div>
+                        <div class="col-6">Ngày dự kiến: <strong class="text-primary" id="remindExpectedDate">---</strong></div>
+                        <div class="col-12">Số tiền dự kiến: <strong class="text-danger fs-6" id="remindExpectedAmount">0 đ</strong></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-dark small mb-1">Mẫu kịch bản gọi điện / Tin nhắn Zalo &amp; SMS:</label>
+                    <textarea class="form-control" id="remindMessageTemplate" rows="4" style="font-size: 13.5px;"></textarea>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label fw-semibold text-muted small mb-1">Ghi chú của Lễ tân:</label>
+                    <input type="text" class="form-control form-control-sm" id="remindStaffNotes" placeholder="VD: Bệnh nhân hẹn 10h sáng tới...">
+                </div>
+            </div>
+            <div class="modal-footer bg-light px-4 py-3 rounded-bottom-3 d-flex justify-content-between">
+                <button type="button" class="fin-btn fin-btn-outline" onclick="copyReminderTemplate()">
+                    <i class="bi bi-clipboard me-1"></i>Sao chép tin nhắn
+                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="fin-btn fin-btn-outline" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="fin-btn fin-btn-success" onclick="submitReminderSent()">
+                        <i class="bi bi-check-lg me-1"></i>Đánh dấu Đã nhắc
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CẤU HÌNH PHÂN BỔ ĐỢT (DentalSoft Auto-Split) -->
+<div class="modal fade" id="installmentSplitModal" tabindex="-1" aria-labelledby="installmentSplitModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow border-0 rounded-3">
+            <div class="modal-header bg-dark text-white py-3 px-4 rounded-top-3">
+                <h5 class="modal-title fw-bold" id="installmentSplitModalLabel">
+                    <i class="bi bi-sliders me-2"></i>Thiết lập Lộ trình Chia đợt (DentalSoft Auto-Split)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="modalSplitPlanId">
+                <div class="p-3 bg-light rounded-3 border mb-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold text-muted mb-1">Tổng chi phí phác đồ:</label>
+                            <input type="text" class="form-control form-control-sm fw-bold bg-white" id="modalSplitTotalDisplay" readonly value="0 đ">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold text-muted mb-1">Đợt 1 đóng ban đầu:</label>
+                            <input type="number" class="form-control form-control-sm" id="modalSplitDownPayment" value="5000000" min="0" step="500000">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold text-muted mb-1">Số đợt còn lại:</label>
+                            <input type="number" class="form-control form-control-sm" id="modalSplitCount" value="9" min="1" max="36">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-semibold text-muted mb-1">Khoảng cách:</label>
+                            <select class="form-select form-select-sm" id="modalSplitInterval">
+                                <option value="1">1 tháng</option>
+                                <option value="2">2 tháng</option>
+                                <option value="0.5">2 tuần</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="fin-btn fin-btn-sm fin-btn-primary w-100" onclick="generateModalSplit()">
+                                <i class="bi bi-calculator me-1"></i>Chia đợt
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive border rounded-3" style="max-height: 320px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle mb-0" id="tableModalSplit">
+                        <thead class="table-light sticky-top">
+                        <tr class="small text-muted">
+                            <th style="width: 50px;" class="text-center">Đợt</th>
+                            <th>Nội dung đợt</th>
+                            <th style="width: 140px;">Ngày dự kiến</th>
+                            <th style="width: 150px;" class="text-end">Dự kiến thu (đ)</th>
+                            <th style="width: 50px;" class="text-center">Xóa</th>
+                        </tr>
+                        </thead>
+                        <tbody id="tbodyModalSplit"></tbody>
+                    </table>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <button type="button" class="fin-btn fin-btn-sm fin-btn-outline" onclick="addModalSplitRow()">
+                        <i class="bi bi-plus-circle me-1"></i>Thêm đợt
+                    </button>
+                    <div class="fw-bold fs-7" id="modalSplitSumDisplay">Tổng: 0 đ</div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light px-4 py-3 rounded-bottom-3">
+                <button type="button" class="fin-btn fin-btn-outline" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="fin-btn fin-btn-primary" onclick="saveModalSplit()">
+                    <i class="bi bi-check2-circle me-1"></i>Lưu Lộ trình Chia đợt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- MODAL GHI NHẬN THANH TOÁN (SCR-22.2) -->
 <div class="modal fade" id="quickPayModal" tabindex="-1" aria-labelledby="quickPayModalLabel"
@@ -1954,7 +2314,380 @@
                 if (dbDepositQr) dbDepositQr.refresh(true);
             });
         }
+
+        let dbInstPayQr = null;
+        const instPayModalEl = document.getElementById('installmentPayModal');
+        if (instPayModalEl) {
+            instPayModalEl.addEventListener('show.bs.modal', function () {
+                const bAcc = document.getElementById('instPayBankAccountId');
+                if (bAcc) bAcc.value = '';
+                const expCont = document.getElementById('instPayExpectedTransferContent');
+                if (expCont) expCont.value = '';
+                if (!dbInstPayQr) {
+                    dbInstPayQr = new VietQrPaymentBox({
+                        container: 'dashboardInstPayQrContainer',
+                        methodSelect: 'instPayMethodSelect',
+                        amountInput: 'instPayAmountInput',
+                        profileId: () => /*[[${patient != null ? patient.profileId : null}]]*/ null,
+                        bankAccountIdInput: 'instPayBankAccountId',
+                        expectedContentInput: 'instPayExpectedTransferContent'
+                    });
+                } else {
+                    dbInstPayQr.refresh(true);
+                }
+            });
+            instPayModalEl.addEventListener('hidden.bs.modal', function () {
+                if (dbInstPayQr) dbInstPayQr.reset();
+                const bAcc = document.getElementById('instPayBankAccountId');
+                if (bAcc) bAcc.value = '';
+                const expCont = document.getElementById('instPayExpectedTransferContent');
+                if (expCont) expCont.value = '';
+            });
+        }
+
+        const instMethodSel = document.getElementById('instPayMethodSelect');
+        const instTransGroup = document.getElementById('instPayTransRefGroup');
+        if (instMethodSel && instTransGroup) {
+            const toggleInstTrans = () => {
+                instTransGroup.style.display = (instMethodSel.value === 'BANK_TRANSFER' || instMethodSel.value === 'POS_CARD') ? 'block' : 'none';
+            };
+            instMethodSel.addEventListener('change', toggleInstTrans);
+            toggleInstTrans();
+        }
     });
+
+    // =========================================================================
+    // DENTALSOFT INSTALLMENT & REMINDER CLIENT LOGIC
+    // =========================================================================
+    var CURRENT_SUGGESTED_AMOUNT = window.CURRENT_SUGGESTED_AMOUNT || 0;
+    var CURRENT_REMAINING_DEBT = window.CURRENT_REMAINING_DEBT || 0;
+    var MODAL_SPLIT_ITEMS = window.MODAL_SPLIT_ITEMS || [];
+    var MODAL_PLAN_TOTAL = window.MODAL_PLAN_TOTAL || 0;
+
+    function getCsrfToken() {
+        const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
+    }
+
+    window.openInstallmentPayModal = function(planId, planCode, planName, remainingDebt, suggestedAmount, phaseName) {
+        const idEl = document.getElementById('instPayPlanId');
+        if (idEl) idEl.value = planId || '';
+        const codeEl = document.getElementById('instPayPlanCode');
+        if (codeEl) codeEl.innerText = planCode || '';
+        const nameEl = document.getElementById('instPayPlanName');
+        if (nameEl) nameEl.innerText = planName || '';
+        const phaseEl = document.getElementById('instPayPhaseTarget');
+        if (phaseEl) phaseEl.innerText = phaseName || 'Đợt tiếp theo';
+
+        window.CURRENT_REMAINING_DEBT = Number(remainingDebt || 0);
+        window.CURRENT_SUGGESTED_AMOUNT = Number(suggestedAmount || 0);
+        if (window.CURRENT_SUGGESTED_AMOUNT <= 0) window.CURRENT_SUGGESTED_AMOUNT = window.CURRENT_REMAINING_DEBT;
+
+        const debtDisp = document.getElementById('instPayRemainingDebtDisplay');
+        if (debtDisp) debtDisp.innerText = formatVnd(window.CURRENT_REMAINING_DEBT);
+        const amtInput = document.getElementById('instPayAmountInput');
+        if (amtInput) {
+            amtInput.value = window.CURRENT_SUGGESTED_AMOUNT;
+            amtInput.dispatchEvent(new Event('input'));
+        }
+        const btnExp = document.getElementById('btnQuickPayExpected');
+        if (btnExp) btnExp.innerText = 'Đúng dự kiến (' + formatVnd(window.CURRENT_SUGGESTED_AMOUNT) + ')';
+        const btnAll = document.getElementById('btnQuickPayAll');
+        if (btnAll) btnAll.innerText = 'Tất toán (' + formatVnd(window.CURRENT_REMAINING_DEBT) + ')';
+
+        // Cập nhật số dư ví tạm ứng trong dropdown
+        const depOpt = document.getElementById('instPayDepositOption');
+        const patDeposit = /*[[${patient != null and patient.depositBalance != null ? patient.depositBalance : 0}]]*/ 0;
+        if (depOpt) {
+            depOpt.textContent = `Ví tiền tạm ứng (Số dư: ${formatVnd(patDeposit)})`;
+            depOpt.disabled = (Number(patDeposit) <= 0);
+        }
+
+        const methodSel = document.getElementById('instPayMethodSelect');
+        if (methodSel) {
+            methodSel.dispatchEvent(new Event('change'));
+        }
+
+        const modalEl = document.getElementById('installmentPayModal');
+        if (modalEl && window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    };
+
+    window.setPayAmount = function(val) {
+        const el = document.getElementById('instPayAmountInput');
+        if (el) {
+            el.value = val;
+            el.dispatchEvent(new Event('input'));
+        }
+    };
+    window.setPayAmountFromSuggested = function() {
+        const el = document.getElementById('instPayAmountInput');
+        if (el) {
+            el.value = window.CURRENT_SUGGESTED_AMOUNT;
+            el.dispatchEvent(new Event('input'));
+        }
+    };
+    window.setPayAmountFromRemaining = function() {
+        const el = document.getElementById('instPayAmountInput');
+        if (el) {
+            el.value = window.CURRENT_REMAINING_DEBT;
+            el.dispatchEvent(new Event('input'));
+        }
+    };
+
+    window.submitInstallmentPayment = async function() {
+        const planId = document.getElementById('instPayPlanId').value;
+        const amount = Number(document.getElementById('instPayAmountInput').value || 0);
+        const method = document.getElementById('instPayMethodSelect').value;
+        const notes = document.getElementById('instPayNotesInput').value;
+        const transRef = document.getElementById('instPayTransRef')?.value;
+
+        if (amount <= 0) {
+            alert('Vui lòng nhập số tiền thanh toán lớn hơn 0!');
+            return;
+        }
+
+        let finalNotes = notes || '';
+        if (transRef && transRef.trim()) {
+            finalNotes = (finalNotes ? (finalNotes + ' - ') : '') + 'Mã GD: ' + transRef.trim();
+        }
+
+        const btn = document.getElementById('btnSubmitInstPay');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang xử lý...';
+        }
+
+        try {
+            const csrf = getCsrfToken();
+            const headers = { 'Content-Type': 'application/json' };
+            if (csrf) headers['X-XSRF-TOKEN'] = csrf;
+
+            const resp = await fetch(`/api/doctor/treatment-plans/${planId}/installments/pay`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({ amount: amount, paymentMethod: method, notes: finalNotes })
+            });
+            const res = await resp.json();
+            if (resp.ok && res.success) {
+                alert('Ghi nhận thanh toán thành công!');
+                window.location.reload();
+            } else {
+                alert('Lỗi: ' + (res.message || 'Không thể ghi nhận thanh toán'));
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Xác nhận Thu tiền';
+                }
+            }
+        } catch (e) {
+            alert('Lỗi kết nối máy chủ!');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Xác nhận Thu tiền';
+            }
+        }
+    };
+
+    window.openInstallmentReminderModal = function(instId, order, phaseName, expectedDate, expectedAmount, patientName, patientPhone, planName) {
+        const idEl = document.getElementById('remindInstId');
+        if (idEl) idEl.value = instId || '';
+        const nameEl = document.getElementById('remindPatientName');
+        if (nameEl) nameEl.innerText = patientName || 'Bệnh nhân';
+        const phoneEl = document.getElementById('remindPatientPhone');
+        if (phoneEl) phoneEl.innerText = patientPhone || 'Chưa có SĐT';
+        const phaseEl = document.getElementById('remindPhaseName');
+        if (phaseEl) phaseEl.innerText = `Đợt ${order}: ${phaseName}`;
+        const dateEl = document.getElementById('remindExpectedDate');
+        if (dateEl) dateEl.innerText = expectedDate || 'Theo lịch hẹn';
+        const amtEl = document.getElementById('remindExpectedAmount');
+        if (amtEl) amtEl.innerText = formatVnd(expectedAmount);
+
+        const template = `Kính gửi anh/chị ${patientName || 'Quý khách'},\nNha khoa xin phép nhắc lịch hẹn tái khám điều trị "${planName}" vào ngày ${expectedDate || 'sắp tới'}.\nTheo lộ trình kế hoạch, đợt này anh/chị dự kiến chuẩn bị khoảng ${formatVnd(expectedAmount)} ạ.\nPhòng khám rất hân hạnh được đón tiếp anh/chị!`;
+        const tplEl = document.getElementById('remindMessageTemplate');
+        if (tplEl) tplEl.value = template;
+
+        const modalEl = document.getElementById('installmentReminderModal');
+        if (modalEl && window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    };
+
+    window.copyReminderTemplate = function() {
+        const text = document.getElementById('remindMessageTemplate').value;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Đã sao chép nội dung tin nhắn vào bộ nhớ tạm (Clipboard)!');
+        });
+    };
+
+    window.submitReminderSent = async function() {
+        const instId = document.getElementById('remindInstId').value;
+        const notes = document.getElementById('remindStaffNotes').value;
+
+        try {
+            const csrf = getCsrfToken();
+            const headers = { 'Content-Type': 'application/json' };
+            if (csrf) headers['X-XSRF-TOKEN'] = csrf;
+
+            const resp = await fetch(`/api/doctor/treatment-plans/installments/${instId}/remind`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({ notes: notes })
+            });
+            if (resp.ok) {
+                alert('Đã đánh dấu ghi nhận nhắc lịch cho bệnh nhân!');
+                window.location.reload();
+            }
+        } catch (e) {
+            alert('Lỗi ghi nhận nhắc lịch!');
+        }
+    };
+
+    window.openSplitModal = function(planId, planCode, totalCost) {
+        const idEl = document.getElementById('modalSplitPlanId');
+        if (idEl) idEl.value = planId || '';
+        window.MODAL_PLAN_TOTAL = Number(totalCost || 0);
+        const dispEl = document.getElementById('modalSplitTotalDisplay');
+        if (dispEl) dispEl.value = formatVnd(window.MODAL_PLAN_TOTAL);
+
+        fetch(`/api/doctor/treatment-plans/${planId}/installments`)
+            .then(r => r.json())
+            .then(list => {
+                if (list && list.length > 0) {
+                    window.MODAL_SPLIT_ITEMS = list.map(i => ({
+                        phaseName: i.phaseName,
+                        expectedDate: i.expectedDateRaw || i.expectedDate,
+                        expectedAmount: i.expectedAmount,
+                        notes: i.notes || ''
+                    }));
+                } else {
+                    generateModalSplit();
+                }
+                renderModalSplitTable();
+            })
+            .catch(() => {
+                generateModalSplit();
+                renderModalSplitTable();
+            });
+
+        const modalEl = document.getElementById('installmentSplitModal');
+        if (modalEl && window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    };
+
+    window.generateModalSplit = function() {
+        const downPayment = Number(document.getElementById('modalSplitDownPayment').value || 0);
+        const count = Math.max(1, parseInt(document.getElementById('modalSplitCount').value || 9));
+        const intervalMonths = parseFloat(document.getElementById('modalSplitInterval').value || 1);
+
+        const remainingTotal = Math.max(0, window.MODAL_PLAN_TOTAL - downPayment);
+        const perInst = Math.round(remainingTotal / count);
+        const today = new Date();
+
+        window.MODAL_SPLIT_ITEMS = [];
+        window.MODAL_SPLIT_ITEMS.push({
+            phaseName: 'Đợt 1: Đóng ban đầu (Gắn mắc cài / Bắt đầu)',
+            expectedDate: today.toISOString().split('T')[0],
+            expectedAmount: downPayment,
+            notes: ''
+        });
+
+        let allocated = 0;
+        for (let i = 1; i <= count; i++) {
+            const nextDate = new Date(today);
+            if (intervalMonths === 0.5) {
+                nextDate.setDate(nextDate.getDate() + (i * 14));
+            } else {
+                nextDate.setMonth(nextDate.getMonth() + Math.round(i * intervalMonths));
+            }
+            let amt = (i === count) ? (remainingTotal - allocated) : perInst;
+            allocated += amt;
+
+            window.MODAL_SPLIT_ITEMS.push({
+                phaseName: `Đợt ${i + 1}: Tái khám siết răng tháng ${i}`,
+                expectedDate: nextDate.toISOString().split('T')[0],
+                expectedAmount: amt,
+                notes: ''
+            });
+        }
+        renderModalSplitTable();
+    };
+
+    window.renderModalSplitTable = function() {
+        const tbody = document.getElementById('tbodyModalSplit');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        let sum = 0;
+        (window.MODAL_SPLIT_ITEMS || []).forEach((it, idx) => {
+            sum += Number(it.expectedAmount || 0);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-center fw-bold text-muted">${idx + 1}</td>
+                <td><input type="text" class="form-control form-control-sm" value="${it.phaseName || ''}" onchange="window.MODAL_SPLIT_ITEMS[${idx}].phaseName=this.value"></td>
+                <td><input type="date" class="form-control form-control-sm" value="${it.expectedDate || ''}" onchange="window.MODAL_SPLIT_ITEMS[${idx}].expectedDate=this.value"></td>
+                <td><input type="number" class="form-control form-control-sm text-end fw-bold" value="${it.expectedAmount || 0}" step="100000" onchange="window.MODAL_SPLIT_ITEMS[${idx}].expectedAmount=Number(this.value); window.updateModalSplitSum();"></td>
+                <td class="text-center"><button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="window.MODAL_SPLIT_ITEMS.splice(${idx},1); window.renderModalSplitTable();"><i class="bi bi-trash"></i></button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+        const sumDisp = document.getElementById('modalSplitSumDisplay');
+        if (sumDisp) sumDisp.innerText = `Tổng: ${formatVnd(sum)}`;
+    };
+
+    window.updateModalSplitSum = function() {
+        let sum = 0;
+        (window.MODAL_SPLIT_ITEMS || []).forEach(it => sum += Number(it.expectedAmount || 0));
+        const sumDisp = document.getElementById('modalSplitSumDisplay');
+        if (sumDisp) sumDisp.innerText = `Tổng: ${formatVnd(sum)}`;
+    };
+
+    window.addModalSplitRow = function() {
+        const nextOrder = (window.MODAL_SPLIT_ITEMS || []).length + 1;
+        const today = new Date();
+        today.setMonth(today.getMonth() + nextOrder);
+        (window.MODAL_SPLIT_ITEMS = window.MODAL_SPLIT_ITEMS || []).push({
+            phaseName: `Đợt ${nextOrder}: Thanh toán bổ sung`,
+            expectedDate: today.toISOString().split('T')[0],
+            expectedAmount: 1000000,
+            notes: ''
+        });
+        renderModalSplitTable();
+    };
+
+    window.saveModalSplit = async function() {
+        const planId = document.getElementById('modalSplitPlanId').value;
+        try {
+            const csrf = getCsrfToken();
+            const headers = { 'Content-Type': 'application/json' };
+            if (csrf) headers['X-XSRF-TOKEN'] = csrf;
+
+            const resp = await fetch(`/api/doctor/treatment-plans/${planId}/installments`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify((window.MODAL_SPLIT_ITEMS || []).map((it, idx) => ({
+                    installmentOrder: idx + 1,
+                    phaseName: it.phaseName,
+                    expectedDate: it.expectedDate,
+                    expectedAmount: it.expectedAmount,
+                    notes: it.notes
+                })))
+            });
+            const res = await resp.json();
+            if (resp.ok && res.success) {
+                alert('Đã cập nhật lộ trình chia đợt thành công!');
+                window.location.reload();
+            } else {
+                alert('Lỗi: ' + (res.message || 'Không thể lưu lộ trình'));
+            }
+        } catch (e) {
+            alert('Lỗi kết nối máy chủ!');
+        }
+    };
+
+    window.formatVnd = function(val) {
+        return new Intl.NumberFormat('vi-VN').format(val || 0) + ' đ';
+    };
 </script>
             </div> <!-- end #cashierTabContent -->
         </main>

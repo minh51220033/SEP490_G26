@@ -4,6 +4,8 @@ import com.cvdcms.DTO.AiParsePlanRequestDTO;
 import com.cvdcms.DTO.AiParsePlanResponseDTO;
 import com.cvdcms.DTO.TreatmentPlanRequestDTO;
 import com.cvdcms.DTO.TreatmentPlanResponseDTO;
+import com.cvdcms.DTO.TreatmentPlanInstallmentDTO;
+import com.cvdcms.DTO.InstallmentPaymentRequestDTO;
 import com.cvdcms.DTO.PerformedServiceRequestDTO;
 import com.cvdcms.DTO.PerformedServiceResponseDTO;
 import com.cvdcms.service.PerformedServiceService;
@@ -316,5 +318,99 @@ public class TreatmentPlanRestController {
             error.put("message", "Lỗi phân tích AI: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
+    }
+
+    /**
+     * Lấy danh sách các đợt thanh toán của kế hoạch điều trị
+     */
+    @GetMapping("/{id}/installments")
+    public ResponseEntity<List<TreatmentPlanInstallmentDTO>> getInstallments(@PathVariable Long id) {
+        return ResponseEntity.ok(treatmentPlanService.getPlanInstallments(id));
+    }
+
+    /**
+     * Cập nhật/thiết lập lộ trình chia đợt thanh toán (Installments Schedule)
+     */
+    @PostMapping("/{id}/installments")
+    public ResponseEntity<?> saveInstallments(
+            @PathVariable Long id,
+            @RequestBody List<TreatmentPlanInstallmentDTO> installmentDTOs) {
+        try {
+            TreatmentPlanResponseDTO updated = treatmentPlanService.saveInstallments(id, installmentDTOs);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Đã cập nhật lộ trình thanh toán theo đợt thành công!");
+            response.put("data", updated);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
+     * Ghi nhận thanh toán đợt linh hoạt (Không fix cứng số tiền - Chuẩn DentalSoft)
+     */
+    @PostMapping("/{id}/installments/pay")
+    public ResponseEntity<?> recordInstallmentPayment(
+            @PathVariable Long id,
+            @RequestBody InstallmentPaymentRequestDTO request) {
+        try {
+            TreatmentPlanResponseDTO updated = treatmentPlanService.recordInstallmentPayment(
+                    id, request.getAmount(), null);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Đã ghi nhận thanh toán thành công!");
+            response.put("data", updated);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
+     * Lễ tân đánh dấu đã nhắc bệnh nhân chuẩn bị tiền đợt tới
+     */
+    @PostMapping("/installments/{installmentId}/remind")
+    public ResponseEntity<?> markReminderSent(
+            @PathVariable Long installmentId,
+            @RequestBody(required = false) Map<String, String> body) {
+        try {
+            String notes = body != null ? body.get("notes") : null;
+            TreatmentPlanInstallmentDTO updated = treatmentPlanService.markReminderSent(installmentId, notes);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Đã ghi nhận nhắc lịch thanh toán cho bệnh nhân!");
+            response.put("data", updated);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    /**
+     * Danh sách các đợt thanh toán sắp tới hạn dành cho Lễ tân theo dõi và nhắc hẹn
+     */
+    @GetMapping("/installments/upcoming")
+    public ResponseEntity<?> getUpcomingInstallments(
+            @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        org.springframework.data.domain.Page<TreatmentPlanInstallmentDTO> result = treatmentPlanService.searchUpcomingInstallments(
+                branchId, startDate, endDate, status, keyword, pageable);
+        return ResponseEntity.ok(result);
     }
 }

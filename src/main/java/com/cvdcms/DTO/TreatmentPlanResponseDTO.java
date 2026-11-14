@@ -43,6 +43,18 @@ public class TreatmentPlanResponseDTO {
     private Integer completedItems;
     private Integer progressPercent;
 
+    private Boolean isInstallment;
+
+    public Boolean getIsInstallment() {
+        return Boolean.TRUE.equals(this.isInstallment);
+    }
+    private BigDecimal totalPaidAmount;
+    private BigDecimal remainingCost;
+    private TreatmentPlanInstallmentDTO nextInstallment;
+
+    @Builder.Default
+    private List<TreatmentPlanInstallmentDTO> installments = new ArrayList<>();
+
     @Builder.Default
     private List<TreatmentPlanStageResponseDTO> stages = new ArrayList<>();
 }
