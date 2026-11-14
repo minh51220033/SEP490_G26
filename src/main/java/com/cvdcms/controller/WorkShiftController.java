@@ -1,8 +1,10 @@
 package com.cvdcms.controller;
 
+import com.cvdcms.entity.AppointmentSessionWindow;
 import com.cvdcms.entity.Branch;
 import com.cvdcms.entity.User;
 import com.cvdcms.entity.WorkShift;
+import com.cvdcms.entity.enums.PreferredSession;
 import com.cvdcms.repository.UserRepository;
 import com.cvdcms.service.BranchService;
 import com.cvdcms.service.WorkShiftService;
@@ -16,7 +18,9 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 // FT33 – Cấu hình ca làm việc (SCR-33.0): CRUD WorkShift theo chi nhánh.
 @Controller
@@ -82,8 +86,28 @@ public class WorkShiftController {
         model.addAttribute("isAdmin", isAdmin(session));
 
         if (selectedBranchId != null) {
+            Branch selectedBranch = branches.stream()
+                    .filter(b -> b.getBranchId().equals(selectedBranchId))
+                    .findFirst()
+                    .orElseGet(() -> branchService.getBranchById(selectedBranchId));
             List<WorkShift> shifts = workShiftService.getShiftsByBranch(selectedBranchId);
+            List<AppointmentSessionWindow> sessionWindows = workShiftService.getSessionWindowsByBranch(selectedBranchId);
+            Map<Long, String> shiftSessionLabels = new LinkedHashMap<>();
+            for (WorkShift ws : shifts) {
+                PreferredSession mapped = workShiftService.resolveSession(ws);
+                if (mapped != null) {
+                    shiftSessionLabels.put(ws.getShiftId(), switch (mapped) {
+                        case MORNING -> "Ca Sáng";
+                        case AFTERNOON -> "Ca Chiều";
+                        case EVENING -> "Ca Tối";
+                        default -> mapped.name();
+                    });
+                }
+            }
+            model.addAttribute("selectedBranch", selectedBranch);
             model.addAttribute("shifts", shifts);
+            model.addAttribute("sessionWindows", sessionWindows);
+            model.addAttribute("shiftSessionLabels", shiftSessionLabels);
         }
 
         return "shift/list";
@@ -162,6 +186,61 @@ public class WorkShiftController {
             ra.addFlashAttribute("successMessage", "Đã xóa ca làm việc thành công.");
         } catch (Exception e) {
             ra.addFlashAttribute("errorMessage", "Không thể xóa ca làm việc này vì đã có dữ liệu phân ca hoặc chấm công liên kết. Vui lòng sử dụng tính năng 'Tắt ca'.");
+        }
+        return "redirect:/admin/work-shifts?branchId=" + branchId;
+    }
+
+    // ===================== POST: Cấu hình Ca khám (Session Windows) =====================
+
+    @PostMapping("/admin/work-shifts/session-windows/{id}/update")
+    public String updateSessionWindow(@PathVariable Long id,
+                                      @RequestParam Long branchId,
+                                      @RequestParam @DateTimeFormat(pattern = "HH:mm") LocalTime startTime,
+                                      @RequestParam @DateTimeFormat(pattern = "HH:mm") LocalTime endTime,
+                                      RedirectAttributes ra, HttpSession session) {
+        if (!isLoggedIn(session)) return "redirect:/login";
+        requireAdmin(session);
+        try {
+            workShiftService.updateSessionWindow(id, startTime, endTime);
+            ra.addFlashAttribute("successMessage", "Cập nhật khung giờ ca khám và đồng bộ ca làm thành công.");
+        } catch (IllegalArgumentException e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/work-shifts?branchId=" + branchId;
+    }
+
+    @PostMapping("/admin/work-shifts/session-windows/{id}/toggle")
+    public String toggleSessionWindow(@PathVariable Long id,
+                                      @RequestParam Long branchId,
+                                      RedirectAttributes ra, HttpSession session) {
+        if (!isLoggedIn(session)) return "redirect:/login";
+        requireAdmin(session);
+        try {
+            AppointmentSessionWindow w = workShiftService.toggleSessionWindow(id);
+            String label = switch (w.getPreferredSession()) {
+                case MORNING -> "Ca Sáng";
+                case AFTERNOON -> "Ca Chiều";
+                case EVENING -> "Ca Tối";
+                default -> w.getPreferredSession().name();
+            };
+            ra.addFlashAttribute("successMessage",
+                    label + " đã được " + (Boolean.TRUE.equals(w.getIsActive()) ? "bật nhận lịch hẹn" : "tắt nhận lịch hẹn") + ".");
+        } catch (IllegalArgumentException e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/work-shifts?branchId=" + branchId;
+    }
+
+    @PostMapping("/admin/work-shifts/session-windows/sync")
+    public String syncSessionWindows(@RequestParam Long branchId,
+                                     RedirectAttributes ra, HttpSession session) {
+        if (!isLoggedIn(session)) return "redirect:/login";
+        requireAdmin(session);
+        try {
+            workShiftService.syncSessionWindowsFromShifts(branchId);
+            ra.addFlashAttribute("successMessage", "Đã đồng bộ khung giờ và trạng thái các ca khám theo ca làm việc hiện tại.");
+        } catch (IllegalArgumentException e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/work-shifts?branchId=" + branchId;
     }

@@ -16,6 +16,35 @@
             <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
             <link rel="stylesheet" th:href="@{/css/staff.css}">
             <link rel="stylesheet" th:href="@{/css/account.css}">
+            <style>
+                /* Mở khóa scroll dọc cho trang Cấu hình Ca khám & Ca làm (ghi đè staff.css 100vh lock) */
+                body.staff-page-body .app-content {
+                    overflow-y: auto !important;
+                    overflow-x: hidden !important;
+                    height: calc(100vh - 64px) !important;
+                    display: block !important;
+                    padding-bottom: 40px !important;
+                }
+                body.staff-page-body .staff-table-card {
+                    flex: none !important;
+                    height: auto !important;
+                    min-height: unset !important;
+                    max-height: none !important;
+                    overflow: visible !important;
+                    border-radius: 16px !important;
+                }
+                body.staff-page-body .dv-table-scroll-container {
+                    flex: none !important;
+                    height: auto !important;
+                    max-height: none !important;
+                    overflow-y: visible !important;
+                    overflow-x: auto !important;
+                }
+                #sessionWindowTable,
+                #shiftTable {
+                    min-width: 100% !important;
+                }
+            </style>
 
             <!-- TOAST MESSAGES -->
             <div class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3" th:if="${successMessage}">
@@ -54,25 +83,37 @@
             <!-- HR TABS (Chuẩn DentalSoft) -->
             <nav th:replace="~{fragments/hr_tabs :: hrTabs('work-shifts')}"></nav>
 
-            <!-- 3 THẺ KPI TỔNG QUAN (Đồng bộ chuẩn Quản lý tài khoản) -->
+            <!-- 4 THẺ KPI TỔNG QUAN (Đồng bộ chuẩn Quản lý tài khoản) -->
             <div class="row g-3 mb-4" th:if="${shifts != null}">
-                <div class="col-md-4 col-sm-6">
+                <div class="col-xl-3 col-md-6">
+                    <div class="dv-kpi-card" style="--kpi-accent: #6366f1;">
+                        <div>
+                            <div class="dv-kpi-num" style="color: #4f46e5;" th:text="${sessionWindows != null ? #lists.size(sessionWindows) : 0}">0</div>
+                            <div class="dv-kpi-label">Tổng số ca khám</div>
+                            <div class="dv-kpi-sub" th:text="${sessionWindows != null ? sessionWindows.?[isActive == true].size() + ' ca đang mở nhận lịch hẹn' : 'Khung giờ nhận lịch hẹn'}">0 ca đang mở nhận lịch hẹn</div>
+                        </div>
+                        <div class="dv-kpi-icon" style="background: #eef2ff; color: #4f46e5;">
+                            <i class="bi bi-calendar2-week"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-6">
                     <div class="dv-kpi-card" style="--kpi-accent: #0284c7;">
                         <div>
                             <div class="dv-kpi-num" th:text="${#lists.size(shifts)}">0</div>
                             <div class="dv-kpi-label">Tổng số ca làm</div>
-                            <div class="dv-kpi-sub">Khung giờ tại chi nhánh này</div>
+                            <div class="dv-kpi-sub">Khung giờ nhân sự &amp; chấm công</div>
                         </div>
                         <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
                             <i class="bi bi-clock"></i>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4 col-sm-6">
+                <div class="col-xl-3 col-md-6">
                     <div class="dv-kpi-card" style="--kpi-accent: #10b981;">
                         <div>
                             <div class="dv-kpi-num text-success" th:text="${shifts.?[isActive == true].size()}">0</div>
-                            <div class="dv-kpi-label">Đang hoạt động</div>
+                            <div class="dv-kpi-label">Ca làm đang hoạt động</div>
                             <div class="dv-kpi-sub">Áp dụng cho phân ca &amp; chấm công</div>
                         </div>
                         <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
@@ -80,12 +121,12 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4 col-sm-6">
+                <div class="col-xl-3 col-md-6">
                     <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;">
                         <div>
                             <div class="dv-kpi-num text-warning" th:text="${shifts.?[isActive == false].size()}">0</div>
                             <div class="dv-kpi-label">Đã tắt / Tạm dừng</div>
-                            <div class="dv-kpi-sub">Ẩn khỏi phân ca mới</div>
+                            <div class="dv-kpi-sub" th:text="${sessionWindows != null ? sessionWindows.?[isActive == false].size() + ' ca khám đang đóng lịch' : 'Ẩn khỏi phân ca mới'}">Ẩn khỏi phân ca mới</div>
                         </div>
                         <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
                             <i class="bi bi-pause-circle-fill"></i>
@@ -100,17 +141,182 @@
                 <p class="text-muted mt-3">Vui lòng chọn chi nhánh để xem và quản lý ca làm việc.</p>
             </div>
 
-            <!-- BẢNG DỮ LIỆU CA LÀM (ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN) -->
+            <!-- 1. BẢNG CẤU HÌNH CA KHÁM (KHUNG GIỜ NHẬN LỊCH HẸN) -->
+            <section th:if="${selectedBranchId != null and sessionWindows != null}" class="staff-table-card mb-4">
+                <div class="dv-grid-topbar">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <div class="fw-bold text-dark" style="font-size: 15px;">
+                            <i class="bi bi-calendar2-week text-primary me-2"></i>Cấu hình Ca khám (Khung giờ nhận lịch hẹn)
+                            <span class="text-muted mx-1">•</span>
+                            Hiển thị <span class="text-primary fw-bolder" th:text="${#lists.size(sessionWindows)}">0</span> ca khám
+                            (<span class="text-success fw-bold" th:text="${sessionWindows.?[isActive == true].size()}">0</span> đang mở)
+                        </div>
+                        <span th:if="${selectedBranch != null}"
+                              class="badge rounded-pill px-3 py-2"
+                              style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700;">
+                            <i class="bi bi-door-open me-1"></i>Giờ cơ sở:
+                            <span th:text="${#temporals.format(selectedBranch.openingTime, 'HH:mm')}">08:00</span>
+                            –
+                            <span th:text="${#temporals.format(selectedBranch.closingTime, 'HH:mm')}">20:00</span>
+                        </span>
+                        <span class="badge rounded-pill px-3 py-2"
+                              style="background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 600;">
+                            <i class="bi bi-shield-check me-1 text-success"></i>Nghỉ trưa tối thiểu 30 phút (Điều 109 BLLĐ)
+                        </span>
+                    </div>
+                    <form th:action="@{/admin/work-shifts/session-windows/sync}" method="post" class="d-inline">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf != null}"/>
+                        <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                        <button type="submit" class="dv-equal-btn-secondary px-3" style="width: auto !important;"
+                                title="Đồng bộ khung giờ và trạng thái ca khám từ các ca làm Sáng/Chiều/Tối">
+                            <i class="bi bi-arrow-repeat text-primary"></i>
+                            <span>Đồng bộ từ ca làm</span>
+                        </button>
+                    </form>
+                </div>
+
+                <div class="dv-table-scroll-container">
+                    <table class="dv-amis-table" id="sessionWindowTable">
+                        <thead>
+                        <tr>
+                            <th style="width: 60px; min-width: 60px;" class="text-center">
+                                <div class="dv-th-inner justify-content-center"><span>#</span></div>
+                            </th>
+                            <th style="min-width: 140px;">
+                                <div class="dv-th-inner"><span>Phiên khám</span></div>
+                            </th>
+                            <th style="min-width: 240px;">
+                                <div class="dv-th-inner"><span>Tên hiển thị đặt lịch</span></div>
+                            </th>
+                            <th style="min-width: 140px;">
+                                <div class="dv-th-inner"><span>Giờ mở lịch</span></div>
+                            </th>
+                            <th style="min-width: 140px;">
+                                <div class="dv-th-inner"><span>Giờ đóng lịch</span></div>
+                            </th>
+                            <th style="min-width: 140px;">
+                                <div class="dv-th-inner"><span>Thời lượng</span></div>
+                            </th>
+                            <th style="min-width: 190px;">
+                                <div class="dv-th-inner"><span>Trạng thái nhận lịch</span></div>
+                            </th>
+                            <th class="text-center" style="width: 270px; min-width: 270px;">
+                                <div class="dv-th-inner justify-content-center"><span>Thao tác nhanh</span></div>
+                            </th>
+                            <th class="dv-floating-actions-track"></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="w, stat : ${sessionWindows}" class="dv-data-row"
+                            th:with="sessLabel=${w.preferredSession.name() == 'MORNING' ? 'Ca Sáng' : (w.preferredSession.name() == 'AFTERNOON' ? 'Ca Chiều' : 'Ca Tối')},
+                                     mins=${(w.endTime.hour * 60 + w.endTime.minute) - (w.startTime.hour * 60 + w.startTime.minute)}">
+                            <td class="text-center text-muted fw-semibold" style="width: 60px; min-width: 60px;">
+                                <span th:text="${stat.count}">1</span>
+                            </td>
+                            <td>
+                                <span class="chip chip--primary fw-bold" th:text="${w.preferredSession.name()}">MORNING</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi"
+                                       th:classappend="${w.preferredSession.name() == 'MORNING'} ? 'bi-sunrise-fill text-warning' : (${w.preferredSession.name() == 'AFTERNOON'} ? 'bi-sun-fill text-primary' : 'bi-moon-stars-fill text-info')"></i>
+                                    <span class="fw-bold text-dark" style="font-size: 14.5px;" th:text="${sessLabel}">Ca Sáng</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-secondary">
+                                    <i class="bi bi-clock me-1 text-primary"></i>
+                                    <span th:text="${#temporals.format(w.startTime, 'HH:mm')}">08:00</span>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-secondary">
+                                    <i class="bi bi-clock-history me-1 text-muted"></i>
+                                    <span th:text="${#temporals.format(w.endTime, 'HH:mm')}">12:00</span>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="chip" style="background: #f1f5f9; color: #475569; font-weight: 700;">
+                                    <i class="bi bi-hourglass-split me-1 text-warning"></i>
+                                    <span th:text="${(mins - (mins % 60)) / 60} + 'h' + (${mins % 60 > 0} ? ' ' + ${mins % 60} + 'm' : '')">4h</span>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill px-3 py-2 fw-bold"
+                                      th:style="${w.isActive} ? 'background:#ecfdf5;color:#059669;font-size:12.5px;border:1px solid #a7f3d0;' : 'background:#fef2f2;color:#dc2626;font-size:12.5px;border:1px solid #fecaca;'">
+                                    <i class="bi" th:classappend="${w.isActive} ? 'bi-check-circle-fill me-1' : 'bi-slash-circle-fill me-1'"></i>
+                                    <span th:text="${w.isActive} ? 'Đang mở đặt lịch' : 'Đã tắt nhận lịch'">Đang mở đặt lịch</span>
+                                </span>
+                            </td>
+                            <td class="text-center" style="width: 270px; white-space: nowrap;">
+                                <div class="dv-actions-cell-always" onclick="event.stopPropagation()">
+                                    <button type="button"
+                                            class="dv-equal-btn-secondary"
+                                            title="Chỉnh khung giờ ca khám"
+                                            th:attr="data-windowid=${w.windowId},
+                                                     data-sessionlabel=${sessLabel},
+                                                     data-starttime=${#temporals.format(w.startTime,'HH:mm')},
+                                                     data-endtime=${#temporals.format(w.endTime,'HH:mm')}"
+                                            onclick="openEditSessionWindowModal(this)">
+                                        <i class="bi bi-pencil text-primary"></i>
+                                        <span>Sửa giờ</span>
+                                    </button>
+
+                                    <form th:action="@{/admin/work-shifts/session-windows/{id}/toggle(id=${w.windowId})}" method="post" class="d-inline">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf != null}"/>
+                                        <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                                        <button type="submit"
+                                                th:class="${w.isActive} ? 'dv-equal-btn-danger' : 'dv-equal-btn-primary'"
+                                                th:title="${w.isActive} ? 'Tắt nhận lịch buổi này' : 'Mở nhận lịch buổi này'">
+                                            <i class="bi" th:classappend="${w.isActive} ? 'bi-pause-circle' : 'bi-play-circle'"></i>
+                                            <span th:text="${w.isActive} ? 'Tắt lịch' : 'Mở lịch'">Tắt lịch</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                            <td class="dv-floating-actions-track">
+                                <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
+                                    <button type="button"
+                                            class="dv-equal-btn-secondary"
+                                            title="Chỉnh khung giờ ca khám"
+                                            th:attr="data-windowid=${w.windowId},
+                                                     data-sessionlabel=${sessLabel},
+                                                     data-starttime=${#temporals.format(w.startTime,'HH:mm')},
+                                                     data-endtime=${#temporals.format(w.endTime,'HH:mm')}"
+                                            onclick="openEditSessionWindowModal(this)">
+                                        <i class="bi bi-pencil text-primary"></i>
+                                        <span>Sửa giờ</span>
+                                    </button>
+
+                                    <form th:action="@{/admin/work-shifts/session-windows/{id}/toggle(id=${w.windowId})}" method="post" class="d-inline">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf != null}"/>
+                                        <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                                        <button type="submit"
+                                                th:class="${w.isActive} ? 'dv-equal-btn-danger' : 'dv-equal-btn-primary'"
+                                                th:title="${w.isActive} ? 'Tắt nhận lịch buổi này' : 'Mở nhận lịch buổi này'">
+                                            <i class="bi" th:classappend="${w.isActive} ? 'bi-pause-circle' : 'bi-play-circle'"></i>
+                                            <span th:text="${w.isActive} ? 'Tắt lịch' : 'Mở lịch'">Tắt lịch</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 2. BẢNG DỮ LIỆU CA LÀM VIỆC NHÂN SỰ (ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN) -->
             <section th:if="${selectedBranchId != null}" class="staff-table-card">
                 <!-- THANH THÔNG TIN BẢNG (CHUẨN TÀI KHOẢN) -->
                 <div class="dv-grid-topbar">
                     <div class="d-flex align-items-center gap-3 flex-wrap">
                         <div class="fw-bold text-dark" style="font-size: 15px;">
-                            Hiển thị <span class="text-primary fw-bolder" th:text="${shifts != null ? #lists.size(shifts) : 0}">0</span> ca làm việc
+                            <i class="bi bi-person-workspace text-primary me-2"></i>Cấu hình Ca làm việc nhân sự &amp; Chấm công
                             <span class="text-muted mx-1">•</span>
-                            <span class="text-secondary fw-semibold">Chi nhánh hiện tại</span>
+                            Hiển thị <span class="text-primary fw-bolder" th:text="${shifts != null ? #lists.size(shifts) : 0}">0</span> ca làm việc
                         </div>
-                        <span class="badge rounded-pill px-3 py-1.5"
+                        <span class="badge rounded-pill px-3 py-2"
                               style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700;">
                             <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện thanh Thao tác nổi bám mép phải
                         </span>
@@ -127,22 +333,25 @@
                             <th style="min-width: 140px;">
                                 <div class="dv-th-inner"><span>Mã ca</span></div>
                             </th>
-                            <th style="min-width: 240px;">
+                            <th style="min-width: 230px;">
                                 <div class="dv-th-inner"><span>Tên ca làm</span></div>
                             </th>
-                            <th style="min-width: 150px;">
+                            <th style="min-width: 130px;">
                                 <div class="dv-th-inner"><span>Giờ bắt đầu</span></div>
                             </th>
-                            <th style="min-width: 150px;">
+                            <th style="min-width: 130px;">
                                 <div class="dv-th-inner"><span>Giờ kết thúc</span></div>
                             </th>
-                            <th style="min-width: 140px;">
+                            <th style="min-width: 120px;">
                                 <div class="dv-th-inner"><span>Thời lượng</span></div>
                             </th>
-                            <th style="min-width: 180px;">
+                            <th style="min-width: 200px;">
+                                <div class="dv-th-inner"><span>Phiên khám áp dụng</span></div>
+                            </th>
+                            <th style="min-width: 170px;">
                                 <div class="dv-th-inner"><span>Trạng thái</span></div>
                             </th>
-                            <th class="text-center" style="width: 1%;">
+                            <th class="text-center" data-col="actions" style="width: 380px; min-width: 380px;">
                                 <div class="dv-th-inner justify-content-center"><span>Thao tác nhanh</span></div>
                             </th>
                             <th class="dv-floating-actions-track"></th>
@@ -150,11 +359,13 @@
                         </thead>
                         <tbody>
                         <tr th:if="${#lists.isEmpty(shifts)}">
-                            <td colspan="9" class="text-center text-muted py-5">
+                            <td colspan="10" class="text-center text-muted py-5">
                                 <i class="bi bi-clock-history me-2 fs-4"></i>Chưa có ca làm việc nào. Bấm <strong>Thêm ca mới</strong> để bắt đầu.
                             </td>
                         </tr>
-                        <tr th:each="s, stat : ${shifts}" class="dv-data-row">
+                        <tr th:each="s, stat : ${shifts}" class="dv-data-row"
+                            th:with="mins=${s.endTime.hour * 60 + s.endTime.minute - s.startTime.hour * 60 - s.startTime.minute},
+                                     mappedSession=${shiftSessionLabels != null ? shiftSessionLabels[s.shiftId] : null}">
                             <!-- STT -->
                             <td class="text-center text-muted fw-semibold" style="width: 60px; min-width: 60px;">
                                 <span th:text="${stat.count}">1</span>
@@ -187,16 +398,31 @@
                             </td>
 
                             <!-- Thời lượng -->
-                            <td th:with="mins=${s.endTime.hour * 60 + s.endTime.minute - s.startTime.hour * 60 - s.startTime.minute}">
+                            <td>
                                 <span class="chip" style="background: #f1f5f9; color: #475569; font-weight: 700;">
                                     <i class="bi bi-hourglass-split me-1 text-warning"></i>
-                                    <span th:text="${mins / 60} + 'h' + (${mins % 60 > 0} ? ' ' + ${mins % 60} + 'm' : '')">4h</span>
+                                    <span th:text="${(mins - (mins % 60)) / 60} + 'h' + (${mins % 60 > 0} ? ' ' + ${mins % 60} + 'm' : '')">4h</span>
+                                </span>
+                            </td>
+
+                            <!-- Phiên khám áp dụng -->
+                            <td>
+                                <span th:if="${mappedSession != null}"
+                                      class="badge rounded-pill px-3 py-2 fw-semibold"
+                                      style="background:#eff6ff;color:#1d4ed8;font-size:12px;border:1px solid #bfdbfe;">
+                                    <i class="bi bi-link-45deg me-1"></i>
+                                    <span th:text="'Khớp ' + ${mappedSession}">Khớp Ca Sáng</span>
+                                </span>
+                                <span th:if="${mappedSession == null}"
+                                      class="badge rounded-pill px-3 py-2 fw-semibold"
+                                      style="background:#f8fafc;color:#64748b;font-size:12px;border:1px solid #e2e8f0;">
+                                    <i class="bi bi-briefcase me-1"></i>Nội bộ / Chấm công
                                 </span>
                             </td>
 
                             <!-- Trạng thái -->
                             <td>
-                                <span class="badge rounded-pill px-3 py-1.5 fw-bold"
+                                <span class="badge rounded-pill px-3 py-2 fw-bold"
                                       th:style="${s.isActive} ? 'background:#ecfdf5;color:#059669;font-size:12.5px;border:1px solid #a7f3d0;' : 'background:#fef2f2;color:#dc2626;font-size:12.5px;border:1px solid #fecaca;'">
                                     <i class="bi" th:classappend="${s.isActive} ? 'bi-check-circle-fill me-1' : 'bi-pause-circle-fill me-1'"></i>
                                     <span th:text="${s.isActive} ? 'Đang hoạt động' : 'Đã tắt'">Đang hoạt động</span>
@@ -204,7 +430,7 @@
                             </td>
 
                             <!-- Nút tĩnh trên cột -->
-                            <td class="text-center" style="width: 1%; white-space: nowrap;">
+                            <td class="text-center" style="width: 380px; white-space: nowrap;">
                                 <div class="dv-actions-cell-always" onclick="event.stopPropagation()">
                                     <!-- Nút Sửa -->
                                     <button type="button"
@@ -222,6 +448,7 @@
 
                                     <!-- Nút Bật/Tắt -->
                                     <form th:action="@{/admin/work-shifts/{id}/toggle(id=${s.shiftId})}" method="post" class="d-inline">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf != null}"/>
                                         <input type="hidden" name="branchId" th:value="${selectedBranchId}">
                                         <button type="submit"
                                                 th:class="${s.isActive} ? 'dv-equal-btn-danger' : 'dv-equal-btn-primary'"
@@ -234,6 +461,7 @@
                                     <!-- Nút Xóa -->
                                     <form th:action="@{/admin/work-shifts/{id}/delete(id=${s.shiftId})}" method="post" class="d-inline"
                                           onsubmit="return confirm('Bạn có chắc muốn xóa ca làm này? (Chỉ xóa được khi chưa có lịch phân ca hoặc chấm công).');">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf != null}"/>
                                         <input type="hidden" name="branchId" th:value="${selectedBranchId}">
                                         <button type="submit" class="dv-equal-btn-secondary text-danger" title="Xóa ca">
                                             <i class="bi bi-trash3 text-danger"></i>
@@ -260,6 +488,7 @@
                                     </button>
 
                                     <form th:action="@{/admin/work-shifts/{id}/toggle(id=${s.shiftId})}" method="post" class="d-inline">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf != null}"/>
                                         <input type="hidden" name="branchId" th:value="${selectedBranchId}">
                                         <button type="submit"
                                                 th:class="${s.isActive} ? 'dv-equal-btn-danger' : 'dv-equal-btn-primary'"
@@ -271,6 +500,7 @@
 
                                     <form th:action="@{/admin/work-shifts/{id}/delete(id=${s.shiftId})}" method="post" class="d-inline"
                                           onsubmit="return confirm('Bạn có chắc muốn xóa ca làm này?');">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf != null}"/>
                                         <input type="hidden" name="branchId" th:value="${selectedBranchId}">
                                         <button type="submit" class="dv-equal-btn-secondary text-danger" title="Xóa ca">
                                             <i class="bi bi-trash3 text-danger"></i>
@@ -290,14 +520,11 @@
     </div>
 </div>
 
-        </main>
-    </div>
-</div>
-
 <!-- ===== MODAL TẠO CA MỚI ===== -->
 <div class="modal fade" id="modalCreateShift" tabindex="-1" aria-labelledby="modalCreateShiftLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <form class="modal-content" th:action="@{/admin/work-shifts}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf != null}"/>
             <div class="modal-header">
                 <h5 class="modal-title fw-bold" id="modalCreateShiftLabel">
                     <i class="bi bi-clock-history me-2 text-primary"></i>Thêm ca làm việc mới
@@ -308,15 +535,15 @@
                 <input type="hidden" name="branchId" th:value="${selectedBranchId}">
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Mã ca <span class="text-danger">*</span></label>
-                    <input type="text" name="shiftCode" class="form-control" placeholder="VD: SANG, CHIEU, TOI"
+                    <input type="text" name="shiftCode" class="form-control" placeholder="VD: SANG, CHIEU, TOI, HANH_CHINH"
                            maxlength="20" required style="text-transform:uppercase;">
                     <div class="form-text">Mã không dấu, không dùng lại mã đã có trong chi nhánh.</div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Tên ca <span class="text-danger">*</span></label>
-                    <input type="text" name="shiftName" class="form-control" placeholder="VD: Ca sáng" maxlength="50" required>
+                    <input type="text" name="shiftName" class="form-control" placeholder="VD: Ca sáng / Ca hành chính" maxlength="50" required>
                 </div>
-                <div class="row g-3">
+                <div class="row g-3 mb-3">
                     <div class="col-6">
                         <label class="form-label fw-semibold">Giờ bắt đầu <span class="text-danger">*</span></label>
                         <input type="time" name="startTime" class="form-control" required>
@@ -325,6 +552,10 @@
                         <label class="form-label fw-semibold">Giờ kết thúc <span class="text-danger">*</span></label>
                         <input type="time" name="endTime" class="form-control" required>
                     </div>
+                </div>
+                <div class="rounded-3 p-3 small" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #475569;">
+                    <i class="bi bi-info-circle-fill text-primary me-1"></i>
+                    <strong>Tuân thủ Bộ luật Lao động (Điều 105 &amp; 107):</strong> Thời lượng ca từ 1 đến tối đa 12 giờ/ngày (không tạo ca 24/24). Các ca hành chính (&gt; 6 giờ) chỉ dùng cho phân ca &amp; chấm công, không ảnh hưởng cấu hình khung đặt lịch.
                 </div>
             </div>
             <div class="modal-footer">
@@ -335,7 +566,7 @@
     </div>
 </div>
 
-<!-- ===== MODAL SỬA CA ===== -->
+<!-- ===== MODAL SỬA CA LÀM VIỆC ===== -->
 <div class="modal fade" id="modalEditShift" tabindex="-1" aria-labelledby="modalEditShiftLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <form class="modal-content" id="formEditShift" th:action="@{/admin/work-shifts}" method="post">
@@ -357,7 +588,7 @@
                     <label class="form-label fw-semibold">Tên ca <span class="text-danger">*</span></label>
                     <input type="text" id="editShiftName" name="shiftName" class="form-control" maxlength="50" required>
                 </div>
-                <div class="row g-3">
+                <div class="row g-3 mb-3">
                     <div class="col-6">
                         <label class="form-label fw-semibold">Giờ bắt đầu <span class="text-danger">*</span></label>
                         <input type="time" id="editStartTime" name="startTime" class="form-control" required>
@@ -367,10 +598,54 @@
                         <input type="time" id="editEndTime" name="endTime" class="form-control" required>
                     </div>
                 </div>
+                <div class="rounded-3 p-3 small" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #475569;">
+                    <i class="bi bi-info-circle-fill text-primary me-1"></i>
+                    <strong>Tuân thủ Bộ luật Lao động:</strong> Thời lượng ca từ 1 đến tối đa 12 giờ/ngày. Khi sửa ca Sáng/Chiều/Tối, khung giờ đặt lịch hẹn tương ứng sẽ tự động cập nhật theo.
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
                 <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ===== MODAL SỬA KHUNG GIỜ CA KHÁM ===== -->
+<div class="modal fade" id="modalEditSessionWindow" tabindex="-1" aria-labelledby="modalEditSessionWindowLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" id="formEditSessionWindow" th:action="@{/admin/work-shifts/session-windows}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf != null}"/>
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="modalEditSessionWindowLabel">
+                    <i class="bi bi-calendar2-week me-2 text-primary"></i>Chỉnh khung giờ Ca khám
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Phiên khám</label>
+                    <input type="text" id="editWindowSessionLabel" class="form-control bg-light fw-bold" readonly>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Giờ mở lịch <span class="text-danger">*</span></label>
+                        <input type="time" id="editWindowStartTime" name="startTime" class="form-control" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Giờ đóng lịch <span class="text-danger">*</span></label>
+                        <input type="time" id="editWindowEndTime" name="endTime" class="form-control" required>
+                    </div>
+                </div>
+                <div class="rounded-3 p-3 small" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #475569;">
+                    <i class="bi bi-shield-check text-success me-1"></i>
+                    Khung giờ phải nằm trong giờ mở/đóng cửa của cơ sở, không chồng lấn giữa các buổi và đảm bảo khoảng nghỉ trưa tối thiểu <strong>30 phút</strong> giữa Ca Sáng và Ca Chiều (Điều 109 BLLĐ).
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Lưu khung giờ</button>
             </div>
         </form>
     </div>
@@ -385,6 +660,15 @@
         document.getElementById('editStartTime').value = btn.getAttribute('data-starttime');
         document.getElementById('editEndTime').value = btn.getAttribute('data-endtime');
         new bootstrap.Modal(document.getElementById('modalEditShift')).show();
+    }
+
+    function openEditSessionWindowModal(btn) {
+        const id = btn.getAttribute('data-windowid');
+        document.getElementById('formEditSessionWindow').action = '/admin/work-shifts/session-windows/' + id + '/update';
+        document.getElementById('editWindowSessionLabel').value = btn.getAttribute('data-sessionlabel') || '';
+        document.getElementById('editWindowStartTime').value = btn.getAttribute('data-starttime') || '';
+        document.getElementById('editWindowEndTime').value = btn.getAttribute('data-endtime') || '';
+        new bootstrap.Modal(document.getElementById('modalEditSessionWindow')).show();
     }
 </script>
 

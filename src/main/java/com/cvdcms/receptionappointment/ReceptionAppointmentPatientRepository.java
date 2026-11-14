@@ -1,6 +1,7 @@
 package com.cvdcms.receptionappointment;
 
 import com.cvdcms.entity.PatientProfile;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -9,6 +10,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ReceptionAppointmentPatientRepository extends JpaRepository<PatientProfile, Long> {
+    @Query("""
+        SELECT p FROM PatientProfile p WHERE p.status = 'ACTIVE'
+        ORDER BY p.profileId DESC
+        """)
+    List<PatientProfile> findRecentBookable(Pageable pageable);
+
     @Query("""
         SELECT p FROM PatientProfile p WHERE p.status = 'ACTIVE'
           AND (LOWER(p.fullName) LIKE LOWER(CONCAT('%', :query, '%'))

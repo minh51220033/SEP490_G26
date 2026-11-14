@@ -4,6 +4,7 @@ import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.AppointmentPolicyService;
+import com.cvdcms.service.WorkShiftService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -336,10 +337,12 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
             StaffProfile doctor = schedule.getStaff();
             WorkShift shift = schedule.getShift();
             if (doctor == null || !assigned.contains(doctor.getStaffId()) || shift == null || !Boolean.TRUE.equals(shift.getIsActive())) continue;
-            if (shift.getStartTime().isAfter(range.end()) || shift.getEndTime().isBefore(range.start())) continue;
+            if (isInternalDutyShift(shift)) continue;
+            if (!shift.getStartTime().isBefore(range.end()) || !shift.getEndTime().isAfter(range.start())) continue;
 
-            // Nếu ngày khám là hôm nay và ca làm việc của bác sĩ đã qua thời gian kết ca
-            if (date.equals(today) && shift.getEndTime() != null && !now.isBefore(shift.getEndTime())) {
+            // Nếu ngày khám là hôm nay và ca làm việc của bác sĩ (hoặc phiên khám) đã qua thời gian kết ca hiệu lực
+            LocalTime effectiveEnd = shift.getEndTime().isBefore(range.end()) ? shift.getEndTime() : range.end();
+            if (date.equals(today) && !now.isBefore(effectiveEnd)) {
                 continue;
             }
 
@@ -379,35 +382,50 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         LocalTime start = null;
         LocalTime end = null;
         boolean active = true;
+        boolean decidedByWindow = false;
 
-        // 1. Kiểm tra cấu hình ca làm việc (work_shifts) thực tế của chi nhánh
-        if (workShifts != null) {
-            try {
-                List<WorkShift> shifts = workShifts.findByBranchBranchIdAndIsActiveTrueOrderByStartTimeAsc(branch.getBranchId());
-                if (shifts.isEmpty()) {
-                    shifts = workShifts.findByBranchIsNullAndIsActiveTrueOrderByStartTimeAsc();
-                }
-                for (WorkShift ws : shifts) {
-                    if (Boolean.TRUE.equals(ws.getIsActive()) && mapShiftToSession(ws) == session
-                            && ws.getStartTime() != null && ws.getEndTime() != null) {
-                        start = ws.getStartTime();
-                        end = ws.getEndTime();
-                        active = true;
-                        break;
-                    }
-                }
-            } catch (Exception ignored) {}
-        }
-
-        // 2. Nếu chưa có từ work_shifts, lấy từ appointment_session_windows
-        if (start == null || end == null) {
+        // 1. Ưu tiên 1: Cấu hình Ca khám chuyên biệt (appointment_session_windows) của chi nhánh
+        if (windows != null && branch.getBranchId() != null) {
             var winOpt = windows.findByBranch_BranchIdAndPreferredSession(branch.getBranchId(), session);
             if (winOpt.isPresent()) {
                 var w = winOpt.get();
                 start = w.getStartTime();
                 end = w.getEndTime();
                 active = Boolean.TRUE.equals(w.getIsActive());
+                decidedByWindow = true;
+                if (!active) {
+                    return new SessionRange(start != null ? start : LocalTime.MIN,
+                            end != null ? end : LocalTime.MIN, false);
+                }
             }
+        }
+
+        // 2. Ưu tiên 2 (Fallback): Kiểm tra cấu hình ca làm việc (work_shifts) thực tế của chi nhánh
+        if (!decidedByWindow && workShifts != null && branch.getBranchId() != null) {
+            try {
+                List<WorkShift> branchActiveShifts = workShifts.findByBranchBranchIdAndIsActiveTrueOrderByStartTimeAsc(branch.getBranchId());
+                long totalBranchShifts = workShifts.countByBranchBranchId(branch.getBranchId());
+                boolean hasBranchShiftConfig = !branchActiveShifts.isEmpty() || totalBranchShifts > 0;
+                List<WorkShift> shifts = !branchActiveShifts.isEmpty()
+                        ? branchActiveShifts
+                        : (!hasBranchShiftConfig ? workShifts.findByBranchIsNullAndIsActiveTrueOrderByStartTimeAsc() : List.of());
+
+                boolean matched = false;
+                for (WorkShift ws : shifts) {
+                    if (Boolean.TRUE.equals(ws.getIsActive()) && !isInternalDutyShift(ws)
+                            && mapShiftToSession(ws) == session
+                            && ws.getStartTime() != null && ws.getEndTime() != null) {
+                        start = ws.getStartTime();
+                        end = ws.getEndTime();
+                        active = true;
+                        matched = true;
+                        break;
+                    }
+                }
+                if (!matched && hasBranchShiftConfig) {
+                    active = false;
+                }
+            } catch (Exception ignored) {}
         }
 
         // 3. Fallback theo khung giờ mặc định nếu chưa cấu hình
@@ -436,17 +454,36 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         return new SessionRange(start, end, valid);
     }
 
+    private boolean isInternalDutyShift(WorkShift shift) {
+        if (shift == null || shift.getStartTime() == null || shift.getEndTime() == null
+                || !shift.getEndTime().isAfter(shift.getStartTime())) {
+            return true;
+        }
+        long mins = Duration.between(shift.getStartTime(), shift.getEndTime()).toMinutes();
+        if (mins > WorkShiftService.MAX_SHIFT_MINUTES) {
+            return true;
+        }
+        String code = shift.getShiftCode() != null ? shift.getShiftCode().toUpperCase(Locale.ROOT) : "";
+        return code.contains("ALL") || code.contains("FULL") || code.contains("DEMO") || code.contains("SEED");
+    }
+
     private PreferredSession mapShiftToSession(WorkShift shift) {
-        if (shift == null) return null;
-        String name = (shift.getShiftName() != null ? shift.getShiftName() : "").toUpperCase();
-        String code = (shift.getShiftCode() != null ? shift.getShiftCode() : "").toUpperCase();
-        if (code.contains("ALL") || code.contains("FULL") || name.contains("CẢ NGÀY") || name.contains("CA NGAY")) {
+        if (isInternalDutyShift(shift)) return null;
+        long mins = Duration.between(shift.getStartTime(), shift.getEndTime()).toMinutes();
+        if (mins <= 0 || mins > WorkShiftService.MAX_BOOKING_WINDOW_MINUTES) {
             return null;
         }
-        if (code.contains("AM") || name.contains("SÁNG") || name.contains("SANG") || name.contains("MORNING")) {
+        String name = (shift.getShiftName() != null ? shift.getShiftName() : "").toUpperCase(Locale.ROOT);
+        String code = (shift.getShiftCode() != null ? shift.getShiftCode() : "").toUpperCase(Locale.ROOT);
+        if (code.contains("HC") || code.contains("HANH_CHINH")
+                || name.contains("CẢ NGÀY") || name.contains("CA NGAY")
+                || name.contains("HÀNH CHÍNH") || name.contains("HANH CHINH")) {
+            return null;
+        }
+        if (code.contains("AM") || code.contains("SANG") || name.contains("SÁNG") || name.contains("SANG") || name.contains("MORNING")) {
             return PreferredSession.MORNING;
         }
-        if (code.contains("PM") || name.contains("CHIỀU") || name.contains("CHIEU") || name.contains("AFTERNOON")) {
+        if (code.contains("PM") || code.contains("CHIEU") || name.contains("CHIỀU") || name.contains("CHIEU") || name.contains("AFTERNOON")) {
             return PreferredSession.AFTERNOON;
         }
         if (code.contains("EV") || code.contains("TOI") || name.contains("TỐI") || name.contains("TOI") || name.contains("EVENING") || name.contains("NIGHT")) {
@@ -454,9 +491,9 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         }
         LocalTime s = shift.getStartTime();
         if (s != null) {
-            if (s.isAfter(LocalTime.of(5, 0)) && s.isBefore(LocalTime.of(12, 30))) return PreferredSession.MORNING;
-            if (s.isAfter(LocalTime.of(12, 0)) && s.isBefore(LocalTime.of(17, 30))) return PreferredSession.AFTERNOON;
-            if (!s.isBefore(LocalTime.of(17, 30))) return PreferredSession.EVENING;
+            if (s.isBefore(LocalTime.NOON)) return PreferredSession.MORNING;
+            if (s.isBefore(LocalTime.of(17, 30))) return PreferredSession.AFTERNOON;
+            return PreferredSession.EVENING;
         }
         return null;
     }

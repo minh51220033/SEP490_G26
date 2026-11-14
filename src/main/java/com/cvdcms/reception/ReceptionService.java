@@ -496,10 +496,10 @@ public class ReceptionService {
     public List<PatientRow> searchPatients(HttpSession session, String query) {
         access.require(session);
         String term = query == null ? "" : query.trim();
-        if (term.isEmpty()) {
-            return List.of();
-        }
-        return profiles.search(term, PageRequest.of(0, 15)).stream().map(this::patientRow).toList();
+        List<PatientProfile> list = term.isEmpty()
+                ? profiles.findRecentActive(PageRequest.of(0, 20))
+                : profiles.search(term, PageRequest.of(0, 20));
+        return list.stream().map(this::patientRow).toList();
     }
 
     private void lockBranchForBooking(Long branchId) {

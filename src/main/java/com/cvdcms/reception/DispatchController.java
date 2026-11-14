@@ -23,8 +23,11 @@ public class DispatchController {
     @GetMapping
     public String board(@RequestParam(required = false) Long branchId,
                         @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate day,
+                        @RequestParam(required = false) String datePreset,
                         @RequestParam(required = false) String keyword,
                         @RequestParam(required = false) Long doctorId,
+                        @RequestParam(required = false) Long roomId,
+                        @RequestParam(required = false) Long chairId,
                         @RequestParam(required = false) String status,
                         @RequestParam(defaultValue = "0") int page,
                         @RequestParam(defaultValue = "10") int size,
@@ -38,6 +41,26 @@ public class DispatchController {
             size = 10;
         }
 
+        String effectivePreset;
+        if (datePreset != null && !datePreset.isBlank()) {
+            effectivePreset = datePreset.trim().toUpperCase();
+        } else if (day != null) {
+            effectivePreset = day.equals(java.time.LocalDate.now()) ? "TODAY" : "DAY";
+        } else {
+            effectivePreset = "TODAY";
+        }
+
+        java.time.LocalDate effectiveDay;
+        if ("TODAY".equals(effectivePreset)) {
+            effectiveDay = java.time.LocalDate.now();
+        } else if (day != null) {
+            effectiveDay = day;
+        } else if (session != null && session.getAttribute("currentWorkflowDay") instanceof java.time.LocalDate sd) {
+            effectiveDay = sd;
+        } else {
+            effectiveDay = java.time.LocalDate.now();
+        }
+
         if (day != null && session != null) {
             session.setAttribute("currentWorkflowDay", day);
         }
@@ -48,13 +71,13 @@ public class DispatchController {
             if (sId instanceof Long sid) effectiveBranchId = sid;
         }
 
-        var board = service.board(session, effectiveBranchId, day);
+        var board = service.board(session, effectiveBranchId, effectiveDay, effectivePreset, true);
         if (session != null) {
             session.setAttribute("currentBranchId", board.branchId());
         }
         List<Visit> allVisits = board.visits();
 
-        // Lọc theo keyword, doctorId, status
+        // Lọc theo keyword, doctorId, roomId, chairId, status
         String kw = keyword == null ? "" : keyword.trim().toLowerCase();
         List<Visit> filtered = allVisits.stream().filter(v -> {
             if (!kw.isEmpty()) {
@@ -71,6 +94,16 @@ public class DispatchController {
             }
             if (doctorId != null && doctorId > 0) {
                 if (v.getPrimaryDoctor() == null || !doctorId.equals(v.getPrimaryDoctor().getStaffId())) {
+                    return false;
+                }
+            }
+            if (roomId != null && roomId > 0) {
+                if (!roomId.equals(v.getRoomId())) {
+                    return false;
+                }
+            }
+            if (chairId != null && chairId > 0) {
+                if (!chairId.equals(v.getChairId())) {
                     return false;
                 }
             }
@@ -146,8 +179,11 @@ public class DispatchController {
         model.addAttribute("toItem", toItem);
         model.addAttribute("keyword", keyword != null ? keyword : "");
         model.addAttribute("selectedDoctorId", doctorId);
+        model.addAttribute("selectedRoomId", roomId);
+        model.addAttribute("selectedChairId", chairId);
         model.addAttribute("selectedStatus", status != null ? status : "ALL");
-        model.addAttribute("selectedDay", day != null ? day : (session != null && session.getAttribute("currentWorkflowDay") instanceof java.time.LocalDate sd ? sd : java.time.LocalDate.now()));
+        model.addAttribute("selectedDatePreset", effectivePreset);
+        model.addAttribute("selectedDay", effectiveDay);
         model.addAttribute("sidebarMenu", "dispatch");
         return "reception/dispatch";
     }

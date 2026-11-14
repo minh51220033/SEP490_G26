@@ -18,6 +18,7 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Validator;
 import jakarta.validation.constraints.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -127,7 +128,11 @@ public class ReceptionAppointmentService {
     public record CancelRequest(@NotBlank String reasonCode, @Size(max = 180) String note) {}
     public record BranchOption(Long id, String name) {}
     public record ServiceOption(Long id, String name, int durationMinutes) {}
-    public record PatientOption(Long id, String code, String name, String phone) {}
+    public record PatientOption(Long id, String code, String name, String phone, LocalDate dob, String gender) {
+        public PatientOption(Long id, String code, String name, String phone) {
+            this(id, code, name, phone, null, null);
+        }
+    }
     public record Options(List<BranchOption> branches, List<ServiceOption> services) {}
     public record AppointmentView(Long id, String code, Long profileId, String patientCode,
             String patientName, String patientPhone, Long branchId, String branchName,
@@ -183,9 +188,18 @@ public class ReceptionAppointmentService {
                 requireBranch(scope, branchId);
             } catch (Exception ignored) {}
         }
-        if (query == null || query.trim().length() < 2) return List.of();
-        return patients.search(query.trim()).stream().limit(20)
-                .map(p -> new PatientOption(p.getProfileId(), p.getPatientCode(), p.getFullName(), p.getPhoneNumber()))
+        String q = query == null ? "" : query.trim();
+        List<PatientProfile> list = q.isEmpty()
+                ? patients.findRecentBookable(PageRequest.of(0, 30))
+                : patients.search(q).stream().limit(30).toList();
+        return list.stream()
+                .map(p -> new PatientOption(
+                        p.getProfileId(),
+                        p.getPatientCode(),
+                        p.getFullName(),
+                        p.getPhoneNumber(),
+                        p.getDob(),
+                        p.getGender()))
                 .toList();
     }
 

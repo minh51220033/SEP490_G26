@@ -305,17 +305,19 @@
               <!-- Phạm vi thời gian: Hôm nay / Tuần này / Tháng này / Tất cả -->
               <div class="dv-quick-segment" role="group" aria-label="Phạm vi thời gian">
                 <button type="button" class="dv-seg-btn" id="dispatchTabToday"
-                  th:classappend="${selectedDay == null or selectedDay.equals(T(java.time.LocalDate).now())} ? 'active' : ''">
+                  th:classappend="${selectedDatePreset == 'TODAY'} ? 'active' : ''">
                   <i class="bi bi-calendar-check"></i> Hôm nay
                 </button>
-                <button type="button" class="dv-seg-btn" id="dispatchTabThisWeek">
+                <button type="button" class="dv-seg-btn" id="dispatchTabThisWeek"
+                  th:classappend="${selectedDatePreset == 'THIS_WEEK'} ? 'active' : ''">
                   <i class="bi bi-calendar-week"></i> Tuần này
                 </button>
-                <button type="button" class="dv-seg-btn" id="dispatchTabThisMonth">
+                <button type="button" class="dv-seg-btn" id="dispatchTabThisMonth"
+                  th:classappend="${selectedDatePreset == 'THIS_MONTH'} ? 'active' : ''">
                   <i class="bi bi-calendar-month"></i> Tháng này
                 </button>
                 <button type="button" class="dv-seg-btn" id="dispatchTabAll"
-                  th:classappend="${selectedDay == null} ? 'active' : ''">
+                  th:classappend="${selectedDatePreset == 'ALL'} ? 'active' : ''">
                   <i class="bi bi-infinity"></i> Tất cả ngày
                 </button>
               </div>
@@ -392,20 +394,23 @@
           </div>
 
           <!-- PANEL LỌC NÂNG CAO (COLLAPSIBLE) -->
-          <div id="dispatchAdvFilterPanel" class="dv-adv-filter-panel mt-3 pt-3 border-top d-none">
+          <div id="dispatchAdvFilterPanel" class="dv-adv-filter-panel mt-3 pt-3 border-top"
+            th:classappend="${selectedRoomId == null and selectedChairId == null} ? 'd-none' : ''">
             <div class="row g-2">
               <div class="col-12 col-md-4">
                 <label class="form-label small fw-bold text-muted mb-1">Phòng khám</label>
                 <select id="advFilterRoom" class="form-select form-select-sm dv-adv-control">
                   <option value="">Tất cả phòng khám</option>
-                  <option th:each="r : ${board.rooms}" th:value="${r.roomId}" th:text="${r.roomName}"></option>
+                  <option th:each="r : ${board.rooms}" th:value="${r.roomId}" th:text="${r.roomName}"
+                    th:selected="${selectedRoomId != null and selectedRoomId == r.roomId}"></option>
                 </select>
               </div>
               <div class="col-12 col-md-4">
                 <label class="form-label small fw-bold text-muted mb-1">Ghế nha</label>
                 <select id="advFilterChair" class="form-select form-select-sm dv-adv-control">
                   <option value="">Tất cả ghế nha</option>
-                  <option th:each="c : ${board.chairs}" th:value="${c.chairId}" th:text="${c.chairName}"></option>
+                  <option th:each="c : ${board.chairs}" th:value="${c.chairId}" th:text="${c.chairName}"
+                    th:selected="${selectedChairId != null and selectedChairId == c.chairId}"></option>
                 </select>
               </div>
               <div class="col-12 col-md-4 d-flex align-items-end gap-2">
@@ -759,24 +764,24 @@
 
                 <div class="misa-nav-group d-flex align-items-center gap-1">
                   <!-- 1. Về trang đầu -->
-                  <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=0, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus}, day=${selectedDay != null ? #temporals.format(selectedDay, 'yyyy-MM-dd') : ''})}"
+                  <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=0, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus}, datePreset=${selectedDatePreset}, roomId=${selectedRoomId}, chairId=${selectedChairId}, day=${selectedDay != null ? #temporals.format(selectedDay, 'yyyy-MM-dd') : ''})}"
                     class="misa-nav-btn" th:classappend="${currentPage == 0} ? 'disabled' : ''" title="Trang đầu">
                     <i class="bi bi-chevron-bar-left"></i>
                   </a>
                   <!-- 2. Trang trước -->
-                  <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=${currentPage - 1}, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus}, day=${selectedDay != null ? #temporals.format(selectedDay, 'yyyy-MM-dd') : ''})}"
+                  <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=${currentPage - 1}, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus}, datePreset=${selectedDatePreset}, roomId=${selectedRoomId}, chairId=${selectedChairId}, day=${selectedDay != null ? #temporals.format(selectedDay, 'yyyy-MM-dd') : ''})}"
                     class="misa-nav-btn" th:classappend="${currentPage == 0} ? 'disabled' : ''" title="Trang trước">
                     <i class="bi bi-chevron-left"></i>
                   </a>
                   <!-- 3. Trang sau -->
-                  <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=${currentPage + 1}, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus}, day=${selectedDay != null ? #temporals.format(selectedDay, 'yyyy-MM-dd') : ''})}"
+                  <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=${currentPage + 1}, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus}, datePreset=${selectedDatePreset}, roomId=${selectedRoomId}, chairId=${selectedChairId}, day=${selectedDay != null ? #temporals.format(selectedDay, 'yyyy-MM-dd') : ''})}"
                     class="misa-nav-btn"
                     th:classappend="${currentPage >= totalPages - 1 or totalPages == 0} ? 'disabled' : ''"
                     title="Trang sau">
                     <i class="bi bi-chevron-right"></i>
                   </a>
                   <!-- 4. Đến trang cuối -->
-                  <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=${totalPages > 0 ? totalPages - 1 : 0}, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus}, day=${selectedDay != null ? #temporals.format(selectedDay, 'yyyy-MM-dd') : ''})}"
+                  <a th:href="@{/reception/dispatch(branchId=${board.branchId}, page=${totalPages > 0 ? totalPages - 1 : 0}, size=${pageSize}, keyword=${keyword}, doctorId=${selectedDoctorId}, status=${selectedStatus}, datePreset=${selectedDatePreset}, roomId=${selectedRoomId}, chairId=${selectedChairId}, day=${selectedDay != null ? #temporals.format(selectedDay, 'yyyy-MM-dd') : ''})}"
                     class="misa-nav-btn"
                     th:classappend="${currentPage >= totalPages - 1 or totalPages == 0} ? 'disabled' : ''"
                     title="Trang cuối">
@@ -794,7 +799,10 @@
           <input type="hidden" id="filterKeywordInput" name="keyword" th:value="${keyword}">
           <input type="hidden" id="filterDoctorIdInput" name="doctorId" th:value="${selectedDoctorId}">
           <input type="hidden" id="filterStatusInput" name="status" th:value="${selectedStatus}">
+          <input type="hidden" id="filterDatePresetInput" name="datePreset" th:value="${selectedDatePreset}">
           <input type="hidden" id="filterDayInput" name="day" th:value="${selectedDay != null ? #temporals.format(selectedDay, 'yyyy-MM-dd') : ''}">
+          <input type="hidden" id="filterRoomIdInput" name="roomId" th:value="${selectedRoomId}">
+          <input type="hidden" id="filterChairIdInput" name="chairId" th:value="${selectedChairId}">
           <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
           <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
         </form>
@@ -1131,9 +1139,27 @@
       var filterForm = document.getElementById('filterForm');
       var filterStatusInput = document.getElementById('filterStatusInput');
       var filterDoctorIdInput = document.getElementById('filterDoctorIdInput');
+      var filterDatePresetInput = document.getElementById('filterDatePresetInput');
       var filterDayInput = document.getElementById('filterDayInput');
+      var filterRoomIdInput = document.getElementById('filterRoomIdInput');
+      var filterChairIdInput = document.getElementById('filterChairIdInput');
+      var pageIndexInput = document.getElementById('pageIndexInput');
       var dispatchFilterDate = document.getElementById('dispatchFilterDate');
       var dispatchDoctorFilter = document.getElementById('dispatchDoctorFilter');
+      var advFilterRoom = document.getElementById('advFilterRoom');
+      var advFilterChair = document.getElementById('advFilterChair');
+
+      function formatLocalIso(dateObj) {
+        var y = dateObj.getFullYear();
+        var m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        var d = String(dateObj.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + d;
+      }
+
+      function submitDispatchFilters() {
+        if (pageIndexInput) pageIndexInput.value = '0';
+        if (filterForm) filterForm.submit();
+      }
 
       var dayNames = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
       function formatDayWithWeekday(isoStr) {
@@ -1145,95 +1171,155 @@
       }
       var dateLabel = document.getElementById('dispatchDateDisplayLabel');
       if (dateLabel && dispatchFilterDate && dispatchFilterDate.value) {
-        dateLabel.textContent = formatDayWithWeekday(dispatchFilterDate.value);
+        var preset = filterDatePresetInput ? filterDatePresetInput.value : '';
+        if (preset === 'THIS_WEEK') {
+          dateLabel.textContent = 'Tuần của ' + formatDayWithWeekday(dispatchFilterDate.value);
+        } else if (preset === 'THIS_MONTH') {
+          var p = dispatchFilterDate.value.split('-');
+          dateLabel.textContent = p.length === 3 ? ('Tháng ' + p[1] + '/' + p[0]) : formatDayWithWeekday(dispatchFilterDate.value);
+        } else if (preset === 'ALL') {
+          dateLabel.textContent = 'Tất cả ngày';
+        } else {
+          dateLabel.textContent = formatDayWithWeekday(dispatchFilterDate.value);
+        }
       }
+
+      function openDispatchDatePicker() {
+        try {
+          if (dispatchFilterDate && dispatchFilterDate.showPicker) {
+            dispatchFilterDate.showPicker();
+          } else if (dispatchFilterDate) {
+            dispatchFilterDate.focus();
+          }
+        } catch (_) {}
+      }
+      if (dateLabel) dateLabel.addEventListener('click', openDispatchDatePicker);
+      if (dispatchFilterDate) dispatchFilterDate.addEventListener('click', openDispatchDatePicker);
 
       // 1. Status Filter Pills
       document.querySelectorAll('[data-status]').forEach(function (pill) {
         pill.addEventListener('click', function () {
           var st = this.getAttribute('data-status');
-          if (filterStatusInput && filterForm) {
-            filterStatusInput.value = st || 'ALL';
-            filterForm.submit();
-          }
+          if (filterStatusInput) filterStatusInput.value = st || 'ALL';
+          submitDispatchFilters();
         });
       });
 
       // 2. Doctor Select
       if (dispatchDoctorFilter) {
         dispatchDoctorFilter.addEventListener('change', function () {
-          if (filterDoctorIdInput && filterForm) {
-            filterDoctorIdInput.value = this.value;
-            filterForm.submit();
-          }
+          if (filterDoctorIdInput) filterDoctorIdInput.value = this.value;
+          submitDispatchFilters();
         });
       }
 
       // 3. Date Navigator
       if (dispatchFilterDate) {
         dispatchFilterDate.addEventListener('change', function () {
-          if (filterDayInput && filterForm) {
-            filterDayInput.value = this.value;
-            filterForm.submit();
+          if (filterDayInput) filterDayInput.value = this.value;
+          if (filterDatePresetInput) {
+            var todayIso = formatLocalIso(new Date());
+            filterDatePresetInput.value = (this.value === todayIso) ? 'TODAY' : 'DAY';
           }
+          submitDispatchFilters();
         });
       }
 
       var prevBtn = document.getElementById('dispatchPrevDayBtn');
       if (prevBtn && dispatchFilterDate) {
         prevBtn.addEventListener('click', function () {
-          var current = dispatchFilterDate.value ? new Date(dispatchFilterDate.value) : new Date();
+          var current = dispatchFilterDate.value ? new Date(dispatchFilterDate.value + 'T00:00:00') : new Date();
           current.setDate(current.getDate() - 1);
-          var iso = current.toISOString().split('T')[0];
+          var iso = formatLocalIso(current);
           dispatchFilterDate.value = iso;
-          if (filterDayInput && filterForm) {
-            filterDayInput.value = iso;
-            filterForm.submit();
-          }
+          if (filterDayInput) filterDayInput.value = iso;
+          if (filterDatePresetInput) filterDatePresetInput.value = (iso === formatLocalIso(new Date())) ? 'TODAY' : 'DAY';
+          submitDispatchFilters();
         });
       }
 
       var nextBtn = document.getElementById('dispatchNextDayBtn');
       if (nextBtn && dispatchFilterDate) {
         nextBtn.addEventListener('click', function () {
-          var current = dispatchFilterDate.value ? new Date(dispatchFilterDate.value) : new Date();
+          var current = dispatchFilterDate.value ? new Date(dispatchFilterDate.value + 'T00:00:00') : new Date();
           current.setDate(current.getDate() + 1);
-          var iso = current.toISOString().split('T')[0];
+          var iso = formatLocalIso(current);
           dispatchFilterDate.value = iso;
-          if (filterDayInput && filterForm) {
-            filterDayInput.value = iso;
-            filterForm.submit();
-          }
+          if (filterDayInput) filterDayInput.value = iso;
+          if (filterDatePresetInput) filterDatePresetInput.value = (iso === formatLocalIso(new Date())) ? 'TODAY' : 'DAY';
+          submitDispatchFilters();
         });
       }
 
       var tabToday = document.getElementById('dispatchTabToday');
       if (tabToday) {
         tabToday.addEventListener('click', function () {
-          var today = new Date().toISOString().split('T')[0];
-          if (filterDayInput && filterForm) {
-            filterDayInput.value = today;
-            filterForm.submit();
-          }
+          var today = formatLocalIso(new Date());
+          if (filterDayInput) filterDayInput.value = today;
+          if (filterDatePresetInput) filterDatePresetInput.value = 'TODAY';
+          submitDispatchFilters();
+        });
+      }
+
+      var tabWeek = document.getElementById('dispatchTabThisWeek');
+      if (tabWeek) {
+        tabWeek.addEventListener('click', function () {
+          if (filterDayInput && !filterDayInput.value) filterDayInput.value = formatLocalIso(new Date());
+          if (filterDatePresetInput) filterDatePresetInput.value = 'THIS_WEEK';
+          submitDispatchFilters();
+        });
+      }
+
+      var tabMonth = document.getElementById('dispatchTabThisMonth');
+      if (tabMonth) {
+        tabMonth.addEventListener('click', function () {
+          if (filterDayInput && !filterDayInput.value) filterDayInput.value = formatLocalIso(new Date());
+          if (filterDatePresetInput) filterDatePresetInput.value = 'THIS_MONTH';
+          submitDispatchFilters();
         });
       }
 
       var tabAll = document.getElementById('dispatchTabAll');
       if (tabAll) {
         tabAll.addEventListener('click', function () {
-          if (filterDayInput && filterForm) {
-            filterDayInput.value = '';
-            filterForm.submit();
-          }
+          if (filterDatePresetInput) filterDatePresetInput.value = 'ALL';
+          submitDispatchFilters();
         });
       }
 
-      // 4. Toggle Advanced Filter Panel
+      // 4. Advanced Filter Panel (Phòng khám, Ghế nha, Áp dụng, Đặt lại)
       var btnAdv = document.getElementById('btnToggleDispatchAdvFilter');
       var panelAdv = document.getElementById('dispatchAdvFilterPanel');
       if (btnAdv && panelAdv) {
         btnAdv.addEventListener('click', function () {
           panelAdv.classList.toggle('d-none');
+          btnAdv.classList.toggle('active', !panelAdv.classList.contains('d-none'));
+        });
+      }
+
+      var btnApplyAdv = document.getElementById('btnApplyAdvFilter');
+      if (btnApplyAdv) {
+        btnApplyAdv.addEventListener('click', function () {
+          if (filterRoomIdInput) filterRoomIdInput.value = advFilterRoom ? advFilterRoom.value : '';
+          if (filterChairIdInput) filterChairIdInput.value = advFilterChair ? advFilterChair.value : '';
+          submitDispatchFilters();
+        });
+      }
+
+      var btnResetAdv = document.getElementById('btnResetAdvFilter');
+      if (btnResetAdv) {
+        btnResetAdv.addEventListener('click', function () {
+          if (advFilterRoom) advFilterRoom.value = '';
+          if (advFilterChair) advFilterChair.value = '';
+          if (filterRoomIdInput) filterRoomIdInput.value = '';
+          if (filterChairIdInput) filterChairIdInput.value = '';
+          if (filterDoctorIdInput) filterDoctorIdInput.value = '';
+          if (filterStatusInput) filterStatusInput.value = 'ALL';
+          if (filterDatePresetInput) filterDatePresetInput.value = 'TODAY';
+          if (filterDayInput) filterDayInput.value = formatLocalIso(new Date());
+          var kwInput = document.getElementById('filterKeywordInput');
+          if (kwInput) kwInput.value = '';
+          submitDispatchFilters();
         });
       }
     });

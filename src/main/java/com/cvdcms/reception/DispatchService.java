@@ -60,6 +60,11 @@ public class DispatchService {
 
     @Transactional
     public Board board(HttpSession session, Long requestedBranch, LocalDate requestedDay) {
+        return board(session, requestedBranch, requestedDay, "DAY", false);
+    }
+
+    @Transactional
+    public Board board(HttpSession session, Long requestedBranch, LocalDate requestedDay, String datePreset, boolean includeAllStatuses) {
         var scope = access.require(session);
         List<Branch> options = branches.findAll().stream()
                 .filter(b -> Boolean.TRUE.equals(b.getIsActive()) && scope.permits(b.getBranchId()))
@@ -69,7 +74,19 @@ public class DispatchService {
         checkBranch(session, branchId);
         LocalDate day = requestedDay != null ? requestedDay : LocalDate.now(ZONE);
         LocalTime now = LocalTime.now(ZONE);
-        List<Visit> dayVisits = visits.today(branchId, day.atStartOfDay(), day.plusDays(1).atStartOfDay());
+        String preset = datePreset == null ? "DAY" : datePreset.trim().toUpperCase();
+        List<Visit> dayVisits;
+        if ("THIS_WEEK".equals(preset)) {
+            LocalDate startOfWeek = day.with(DayOfWeek.MONDAY);
+            dayVisits = visits.today(branchId, startOfWeek.atStartOfDay(), startOfWeek.plusDays(7).atStartOfDay());
+        } else if ("THIS_MONTH".equals(preset)) {
+            LocalDate startOfMonth = day.withDayOfMonth(1);
+            dayVisits = visits.today(branchId, startOfMonth.atStartOfDay(), startOfMonth.plusMonths(1).atStartOfDay());
+        } else if ("ALL".equals(preset)) {
+            dayVisits = visits.allByBranch(branchId);
+        } else {
+            dayVisits = visits.today(branchId, day.atStartOfDay(), day.plusDays(1).atStartOfDay());
+        }
         List<StaffSchedule> todaySchedules = schedules.findTodaySchedules(branchId, day);
         Map<Long, LocalTime> shiftStarts = new HashMap<>();
         Map<Long, List<StaffSchedule>> doctorSchedules = todaySchedules.stream()
@@ -98,7 +115,9 @@ public class DispatchService {
             doctorMap.put(d.getStaffId(), d);
         }
         for (Visit v : dayVisits) {
-            if (isWaitingDispatchVisit(v) && v.getPrimaryDoctor() != null) {
+            if (v != null && v.getStatus() != VisitStatus.CANCELLED
+                    && (includeAllStatuses || isWaitingDispatchVisit(v))
+                    && v.getPrimaryDoctor() != null) {
                 doctorMap.putIfAbsent(v.getPrimaryDoctor().getStaffId(), v.getPrimaryDoctor());
             }
         }
@@ -145,12 +164,12 @@ public class DispatchService {
         }
         String defaultRoomName = !activeRooms.isEmpty() ? activeRooms.get(0).getRoomName() : "Phòng khám Nha khoa";
 
-        // Chỉ giữ lại các lượt khám đang chờ điều phối (WAITING / WAITING_RESULT),
-        // loại bỏ IN_EXAM, IN_TREATMENT, COMPLETED, WAITING_PAYMENT, CANCELLED khỏi bảng điều phối.
-        // Đẩy các bệnh nhân vãng lai / chưa xếp hàng (primaryDoctor == null) xuống cuối danh sách.
+        // Khi includeAllStatuses = true, giữ tất cả lượt khám không bị hủy để lọc Trạng thái Đang khám / Hoàn thành.
+        // Đẩy các lượt đang chờ (WAITING / WAITING_RESULT) lên trước, và đẩy vãng lai chưa gán BS xuống sau trong nhóm chờ.
         List<Visit> sortedVisits = dayVisits.stream()
-                .filter(Board::isWaitingDispatchVisit)
-                .sorted(Comparator.comparing((Visit v) -> v.getPrimaryDoctor() == null ? 1 : 0)
+                .filter(v -> includeAllStatuses ? (v != null && v.getStatus() != VisitStatus.CANCELLED) : Board.isWaitingDispatchVisit(v))
+                .sorted(Comparator.comparing((Visit v) -> Board.isWaitingDispatchVisit(v) ? 0 : 1)
+                        .thenComparing((Visit v) -> v.getPrimaryDoctor() == null ? 1 : 0)
                         .thenComparing((Visit v) -> v.getVisitType() == VisitType.EMERGENCY ? 0 : 1)
                         .thenComparing((Visit v) -> v.getStatus() == VisitStatus.WAITING_RESULT ? 0 : 1)
                         .thenComparing((Visit v) -> {
@@ -179,7 +198,14 @@ public class DispatchService {
             String cName = v.getChairId() != null ? chairLookup.get(v.getChairId()) : null;
             visitChairNames.put(v.getVisitId(), cName != null ? cName : "Chưa xếp ghế");
 
-            if (v.getPrimaryDoctor() == null) {
+            if (!Board.isWaitingDispatchVisit(v)) {
+                String docName = v.getPrimaryDoctor() != null ? v.getPrimaryDoctor().getFullName() : "Chưa phân BS";
+                if (v.getStatus() == VisitStatus.IN_EXAM || v.getStatus() == VisitStatus.IN_TREATMENT) {
+                    queueInfo.put(v.getVisitId(), new DoctorQueueInfo(999, "Đang khám", "badge bg-primary text-white", docName));
+                } else {
+                    queueInfo.put(v.getVisitId(), new DoctorQueueInfo(1000, "Hoàn thành", "badge bg-success text-white", docName));
+                }
+            } else if (v.getPrimaryDoctor() == null) {
                 queueInfo.put(v.getVisitId(), new DoctorQueueInfo(-1, "Chưa xếp hàng", "badge bg-warning-subtle text-warning-emphasis border border-warning-subtle", "Chưa phân BS"));
             } else {
                 String docName = v.getPrimaryDoctor().getFullName();

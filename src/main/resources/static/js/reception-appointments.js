@@ -321,13 +321,17 @@
         }
         updateDateDisplay();
 
-        dateDisplay?.addEventListener('click', () => {
-            if (dateInput.showPicker) {
-                dateInput.showPicker();
-            } else {
-                dateInput.click();
-            }
-        });
+        const openMainDatePicker = () => {
+            try {
+                if (dateInput.showPicker) {
+                    dateInput.showPicker();
+                } else {
+                    dateInput.focus();
+                }
+            } catch (_) {}
+        };
+        dateDisplay?.addEventListener('click', openMainDatePicker);
+        dateInput?.addEventListener('click', openMainDatePicker);
 
         function setPeriodActive(activeId) {
             ['tabToday', 'tabWeek', 'tabMonth'].forEach(id => {
@@ -753,7 +757,7 @@
             currentKpiFilter = 'CANCELLED';
             if ($('advFilterStatus')) $('advFilterStatus').value = 'CANCELLED';
             applyFiltersAndRender();
-            document.querySelector('.dv-main-table')?.scrollIntoView({ behavior: 'smooth' });
+            document.querySelector('#appointmentListTable')?.scrollIntoView({ behavior: 'smooth' });
         });
 
         // Active Filter Tags management
@@ -1224,9 +1228,13 @@
         const statusModalEl = $('statusQuickChangeModal');
         const statusModal = statusModalEl ? new bootstrap.Modal(statusModalEl) : null;
 
-        function openQuickStatusModal(appointment) {
+        async function openQuickStatusModal(appointment) {
             if (!statusModal) return;
             activeAppointmentIdForStatus = appointment.id;
+            const detailBranchId = appointment.branchId || branch.value || options?.branches?.[0]?.id;
+            if (detailBranchId) {
+                await loadModalSessionWindows(detailBranchId);
+            }
 
             // Header info
             if ($('modalDetailCode')) {
@@ -1372,16 +1380,126 @@
         const createModal = createModalEl ? new bootstrap.Modal(createModalEl) : null;
 
         let dynamicSessionWindows = {};
+        const defaultSessionMeta = {
+            MORNING: { label: 'Ca Sáng', lower: 'ca sáng', start: '08:00', end: '12:00' },
+            AFTERNOON: { label: 'Ca Chiều', lower: 'ca chiều', start: '13:30', end: '17:30' },
+            EVENING: { label: 'Ca Tối', lower: 'ca tối', start: '17:30', end: '20:30' }
+        };
+
+        function getSessionRangeMinutes(sessionKey) {
+            const def = defaultSessionMeta[sessionKey] || defaultSessionMeta.MORNING;
+            const win = dynamicSessionWindows[sessionKey];
+            const startStr = win?.startTime ? win.startTime.slice(0, 5) : def.start;
+            const endStr = win?.endTime ? win.endTime.slice(0, 5) : def.end;
+            const [sH, sM] = startStr.split(':').map(n => parseInt(n, 10));
+            const [eH, eM] = endStr.split(':').map(n => parseInt(n, 10));
+            const startMin = sH * 60 + (Number.isNaN(sM) ? 0 : sM);
+            const endMin = eH * 60 + (Number.isNaN(eM) ? 0 : eM);
+            const maxStartMin = Math.max(startMin, endMin - 30);
+            return { startStr, endStr, startMin, endMin, maxStartMin };
+        }
+
+        function syncSessionMinutes(hourSelect, minuteSelect, sessionKey) {
+            if (!hourSelect || !minuteSelect) return;
+            const selectedHour = hourSelect.value;
+            if (!selectedHour) {
+                minuteSelect.disabled = true;
+                return;
+            }
+            minuteSelect.disabled = false;
+            const hourNum = parseInt(selectedHour, 10);
+            const { startMin, maxStartMin } = getSessionRangeMinutes(sessionKey);
+            let firstAllowed = null;
+            [...minuteSelect.options].forEach(opt => {
+                const m = parseInt(opt.value, 10);
+                const total = hourNum * 60 + m;
+                const allowed = total >= startMin && total <= maxStartMin;
+                opt.disabled = !allowed;
+                opt.hidden = !allowed;
+                if (allowed && firstAllowed === null) firstAllowed = opt.value;
+            });
+            const curTotal = hourNum * 60 + parseInt(minuteSelect.value || '0', 10);
+            if ((curTotal < startMin || curTotal > maxStartMin) && firstAllowed !== null) {
+                minuteSelect.value = firstAllowed;
+            }
+        }
+
+        function populateSessionHours(hourSelect, minuteSelect, sessionKey) {
+            if (!hourSelect) return;
+            const prevHour = hourSelect.value;
+            hourSelect.replaceChildren();
+            const def = defaultSessionMeta[sessionKey] || defaultSessionMeta.MORNING;
+            hourSelect.appendChild(option('', `Linh động cả ${def.lower}`));
+            const { startMin, maxStartMin } = getSessionRangeMinutes(sessionKey);
+            const minH = Math.floor(startMin / 60);
+            const maxH = Math.floor(maxStartMin / 60);
+            const validHours = [];
+            for (let h = minH; h <= maxH; h++) {
+                const hStr = String(h).padStart(2, '0');
+                hourSelect.appendChild(option(hStr, `${hStr} giờ`));
+                validHours.push(hStr);
+            }
+            if (prevHour && validHours.includes(prevHour)) {
+                hourSelect.value = prevHour;
+            } else {
+                hourSelect.value = '';
+            }
+            syncSessionMinutes(hourSelect, minuteSelect, sessionKey);
+        }
+
         async function loadModalSessionWindows(branchId) {
             if (!branchId) return;
             try {
                 const list = await request(`/sessions?branchId=${encodeURIComponent(branchId)}`);
                 if (Array.isArray(list) && list.length > 0) {
+                    dynamicSessionWindows = {};
+                    const idSuffixMap = { MORNING: 'Morning', AFTERNOON: 'Afternoon', EVENING: 'Evening' };
                     list.forEach(w => {
                         dynamicSessionWindows[w.session] = w;
-                        const subEl = $(w.session === 'MORNING' ? 'subTimeMorning' : (w.session === 'AFTERNOON' ? 'subTimeAfternoon' : 'subTimeEvening'));
-                        if (subEl && w.startTime && w.endTime) {
-                            subEl.textContent = `${w.startTime.slice(0, 5)} – ${w.endTime.slice(0, 5)}`;
+                        const suffix = idSuffixMap[w.session];
+                        if (!suffix) return;
+                        const isActive = w.active !== false;
+                        const def = defaultSessionMeta[w.session] || { label: w.session };
+                        const rangeText = w.startTime && w.endTime
+                            ? `${w.startTime.slice(0, 5)} – ${w.endTime.slice(0, 5)}`
+                            : `${def.start} – ${def.end}`;
+                        const statusText = isActive ? rangeText : 'Đã tắt nhận lịch';
+
+                        // 1. Modal Thêm mới
+                        const modalBtn = document.querySelector(`#modalSessionGroup [data-modal-session="${w.session}"]`);
+                        if (modalBtn) {
+                            modalBtn.disabled = !isActive;
+                            modalBtn.classList.toggle('opacity-50', !isActive);
+                        }
+                        if ($(`subTime${suffix}`)) $(`subTime${suffix}`).textContent = statusText;
+
+                        // 2. Modal Sửa lịch hẹn
+                        const editBtn = document.querySelector(`#editSessionGroup [data-edit-session="${w.session}"]`);
+                        if (editBtn) {
+                            editBtn.disabled = !isActive;
+                            editBtn.classList.toggle('opacity-50', !isActive);
+                        }
+                        if ($(`editSub${suffix}`)) $(`editSub${suffix}`).textContent = statusText;
+
+                        // 3. Modal Chi tiết
+                        const detailCard = $(`detailSess${suffix}`);
+                        if (detailCard) {
+                            detailCard.classList.toggle('opacity-50', !isActive);
+                        }
+                        if ($(`detailSub${suffix}`)) $(`detailSub${suffix}`).textContent = statusText;
+
+                        // 4. Filter nâng cao & Legend thanh danh sách
+                        const advOpt = $(`advOpt${suffix}`);
+                        if (advOpt) {
+                            advOpt.textContent = isActive
+                                ? `${def.label} (${rangeText.replace('–', '-')})`
+                                : `${def.label} (Tạm tắt)`;
+                        }
+                        const legendEl = $(`legend${suffix}`);
+                        if (legendEl) {
+                            legendEl.textContent = isActive
+                                ? `${def.label}: ${rangeText}`
+                                : `${def.label}: Tạm tắt`;
                         }
                     });
                 }
@@ -1390,62 +1508,29 @@
             }
         }
 
-        const sessionHourOptions = {
-            MORNING: [
-                { value: '', label: 'Linh động cả ca sáng' },
-                { value: '08', label: '08 giờ' },
-                { value: '09', label: '09 giờ' },
-                { value: '10', label: '10 giờ' },
-                { value: '11', label: '11 giờ' }
-            ],
-            AFTERNOON: [
-                { value: '', label: 'Linh động cả ca chiều' },
-                { value: '13', label: '13 giờ' },
-                { value: '14', label: '14 giờ' },
-                { value: '15', label: '15 giờ' },
-                { value: '16', label: '16 giờ' },
-                { value: '17', label: '17 giờ' }
-            ],
-            EVENING: [
-                { value: '', label: 'Linh động cả ca tối' },
-                { value: '18', label: '18 giờ' },
-                { value: '19', label: '19 giờ' },
-                { value: '20', label: '20 giờ' },
-                { value: '21', label: '21 giờ' }
-            ]
-        };
-
         function setModalSession(sessionKey) {
-            const validSession = ['MORNING', 'AFTERNOON', 'EVENING'].includes(sessionKey) ? sessionKey : 'MORNING';
+            let validSession = ['MORNING', 'AFTERNOON', 'EVENING'].includes(sessionKey) ? sessionKey : 'MORNING';
+            if (dynamicSessionWindows[validSession] && dynamicSessionWindows[validSession].active === false) {
+                const firstActive = ['MORNING', 'AFTERNOON', 'EVENING'].find(
+                    s => !dynamicSessionWindows[s] || dynamicSessionWindows[s].active !== false
+                );
+                if (firstActive) {
+                    validSession = firstActive;
+                }
+            }
             if ($('modalSession')) {
                 $('modalSession').value = validSession;
             }
             document.querySelectorAll('#modalSessionGroup [data-modal-session]').forEach(btn => {
                 btn.classList.toggle('active', btn.getAttribute('data-modal-session') === validSession);
             });
-            const hourSelect = $('modalHour');
-            if (hourSelect) {
-                const prevHour = hourSelect.value;
-                hourSelect.replaceChildren();
-                const sessName = validSession === 'MORNING' ? 'ca sáng' : (validSession === 'AFTERNOON' ? 'ca chiều' : 'ca tối');
-                hourSelect.appendChild(option('', `Linh động cả ${sessName}`));
-                const win = dynamicSessionWindows[validSession];
-                let startH = validSession === 'MORNING' ? 8 : (validSession === 'AFTERNOON' ? 13 : 18);
-                let endH = validSession === 'MORNING' ? 11 : (validSession === 'AFTERNOON' ? 17 : 20);
-                if (win && win.startTime && win.endTime) {
-                    startH = parseInt(win.startTime.slice(0, 2), 10);
-                    endH = parseInt(win.endTime.slice(0, 2), 10);
-                }
-                for (let h = startH; h <= endH; h++) {
-                    const hStr = String(h).padStart(2, '0');
-                    hourSelect.appendChild(option(hStr, `${hStr} giờ`));
-                }
-                if (prevHour) {
-                    hourSelect.value = prevHour;
-                }
-            }
+            populateSessionHours($('modalHour'), $('modalMinute'), validSession);
             updateCreateModalSubtitle();
         }
+
+        $('modalHour')?.addEventListener('change', () => {
+            syncSessionMinutes($('modalHour'), $('modalMinute'), $('modalSession')?.value || 'MORNING');
+        });
 
         function updateCreateModalSubtitle() {
             const dateVal = $('modalAppointmentDate')?.value || dateInput.value || today();
@@ -1458,6 +1543,7 @@
 
         document.querySelectorAll('#modalSessionGroup [data-modal-session]').forEach(btn => {
             btn.addEventListener('click', () => {
+                if (btn.disabled) return;
                 const sess = btn.getAttribute('data-modal-session') || 'MORNING';
                 setModalSession(sess);
                 loadModalDoctors();
@@ -1594,6 +1680,72 @@
             options.services.forEach(s => select.appendChild(option(s.id, s.name)));
         }
 
+        let patientListVisible = true;
+        async function loadModalPatients(queryText = '') {
+            const resultsBox = $('modalPatientResults');
+            const countBtnLabel = $('modalPatientListCount');
+            if (!resultsBox) return;
+            const query = (queryText || '').trim();
+            let patientBranchId = $('modalBranchId')?.value || $('filterBranch')?.value || '';
+            if (!patientBranchId && options?.branches?.length) {
+                patientBranchId = String(options.branches[0].id);
+                if ($('modalBranchId')) $('modalBranchId').value = patientBranchId;
+            }
+            const url = patientBranchId
+                ? `/patients?branchId=${encodeURIComponent(patientBranchId)}&query=${encodeURIComponent(query)}`
+                : `/patients?query=${encodeURIComponent(query)}`;
+            try {
+                const patients = await request(url);
+                resultsBox.replaceChildren();
+                const list = Array.isArray(patients) ? patients : [];
+                if (countBtnLabel) {
+                    countBtnLabel.textContent = patientListVisible ? `Ẩn danh sách (${list.length})` : `Xem danh sách (${list.length})`;
+                }
+                if (!list.length) {
+                    resultsBox.innerHTML = '<div class="p-3 text-center text-muted small">Không tìm thấy khách hàng phù hợp. Bạn có thể nhập thông tin khách mới bên dưới.</div>';
+                } else {
+                    list.forEach(p => {
+                        const item = document.createElement('div');
+                        item.className = 'patient-autocomplete-item d-flex align-items-center justify-content-between gap-2';
+                        const dobText = p.dob ? ` · NS: ${dateLabel(p.dob)}` : '';
+                        item.innerHTML = `
+                            <div class="min-w-0">
+                                <div class="text-truncate">
+                                    <strong>${escapeHtml(p.name)}</strong>
+                                    <span class="badge bg-light text-secondary border font-monospace ms-1">${escapeHtml(p.code)}</span>
+                                </div>
+                                <div class="small text-muted">${escapeHtml(p.phone || 'Chưa có SĐT')}${escapeHtml(dobText)}</div>
+                            </div>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle flex-shrink-0">Chọn</span>
+                        `;
+                        item.addEventListener('click', () => {
+                            $('modalProfileId').value = p.id;
+                            $('modalPatientCode').value = p.code || '';
+                            $('modalPatientName').value = p.name;
+                            $('modalPatientPhone').value = p.phone || '';
+                            $('selectedPatientName').textContent = p.name;
+                            $('selectedPatientCode').textContent = `(${p.code})`;
+                            $('selectedPatientChip').style.display = 'flex';
+                            if ($('newPatientFieldsContainer')) $('newPatientFieldsContainer').style.display = 'none';
+                            patientListVisible = false;
+                            resultsBox.style.display = 'none';
+                            if (countBtnLabel) countBtnLabel.textContent = 'Đổi từ danh sách';
+                            if (p.dob) {
+                                updatePriorityFromDob(p.dob);
+                            }
+                        });
+                        resultsBox.appendChild(item);
+                    });
+                }
+                if (patientListVisible && !$('modalProfileId')?.value) {
+                    resultsBox.style.display = 'block';
+                }
+            } catch (err) {
+                resultsBox.innerHTML = '<div class="p-2 text-muted small">Không thể tải danh sách hồ sơ. Bạn có thể nhập khách mới bên dưới.</div>';
+                if (patientListVisible) resultsBox.style.display = 'block';
+            }
+        }
+
         async function openCreateModalWith(targetDate, targetSession) {
             if (!createModal) return;
             $('createAppointmentForm')?.reset();
@@ -1603,6 +1755,7 @@
             if ($('newPatientFieldsContainer')) $('newPatientFieldsContainer').style.display = 'block';
             if ($('modalGuardianContainer')) $('modalGuardianContainer').style.display = 'none';
             $('modalPatientSearch').value = '';
+            patientListVisible = true;
             const chosenDate = targetDate || dateInput.value || today();
             const chosenSession = targetSession || $('advFilterSession')?.value || 'MORNING';
             $('modalAppointmentDate').value = chosenDate;
@@ -1613,7 +1766,7 @@
             if (bId) await loadModalSessionWindows(bId);
             setModalSession(chosenSession);
             createModal.show();
-            await loadModalDoctors();
+            await Promise.all([loadModalDoctors(), loadModalPatients('')]);
         }
 
         $('openCreateModalBtn')?.addEventListener('click', () => {
@@ -1625,6 +1778,7 @@
             if (bId) await loadModalSessionWindows(bId);
             setModalSession($('modalSession')?.value || 'MORNING');
             loadModalDoctors();
+            loadModalPatients($('modalPatientSearch')?.value || '');
         });
         $('modalAppointmentDate')?.addEventListener('change', (e) => {
             if (e.target.value && e.target.value < today()) {
@@ -1635,58 +1789,49 @@
             loadModalDoctors();
         });
 
-        // Customer Autocomplete Search
+        // Customer Autocomplete Search + Browseable List
         let patientSearchTimer;
         $('modalPatientSearch')?.addEventListener('input', (e) => {
             clearTimeout(patientSearchTimer);
             const query = e.target.value.trim();
-            const resultsBox = $('modalPatientResults');
-            if (query.length < 2) {
-                resultsBox.style.display = 'none';
-                return;
-            }
-            patientSearchTimer = setTimeout(async () => {
-                try {
-                    let patientBranchId = $('modalBranchId')?.value || $('filterBranch')?.value || '';
-                    if (!patientBranchId && options?.branches?.length) {
-                        patientBranchId = String(options.branches[0].id);
-                        if ($('modalBranchId')) $('modalBranchId').value = patientBranchId;
-                    }
-                    const url = patientBranchId
-                        ? `/patients?branchId=${encodeURIComponent(patientBranchId)}&query=${encodeURIComponent(query)}`
-                        : `/patients?query=${encodeURIComponent(query)}`;
-                    const patients = await request(url);
-                    resultsBox.replaceChildren();
-                    if (!patients || !patients.length) {
-                        resultsBox.innerHTML = '<div class="p-2 text-muted small">Không tìm thấy khách hàng cũ. Bạn có thể nhập thông tin khách mới bên dưới.</div>';
-                    } else {
-                        patients.forEach(p => {
-                            const item = document.createElement('div');
-                            item.className = 'patient-autocomplete-item';
-                            item.innerHTML = `<strong>${escapeHtml(p.name)}</strong> <span class="badge bg-light text-secondary border font-monospace ms-1">${escapeHtml(p.code)}</span> <span class="text-muted ms-1">· ${escapeHtml(p.phone)}</span>`;
-                            item.addEventListener('click', () => {
-                                $('modalProfileId').value = p.id;
-                                $('modalPatientCode').value = p.code || '';
-                                $('modalPatientName').value = p.name;
-                                $('modalPatientPhone').value = p.phone || '';
-                                $('selectedPatientName').textContent = p.name;
-                                $('selectedPatientCode').textContent = `(${p.code})`;
-                                $('selectedPatientChip').style.display = 'flex';
-                                if ($('newPatientFieldsContainer')) $('newPatientFieldsContainer').style.display = 'none';
-                                resultsBox.style.display = 'none';
-                                if (p.dob) {
-                                    updatePriorityFromDob(p.dob);
-                                }
-                            });
-                            resultsBox.appendChild(item);
-                        });
-                    }
+            patientListVisible = true;
+            patientSearchTimer = setTimeout(() => {
+                loadModalPatients(query);
+            }, 220);
+        });
+
+        $('modalPatientSearch')?.addEventListener('focus', () => {
+            if (!$('modalProfileId')?.value) {
+                patientListVisible = true;
+                const resultsBox = $('modalPatientResults');
+                if (resultsBox && resultsBox.children.length > 0) {
                     resultsBox.style.display = 'block';
-                } catch (err) {
-                    resultsBox.innerHTML = '<div class="p-2 text-muted small">Không tìm thấy hồ sơ hoặc lỗi kết nối. Bạn có thể nhập khách mới bên dưới.</div>';
-                    resultsBox.style.display = 'block';
+                    if ($('modalPatientListCount')) $('modalPatientListCount').textContent = `Ẩn danh sách (${resultsBox.querySelectorAll('.patient-autocomplete-item').length})`;
+                } else {
+                    loadModalPatients($('modalPatientSearch')?.value || '');
                 }
-            }, 250);
+            }
+        });
+
+        $('btnTogglePatientList')?.addEventListener('click', () => {
+            const resultsBox = $('modalPatientResults');
+            const countBtnLabel = $('modalPatientListCount');
+            if (!resultsBox) return;
+            patientListVisible = !patientListVisible || resultsBox.style.display === 'none';
+            if (patientListVisible) {
+                resultsBox.style.display = 'block';
+                if (resultsBox.children.length === 0) {
+                    loadModalPatients($('modalPatientSearch')?.value || '');
+                } else if (countBtnLabel) {
+                    countBtnLabel.textContent = `Ẩn danh sách (${resultsBox.querySelectorAll('.patient-autocomplete-item').length})`;
+                }
+            } else {
+                resultsBox.style.display = 'none';
+                if (countBtnLabel) {
+                    const cnt = resultsBox.querySelectorAll('.patient-autocomplete-item').length;
+                    countBtnLabel.textContent = cnt ? `Xem danh sách (${cnt})` : 'Xem danh sách KH';
+                }
+            }
         });
 
         $('clearSelectedPatientBtn')?.addEventListener('click', (event) => {
@@ -1699,7 +1844,7 @@
             if ($('newPatientFieldsContainer')) $('newPatientFieldsContainer').style.display = 'block';
             $('modalPatientSearch').value = '';
             $('modalPatientSearch').disabled = false;
-            $('modalPatientResults').style.display = 'none';
+            patientListVisible = true;
             $('newPatientFieldsContainer')?.querySelectorAll('input, select, textarea').forEach(field => { field.disabled = false; });
             $('modalPatientName').value = '';
             $('modalPatientPhone').value = '';
@@ -1707,13 +1852,7 @@
             if ($('modalPatientDob')) $('modalPatientDob').value = '';
             if ($('modalPatientGender')) $('modalPatientGender').value = '';
             if ($('modalGuardianContainer')) $('modalGuardianContainer').style.display = 'none';
-        });
-
-        // Close search results when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('#modalPatientSearch') && !e.target.closest('#modalPatientResults')) {
-                if ($('modalPatientResults')) $('modalPatientResults').style.display = 'none';
-            }
+            loadModalPatients('');
         });
 
         // Save Appointment from Modal 2
@@ -1889,37 +2028,34 @@
             document.querySelectorAll('#editSessionGroup [data-edit-session]').forEach(btn => {
                 btn.classList.toggle('active', btn.getAttribute('data-edit-session') === validSession);
             });
-            const hourSelect = $('editHour');
-            if (hourSelect) {
-                const prevHour = hourSelect.value;
-                hourSelect.replaceChildren();
-                const opts = sessionHourOptions[validSession] || sessionHourOptions.MORNING;
-                opts.forEach(o => hourSelect.appendChild(option(o.value, o.label)));
-                if (opts.some(o => o.value === prevHour)) {
-                    hourSelect.value = prevHour;
-                } else {
-                    hourSelect.value = '';
-                }
-            }
+            populateSessionHours($('editHour'), $('editMinute'), validSession);
         }
+
+        $('editHour')?.addEventListener('change', () => {
+            syncSessionMinutes($('editHour'), $('editMinute'), $('editSession')?.value || 'MORNING');
+        });
 
         document.querySelectorAll('#editSessionGroup [data-edit-session]').forEach(btn => {
             btn.addEventListener('click', async () => {
+                if (btn.disabled) return;
                 const sessionKey = btn.getAttribute('data-edit-session');
                 setEditModalSession(sessionKey);
                 const branchId = $('editBranchId')?.value || branch.value;
                 const date = $('editAppointmentDate')?.value;
                 if (branchId && date) {
-                    await loadEditModalDoctors(branchId, date, $('editDoctorId')?.value);
+                    await loadEditModalDoctors(branchId, date, $('editDoctorId')?.value, sessionKey, activeAppointmentIdForEdit);
                 }
             });
         });
 
-        async function loadEditModalDoctors(branchId, date, selectedDoctorId) {
+        async function loadEditModalDoctors(branchId, date, selectedDoctorId, sessionPeriod, excludeAppointmentId) {
             const select = $('editDoctorId');
             const help = $('editDoctorHelp');
+            const submitBtn = $('saveEditAppointmentBtn');
             if (!select) return;
+            const curSess = sessionPeriod || $('editSession')?.value || 'MORNING';
             select.disabled = true;
+            if (submitBtn) submitBtn.disabled = false;
             select.replaceChildren(option('', 'Đang tải bác sĩ trực…'));
             if (!branchId || !date) {
                 select.replaceChildren(option('', '-- Chưa chỉ định bác sĩ --'));
@@ -1928,25 +2064,45 @@
                 return;
             }
             try {
-                const res = await request(`/doctors?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`);
-                const list = Array.isArray(res) ? res : (Array.isArray(res?.doctors) ? res.doctors : []);
+                let url = `/availability?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}&sessionPeriod=${encodeURIComponent(curSess)}`;
+                if (excludeAppointmentId) {
+                    url += `&excludeAppointmentId=${encodeURIComponent(excludeAppointmentId)}`;
+                }
+                const res = await request(url);
+                if (!res || !res.available) {
+                    select.replaceChildren(option('', '-- Ca khám không khả dụng --'));
+                    select.disabled = false;
+                    if (help) help.innerHTML = `<span class="text-danger fw-semibold"><i class="bi bi-exclamation-triangle-fill me-1"></i>${escapeHtml(res?.reason || 'Ca khám không khả dụng hoặc đã tắt nhận lịch.')}</span>`;
+                    if (submitBtn) submitBtn.disabled = true;
+                    return;
+                }
+                const list = Array.isArray(res.doctors) ? res.doctors : [];
                 select.replaceChildren(option('', list.length ? '-- Chưa chỉ định bác sĩ --' : '-- Không có bác sĩ trực ca này --'));
                 list.forEach(d => select.appendChild(option(d.id, `BS. ${d.name}${d.specialty ? ` · ${d.specialty}` : ''}`)));
+                const hadPrevDoctor = Boolean(selectedDoctorId);
+                let prevMissing = false;
                 if (selectedDoctorId && [...select.options].some(o => o.value === String(selectedDoctorId))) {
                     select.value = String(selectedDoctorId);
                 } else {
                     select.value = '';
+                    prevMissing = hadPrevDoctor;
                 }
                 select.disabled = false;
-                const sessNames = { MORNING: 'Ca Sáng', AFTERNOON: 'Ca Chiều', EVENING: 'Ca Tối' };
-                const curSess = $('editSession')?.value || 'MORNING';
-                if (help) help.textContent = list.length
-                    ? `Có ${list.length} bác sĩ trực (${sessNames[curSess] || 'Ca Sáng'}) ngày ${dateLabel(date)}.`
-                    : `Chưa có bác sĩ phân ca trực ngày ${dateLabel(date)}.`;
+                if (submitBtn) submitBtn.disabled = false;
+                const sessLabel = defaultSessionMeta[curSess]?.label || 'Ca Sáng';
+                if (help) {
+                    if (list.length) {
+                        help.innerHTML = `<span class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Có ${list.length} bác sĩ trực (${sessLabel}) ngày ${dateLabel(date)}. Còn ${res.remainingBranch} chỗ.</span>`
+                            + (prevMissing ? ' <span class="text-warning-emphasis">Bác sĩ cũ không trực ca này.</span>' : '');
+                    } else {
+                        help.innerHTML = `<span class="text-warning-emphasis fw-semibold">Chưa có bác sĩ phân ca trực (${sessLabel}) ngày ${dateLabel(date)}.</span>`;
+                    }
+                }
             } catch (err) {
                 select.replaceChildren(option('', '-- Chưa chỉ định bác sĩ --'));
                 select.disabled = false;
-                if (help) help.textContent = 'Chưa có bác sĩ phân ca trực hoặc tạm thời không tải được.';
+                if (submitBtn) submitBtn.disabled = true;
+                if (help) help.innerHTML = `<span class="text-danger fw-semibold">${escapeHtml(err?.message || 'Chưa có bác sĩ phân ca trực hoặc không tải được khả dụng.')}</span>`;
             }
         }
 
@@ -1967,8 +2123,9 @@
             }
             const branchId = $('editBranchId')?.value || branch.value;
             const date = e.target.value;
+            const sessionKey = $('editSession')?.value || 'MORNING';
             if (branchId && date) {
-                await loadEditModalDoctors(branchId, date, $('editDoctorId')?.value);
+                await loadEditModalDoctors(branchId, date, $('editDoctorId')?.value, sessionKey, activeAppointmentIdForEdit);
             }
         });
 
@@ -1983,6 +2140,9 @@
             const branchIdVal = appointment.branchId || branch.value || (options.branches[0]?.id || '');
             if ($('editBranchId')) $('editBranchId').value = branchIdVal;
             if ($('editBranchName')) $('editBranchName').value = appointment.branchName || 'Cơ sở phòng khám';
+            if (branchIdVal) {
+                await loadModalSessionWindows(branchIdVal);
+            }
 
             const patientCodeVal = appointment.patientCode || (appointment.profileId ? `BN#${appointment.profileId}` : 'Khách mới');
             if ($('editPatientCode')) $('editPatientCode').value = patientCodeVal;
@@ -2015,14 +2175,18 @@
             if (appointment.expectedTime) {
                 const timeParts = String(appointment.expectedTime).slice(0, 5).split(':');
                 if ($('editHour')) $('editHour').value = timeParts[0] || '';
-                if ($('editMinute')) $('editMinute').value = timeParts[1] || '00';
+                syncSessionMinutes($('editHour'), $('editMinute'), sessKey);
+                if ($('editMinute') && [...$('editMinute').options].some(o => o.value === timeParts[1] && !o.disabled)) {
+                    $('editMinute').value = timeParts[1];
+                }
             } else {
                 if ($('editHour')) $('editHour').value = '';
+                syncSessionMinutes($('editHour'), $('editMinute'), sessKey);
                 if ($('editMinute')) $('editMinute').value = '00';
             }
 
             loadEditModalServices(appointment.serviceId);
-            await loadEditModalDoctors(branchIdVal, aptDate, appointment.doctorId);
+            await loadEditModalDoctors(branchIdVal, aptDate, appointment.doctorId, sessKey, appointment.id);
 
             const rawNotes = appointment.symptoms || '';
             const noteMatch = rawNotes.match(/(?:\s*-\s*)?\[Ghi chú: ([\s\S]*?)\]$/);
@@ -2145,10 +2309,16 @@
             grid.classList.toggle('is-week', !isMonth && !isDay);
             grid.classList.toggle('is-day', isDay);
 
+            const formatSessionHours = (key, defHours) => {
+                const w = dynamicSessionWindows[key];
+                if (!w) return defHours;
+                if (w.active === false) return 'Tạm tắt nhận lịch';
+                return (w.startTime && w.endTime) ? `${w.startTime.slice(0, 5)} – ${w.endTime.slice(0, 5)}` : defHours;
+            };
             const sessBadgeMap = {
-                MORNING: { text: 'Sáng', cls: 'morning', full: 'Ca Sáng', hours: '08:00 – 12:00', icon: 'bi-sunrise-fill' },
-                AFTERNOON: { text: 'Chiều', cls: 'afternoon', full: 'Ca Chiều', hours: '13:30 – 17:30', icon: 'bi-sun-fill' },
-                EVENING: { text: 'Tối', cls: 'evening', full: 'Ca Tối', hours: '17:30 – 20:30', icon: 'bi-moon-stars-fill' }
+                MORNING: { text: 'Sáng', cls: 'morning', full: 'Ca Sáng', hours: formatSessionHours('MORNING', '08:00 – 12:00'), icon: 'bi-sunrise-fill' },
+                AFTERNOON: { text: 'Chiều', cls: 'afternoon', full: 'Ca Chiều', hours: formatSessionHours('AFTERNOON', '13:30 – 17:30'), icon: 'bi-sun-fill' },
+                EVENING: { text: 'Tối', cls: 'evening', full: 'Ca Tối', hours: formatSessionHours('EVENING', '17:30 – 20:30'), icon: 'bi-moon-stars-fill' }
             };
 
             const buildRichCalendarCard = (a, showSessionBadge) => {
@@ -2327,6 +2497,8 @@
         // Select changes
         branch.addEventListener('change', async () => {
             try {
+                const bId = branch.value || options.branches?.[0]?.id;
+                if (bId) await loadModalSessionWindows(bId);
                 await loadDoctors();
                 if (createModalEl?.classList.contains('show')) {
                     const modalBranch = $('modalBranchId');
@@ -2340,6 +2512,10 @@
         });
 
         // Initial Load
+        const initSessionBranch = branch.value || options.branches?.[0]?.id;
+        if (initSessionBranch) {
+            await loadModalSessionWindows(initSessionBranch);
+        }
         await loadDoctors();
         await load();
 
@@ -2365,6 +2541,8 @@
                         $('selectedPatientCode').textContent = `(${target.code})`;
                         $('selectedPatientChip').style.display = 'flex';
                         if ($('newPatientFieldsContainer')) $('newPatientFieldsContainer').style.display = 'none';
+                        if ($('modalPatientResults')) $('modalPatientResults').style.display = 'none';
+                        patientListVisible = false;
                         if (target.dob) updatePriorityFromDob(target.dob);
                     }
                 } catch (_) {}
@@ -2515,6 +2693,32 @@
         let patientSeq = 0, availabilitySeq = 0, available = false;
         let currentSessionsOverview = [];
 
+        async function loadFormSessionWindows() {
+            const branchId = $('branchId')?.value;
+            const sessionSelect = $('preferredSession');
+            if (!branchId || !sessionSelect) return;
+            try {
+                const list = await request(`/sessions?branchId=${encodeURIComponent(branchId)}`);
+                if (!Array.isArray(list) || !list.length) return;
+                const currentSelected = sessionSelect.value;
+                list.forEach(w => {
+                    const opt = [...sessionSelect.options].find(o => o.value === w.session);
+                    if (!opt) return;
+                    const isActive = w.active !== false;
+                    const range = w.startTime && w.endTime ? `${w.startTime.slice(0, 5)} - ${w.endTime.slice(0, 5)}` : '';
+                    opt.textContent = isActive
+                        ? (range ? `${w.label} (${range})` : w.label)
+                        : `${w.label} (Tạm tắt nhận lịch)`;
+                    opt.disabled = !isActive && !(editing && current?.session === w.session);
+                });
+                const selectedOpt = [...sessionSelect.options].find(o => o.value === currentSelected);
+                if (!editing && selectedOpt && selectedOpt.disabled) {
+                    const firstEnabled = [...sessionSelect.options].find(o => !o.disabled && o.value);
+                    if (firstEnabled) sessionSelect.value = firstEnabled.value;
+                }
+            } catch (_) {}
+        }
+
         async function loadSessionOverview() {
             const branchId = $('branchId').value;
             const date = $('appointmentDate').value;
@@ -2610,8 +2814,9 @@
 
         async function findPatient() {
             const token = ++patientSeq, query = $('patientSearch').value.trim(), branchId = $('branchId').value;
-            const select = $('profileId'); select.replaceChildren(option('', 'Chọn hồ sơ từ kết quả tìm kiếm'));
-            if (query.length < 2 || !branchId) return;
+            const select = $('profileId');
+            select.replaceChildren(option('', query ? 'Chọn hồ sơ từ kết quả tìm kiếm' : 'Chọn khách hàng từ danh sách (hoặc nhập để lọc)'));
+            if (!branchId) return;
             const list = await request(`/patients?branchId=${encodeURIComponent(branchId)}&query=${encodeURIComponent(query)}`);
             if (token !== patientSeq) return;
             list.forEach(p => select.appendChild(option(p.id, `${p.name} (${p.code}) · ${p.phone}`)));
@@ -2621,6 +2826,11 @@
         let debounce;
         $('patientSearch').addEventListener('input', () => { clearTimeout(debounce);
             debounce = setTimeout(() => findPatient().catch(e => error(e.message)), 250); });
+        $('patientSearch').addEventListener('focus', () => {
+            if (!$('patientSearch').value.trim() && $('profileId').options.length <= 1) {
+                findPatient().catch(() => {});
+            }
+        });
 
         async function availability() {
             const token = ++availabilitySeq, branchId = $('branchId').value,
@@ -2648,10 +2858,11 @@
         }
 
         $('branchId').addEventListener('change', () => {
-            ++patientSeq; $('profileId').replaceChildren(option('', 'Chọn hồ sơ từ kết quả tìm kiếm'));
+            ++patientSeq; $('profileId').replaceChildren(option('', 'Chọn khách hàng từ danh sách'));
+            loadFormSessionWindows().catch(() => {});
             loadSessionOverview().catch(e => error(e.message));
             availability().catch(e => error(e.message));
-            if ($('patientSearch').value.trim().length >= 2) findPatient().catch(e => error(e.message));
+            if (!editing) findPatient().catch(e => error(e.message));
         });
         $('appointmentDate').addEventListener('change', () => {
             loadSessionOverview().catch(e => error(e.message));
@@ -2664,6 +2875,10 @@
             if (available) loadSlots(availabilitySeq).catch(e => error(e.message));
         }));
 
+        await loadFormSessionWindows();
+        if (!editing && !new URLSearchParams(location.search).get('query') && $('branchId').value) {
+            findPatient().catch(() => {});
+        }
         if (editing) {
             await loadSessionOverview();
             await availability();

@@ -94,23 +94,34 @@ function initialiseQueue() {
                     btn.disabled = true;
                     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang gọi...';
                 }
+                const headers = {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                };
+                const csrfMeta = document.querySelector('meta[name="_csrf"]');
+                const csrfHeaderMeta = document.querySelector('meta[name="_csrf_header"]');
+                if (csrfMeta && csrfHeaderMeta && csrfMeta.content && csrfHeaderMeta.content) {
+                    headers[csrfHeaderMeta.content] = csrfMeta.content;
+                }
                 try {
-                    await fetch(form.action, {
+                    const res = await fetch(form.action, {
                         method: 'POST',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        },
+                        credentials: 'same-origin',
+                        headers,
                         body: new URLSearchParams(new FormData(form))
                     });
+                    if (!res.ok) {
+                        throw new Error('HTTP ' + res.status);
+                    }
                     const card = form.closest('.queue-card');
                     const patientName = card ? card.querySelector('.queue-patient')?.textContent.trim() : '';
                     const ticketNum = card ? card.querySelector('.ticket-num')?.textContent.trim() : '';
-                    showRecallToast(`Đã nhắc gọi số ${ticketNum || ''} cho bệnh nhân ${patientName || ''}.`);
+                    await refresh();
+                    showRecallToast(`Đã phát tín hiệu gọi số ${ticketNum || ''} cho bệnh nhân ${patientName || ''}.`);
                 } catch (_) {
-                    showRecallToast('Đã phát tín hiệu gọi lại số khám thành công.');
+                    showRecallToast('Không thể phát tín hiệu gọi số. Vui lòng thử lại.');
                 } finally {
-                    if (btn) {
+                    if (btn && btn.isConnected) {
                         btn.disabled = false;
                         btn.innerHTML = origHtml;
                     }

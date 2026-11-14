@@ -1597,7 +1597,16 @@
             const sessionVal = sessionSelect.value;
 
             if (!branchId || !dateVal || !sessionVal) {
-                if (noticeEl) noticeEl.style.display = 'none';
+                if (noticeEl) {
+                    if (branchId && dateVal && !sessionVal) {
+                        noticeEl.className = 'cv-drawer__notice is-error';
+                        noticeEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> Cơ sở hiện đang tạm ngừng nhận lịch tất cả các buổi.';
+                        noticeEl.style.display = 'block';
+                    } else {
+                        noticeEl.style.display = 'none';
+                    }
+                }
+                if (submitBtn) submitBtn.disabled = true;
                 return;
             }
 
@@ -1692,8 +1701,55 @@
             }
         }
 
+        let drawerSessionSeq = 0;
+        async function loadDrawerSessions(branchId) {
+            if (!sessionSelect || !branchId) return;
+            const seq = ++drawerSessionSeq;
+            const prev = sessionSelect.value;
+            try {
+                const res = await fetch(`/api/public/booking/sessions?branchId=${encodeURIComponent(branchId)}`);
+                if (seq !== drawerSessionSeq) return;
+                const list = await res.json().catch(() => []);
+                if (Array.isArray(list) && list.length > 0) {
+                    const activeList = list.filter(s => s.active === true);
+                    sessionSelect.replaceChildren();
+                    if (activeList.length === 0) {
+                        const opt = document.createElement('option');
+                        opt.value = '';
+                        opt.textContent = 'Cơ sở tạm ngừng nhận lịch';
+                        opt.disabled = true;
+                        sessionSelect.appendChild(opt);
+                        sessionSelect.value = '';
+                    } else {
+                        activeList.forEach(s => {
+                            const opt = document.createElement('option');
+                            opt.value = s.session;
+                            opt.textContent = s.label || s.name;
+                            sessionSelect.appendChild(opt);
+                        });
+                        if (prev && activeList.some(s => s.session === prev)) {
+                            sessionSelect.value = prev;
+                        } else {
+                            const notEnded = activeList.find(s => !s.endedToday);
+                            sessionSelect.value = (notEnded || activeList[0]).session;
+                        }
+                    }
+                    if (typeof sessionCustomSelect !== 'undefined' && sessionCustomSelect) {
+                        sessionCustomSelect.sync();
+                    }
+                }
+            } catch (err) {
+                console.warn('Could not load drawer sessions:', err);
+            }
+        }
+
         // Lắng nghe sự kiện thay đổi của các trường trong Drawer để đồng bộ URL & giao diện
-        if (branchSelect) branchSelect.addEventListener('change', () => { updateBranchInfo(); updateFullAppointmentUrl(); checkAvailability(); });
+        if (branchSelect) branchSelect.addEventListener('change', async () => {
+            updateBranchInfo();
+            await loadDrawerSessions(branchSelect.value);
+            updateFullAppointmentUrl();
+            checkAvailability();
+        });
         if (dateInput) dateInput.addEventListener('change', () => { updateFullAppointmentUrl(); checkAvailability(); });
         if (sessionSelect) sessionSelect.addEventListener('change', () => { updateFullAppointmentUrl(); checkAvailability(); });
         if (doctorSelect) doctorSelect.addEventListener('change', () => {
@@ -1709,7 +1765,7 @@
             loadSlots(availSequence);
         });
 
-        function openBooking(opts = {}) {
+        async function openBooking(opts = {}) {
             if (!drawer || !overlay) return;
             if (errorEl) errorEl.classList.remove('is-visible');
             if (successBox) successBox.classList.remove('is-visible');
@@ -1766,10 +1822,11 @@
             }
 
             // Cập nhật lại các liên kết & trạng thái
-            if (branchSelect) branchSelect.dispatchEvent(new Event('change', { bubbles: true }));
-            if (serviceSelect) serviceSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            if (branchCustomSelect) branchCustomSelect.sync();
+            if (serviceCustomSelect) serviceCustomSelect.sync();
             updateBranchInfo();
             updateServiceDetailLink();
+            await loadDrawerSessions(branchSelect ? branchSelect.value : null);
             updateFullAppointmentUrl();
 
             // 4. Kích hoạt kiểm tra lịch làm việc của bác sĩ theo ngày và ca được chọn

@@ -485,17 +485,25 @@
                 const res = await fetch(`/api/public/booking/sessions?branchId=${encodeURIComponent(branchId)}`);
                 const list = await res.json().catch(() => []);
                 if (Array.isArray(list) && list.length > 0) {
+                    const activeList = list.filter(s => s.active !== false);
                     select.replaceChildren();
-                    list.forEach(s => {
-                        const opt = document.createElement('option');
-                        opt.value = s.session;
-                        opt.textContent = s.label || s.name;
-                        select.appendChild(opt);
-                    });
-                    if (prev && list.some(s => s.session === prev)) {
-                        select.value = prev;
+                    if (activeList.length === 0) {
+                        const emptyOpt = option('', 'Cơ sở tạm ngừng nhận lịch');
+                        emptyOpt.disabled = true;
+                        select.appendChild(emptyOpt);
+                        select.value = '';
                     } else {
-                        select.value = list[0].session;
+                        activeList.forEach(s => {
+                            const opt = document.createElement('option');
+                            opt.value = s.session;
+                            opt.textContent = s.label || s.name;
+                            select.appendChild(opt);
+                        });
+                        if (prev && activeList.some(s => s.session === prev)) {
+                            select.value = prev;
+                        } else {
+                            select.value = activeList[0].session;
+                        }
                     }
                 }
             } catch (err) {
@@ -591,13 +599,33 @@
             $('successMessage').hidden = false;
         }
 
+        let dynamicSessionLabel = sessionLabel[a.session] || a.session;
+        if (a.branchId) {
+            try {
+                const res = await fetch(`/api/public/booking/sessions?branchId=${encodeURIComponent(a.branchId)}`, {
+                    headers: { Accept: 'application/json' }
+                });
+                if (res.ok) {
+                    const wins = await res.json();
+                    const matched = Array.isArray(wins) ? wins.find(w => w.session === a.session) : null;
+                    if (matched) {
+                        if (matched.label && matched.startTime && matched.endTime) {
+                            dynamicSessionLabel = `${matched.label} (${matched.startTime.slice(0, 5)} – ${matched.endTime.slice(0, 5)})`;
+                        } else if (matched.label) {
+                            dynamicSessionLabel = matched.label;
+                        }
+                    }
+                }
+            } catch (_) {}
+        }
+
         const facts = $('appointmentFacts');
         const items = [
             ['Mã lịch hẹn', a.code + (a.code.startsWith('TK') ? ' (Lịch tái khám chỉ định FT18)' : '')],
             ['Người đi khám', a.patientName],
             ['Cơ sở khám', a.branchName],
             ['Ngày khám', dateLabel(a.date)],
-            ['Buổi khám', sessionLabel[a.session] || a.session],
+            ['Buổi khám', dynamicSessionLabel],
             ['Giờ hẹn dự kiến', a.expectedTime ? a.expectedTime.slice(0, 5) : 'Linh hoạt trong buổi'],
             ['Bác sĩ phụ trách', a.requestedDoctorName || (a.code.startsWith('TK') ? 'Bác sĩ điều trị' : 'Không yêu cầu đích danh · Lễ tân điều phối')],
             ['Dịch vụ quan tâm', a.serviceName || 'Khám & tư vấn tổng quát'],

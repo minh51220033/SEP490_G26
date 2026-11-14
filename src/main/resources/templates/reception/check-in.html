@@ -348,7 +348,7 @@
                                     <i class="bi bi-search text-success me-1"></i>Tìm hồ sơ bệnh nhân
                                 </label>
                                 <button type="button" class="btn btn-outline-success btn-sm py-1 px-3 rounded-2 d-inline-flex align-items-center gap-2 btn-open-quick-create-patient"
-                                        data-bs-toggle="modal" data-bs-target="#quickAddPatientModal" title="Tạo nhanh hồ sơ bệnh nhân mới">
+                                        data-bs-toggle="modal" data-bs-target="#addPatientModal" title="Tạo nhanh hồ sơ bệnh nhân mới">
                                     <i class="bi bi-person-plus-fill"></i><span>Tạo hồ sơ mới</span>
                                 </button>
                             </div>
@@ -529,7 +529,7 @@
                                     <!-- 3. Thời gian hẹn -->
                                     <td data-col="time" class="text-center">
                                         <span class="fw-semibold text-dark" th:text="${a.expectedTime != null ? a.expectedTime : '--:--'}">09:30</span>
-                                        <small th:if="${a.lateMinutes >= 15}" class="badge bg-warning text-dark d-block mt-0.5" style="font-size: 10px;" th:text="|Trễ ${a.lateMinutes}p|"></small>
+                                        <small th:if="${a.lateMinutes >= 15}" class="badge bg-warning text-dark d-block mt-1" style="font-size: 10px;" th:text="|Trễ ${a.lateMinutes}p|"></small>
                                     </td>
 
                                     <!-- 4. Tên BN -->
@@ -585,93 +585,6 @@
                                                     data-bs-toggle="modal" th:data-bs-target="|#noteModal-${a.id}|" title="Chỉnh sửa chú thích">
                                                 <i class="bi bi-pencil-square text-primary"></i><span>Chú thích</span>
                                             </button>
-                                        </div>
-
-                                        <!-- MODAL TIẾP ĐÓN CHI TIẾT -->
-                                        <div class="modal fade text-start" th:id="|checkInModal-${a.id}|" tabindex="-1" aria-hidden="true">
-                                            <div class="modal-dialog modal-dialog-centered">
-                                                <div class="modal-content border-0 shadow-lg rounded-4">
-                                                    <form method="post" th:action="${a.status.name() == 'PENDING'} ? @{/reception/check-in/appointments/{id}/confirm-and-check-in(id=${a.id})} : @{/reception/check-in/appointments/{id}(id=${a.id})}">
-                                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                                                        <input type="hidden" name="branchId" th:value="${dashboard.branchId}">
-                                                        <input type="hidden" name="requestKey" th:value="${a.requestKey}">
-
-                                                        <div class="modal-header bg-light border-0 py-3 px-4 rounded-top-4">
-                                                            <div>
-                                                                <h5 class="modal-title fw-bold text-dark mb-0">
-                                                                    <i class="bi bi-person-check-fill text-primary me-2"></i>Tiếp đón bệnh nhân
-                                                                </h5>
-                                                                <small class="text-muted" th:text="|Lịch hẹn: ${a.code} · ${a.patient != null ? a.patient.name : ''}|"></small>
-                                                            </div>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                        </div>
-
-                                                        <div class="modal-body p-4">
-                                                            <div class="p-3 bg-light rounded-3 mb-3 border">
-                                                                <div class="d-flex align-items-center justify-content-between mb-1">
-                                                                    <strong class="text-dark fs-6" th:text="${a.patient != null ? a.patient.name : ''}">Nguyễn Minh An</strong>
-                                                                    <span class="badge bg-white text-secondary border font-monospace" th:text="${a.patient != null ? a.patient.code : ''}">BN10001</span>
-                                                                </div>
-                                                                <div class="small text-muted mb-2">
-                                                                    <i class="bi bi-telephone text-primary me-1"></i><span th:text="${a.patient != null ? a.patient.phone : ''}"></span> &middot;
-                                                                    <i class="bi bi-clock text-primary me-1"></i>Giờ hẹn: <span class="fw-bold text-dark" th:text="${a.expectedTime}"></span> &middot;
-                                                                    <i class="bi bi-stethoscope text-primary me-1"></i><span th:text="${a.doctorName != null ? a.doctorName : 'BS linh hoạt'}"></span>
-                                                                </div>
-                                                            </div>
-
-                                                            <div class="mb-3">
-                                                                <label th:for="|modalSymptoms-${a.id}|" class="form-label small fw-bold text-dark mb-1">
-                                                                    Triệu chứng ban đầu / Lý do đến khám *
-                                                                </label>
-                                                                <textarea th:id="|modalSymptoms-${a.id}|" name="symptoms" class="form-control" rows="2" maxlength="500" required th:text="${a.symptoms}" placeholder="Ghi nhận tình trạng hiện tại của bệnh nhân khi đến phòng khám..."></textarea>
-                                                            </div>
-                                                        </div>
-
-                                                        <div class="modal-footer bg-light border-0 py-2 px-4 rounded-bottom-4">
-                                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
-                                                            <button type="submit" class="btn btn-success btn-sm fw-bold px-3 d-inline-flex align-items-center gap-2">
-                                                                <i class="bi bi-check2-circle"></i>
-                                                                <span th:text="${a.status.name() == 'PENDING' ? 'Xác nhận & Tiếp đón ngay' : 'Xác nhận Tiếp đón'}">Xác nhận Tiếp đón</span>
-                                                            </button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- MODAL CHÚ THÍCH CHI TIẾT -->
-                                        <div class="modal fade text-start" th:id="|noteModal-${a.id}|" tabindex="-1" aria-hidden="true">
-                                            <div class="modal-dialog modal-dialog-centered">
-                                                <div class="modal-content border-0 shadow-lg rounded-4">
-                                                    <form method="post" th:action="@{/reception/check-in/appointments/{id}/note(id=${a.id})}">
-                                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                                                        <input type="hidden" name="branchId" th:value="${dashboard.branchId}">
-                                                        <div class="modal-header bg-light border-0 py-3 px-4 rounded-top-4">
-                                                            <div>
-                                                                <h5 class="modal-title fw-bold text-dark mb-0">
-                                                                    <i class="bi bi-pencil-square text-primary me-2"></i>Chỉnh sửa chú thích
-                                                                </h5>
-                                                                <small class="text-muted" th:text="|Bệnh nhân: ${a.patient != null ? a.patient.name : ''} (${a.patient != null ? a.patient.code : ''})|"></small>
-                                                            </div>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                        </div>
-                                                        <div class="modal-body p-4">
-                                                            <div class="mb-3">
-                                                                <label th:for="|noteInput-${a.id}|" class="form-label small fw-bold text-dark mb-1">
-                                                                    Nội dung chú thích / Triệu chứng ban đầu
-                                                                </label>
-                                                                <textarea th:id="|noteInput-${a.id}|" name="note" class="form-control" rows="3" maxlength="500" placeholder="Ghi nhận triệu chứng hoặc dặn dò khi đến khám..." th:text="${a.symptoms}"></textarea>
-                                                            </div>
-                                                        </div>
-                                                        <div class="modal-footer bg-light border-0 py-2 px-4 rounded-bottom-4 d-flex justify-content-end gap-2">
-                                                            <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>
-                                                            <button type="submit" class="btn btn-primary btn-sm fw-semibold px-3 d-inline-flex align-items-center gap-2">
-                                                                <i class="bi bi-check2"></i><span>Lưu chú thích</span>
-                                                            </button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
                                         </div>
                                     </td>
 
@@ -814,6 +727,94 @@
                     </div>
                 </div>
             </div>
+
+            <!-- CÁC MODAL TIẾP ĐÓN & CHÚ THÍCH ĐẶT NGOÀI TABLE ĐỂ LUÔN BẤM ĐƯỢC TRÊN MỌI VIEWPORT -->
+            <th:block th:each="a : ${dashboard.appointments}" th:if="${a.status.name() != 'CHECKED_IN'}">
+                <div class="modal fade text-start" th:id="|checkInModal-${a.id}|" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow-lg rounded-4">
+                            <form method="post" th:action="${a.status.name() == 'PENDING'} ? @{/reception/check-in/appointments/{id}/confirm-and-check-in(id=${a.id})} : @{/reception/check-in/appointments/{id}(id=${a.id})}">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                <input type="hidden" name="branchId" th:value="${dashboard.branchId}">
+                                <input type="hidden" name="requestKey" th:value="${a.requestKey}">
+
+                                <div class="modal-header bg-light border-0 py-3 px-4 rounded-top-4">
+                                    <div>
+                                        <h5 class="modal-title fw-bold text-dark mb-0">
+                                            <i class="bi bi-person-check-fill text-primary me-2"></i>Tiếp đón bệnh nhân
+                                        </h5>
+                                        <small class="text-muted" th:text="|Lịch hẹn: ${a.code} · ${a.patient != null ? a.patient.name : ''}|"></small>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+
+                                <div class="modal-body p-4">
+                                    <div class="p-3 bg-light rounded-3 mb-3 border">
+                                        <div class="d-flex align-items-center justify-content-between mb-1">
+                                            <strong class="text-dark fs-6" th:text="${a.patient != null ? a.patient.name : ''}">Nguyễn Minh An</strong>
+                                            <span class="badge bg-white text-secondary border font-monospace" th:text="${a.patient != null ? a.patient.code : ''}">BN10001</span>
+                                        </div>
+                                        <div class="small text-muted mb-2">
+                                            <i class="bi bi-telephone text-primary me-1"></i><span th:text="${a.patient != null ? a.patient.phone : ''}"></span> &middot;
+                                            <i class="bi bi-clock text-primary me-1"></i>Giờ hẹn: <span class="fw-bold text-dark" th:text="${a.expectedTime}"></span> &middot;
+                                            <i class="bi bi-stethoscope text-primary me-1"></i><span th:text="${a.doctorName != null ? a.doctorName : 'BS linh hoạt'}"></span>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label th:for="|modalSymptoms-${a.id}|" class="form-label small fw-bold text-dark mb-1">
+                                            Triệu chứng ban đầu / Lý do đến khám *
+                                        </label>
+                                        <textarea th:id="|modalSymptoms-${a.id}|" name="symptoms" class="form-control" rows="2" maxlength="500" required th:text="${a.symptoms}" placeholder="Ghi nhận tình trạng hiện tại của bệnh nhân khi đến phòng khám..."></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="modal-footer bg-light border-0 py-2 px-4 rounded-bottom-4">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                                    <button type="submit" class="btn btn-success btn-sm fw-bold px-3 d-inline-flex align-items-center gap-2">
+                                        <i class="bi bi-check2-circle"></i>
+                                        <span th:text="${a.status.name() == 'PENDING' ? 'Xác nhận & Tiếp đón ngay' : 'Xác nhận Tiếp đón'}">Xác nhận Tiếp đón</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade text-start" th:id="|noteModal-${a.id}|" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow-lg rounded-4">
+                            <form method="post" th:action="@{/reception/check-in/appointments/{id}/note(id=${a.id})}">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                <input type="hidden" name="branchId" th:value="${dashboard.branchId}">
+                                <div class="modal-header bg-light border-0 py-3 px-4 rounded-top-4">
+                                    <div>
+                                        <h5 class="modal-title fw-bold text-dark mb-0">
+                                            <i class="bi bi-pencil-square text-primary me-2"></i>Chỉnh sửa chú thích
+                                        </h5>
+                                        <small class="text-muted" th:text="|Bệnh nhân: ${a.patient != null ? a.patient.name : ''} (${a.patient != null ? a.patient.code : ''})|"></small>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body p-4">
+                                    <div class="mb-3">
+                                        <label th:for="|noteInput-${a.id}|" class="form-label small fw-bold text-dark mb-1">
+                                            Nội dung chú thích / Triệu chứng ban đầu
+                                        </label>
+                                        <textarea th:id="|noteInput-${a.id}|" name="note" class="form-control" rows="3" maxlength="500" placeholder="Ghi nhận triệu chứng hoặc dặn dò khi đến khám..." th:text="${a.symptoms}"></textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer bg-light border-0 py-2 px-4 rounded-bottom-4 d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>
+                                    <button type="submit" class="btn btn-primary btn-sm fw-semibold px-3 d-inline-flex align-items-center gap-2">
+                                        <i class="bi bi-check2"></i><span>Lưu chú thích</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </th:block>
 
             <!-- MODAL CHI TIẾT LƯỢT TIẾP ĐÓN Ở GIỮA MÀN HÌNH (ĐÃ BỎ NÚT CHUYỂN HƯỚNG, GIỮ LẠI NÚT THOÁT, CÁC DÒNG THOÁNG ĐỀU) -->
             <div class="modal fade" tabindex="-1" id="receptionDetailDrawer" aria-labelledby="receptionDetailDrawerLabel" aria-hidden="true">
@@ -1067,12 +1068,13 @@
 
             if (walkInQueryInput && walkInDropdown) {
                 let walkInTimer;
+                walkInQueryInput.addEventListener('focus', () => { walkInQueryInput.dispatchEvent(new Event('input')); });
                 walkInQueryInput.addEventListener('input', () => {
                     const q = walkInQueryInput.value.trim();
                     if (walkInHiddenQuery) walkInHiddenQuery.value = q;
                     if (walkInClearBtn) walkInClearBtn.classList.toggle('d-none', q.length === 0);
                     clearTimeout(walkInTimer);
-                    if (q.length < 2) {
+                    if (false && q.length < 2) {
                         walkInDropdown.classList.add('d-none');
                         walkInDropdown.innerHTML = '';
                         return;
@@ -1118,7 +1120,7 @@
                 }
 
                 document.addEventListener('click', e => {
-                    if (!e.target.closest('.walkin-live-search-wrapper')) {
+                    if (!e.target.closest('#walkInSearchForm') && !e.target.closest('#walkInLiveDropdown')) {
                         walkInDropdown.classList.add('d-none');
                     }
                 });
@@ -1181,7 +1183,7 @@
                     try {
                         const res = await fetch('/patients/quick-create', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                            headers: Object.assign({ 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, (document.querySelector('meta[name="_csrf"]') && document.querySelector('meta[name="_csrf_header"]')) ? { [document.querySelector('meta[name="_csrf_header"]').content]: document.querySelector('meta[name="_csrf"]').content } : {}),
                             body: JSON.stringify(payload)
                         });
                         if (!res.ok) {
@@ -1378,28 +1380,70 @@
             const prevDayBtn = document.getElementById('checkInPrevDayBtn');
             const nextDayBtn = document.getElementById('checkInNextDayBtn');
 
+            const currentBranchId = document.querySelector('#walkInSearchForm input[name="branchId"]')?.value
+                || new URLSearchParams(window.location.search).get('branchId')
+                || '';
+            const buildCheckInDayUrl = isoDay => '/reception/check-in?day=' + encodeURIComponent(isoDay)
+                + (currentBranchId ? '&branchId=' + encodeURIComponent(currentBranchId) : '');
+
+            const formatLocalIso = dateObj => {
+                const y = dateObj.getFullYear();
+                const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const d = String(dateObj.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            };
+
+            const openCheckInDatePicker = () => {
+                try {
+                    if (hiddenDateInput?.showPicker) {
+                        hiddenDateInput.showPicker();
+                    } else {
+                        hiddenDateInput?.focus();
+                    }
+                } catch (_) {}
+            };
+            checkInDateLabel?.addEventListener('click', openCheckInDatePicker);
+            hiddenDateInput?.addEventListener('click', openCheckInDatePicker);
+
             if (hiddenDateInput) {
                 hiddenDateInput.addEventListener('change', function () {
                     if (this.value) {
-                        window.location.href = '/reception/check-in?day=' + this.value;
+                        window.location.href = buildCheckInDayUrl(this.value);
                     }
                 });
             }
             if (prevDayBtn && hiddenDateInput) {
                 prevDayBtn.addEventListener('click', function () {
-                    const cur = hiddenDateInput.value ? new Date(hiddenDateInput.value) : new Date();
-                    cur.setDate(cur.getDate() - 1);
-                    const iso = cur.toISOString().split('T')[0];
-                    window.location.href = '/reception/check-in?day=' + iso;
+                    const base = hiddenDateInput.value ? new Date(hiddenDateInput.value + 'T00:00:00') : new Date();
+                    base.setDate(base.getDate() - 1);
+                    window.location.href = buildCheckInDayUrl(formatLocalIso(base));
                 });
             }
             if (nextDayBtn && hiddenDateInput) {
                 nextDayBtn.addEventListener('click', function () {
-                    const cur = hiddenDateInput.value ? new Date(hiddenDateInput.value) : new Date();
-                    cur.setDate(cur.getDate() + 1);
-                    const iso = cur.toISOString().split('T')[0];
-                    window.location.href = '/reception/check-in?day=' + iso;
+                    const base = hiddenDateInput.value ? new Date(hiddenDateInput.value + 'T00:00:00') : new Date();
+                    base.setDate(base.getDate() + 1);
+                    window.location.href = buildCheckInDayUrl(formatLocalIso(base));
                 });
+            }
+
+            function openReceptionDetailModalFromRow(row) {
+                if (!row) return;
+                const drawerEl = document.getElementById('receptionDetailDrawer');
+                if (!drawerEl) return;
+                const setText = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = val || '—';
+                };
+                setText('drawerVisitCode', row.dataset.visitCode || '—');
+                setText('drawerPatientName', row.dataset.patientName || 'Khách hàng');
+                setText('drawerPatientCode', row.dataset.patientCode || '---');
+                setText('drawerPhone', row.dataset.phone || 'Chưa cập nhật');
+                setText('drawerTicketNumber', row.dataset.ticketNumber || 'Chưa cấp');
+                setText('drawerDoctorName', row.dataset.doctorName || 'Theo điều phối');
+                setText('drawerCheckInTime', row.dataset.checkinTime || '—');
+                setText('drawerSymptoms', row.dataset.symptoms || 'Không có ghi chú triệu chứng');
+                bootstrap.Modal.getOrCreateInstance(drawerEl).show();
             }
 
             // Print direct helper (A6)

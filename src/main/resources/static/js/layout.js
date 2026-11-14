@@ -702,12 +702,19 @@
        ============================================================= */
     window.switchAppBranchContext = function (branchId) {
         var url = '/api/branches/switch-context?branchId=' + encodeURIComponent(branchId || '');
+        var headers = {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        };
+        var csrfMeta = document.querySelector('meta[name="_csrf"]');
+        var csrfHeaderMeta = document.querySelector('meta[name="_csrf_header"]');
+        if (csrfMeta && csrfHeaderMeta && csrfMeta.content && csrfHeaderMeta.content) {
+            headers[csrfHeaderMeta.content] = csrfMeta.content;
+        }
         fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+            credentials: 'same-origin',
+            headers: headers
         }).then(function (res) {
             return res.json();
         }).then(function (data) {

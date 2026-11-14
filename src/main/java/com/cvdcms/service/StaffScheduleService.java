@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.temporal.TemporalAdjusters;
@@ -173,12 +174,19 @@ public class StaffScheduleService {
                     + ". Không thể phân ca làm việc vào ngày nghỉ phép!");
         }
 
-        // Chống xếp trùng giờ: một nhân sự không thể trực 2 ca có khung giờ giao nhau trong cùng một ngày.
+        // Chống xếp trùng giờ & kiểm tra giới hạn 12h/ngày theo Điều 105 & 107 Bộ luật Lao động.
         LocalTime newStart = shift.getStartTime();
         LocalTime newEnd = shift.getEndTime();
+        long newShiftMinutes = (newStart != null && newEnd != null) ? Duration.between(newStart, newEnd).toMinutes() : 0;
+        if (newShiftMinutes <= 0 || newShiftMinutes > WorkShiftService.MAX_SHIFT_MINUTES) {
+            throw new IllegalArgumentException("Không thể phân ca '" + shift.getShiftName()
+                    + "' vì thời lượng vượt quá 12 giờ/ngày theo Điều 105 & 107 Bộ luật Lao động.");
+        }
+
         List<StaffSchedule> existingSchedules = scheduleRepository
                 .findByStaffStaffIdAndWorkDateAndStatusNot(staffId, workDate, ScheduleStatus.CANCELLED);
 
+        long existingMinutes = 0;
         for (StaffSchedule ex : existingSchedules) {
             WorkShift exShift = ex.getShift();
             LocalTime exStart = exShift.getStartTime();
@@ -196,6 +204,15 @@ public class StaffScheduleService {
                             + "\" (" + timeRange + "). Không thể xếp trùng giờ ở hai chi nhánh.");
                 }
             }
+            if (exStart != null && exEnd != null && exEnd.isAfter(exStart)) {
+                existingMinutes += Duration.between(exStart, exEnd).toMinutes();
+            }
+        }
+
+        if (existingMinutes + newShiftMinutes > WorkShiftService.MAX_SHIFT_MINUTES) {
+            throw new IllegalArgumentException("Theo Điều 107 Bộ luật Lao động, tổng thời giờ làm việc của nhân sự trong ngày "
+                    + workDate.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                    + " không được vượt quá 12 giờ (kể cả làm thêm giờ).");
         }
 
         StaffSchedule s = new StaffSchedule();

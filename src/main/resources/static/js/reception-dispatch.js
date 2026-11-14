@@ -54,7 +54,7 @@
             if (strong) strong.textContent = keyword;
         } else {
             const chip = document.createElement('span');
-            chip.className = 'badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1.5 d-inline-flex align-items-center gap-1.5 filter-chip';
+            chip.className = 'badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 d-inline-flex align-items-center gap-2 filter-chip';
             chip.dataset.filterType = 'keyword';
             chip.innerHTML = `<span>Từ khóa: <strong></strong></span><button type="button" class="btn-close btn-remove-chip" data-filter-type="keyword" style="font-size: 9px;" aria-label="Xóa lọc từ khóa"></button>`;
             chip.querySelector('strong').textContent = keyword;

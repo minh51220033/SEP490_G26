@@ -27,7 +27,8 @@ public class ReceptionAppointmentRestController {
     }
     @GetMapping("/patients")
     public List<ReceptionAppointmentService.PatientOption> patients(HttpSession session,
-            @RequestParam(required = false) Long branchId, @RequestParam String query) {
+            @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false, defaultValue = "") String query) {
         return appointments.searchPatients(session, branchId, query);
     }
     @GetMapping("/availability")
