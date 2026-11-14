@@ -171,10 +171,15 @@
         /* PRINT STYLES - CHUẨN KHỔ GIẤY A6 PORTRAIT (105mm x 148mm) */
         @media print {
             @page {
-                size: A6 portrait;
-                margin: 6mm;
+                size: 105mm 148mm;
+                margin: 4mm;
             }
-            body {
+            html, body {
+                width: 105mm !important;
+                height: 148mm !important;
+                max-width: 105mm !important;
+                max-height: 148mm !important;
+                overflow: hidden !important;
                 background: #ffffff !important;
                 padding: 0 !important;
                 margin: 0 !important;

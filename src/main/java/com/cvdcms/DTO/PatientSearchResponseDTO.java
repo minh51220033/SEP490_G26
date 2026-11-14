@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PatientSearchResponseDTO {
     private Long profileId;
+    private String patientToken;
     private String patientCode;
     private String fullName;
     private String phoneNumber;
@@ -22,6 +23,7 @@ public class PatientSearchResponseDTO {
 
     // Thông tin ca khám gần nhất hoặc ca khám đang mở
     private Long latestVisitId;
+    private String latestVisitToken;
     private String latestVisitCode;
     private String latestVisitStatus; // IN_EXAM, WAITING, COMPLETED
     private String latestVisitStatusDisplay;

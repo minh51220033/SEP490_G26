@@ -8,6 +8,7 @@ import com.cvdcms.entity.enums.PreferredSession;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -19,6 +20,9 @@ public interface AppointmentPolicyService {
                         List<DoctorOption> doctors) { }
     record SessionLoadSummary(PreferredSession session, String sessionName, int bookedCount,
                               int capacity, int remaining, String loadStatus, String recommendation) { }
+    record SessionRange(LocalTime start, LocalTime end, boolean active) { }
+    record SessionWindowInfo(PreferredSession session, String sessionName, LocalTime startTime,
+                             LocalTime endTime, String label, boolean active) { }
 
     Availability availability(Branch branch, LocalDate date, PreferredSession session,
                               Long excludeAppointmentId, AppointmentActorType actorType);
@@ -36,4 +40,8 @@ public interface AppointmentPolicyService {
     boolean sessionEnded(Branch branch, LocalDate date, PreferredSession session, LocalDateTime now);
 
     void ensureModificationCutoff(Appointment appointment, AppointmentActorType actorType);
+
+    SessionRange sessionRange(Branch branch, PreferredSession session);
+
+    List<SessionWindowInfo> sessionWindows(Branch branch);
 }

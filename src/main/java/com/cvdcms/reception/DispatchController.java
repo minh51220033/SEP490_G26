@@ -48,7 +48,7 @@ public class DispatchController {
             if (sId instanceof Long sid) effectiveBranchId = sid;
         }
 
-        var board = service.board(session, effectiveBranchId);
+        var board = service.board(session, effectiveBranchId, day);
         if (session != null) {
             session.setAttribute("currentBranchId", board.branchId());
         }
@@ -147,6 +147,7 @@ public class DispatchController {
         model.addAttribute("keyword", keyword != null ? keyword : "");
         model.addAttribute("selectedDoctorId", doctorId);
         model.addAttribute("selectedStatus", status != null ? status : "ALL");
+        model.addAttribute("selectedDay", day != null ? day : (session != null && session.getAttribute("currentWorkflowDay") instanceof java.time.LocalDate sd ? sd : java.time.LocalDate.now()));
         model.addAttribute("sidebarMenu", "dispatch");
         return "reception/dispatch";
     }

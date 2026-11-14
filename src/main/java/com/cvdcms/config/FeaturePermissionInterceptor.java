@@ -308,7 +308,8 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/admin/leave-requests") || uri.startsWith("/api/admin/leave-requests")) {
             return List.of("HR_LEAVE_APPROVE", "SCHEDULE_MANAGE", "STAFF_MANAGE");
         }
-        if (uri.startsWith("/admin/schedules") || uri.startsWith("/api/schedules")) {
+        if (uri.startsWith("/admin/schedules") || uri.startsWith("/api/schedules")
+                || uri.startsWith("/admin/work-shifts")) {
             return List.of("SCHEDULE_MANAGE");
         }
         if (uri.startsWith("/admin/staffs") || uri.startsWith("/staffs")) {

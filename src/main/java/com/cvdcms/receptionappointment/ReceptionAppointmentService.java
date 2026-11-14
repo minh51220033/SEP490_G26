@@ -8,6 +8,7 @@ import com.cvdcms.patient.PatientService;
 import com.cvdcms.patient.PatientView;
 import com.cvdcms.patient.ReceptionPatientRecord;
 import com.cvdcms.patient.ReceptionPatientRepository;
+import com.cvdcms.reception.ReceptionVisitRepository;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.AppointmentConflictDetectionService;
 import com.cvdcms.service.AppointmentLifecycleService;
@@ -47,6 +48,14 @@ public class ReceptionAppointmentService {
     private final AppointmentSlotService slots;
     private final PatientService patientService;
     private final Validator validator;
+    @Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher careEventPublisher;
+
+    @Autowired(required = false)
+    private ReceptionVisitRepository receptionVisits;
+
+    @Autowired(required = false)
+    private ClinicalQueueTicketRepository clinicalQueueTickets;
 
     @Autowired
     public ReceptionAppointmentService(PatientAccess access, ReceptionAppointmentRepository appointments,
@@ -197,6 +206,13 @@ public class ReceptionAppointmentService {
         PatientAccess.Scope scope = access.require(session);
         Branch branch = requireBranch(scope, branchId);
         return rules.dayLoadOverview(branch, date);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppointmentPolicyService.SessionWindowInfo> sessions(HttpSession session, Long branchId) {
+        PatientAccess.Scope scope = access.require(session);
+        Branch branch = requireBranch(scope, branchId);
+        return rules.sessionWindows(branch);
     }
 
     @Transactional(readOnly = true)
@@ -369,6 +385,9 @@ public class ReceptionAppointmentService {
         a.setStatus(Boolean.TRUE.equals(request.isTentative()) ? AppointmentStatus.PENDING : AppointmentStatus.CONFIRMED);
         appointments.saveAndFlush(a);
         history(a, scope.user().getUserId(), "CREATE", null, snapshot(a), null);
+        if (careEventPublisher != null && a.getAppointmentId() != null) {
+            careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentUpsertedCareEvent(a.getAppointmentId()));
+        }
         return view(a);
     }
 
@@ -491,6 +510,9 @@ public class ReceptionAppointmentService {
         lifecycle.transition(a, AppointmentStatus.CONFIRMED, AppointmentLifecycleAction.CONFIRM);
         appointments.saveAndFlush(a);
         history(a, scope.user().getUserId(), "CONFIRM", old, snapshot(a), null);
+        if (careEventPublisher != null && a.getAppointmentId() != null) {
+            careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentUpsertedCareEvent(a.getAppointmentId()));
+        }
         return view(a);
     }
 
@@ -514,6 +536,23 @@ public class ReceptionAppointmentService {
             if (task.getTaskType() == CustomerCareTaskType.APPOINTMENT_REMINDER
                     && task.getStatus() != CustomerCareTaskStatus.COMPLETED)
                 task.setStatus(CustomerCareTaskStatus.CANCELLED);
+        if (receptionVisits != null) {
+            receptionVisits.findByAppointmentId(id).ifPresent(v -> {
+                if (v.getStatus() != VisitStatus.COMPLETED) {
+                    v.setStatus(VisitStatus.CANCELLED);
+                    receptionVisits.saveAndFlush(v);
+                    if (clinicalQueueTickets != null && v.getVisitId() != null) {
+                        List<QueueTicket> tickets = clinicalQueueTickets.findByVisitVisitId(v.getVisitId());
+                        for (QueueTicket t : tickets) {
+                            t.setStatus(QueueStatus.CANCELLED);
+                        }
+                        if (!tickets.isEmpty()) {
+                            clinicalQueueTickets.saveAll(tickets);
+                        }
+                    }
+                }
+            });
+        }
         return view(a);
     }
 
@@ -536,7 +575,9 @@ public class ReceptionAppointmentService {
             if (reminder.getTaskType() == CustomerCareTaskType.APPOINTMENT_REMINDER
                     && reminder.getStatus() != CustomerCareTaskStatus.COMPLETED)
                 reminder.setStatus(CustomerCareTaskStatus.CANCELLED);
-        if (!careTasks.existsByAppointment_AppointmentIdAndTaskType(id, CustomerCareTaskType.NO_SHOW_RECALL)) {
+        if (careEventPublisher != null && id != null) {
+            careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentNoShowCareEvent(id));
+        } else if (!careTasks.existsByAppointment_AppointmentIdAndTaskType(id, CustomerCareTaskType.NO_SHOW_RECALL)) {
             CustomerCareTask task = new CustomerCareTask();
             task.setTaskCode("NS" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase());
             task.setAppointment(a); task.setPatientProfile(a.getPatientProfile()); task.setBranch(a.getBranch());
