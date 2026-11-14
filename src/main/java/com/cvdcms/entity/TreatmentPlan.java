@@ -1,5 +1,6 @@
 package com.cvdcms.entity;
 
+import com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus;
 import com.cvdcms.entity.enums.TreatmentPlanStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -110,6 +111,31 @@ public class TreatmentPlan {
             return this.finalEstimatedCost;
         }
         return this.totalEstimatedCost != null ? this.totalEstimatedCost : BigDecimal.ZERO;
+    }
+
+    @Transient
+    public boolean isFullyPaid() {
+        return getEstimatedCost().compareTo(BigDecimal.ZERO) > 0
+                && getRemainingCost().compareTo(BigDecimal.ZERO) <= 0;
+    }
+
+    @Transient
+    public boolean isScheduleLocked() {
+        BigDecimal paid = this.totalPaidAmount != null ? this.totalPaidAmount : BigDecimal.ZERO;
+        return paid.compareTo(BigDecimal.ZERO) > 0 || isFullyPaid();
+    }
+
+    @Transient
+    public TreatmentPlanInstallment getNextUnpaidInstallment() {
+        if (this.installments == null || this.installments.isEmpty()) {
+            return null;
+        }
+        for (TreatmentPlanInstallment inst : this.installments) {
+            if (inst.getStatus() != TreatmentPlanInstallmentStatus.PAID) {
+                return inst;
+            }
+        }
+        return null;
     }
 
     @PrePersist

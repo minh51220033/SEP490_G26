@@ -682,35 +682,46 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     public TreatmentPlanResponseDTO saveInstallments(Long planId, List<TreatmentPlanInstallmentDTO> installmentDTOs) {
         TreatmentPlan plan = treatmentPlanRepository.findByIdWithDetails(planId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kế hoạch điều trị ID: " + planId));
+
+        BigDecimal currentPaid = plan.getTotalPaidAmount() != null ? plan.getTotalPaidAmount() : BigDecimal.ZERO;
+        if (currentPaid.compareTo(BigDecimal.ZERO) > 0 || plan.isFullyPaid()) {
+            throw new IllegalStateException("Kế hoạch điều trị đã phát sinh thanh toán hoặc đã tất toán, lộ trình chia đợt đã được khóa cứng!");
+        }
+        if (installmentDTOs == null || installmentDTOs.isEmpty()) {
+            throw new IllegalArgumentException("Lộ trình chia đợt phải có ít nhất 1 đợt thanh toán!");
+        }
+
         plan.setIsInstallment(true);
         plan.getInstallments().clear();
-        if (installmentDTOs != null) {
-            int order = 1;
-            for (TreatmentPlanInstallmentDTO dto : installmentDTOs) {
-                TreatmentPlanInstallment inst = new TreatmentPlanInstallment();
-                inst.setPlan(plan);
-                inst.setInstallmentOrder(dto.getInstallmentOrder() != null ? dto.getInstallmentOrder() : order++);
-                inst.setPhaseName(dto.getPhaseName() != null && !dto.getPhaseName().isBlank()
-                        ? dto.getPhaseName() : "Đợt " + inst.getInstallmentOrder());
-                if (dto.getExpectedDateRaw() != null && !dto.getExpectedDateRaw().isBlank()) {
-                    try {
-                        inst.setExpectedDate(LocalDate.parse(dto.getExpectedDateRaw()));
-                    } catch (Exception ignored) {}
-                } else if (dto.getExpectedDate() != null && !dto.getExpectedDate().isBlank()) {
-                    try {
-                        inst.setExpectedDate(LocalDate.parse(dto.getExpectedDate(), DATE_FORMATTER));
-                    } catch (Exception e1) {
-                        try {
-                            inst.setExpectedDate(LocalDate.parse(dto.getExpectedDate()));
-                        } catch (Exception ignored) {}
-                    }
-                }
-                inst.setExpectedAmount(dto.getExpectedAmount() != null ? dto.getExpectedAmount() : BigDecimal.ZERO);
-                inst.setPaidAmount(BigDecimal.ZERO);
-                inst.setStatus(com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.PENDING);
-                inst.setNotes(dto.getNotes());
-                plan.getInstallments().add(inst);
+        int order = 1;
+        for (TreatmentPlanInstallmentDTO dto : installmentDTOs) {
+            BigDecimal expectedAmt = dto.getExpectedAmount() != null ? dto.getExpectedAmount() : BigDecimal.ZERO;
+            if (expectedAmt.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Số tiền dự kiến của mỗi đợt không được âm!");
             }
+            TreatmentPlanInstallment inst = new TreatmentPlanInstallment();
+            inst.setPlan(plan);
+            inst.setInstallmentOrder(dto.getInstallmentOrder() != null ? dto.getInstallmentOrder() : order++);
+            inst.setPhaseName(dto.getPhaseName() != null && !dto.getPhaseName().isBlank()
+                    ? dto.getPhaseName() : "Đợt " + inst.getInstallmentOrder());
+            if (dto.getExpectedDateRaw() != null && !dto.getExpectedDateRaw().isBlank()) {
+                try {
+                    inst.setExpectedDate(LocalDate.parse(dto.getExpectedDateRaw()));
+                } catch (Exception ignored) {}
+            } else if (dto.getExpectedDate() != null && !dto.getExpectedDate().isBlank()) {
+                try {
+                    inst.setExpectedDate(LocalDate.parse(dto.getExpectedDate(), DATE_FORMATTER));
+                } catch (Exception e1) {
+                    try {
+                        inst.setExpectedDate(LocalDate.parse(dto.getExpectedDate()));
+                    } catch (Exception ignored) {}
+                }
+            }
+            inst.setExpectedAmount(expectedAmt);
+            inst.setPaidAmount(BigDecimal.ZERO);
+            inst.setStatus(com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.PENDING);
+            inst.setNotes(dto.getNotes());
+            plan.getInstallments().add(inst);
         }
         recalculateInstallmentsInternal(plan);
         TreatmentPlan saved = treatmentPlanRepository.save(plan);
@@ -726,7 +737,18 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             throw new IllegalArgumentException("Số tiền thanh toán phải lớn hơn 0!");
         }
 
+        BigDecimal estimatedCost = plan.getEstimatedCost() != null ? plan.getEstimatedCost() : BigDecimal.ZERO;
         BigDecimal currentPaid = plan.getTotalPaidAmount() != null ? plan.getTotalPaidAmount() : BigDecimal.ZERO;
+        BigDecimal remainingCost = estimatedCost.subtract(currentPaid);
+        if (remainingCost.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Kế hoạch điều trị này đã thu đủ, không thể thu thêm!");
+        }
+        if (amount.compareTo(remainingCost) > 0) {
+            throw new IllegalArgumentException(String.format(
+                    "Số tiền thu (%,.0f đ) vượt quá số tiền còn lại cần thu (%,.0f đ)!",
+                    amount, remainingCost));
+        }
+
         plan.setTotalPaidAmount(currentPaid.add(amount));
 
         recalculateInstallmentsInternal(plan);
@@ -776,6 +798,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     public TreatmentPlanInstallmentDTO markReminderSent(Long installmentId, String notes) {
         TreatmentPlanInstallment inst = treatmentPlanInstallmentRepository.findById(installmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đợt thanh toán ID: " + installmentId));
+        if (inst.getStatus() == com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.PAID
+                || (inst.getPlan() != null && inst.getPlan().isFullyPaid())) {
+            throw new IllegalStateException("Đợt thanh toán này đã hoàn tất, không cần nhắc hẹn!");
+        }
         inst.setReminded(true);
         inst.setRemindedAt(LocalDateTime.now());
         if (notes != null && !notes.isBlank()) {
