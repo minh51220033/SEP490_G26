@@ -706,8 +706,6 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
 
         BigDecimal estimatedCost = plan.getEstimatedCost() != null ? plan.getEstimatedCost() : BigDecimal.ZERO;
         BigDecimal currentPaid = plan.getTotalPaidAmount() != null ? plan.getTotalPaidAmount() : BigDecimal.ZERO;
-        BigDecimal estimatedCost = plan.getEstimatedCost() != null ? plan.getEstimatedCost() : BigDecimal.ZERO;
-        BigDecimal currentPaid = plan.getTotalPaidAmount() != null ? plan.getTotalPaidAmount() : BigDecimal.ZERO;
         BigDecimal remainingCost = estimatedCost.subtract(currentPaid);
         if (remainingCost.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Kế hoạch điều trị này đã thu đủ, không thể thu thêm!");
