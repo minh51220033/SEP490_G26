@@ -97,6 +97,20 @@ public class MembershipTierServiceImpl implements MembershipTierService {
 
         validateTierDto(dto);
 
+        // Không cho sửa hoặc tắt hạng cơ sở duy nhất làm mất hạng có ngưỡng chi tiêu 0 đ
+        boolean isCurrentBaseTier = existing.getMinTotalSpent() != null && BigDecimal.ZERO.compareTo(existing.getMinTotalSpent()) == 0;
+        boolean willDeactivate = dto.getIsActive() != null && !dto.getIsActive();
+        boolean willChangeSpentFromZero = dto.getMinTotalSpent() != null && dto.getMinTotalSpent().compareTo(BigDecimal.ZERO) > 0;
+
+        if (isCurrentBaseTier && (willDeactivate || willChangeSpentFromZero)) {
+            long otherZeroSpentActiveCount = membershipTierRepository.findByIsActiveTrueOrderByMinTotalSpentAsc().stream()
+                    .filter(t -> t.getMinTotalSpent() != null && t.getMinTotalSpent().compareTo(BigDecimal.ZERO) == 0 && !t.getTierId().equals(tierId))
+                    .count();
+            if (otherZeroSpentActiveCount == 0) {
+                throw new IllegalStateException("Không thể sửa hoặc vô hiệu hóa hạng thành viên cơ sở (mức chi tiêu 0 đ) làm mất hạng có ngưỡng chi tiêu 0 đ.");
+            }
+        }
+
         existing.setTierCode(cleanCode);
         existing.setTierName(dto.getTierName().trim());
         existing.setMinTotalSpent(dto.getMinTotalSpent());
@@ -105,15 +119,6 @@ public class MembershipTierServiceImpl implements MembershipTierService {
         existing.setPointValue(dto.getPointValue());
         existing.setDisplayOrder(dto.getDisplayOrder());
         if (dto.getIsActive() != null) {
-            // Không cho vô hiệu hóa hạng mặc định có minTotalSpent = 0 nếu là hạng cơ sở duy nhất
-            if (!dto.getIsActive() && BigDecimal.ZERO.compareTo(existing.getMinTotalSpent()) == 0) {
-                long zeroSpentActiveCount = membershipTierRepository.findByIsActiveTrueOrderByMinTotalSpentAsc().stream()
-                        .filter(t -> t.getMinTotalSpent().compareTo(BigDecimal.ZERO) == 0 && !t.getTierId().equals(tierId))
-                        .count();
-                if (zeroSpentActiveCount == 0) {
-                    throw new IllegalStateException("Không thể vô hiệu hóa hạng thành viên cơ sở (mức chi tiêu 0 đ) khi không có hạng thay thế.");
-                }
-            }
             existing.setIsActive(dto.getIsActive());
         }
 

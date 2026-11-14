@@ -24,6 +24,8 @@ import java.util.UUID;
 @Transactional
 public class PaymentServiceImpl implements PaymentService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PaymentServiceImpl.class);
+
     private final PaymentRepository paymentRepository;
     private final InvoiceRepository invoiceRepository;
     private final InvoiceAuditLogRepository invoiceAuditLogRepository;
@@ -385,6 +387,30 @@ public class PaymentServiceImpl implements PaymentService {
         if (visit.getStatus() != VisitStatus.WAITING_PAYMENT) {
             throw new IllegalStateException("Chỉ hoàn tất lượt khám đang chờ thanh toán.");
         }
+
+        // Không kết thúc lượt khám nếu vẫn còn hóa đơn khác chưa thanh toán hết nợ
+        List<Invoice> visitInvoices = invoiceRepository.findByVisit_VisitId(visit.getVisitId());
+        if (visitInvoices != null) {
+            boolean hasOtherDebt = visitInvoices.stream().anyMatch(inv ->
+                    (invoice.getInvoiceId() == null || !inv.getInvoiceId().equals(invoice.getInvoiceId()))
+                    && inv.getStatus() != InvoiceStatus.CANCELLED
+                    && inv.getRemainingDebt() != null
+                    && inv.getRemainingDebt().compareTo(BigDecimal.ZERO) > 0);
+            if (hasOtherDebt) {
+                log.info("Lượt khám {} chưa thể kết thúc vì vẫn còn hóa đơn khác có nợ.", visit.getVisitCode());
+                return;
+            }
+        }
+
+        // Không kết thúc lượt khám nếu còn dịch vụ hoàn tất chưa lập hóa đơn
+        if (invoiceService != null) {
+            List<com.cvdcms.entity.PerformedService> unbilled = invoiceService.getUnbilledPerformedServices(visit.getVisitId());
+            if (unbilled != null && !unbilled.isEmpty()) {
+                log.info("Lượt khám {} chưa thể kết thúc vì còn {} dịch vụ hoàn tất chưa lập hóa đơn.", visit.getVisitCode(), unbilled.size());
+                return;
+            }
+        }
+
         visit.setStatus(VisitStatus.COMPLETED);
         visit.setCompletedAt(LocalDateTime.now());
         visitRepository.saveAndFlush(visit);

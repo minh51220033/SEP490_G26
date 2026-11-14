@@ -927,7 +927,7 @@ public class PayrollServiceImpl implements PayrollService {
                 currentUserId, branchId, AssignmentStatus.ACTIVE);
         if (!hasAssignment) {
             boolean isMultiBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(currentUserId, AssignmentStatus.ACTIVE).isEmpty()
-                    && userRepository.findById(currentUserId).map(u -> u.getBranch() == null || branchId.equals(u.getBranch().getBranchId())).orElse(false);
+                    && userRepository.findById(currentUserId).map(u -> u.getBranch() != null && branchId.equals(u.getBranch().getBranchId())).orElse(false);
             if (!isMultiBranch) {
                 throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh này");
             }
