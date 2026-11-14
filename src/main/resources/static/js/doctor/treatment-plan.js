@@ -132,14 +132,14 @@ function groupStagesIntoCourses(stages, plan) {
         let courseTitle = null;
         let cleanStageName = (st.stageName || '').trim();
 
-        // 1. Kiểm tra prefix dạng [CĐ #1], [CĐ 1], [CĐ#1]...
-        const cdMatch = cleanStageName.match(/^\[(CĐ\s*#?\d+)\]\s*(.*)$/i);
+        // 1. Kiểm tra prefix dạng [CĐ #1], [SV #1]...
+        const cdMatch = cleanStageName.match(/^\[((?:CĐ|SV)\s*#?\d+)\]\s*(.*)$/i);
         if (cdMatch) {
-            courseKey = cdMatch[1].toUpperCase().replace(/\s+/g, ' '); // Ví dụ: "CĐ #1"
+            courseKey = cdMatch[1].toUpperCase().replace(/\s+/g, ' '); // Ví dụ: "CĐ #1" hoặc "SV #1"
             cleanStageName = cdMatch[2].trim();
 
-            if (st.description && /chẩn đoán:/i.test(st.description)) {
-                const parts = st.description.split(/chẩn đoán:\s*/i);
+            if (st.description && /(?:chẩn đoán|dịch vụ):\s*/i.test(st.description)) {
+                const parts = st.description.split(/(?:chẩn đoán|dịch vụ):\s*/i);
                 if (parts[1]) {
                     courseTitle = `[${courseKey}] ${parts[1].trim()}`;
                 }
@@ -147,8 +147,8 @@ function groupStagesIntoCourses(stages, plan) {
             if (!courseTitle) {
                 courseTitle = `[${courseKey}] Quá trình điều trị`;
             }
-        } else if (st.description && /^điều trị chẩn đoán:\s*/i.test(st.description.trim())) {
-            const diagPart = st.description.trim().replace(/^điều trị chẩn đoán:\s*/i, '');
+        } else if (st.description && /^(?:điều trị chẩn đoán|dịch vụ):\s*/i.test(st.description.trim())) {
+            const diagPart = st.description.trim().replace(/^(?:điều trị chẩn đoán|dịch vụ):\s*/i, '');
             courseKey = 'DIAG_' + diagPart;
             courseTitle = diagPart;
         } else {
@@ -226,19 +226,19 @@ function renderPlanInlineRoadmapHtml(plan) {
                 let completedBadgeHtml = '';
                 if (st.status === 'COMPLETED' || (totalItemsInStage > 0 && doneItemsInStage === totalItemsInStage)) {
                     completedBadgeHtml = `
-                        <span class="badge px-2.5 py-1.5 rounded-pill bg-success-subtle text-success border border-success" id="stage-completed-badge-${st.stageId}">
+                        <span class="badge px-2 py-1 rounded-pill bg-success-subtle text-success border border-success" id="stage-completed-badge-${st.stageId}">
                             <i class="bi bi-check2-circle me-1"></i><span>${st.completedAt ? 'Hoàn thành: ' + st.completedAt : 'Đã hoàn thành'}</span>
                         </span>
                     `;
                 } else if (doneItemsInStage > 0 || st.status === 'IN_PROGRESS') {
                     completedBadgeHtml = `
-                        <span class="badge px-2.5 py-1.5 rounded-pill bg-primary-subtle text-primary border border-primary" id="stage-completed-badge-${st.stageId}">
+                        <span class="badge px-2 py-1 rounded-pill bg-primary-subtle text-primary border border-primary" id="stage-completed-badge-${st.stageId}">
                             <i class="bi bi-arrow-repeat me-1"></i><span>Tiến độ: ${doneItemsInStage}/${totalItemsInStage} bước</span>
                         </span>
                     `;
                 } else {
                     completedBadgeHtml = `
-                        <span class="badge px-2.5 py-1.5 rounded-pill bg-light text-secondary border" id="stage-completed-badge-${st.stageId}">
+                        <span class="badge px-2 py-1 rounded-pill bg-light text-secondary border" id="stage-completed-badge-${st.stageId}">
                             <i class="bi bi-clock-history me-1"></i><span>Chưa thực hiện</span>
                         </span>
                     `;
@@ -270,13 +270,13 @@ function renderPlanInlineRoadmapHtml(plan) {
 
                         if (isComp) {
                             statusBadgeHtml = `
-                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1 shadow-xs" style="font-size: 12px;">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill fw-bold d-inline-flex align-items-center gap-1 shadow-xs" style="font-size: 12px;">
                                     <i class="bi bi-check2-circle"></i>
                                     <span>Đã thực hiện</span>
                                 </span>
                             `;
                             actionBtnHtml = `
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-semibold shadow-xs d-inline-flex align-items-center gap-1.5"
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 fw-semibold shadow-xs d-inline-flex align-items-center gap-1"
                                         style="font-size: 12px;"
                                         title="Hoàn tác lại bước này (Chuyển về Chưa làm)"
                                         onclick="revertPlanItemStatus(${it.planItemId})">
@@ -286,13 +286,13 @@ function renderPlanInlineRoadmapHtml(plan) {
                             `;
                         } else {
                             statusBadgeHtml = `
-                                <span class="badge bg-light text-secondary border px-2.5 py-1.5 rounded-pill fw-semibold d-inline-flex align-items-center gap-1 shadow-xs" style="font-size: 12px;">
+                                <span class="badge bg-light text-secondary border px-2 py-1 rounded-pill fw-semibold d-inline-flex align-items-center gap-1 shadow-xs" style="font-size: 12px;">
                                     <i class="bi bi-clock"></i>
                                     <span>Chưa làm</span>
                                 </span>
                             `;
                             actionBtnHtml = `
-                                <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5"
+                                <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs d-inline-flex align-items-center gap-1"
                                         style="font-size: 12px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;"
                                         title="Thực hiện thủ thuật này trong ca khám hôm nay (Tự động đưa vào Dịch vụ thực hiện FT16)"
                                         onclick="executePlanItemDirectly(${it.planItemId})">
@@ -330,19 +330,19 @@ function renderPlanInlineRoadmapHtml(plan) {
 
                 stagesInsideCourseHtml += `
                     <div class="${cardClass}" id="stage-card-${st.stageId}">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-2.5 mb-2.5 border-bottom">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-2 mb-2 border-bottom">
                             <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-dark px-2.5 py-1.5 rounded-pill fw-bold" style="font-size: 11.5px;">Giai đoạn ${st.internalOrder}</span>
+                                <span class="badge bg-dark px-2 py-1 rounded-pill fw-bold" style="font-size: 11.5px;">Giai đoạn ${st.internalOrder}</span>
                                 <strong class="text-dark" style="font-size: 14.5px;">${st.cleanStageName}</strong>
                             </div>
                             <div class="d-flex flex-wrap align-items-center gap-2">
                                 ${completedBadgeHtml}
-                                <span class="badge bg-white text-dark border px-2.5 py-1.5 rounded-pill shadow-xs">
+                                <span class="badge bg-white text-dark border px-2 py-1 rounded-pill shadow-xs">
                                     <i class="bi bi-calendar-check text-primary me-1"></i>
                                     <span>Dự kiến xong: </span>
                                     <strong>${expectedEnd}</strong>
                                 </span>
-                                <span class="badge px-3 py-1.5 rounded-pill shadow-xs d-inline-flex align-items-center gap-1.5 ${stageStatusClass}" id="stage-status-badge-${st.stageId}">
+                                <span class="badge px-3 py-1 rounded-pill shadow-xs d-inline-flex align-items-center gap-1 ${stageStatusClass}" id="stage-status-badge-${st.stageId}">
                                     <i class="bi ${stageStatusIcon}"></i>
                                     <span>${stageStatusText}</span>
                                 </span>
@@ -378,8 +378,8 @@ function renderPlanInlineRoadmapHtml(plan) {
                          onclick="toggleCourseAccordion('${course.courseId}')"
                          title="Nhấn để gập / mở quá trình điều trị này">
                         
-                        <div class="d-flex align-items-center gap-2.5 flex-grow-1">
-                            <span class="badge rounded-pill px-2.5 py-1 text-white fw-bold shadow-xs"
+                        <div class="d-flex align-items-center gap-2 flex-grow-1">
+                            <span class="badge rounded-pill px-2 py-1 text-white fw-bold shadow-xs"
                                   style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); font-size: 11.5px; letter-spacing: 0.3px;">
                                 QUÁ TRÌNH ${course.courseIndex}
                             </span>
@@ -392,7 +392,7 @@ function renderPlanInlineRoadmapHtml(plan) {
                         </div>
 
                         <div class="d-flex align-items-center gap-2">
-                            <span class="badge ${courseStatusBadgeClass} px-2.5 py-1.5 rounded-pill d-inline-flex align-items-center gap-1" style="font-size: 12px;">
+                            <span class="badge ${courseStatusBadgeClass} px-2 py-1 rounded-pill d-inline-flex align-items-center gap-1" style="font-size: 12px;">
                                 <i class="bi ${courseStatusIcon}"></i>
                                 <span>${courseStatusText}</span>
                             </span>
@@ -417,26 +417,26 @@ function renderPlanInlineRoadmapHtml(plan) {
         <div class="df-inline-roadmap-container p-3 p-md-4" style="width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden;">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
                 <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-primary text-white px-2.5 py-1 rounded-pill fw-bold">
+                    <span class="badge bg-primary text-white px-2 py-1 rounded-pill fw-bold">
                         <i class="bi bi-diagram-3-fill me-1"></i>LỘ TRÌNH ĐIỀU TRỊ THEO CÁC QUÁ TRÌNH
                     </span>
                     <strong class="text-dark fs-6">${plan.planName}</strong>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2 small">
-                    <span class="badge bg-white text-dark border px-2.5 py-1.5 rounded-pill shadow-xs">
+                    <span class="badge bg-white text-dark border px-2 py-1 rounded-pill shadow-xs">
                         <i class="bi bi-layers text-primary me-1"></i>
                         <span>Tổng cộng: </span>
                         <strong>${courses.length} quá trình</strong>
                     </span>
-                    <span class="badge bg-white text-dark border px-2.5 py-1.5 rounded-pill shadow-xs">
+                    <span class="badge bg-white text-dark border px-2 py-1 rounded-pill shadow-xs">
                         <i class="bi bi-calendar-check text-primary me-1"></i>
                         <span>Dự kiến xong: </span>
                         <strong>${plan.expectedEndDate || '---'}</strong>
                     </span>
-                    <span class="badge bg-light text-primary border px-2.5 py-1.5 rounded-pill fw-bold" id="plan-progress-badge-${plan.planId}">
+                    <span class="badge bg-light text-primary border px-2 py-1 rounded-pill fw-bold" id="plan-progress-badge-${plan.planId}">
                         ${plan.totalItems ? `${plan.completedItems}/${plan.totalItems} bước (${plan.progressPercent}%)` : `${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)`}
                     </span>
-                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 shadow-xs d-inline-flex align-items-center gap-1 ms-1"
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 shadow-xs d-inline-flex align-items-center gap-1 ms-1"
                             onclick="toggleAllCoursesInPlan(${plan.planId})"
                             id="btn-toggle-all-${plan.planId}"
                             title="Thu gọn hoặc mở tất cả các quá trình">
@@ -508,15 +508,17 @@ function renderDiagnosisProgressTables() {
                 });
             }
 
-            // 2. Phân tích courseTitle để lấy CĐ prefix, ICD code và tên chẩn đoán sạch đẹp
+            // 2. Phân tích courseTitle để lấy CĐ/SV prefix, ICD code và tên sạch đẹp
             let rawTitle = (course.courseTitle || '').trim();
             let cdPrefix = '';
+            let isServicePrefix = false;
             let icdCode = '';
             let diagName = rawTitle;
 
-            const cdMatch = diagName.match(/^\[(CĐ\s*#?\d+)\]\s*(.*)$/i);
+            const cdMatch = diagName.match(/^\[((?:CĐ|SV)\s*#?\d+)\]\s*(.*)$/i);
             if (cdMatch) {
                 cdPrefix = cdMatch[1].toUpperCase().replace(/\s+/g, ' ');
+                isServicePrefix = cdPrefix.startsWith('SV');
                 diagName = cdMatch[2].trim();
             }
 
@@ -535,7 +537,7 @@ function renderDiagnosisProgressTables() {
             const multipleStages = course.stages && course.stages.length > 1;
 
             if (!course.stages || course.stages.length === 0 || totalSteps === 0) {
-                tbodyRowsHtml = '<tr><td colspan="6" class="text-center text-muted fst-italic py-3">Chẩn đoán này chưa có bước thực hiện nào.</td></tr>';
+                tbodyRowsHtml = '<tr><td colspan="6" class="text-center text-muted fst-italic py-3">Mục này chưa có bước thực hiện nào.</td></tr>';
             } else {
                 let globalItemIdx = 0;
                 course.stages.forEach((stage, sIdx) => {
@@ -544,7 +546,7 @@ function renderDiagnosisProgressTables() {
                     const stageDoneCnt = stageItems.filter(i => i.status === 'COMPLETED').length;
                     const stageIsAllDone = stageTotalCnt > 0 && stageDoneCnt === stageTotalCnt;
 
-                    // Nếu có nhiều giai đoạn trong cùng chẩn đoán, hiển thị 1 dòng tiêu đề phân chia giai đoạn nhẹ nhàng
+                    // Nếu có nhiều giai đoạn trong cùng mục, hiển thị 1 dòng tiêu đề phân chia giai đoạn nhẹ nhàng
                     if (multipleStages) {
                         tbodyRowsHtml += `
                             <tr class="table-light" style="border-top: 1.5px solid #e2e8f0;">
@@ -583,8 +585,8 @@ function renderDiagnosisProgressTables() {
                             : '<span class="text-muted">---</span>';
 
                         const statusBadgeHtml = isDone
-                            ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1.5 fw-bold"><i class="bi bi-check2-circle me-1"></i>Đã làm</span>'
-                            : '<span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1.5 fw-semibold"><i class="bi bi-clock me-1"></i>Chưa làm</span>';
+                            ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 fw-bold"><i class="bi bi-check2-circle me-1"></i>Đã làm</span>'
+                            : '<span class="badge bg-light text-secondary border rounded-pill px-2 py-1 fw-semibold"><i class="bi bi-clock me-1"></i>Chưa làm</span>';
 
                         tbodyRowsHtml += `
                             <tr class="${isDone ? 'ps-step-done' : 'ps-step-todo'}">
@@ -604,16 +606,16 @@ function renderDiagnosisProgressTables() {
                 });
             }
 
-            // Mỗi chẩn đoán là 1 bảng riêng biệt bên trong Kế hoạch điều trị
+            // Mỗi dịch vụ / chẩn đoán là 1 bảng riêng biệt bên trong Kế hoạch điều trị
             coursesHtml += `
                 <div class="border rounded-3 overflow-hidden bg-white shadow-xs">
-                    <div class="p-2.5 px-3 bg-light border-bottom d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="p-2 px-3 bg-light border-bottom d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                            ${cdPrefix ? `<span class="badge bg-primary text-white rounded-pill px-2.5 py-1 fw-bold" style="font-size: 11.5px;">${escapePlanHtml(cdPrefix)}</span>` : ''}
-                            <strong class="text-dark" style="font-size: 13.5px;">Chẩn đoán: ${escapePlanHtml(diagName)}</strong>
-                            ${icdCode ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5"><i class="bi bi-clipboard2-pulse me-1"></i>[${escapePlanHtml(icdCode)}]</span>` : ''}
+                            ${cdPrefix ? `<span class="badge bg-primary text-white rounded-pill px-2 py-1 fw-bold" style="font-size: 11.5px;">${escapePlanHtml(cdPrefix)}</span>` : ''}
+                            <strong class="text-dark" style="font-size: 13.5px;">${isServicePrefix ? 'Dịch vụ:' : 'Chẩn đoán:'} ${escapePlanHtml(diagName)}</strong>
+                            ${icdCode ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-1"><i class="bi bi-clipboard2-pulse me-1"></i>[${escapePlanHtml(icdCode)}]</span>` : ''}
                         </div>
-                        <span class="badge rounded-pill px-2.5 py-1 ${doneSteps > 0 && doneSteps === totalSteps ? 'bg-success-subtle text-success border border-success' : (doneSteps > 0 ? 'bg-primary-subtle text-primary border border-primary' : 'bg-light text-secondary border')}">
+                        <span class="badge rounded-pill px-2 py-1 ${doneSteps > 0 && doneSteps === totalSteps ? 'bg-success-subtle text-success border border-success' : (doneSteps > 0 ? 'bg-primary-subtle text-primary border border-primary' : 'bg-light text-secondary border')}">
                             <i class="bi ${doneSteps > 0 && doneSteps === totalSteps ? 'bi-check2-circle' : 'bi-clock'} me-1"></i>
                             <span>${doneSteps}/${totalSteps} bước đã làm</span>
                         </span>
@@ -641,12 +643,12 @@ function renderDiagnosisProgressTables() {
 
         const planPct = planTotalSteps > 0 ? Math.round((planDoneSteps / planTotalSteps) * 100) : 0;
 
-        // Cùng 1 Kế hoạch điều trị thì gom chung vào 1 khối (ps-plan-card), bên trong chứa các bảng chẩn đoán tương ứng
+        // Cùng 1 Kế hoạch điều trị thì gom chung vào 1 khối (ps-plan-card), bên trong chứa các bảng tương ứng
         allDiagnosisCardsHtml += `
             <div class="ps-plan-card">
                 <div class="ps-plan-head d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <span class="badge bg-dark rounded-pill px-2.5 py-1.5">${escapePlanHtml(plan.planCode || 'KHDT')}</span>
+                        <span class="badge bg-dark rounded-pill px-2 py-1">${escapePlanHtml(plan.planCode || 'KHDT')}</span>
                         <strong class="text-dark" style="font-size: 14.5px;">${escapePlanHtml(plan.planName)}</strong>
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -1028,7 +1030,7 @@ function sendPlanToAccounting(planId, planCode) {
         // Cập nhật nút trong cột Thao tác
         const actionBtn = document.getElementById(`btn-action-handover-${planId}`);
         if (actionBtn) {
-            actionBtn.outerHTML = `<span class="badge bg-success-subtle text-success border border-success py-1.5 px-2" title="Đã chuyển Kế toán"><i class="bi bi-check2-all me-1"></i>Đã chuyển KT</span>`;
+            actionBtn.outerHTML = `<span class="badge bg-success-subtle text-success border border-success py-1 px-2" title="Đã chuyển Kế toán"><i class="bi bi-check2-all me-1"></i>Đã chuyển KT</span>`;
         }
     })
     .catch(err => {

@@ -382,13 +382,20 @@ public class PatientService {
         visibleProfile(scope, patientId);
         Visit visit = visits.oneForPatient(patientId, visitId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        LocalDate visitDate = visit.getCheckInAt() != null ? visit.getCheckInAt().toLocalDate() : null;
+        List<Appointment> patientAppointments = appointments.findByProfileIdWithDetails(patientId);
         return new VisitDetails(ReceptionVisitView.from(visit),
                 performedServices.findByVisitIdWithDetails(visitId).stream()
                         .map(item -> item.getService().getServiceName()).toList(),
-                appointments.findByProfileIdWithDetails(patientId).stream()
-                        .filter(a -> a.getAppointmentDate().isAfter(visit.getCheckInAt().toLocalDate()))
+                (patientAppointments != null ? patientAppointments : List.<Appointment>of()).stream()
+                        .filter(Objects::nonNull)
+                        .filter(a -> a.getAppointmentDate() != null
+                                && (visitDate == null || a.getAppointmentDate().isAfter(visitDate)))
                         .filter(a -> a.getStatus() == com.cvdcms.entity.enums.AppointmentStatus.PENDING
                                 || a.getStatus() == com.cvdcms.entity.enums.AppointmentStatus.CONFIRMED)
+                        .sorted(Comparator.comparing(Appointment::getAppointmentDate)
+                                .thenComparing(Appointment::getExpectedTime,
+                                        Comparator.nullsLast(Comparator.naturalOrder())))
                         .map(a -> new FollowUp(a.getAppointmentCode(), a.getAppointmentDate(),
                                 a.getExpectedTime(), a.getStatus().name(),
                                 a.getDoctor() == null ? null : a.getDoctor().getFullName(),

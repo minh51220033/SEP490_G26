@@ -42,6 +42,25 @@ public class EmrViewText {
         catch (RuntimeException ex) { return raw; }
     }
 
+    public String number(Object value) {
+        if (value == null) return "";
+        if (value instanceof java.math.BigDecimal bd) {
+            return bd.compareTo(java.math.BigDecimal.ZERO) == 0
+                    ? "0"
+                    : bd.stripTrailingZeros().toPlainString();
+        }
+        String raw = value.toString().trim();
+        if (raw.isEmpty()) return "";
+        try {
+            java.math.BigDecimal bd = new java.math.BigDecimal(raw);
+            return bd.compareTo(java.math.BigDecimal.ZERO) == 0
+                    ? "0"
+                    : bd.stripTrailingZeros().toPlainString();
+        } catch (NumberFormatException ex) {
+            return raw;
+        }
+    }
+
     public String label(Object value) {
         if (value == null) return "—";
         String raw = value.toString();

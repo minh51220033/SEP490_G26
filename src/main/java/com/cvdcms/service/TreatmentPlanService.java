@@ -15,6 +15,8 @@ public interface TreatmentPlanService {
 
     TreatmentPlanResponseDTO createPlan(TreatmentPlanRequestDTO request);
 
+    TreatmentPlanResponseDTO updatePlan(Long planId, TreatmentPlanRequestDTO request);
+
     TreatmentPlanResponseDTO updatePlanStatus(Long planId, String status);
 
     TreatmentPlanResponseDTO updateStageStatus(Long stageId, String status);

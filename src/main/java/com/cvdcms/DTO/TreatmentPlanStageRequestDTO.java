@@ -13,6 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TreatmentPlanStageRequestDTO {
+    private Long stageId;
     private Integer stageOrder;
     private String stageName;
     private Integer estimatedDaysFromStart;

@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TreatmentPlanItemRequestDTO {
+    private Long planItemId;
     private Long serviceId;
     private String customServiceName;
     private String stepName;

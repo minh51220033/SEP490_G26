@@ -359,12 +359,55 @@ public class DoctorRecordPageController {
             @PathVariable String visitRef) {
         Long id = decodePatientRef(patientRef);
         Long visitId = decodeVisitRef(visitRef);
-        records.visit(session, id, visitId);
+        var detail = records.visit(session, id, visitId);
         if (doctorVisitAccess != null) {
             doctorVisitAccess.requireVisitRead(session, visitId);
         }
-        return "redirect:/doctor/examination/" + urlIdCodec.encodeVisit(visitId)
-                + "/diagnoses?readOnly=true&fromPatientRef=" + encodePatient(id);
+        PatientView patient = records.get(session, id);
+        model.addAttribute("patient", patient);
+        model.addAttribute("patientRouteId", encodePatient(id));
+        model.addAttribute("detail", detail);
+        model.addAttribute("visit", detail != null ? detail.visit() : null);
+        LocalDate visitDate = detail != null && detail.visit() != null && detail.visit().checkInAt() != null
+                ? detail.visit().checkInAt().toLocalDate()
+                : null;
+        List<com.cvdcms.entity.Appointment> patientAppointments = overviewService.getPatientAppointments(id);
+        List<PatientService.FollowUp> followUps = (patientAppointments != null ? patientAppointments : List.<com.cvdcms.entity.Appointment>of()).stream()
+                .filter(java.util.Objects::nonNull)
+                .filter(a -> a.getAppointmentDate() != null
+                        && (visitDate == null || a.getAppointmentDate().isAfter(visitDate)))
+                .filter(a -> a.getStatus() == com.cvdcms.entity.enums.AppointmentStatus.PENDING
+                        || a.getStatus() == com.cvdcms.entity.enums.AppointmentStatus.CONFIRMED)
+                .sorted(java.util.Comparator.comparing(com.cvdcms.entity.Appointment::getAppointmentDate)
+                        .thenComparing(com.cvdcms.entity.Appointment::getExpectedTime,
+                                java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                .map(a -> new PatientService.FollowUp(
+                        a.getAppointmentCode(),
+                        a.getAppointmentDate(),
+                        a.getExpectedTime(),
+                        a.getStatus().name(),
+                        a.getDoctor() == null ? null : a.getDoctor().getFullName(),
+                        a.getService() == null ? null : a.getService().getServiceName()))
+                .toList();
+        model.addAttribute("followUps", followUps);
+        model.addAttribute("treatmentPlans", overviewService.getPatientTreatmentPlans(id));
+        model.addAttribute("canPerformClinical", canPerformClinicalOnVisit(session, visitId));
+        model.addAttribute("canManageEmr", records.isAdmin(session) || records.isDoctor(session));
+        shared(model, session);
+        return "patient-records/visit";
+    }
+
+    private boolean canPerformClinicalOnVisit(HttpSession session, Long visitId) {
+        if (session == null) return false;
+        if (records.isAdmin(session)) return true;
+        if (!records.isDoctor(session)) return false;
+        if (doctorVisitAccess == null || visitId == null) return true;
+        try {
+            doctorVisitAccess.require(session, visitId);
+            return true;
+        } catch (ResponseStatusException ex) {
+            return false;
+        }
     }
 
     @GetMapping("/{patientRef}/documents/{documentId}")

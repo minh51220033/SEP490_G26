@@ -23,6 +23,7 @@ public class PrescriptionRequestDTO {
     private String followupDate;
     private Double patientWeight;
     private String guardianInfo;
+    private Boolean confirmAllergyWarning;
 
     @Builder.Default
     private List<PrescriptionItemRequestDTO> items = new ArrayList<>();

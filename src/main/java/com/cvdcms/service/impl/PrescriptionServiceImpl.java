@@ -53,7 +53,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     @Transactional(readOnly = true)
     public PrescriptionResponseDTO getPrescriptionById(Long prescriptionId) {
         Prescription prescription = prescriptionRepository.findById(prescriptionId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn thuốc ID: " + prescriptionId));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn thuốc."));
         return mapToPrescriptionResponseDTO(prescription);
     }
 
@@ -62,7 +62,8 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     public PrescriptionResponseDTO createPrescription(PrescriptionRequestDTO request) {
         Visit visit = null;
         if (request.getVisitId() != null) {
-            visit = visitRepository.findById(request.getVisitId()).orElse(null);
+            visit = visitRepository.findById(request.getVisitId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám để kê đơn thuốc!"));
         }
         if (visit == null && request.getPatientId() != null) {
             visit = visitRepository.findFirstByPatientProfile_ProfileIdOrderByCheckInAtDesc(request.getPatientId()).orElse(null);
@@ -71,8 +72,8 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             throw new IllegalArgumentException("Không tìm thấy ca khám hoặc hồ sơ bệnh nhân để kê đơn thuốc!");
         }
 
-        // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi chuyển thanh toán hoặc hoàn tất (áp dụng khi kê trực tiếp trong ca khám)
-        if (visit != null && request.getPatientId() == null
+        // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi chuyển thanh toán hoặc hoàn tất
+        if (visit != null
                 && (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED)) {
             throw new IllegalStateException("Bệnh án lâm sàng đã hoàn tất và khóa bất biến (BR-EMR-02). Không thể tạo đơn thuốc mới.");
         }
@@ -84,19 +85,22 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             throw new IllegalArgumentException("Không tìm thấy hồ sơ bệnh nhân!");
         }
 
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new IllegalArgumentException("Đơn thuốc phải có ít nhất 1 loại thuốc!");
+        }
+
         StaffProfile doctor = null;
         if (request.getDoctorId() != null) {
-            doctor = staffProfileRepository.findById(request.getDoctorId()).orElse(null);
-        }
-        if (doctor == null && visit != null) {
+            doctor = staffProfileRepository.findById(request.getDoctorId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin bác sĩ kê đơn!"));
+        } else if (visit != null) {
             doctor = visit.getPrimaryDoctor();
-        }
-        if (doctor == null) {
-            doctor = staffProfileRepository.findAll().stream().findFirst().orElse(null);
         }
         if (doctor == null) {
             throw new IllegalArgumentException("Vui lòng chọn bác sĩ kê đơn!");
         }
+
+        validatePatientAllergySafety(patient, request);
 
         Prescription prescription = new Prescription();
         prescription.setPrescriptionCode("DT" + (System.currentTimeMillis() % 10000000));
@@ -180,16 +184,42 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             }
         }
 
+        if (prescription.getItems().isEmpty()) {
+            throw new IllegalArgumentException("Vui lòng nhập tên thuốc hợp lệ cho ít nhất 1 loại thuốc trong đơn!");
+        }
+
         Prescription saved = prescriptionRepository.save(prescription);
         log.info("Đã tạo đơn thuốc thành công: ID = {}, Code = {}", saved.getPrescriptionId(), saved.getPrescriptionCode());
         return mapToPrescriptionResponseDTO(saved);
+    }
+
+    private void validatePatientAllergySafety(PatientProfile patient, PrescriptionRequestDTO request) {
+        if (patient == null || Boolean.TRUE.equals(request.getConfirmAllergyWarning())) {
+            return;
+        }
+        String rawDetails = patient.getAllergyDetails() != null ? patient.getAllergyDetails().trim() : "";
+        String normalized = rawDetails.toLowerCase();
+        boolean hasBenignNoneText = normalized.isEmpty()
+                || normalized.equals("không")
+                || normalized.equals("khong")
+                || normalized.equals("không có")
+                || normalized.equals("chưa ghi nhận")
+                || normalized.equals("none")
+                || normalized.equals("no");
+        boolean hasAllergyFlag = Boolean.TRUE.equals(patient.getHasAllergies()) || !hasBenignNoneText;
+        if (!hasAllergyFlag) {
+            return;
+        }
+        String desc = !hasBenignNoneText ? rawDetails : "Đã đánh dấu có tiền sử dị ứng trong hồ sơ";
+        throw new IllegalArgumentException(
+                "Cảnh báo dị ứng: Bệnh nhân có tiền sử dị ứng (" + desc + "). Vui lòng kiểm tra kỹ hoạt chất và xác nhận trước khi kê đơn!");
     }
 
     @Override
     @Transactional
     public void deletePrescription(Long prescriptionId) {
         Prescription prescription = prescriptionRepository.findById(prescriptionId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn thuốc ID: " + prescriptionId));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn thuốc."));
 
         if (prescription.getVisit() != null &&
                 (prescription.getVisit().getStatus() == VisitStatus.WAITING_PAYMENT || prescription.getVisit().getStatus() == VisitStatus.COMPLETED)) {

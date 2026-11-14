@@ -779,6 +779,16 @@ public class DiagnosisController {
         } catch (Exception ignored) {}
         model.addAttribute("diagnosesJson", diagnosesJson);
 
+        List<Icd10DiseaseDTO> commonIcds = (icd10DiseaseService != null)
+                ? icd10DiseaseService.getCommonDentalDiseases()
+                : List.of();
+        model.addAttribute("commonIcds", commonIcds);
+        String commonIcdsJson = "[]";
+        try {
+            commonIcdsJson = new ObjectMapper().writeValueAsString(commonIcds);
+        } catch (Exception ignored) {}
+        model.addAttribute("commonIcdsJson", commonIcdsJson);
+
         boolean isClinicalLocked = visit.getStatus() != null &&
                 (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED);
         model.addAttribute("isClinicalLocked", isClinicalLocked);

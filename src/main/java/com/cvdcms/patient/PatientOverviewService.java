@@ -268,7 +268,26 @@ public class PatientOverviewService {
     }
 
     public List<TreatmentPlan> getPatientTreatmentPlans(Long profileId) {
-        return treatmentPlanRepository.findByProfileIdWithDetails(profileId);
+        List<TreatmentPlan> plans = treatmentPlanRepository.findByProfileIdWithDetails(profileId);
+        if (plans != null) {
+            for (TreatmentPlan plan : plans) {
+                if (plan.getStages() != null) {
+                    plan.getStages().sort(Comparator.comparing(
+                            TreatmentPlanStage::getStageOrder,
+                            Comparator.nullsLast(Comparator.naturalOrder())));
+                    for (TreatmentPlanStage stage : plan.getStages()) {
+                        if (stage.getItems() != null) {
+                            for (TreatmentPlanItem item : stage.getItems()) {
+                                if (item.getService() != null) {
+                                    item.getService().getServiceName();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return plans != null ? plans : List.of();
     }
 
     public List<PerformedService> getPatientPerformedServices(Long profileId) {
