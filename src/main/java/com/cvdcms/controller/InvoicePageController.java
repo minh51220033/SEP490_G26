@@ -206,16 +206,33 @@ public class InvoicePageController {
         return "finance/invoices/list";
     }
 
+    private String sanitizeReturnUrl(String returnUrl) {
+        if (returnUrl == null || returnUrl.isBlank()) {
+            return null;
+        }
+        String trimmed = returnUrl.trim();
+        if (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.contains("\\")) {
+            return trimmed;
+        }
+        return null;
+    }
+
     @GetMapping("/create")
     public String createInvoiceForm(
             @RequestParam(required = false) Long visitId,
             @RequestParam(required = false) Long profileId,
             @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) String returnUrl,
             Model model,
             HttpSession session
     ) {
         Long currentUserId = getCurrentUserId(session);
         populateUserAndSidebar(model, session);
+
+        String safeReturnUrl = sanitizeReturnUrl(returnUrl);
+        if (safeReturnUrl != null) {
+            model.addAttribute("returnUrl", safeReturnUrl);
+        }
 
         Long effectiveBranchId = resolveBranchId(branchId, currentUserId);
         List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
@@ -297,28 +314,69 @@ public class InvoicePageController {
     @PostMapping("/create")
     public String saveInvoice(
             @ModelAttribute InvoiceCreateRequestDTO request,
+            @RequestParam(required = false) String returnUrl,
             RedirectAttributes redirectAttributes,
             HttpSession session
     ) {
+        String safeReturnUrl = sanitizeReturnUrl(returnUrl);
         try {
             Long cashierUserId = getCurrentUserId(session);
-            Invoice invoice = invoiceService.createInvoice(request, cashierUserId);
+            boolean hasNoServices = request == null || request.getItems() == null || request.getItems().isEmpty();
+            boolean isMedicineOnlyOrder = request != null
+                    && request.getVisitId() == null
+                    && hasNoServices
+                    && Boolean.TRUE.equals(request.getBuyMedicineAtClinic())
+                    && request.getPrescriptionId() != null
+                    && request.getMedicineItems() != null
+                    && !request.getMedicineItems().isEmpty();
+
+            Invoice invoice;
+            if (isMedicineOnlyOrder) {
+                MedicineInvoiceCreateRequestDTO medReq = new MedicineInvoiceCreateRequestDTO();
+                medReq.setPrescriptionId(request.getPrescriptionId());
+                medReq.setNotes(request.getNotes());
+                List<MedicineInvoiceCreateRequestDTO.Item> medItems = request.getMedicineItems().stream()
+                        .filter(m -> m != null && m.getPrescriptionItemId() != null)
+                        .map(m -> new MedicineInvoiceCreateRequestDTO.Item(m.getPrescriptionItemId(), m.getQuantity()))
+                        .toList();
+                medReq.setItems(medItems);
+                invoice = invoiceService.createMedicineInvoice(medReq, cashierUserId);
+            } else {
+                invoice = invoiceService.createInvoice(request, cashierUserId);
+            }
             redirectAttributes.addFlashAttribute("successMessage", "Đã phát hành hóa đơn thành công: " + invoice.getInvoiceCode());
+            if (safeReturnUrl != null) {
+                redirectAttributes.addAttribute("returnUrl", safeReturnUrl);
+            }
             return "redirect:/invoices/" + invoice.getInvoiceId();
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi phát hành hóa đơn: " + e.getMessage());
-            return "redirect:/invoices/create" + (request.getVisitId() != null ? "?visitId=" + request.getVisitId() : "");
+            if (request != null && request.getVisitId() != null) {
+                redirectAttributes.addAttribute("visitId", request.getVisitId());
+            } else if (request != null && request.getProfileId() != null) {
+                redirectAttributes.addAttribute("profileId", request.getProfileId());
+            }
+            if (safeReturnUrl != null) {
+                redirectAttributes.addAttribute("returnUrl", safeReturnUrl);
+            }
+            return "redirect:/invoices/create";
         }
     }
 
     @GetMapping("/create-medicine")
     public String createMedicineInvoiceForm(
             @RequestParam Long prescriptionId,
+            @RequestParam(required = false) String returnUrl,
             Model model,
             HttpSession session
     ) {
         Long currentUserId = getCurrentUserId(session);
         populateUserAndSidebar(model, session);
+
+        String safeReturnUrl = sanitizeReturnUrl(returnUrl);
+        if (safeReturnUrl != null) {
+            model.addAttribute("returnUrl", safeReturnUrl);
+        }
 
         Prescription prescription = prescriptionRepository.findByIdWithDetails(prescriptionId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn thuốc ID: " + prescriptionId));
@@ -344,17 +402,28 @@ public class InvoicePageController {
     @PostMapping("/create-medicine")
     public String saveMedicineInvoice(
             @ModelAttribute MedicineInvoiceCreateRequestDTO request,
+            @RequestParam(required = false) String returnUrl,
             RedirectAttributes redirectAttributes,
             HttpSession session
     ) {
+        String safeReturnUrl = sanitizeReturnUrl(returnUrl);
         try {
             Long cashierUserId = getCurrentUserId(session);
             Invoice invoice = invoiceService.createMedicineInvoice(request, cashierUserId);
             redirectAttributes.addFlashAttribute("successMessage", "Đã lập Hóa đơn thuốc riêng thành công: " + invoice.getInvoiceCode());
+            if (safeReturnUrl != null) {
+                redirectAttributes.addAttribute("returnUrl", safeReturnUrl);
+            }
             return "redirect:/invoices/" + invoice.getInvoiceId();
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi tạo hóa đơn thuốc: " + e.getMessage());
-            return "redirect:/invoices/create-medicine?prescriptionId=" + (request != null ? request.getPrescriptionId() : "");
+            if (request != null && request.getPrescriptionId() != null) {
+                redirectAttributes.addAttribute("prescriptionId", request.getPrescriptionId());
+            }
+            if (safeReturnUrl != null) {
+                redirectAttributes.addAttribute("returnUrl", safeReturnUrl);
+            }
+            return "redirect:/invoices/create-medicine";
         }
     }
 
@@ -365,6 +434,7 @@ public class InvoicePageController {
             @RequestParam(required = false) String note,
             @RequestParam(required = false) Long visitId,
             @RequestParam(required = false) Long profileId,
+            @RequestParam(required = false) String returnUrl,
             RedirectAttributes redirectAttributes,
             HttpSession session
     ) {
@@ -376,10 +446,14 @@ public class InvoicePageController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi cập nhật lựa chọn đơn thuốc: " + e.getMessage());
         }
+        String safeReturnUrl = sanitizeReturnUrl(returnUrl);
         if (visitId != null) {
-            return "redirect:/invoices/create?visitId=" + visitId;
+            redirectAttributes.addAttribute("visitId", visitId);
         } else if (profileId != null) {
-            return "redirect:/invoices/create?profileId=" + profileId;
+            redirectAttributes.addAttribute("profileId", profileId);
+        }
+        if (safeReturnUrl != null) {
+            redirectAttributes.addAttribute("returnUrl", safeReturnUrl);
         }
         return "redirect:/invoices/create";
     }
@@ -414,11 +488,9 @@ public class InvoicePageController {
             model.addAttribute("allocations", java.util.List.of());
         }
 
-        if (returnUrl != null && !returnUrl.isBlank()) {
-            String trimmed = returnUrl.trim();
-            if (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.contains("\\")) {
-                model.addAttribute("returnUrl", trimmed);
-            }
+        String safeReturnUrl = sanitizeReturnUrl(returnUrl);
+        if (safeReturnUrl != null) {
+            model.addAttribute("returnUrl", safeReturnUrl);
         }
 
         return "finance/invoices/detail";
