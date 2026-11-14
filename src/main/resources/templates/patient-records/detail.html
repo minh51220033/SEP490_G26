@@ -1330,6 +1330,12 @@
                                     <span class="dv-seg-count"
                                         th:text="${treatmentTimeline != null ? treatmentTimeline.size() : 0}">0</span>
                                 </button>
+                                <button type="button" class="dv-seg-btn" id="btnTreatmentPlans"
+                                    onclick="switchTreatmentMode('plans')">
+                                    <i class="bi bi-diagram-3-fill"></i> Kế hoạch điều trị
+                                    <span class="dv-seg-count"
+                                        th:text="${treatmentPlans != null ? treatmentPlans.size() : 0}">0</span>
+                                </button>
                                 <button type="button" class="dv-seg-btn" id="btnTreatmentAudit"
                                     onclick="switchTreatmentMode('audit')">
                                     <i class="bi bi-journal-text"></i> Nhật ký thao tác (Audit Log)
@@ -1469,7 +1475,7 @@
                                                 <td class="text-center text-muted fw-bold" th:text="${stat.count}">1
                                                 </td>
                                                 <td class="text-nowrap">
-                                                    <a th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${idCodec.encodeVisit(item.visitId)}, readOnly=true, fromPatientRef=${idCodec.encodePatient(patient.id)})}"
+                                                    <a th:href="${recordBasePath == '/doctor/patient-records' ? '/doctor/patient-records/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId) : (recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '/visits/' + item.visitId}"
                                                         class="dv-code-pill mb-1"
                                                         th:text="${item.visitCode}">VIS-001</a>
                                                     <div class="text-muted small fw-semibold d-flex align-items-center gap-1 mt-1">
@@ -1562,18 +1568,18 @@
                                                     </form>
                                                 </td>
                                                 <td class="text-center">
-                                                    <a th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${idCodec.encodeVisit(item.visitId)}, readOnly=true, fromPatientRef=${idCodec.encodePatient(patient.id)})}"
+                                                    <a th:href="${recordBasePath == '/doctor/patient-records' ? '/doctor/patient-records/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId) : (recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '/visits/' + item.visitId}"
                                                         class="dv-equal-btn-primary"
-                                                        title="Xem chi tiết lượt khám (Chế độ Chỉ xem)">
+                                                        title="Xem chi tiết lượt khám">
                                                         <i class="bi bi-eye-fill"></i>
                                                         <span>Chi tiết lượt khám</span>
                                                     </a>
                                                 </td>
                                                 <td class="dv-floating-actions-track">
                                                     <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
-                                                        <a th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${idCodec.encodeVisit(item.visitId)}, readOnly=true, fromPatientRef=${idCodec.encodePatient(patient.id)})}"
+                                                        <a th:href="${recordBasePath == '/doctor/patient-records' ? '/doctor/patient-records/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId) : (recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '/visits/' + item.visitId}"
                                                             class="dv-equal-btn-primary"
-                                                            title="Xem chi tiết lượt khám (Chế độ Chỉ xem)">
+                                                            title="Xem chi tiết lượt khám">
                                                             <i class="bi bi-eye-fill"></i>
                                                             <span>Chi tiết lượt khám</span>
                                                         </a>
@@ -1584,6 +1590,215 @@
                                                             <i class="bi bi-file-earmark-medical-fill text-success"></i>
                                                             <span>Xem Bệnh án</span>
                                                         </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CHẾ ĐỘ 1B: BẢNG KẾ HOẠCH ĐIỀU TRỊ & LỘ TRÌNH TRẢ THEO ĐỢT -->
+                        <div id="treatmentPlansView" style="display: none;">
+                            <div class="dv-toolbar-card mb-3">
+                                <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                                    <div class="dv-search-box">
+                                        <i class="bi bi-search search-lead-icon"></i>
+                                        <input type="text" id="patientPlanSearchInput"
+                                            placeholder="Tìm theo Mã KHDT, tên phác đồ, bác sĩ..."
+                                            oninput="toggleClearBtn(this); filterPatientPlansTable()">
+                                        <button type="button" class="search-clear-btn"
+                                            onclick="document.getElementById('patientPlanSearchInput').value=''; toggleClearBtn(document.getElementById('patientPlanSearchInput')); filterPatientPlansTable();"
+                                            title="Xóa tìm kiếm">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="text-muted small">
+                                            Hiển thị: <strong class="text-primary" id="patientPlansVisibleCount"
+                                                th:text="${treatmentPlans != null ? treatmentPlans.size() : 0}">0</strong> kế hoạch
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="dv-grid-card">
+                                <div class="dv-grid-topbar">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold">
+                                            <i class="bi bi-diagram-3-fill me-1"></i>Kế hoạch điều trị &amp; Tiến độ tài chính
+                                        </span>
+                                    </div>
+                                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Bấm "Xem lộ trình &amp; Đợt TT" để kiểm tra chi tiết từng giai đoạn và lịch trả theo đợt</small>
+                                </div>
+                                <div class="dv-table-scroll-container">
+                                    <table class="dv-amis-table" id="patientPlansTable">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 54px;" class="text-center">STT</th>
+                                                <th style="min-width: 240px;">Mã &amp; Tên phác đồ</th>
+                                                <th style="min-width: 190px;">Bác sĩ &amp; Thời gian</th>
+                                                <th class="text-end" style="min-width: 165px;">Tổng dự toán / Đã trả</th>
+                                                <th class="text-center" style="min-width: 155px;">Hình thức TT</th>
+                                                <th class="text-center" style="min-width: 135px;">Trạng thái</th>
+                                                <th class="text-center" style="min-width: 170px;">Chi tiết</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:if="${treatmentPlans == null or #lists.isEmpty(treatmentPlans)}" class="empty-row">
+                                                <td colspan="7" class="text-center text-muted py-5">
+                                                    <i class="bi bi-diagram-3 fs-2 d-block mb-2 text-secondary"></i>
+                                                    Bệnh nhân chưa có Kế hoạch điều trị nào.
+                                                </td>
+                                            </tr>
+                                            <tr th:each="p, stat : ${treatmentPlans}" class="patient-plan-row dv-data-row">
+                                                <td class="text-center text-muted fw-bold" th:text="${stat.count}">1</td>
+                                                <td>
+                                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                                        <span class="dv-code-pill text-nowrap" th:text="${p.planCode}">KHDT-001</span>
+                                                        <span class="badge bg-light text-secondary border text-nowrap"
+                                                              th:text="${(p.stages != null ? p.stages.size() : 0) + ' giai đoạn'}">0 giai đoạn</span>
+                                                    </div>
+                                                    <div class="fw-bold text-dark" th:text="${p.planName}">Tên phác đồ</div>
+                                                </td>
+                                                <td>
+                                                    <div class="fw-semibold text-dark"
+                                                         th:text="${p.doctor != null ? p.doctor.fullName : '---'}">Bác sĩ</div>
+                                                    <div class="text-muted small">
+                                                        <span th:text="${p.startDate != null ? #temporals.format(p.startDate, 'dd/MM/yyyy') : '---'}">--/--</span>
+                                                        &rarr;
+                                                        <span th:text="${p.expectedEndDate != null ? #temporals.format(p.expectedEndDate, 'dd/MM/yyyy') : '---'}">--/--</span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-end">
+                                                    <div class="fw-bold text-primary"
+                                                         th:text="${#numbers.formatDecimal(p.estimatedCost, 0, 'COMMA', 0, 'POINT') + ' đ'}">0 đ</div>
+                                                    <div class="small text-success">
+                                                        Đã trả:
+                                                        <strong th:text="${p.totalPaidAmount != null ? #numbers.formatDecimal(p.totalPaidAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</strong>
+                                                    </div>
+                                                    <div class="small text-danger" th:if="${p.remainingCost != null and p.remainingCost.signum() > 0}">
+                                                        Còn lại:
+                                                        <strong th:text="${#numbers.formatDecimal(p.remainingCost, 0, 'COMMA', 0, 'POINT') + ' đ'}">0 đ</strong>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span th:if="${p.isInstallment}"
+                                                          class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 text-nowrap">
+                                                        <i class="bi bi-calendar2-week me-1"></i>
+                                                        <span th:text="${'Trả theo đợt (' + (p.installments != null ? p.installments.size() : 0) + ')'}">Trả theo đợt</span>
+                                                    </span>
+                                                    <span th:unless="${p.isInstallment}"
+                                                          class="badge bg-light text-secondary border px-2 py-1 text-nowrap">
+                                                        Thanh toán 1 lần
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="dv-status-pill text-nowrap"
+                                                          th:classappend="${p.status != null ? (p.status.name() == 'COMPLETED' ? ' bg-success-subtle text-success border border-success-subtle' : (p.status.name() == 'IN_PROGRESS' ? ' bg-primary-subtle text-primary border border-primary-subtle' : (p.status.name() == 'CANCELLED' ? ' bg-danger-subtle text-danger border border-danger-subtle' : ' bg-info-subtle text-info border border-info-subtle'))) : ' bg-light text-secondary border'}"
+                                                          th:switch="${p.status != null ? p.status.name() : 'DRAFT'}">
+                                                        <span th:case="'COMPLETED'">Hoàn thành</span>
+                                                        <span th:case="'IN_PROGRESS'">Đang điều trị</span>
+                                                        <span th:case="'ACCEPTED'">Đã duyệt</span>
+                                                        <span th:case="'PROPOSED'">Đề xuất</span>
+                                                        <span th:case="'CANCELLED'">Đã hủy</span>
+                                                        <span th:case="*">Nháp</span>
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold text-nowrap"
+                                                            th:attr="data-plan-id=${p.planId}, data-plan-code=${p.planCode}, data-plan-name=${p.planName}"
+                                                            onclick="openPatientPlanDetailModal(this.getAttribute('data-plan-id'), this.getAttribute('data-plan-code'), this.getAttribute('data-plan-name'))">
+                                                        <i class="bi bi-eye me-1"></i>Lộ trình &amp; Đợt TT
+                                                    </button>
+
+                                                    <!-- Nội dung chi tiết lộ trình & các đợt thanh toán pre-render sẵn -->
+                                                    <div class="d-none" th:id="'patient-plan-detail-tpl-' + ${p.planId}">
+                                                        <div class="mb-4">
+                                                            <h6 class="fw-bold text-dark mb-2">
+                                                                <i class="bi bi-layers text-primary me-1"></i>Lộ trình giai đoạn điều trị
+                                                            </h6>
+                                                            <div th:if="${p.stages == null or #lists.isEmpty(p.stages)}" class="text-muted small fst-italic">
+                                                                Kế hoạch chưa có giai đoạn chi tiết.
+                                                            </div>
+                                                            <div th:each="st : ${p.stages}" class="border rounded-3 p-3 mb-2 bg-light">
+                                                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                                                    <strong class="text-dark" th:text="${st.stageName}">Giai đoạn</strong>
+                                                                    <span class="badge bg-white text-dark border text-nowrap"
+                                                                          th:text="${st.status != null ? st.status.name() : 'PENDING'}">PENDING</span>
+                                                                </div>
+                                                                <div th:if="${st.items != null and !#lists.isEmpty(st.items)}" class="table-responsive bg-white rounded border">
+                                                                    <table class="table table-sm mb-0 small">
+                                                                        <thead class="table-light">
+                                                                            <tr>
+                                                                                <th>Thủ thuật / Dịch vụ</th>
+                                                                                <th class="text-center">Vị trí răng</th>
+                                                                                <th class="text-center">SL</th>
+                                                                                <th class="text-end">Đơn giá</th>
+                                                                                <th class="text-center">Trạng thái</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            <tr th:each="it : ${st.items}">
+                                                                                <td th:text="${it.stepName != null and !it.stepName.isEmpty() ? it.stepName : (it.service != null ? it.service.serviceName : 'Thủ thuật')}">Bước</td>
+                                                                                <td class="text-center" th:text="${it.toothNumbers != null ? it.toothNumbers : '-'}">-</td>
+                                                                                <td class="text-center" th:text="${it.quantity != null ? it.quantity : 1}">1</td>
+                                                                                <td class="text-end fw-semibold"
+                                                                                    th:text="${it.estimatedPrice != null ? #numbers.formatDecimal(it.estimatedPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</td>
+                                                                                <td class="text-center">
+                                                                                    <span class="badge text-nowrap"
+                                                                                          th:classappend="${it.status != null and it.status.name() == 'COMPLETED' ? 'bg-success-subtle text-success border border-success' : 'bg-light text-secondary border'}"
+                                                                                          th:text="${it.status != null and it.status.name() == 'COMPLETED' ? 'Đã làm' : 'Chưa làm'}">Chưa làm</span>
+                                                                                </td>
+                                                                            </tr>
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div th:if="${p.isInstallment}">
+                                                            <h6 class="fw-bold text-dark mb-2">
+                                                                <i class="bi bi-calendar2-week text-primary me-1"></i>Lộ trình thanh toán theo đợt
+                                                            </h6>
+                                                            <div th:if="${p.installments == null or #lists.isEmpty(p.installments)}" class="text-muted small fst-italic">
+                                                                Chưa chia lịch các đợt thanh toán.
+                                                            </div>
+                                                            <div th:if="${p.installments != null and !#lists.isEmpty(p.installments)}" class="table-responsive border rounded">
+                                                                <table class="table table-sm align-middle mb-0 small">
+                                                                    <thead class="table-light">
+                                                                        <tr>
+                                                                            <th class="text-center">#</th>
+                                                                            <th>Tên đợt</th>
+                                                                            <th class="text-center">Ngày dự kiến</th>
+                                                                            <th class="text-end">Dự kiến đóng</th>
+                                                                            <th class="text-end">Đã thanh toán</th>
+                                                                            <th class="text-end">Còn thiếu</th>
+                                                                            <th class="text-center">Trạng thái</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        <tr th:each="inst : ${p.installments}">
+                                                                            <td class="text-center fw-bold" th:text="${inst.installmentOrder}">1</td>
+                                                                            <td class="fw-semibold" th:text="${inst.phaseName}">Đợt 1</td>
+                                                                            <td class="text-center"
+                                                                                th:text="${inst.expectedDate != null ? #temporals.format(inst.expectedDate, 'dd/MM/yyyy') : '---'}">---</td>
+                                                                            <td class="text-end fw-bold"
+                                                                                th:text="${#numbers.formatDecimal(inst.expectedAmount, 0, 'COMMA', 0, 'POINT') + ' đ'}">0 đ</td>
+                                                                            <td class="text-end text-success fw-bold"
+                                                                                th:text="${#numbers.formatDecimal(inst.paidAmount, 0, 'COMMA', 0, 'POINT') + ' đ'}">0 đ</td>
+                                                                            <td class="text-end text-danger fw-bold"
+                                                                                th:text="${#numbers.formatDecimal(inst.remainingAmount, 0, 'COMMA', 0, 'POINT') + ' đ'}">0 đ</td>
+                                                                            <td class="text-center">
+                                                                                <span th:class="${inst.status != null ? inst.status.badgeClass + ' text-nowrap' : 'badge bg-secondary text-nowrap'}"
+                                                                                      th:text="${inst.status != null ? inst.status.displayName : 'Chưa TT'}">Trạng thái</span>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1911,9 +2126,9 @@
                                             </td>
                                             <td class="text-nowrap">
                                                 <a th:if="${emr.visitId != null}"
-                                                    th:href="@{/doctor/examination/{visitId}/diagnoses(visitId=${idCodec.encodeVisit(emr.visitId)}, readOnly=true, fromPatientRef=${idCodec.encodePatient(patient.id)})}"
+                                                    th:href="${recordBasePath == '/doctor/patient-records' ? '/doctor/patient-records/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(emr.visitId) : (recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '/visits/' + emr.visitId}"
                                                     class="dv-code-pill"
-                                                    title="Xem chi tiết lượt khám (Chỉ xem)">
+                                                    title="Xem chi tiết lượt khám">
                                                     <i class="bi bi-box-arrow-up-right text-primary"></i>
                                                     <span th:text="${emr.visitCode}">VIS-001</span>
                                                 </a>
@@ -2717,6 +2932,59 @@
                             </div>
 
                             <div th:if="${canViewBilling != false}">
+                                <!-- Tổng hợp Kế hoạch điều trị trả theo đợt / trọn gói -->
+                                <div th:with="installmentPlans=${treatmentPlans != null ? treatmentPlans.?[isInstallment] : null}"
+                                     th:if="${installmentPlans != null and !#lists.isEmpty(installmentPlans)}"
+                                     class="card border border-primary-subtle rounded-4 shadow-sm mb-4 overflow-hidden">
+                                    <div class="card-header bg-primary-subtle bg-opacity-50 border-bottom border-primary-subtle py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        <div class="fw-bold text-primary d-flex align-items-center gap-2">
+                                            <i class="bi bi-calendar2-week-fill"></i>
+                                            <span>Phác đồ thanh toán theo đợt (Trả góp nha khoa)</span>
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill"
+                                              th:text="${installmentPlans.size() + ' phác đồ trả góp'}">0 phác đồ</span>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0 small">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Mã &amp; Tên phác đồ</th>
+                                                    <th class="text-end">Tổng phác đồ</th>
+                                                    <th class="text-end">Đã thanh toán</th>
+                                                    <th class="text-end">Còn lại</th>
+                                                    <th class="text-center">Số đợt</th>
+                                                    <th class="text-center">Thao tác</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr th:each="ip : ${installmentPlans}">
+                                                    <td>
+                                                        <span class="dv-code-pill me-1 text-nowrap" th:text="${ip.planCode}">KHDT</span>
+                                                        <strong class="text-dark" th:text="${ip.planName}">Phác đồ</strong>
+                                                    </td>
+                                                    <td class="text-end fw-bold text-dark"
+                                                        th:text="${#numbers.formatDecimal(ip.estimatedCost, 0, 'COMMA', 0, 'POINT') + ' đ'}">0 đ</td>
+                                                    <td class="text-end fw-bold text-success"
+                                                        th:text="${ip.totalPaidAmount != null ? #numbers.formatDecimal(ip.totalPaidAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</td>
+                                                    <td class="text-end fw-bold text-danger"
+                                                        th:text="${ip.remainingCost != null ? #numbers.formatDecimal(ip.remainingCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-light text-primary border text-nowrap"
+                                                              th:text="${(ip.installments != null ? ip.installments.size() : 0) + ' đợt'}">0 đợt</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold text-nowrap"
+                                                                th:attr="data-plan-id=${ip.planId}, data-plan-code=${ip.planCode}, data-plan-name=${ip.planName}"
+                                                                onclick="openPatientPlanDetailModal(this.getAttribute('data-plan-id'), this.getAttribute('data-plan-code'), this.getAttribute('data-plan-name'))">
+                                                            <i class="bi bi-list-check me-1"></i>Xem các đợt trả
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
                                 <!-- Thông báo khi bệnh nhân chưa có hóa đơn -->
                                 <div th:if="${#lists.isEmpty(invoices)}" class="text-center py-5 border rounded bg-light">
                                     <i class="bi bi-receipt text-secondary fs-1 d-block mb-2"></i>
@@ -2935,6 +3203,27 @@
     <!-- =========================================================================
      4. TẬP HỢP CÁC MODAL NGHIỆP VỤ (CRUD CHUYÊN SÂU)
      ========================================================================= -->
+
+    <!-- Modal 0: Chi tiết Kế hoạch điều trị & Lộ trình trả theo đợt -->
+    <div class="modal fade" id="patientPlanDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-light border-bottom">
+                    <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+                        <span class="badge bg-primary text-white rounded-pill px-2 py-1" id="patientPlanModalCode">KHDT</span>
+                        <span id="patientPlanModalTitle">Chi tiết Kế hoạch điều trị</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4" id="patientPlanModalBody">
+                    <div class="text-center text-muted py-4">Đang tải chi tiết...</div>
+                </div>
+                <div class="modal-footer bg-light border-top">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal 1: Cập nhật dị ứng & bệnh nền nhanh -->
     <div class="modal fade" id="healthNotesModal" tabindex="-1" aria-labelledby="healthNotesModalLabel"
@@ -4900,20 +5189,54 @@
 
         function switchTreatmentMode(mode) {
             const timelineView = document.getElementById("treatmentTimelineView");
+            const plansView = document.getElementById("treatmentPlansView");
             const auditView = document.getElementById("treatmentAuditView");
             const btnTimeline = document.getElementById("btnTreatmentTimeline");
+            const btnPlans = document.getElementById("btnTreatmentPlans");
             const btnAudit = document.getElementById("btnTreatmentAudit");
 
-            if (mode === 'timeline') {
-                timelineView.style.display = "block";
-                auditView.style.display = "none";
-                btnTimeline.classList.add("active");
-                btnAudit.classList.remove("active");
-            } else {
-                timelineView.style.display = "none";
-                auditView.style.display = "block";
-                btnTimeline.classList.remove("active");
-                btnAudit.classList.add("active");
+            if (timelineView) timelineView.style.display = mode === 'timeline' ? "block" : "none";
+            if (plansView) plansView.style.display = mode === 'plans' ? "block" : "none";
+            if (auditView) auditView.style.display = mode === 'audit' ? "block" : "none";
+
+            if (btnTimeline) btnTimeline.classList.toggle("active", mode === 'timeline');
+            if (btnPlans) btnPlans.classList.toggle("active", mode === 'plans');
+            if (btnAudit) btnAudit.classList.toggle("active", mode === 'audit');
+        }
+
+        function filterPatientPlansTable() {
+            const input = document.getElementById("patientPlanSearchInput");
+            const query = (input ? input.value : "").trim().toLowerCase();
+            const rows = document.querySelectorAll("#patientPlansTable tbody tr.patient-plan-row");
+            let visible = 0;
+            rows.forEach(row => {
+                const text = (row.textContent || "").toLowerCase();
+                const match = !query || text.includes(query);
+                row.style.display = match ? "" : "none";
+                if (match) visible++;
+            });
+            const countEl = document.getElementById("patientPlansVisibleCount");
+            if (countEl) countEl.innerText = String(visible);
+        }
+
+        function openPatientPlanDetailModal(planId, planCode, planName) {
+            const modalEl = document.getElementById("patientPlanDetailModal");
+            if (!modalEl) return;
+            const codeEl = document.getElementById("patientPlanModalCode");
+            const titleEl = document.getElementById("patientPlanModalTitle");
+            const bodyEl = document.getElementById("patientPlanModalBody");
+            if (codeEl) codeEl.innerText = planCode || "KHDT";
+            if (titleEl) titleEl.innerText = planName || "Chi tiết Kế hoạch điều trị";
+
+            const tplEl = document.getElementById("patient-plan-detail-tpl-" + planId);
+            if (bodyEl) {
+                bodyEl.innerHTML = tplEl
+                    ? tplEl.innerHTML
+                    : '<div class="text-center text-muted py-4">Không có dữ liệu chi tiết cho kế hoạch này.</div>';
+            }
+
+            if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
             }
         }
 

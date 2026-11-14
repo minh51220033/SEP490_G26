@@ -35,6 +35,13 @@ public class PatientPageController {
     private final PatientOverviewService overviewService;
     @Autowired(required = false)
     private ClinicalPhotoService clinicalPhotoService;
+<<<<<<< Updated upstream
+=======
+    @Autowired(required = false)
+    private com.cvdcms.repository.UserRepository userRepository;
+    @Autowired(required = false)
+    private com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+>>>>>>> Stashed changes
 
     public PatientPageController(PatientService service,
                                  com.cvdcms.repository.InvoiceRepository invoiceRepository,
@@ -371,10 +378,18 @@ public class PatientPageController {
     @GetMapping("/{id}/visits/{visitId}")
     public String visit(@PathVariable Long id, @PathVariable Long visitId, Model model,
                         HttpSession session) {
-        service.visit(session, id, visitId);
-        var codec = new com.cvdcms.security.UrlIdCodec();
-        return "redirect:/doctor/examination/" + codec.encodeVisit(visitId)
-                + "/diagnoses?readOnly=true&fromPatientRef=" + codec.encodePatient(id);
+        var detail = service.visit(session, id, visitId);
+        PatientView patient = service.get(session, id);
+        model.addAttribute("patient", patient);
+        model.addAttribute("patientRouteId", String.valueOf(id));
+        model.addAttribute("detail", detail);
+        model.addAttribute("visit", detail.visit());
+        model.addAttribute("followUps", detail.followUps() != null ? detail.followUps() : List.of());
+        model.addAttribute("treatmentPlans", overviewService.getPatientTreatmentPlans(id));
+        model.addAttribute("canPerformClinical", canPerformClinicalOnVisit(session, visitId));
+        model.addAttribute("canManageEmr", service.scope(session).admin() || checkDoctorRole(session));
+        shared(model, "/reception/patients", "patients", canManageAdmin(session), canViewClinicalRecords(session));
+        return "patient-records/visit";
     }
 
     @GetMapping("/{id}/documents/{documentId}")
@@ -415,6 +430,20 @@ public class PatientPageController {
             return perms.stream().anyMatch(p -> "MEDICAL_RECORD_VIEW".equalsIgnoreCase(String.valueOf(p)));
         }
         return false;
+    }
+
+    private boolean canPerformClinicalOnVisit(HttpSession session, Long visitId) {
+        if (session == null) return false;
+        var scope = service.scope(session);
+        if (scope.admin()) return true;
+        if (!checkDoctorRole(session)) return false;
+        if (doctorVisitAccess == null || visitId == null) return true;
+        try {
+            doctorVisitAccess.require(session, visitId);
+            return true;
+        } catch (ResponseStatusException ex) {
+            return false;
+        }
     }
 
     private boolean checkDoctorRole(HttpSession session) {

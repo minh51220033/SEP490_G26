@@ -78,6 +78,11 @@ public class TreatmentPlan {
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
+<<<<<<< Updated upstream
+=======
+    @OrderBy("stageOrder ASC")
+    @org.hibernate.annotations.BatchSize(size = 50)
+>>>>>>> Stashed changes
     private List<TreatmentPlanStage> stages = new ArrayList<>();
 
     @Transient

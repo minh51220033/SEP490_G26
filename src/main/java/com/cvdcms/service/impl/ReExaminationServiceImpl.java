@@ -34,33 +34,38 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     private final ServiceRepository serviceRepository;
     private final VisitRepository visitRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private LeaveRequestRepository leaveRequestRepository;
+
     @Override
     @Transactional
     public ReExaminationResponseDTO createReExamination(ReExaminationRequestDTO dto) {
         log.info("Creating re-examination appointment: {}", dto);
 
+        if (dto.getPatientProfileId() == null) {
+            throw new IllegalArgumentException("Vui lòng chỉ định hồ sơ bệnh nhân!");
+        }
         if (dto.getAppointmentDate() != null && dto.getAppointmentDate().isBefore(LocalDate.now())) {
             throw new IllegalArgumentException("Ngày hẹn tái khám không được nằm trong quá khứ!");
         }
 
         PatientProfile patient = patientProfileRepository.findById(dto.getPatientProfileId())
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bệnh nhân ID: " + dto.getPatientProfileId()));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hồ sơ bệnh nhân."));
 
-        Branch branch = null;
+        Branch branch;
         if (dto.getBranchId() != null) {
-            branch = branchRepository.findById(dto.getBranchId()).orElse(null);
-        }
-        if (branch == null && patient.getPreferredBranch() != null) {
+            branch = branchRepository.findById(dto.getBranchId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chi nhánh thực hiện tái khám!"));
+        } else if (patient.getPreferredBranch() != null) {
             branch = patient.getPreferredBranch();
-        }
-        if (branch == null) {
-            branch = branchRepository.findAll().stream().findFirst()
-                    .orElseThrow(() -> new IllegalStateException("Hệ thống chưa có chi nhánh nào!"));
+        } else {
+            throw new IllegalArgumentException("Vui lòng chọn chi nhánh thực hiện tái khám!");
         }
 
         StaffProfile doctor = null;
         if (dto.getDoctorId() != null) {
-            doctor = staffProfileRepository.findById(dto.getDoctorId()).orElse(null);
+            doctor = staffProfileRepository.findById(dto.getDoctorId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bác sĩ phụ trách tái khám!"));
         }
 
         com.cvdcms.entity.Service service = null;
@@ -73,10 +78,14 @@ public class ReExaminationServiceImpl implements ReExaminationService {
             currentVisit = visitRepository.findById(dto.getVisitId()).orElse(null);
         }
 
+        LocalDate targetDate = dto.getAppointmentDate() != null ? dto.getAppointmentDate() : LocalDate.now().plusDays(7);
+        LocalTime resolvedTime = parseExpectedTimeSafe(dto.getExpectedTime(), LocalTime.of(9, 0));
+        if (doctor != null) {
+            validateDoctorAvailabilityForReExam(doctor, branch, targetDate, resolvedTime, null);
+        }
+
         Appointment appt = new Appointment();
-        String dateStr = dto.getAppointmentDate() != null
-                ? dto.getAppointmentDate().format(DateTimeFormatter.ofPattern("yyMMdd"))
-                : LocalDate.now().format(DateTimeFormatter.ofPattern("yyMMdd"));
+        String dateStr = targetDate.format(DateTimeFormatter.ofPattern("yyMMdd"));
         long randomSuffix = 1000 + (long)(Math.random() * 9000);
         appt.setAppointmentCode("TK" + dateStr + "-" + randomSuffix);
 
@@ -84,18 +93,9 @@ public class ReExaminationServiceImpl implements ReExaminationService {
         appt.setBranch(branch);
         appt.setDoctor(doctor);
         appt.setService(service);
-        appt.setAppointmentDate(dto.getAppointmentDate() != null ? dto.getAppointmentDate() : LocalDate.now().plusDays(7));
+        appt.setAppointmentDate(targetDate);
         appt.setPreferredSession(dto.getPreferredSession() != null ? dto.getPreferredSession() : PreferredSession.MORNING);
-
-        if (dto.getExpectedTime() != null && !dto.getExpectedTime().isBlank()) {
-            try {
-                appt.setExpectedTime(LocalTime.parse(dto.getExpectedTime()));
-            } catch (Exception e) {
-                appt.setExpectedTime(LocalTime.of(9, 0));
-            }
-        } else {
-            appt.setExpectedTime(LocalTime.of(9, 0));
-        }
+        appt.setExpectedTime(resolvedTime);
 
         appt.setInitialSymptoms(dto.getFollowupReason() != null ? dto.getFollowupReason() : "Tái khám kiểm tra sau điều trị");
         appt.setSource(AppointmentSource.RECEPTIONIST);
@@ -210,7 +210,7 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     @Transactional
     public ReExaminationResponseDTO updateAppointmentStatus(Long appointmentId, String statusStr, String cancelReason) {
         Appointment appt = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch hẹn ID: " + appointmentId));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch hẹn tái khám."));
 
         AppointmentStatus newStatus = AppointmentStatus.valueOf(statusStr.toUpperCase());
         appt.setStatus(newStatus);
@@ -226,18 +226,24 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     @Transactional
     public ReExaminationResponseDTO updateAppointmentDate(Long appointmentId, LocalDate newDate, String newTime, PreferredSession session) {
         Appointment appt = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch hẹn ID: " + appointmentId));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch hẹn tái khám."));
 
         if (newDate != null && newDate.isBefore(LocalDate.now())) {
             throw new IllegalArgumentException("Ngày hẹn tái khám không được nằm trong quá khứ!");
         }
 
+        LocalDate targetDate = newDate != null ? newDate : appt.getAppointmentDate();
+        LocalTime targetTime = (newTime != null && !newTime.isBlank())
+                ? parseExpectedTimeSafe(newTime, appt.getExpectedTime())
+                : appt.getExpectedTime();
+        if (appt.getDoctor() != null && targetDate != null) {
+            validateDoctorAvailabilityForReExam(appt.getDoctor(), appt.getBranch(), targetDate, targetTime, appt.getAppointmentId());
+        }
+
         if (newDate != null) appt.setAppointmentDate(newDate);
         if (session != null) appt.setPreferredSession(session);
-        if (newTime != null && !newTime.isBlank()) {
-            try {
-                appt.setExpectedTime(LocalTime.parse(newTime));
-            } catch (Exception ignored) {}
+        if (targetTime != null) {
+            appt.setExpectedTime(targetTime);
         }
         appt.setRescheduleCount(appt.getRescheduleCount() + 1);
         Appointment saved = appointmentRepository.save(appt);
@@ -262,7 +268,7 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     public void updateCareTaskStatus(CareTaskUpdateDTO dto) {
         if (dto.getTaskId() == null) return;
         CustomerCareTask task = customerCareTaskRepository.findById(dto.getTaskId())
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhiệm vụ CSKH ID: " + dto.getTaskId()));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhiệm vụ CSKH."));
 
         if (dto.getStatus() != null) {
             task.setStatus(dto.getStatus());
@@ -278,6 +284,64 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     @Transactional
     public void cancelAppointment(Long appointmentId, String reason) {
         updateAppointmentStatus(appointmentId, "CANCELLED", reason);
+    }
+
+    private LocalTime parseExpectedTimeSafe(String expectedTimeStr, LocalTime fallback) {
+        if (expectedTimeStr == null || expectedTimeStr.isBlank()) {
+            return fallback;
+        }
+        try {
+            return LocalTime.parse(expectedTimeStr.trim());
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
+
+    private void validateDoctorAvailabilityForReExam(
+            StaffProfile doctor,
+            Branch branch,
+            LocalDate date,
+            LocalTime expectedTime,
+            Long excludeAppointmentId) {
+        if (doctor == null || date == null) {
+            return;
+        }
+        String doctorName = doctor.getFullName() != null ? doctor.getFullName() : "Bác sĩ";
+        String dateDisplay = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
+        if (leaveRequestRepository != null) {
+            List<LeaveRequest> leaves = leaveRequestRepository.findByStaffStaffIdOrderBySubmittedAtDesc(doctor.getStaffId());
+            if (leaves != null) {
+                for (LeaveRequest leave : leaves) {
+                    if (leave.getStatus() != LeaveStatus.APPROVED) continue;
+                    if (leave.getStartDate() == null || leave.getEndDate() == null) continue;
+                    if (date.isBefore(leave.getStartDate()) || date.isAfter(leave.getEndDate())) continue;
+                    WorkShift shift = leave.getShift();
+                    if (shift == null) {
+                        throw new IllegalArgumentException(doctorName + " đã đăng ký nghỉ phép ngày " + dateDisplay + ". Vui lòng chọn ngày hoặc bác sĩ khác!");
+                    }
+                    if (expectedTime != null && shift.getStartTime() != null && shift.getEndTime() != null
+                            && !expectedTime.isBefore(shift.getStartTime()) && !expectedTime.isAfter(shift.getEndTime())) {
+                        throw new IllegalArgumentException(doctorName + " nghỉ phép ca " + shift.getShiftName() + " ngày " + dateDisplay + ". Vui lòng chọn khung giờ khác!");
+                    }
+                }
+            }
+        }
+
+        List<Appointment> sameDayAppointments = appointmentRepository.findByDoctor_StaffIdAndAppointmentDate(doctor.getStaffId(), date);
+        if (sameDayAppointments != null && expectedTime != null) {
+            for (Appointment existing : sameDayAppointments) {
+                if (excludeAppointmentId != null && excludeAppointmentId.equals(existing.getAppointmentId())) continue;
+                if (existing.getStatus() == AppointmentStatus.CANCELLED || existing.getStatus() == AppointmentStatus.NO_SHOW) continue;
+                if (existing.getExpectedTime() != null) {
+                    long diffMinutes = Math.abs(ChronoUnit.MINUTES.between(expectedTime, existing.getExpectedTime()));
+                    if (diffMinutes < 30) {
+                        throw new IllegalArgumentException(
+                                doctorName + " đã có lịch hẹn lúc " + existing.getExpectedTime() + " ngày " + dateDisplay + ". Vui lòng chọn khung giờ cách ít nhất 30 phút!");
+                    }
+                }
+            }
+        }
     }
 
     private ReExaminationResponseDTO mapToDTO(Appointment appt) {

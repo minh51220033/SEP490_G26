@@ -517,7 +517,13 @@
                     const modal = bootstrap.Modal.getInstance(modalEl);
                     if (modal) modal.hide();
                 } else {
-                    alert('Có lỗi khi tạo lịch hẹn tái khám. Vui lòng thử lại.');
+                    const errData = await res.json().catch(() => ({}));
+                    const errMsg = errData.message || 'Có lỗi khi tạo lịch hẹn tái khám. Vui lòng thử lại.';
+                    if (typeof showToast === 'function') {
+                        showToast(errMsg, true);
+                    } else {
+                        alert(errMsg);
+                    }
                 }
             } catch (e) {
                 console.error('Error submitting re-exam booking:', e);
