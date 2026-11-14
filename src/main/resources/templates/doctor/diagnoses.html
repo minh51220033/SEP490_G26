@@ -464,11 +464,7 @@
                             </th:block>
 
                             <th:block th:if="${visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}">
-                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
-                                    <i class="bi bi-hourglass-split text-warning"></i>
-                                    <span>Chờ thanh toán (Khóa BR-EMR-02)</span>
-                                </span>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
                                         th:data-visit-id="${visit.visitId}"
                                         onclick="reopenClinicalExamination(this.getAttribute('data-visit-id'))"
                                         title="Mở lại ca khám để bổ sung/sửa đổi nếu Kế toán chưa thu tiền">

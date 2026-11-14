@@ -7,6 +7,7 @@ import com.cvdcms.entity.PatientProfile;
 import com.cvdcms.entity.StaffProfile;
 import com.cvdcms.entity.SystemAuditLog;
 import com.cvdcms.entity.TreatmentPlan;
+import com.cvdcms.entity.TreatmentPlanInstallment;
 import com.cvdcms.entity.TreatmentPlanItem;
 import com.cvdcms.entity.TreatmentPlanStage;
 import com.cvdcms.entity.User;
@@ -26,6 +27,7 @@ import com.cvdcms.repository.PrescriptionRepository;
 import com.cvdcms.repository.StaffBranchAssignmentRepository;
 import com.cvdcms.repository.StaffProfileRepository;
 import com.cvdcms.repository.SystemAuditLogRepository;
+import com.cvdcms.repository.TreatmentPlanInstallmentRepository;
 import com.cvdcms.repository.TreatmentPlanItemRepository;
 import com.cvdcms.repository.TreatmentPlanRepository;
 import com.cvdcms.repository.TreatmentPlanStageRepository;
@@ -82,6 +84,9 @@ public class DoctorVisitAccess {
 
     @Autowired(required = false)
     private StaffBranchAssignmentRepository branchAssignments;
+
+    @Autowired(required = false)
+    private TreatmentPlanInstallmentRepository treatmentPlanInstallments;
 
     public void requireWorkflowExecution(HttpSession session, Long executionId) {
         var execution = workflowExecutions.findById(executionId)
@@ -406,6 +411,20 @@ public class DoctorVisitAccess {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy tiến trình quy trình."));
         if (execution.getVisit() != null) {
             requireVisitRead(session, execution.getVisit().getVisitId());
+        } else {
+            requireAuthenticatedUser(session);
+        }
+    }
+
+    public void requireTreatmentInstallment(HttpSession session, Long installmentId) {
+        if (treatmentPlanInstallments == null) {
+            requireAuthenticatedUser(session);
+            return;
+        }
+        TreatmentPlanInstallment installment = treatmentPlanInstallments.findById(installmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đợt thanh toán."));
+        if (installment.getPlan() != null) {
+            requireTreatmentPlanWrite(session, installment.getPlan().getPlanId());
         } else {
             requireAuthenticatedUser(session);
         }
