@@ -678,11 +678,18 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 .collect(Collectors.toList());
     }
 
-    @Override
+     @Override
     @Transactional
     public TreatmentPlanResponseDTO saveInstallments(Long planId, List<TreatmentPlanInstallmentDTO> installmentDTOs) {
         TreatmentPlan plan = treatmentPlanRepository.findByIdWithDetails(planId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kế hoạch điều trị."));
+        BigDecimal currentPaid = plan.getTotalPaidAmount() != null ? plan.getTotalPaidAmount() : BigDecimal.ZERO;
+        if (currentPaid.compareTo(BigDecimal.ZERO) > 0 || plan.isFullyPaid()) {
+            throw new IllegalStateException("Kế hoạch điều trị đã phát sinh thanh toán hoặc đã tất toán, lộ trình chia đợt đã được khóa cứng!");
+        }
+        if (installmentDTOs == null || installmentDTOs.isEmpty()) {
+            throw new IllegalArgumentException("Lộ trình chia đợt phải có ít nhất 1 đợt thanh toán!");
+        }
         applyInstallmentSchedule(plan, installmentDTOs, true);
         TreatmentPlan saved = treatmentPlanRepository.save(plan);
         return mapToResponseDTO(saved);
@@ -697,12 +704,18 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             throw new IllegalArgumentException("Số tiền thanh toán phải lớn hơn 0!");
         }
 
+        BigDecimal estimatedCost = plan.getEstimatedCost() != null ? plan.getEstimatedCost() : BigDecimal.ZERO;
         BigDecimal currentPaid = plan.getTotalPaidAmount() != null ? plan.getTotalPaidAmount() : BigDecimal.ZERO;
-        BigDecimal effectiveTotal = plan.getEstimatedCost();
-        if (effectiveTotal.compareTo(BigDecimal.ZERO) > 0
-                && currentPaid.add(amount).compareTo(effectiveTotal) > 0) {
-            throw new IllegalArgumentException("Số tiền thanh toán vượt quá tổng chi phí còn lại của kế hoạch điều trị!");
+        BigDecimal remainingCost = estimatedCost.subtract(currentPaid);
+        if (remainingCost.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Kế hoạch điều trị này đã thu đủ, không thể thu thêm!");
         }
+        if (amount.compareTo(remainingCost) > 0) {
+            throw new IllegalArgumentException(String.format(
+                    "Số tiền thu (%,.0f đ) vượt quá số tiền còn lại cần thu (%,.0f đ)!",
+                    amount, remainingCost));
+        }
+
         plan.setTotalPaidAmount(currentPaid.add(amount));
 
         recalculateInstallmentsInternal(plan);
@@ -747,11 +760,15 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         }
     }
 
-    @Override
+        @Override
     @Transactional
     public TreatmentPlanInstallmentDTO markReminderSent(Long installmentId, String notes) {
         TreatmentPlanInstallment inst = treatmentPlanInstallmentRepository.findById(installmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đợt thanh toán cần nhắc hẹn."));
+        if (inst.getStatus() == com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.PAID
+                || (inst.getPlan() != null && inst.getPlan().isFullyPaid())) {
+            throw new IllegalStateException("Đợt thanh toán này đã hoàn tất, không cần nhắc hẹn!");
+        }
         inst.setReminded(true);
         inst.setRemindedAt(LocalDateTime.now());
         if (notes != null && !notes.isBlank()) {

@@ -336,10 +336,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             missingRequirements.add("Ca khám này đã hoàn tất toàn bộ quy trình và xuất hóa đơn.");
         }
 
-        // Kiểm tra điều kiện 1: Bắt buộc có chẩn đoán ICD-10
+        // Kiểm tra điều kiện 1: Chẩn đoán ICD-10 (tùy chọn, chỉ cảnh báo nếu chưa có)
         if (!hasDiagnosis) {
-            missingRequirements
-                    .add("Chưa có chẩn đoán ICD-10. Bác sĩ cần thêm ít nhất 01 chẩn đoán trước khi hoàn tất ca khám.");
+            warnings.add(
+                    "Chưa có chẩn đoán ICD-10 (khuyến nghị bổ sung chẩn đoán để hồ sơ bệnh án đầy đủ hơn).");
         } else if (!hasMainDiagnosis) {
             warnings.add(
                     "Chưa có chẩn đoán loại CHÍNH (MAIN). Khuyến nghị xác định chẩn đoán chính để bệnh án chuẩn y khoa.");
@@ -444,12 +444,20 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             throw new IllegalStateException("Lượt khám hiện tại đã ở trạng thái " + visit.getStatus().name() + ".");
         }
 
-        // Kiểm tra xem ca khám có phát sinh chi phí cần Kế toán lập hóa đơn hay không
-        BigDecimal totalService = check.getTotalServiceAmount() != null ? check.getTotalServiceAmount() : BigDecimal.ZERO;
+        // Kiểm tra xem ca khám có phát sinh chi phí cần Kế toán lập hóa đơn lẻ hay không
+        // (Dịch vụ thuộc KHDT trả theo đợt đã thu qua lộ trình phân kỳ nên không đẩy sang hóa đơn lẻ)
+        List<PerformedService> completedServices = performedServiceRepository.findByVisitIdWithDetails(visitId).stream()
+                .filter(ps -> ps.getStatus() == PerformedServiceStatus.COMPLETED)
+                .toList();
+        boolean hasBillableServices = completedServices.stream().anyMatch(ps -> !isInstallmentPlanService(ps));
+        BigDecimal billableServiceAmount = completedServices.stream()
+                .filter(ps -> !isInstallmentPlanService(ps))
+                .map(ps -> ps.getFinalPrice() != null ? ps.getFinalPrice() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalPresc = check.getTotalPrescriptionAmount() != null ? check.getTotalPrescriptionAmount() : BigDecimal.ZERO;
-        boolean hasPayableItems = totalService.compareTo(BigDecimal.ZERO) > 0 
-                || totalPresc.compareTo(BigDecimal.ZERO) > 0 
-                || check.isHasCompletedServices() 
+        boolean hasPayableItems = billableServiceAmount.compareTo(BigDecimal.ZERO) > 0
+                || totalPresc.compareTo(BigDecimal.ZERO) > 0
+                || hasBillableServices
                 || check.isHasPrescription();
 
         if (hasPayableItems) {
@@ -531,6 +539,13 @@ public class DiagnosisServiceImpl implements DiagnosisService {
 
         Visit saved = visitRepository.save(visit);
         return saved;
+    }
+
+    private boolean isInstallmentPlanService(PerformedService ps) {
+        return ps != null
+                && ps.getPlanItem() != null
+                && ps.getPlanItem().getPlan() != null
+                && Boolean.TRUE.equals(ps.getPlanItem().getPlan().getIsInstallment());
     }
 
     @Override

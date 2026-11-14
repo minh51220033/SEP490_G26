@@ -236,6 +236,13 @@ public class InvoiceServiceImpl implements InvoiceService {
                     throw new IllegalStateException("Dịch vụ thực hiện ID " + ps.getPerformedId() + " thuộc bước kế hoạch điều trị chưa hoàn thành.");
                 }
 
+                if (isInstallmentPlanService(ps)) {
+                    String displayName = (ps.getStepName() != null && !ps.getStepName().isBlank())
+                            ? ps.getStepName()
+                            : ps.getService().getServiceName();
+                    throw new IllegalStateException("Dịch vụ '" + displayName + "' thuộc Kế hoạch điều trị trả theo đợt, vui lòng thu tiền qua lộ trình trả góp thay vì lập hóa đơn lẻ.");
+                }
+
                 if (itemDto.getServiceId() != null && !itemDto.getServiceId().equals(ps.getService().getServiceId())) {
                     throw new IllegalArgumentException("Mã dịch vụ không khớp với dịch vụ đã thực hiện trên lâm sàng.");
                 }
@@ -1138,8 +1145,16 @@ public class InvoiceServiceImpl implements InvoiceService {
         return allServices.stream()
                 .filter(ps -> ps.getStatus() == PerformedServiceStatus.COMPLETED)
                 .filter(ps -> ps.getPlanItem() == null || ps.getPlanItem().getStatus() == TreatmentPlanItemStatus.COMPLETED)
+                .filter(ps -> !isInstallmentPlanService(ps))
                 .filter(ps -> billedIds.isEmpty() || !billedIds.contains(ps.getPerformedId()))
                 .toList();
+    }
+
+    private boolean isInstallmentPlanService(PerformedService ps) {
+        return ps != null
+                && ps.getPlanItem() != null
+                && ps.getPlanItem().getPlan() != null
+                && Boolean.TRUE.equals(ps.getPlanItem().getPlan().getIsInstallment());
     }
 
     @Override
