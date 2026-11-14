@@ -23,6 +23,9 @@ public class DoctorParaclinicalRestController {
     private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
     private final com.cvdcms.service.NanoPixIntegrationService nanoPixIntegrationService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ClinicalPhotoService clinicalPhotoService;
+
     @org.springframework.beans.factory.annotation.Autowired
     public DoctorParaclinicalRestController(ParaclinicalOrderService paraclinicalOrderService,
                                            com.cvdcms.security.DoctorVisitAccess doctorVisitAccess,
@@ -45,6 +48,8 @@ public class DoctorParaclinicalRestController {
             @PathVariable("orderItemId") Long orderItemId,
             @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
             @RequestParam(value = "resultSummary", required = false) String resultSummary,
+            @RequestParam(value = "stage", required = false) String stageStr,
+            @RequestParam(value = "category", required = false) String categoryStr,
             jakarta.servlet.http.HttpSession session
     ) {
         doctorVisitAccess.requireParaclinicalItem(session, orderItemId);
@@ -59,6 +64,15 @@ public class DoctorParaclinicalRestController {
                     .status("COMPLETED")
                     .build();
             ParaclinicalOrderItemResponseDTO updated = paraclinicalOrderService.updateOrder(orderItemId, dto);
+            if (clinicalPhotoService != null) {
+                com.cvdcms.entity.enums.PhotoStage stage = parseStageSafe(stageStr);
+                com.cvdcms.entity.enums.PhotoCategory category = parseCategorySafe(categoryStr);
+                String caption = updated != null && updated.getServiceName() != null ? updated.getServiceName() : "Ảnh cận lâm sàng";
+                if (resultSummary != null && !resultSummary.isBlank()) {
+                    caption = caption + " — " + resultSummary.trim();
+                }
+                clinicalPhotoService.registerPhotoForOrderItem(orderItemId, stage, category, caption, imageUrl);
+            }
             return ResponseEntity.ok(updated);
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
@@ -184,6 +198,34 @@ public class DoctorParaclinicalRestController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("message", "Lỗi khi xóa chỉ định: " + e.getMessage()));
+        }
+    }
+
+    private com.cvdcms.entity.enums.PhotoStage parseStageSafe(String stageStr) {
+        if (stageStr == null || stageStr.isBlank()) {
+            return com.cvdcms.entity.enums.PhotoStage.BEFORE;
+        }
+        try {
+            return com.cvdcms.entity.enums.PhotoStage.valueOf(stageStr.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return com.cvdcms.entity.enums.PhotoStage.BEFORE;
+        }
+    }
+
+    private com.cvdcms.entity.enums.PhotoCategory parseCategorySafe(String categoryStr) {
+        if (categoryStr == null || categoryStr.isBlank()) {
+            return com.cvdcms.entity.enums.PhotoCategory.OTHER;
+        }
+        String normalized = categoryStr.trim().toUpperCase();
+        if ("XRAY".equals(normalized) || "PANORAMIC".equals(normalized)
+                || "CEPHALOMETRIC".equals(normalized) || "CT_CONEBEAM".equals(normalized)
+                || "CT".equals(normalized)) {
+            return com.cvdcms.entity.enums.PhotoCategory.OTHER;
+        }
+        try {
+            return com.cvdcms.entity.enums.PhotoCategory.valueOf(normalized);
+        } catch (IllegalArgumentException e) {
+            return com.cvdcms.entity.enums.PhotoCategory.OTHER;
         }
     }
 }

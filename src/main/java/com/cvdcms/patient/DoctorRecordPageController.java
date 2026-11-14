@@ -54,8 +54,8 @@ public class DoctorRecordPageController {
     }
 
     public DoctorRecordPageController(DoctorRecordService records,
-                                      com.cvdcms.repository.InvoiceRepository invoiceRepository,
-                                      PatientOverviewService overviewService) {
+            com.cvdcms.repository.InvoiceRepository invoiceRepository,
+            PatientOverviewService overviewService) {
         this.records = records;
         this.invoiceRepository = invoiceRepository;
         this.overviewService = overviewService;
@@ -63,7 +63,8 @@ public class DoctorRecordPageController {
 
     @ModelAttribute("roleNames")
     public List<String> roleNames(HttpSession session) {
-        if (session != null && session.getAttribute("roleNames") instanceof List<?> sessionRoles && !sessionRoles.isEmpty()) {
+        if (session != null && session.getAttribute("roleNames") instanceof List<?> sessionRoles
+                && !sessionRoles.isEmpty()) {
             return sessionRoles.stream().map(String::valueOf).toList();
         }
         return records.isAdmin(session) ? List.of("ADMIN") : List.of("BAC_SI");
@@ -113,7 +114,7 @@ public class DoctorRecordPageController {
 
     @GetMapping("/{patientRef}")
     public String detail(HttpSession session, Model model, @PathVariable String patientRef,
-                         @RequestParam(required = false) String tab) {
+            @RequestParam(required = false) String tab) {
         Long id = decodePatientRef(patientRef);
         PatientView patient = records.get(session, id);
         model.addAttribute("patient", patient);
@@ -125,11 +126,11 @@ public class DoctorRecordPageController {
         // Find active visit if any
         VisitView activeVisit = visitList.stream()
                 .filter(v -> "WAITING".equalsIgnoreCase(v.status()) ||
-                             "IN_EXAM".equalsIgnoreCase(v.status()) ||
-                             "WAITING_PARACLINICAL".equalsIgnoreCase(v.status()) ||
-                             "WAITING_RESULT".equalsIgnoreCase(v.status()) ||
-                             "IN_TREATMENT".equalsIgnoreCase(v.status()) ||
-                             "WAITING_PAYMENT".equalsIgnoreCase(v.status()))
+                        "IN_EXAM".equalsIgnoreCase(v.status()) ||
+                        "WAITING_PARACLINICAL".equalsIgnoreCase(v.status()) ||
+                        "WAITING_RESULT".equalsIgnoreCase(v.status()) ||
+                        "IN_TREATMENT".equalsIgnoreCase(v.status()) ||
+                        "WAITING_PAYMENT".equalsIgnoreCase(v.status()))
                 .findFirst().orElse(null);
         model.addAttribute("activeVisit", activeVisit);
 
@@ -144,8 +145,14 @@ public class DoctorRecordPageController {
 
         // EMR KPI counts
         long emrTotal = emrList.size();
-        long emrDraft = emrList.stream().filter(e -> e.status() == EmrRecordStatus.DRAFT || e.status() == EmrRecordStatus.AMENDMENT_DRAFT).count();
-        long emrPending = emrList.stream().filter(e -> e.status() == EmrRecordStatus.DOCTOR_SIGNATURE_PENDING || e.status() == EmrRecordStatus.PATIENT_SIGNATURE_PENDING || e.status() == EmrRecordStatus.READY_TO_LOCK).count();
+        long emrDraft = emrList.stream()
+                .filter(e -> e.status() == EmrRecordStatus.DRAFT || e.status() == EmrRecordStatus.AMENDMENT_DRAFT)
+                .count();
+        long emrPending = emrList.stream()
+                .filter(e -> e.status() == EmrRecordStatus.DOCTOR_SIGNATURE_PENDING
+                        || e.status() == EmrRecordStatus.PATIENT_SIGNATURE_PENDING
+                        || e.status() == EmrRecordStatus.READY_TO_LOCK)
+                .count();
         long emrSigned = emrList.stream().filter(e -> e.status() == EmrRecordStatus.SIGNED).count();
         model.addAttribute("emrTotal", emrTotal);
         model.addAttribute("emrDraft", emrDraft);
@@ -165,9 +172,12 @@ public class DoctorRecordPageController {
         BigDecimal totalDebt = BigDecimal.ZERO;
         for (Invoice inv : invoiceList) {
             if (inv.getStatus() != com.cvdcms.entity.enums.InvoiceStatus.CANCELLED) {
-                if (inv.getTotalAmount() != null) totalIncurred = totalIncurred.add(inv.getTotalAmount());
-                if (inv.getPaidAmount() != null) totalPaid = totalPaid.add(inv.getPaidAmount());
-                if (inv.getRemainingDebt() != null) totalDebt = totalDebt.add(inv.getRemainingDebt());
+                if (inv.getTotalAmount() != null)
+                    totalIncurred = totalIncurred.add(inv.getTotalAmount());
+                if (inv.getPaidAmount() != null)
+                    totalPaid = totalPaid.add(inv.getPaidAmount());
+                if (inv.getRemainingDebt() != null)
+                    totalDebt = totalDebt.add(inv.getRemainingDebt());
             }
         }
         model.addAttribute("totalIncurred", totalIncurred);
@@ -196,9 +206,9 @@ public class DoctorRecordPageController {
 
     @PostMapping("/{patientRef}/health-notes")
     public String updateHealthNotes(HttpSession session, @PathVariable String patientRef,
-                                    @RequestParam(required = false) String allergyDetails,
-                                    @RequestParam(required = false) String underlyingDiseaseDetails,
-                                    RedirectAttributes redirect) {
+            @RequestParam(required = false) String allergyDetails,
+            @RequestParam(required = false) String underlyingDiseaseDetails,
+            RedirectAttributes redirect) {
         Long id = decodePatientRef(patientRef);
         String routeRef = encodePatient(id);
         try {
@@ -212,8 +222,8 @@ public class DoctorRecordPageController {
 
     @PostMapping("/{patientRef}/change-code")
     public String changeCode(HttpSession session, @PathVariable String patientRef,
-                             @RequestParam String newCode,
-                             RedirectAttributes redirect) {
+            @RequestParam String newCode,
+            RedirectAttributes redirect) {
         Long id = decodePatientRef(patientRef);
         String routeRef = encodePatient(id);
         try {
@@ -227,8 +237,8 @@ public class DoctorRecordPageController {
 
     @PostMapping("/{patientRef}/merge")
     public String mergeRecords(HttpSession session, @PathVariable String patientRef,
-                               @RequestParam(required = false) String targetCode,
-                               RedirectAttributes redirect) {
+            @RequestParam(required = false) String targetCode,
+            RedirectAttributes redirect) {
         Long id = decodePatientRef(patientRef);
         String routeRef = encodePatient(id);
         if (targetCode == null || targetCode.isBlank()) {
@@ -241,7 +251,8 @@ public class DoctorRecordPageController {
                 redirect.addFlashAttribute("documentError", "Mã hồ sơ phụ cần gộp phải khác mã hồ sơ hiện tại.");
                 return "redirect:/doctor/patient-records/" + routeRef;
             }
-            redirect.addFlashAttribute("documentError", "Chức năng tự động gộp dữ liệu hồ sơ lâm sàng đang tạm khóa để đảm bảo toàn vẹn dữ liệu EMR và hóa đơn đã lập. Vui lòng liên hệ Quản trị viên chi nhánh để thực hiện quy trình gộp đối soát.");
+            redirect.addFlashAttribute("documentError",
+                    "Chức năng tự động gộp dữ liệu hồ sơ lâm sàng đang tạm khóa để đảm bảo toàn vẹn dữ liệu EMR và hóa đơn đã lập. Vui lòng liên hệ Quản trị viên chi nhánh để thực hiện quy trình gộp đối soát.");
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Không thể thực hiện yêu cầu gộp hồ sơ: " + ex.getMessage());
         }
@@ -257,9 +268,9 @@ public class DoctorRecordPageController {
 
     @PostMapping("/{patientRef}/documents")
     public String uploadDocument(HttpSession session, @PathVariable String patientRef,
-                                 @RequestParam DocumentType documentType,
-                                 @RequestParam("file") MultipartFile file,
-                                 RedirectAttributes redirect) {
+            @RequestParam DocumentType documentType,
+            @RequestParam("file") MultipartFile file,
+            RedirectAttributes redirect) {
         Long id = decodePatientRef(patientRef);
         String routeRef = encodePatient(id);
         try {
@@ -275,9 +286,9 @@ public class DoctorRecordPageController {
 
     @PostMapping("/{patientRef}/documents/{documentId}/type")
     public String updateDocumentType(HttpSession session, @PathVariable String patientRef,
-                                     @PathVariable Long documentId,
-                                     @RequestParam DocumentType newType,
-                                     RedirectAttributes redirect) {
+            @PathVariable Long documentId,
+            @RequestParam DocumentType newType,
+            RedirectAttributes redirect) {
         Long id = decodePatientRef(patientRef);
         String routeRef = encodePatient(id);
         try {
@@ -291,8 +302,8 @@ public class DoctorRecordPageController {
 
     @PostMapping("/{patientRef}/documents/{documentId}/delete")
     public String deleteDocument(HttpSession session, @PathVariable String patientRef,
-                                 @PathVariable Long documentId,
-                                 RedirectAttributes redirect) {
+            @PathVariable Long documentId,
+            RedirectAttributes redirect) {
         Long id = decodePatientRef(patientRef);
         String routeRef = encodePatient(id);
         try {
@@ -306,12 +317,12 @@ public class DoctorRecordPageController {
 
     @PostMapping("/{patientRef}/photos")
     public String uploadPhoto(HttpSession session, @PathVariable String patientRef,
-                              @RequestParam(required = false) Long visitId,
-                              @RequestParam(defaultValue = "BEFORE") String stage,
-                              @RequestParam(defaultValue = "INTRAORAL") String category,
-                              @RequestParam(required = false) String caption,
-                              @RequestParam("file") MultipartFile file,
-                              RedirectAttributes redirect) {
+            @RequestParam(required = false) Long visitId,
+            @RequestParam(defaultValue = "BEFORE") String stage,
+            @RequestParam(defaultValue = "INTRAORAL") String category,
+            @RequestParam(required = false) String caption,
+            @RequestParam("file") MultipartFile file,
+            RedirectAttributes redirect) {
         Long id = decodePatientRef(patientRef);
         records.get(session, id);
         if (visitId != null && doctorVisitAccess != null) {
@@ -320,8 +331,28 @@ public class DoctorRecordPageController {
         String routeRef = encodePatient(id);
         try {
             if (clinicalPhotoService != null && !file.isEmpty()) {
-                PhotoStage pStage = PhotoStage.valueOf(stage.toUpperCase());
-                PhotoCategory pCat = PhotoCategory.valueOf(category.toUpperCase());
+                PhotoStage pStage;
+                try {
+                    pStage = stage != null && !stage.isBlank() ? PhotoStage.valueOf(stage.trim().toUpperCase())
+                            : PhotoStage.BEFORE;
+                } catch (IllegalArgumentException ex) {
+                    pStage = PhotoStage.BEFORE;
+                }
+                PhotoCategory pCat = PhotoCategory.INTRAORAL;
+                if (category != null && !category.isBlank()) {
+                    String norm = category.trim().toUpperCase();
+                    if ("XRAY".equals(norm) || "PANORAMIC".equals(norm)
+                            || "CEPHALOMETRIC".equals(norm) || "CT_CONEBEAM".equals(norm)
+                            || "CT".equals(norm)) {
+                        pCat = PhotoCategory.OTHER;
+                    } else {
+                        try {
+                            pCat = PhotoCategory.valueOf(norm);
+                        } catch (IllegalArgumentException ex) {
+                            pCat = PhotoCategory.OTHER;
+                        }
+                    }
+                }
                 clinicalPhotoService.uploadPhoto(id, visitId, pStage, pCat, caption, file);
                 redirect.addFlashAttribute("documentSuccess", "Đã tải lên ảnh lâm sàng mới thành công.");
             }
@@ -333,11 +364,11 @@ public class DoctorRecordPageController {
 
     @PostMapping("/{patientRef}/photos/{photoId}/edit")
     public String editPhoto(HttpSession session, @PathVariable String patientRef,
-                            @PathVariable Long photoId,
-                            @RequestParam(required = false) String caption,
-                            @RequestParam(required = false) String stage,
-                            @RequestParam(required = false) String category,
-                            RedirectAttributes redirect) {
+            @PathVariable Long photoId,
+            @RequestParam(required = false) String caption,
+            @RequestParam(required = false) String stage,
+            @RequestParam(required = false) String category,
+            RedirectAttributes redirect) {
         Long id = decodePatientRef(patientRef);
         String routeRef = encodePatient(id);
         try {
@@ -351,8 +382,8 @@ public class DoctorRecordPageController {
 
     @PostMapping("/{patientRef}/photos/{photoId}/delete")
     public String deletePhoto(HttpSession session, @PathVariable String patientRef,
-                              @PathVariable Long photoId,
-                              RedirectAttributes redirect) {
+            @PathVariable Long photoId,
+            RedirectAttributes redirect) {
         Long id = decodePatientRef(patientRef);
         String routeRef = encodePatient(id);
         try {
@@ -382,7 +413,8 @@ public class DoctorRecordPageController {
                 ? detail.visit().checkInAt().toLocalDate()
                 : null;
         List<com.cvdcms.entity.Appointment> patientAppointments = overviewService.getPatientAppointments(id);
-        List<PatientService.FollowUp> followUps = (patientAppointments != null ? patientAppointments : List.<com.cvdcms.entity.Appointment>of()).stream()
+        List<PatientService.FollowUp> followUps = (patientAppointments != null ? patientAppointments
+                : List.<com.cvdcms.entity.Appointment>of()).stream()
                 .filter(java.util.Objects::nonNull)
                 .filter(a -> a.getAppointmentDate() != null
                         && (visitDate == null || a.getAppointmentDate().isAfter(visitDate)))
@@ -408,10 +440,14 @@ public class DoctorRecordPageController {
     }
 
     private boolean canPerformClinicalOnVisit(HttpSession session, Long visitId) {
-        if (session == null) return false;
-        if (records.isAdmin(session)) return true;
-        if (!records.isDoctor(session)) return false;
-        if (doctorVisitAccess == null || visitId == null) return true;
+        if (session == null)
+            return false;
+        if (records.isAdmin(session))
+            return true;
+        if (!records.isDoctor(session))
+            return false;
+        if (doctorVisitAccess == null || visitId == null)
+            return true;
         try {
             doctorVisitAccess.require(session, visitId);
             return true;
@@ -442,11 +478,13 @@ public class DoctorRecordPageController {
     }
 
     @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
-    public String handleStatusException(org.springframework.web.server.ResponseStatusException ex, RedirectAttributes redirect) {
+    public String handleStatusException(org.springframework.web.server.ResponseStatusException ex,
+            RedirectAttributes redirect) {
         if (ex.getStatusCode().value() == 401) {
             return "redirect:/login";
         }
-        redirect.addFlashAttribute("documentError", ex.getReason() != null ? ex.getReason() : "Không thể truy cập hồ sơ này.");
+        redirect.addFlashAttribute("documentError",
+                ex.getReason() != null ? ex.getReason() : "Không thể truy cập hồ sơ này.");
         return "redirect:/doctor/patient-records";
     }
 }

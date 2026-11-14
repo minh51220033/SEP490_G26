@@ -10,7 +10,7 @@
     <div class="df-foldable-bar" id="bar-orders" onclick="toggleMainBar('orders')">
         <div class="d-flex align-items-center">
             <i class="bi bi-chevron-right df-foldable-chevron" id="chevron-orders"></i>
-            <span class="df-foldable-title">2. CHỈ ĐỊNH CẬN LÂM SÀNG &amp; CHẨN ĐOÁN HÌNH ẢNH</span>
+            <span class="df-foldable-title">2. Chỉ định cận lâm sàng &amp; hình ảnh</span>
             <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Chụp X-Quang NanoPix, CT ConeBeam 3D, Xét nghiệm máu)</span>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -20,43 +20,18 @@
     </div>
     <div class="df-foldable-content" id="content-orders" style="display: none;">
         <div class="p-3 p-md-4 bg-white">
-            <!-- CHIP CHỈ ĐỊNH NHANH -->
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom" th:unless="${isReadOnlyView == true}">
-                <div class="d-flex flex-wrap align-items-center gap-1.5 small">
-                    <span class="text-secondary fw-bold me-1"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Chỉ định nhanh 1 chạm:</span>
-                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small"
-                            th:disabled="${isClinicalLocked}"
-                            onclick="quickCreateParaclinicalOrder('CLS-XQ-CHOP', 'Chụp X-quang quanh chóp (Periapical)', 'R16')">
-                        + X-Quang quanh chóp
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small"
-                            th:disabled="${isClinicalLocked}"
-                            onclick="quickCreateParaclinicalOrder('CLS-PANO', 'Chụp Panorama toàn cảnh (Toàn hàm)', 'Toàn hàm')">
-                        + Panorama toàn cảnh
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small"
-                            th:disabled="${isClinicalLocked}"
-                            onclick="quickCreateParaclinicalOrder('CLS-CT-3D', 'Chụp CT ConeBeam 3D khảo sát xương', 'Hàm dưới')">
-                        + CT ConeBeam 3D
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0.5 px-2.5 small"
-                            th:disabled="${isClinicalLocked}"
-                            onclick="quickCreateParaclinicalOrder('CLS-XN-MAU', 'Xét nghiệm máu đông (PT/APTT/INR)', 'Máu')">
-                        + Xét nghiệm đông máu
-                    </button>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 small"
-                            onclick="loadParaclinicalOrders()"
-                            title="Làm mới danh sách kết quả đồng bộ từ máy X-quang NanoPix">
-                        <i class="bi bi-arrow-clockwise me-1"></i>Làm mới KQ
-                    </button>
-                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs"
-                            th:disabled="${isClinicalLocked}"
-                            onclick="openAddParaclinicalModal()">
-                        <i class="bi bi-plus-circle-fill me-1"></i>Thêm chỉ định khác
-                    </button>
-                </div>
+            <!-- THANH TÁC VỤ CHỈ ĐỊNH CẬN LÂM SÀNG -->
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3 pb-2 border-bottom" th:unless="${isReadOnlyView == true}">
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 small"
+                        onclick="loadParaclinicalOrders()"
+                        title="Làm mới danh sách kết quả đồng bộ từ máy X-quang">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Làm mới kết quả
+                </button>
+                <button type="button" class="btn df-btn-tonal-primary btn-sm rounded-pill px-3 py-1 fw-semibold"
+                        th:if="${!isClinicalLocked}"
+                        onclick="openAddParaclinicalModal()">
+                    <i class="bi bi-plus-circle me-1"></i>Thêm chỉ định
+                </button>
             </div>
 
             <!-- BẢNG DANH SÁCH CHỈ ĐỊNH CẬN LÂM SÀNG (SCR-11.3 LƯU DATABASE) -->
@@ -77,7 +52,7 @@
                         <tr th:if="${paraclinicalOrders == null or #lists.isEmpty(paraclinicalOrders)}" id="emptyOrdersRow">
                             <td colspan="7" class="text-center py-4 text-muted">
                                 <i class="bi bi-images fs-3 d-block mb-1 text-secondary"></i>
-                                <span>Chưa có chỉ định cận lâm sàng nào trong ca khám này. Nhấn <strong>"+ Thêm chỉ định"</strong> hoặc chọn từ các mẫu nhanh phía trên.</span>
+                                <span>Chưa có chỉ định cận lâm sàng trong ca khám này. Nhấn <strong>"+ Thêm chỉ định"</strong> để tạo phiếu chụp phim hoặc xét nghiệm.</span>
                             </td>
                         </tr>
                         <tr th:each="ord : ${paraclinicalOrders}" th:id="'order-row-' + ${ord.orderItemId}">
@@ -95,7 +70,7 @@
                                     <img th:if="${ord.primaryImageUrl != null and !#strings.isEmpty(ord.primaryImageUrl)}"
                                          th:src="${ord.primaryImageUrl}"
                                          alt="X-ray thumbnail"
-                                         class="rounded border shadow-xs"
+                                         class="rounded border shadow-sm"
                                          style="width: 48px; height: 48px; object-fit: cover; cursor: pointer; background: #0f172a;"
                                          th:data-url="${ord.primaryImageUrl}"
                                          th:data-service="${ord.serviceName}"
@@ -110,7 +85,7 @@
                                         <span class="badge bg-secondary-subtle text-secondary small ms-1" th:text="${ord.serviceType}">XRAY</span>
                                         <div class="small text-muted" th:if="${ord.resultSummary != null and !#strings.isEmpty(ord.resultSummary)}" th:text="'KQ: ' + ${ord.resultSummary}"></div>
                                         <div class="mt-1" th:if="${ord.primaryImageUrl != null and !#strings.isEmpty(ord.primaryImageUrl)}">
-                                            <button type="button" class="btn btn-xs btn-outline-info py-0 px-2 small"
+                                            <button type="button" class="btn btn-sm btn-outline-info py-0 px-2 small"
                                                     style="font-size: 11px;"
                                                     th:data-url="${ord.primaryImageUrl}"
                                                     th:data-service="${ord.serviceName}"
@@ -168,12 +143,12 @@
                                             onclick="toggleOrderStatus(this.getAttribute('data-id'), this.getAttribute('data-status'))">
                                         <i class="bi" th:classappend="${ord.status == 'COMPLETED'} ? 'bi-check2-circle' : 'bi-check-lg'"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
+                                    <button type="button" class="btn btn-sm df-neutral-del-btn p-1 ms-2"
                                             title="Xóa chỉ định này"
                                             th:if="${!isClinicalLocked}"
                                             th:data-id="${ord.orderItemId}"
                                             onclick="deleteOrder(this.getAttribute('data-id'))">
-                                        <i class="bi bi-trash3-fill"></i>
+                                        <i class="bi bi-trash3"></i>
                                     </button>
                                 </div>
                             </td>
@@ -192,26 +167,26 @@
     <!-- Modal 1: Tạo chỉ định mới -->
     <div class="modal fade" id="addParaclinicalModal" tabindex="-1" aria-labelledby="addParaclinicalModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-                <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
-                    <div class="d-flex align-items-center gap-2.5">
-                        <div class="bg-white text-primary rounded-circle p-2 d-flex align-items-center justify-content-center shadow-xs" style="width: 36px; height: 36px;">
-                            <i class="bi bi-images fs-5"></i>
-                        </div>
-                        <div>
-                            <h5 class="modal-title fw-bold mb-0 text-white" id="addParaclinicalModalLabel">Chỉ định Cận lâm sàng &amp; Chẩn đoán hình ảnh</h5>
-                            <small class="text-white-50">Tạo phiếu chỉ định X-quang, CT ConeBeam, Xét nghiệm (SCR-11.2)</small>
-                        </div>
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
+                <div class="modal-header py-3 px-4 border-bottom bg-light">
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 text-dark" style="font-size: 16px;" id="addParaclinicalModalLabel">
+                            <i class="bi bi-clipboard2-pulse text-primary me-2"></i>Chỉ định cận lâm sàng &amp; hình ảnh
+                        </h5>
+                        <div class="text-muted" style="font-size: 12px;">Tạo phiếu chụp X-Quang, CT ConeBeam, xét nghiệm và phân loại giai đoạn ảnh</div>
                     </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                 </div>
-                <div class="modal-body p-4">
-                    <form id="addParaclinicalForm" onsubmit="event.preventDefault(); submitParaclinicalOrderModal();">
+                <form id="addParaclinicalForm" novalidate onsubmit="event.preventDefault(); submitParaclinicalOrderModal();">
+                    <div class="modal-body p-4">
+                        <div id="pcoOrderErrorAlert" class="alert alert-danger py-2 px-3 small d-none mb-3" role="alert"></div>
+
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-dark small mb-1">
+                            <label class="form-label fw-semibold text-dark small mb-1" for="pcoServiceSelect">
                                 Dịch vụ cận lâm sàng <span class="text-danger">*</span>
                             </label>
-                            <select class="form-select form-select-sm" id="pcoServiceSelect" required>
+                            <select class="form-select form-select-sm" id="pcoServiceSelect" required
+                                    onchange="document.getElementById('pcoOrderErrorAlert')?.classList.add('d-none')">
                                 <option value="">-- Chọn dịch vụ cận lâm sàng --</option>
                                 <option th:each="srv : ${paraclinicalServices}"
                                         th:value="${srv.serviceId}"
@@ -222,30 +197,66 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-dark small mb-1">
+                            <label class="form-label fw-semibold text-dark small mb-1" for="pcoToothInput">
                                 Vị trí răng / Vùng can thiệp
                             </label>
                             <input type="text" class="form-control form-control-sm" id="pcoToothInput"
                                    placeholder="Ví dụ: R16, R26, Hàm trên, Toàn hàm, Máu...">
-                            <div class="form-text text-muted small">Nhập số răng FDI hoặc vùng giải phẫu cần chụp phim / xét nghiệm.</div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-dark small mb-1" for="pcoOrderStageSelect">
+                                    Giai đoạn điều trị
+                                </label>
+                                <select class="form-select form-select-sm" id="pcoOrderStageSelect">
+                                    <option value="BEFORE" selected>Trước điều trị (Before)</option>
+                                    <option value="DURING">Trong quá trình (During)</option>
+                                    <option value="AFTER">Sau điều trị (After)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-dark small mb-1" for="pcoOrderCategorySelect">
+                                    Phân loại ảnh / phim
+                                </label>
+                                <select class="form-select form-select-sm" id="pcoOrderCategorySelect">
+                                    <option value="OTHER" selected>Phim X-Quang / Panorama / CT</option>
+                                    <option value="INTRAORAL">Trong miệng</option>
+                                    <option value="OCCLUSAL">Mặt nhai</option>
+                                    <option value="SMILE">Nụ cười</option>
+                                    <option value="EXTRAORAL">Ngoài mặt / Chân dung</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-dark small mb-1">
+                            <label class="form-label fw-semibold text-dark small mb-1" for="pcoOrderFileInput">
+                                Đính kèm ảnh / phim kết quả (tùy chọn)
+                            </label>
+                            <input type="file" class="form-control form-control-sm" id="pcoOrderFileInput" accept="image/*"
+                                   onchange="previewOrderAttachImage(this)">
+                            <div class="form-text text-muted small">Nếu đã có sẵn phim/ảnh trên máy, chọn để tải lên và đồng bộ ngay vào Kho ảnh.</div>
+                            <div class="mt-2 text-center d-none" id="pcoOrderPreviewWrap">
+                                <img id="pcoOrderImagePreview" src="" alt="Xem trước ảnh" class="img-thumbnail rounded" style="max-height: 140px; object-fit: contain;">
+                            </div>
+                        </div>
+
+                        <div class="mb-1">
+                            <label class="form-label fw-semibold text-dark small mb-1" for="pcoNotesInput">
                                 Mục đích / Yêu cầu chẩn đoán
                             </label>
                             <textarea class="form-control form-control-sm" id="pcoNotesInput" rows="2"
-                                      placeholder="Ghi chú lâm sàng: Khảo sát chóp răng, đo mật độ xương, kiểm tra đông máu..."></textarea>
+                                      placeholder="Ghi chú lâm sàng: Khảo sát chóp răng, đo mật độ xương..."></textarea>
                         </div>
+                    </div>
 
-                        <div class="d-flex justify-content-end gap-2 pt-2 border-top">
-                            <button type="button" class="btn btn-sm btn-light border px-3" data-bs-dismiss="modal">Hủy</button>
-                            <button type="submit" class="btn btn-sm btn-primary px-3 fw-bold" id="btnSubmitParaclinical">
-                                <i class="bi bi-check-lg me-1"></i>Lưu chỉ định vào DB
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <div class="modal-footer bg-light py-2 px-4 border-top justify-content-between">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3" id="btnSubmitParaclinical">
+                            <i class="bi bi-check2-circle me-1"></i>Lưu chỉ định
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -254,14 +265,14 @@
     <div class="modal fade" id="doctorXrayViewerModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg bg-dark text-white" style="border-radius: 14px; overflow: hidden;">
-                <div class="modal-header border-secondary py-2.5 px-4" style="background: #0f172a;">
+                <div class="modal-header border-secondary py-2 px-4" style="background: #0f172a;">
                     <div>
                         <h6 class="modal-title fw-bold mb-0 text-info" id="docXrayModalTitle">
-                            <i class="bi bi-person-bounding-box me-1.5"></i>Trình soi phim X-quang kỹ thuật số NanoPix
+                            <i class="bi bi-person-bounding-box me-1"></i>Trình soi phim X-quang kỹ thuật số NanoPix
                         </h6>
                         <small class="text-white-50" id="docXrayModalMeta">Mã CĐ: — | Vị trí: — | Thời gian: —</small>
                     </div>
-                    <div class="d-flex align-items-center gap-1.5 ms-auto me-3">
+                    <div class="d-flex align-items-center gap-2 ms-auto me-3">
                         <button type="button" class="btn btn-sm btn-outline-light" onclick="docXrayZoom(0.25)" title="Phóng to (+)">
                             <i class="bi bi-zoom-in"></i> Phóng to
                         </button>
@@ -296,53 +307,78 @@
         </div>
     </div>
 
-    <!-- Modal 3: Tải ảnh kết quả / Chụp ảnh cận lâm sàng (Panorama, CT ConeBeam, Xét nghiệm, X-quang) -->
+    <!-- Modal 3: Tải ảnh kết quả / Chụp ảnh cận lâm sàng -->
     <div class="modal fade" id="uploadParaclinicalImageModal" tabindex="-1" aria-labelledby="uploadParaclinicalImageModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-                <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
-                    <div class="d-flex align-items-center gap-2.5">
-                        <div class="bg-white text-primary rounded-circle p-2 d-flex align-items-center justify-content-center shadow-xs" style="width: 36px; height: 36px;">
-                            <i class="bi bi-camera-fill fs-5"></i>
-                        </div>
-                        <div>
-                            <h5 class="modal-title fw-bold mb-0 text-white" id="uploadParaclinicalImageModalLabel">Tải ảnh kết quả Cận lâm sàng</h5>
-                            <small class="text-white-50" id="uploadModalServiceName">X-quang / Panorama / CT / Xét nghiệm</small>
-                        </div>
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
+                <div class="modal-header py-3 px-4 border-bottom bg-light">
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 text-dark" style="font-size: 16px;" id="uploadParaclinicalImageModalLabel">
+                            <i class="bi bi-camera text-primary me-2"></i>Tải ảnh kết quả cận lâm sàng
+                        </h5>
+                        <div class="text-muted" style="font-size: 12px;" id="uploadModalServiceName">X-Quang / Panorama / CT / Xét nghiệm</div>
                     </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                 </div>
-                <div class="modal-body p-4">
-                    <form id="uploadParaclinicalForm" onsubmit="event.preventDefault(); submitUploadParaclinicalImage();">
-                        <input type="hidden" id="uploadOrderItemId">
+                <form id="uploadParaclinicalForm" novalidate onsubmit="event.preventDefault(); submitUploadParaclinicalImage();">
+                    <input type="hidden" id="uploadOrderItemId">
+                    <div class="modal-body p-4">
+                        <div id="pcoUploadErrorAlert" class="alert alert-danger py-2 px-3 small d-none mb-3" role="alert"></div>
+
                         <div class="mb-3">
-                            <label class="form-label fw-bold text-dark small mb-1">
+                            <label class="form-label fw-semibold text-dark small mb-1" for="pcoImageFileInput">
                                 Chọn file ảnh kết quả <span class="text-danger">*</span>
                             </label>
-                            <input type="file" class="form-control" id="pcoImageFileInput" accept="image/*" required onchange="previewUploadImage(this)">
-                            <div class="form-text text-muted small">Hỗ trợ các định dạng: PNG, JPG, JPEG, WEBP, DICOM. Có thể chụp trực tiếp từ camera.</div>
+                            <input type="file" class="form-control form-control-sm" id="pcoImageFileInput" accept="image/*" required
+                                   onchange="previewUploadImage(this); document.getElementById('pcoUploadErrorAlert')?.classList.add('d-none');">
+                            <div class="form-text text-muted small">Hỗ trợ PNG, JPG, JPEG, WEBP hoặc chụp trực tiếp từ thiết bị.</div>
                         </div>
 
                         <div class="mb-3 text-center d-none" id="uploadPreviewContainer">
                             <img id="uploadImagePreview" src="" alt="Xem trước" class="img-thumbnail rounded shadow-sm" style="max-height: 180px; object-fit: contain;">
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-dark small mb-1">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-dark small mb-1" for="pcoUploadStageSelect">
+                                    Giai đoạn điều trị <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select form-select-sm" id="pcoUploadStageSelect" required>
+                                    <option value="BEFORE" selected>Trước điều trị (Before)</option>
+                                    <option value="DURING">Trong quá trình (During)</option>
+                                    <option value="AFTER">Sau điều trị (After)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-dark small mb-1" for="pcoUploadCategorySelect">
+                                    Phân loại ảnh / phim <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select form-select-sm" id="pcoUploadCategorySelect" required>
+                                    <option value="OTHER" selected>Phim X-Quang / Panorama / CT</option>
+                                    <option value="INTRAORAL">Trong miệng</option>
+                                    <option value="OCCLUSAL">Mặt nhai</option>
+                                    <option value="SMILE">Nụ cười</option>
+                                    <option value="EXTRAORAL">Ngoài mặt / Chân dung</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-1">
+                            <label class="form-label fw-semibold text-dark small mb-1" for="pcoUploadSummaryInput">
                                 Kết luận / Ghi chú kết quả
                             </label>
                             <textarea class="form-control form-control-sm" id="pcoUploadSummaryInput" rows="2"
                                       placeholder="Ví dụ: Răng 16 tủy hoại tử, nang quanh chóp kích thước 3mm..."></textarea>
                         </div>
+                    </div>
 
-                        <div class="d-flex justify-content-end gap-2 pt-2 border-top">
-                            <button type="button" class="btn btn-sm btn-light border px-3" data-bs-dismiss="modal">Hủy</button>
-                            <button type="submit" class="btn btn-sm btn-primary px-3 fw-bold" id="btnSubmitUploadImage">
-                                <i class="bi bi-cloud-arrow-up-fill me-1"></i>Tải lên &amp; Hoàn thành
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <div class="modal-footer bg-light py-2 px-4 border-top justify-content-between">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-sm btn-primary fw-semibold px-3" id="btnSubmitUploadImage">
+                            <i class="bi bi-cloud-arrow-up me-1"></i>Tải lên &amp; Hoàn thành
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -418,6 +454,22 @@
         applyDocXrayTransform();
     }
 
+    function previewOrderAttachImage(input) {
+        const prevWrap = document.getElementById('pcoOrderPreviewWrap');
+        const prevImg = document.getElementById('pcoOrderImagePreview');
+        if (input && input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (prevImg) prevImg.src = e.target.result;
+                if (prevWrap) prevWrap.classList.remove('d-none');
+            };
+            reader.readAsDataURL(input.files[0]);
+        } else {
+            if (prevImg) prevImg.src = '';
+            if (prevWrap) prevWrap.classList.add('d-none');
+        }
+    }
+
     function openAddParaclinicalModal() {
         if (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal) {
             alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tạo thêm chỉ định.');
@@ -425,30 +477,51 @@
         }
         const modalEl = document.getElementById('addParaclinicalModal');
         if (modalEl) {
+            const form = document.getElementById('addParaclinicalForm');
+            if (form) form.reset();
+            const stageEl = document.getElementById('pcoOrderStageSelect');
+            if (stageEl) stageEl.value = 'BEFORE';
+            const catEl = document.getElementById('pcoOrderCategorySelect');
+            if (catEl) catEl.value = 'OTHER';
+            const errBox = document.getElementById('pcoOrderErrorAlert');
+            if (errBox) errBox.classList.add('d-none');
+            const prevWrap = document.getElementById('pcoOrderPreviewWrap');
+            if (prevWrap) prevWrap.classList.add('d-none');
             const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            document.getElementById('addParaclinicalForm')?.reset();
             modal.show();
+            setTimeout(() => document.getElementById('pcoServiceSelect')?.focus(), 180);
         }
     }
 
     async function submitParaclinicalOrderModal() {
         const serviceSelect = document.getElementById('pcoServiceSelect');
         const toothInput = document.getElementById('pcoToothInput');
+        const stageSelect = document.getElementById('pcoOrderStageSelect');
+        const categorySelect = document.getElementById('pcoOrderCategorySelect');
+        const fileInput = document.getElementById('pcoOrderFileInput');
         const notesInput = document.getElementById('pcoNotesInput');
         const submitBtn = document.getElementById('btnSubmitParaclinical');
+        const errBox = document.getElementById('pcoOrderErrorAlert');
 
         const serviceId = serviceSelect ? serviceSelect.value : null;
         const toothNumbers = toothInput ? toothInput.value.trim() : '';
+        const stage = stageSelect ? stageSelect.value : 'BEFORE';
+        const category = categorySelect ? categorySelect.value : 'OTHER';
         const notes = notesInput ? notesInput.value.trim() : '';
 
         if (!serviceId) {
-            alert('Vui lòng chọn dịch vụ cận lâm sàng!');
+            if (errBox) {
+                errBox.textContent = 'Vui lòng chọn dịch vụ cận lâm sàng trước khi lưu.';
+                errBox.classList.remove('d-none');
+            }
+            serviceSelect?.focus();
             return;
         }
+        if (errBox) errBox.classList.add('d-none');
 
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu DB...';
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
         }
 
         try {
@@ -457,66 +530,70 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    serviceId: parseInt(serviceId),
+                    serviceId: parseInt(serviceId, 10),
                     toothNumbers: toothNumbers,
                     notes: notes
                 })
             });
 
             const data = await res.json();
-            if (res.ok) {
-                const modalEl = document.getElementById('addParaclinicalModal');
-                if (modalEl) {
-                    const modal = bootstrap.Modal.getInstance(modalEl);
-                    if (modal) modal.hide();
+            if (!res.ok) {
+                if (errBox) {
+                    errBox.textContent = 'Không thể lưu chỉ định: ' + (data.message || 'Lỗi không xác định');
+                    errBox.classList.remove('d-none');
                 }
-                if (typeof showToast === 'function') {
-                    showToast(`✓ Đã lưu chỉ định cận lâm sàng (Mã chụp: ${data.externalRefId || data.orderCode})`);
+                return;
+            }
+
+            let uploadedImg = false;
+            if (fileInput && fileInput.files && fileInput.files.length > 0 && data.orderItemId) {
+                const fd = new FormData();
+                fd.append('file', fileInput.files[0]);
+                fd.append('stage', stage);
+                fd.append('category', category);
+                if (notes) fd.append('resultSummary', notes);
+                const upRes = await fetch(`/api/doctor/paraclinical-orders/${data.orderItemId}/upload`, {
+                    method: 'POST',
+                    body: fd
+                });
+                if (!upRes.ok) {
+                    const upErr = await upRes.json().catch(() => ({}));
+                    if (errBox) {
+                        errBox.textContent = 'Đã tạo chỉ định nhưng tải ảnh đính kèm thất bại: ' + (upErr.message || 'Lỗi tải ảnh');
+                        errBox.classList.remove('d-none');
+                    }
+                    await loadParaclinicalOrders();
+                    return;
                 }
-                await loadParaclinicalOrders();
-            } else {
-                alert('Không thể lưu chỉ định: ' + (data.message || 'Lỗi không xác định'));
+                uploadedImg = true;
+            }
+
+            const modalEl = document.getElementById('addParaclinicalModal');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            }
+            if (typeof showToast === 'function') {
+                const code = data.externalRefId || data.orderCode || '';
+                showToast(uploadedImg
+                    ? `✓ Đã lưu chỉ định & đồng bộ ảnh (${code})`
+                    : `✓ Đã lưu chỉ định cận lâm sàng (${code})`);
+            }
+            await loadParaclinicalOrders();
+            if (uploadedImg && typeof window.reloadClinicalPhotos === 'function') {
+                await window.reloadClinicalPhotos();
             }
         } catch (err) {
             console.error('Error creating paraclinical order:', err);
-            alert('Lỗi kết nối khi tạo chỉ định: ' + err.message);
+            if (errBox) {
+                errBox.textContent = 'Lỗi kết nối khi tạo chỉ định: ' + err.message;
+                errBox.classList.remove('d-none');
+            }
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Lưu chỉ định vào DB';
+                submitBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Lưu chỉ định';
             }
-        }
-    }
-
-    async function quickCreateParaclinicalOrder(serviceCode, defaultName, defaultTooth) {
-        if (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal) {
-            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tạo thêm chỉ định.');
-            return;
-        }
-        try {
-            const visitId = (typeof getCurrentVisitId === 'function') ? getCurrentVisitId() : 1;
-            const res = await fetch(`/api/doctor/visits/${visitId}/paraclinical-orders`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    customServiceName: defaultName,
-                    toothNumbers: defaultTooth,
-                    notes: 'Chỉ định 1 chạm nhanh từ bác sĩ khám lâm sàng'
-                })
-            });
-
-            const data = await res.json();
-            if (res.ok) {
-                if (typeof showToast === 'function') {
-                    showToast(`✓ Đã thêm chỉ định: ${defaultName} (${data.externalRefId || data.orderCode})`);
-                }
-                await loadParaclinicalOrders();
-            } else {
-                alert('Không thể tạo chỉ định: ' + (data.message || 'Lỗi không xác định'));
-            }
-        } catch (err) {
-            console.error('Error in quickCreateParaclinicalOrder:', err);
-            alert('Lỗi khi tạo chỉ định nhanh: ' + err.message);
         }
     }
 
@@ -594,6 +671,12 @@
             if (!res.ok) return;
             const orders = await res.json();
             renderParaclinicalOrdersTable(orders);
+            if (typeof window.syncXrayGalleryFromParaclinicalOrders === 'function') {
+                window.syncXrayGalleryFromParaclinicalOrders(orders);
+            }
+            if (typeof window.refreshPanoXrayPreview === 'function') {
+                window.refreshPanoXrayPreview(orders);
+            }
         } catch (err) {
             console.error('Error loading paraclinical orders:', err);
         }
@@ -613,7 +696,7 @@
                 <tr id="emptyOrdersRow">
                     <td colspan="7" class="text-center py-4 text-muted">
                         <i class="bi bi-images fs-3 d-block mb-1 text-secondary"></i>
-                        <span>Chưa có chỉ định cận lâm sàng nào trong ca khám này. Nhấn <strong>"+ Thêm chỉ định"</strong> hoặc chọn từ các mẫu nhanh phía trên.</span>
+                        <span>Chưa có chỉ định cận lâm sàng trong ca khám này. Nhấn <strong>"+ Thêm chỉ định"</strong> để tạo phiếu chụp phim hoặc xét nghiệm.</span>
                     </td>
                 </tr>
             `;
@@ -636,7 +719,7 @@
             const thumbHtml = hasImg ? `
                 <img src="${esc(ord.primaryImageUrl)}"
                      alt="X-ray"
-                     class="rounded border shadow-xs"
+                     class="rounded border shadow-sm"
                      style="width: 48px; height: 48px; object-fit: cover; cursor: pointer; background: #0f172a;"
                      data-url="${esc(ord.primaryImageUrl)}"
                      data-service="${esc(ord.serviceName)}"
@@ -650,7 +733,7 @@
 
             const viewBtnInline = hasImg ? `
                 <div class="mt-1">
-                    <button type="button" class="btn btn-xs btn-outline-info py-0 px-2 small"
+                    <button type="button" class="btn btn-sm btn-outline-info py-0 px-2 small"
                             style="font-size: 11px;"
                             data-url="${esc(ord.primaryImageUrl)}"
                             data-service="${esc(ord.serviceName)}"
@@ -694,10 +777,10 @@
                             onclick="toggleOrderStatus(${ord.orderItemId}, '${ord.status}')">
                         <i class="bi ${isDone ? 'bi-check2-circle' : 'bi-check-lg'}"></i>
                     </button>
-                    <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2"
+                    <button type="button" class="btn btn-sm df-neutral-del-btn p-1 ms-2"
                             title="Xóa chỉ định này"
                             onclick="deleteOrder(${ord.orderItemId})">
-                        <i class="bi bi-trash3-fill"></i>
+                        <i class="bi bi-trash3"></i>
                     </button>
                 </div>
             `;
@@ -751,21 +834,30 @@
             alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tải thêm kết quả.');
             return;
         }
+        const form = document.getElementById('uploadParaclinicalForm');
+        if (form) form.reset();
         const idInput = document.getElementById('uploadOrderItemId');
         const nameEl = document.getElementById('uploadModalServiceName');
         const fileInput = document.getElementById('pcoImageFileInput');
+        const stageSelect = document.getElementById('pcoUploadStageSelect');
+        const categorySelect = document.getElementById('pcoUploadCategorySelect');
         const summaryInput = document.getElementById('pcoUploadSummaryInput');
         const prev = document.getElementById('uploadPreviewContainer');
+        const errBox = document.getElementById('pcoUploadErrorAlert');
 
         if (idInput) idInput.value = orderItemId;
         if (nameEl) nameEl.textContent = serviceName || 'Chỉ định cận lâm sàng';
         if (fileInput) fileInput.value = '';
+        if (stageSelect) stageSelect.value = 'BEFORE';
+        if (categorySelect) categorySelect.value = 'OTHER';
         if (summaryInput) summaryInput.value = '';
         if (prev) prev.classList.add('d-none');
+        if (errBox) errBox.classList.add('d-none');
 
         const modalEl = document.getElementById('uploadParaclinicalImageModal');
         if (modalEl && typeof bootstrap !== 'undefined') {
             bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            setTimeout(() => fileInput?.focus(), 180);
         }
     }
 
@@ -785,16 +877,26 @@
     async function submitUploadParaclinicalImage() {
         const orderItemId = document.getElementById('uploadOrderItemId')?.value;
         const fileInput = document.getElementById('pcoImageFileInput');
+        const stageSelect = document.getElementById('pcoUploadStageSelect');
+        const categorySelect = document.getElementById('pcoUploadCategorySelect');
         const summaryInput = document.getElementById('pcoUploadSummaryInput');
         const submitBtn = document.getElementById('btnSubmitUploadImage');
+        const errBox = document.getElementById('pcoUploadErrorAlert');
 
         if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-            alert('Vui lòng chọn file ảnh kết quả!');
+            if (errBox) {
+                errBox.textContent = 'Vui lòng chọn file ảnh kết quả trước khi tải lên.';
+                errBox.classList.remove('d-none');
+            }
+            fileInput?.focus();
             return;
         }
+        if (errBox) errBox.classList.add('d-none');
 
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
+        formData.append('stage', stageSelect ? stageSelect.value : 'BEFORE');
+        formData.append('category', categorySelect ? categorySelect.value : 'OTHER');
         if (summaryInput && summaryInput.value.trim()) {
             formData.append('resultSummary', summaryInput.value.trim());
         }
@@ -818,19 +920,26 @@
                     if (m) m.hide();
                 }
                 if (typeof showToast === 'function') {
-                    showToast('✓ Đã tải ảnh kết quả và cập nhật hoàn thành!');
+                    showToast('✓ Đã tải ảnh kết quả & đồng bộ theo giai đoạn!');
                 }
                 await loadParaclinicalOrders();
-            } else {
-                alert('Không thể tải ảnh: ' + (data.message || 'Lỗi không xác định'));
+                if (typeof window.reloadClinicalPhotos === 'function') {
+                    await window.reloadClinicalPhotos();
+                }
+            } else if (errBox) {
+                errBox.textContent = 'Không thể tải ảnh: ' + (data.message || 'Lỗi không xác định');
+                errBox.classList.remove('d-none');
             }
         } catch (err) {
             console.error('Error uploading paraclinical image:', err);
-            alert('Lỗi kết nối khi tải ảnh: ' + err.message);
+            if (errBox) {
+                errBox.textContent = 'Lỗi kết nối khi tải ảnh: ' + err.message;
+                errBox.classList.remove('d-none');
+            }
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-1"></i>Tải lên &amp; Hoàn thành';
+                submitBtn.innerHTML = '<i class="bi bi-cloud-arrow-up me-1"></i>Tải lên &amp; Hoàn thành';
             }
         }
     }

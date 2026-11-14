@@ -203,7 +203,7 @@
                 body.is-readonly-exam-view #treatmentPlansTableBody .dropdown-toggle {
                     pointer-events: none !important;
                 }
-                body.is-readonly-exam-view #mainTabContainer input:not([type="search"]),
+                body.is-readonly-exam-view #mainTabContainer input:not([type="search"]):not(#clinicalPhotoSearchInput),
                 body.is-readonly-exam-view #mainTabContainer select:not(#photoCategorySelect),
                 body.is-readonly-exam-view #mainTabContainer textarea {
                     pointer-events: none !important;
@@ -250,7 +250,7 @@
                 }
                 .df-tab-pane {
                     width: 100% !important;
-                    min-height: calc(100vh - 290px);
+                    min-height: auto;
                     box-sizing: border-box;
                 }
                 .df-tab-pane > .card,
@@ -261,10 +261,10 @@
                     background: #ffffff;
                     border: 1px solid #e2e8f0 !important;
                     border-radius: 12px !important;
-                    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
+                    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
                     overflow: hidden;
-                    min-height: calc(100vh - 310px);
-                    margin-bottom: 24px;
+                    min-height: auto;
+                    margin-bottom: 20px;
                     box-sizing: border-box;
                 }
                 .df-tab-content-header,
@@ -279,7 +279,7 @@
                     justify-content: space-between;
                     flex-wrap: wrap;
                     gap: 12px;
-                    min-height: 52px;
+                    min-height: 48px;
                     box-sizing: border-box;
                 }
                 .df-tab-title-standard,
@@ -288,11 +288,11 @@
                     display: inline-flex;
                     align-items: center;
                     gap: 8px;
-                    font-size: 13.5px;
+                    font-size: 14.5px;
                     font-weight: 700;
-                    color: #1a2f6e !important;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
+                    color: #0f172a !important;
+                    text-transform: none;
+                    letter-spacing: 0;
                     margin: 0;
                 }
                 .df-tab-title-standard i,
@@ -319,7 +319,7 @@
                                 <!-- HÀNG 1: BREADCRUMB & THANH CÔNG CỤ ĐIỀU PHỐI CƠ SỞ (DEMO) THEO CHUẨN MẪU -->
                 <div class="df-unified-top-bar d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 border-bottom bg-white">
                     <!-- THONG BAO CANH BAO TU FLASH ATTRIBUTE -->
-                    <div th:if="${errorMessage != null}" class="w-100 alert alert-warning border-0 shadow-sm rounded-3 d-flex align-items-center gap-2.5 mb-2 px-3 py-2.5" style="background: #fffbeb; border-left: 4px solid #f59e0b !important;">
+                    <div th:if="${errorMessage != null}" class="w-100 alert alert-warning border-0 shadow-sm rounded-3 d-flex align-items-center gap-2 mb-2 px-3 py-2" style="background: #fffbeb; border-left: 4px solid #f59e0b !important;">
                         <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0"></i>
                         <div class="fw-semibold text-dark small" th:text="${errorMessage}">Cảnh báo quyền truy cập</div>
                         <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -384,10 +384,10 @@
                         Cơ sở hiện tại chưa có ca khám nào. Bác sĩ có thể tiếp nhận bệnh nhân mới vào khám ngay, hoặc chuyển sang cơ sở khác trên thanh công cụ.
                     </p>
                     <div class="d-flex align-items-center justify-content-center gap-2">
-                        <button type="button" class="btn btn-primary fw-bold px-3.5 py-2 rounded-3 shadow-sm" onclick="openQuickAddPatientModal()">
+                        <button type="button" class="btn btn-primary fw-bold px-3 py-2 rounded-3 shadow-sm" onclick="openQuickAddPatientModal()">
                             <i class="bi bi-plus-lg me-1"></i> Tiếp nhận bệnh nhân mới
                         </button>
-                        <button type="button" class="btn btn-outline-secondary fw-semibold px-3.5 py-2 rounded-3" onclick="openDailyVisitsDrawer()">
+                        <button type="button" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3" onclick="openDailyVisitsDrawer()">
                             <i class="bi bi-list-task me-1"></i> Xem danh sách ca khám
                         </button>
                     </div>
@@ -437,12 +437,12 @@
                     <!-- NÚT CHUYÊN MÔN HOÀN TẤT KHÁM & BÀN GIAO SANG KẾ TOÁN (TÁCH BIỆT CHUYÊN MÔN & TÀI CHÍNH) -->
                     <div class="d-flex flex-column align-items-end gap-1" th:if="${isReadOnlyView == true}">
                         <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5">
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 rounded-pill fw-semibold d-inline-flex align-items-center gap-2">
                                 <i class="bi bi-lock-fill"></i>
-                                <span>Chế độ Chỉ xem Chi tiết lượt khám</span>
+                                <span>Chế độ chỉ xem chi tiết lượt khám</span>
                             </span>
                             <a th:href="${patientToken != null ? '/doctor/patient-records/' + patientToken + '#emr' : (fromPatientId != null ? '/doctor/patient-records/' + idCodec.encodePatient(fromPatientId) + '#emr' : (patient != null ? '/doctor/patient-records/' + idCodec.encodePatient(patient.profileId) + '#emr' : (visit != null and visit.patientProfile != null ? '/doctor/patient-records/' + idCodec.encodePatient(visit.patientProfile.profileId) + '#emr' : '/doctor/patient-records')))}"
-                               class="btn btn-outline-primary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2 shadow-xs"
+                               class="btn btn-outline-primary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2"
                                title="Xem bệnh án điện tử EMR của bệnh nhân">
                                 <i class="bi bi-file-earmark-medical text-primary"></i>
                                 <span>Bệnh án EMR</span>
@@ -454,7 +454,7 @@
                             <th:block th:if="${visit.status == null or (visit.status.name() != 'WAITING_PAYMENT' and visit.status.name() != 'COMPLETED')}">
                                 <button type="button" id="btnDirectHandover"
                                         class="btn btn-primary rounded-pill px-4 py-2 fw-bold d-inline-flex align-items-center gap-2 shadow-sm text-white"
-                                        style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border: none;"
+                                        style="background: #0284c7; border-color: #0284c7;"
                                         th:data-visit-id="${visit.visitId}"
                                         onclick="confirmDirectHandover(this.getAttribute('data-visit-id'))"
                                         title="Hoàn tất ca khám lâm sàng và khóa hồ sơ bệnh án (BR-EMR-02)">
@@ -464,7 +464,7 @@
                             </th:block>
 
                             <th:block th:if="${visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}">
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1"
                                         th:data-visit-id="${visit.visitId}"
                                         onclick="reopenClinicalExamination(this.getAttribute('data-visit-id'))"
                                         title="Mở lại ca khám để bổ sung/sửa đổi nếu Kế toán chưa thu tiền">
@@ -475,12 +475,12 @@
 
                             <th:block th:if="${visit.status != null and visit.status.name() == 'COMPLETED'}">
                                 <a th:href="@{/emr/records(query=${visit.visitCode})}"
-                               class="btn btn-outline-primary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs"
-                               title="Xem hoặc tạo bệnh án điện tử EMR cho ca khám này">
-                                <i class="bi bi-file-earmark-medical text-primary"></i>
-                                <span>Bệnh án EMR</span>
-                            </a>
-                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs">
+                                   class="btn btn-outline-primary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2"
+                                   title="Xem hoặc tạo bệnh án điện tử EMR cho ca khám này">
+                                    <i class="bi bi-file-earmark-medical text-primary"></i>
+                                    <span>Bệnh án EMR</span>
+                                </a>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-semibold d-inline-flex align-items-center gap-2">
                                     <i class="bi bi-check-circle-fill text-success"></i>
                                     <span>Đã hoàn tất ca khám</span>
                                 </span>
@@ -553,7 +553,7 @@
             <!-- ========================================================= -->
             <!-- TAB CONTENT CONTAINER (CHUYỂN ĐỔI TAB & KÉO CUỘN ĐỘC LẬP) -->
             <!-- ========================================================= -->
-            <div class="df-tab-content-container p-3 p-md-4" id="mainTabContainer" style="background: #f8fafc; min-height: 80vh;">
+            <div class="df-tab-content-container p-3 p-md-4" id="mainTabContainer" style="background: #f8fafc;">
 
                 <!-- TAB 1: THÔNG TIN BỆNH NHÂN -->
                 <div class="df-tab-pane" id="tab-patient-info" style="display: none;">
@@ -565,32 +565,29 @@
                     <div class="df-session-card" id="diagnosisSection"
                          th:with="isClinicalLocked=${(isReadOnlyView != null and isReadOnlyView) or (visit != null and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED'))}">
 
-                        <!-- Header ca khám (NGÀY KHÁM: dd-MM-yyyy) -->
+                        <!-- Header ca khám (Ngày khám: dd-MM-yyyy) -->
                         <div class="df-session-bar">
                             <div class="df-session-title">
                                 <i class="bi bi-calendar2-event"></i>
-                                <span>NGÀY KHÁM: </span>
+                                <span>Ngày khám: </span>
                                 <span th:text="${visit.checkInAt != null ? #temporals.format(visit.checkInAt, 'dd-MM-yyyy') : 'Chưa có thông tin'}">21-10-2026</span>
-                                <button th:unless="${isReadOnlyView == true}" type="button" class="btn btn-sm btn-link text-secondary p-0 ms-1" title="Chỉnh sửa ghi chú ca khám" onclick="toggleMainBar('exam')">
-                                    <i class="bi bi-pencil-square"></i>
-                                </button>
                             </div>
                         </div>
 
                         <!-- BANNER THÔNG BÁO KHÓA BỆNH ÁN KHI ĐÃ HOÀN TẤT (BR-EMR-02) -->
                         <div th:if="${isReadOnlyView != true and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED')}"
                              id="clinicalLockedBanner"
-                             class="alert alert-warning border border-warning-subtle d-flex flex-wrap align-items-center justify-content-between p-3 rounded-3 mb-3 shadow-xs">
+                             class="alert alert-warning border border-warning-subtle d-flex flex-wrap align-items-center justify-content-between p-3 rounded-3 mb-3">
                             <div class="d-flex align-items-center gap-3">
                                 <div class="bg-warning text-white rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
                                     <i class="bi bi-lock-fill fs-5"></i>
                                 </div>
                                 <div>
-                                    <div class="fw-bold text-dark fs-7">
-                                        <i class="bi bi-shield-lock-fill text-warning me-1"></i>BỆNH ÁN LÂM SÀNG ĐÃ ĐƯỢC KHÓA BẤT BIẾN (QUY TẮC BR-EMR-02)
+                                    <div class="fw-bold text-dark small">
+                                        <i class="bi bi-shield-lock-fill text-warning me-1"></i>Bệnh án lâm sàng đã khóa (BR-EMR-02)
                                     </div>
-                                    <div class="text-secondary small mt-0.5">
-                                        Bác sĩ đã hoàn tất ca khám và bàn giao dữ liệu sang bộ phận Kế toán (Người 4) để lập hóa đơn và thu tiền. Toàn bộ chẩn đoán ICD-10, dịch vụ điều trị và đơn thuốc đã được bảo vệ bất biến.
+                                    <div class="text-secondary small mt-1">
+                                        Ca khám đã hoàn tất và bàn giao dữ liệu sang Kế toán để lập hóa đơn thu tiền. Dữ liệu chẩn đoán, dịch vụ và đơn thuốc được khóa bất biến.
                                     </div>
                                 </div>
                             </div>
@@ -892,7 +889,7 @@
                     Ca khám đã hoàn tất và dữ liệu đã sẵn sàng. Bạn có muốn mở ngay <strong>Bệnh án điện tử (EMR)</strong> của ca khám này không?
                 </p>
                 <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-primary py-2.5 fw-bold d-flex align-items-center justify-content-center gap-2" id="btnOpenEmrFromSuccessModal" style="background-color: #0284c7; border-color: #0284c7; border-radius: 10px; font-size: 15px;">
+                    <button type="button" class="btn btn-primary py-2 fw-bold d-flex align-items-center justify-content-center gap-2" id="btnOpenEmrFromSuccessModal" style="background-color: #0284c7; border-color: #0284c7; border-radius: 10px; font-size: 15px;">
                         <i class="bi bi-file-earmark-medical-fill fs-5"></i>
                         <span>Mở Bệnh án điện tử (EMR) ngay</span>
                     </button>
@@ -931,7 +928,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('mainTabContainer');
             if (container) {
-                container.querySelectorAll('input:not([type="search"]), select:not(#photoCategorySelect), textarea').forEach(el => {
+                container.querySelectorAll('input:not([type="search"]):not(#clinicalPhotoSearchInput), select:not(#photoCategorySelect), textarea').forEach(el => {
                     el.setAttribute('readonly', 'readonly');
                     el.setAttribute('disabled', 'disabled');
                 });
@@ -1925,12 +1922,12 @@
                     <p class="text-secondary small mb-3">
                         Bác sĩ chỉ có quyền tác nghiệp và xử lý ca khám tại cơ sở đang phân công làm việc:
                     </p>
-                    <div class="p-2.5 rounded-3 mb-3 fw-bold text-primary border border-primary-subtle" style="background: #e0f2fe; font-size: 15px;">
-                        <i class="bi bi-geo-alt-fill me-1.5 text-primary"></i>
+                    <div class="p-2 rounded-3 mb-3 fw-bold text-primary border border-primary-subtle" style="background: #e0f2fe; font-size: 15px;">
+                        <i class="bi bi-geo-alt-fill me-2 text-primary"></i>
                         <span id="warningAssignedBranchDisplay" th:text="${doctorAssignedBranchFullName != null and !doctorAssignedBranchFullName.isEmpty() ? doctorAssignedBranchFullName : 'Cơ sở hiện tại'}">CN02 - Cơ sở Đống Đa</span>
                     </div>
-                    <div class="alert alert-warning py-2.5 px-3 small text-start mb-0 rounded-3 border-0 d-flex align-items-start gap-2" style="background: #fffbeb; color: #92400e;">
-                        <i class="bi bi-exclamation-triangle-fill fs-5 mt-0.5 text-warning flex-shrink-0"></i>
+                    <div class="alert alert-warning py-2 px-3 small text-start mb-0 rounded-3 border-0 d-flex align-items-start gap-2" style="background: #fffbeb; color: #92400e;">
+                        <i class="bi bi-exclamation-triangle-fill fs-5 mt-1 text-warning flex-shrink-0"></i>
                         <span id="warningTargetBranchText" style="line-height: 1.45;">Bạn không được phép tác động hoặc vào khám các ca bệnh tại cơ sở khác!</span>
                     </div>
                 </div>

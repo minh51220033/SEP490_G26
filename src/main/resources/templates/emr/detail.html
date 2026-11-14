@@ -1663,9 +1663,19 @@
                                             <img th:src="${photo['imageUrl']}" class="card-img-top"
                                                 style="height: 140px; object-fit: cover;">
                                             <div class="card-body p-2">
+                                                <div class="d-flex flex-wrap gap-1 mb-1">
+                                                    <span class="badge"
+                                                        th:classappend="${photo['stage'] == 'BEFORE' ? 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' : (photo['stage'] == 'DURING' ? 'bg-info-subtle text-info-emphasis border border-info-subtle' : 'bg-success-subtle text-success border border-success-subtle')}"
+                                                        style="font-size: 10px;"
+                                                        th:text="${@emrViewText.label(photo['stage'] ?: 'BEFORE')}">Trước điều trị</span>
+                                                    <span class="badge"
+                                                        th:classappend="${(photo['category'] == 'OTHER' or photo['category'] == 'XRAY') ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-light text-secondary border'}"
+                                                        style="font-size: 10px;"
+                                                        th:text="${@emrViewText.label(photo['category'] ?: 'INTRAORAL')}">Trong miệng</span>
+                                                </div>
                                                 <strong class="d-block small text-truncate"
                                                     th:text="${photo['caption'] ?: 'Ảnh lâm sàng'}"></strong>
-                                                <span class="badge bg-warning-subtle text-warning"
+                                                <span class="badge bg-warning-subtle text-warning mt-1"
                                                     style="font-size: 10px;">Chưa chốt phiên bản</span>
                                             </div>
                                         </div>

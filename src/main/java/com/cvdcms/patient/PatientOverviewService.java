@@ -925,10 +925,22 @@ public class PatientOverviewService {
                     String actor = photo.getVisit() != null && photo.getVisit().getPrimaryDoctor() != null
                             ? safeText(photo.getVisit().getPrimaryDoctor().getFullName(), "Bác sĩ / KTV")
                             : "Bác sĩ / KTV";
-                    String stage = photo.getPhotoStage() != null ? photo.getPhotoStage().name() : "";
-                    String cat = photo.getPhotoCategory() != null ? photo.getPhotoCategory().name() : "";
+                    String stage = switch (photo.getPhotoStage() != null ? photo.getPhotoStage().name() : "") {
+                        case "BEFORE" -> "Trước điều trị";
+                        case "DURING" -> "Trong quá trình";
+                        case "AFTER" -> "Sau điều trị";
+                        default -> "Chưa phân giai đoạn";
+                    };
+                    String cat = switch (photo.getPhotoCategory() != null ? photo.getPhotoCategory().name() : "") {
+                        case "INTRAORAL" -> "Trong miệng";
+                        case "EXTRAORAL" -> "Ngoài mặt / Chân dung";
+                        case "SMILE" -> "Nụ cười";
+                        case "OCCLUSAL" -> "Mặt nhai";
+                        case "OTHER" -> "Phim X-Quang / Panorama / CT";
+                        default -> "Chưa phân loại";
+                    };
                     String detail = (!vCode.isEmpty() ? "[" + vCode + "] " : "")
-                            + "Tải lên phim/ảnh lâm sàng (" + cat + " - " + stage + ")"
+                            + "Tải lên phim/ảnh lâm sàng (" + stage + " · " + cat + ")"
                             + (photo.getCaption() != null && !photo.getCaption().isBlank() ? ": " + photo.getCaption().trim() : "");
                     rows.add(new DoctorRecordService.AuditLogRow(
                             ++syntheticIdSeq,

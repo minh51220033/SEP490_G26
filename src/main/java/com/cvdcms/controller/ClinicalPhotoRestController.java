@@ -62,7 +62,7 @@ public class ClinicalPhotoRestController {
         Map<String, Object> response = new HashMap<>();
         try {
             PhotoStage stage = PhotoStage.valueOf(stageStr.toUpperCase());
-            PhotoCategory category = PhotoCategory.valueOf(categoryStr.toUpperCase());
+            PhotoCategory category = parsePhotoCategory(categoryStr);
 
             ClinicalPhotoResponseDTO photo = clinicalPhotoService.uploadPhoto(profileId, visitId, stage, category, caption, file);
             response.put("success", true);
@@ -108,7 +108,7 @@ public class ClinicalPhotoRestController {
         try {
             String caption = body.get("caption");
             PhotoStage stage = body.get("stage") != null ? PhotoStage.valueOf(body.get("stage").toUpperCase()) : null;
-            PhotoCategory category = body.get("category") != null ? PhotoCategory.valueOf(body.get("category").toUpperCase()) : null;
+            PhotoCategory category = body.get("category") != null ? parsePhotoCategory(body.get("category")) : null;
 
             ClinicalPhotoResponseDTO updated = clinicalPhotoService.updatePhoto(photoId, caption, stage, category);
             response.put("success", true);
@@ -119,6 +119,23 @@ public class ClinicalPhotoRestController {
             response.put("success", false);
             response.put("message", "Lỗi cập nhật ảnh: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    private PhotoCategory parsePhotoCategory(String categoryStr) {
+        if (categoryStr == null || categoryStr.isBlank()) {
+            return PhotoCategory.INTRAORAL;
+        }
+        String normalized = categoryStr.trim().toUpperCase();
+        if ("XRAY".equals(normalized) || "PANORAMIC".equals(normalized)
+                || "CEPHALOMETRIC".equals(normalized) || "CT_CONEBEAM".equals(normalized)
+                || "CT".equals(normalized)) {
+            return PhotoCategory.OTHER;
+        }
+        try {
+            return PhotoCategory.valueOf(normalized);
+        } catch (IllegalArgumentException e) {
+            return PhotoCategory.OTHER;
         }
     }
 }

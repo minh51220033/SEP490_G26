@@ -1289,18 +1289,18 @@
             const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a) - parseInt(b));
             if (sorted.length > 0) {
                 if (inputEl) inputEl.value = sorted.join(', ');
-                if (hintEl) hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Răng khôn (${typeText}): ${sorted.map(t => 'R' + t).join(', ')}</span>`;
+                if (hintEl) hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Răng khôn (${typeText}): ${sorted.map(t => 'R' + t).join(', ')}</span>`;
             } else {
                 if (inputEl) inputEl.value = '';
                 if (hintEl) hintEl.innerText = 'Chưa chọn răng khôn (18, 28, 38, 48)';
             }
         } else if (selectedTeeth.size === 32) {
             if (inputEl) inputEl.value = 'Toàn hàm (32 răng)';
-            if (hintEl) hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Toàn hàm (32 răng - Bệnh ${typeText})</span>`;
+            if (hintEl) hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Toàn hàm (32 răng - Bệnh ${typeText})</span>`;
         } else if (selectedTeeth.size > 0) {
             const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a) - parseInt(b));
             if (inputEl) inputEl.value = sorted.join(', ');
-            if (hintEl) hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Đang chọn ${typeText}: ${sorted.map(t => 'R' + t).join(', ')}</span>`;
+            if (hintEl) hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Đang chọn ${typeText}: ${sorted.map(t => 'R' + t).join(', ')}</span>`;
         } else {
             if (inputEl) inputEl.value = '';
             if (hintEl) hintEl.innerText = 'Chưa chọn răng (Mặc định toàn hàm)';
@@ -1457,6 +1457,8 @@
             listEl.style.display = 'none';
             return;
         }
+        document.getElementById('icdSearchError')?.classList.add('d-none');
+        document.getElementById('icdSearchInput')?.classList.remove('is-invalid');
 
         searchTimeout = setTimeout(() => {
             fetch(`/api/v1/icd10/search?q=${encodeURIComponent(query.trim())}`)
@@ -1504,6 +1506,8 @@
         if (nameViEl) nameViEl.value = item.diseaseNameVi;
         if (nameEnEl) nameEnEl.value = item.diseaseNameEn || '';
         if (autoListEl) autoListEl.style.display = 'none';
+        document.getElementById('icdSearchError')?.classList.add('d-none');
+        if (searchInputEl) searchInputEl.classList.remove('is-invalid');
 
         // Điền vào mô tả chẩn đoán lâm sàng nếu chưa có
         const diagTextEl = document.getElementById('diagTextInput');
@@ -1595,11 +1599,11 @@
         if (hintEl) {
             if (icd.startsWith('K01')) {
                 const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a) - parseInt(b));
-                hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Răng khôn (${typeText}): ${sorted.map(t => 'R' + t).join(', ')}</span>`;
+                hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Răng khôn (${typeText}): ${sorted.map(t => 'R' + t).join(', ')}</span>`;
             } else if (isFullMouth) {
-                hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Toàn hàm (32 răng - Bệnh ${typeText})</span>`;
+                hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Toàn hàm (32 răng - Bệnh ${typeText})</span>`;
             } else {
-                hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Đang xem ${typeText}: ${matches.map(t => 'R' + t).join(', ')}</span>`;
+                hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Đang xem ${typeText}: ${matches.map(t => 'R' + t).join(', ')}</span>`;
             }
         }
 
@@ -1632,12 +1636,12 @@
         if (formTitle) formTitle.innerText = `Chỉnh sửa chẩn đoán #${icd}`;
         const formModeBadge = document.getElementById('formModeBadge');
         if (formModeBadge) {
-            formModeBadge.innerHTML = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2.5 py-1 rounded-pill"><i class="bi bi-pencil-square me-1"></i>Đang xem &amp; sửa</span>`;
+            formModeBadge.innerHTML = `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2 py-1 rounded-pill"><i class="bi bi-pencil-square me-1"></i>Đang xem &amp; sửa</span>`;
         }
 
         const btn = document.getElementById('btnSubmitDiagnosis');
         if (btn) {
-            btn.className = 'btn btn-success btn-sm fw-bold';
+            btn.className = 'btn btn-outline-success btn-sm fw-semibold';
             btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Cập nhật chẩn đoán';
         }
 
@@ -1666,20 +1670,27 @@
 
         const btn = document.getElementById('btnSubmitDiagnosis');
         if (btn) {
-            btn.className = 'btn btn-df-purple btn-sm';
+            btn.className = 'btn df-btn-tonal-primary btn-sm';
             btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Thêm chẩn đoán';
         }
+        document.getElementById('icdSearchError')?.classList.add('d-none');
+        document.getElementById('icdSearchInput')?.classList.remove('is-invalid');
     }
 
     function submitDiagnosis(e) {
         e.preventDefault();
         const visitId = document.getElementById('visitId')?.value;
         const icd10Code = document.getElementById('selectedIcd10Code')?.value;
-        const rawSearch = document.getElementById('icdSearchInput')?.value || '';
+        const searchEl = document.getElementById('icdSearchInput');
+        const rawSearch = searchEl?.value || '';
 
         const finalCode = icd10Code || (rawSearch.includes(' - ') ? rawSearch.split(' - ')[0].trim() : rawSearch.trim());
         if (!finalCode) {
-            showToast('Vui lòng chọn hoặc nhập mã bệnh ICD-10!', true);
+            document.getElementById('icdSearchError')?.classList.remove('d-none');
+            if (searchEl) {
+                searchEl.classList.add('is-invalid');
+                searchEl.focus();
+            }
             return;
         }
 
@@ -1758,7 +1769,7 @@
                 .finally(() => {
                     if (btn) {
                         btn.disabled = false;
-                        btn.className = 'btn btn-df-purple btn-sm';
+                        btn.className = 'btn df-btn-tonal-primary btn-sm';
                         btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Thêm chẩn đoán';
                     }
                 });
@@ -1872,18 +1883,14 @@
             </td>
             <td style="padding: 16px;">${badgeHtml}</td>
             <td style="padding: 16px;"><span class="text-secondary" style="font-size: 13.5px; font-weight: 500;">${notesDisplay}</span></td>
-            <td class="text-center" style="padding: 16px 20px;">
-                <div class="d-inline-flex align-items-center justify-content-center gap-1">
-                    <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-xs" style="font-size: 12px;" title="Xem chi tiết & tô màu răng trên sơ đồ FDI" onclick="event.stopPropagation(); inspectDiagnosisRow(this.closest('tr'))">
-                        <i class="bi bi-eye-fill"></i>
-                        <span>Chi tiết</span>
-                    </button>
-                    <button type="button" class="btn btn-primary rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-xs" style="font-size: 12.5px; background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd;" title="Chuyển ngay chẩn đoán & vị trí răng này sang Lập Kế hoạch điều trị (SCR-15.2)" onclick="event.stopPropagation(); openPlanModalForSingleDiagRow(this.closest('tr'))">
-                        <i class="bi bi-diagram-3-fill"></i>
+            <td class="text-center" style="padding: 14px 16px;">
+                <div class="d-inline-flex align-items-center justify-content-center gap-2">
+                    <button type="button" class="btn df-btn-tonal-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 12.5px;" title="Chuyển chẩn đoán & vị trí răng này sang Lập Kế hoạch điều trị" onclick="event.stopPropagation(); openPlanModalForSingleDiagRow(this.closest('tr'))">
+                        <i class="bi bi-diagram-3"></i>
                         <span>Lập phác đồ</span>
                     </button>
-                    <button type="button" class="btn btn-light text-danger rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px; border: 1px solid #fecdd3; background: #fff1f2;" title="Xóa" onclick="event.stopPropagation(); deleteDiagnosis(${d.diagnosisId})">
-                        <i class="bi bi-trash3-fill"></i>
+                    <button type="button" class="btn df-neutral-del-btn rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 30px; height: 30px;" title="Xóa" onclick="event.stopPropagation(); deleteDiagnosis(${d.diagnosisId})">
+                        <i class="bi bi-trash3"></i>
                     </button>
                 </div>
             </td>
@@ -1952,10 +1959,10 @@
                         const badgeColor = newType === 'MAIN' ? 'bg-danger text-white' : (newType === 'SECONDARY' ? 'bg-warning text-dark' : 'bg-info text-white');
                         const typeText = newType === 'MAIN' ? 'Chính' : (newType === 'SECONDARY' ? 'Kèm theo' : 'Phân biệt');
                         if (isAll) {
-                            hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Toàn hàm (32 răng - Bệnh ${typeText})</span>`;
+                            hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Toàn hàm (32 răng - Bệnh ${typeText})</span>`;
                         } else {
                             const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a) - parseInt(b));
-                            hintEl.innerHTML = `<span class="badge ${badgeColor} px-2.5 py-1">Đang chọn ${typeText}: ${sorted.map(t => 'R' + t).join(', ')}</span>`;
+                            hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Đang chọn ${typeText}: ${sorted.map(t => 'R' + t).join(', ')}</span>`;
                         }
                     }
                 }

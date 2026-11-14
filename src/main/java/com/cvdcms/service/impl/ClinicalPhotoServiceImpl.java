@@ -2,11 +2,13 @@ package com.cvdcms.service.impl;
 
 import com.cvdcms.DTO.ClinicalPhotoResponseDTO;
 import com.cvdcms.entity.ClinicalPhoto;
+import com.cvdcms.entity.ParaclinicalOrderItem;
 import com.cvdcms.entity.PatientProfile;
 import com.cvdcms.entity.Visit;
 import com.cvdcms.entity.enums.PhotoCategory;
 import com.cvdcms.entity.enums.PhotoStage;
 import com.cvdcms.repository.ClinicalPhotoRepository;
+import com.cvdcms.repository.ParaclinicalOrderItemRepository;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.repository.VisitRepository;
 import com.cvdcms.service.ClinicalPhotoService;
@@ -35,6 +37,9 @@ public class ClinicalPhotoServiceImpl implements ClinicalPhotoService {
     private final ClinicalPhotoRepository clinicalPhotoRepository;
     private final PatientProfileRepository patientProfileRepository;
     private final VisitRepository visitRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ParaclinicalOrderItemRepository paraclinicalOrderItemRepository;
 
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
@@ -114,6 +119,53 @@ public class ClinicalPhotoServiceImpl implements ClinicalPhotoService {
         ClinicalPhoto saved = clinicalPhotoRepository.save(photo);
         log.info("Uploaded clinical photo ID {} for patient {}", saved.getPhotoId(), profileId);
 
+        return ClinicalPhotoResponseDTO.fromEntity(saved);
+    }
+
+    @Override
+    @Transactional
+    public ClinicalPhotoResponseDTO registerPhotoForOrderItem(Long orderItemId, PhotoStage stage, PhotoCategory category, String caption, String imageUrl) {
+        if (orderItemId == null || imageUrl == null || imageUrl.isBlank() || paraclinicalOrderItemRepository == null) {
+            return null;
+        }
+        Optional<ParaclinicalOrderItem> optItem = paraclinicalOrderItemRepository.findById(orderItemId);
+        if (optItem.isEmpty() || optItem.get().getOrder() == null) {
+            return null;
+        }
+        ParaclinicalOrderItem item = optItem.get();
+        Visit visit = item.getOrder().getVisit();
+        PatientProfile profile = visit != null && visit.getPatientProfile() != null
+                ? visit.getPatientProfile()
+                : item.getOrder().getPatientProfile();
+        if (profile == null) {
+            return null;
+        }
+
+        String normalizedUrl = imageUrl.trim();
+        if (visit != null && visit.getVisitId() != null) {
+            for (ClinicalPhoto existing : clinicalPhotoRepository.findByVisit_VisitIdOrderByCapturedAtDesc(visit.getVisitId())) {
+                if (normalizedUrl.equals(existing.getImageUrl())) {
+                    return ClinicalPhotoResponseDTO.fromEntity(existing);
+                }
+            }
+        }
+
+        String defaultCaption = item.getService() != null ? item.getService().getServiceName() : "Ảnh cận lâm sàng";
+        if (item.getToothNumbers() != null && !item.getToothNumbers().isBlank()) {
+            defaultCaption += " (" + item.getToothNumbers().trim() + ")";
+        }
+
+        ClinicalPhoto photo = new ClinicalPhoto();
+        photo.setPatientProfile(profile);
+        photo.setVisit(visit);
+        photo.setPhotoStage(stage != null ? stage : PhotoStage.BEFORE);
+        photo.setPhotoCategory(category != null ? category : PhotoCategory.OTHER);
+        photo.setImageUrl(normalizedUrl);
+        photo.setCaption(caption != null && !caption.trim().isEmpty() ? caption.trim() : defaultCaption);
+        photo.setCapturedAt(LocalDateTime.now());
+
+        ClinicalPhoto saved = clinicalPhotoRepository.save(photo);
+        log.info("Synced paraclinical image to clinical_photos ID {} for orderItem {}", saved.getPhotoId(), orderItemId);
         return ClinicalPhotoResponseDTO.fromEntity(saved);
     }
 
