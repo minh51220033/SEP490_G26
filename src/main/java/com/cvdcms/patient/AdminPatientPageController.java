@@ -103,6 +103,7 @@ public class AdminPatientPageController {
         model.addAttribute("documents", overviewService.getPatientDocuments(id));
         model.addAttribute("audits", overviewService.getPatientAudits(id));
         model.addAttribute("plans", overviewService.getPatientTreatmentPlans(id));
+        model.addAttribute("treatmentPlans", overviewService.getPatientTreatmentPlans(id));
         model.addAttribute("performedServices", overviewService.getPatientPerformedServices(id));
         model.addAttribute("diagnoses", overviewService.getPatientDiagnoses(id));
         model.addAttribute("examinations", overviewService.getPatientExaminations(id));

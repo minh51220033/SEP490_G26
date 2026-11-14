@@ -519,7 +519,7 @@
                             </td>
                             <td style="padding: 16px;">
                                 <div class="fw-bold text-dark" style="font-size: 15px;" th:text="${d.diagnosisText}">Sâu ngà răng</div>
-                                <div class="text-muted mt-0.5" style="font-size: 12.5px;" th:if="${d.diseaseNameEn != null}" th:text="${d.diseaseNameEn}">Caries of dentine</div>
+                                <div class="text-muted mt-1" style="font-size: 12.5px;" th:if="${d.diseaseNameEn != null}" th:text="${d.diseaseNameEn}">Caries of dentine</div>
                             </td>
                             <td style="padding: 16px;">
                                 <span th:if="${d.diagnosisType != null and d.diagnosisType.name() == 'MAIN'}" class="badge-main" style="font-size: 12.5px; padding: 6px 12px;">
@@ -536,9 +536,9 @@
                                 <span class="text-secondary" style="font-size: 13.5px; font-weight: 500;" th:text="${d.notes != null and !d.notes.isEmpty() ? d.notes : '-'}">-</span>
                             </td>
                             <td class="text-center" style="padding: 16px 20px;">
-                                <div class="d-inline-flex align-items-center justify-content-center gap-1.5" th:if="${!isClinicalLocked}">
+                                <div class="d-inline-flex align-items-center justify-content-center gap-1" th:if="${!isClinicalLocked}">
                                     <button type="button"
-                                            class="btn btn-sm btn-outline-info rounded-pill px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
+                                            class="btn btn-sm btn-outline-info rounded-pill px-2 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
                                             style="font-size: 12px;"
                                             title="Xem chi tiết &amp; tô màu răng trên sơ đồ FDI"
                                             onclick="event.stopPropagation(); inspectDiagnosisRow(this.closest('tr'))">
@@ -546,7 +546,7 @@
                                         <span>Chi tiết</span>
                                     </button>
                                     <button type="button"
-                                            class="btn btn-primary rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs"
+                                            class="btn btn-primary rounded-pill px-3 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-xs"
                                             style="font-size: 12.5px; background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd;"
                                             title="Chuyển ngay chẩn đoán &amp; vị trí răng này sang Lập Kế hoạch điều trị (SCR-15.2)"
                                             onclick="event.stopPropagation(); openPlanModalForSingleDiagRow(this.closest('tr'))">
