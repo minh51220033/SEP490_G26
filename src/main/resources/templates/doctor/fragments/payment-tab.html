@@ -503,18 +503,18 @@
                                     <div class="list-group-item px-0 py-2 d-flex align-items-center justify-content-between" style="border-color: #f1f5f9 !important;">
                                         <div>
                                             <strong class="text-dark">1. Chẩn đoán ICD-10</strong>
-                                            <span class="text-danger small ms-1">* (Bắt buộc)</span>
+                                            <span class="text-muted small ms-1">(Tùy chọn)</span>
                                             <div class="small text-muted" th:if="${diagnoses != null and !diagnoses.isEmpty()}"
                                                  th:text="${diagnoses[0].icd10Code + ' - ' + diagnoses[0].diagnosisText}">
                                                 K02.1 - Sâu ngà răng
                                             </div>
                                         </div>
                                         <div>
-                                            <span th:if="${diagnoses != null and !diagnoses.isEmpty()}" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1">
-                                                <i class="bi bi-check-circle me-1"></i>Đã đạt (<span th:text="${#lists.size(diagnoses)}">1</span> chẩn đoán)
+                                            <span th:if="${diagnoses != null and !diagnoses.isEmpty()}" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1">
+                                                <i class="bi bi-check-circle me-1"></i>Đã có (<span th:text="${#lists.size(diagnoses)}">1</span> chẩn đoán)
                                             </span>
-                                            <span th:unless="${diagnoses != null and !diagnoses.isEmpty()}" class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 fw-bold">
-                                                <i class="bi bi-x-circle me-1"></i>Chưa đạt (0 chẩn đoán)
+                                            <span th:unless="${diagnoses != null and !diagnoses.isEmpty()}" class="badge bg-light text-secondary border rounded-pill px-2 py-1">
+                                                Chưa có chẩn đoán
                                             </span>
                                         </div>
                                     </div>

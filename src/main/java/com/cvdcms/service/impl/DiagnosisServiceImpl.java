@@ -336,10 +336,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             missingRequirements.add("Ca khám này đã hoàn tất toàn bộ quy trình và xuất hóa đơn.");
         }
 
-        // Kiểm tra điều kiện 1: Bắt buộc có chẩn đoán ICD-10
+        // Kiểm tra điều kiện 1: Chẩn đoán ICD-10 (tùy chọn, chỉ cảnh báo nếu chưa có)
         if (!hasDiagnosis) {
-            missingRequirements
-                    .add("Chưa có chẩn đoán ICD-10. Bác sĩ cần thêm ít nhất 01 chẩn đoán trước khi hoàn tất ca khám.");
+            warnings.add(
+                    "Chưa có chẩn đoán ICD-10 (khuyến nghị bổ sung chẩn đoán để hồ sơ bệnh án đầy đủ hơn).");
         } else if (!hasMainDiagnosis) {
             warnings.add(
                     "Chưa có chẩn đoán loại CHÍNH (MAIN). Khuyến nghị xác định chẩn đoán chính để bệnh án chuẩn y khoa.");
