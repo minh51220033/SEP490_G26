@@ -12,7 +12,7 @@
             <div class="patient-page-heading portal-heading mb-4">
                 <div>
                     <a class="text-decoration-none fw-semibold text-primary mb-2 d-inline-flex align-items-center" th:href="@{/portal/records}">
-                        <i class="bi bi-arrow-left me-1.5"></i> Quay lại danh sách hồ sơ
+                        <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách hồ sơ
                     </a>
                     <h1 class="mb-1" th:text="${record.fullName}">Họ tên</h1>
                     <p class="mb-0 text-muted">
@@ -30,13 +30,13 @@
                     </a>
                     <a class="btn btn-outline-primary fw-semibold px-3 py-2 d-inline-flex align-items-center"
                        th:href="@{/portal/records/{id}/edit(id=${record.id})}">
-                        <i class="bi bi-pencil me-1.5"></i> Chỉnh sửa
+                        <i class="bi bi-pencil me-1"></i> Chỉnh sửa
                     </a>
                     <a th:unless="${record.self}"
                        class="btn btn-outline-secondary fw-semibold px-3 py-2 d-inline-flex align-items-center"
                        th:href="@{/portal/records/{id}/transfer(id=${record.id})}"
                        title="Tách hồ sơ để người này tự quản lý tài khoản riêng">
-                        <i class="bi bi-arrow-left-right me-1.5"></i> Tách tài khoản (FT36)
+                        <i class="bi bi-arrow-left-right me-1"></i> Tách tài khoản (FT36)
                     </a>
                 </div>
             </div>
@@ -146,7 +146,88 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade" id="photos"><p th:if="${#lists.isEmpty(photos)}" class="text-muted mt-3">Chưa có ảnh lâm sàng.</p><div class="patient-visit-grid mt-3" th:unless="${#lists.isEmpty(photos)}"><figure th:each="photo : ${photos}" class="panel p-2"><img th:src="${photo.imageUrl}" th:alt="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}" class="img-fluid rounded"><figcaption><span th:text="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}">Ảnh</span><span th:if="${photo.visitCode != null}" th:text="' · ' + ${photo.visitCode}">Lượt khám</span></figcaption></figure></div></div>
+                    <div class="tab-pane fade" id="photos">
+                        <p th:if="${#lists.isEmpty(photos)}" class="text-muted mt-3">Chưa có ảnh lâm sàng hoặc phim chụp nào.</p>
+                        <div th:unless="${#lists.isEmpty(photos)}" class="mt-3">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 p-2 px-3 bg-light border rounded-3">
+                                <div class="btn-group btn-group-sm flex-wrap" id="portalPhotoStageGroup" role="group" aria-label="Lọc theo giai đoạn">
+                                    <button type="button" class="btn btn-primary active" data-stage="ALL" onclick="portalSetPhotoStage('ALL', this)">Tất cả</button>
+                                    <button type="button" class="btn btn-outline-secondary" data-stage="BEFORE" onclick="portalSetPhotoStage('BEFORE', this)">Trước điều trị</button>
+                                    <button type="button" class="btn btn-outline-secondary" data-stage="DURING" onclick="portalSetPhotoStage('DURING', this)">Trong quá trình</button>
+                                    <button type="button" class="btn btn-outline-secondary" data-stage="AFTER" onclick="portalSetPhotoStage('AFTER', this)">Sau điều trị</button>
+                                    <button type="button" class="btn btn-outline-secondary" data-stage="XRAY" onclick="portalSetPhotoStage('XRAY', this)">X-Quang / CT</button>
+                                </div>
+                                <select id="portalPhotoCatFilter" class="form-select form-select-sm" style="width: auto; min-width: 190px;" onchange="portalFilterPhotos()">
+                                    <option value="ALL">Tất cả phân loại</option>
+                                    <option value="INTRAORAL">Trong miệng</option>
+                                    <option value="EXTRAORAL">Ngoài mặt / Chân dung</option>
+                                    <option value="SMILE">Nụ cười</option>
+                                    <option value="OCCLUSAL">Mặt nhai</option>
+                                    <option value="OTHER">Phim X-Quang / Panorama / CT</option>
+                                </select>
+                            </div>
+                            <div class="patient-visit-grid" id="portalPhotoGrid">
+                                <figure th:each="photo : ${photos}" class="panel p-2 portal-photo-card"
+                                        th:data-stage="${photo.stage ?: 'BEFORE'}"
+                                        th:data-category="${photo.category ?: 'INTRAORAL'}">
+                                    <img th:src="${photo.imageUrl}" th:alt="${photo.caption != null ? photo.caption : 'Ảnh lâm sàng'}" class="img-fluid rounded">
+                                    <figcaption class="mt-2">
+                                        <div class="d-flex flex-wrap gap-1 mb-1">
+                                            <span class="badge"
+                                                  th:classappend="${photo.stage == 'AFTER' ? 'bg-success-subtle text-success border border-success-subtle' : (photo.stage == 'DURING' ? 'bg-info-subtle text-info-emphasis border border-info-subtle' : 'bg-warning-subtle text-warning-emphasis border border-warning-subtle')}"
+                                                  th:text="${@emrViewText.label(photo.stage ?: 'BEFORE')}">Trước điều trị</span>
+                                            <span class="badge"
+                                                  th:classappend="${photo.category == 'OTHER' ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle'}"
+                                                  th:text="${@emrViewText.label(photo.category ?: 'INTRAORAL')}">Trong miệng</span>
+                                        </div>
+                                        <div class="fw-semibold text-dark text-truncate" th:text="${photo.caption != null and !photo.caption.isBlank() ? photo.caption : 'Ảnh lâm sàng'}">Ảnh</div>
+                                        <div class="small text-muted">
+                                            <span th:if="${photo.visitCode != null}" th:text="'Ca ' + ${photo.visitCode}">Lượt khám</span>
+                                            <span th:if="${photo.capturedAt != null}" th:text="${(photo.visitCode != null ? ' · ' : '') + #temporals.format(photo.capturedAt, 'dd/MM/yyyy')}"></span>
+                                        </div>
+                                    </figcaption>
+                                </figure>
+                            </div>
+                            <p id="portalPhotoEmptyFilter" class="text-muted text-center py-4 small d-none">Không có ảnh hoặc phim phù hợp bộ lọc đã chọn.</p>
+                            <script>
+                                (function () {
+                                    let currentPortalStage = 'ALL';
+                                    window.portalSetPhotoStage = function (stageVal, btn) {
+                                        currentPortalStage = stageVal || 'ALL';
+                                        document.querySelectorAll('#portalPhotoStageGroup button').forEach(b => {
+                                            const active = (b.getAttribute('data-stage') || '') === currentPortalStage;
+                                            b.classList.toggle('btn-primary', active);
+                                            b.classList.toggle('active', active);
+                                            b.classList.toggle('btn-outline-secondary', !active);
+                                        });
+                                        portalFilterPhotos();
+                                    };
+                                    window.portalFilterPhotos = function () {
+                                        const catEl = document.getElementById('portalPhotoCatFilter');
+                                        const catVal = catEl ? catEl.value : 'ALL';
+                                        const cards = document.querySelectorAll('#portalPhotoGrid .portal-photo-card');
+                                        let visible = 0;
+                                        cards.forEach(c => {
+                                            const st = (c.getAttribute('data-stage') || 'BEFORE').toUpperCase();
+                                            const ct = (c.getAttribute('data-category') || 'INTRAORAL').toUpperCase();
+                                            let okStage = true;
+                                            if (currentPortalStage === 'XRAY') {
+                                                okStage = (ct === 'OTHER' || ct === 'XRAY');
+                                            } else if (currentPortalStage !== 'ALL') {
+                                                okStage = (st === currentPortalStage);
+                                            }
+                                            const okCat = (catVal === 'ALL') || (ct === catVal);
+                                            const show = okStage && okCat;
+                                            c.style.display = show ? '' : 'none';
+                                            if (show) visible++;
+                                        });
+                                        const empty = document.getElementById('portalPhotoEmptyFilter');
+                                        if (empty) empty.classList.toggle('d-none', visible > 0 || cards.length === 0);
+                                    };
+                                })();
+                            </script>
+                        </div>
+                    </div>
                     <div class="tab-pane fade" id="medical"><div class="patient-facts">
                         <div><span>Dị ứng</span><strong th:text="${record.allergyDetails != null ? record.allergyDetails : 'Chưa ghi nhận'}">—</strong></div>
                         <div><span>Bệnh nền</span><strong th:text="${record.underlyingDiseaseDetails != null ? record.underlyingDiseaseDetails : 'Chưa ghi nhận'}">—</strong></div>

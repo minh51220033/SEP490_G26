@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -196,8 +197,13 @@ public class PortalPatientService {
     public List<PhotoView> photos(HttpSession session, Long id) {
         access.requireProfile(access.requireUser(session), id);
         return photos.findByPatientProfile_ProfileIdOrderByCapturedAtDesc(id).stream()
-                .map(photo -> new PhotoView(photo.getImageUrl(), photo.getCaption(),
-                        photo.getVisit() == null ? null : photo.getVisit().getVisitCode()))
+                .map(photo -> new PhotoView(
+                        photo.getImageUrl(),
+                        photo.getCaption(),
+                        photo.getVisit() == null ? null : photo.getVisit().getVisitCode(),
+                        photo.getPhotoStage() != null ? photo.getPhotoStage().name() : "BEFORE",
+                        photo.getPhotoCategory() != null ? photo.getPhotoCategory().name() : "INTRAORAL",
+                        photo.getCapturedAt()))
                 .toList();
     }
 
@@ -325,6 +331,11 @@ public class PortalPatientService {
 
     public record VisitDetails(VisitView visit, String assessment, List<String> diagnoses,
                                List<String> services, List<String> prescriptions) {}
-    public record PhotoView(String imageUrl, String caption, String visitCode) {}
+    public record PhotoView(String imageUrl, String caption, String visitCode,
+                            String stage, String category, LocalDateTime capturedAt) {
+        public PhotoView(String imageUrl, String caption, String visitCode) {
+            this(imageUrl, caption, visitCode, "BEFORE", "INTRAORAL", null);
+        }
+    }
     public record PlanView(String code, String name, String status) {}
 }

@@ -2638,7 +2638,7 @@
                                     </div>
                                     <div class="col-lg-3 col-md-6">
                                         <label class="dv-adv-label"><i class="bi bi-calendar-range text-secondary"></i> Từ ngày - Đến ngày</label>
-                                        <div class="d-flex align-items-center gap-1.5">
+                                        <div class="d-flex align-items-center gap-2">
                                             <input type="date" class="form-control dv-adv-control" id="photoFromDate"
                                                 onchange="onCustomDateChange('photo', filterPhotos); updateAdvFilterBadge('photo');" title="Từ ngày">
                                             <span class="text-muted fw-bold">→</span>
@@ -2652,15 +2652,15 @@
                                         </div>
                                     </div>
                                     <div class="col-lg-3 col-md-6">
-                                        <label class="dv-adv-label"><i class="bi bi-camera text-primary"></i> Phân loại góc chụp</label>
+                                        <label class="dv-adv-label"><i class="bi bi-camera text-primary"></i> Phân loại ảnh / phim</label>
                                         <select class="form-select dv-adv-control" id="photoCategorySelect"
                                             onchange="filterPhotos(); updateAdvFilterBadge('photo');">
-                                            <option value="ALL">Tất cả phân loại góc chụp</option>
+                                            <option value="ALL">Tất cả phân loại</option>
                                             <option value="INTRAORAL">Trong miệng (Intraoral)</option>
-                                            <option value="EXTRAORAL">Ngoài mặt (Extraoral)</option>
+                                            <option value="EXTRAORAL">Ngoài mặt / Chân dung</option>
                                             <option value="SMILE">Nụ cười (Smile)</option>
                                             <option value="OCCLUSAL">Mặt nhai (Occlusal)</option>
-                                            <option value="OTHER">Phim X-Quang / CT / Khác</option>
+                                            <option value="OTHER">Phim X-Quang / Panorama / CT</option>
                                         </select>
                                     </div>
                                     <div class="col-lg-3 col-md-6">
@@ -2722,7 +2722,7 @@
                                             <span
                                                 class="badge bg-primary-subtle text-primary border border-primary-subtle"
                                                 style="font-size: 11px;"
-                                                th:text="${photo.category == 'INTRAORAL' ? 'Trong miệng' : (photo.category == 'EXTRAORAL' ? 'Ngoài mặt' : (photo.category == 'SMILE' ? 'Nụ cười' : (photo.category == 'OCCLUSAL' ? 'Mặt nhai' : 'X-Quang / Khác')))}">Trong
+                                                th:text="${photo.category == 'INTRAORAL' ? 'Trong miệng' : (photo.category == 'EXTRAORAL' ? 'Ngoài mặt / Chân dung' : (photo.category == 'SMILE' ? 'Nụ cười' : (photo.category == 'OCCLUSAL' ? 'Mặt nhai' : 'Phim X-Quang / CT')))}">Trong
                                                 miệng</span>
                                             <small class="text-muted fw-semibold"
                                                 th:text="${photo.capturedAt != null ? #temporals.format(photo.capturedAt, 'dd/MM/yyyy') : '—'}">01/01/2026</small>
@@ -3439,18 +3439,18 @@
                                 <label class="form-label fw-bold">Giai đoạn điều trị:</label>
                                 <select class="form-select" name="stage">
                                     <option value="BEFORE">Trước điều trị (Before)</option>
-                                    <option value="DURING">Trong điều trị</option>
+                                    <option value="DURING">Trong quá trình (During)</option>
                                     <option value="AFTER">Sau điều trị (After)</option>
                                 </select>
                             </div>
                             <div class="col-6">
-                                <label class="form-label fw-bold">Phân loại ảnh:</label>
+                                <label class="form-label fw-bold">Phân loại ảnh / phim:</label>
                                 <select class="form-select" name="category">
                                     <option value="INTRAORAL">Trong miệng (Intraoral)</option>
-                                    <option value="EXTRAORAL">Ngoài mặt (Extraoral)</option>
+                                    <option value="EXTRAORAL">Ngoài mặt / Chân dung</option>
                                     <option value="SMILE">Nụ cười (Smile)</option>
                                     <option value="OCCLUSAL">Mặt nhai (Occlusal)</option>
-                                    <option value="OTHER">Phim X-quang / Khác</option>
+                                    <option value="OTHER">Phim X-Quang / Panorama / CT</option>
                                 </select>
                             </div>
                         </div>
@@ -3495,19 +3495,19 @@
                             <div class="col-6">
                                 <label class="form-label fw-bold">Giai đoạn:</label>
                                 <select class="form-select" id="editPhotoStage" name="stage">
-                                    <option value="BEFORE">Trước điều trị</option>
-                                    <option value="DURING">Trong điều trị</option>
-                                    <option value="AFTER">Sau điều trị</option>
+                                    <option value="BEFORE">Trước điều trị (Before)</option>
+                                    <option value="DURING">Trong quá trình (During)</option>
+                                    <option value="AFTER">Sau điều trị (After)</option>
                                 </select>
                             </div>
                             <div class="col-6">
-                                <label class="form-label fw-bold">Phân loại:</label>
+                                <label class="form-label fw-bold">Phân loại ảnh / phim:</label>
                                 <select class="form-select" id="editPhotoCategory" name="category">
                                     <option value="INTRAORAL">Trong miệng</option>
-                                    <option value="EXTRAORAL">Ngoài mặt</option>
+                                    <option value="EXTRAORAL">Ngoài mặt / Chân dung</option>
                                     <option value="SMILE">Nụ cười</option>
                                     <option value="OCCLUSAL">Mặt nhai</option>
-                                    <option value="OTHER">Phim X-quang / Khác</option>
+                                    <option value="OTHER">Phim X-Quang / Panorama / CT</option>
                                 </select>
                             </div>
                         </div>
@@ -4730,7 +4730,8 @@
         /*<![CDATA[*/
         const recordBasePath = /*[[${recordBasePath}]]*/ '/doctor/patient-records';
         const patientId = /*[[${patient.id}]]*/ 0;
-        const patientRouteId = /*[[${patientRouteId}]]*/ (patientId ? String(patientId) : '0');
+        const rawPatientRouteId = /*[[${patientRouteId}]]*/ '';
+        const patientRouteId = rawPatientRouteId || (patientId ? String(patientId) : '0');
         const patientCode = /*[[${patient.code}]]*/ '';
         const patientBranchId = /*[[${patient.branchId}]]*/ null;
         const canManageBilling = /*[[${canManageBilling}]]*/ false;
@@ -5006,7 +5007,7 @@
                 const stage = (btn.getAttribute("data-stage") || 'ALL').toUpperCase();
                 let count = photoCards.length;
                 if (stage === 'XRAY') {
-                    count = photoCards.filter(c => ['OTHER', 'OCCLUSAL'].includes((c.getAttribute("data-category") || '').toUpperCase())).length;
+                    count = photoCards.filter(c => ['OTHER', 'XRAY'].includes((c.getAttribute("data-category") || '').toUpperCase())).length;
                 } else if (stage !== 'ALL') {
                     count = photoCards.filter(c => (c.getAttribute("data-stage") || '').toUpperCase() === stage).length;
                 }
@@ -5180,9 +5181,9 @@
         }
 
         // 2. Chuyển đổi 2 chế độ hiển thị ở Tab Quá trình điều trị
-        let currentTreatmentStatusFilter = 'ALL';
-        let currentAuditActionFilter = 'ALL';
-        let currentPhotoStageFilter = 'ALL';
+        var currentTreatmentStatusFilter = 'ALL';
+        var currentAuditActionFilter = 'ALL';
+        var currentPhotoStageFilter = 'ALL';
 
         function switchTreatmentMode(mode) {
             const timelineView = document.getElementById("treatmentTimelineView");
@@ -5401,7 +5402,7 @@
 
                 let matchesStage = true;
                 if (currentPhotoStageFilter === 'XRAY') {
-                    matchesStage = (category === 'OTHER' || category === 'OCCLUSAL');
+                    matchesStage = (category === 'OTHER' || category === 'XRAY');
                 } else if (currentPhotoStageFilter !== 'ALL') {
                     matchesStage = (stage === currentPhotoStageFilter);
                 }
@@ -5422,6 +5423,8 @@
                 emptyState.style.display = (visibleCount === 0) ? "block" : "none";
             }
         }
+        window.filterPhotoCategory = filterPhotoCategory;
+        window.filterPhotos = filterPhotos;
 
         // 6. Bộ lọc Hóa đơn & Viện phí
         function setInvoiceStatusSegment(statusVal, btn) {

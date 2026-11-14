@@ -704,7 +704,6 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             throw new IllegalArgumentException("Số tiền thanh toán phải lớn hơn 0!");
         }
 
-
         BigDecimal estimatedCost = plan.getEstimatedCost() != null ? plan.getEstimatedCost() : BigDecimal.ZERO;
         BigDecimal currentPaid = plan.getTotalPaidAmount() != null ? plan.getTotalPaidAmount() : BigDecimal.ZERO;
         BigDecimal remainingCost = estimatedCost.subtract(currentPaid);

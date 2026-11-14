@@ -69,6 +69,8 @@ public class DiagnosisController {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.ClinicalQueueTicketRepository clinicalQueueTicketRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private NanopixXraySyncLogRepository nanopixXraySyncLogRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.security.UrlIdCodec urlIdCodec = new com.cvdcms.security.UrlIdCodec();
 
     public void setDoctorCoverGrantRepository(com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository) {
@@ -77,6 +79,10 @@ public class DiagnosisController {
 
     public void setClinicalQueueTicketRepository(com.cvdcms.repository.ClinicalQueueTicketRepository clinicalQueueTicketRepository) {
         this.clinicalQueueTicketRepository = clinicalQueueTicketRepository;
+    }
+
+    public void setNanopixXraySyncLogRepository(NanopixXraySyncLogRepository nanopixXraySyncLogRepository) {
+        this.nanopixXraySyncLogRepository = nanopixXraySyncLogRepository;
     }
 
     private String encodeVisit(Long visitId) {
@@ -573,6 +579,37 @@ public class DiagnosisController {
         model.addAttribute("paraclinicalOrders", paraclinicalOrders);
         model.addAttribute("paraclinicalServices", paraclinicalServices);
 
+        // Tổng hợp phim X-Quang / Cận lâm sàng hình ảnh (từ chỉ định ca khám + đồng bộ NanoPix của hồ sơ bệnh nhân)
+        List<Map<String, Object>> xrayPhotos = buildXrayPhotoList(paraclinicalOrders, visit, profileId);
+        java.util.Set<String> clinicalUrls = new java.util.HashSet<>();
+        if (clinicalPhotos != null) {
+            for (ClinicalPhotoResponseDTO cp : clinicalPhotos) {
+                if (cp != null && cp.getImageUrl() != null && !cp.getImageUrl().isBlank()) {
+                    clinicalUrls.add(cp.getImageUrl().trim());
+                }
+            }
+        }
+        List<Map<String, Object>> galleryXrayPhotos = new ArrayList<>();
+        for (Map<String, Object> xr : xrayPhotos) {
+            Object uObj = xr.get("imageUrl");
+            String u = uObj != null ? uObj.toString().trim() : "";
+            if (!u.isEmpty() && !clinicalUrls.contains(u)) {
+                galleryXrayPhotos.add(xr);
+            }
+        }
+        int clinicalXrayCount = 0;
+        if (clinicalPhotos != null) {
+            for (ClinicalPhotoResponseDTO cp : clinicalPhotos) {
+                if (cp != null && cp.getPhotoCategory() == PhotoCategory.OTHER) {
+                    clinicalXrayCount++;
+                }
+            }
+        }
+        model.addAttribute("xrayPhotos", xrayPhotos);
+        model.addAttribute("xrayCount", xrayPhotos.size());
+        model.addAttribute("galleryXrayPhotos", galleryXrayPhotos);
+        model.addAttribute("xrayTabCount", galleryXrayPhotos.size() + clinicalXrayCount);
+
         // FT15 / FT13: Quản lý Đặt xưởng Labo & Mẫu xét nghiệm gửi ngoài (SCR-15.3, SCR-13.1)
         List<com.cvdcms.DTO.LaboOrderResponseDTO> laboOrders = laboOrderService.getOrdersByVisit(visitId);
         Map<String, Object> laboStats = laboOrderService.getLaboStatistics(visitId, profileId);
@@ -882,6 +919,91 @@ public class DiagnosisController {
         model.addAttribute("activeServicesJson", "[]");
 
         return "doctor/diagnoses";
+    }
+
+    private List<Map<String, Object>> buildXrayPhotoList(
+            List<com.cvdcms.DTO.ParaclinicalOrderItemResponseDTO> paraclinicalOrders,
+            Visit visit,
+            Long profileId
+    ) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        java.util.Set<String> seenUrls = new java.util.HashSet<>();
+
+        if (paraclinicalOrders != null) {
+            for (com.cvdcms.DTO.ParaclinicalOrderItemResponseDTO ord : paraclinicalOrders) {
+                if (ord == null) continue;
+                String baseCaption = ord.getServiceName() != null ? ord.getServiceName() : "Phim chẩn đoán";
+                String refCode = (ord.getExternalRefId() != null && !ord.getExternalRefId().isBlank())
+                        ? ord.getExternalRefId() : ord.getOrderCode();
+                String timeText = (ord.getPerformedAt() != null && !ord.getPerformedAt().isBlank())
+                        ? ord.getPerformedAt() : (ord.getOrderTime() != null ? ord.getOrderTime() : "");
+
+                List<String> urls = new ArrayList<>();
+                if (ord.getPrimaryImageUrl() != null && !ord.getPrimaryImageUrl().isBlank()) {
+                    urls.add(ord.getPrimaryImageUrl().trim());
+                }
+                if (ord.getImageUrl() != null && !ord.getImageUrl().isBlank()) {
+                    urls.add(ord.getImageUrl().trim());
+                }
+                if (ord.getAttachments() != null) {
+                    for (com.cvdcms.DTO.ParaclinicalOrderItemResponseDTO.AttachmentDTO att : ord.getAttachments()) {
+                        if (att != null && att.getFileUrl() != null && !att.getFileUrl().isBlank()) {
+                            urls.add(att.getFileUrl().trim());
+                        }
+                    }
+                }
+                for (String u : urls) {
+                    if (!seenUrls.add(u)) continue;
+                    Map<String, Object> item = new java.util.LinkedHashMap<>();
+                    item.put("id", "pco-" + ord.getOrderItemId() + "-" + result.size());
+                    item.put("imageUrl", u);
+                    item.put("serviceName", baseCaption);
+                    item.put("serviceType", ord.getServiceType() != null ? ord.getServiceType() : "XRAY");
+                    item.put("refCode", refCode != null ? refCode : "");
+                    item.put("toothNumbers", ord.getToothNumbers() != null ? ord.getToothNumbers() : "Toàn hàm");
+                    item.put("resultSummary", ord.getResultSummary() != null ? ord.getResultSummary() : "");
+                    item.put("capturedAtFormatted", timeText);
+                    item.put("visitId", visit != null ? visit.getVisitId() : null);
+                    item.put("visitCode", visit != null ? visit.getVisitCode() : "");
+                    item.put("source", "PARACLINICAL");
+                    result.add(item);
+                }
+            }
+        }
+
+        if (nanopixXraySyncLogRepository != null && profileId != null) {
+            try {
+                java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+                List<NanopixXraySyncLog> synced = nanopixXraySyncLogRepository
+                        .findByMatchedProfile_ProfileIdOrderByCapturedAtDesc(profileId);
+                for (NanopixXraySyncLog logItem : synced) {
+                    if (logItem == null || logItem.getImageUrl() == null || logItem.getImageUrl().isBlank()) continue;
+                    String u = logItem.getImageUrl().trim();
+                    if (!seenUrls.add(u)) continue;
+
+                    Map<String, Object> item = new java.util.LinkedHashMap<>();
+                    item.put("id", "npx-" + logItem.getSyncLogId());
+                    item.put("imageUrl", u);
+                    String svcName = (logItem.getMatchedItem() != null && logItem.getMatchedItem().getService() != null)
+                            ? logItem.getMatchedItem().getService().getServiceName()
+                            : ("Phim X-quang " + (logItem.getDeviceModel() != null ? logItem.getDeviceModel() : "NanoPix"));
+                    item.put("serviceName", svcName);
+                    item.put("serviceType", "XRAY");
+                    item.put("refCode", logItem.getExternalStudyUid() != null ? logItem.getExternalStudyUid() : "");
+                    item.put("toothNumbers", logItem.getToothNumbers() != null && !logItem.getToothNumbers().isBlank()
+                            ? logItem.getToothNumbers() : "Toàn hàm");
+                    item.put("resultSummary", logItem.getNotes() != null ? logItem.getNotes() : "");
+                    item.put("capturedAtFormatted", logItem.getCapturedAt() != null ? logItem.getCapturedAt().format(dtf) : "");
+                    item.put("visitId", logItem.getMatchedVisit() != null ? logItem.getMatchedVisit().getVisitId() : null);
+                    item.put("visitCode", logItem.getMatchedVisit() != null ? logItem.getMatchedVisit().getVisitCode() : "");
+                    item.put("source", "NANOPIX");
+                    result.add(item);
+                }
+            } catch (Exception ex) {
+                log.warn("Không thể tải ảnh NanoPix cho profileId={}: {}", profileId, ex.getMessage());
+            }
+        }
+        return result;
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

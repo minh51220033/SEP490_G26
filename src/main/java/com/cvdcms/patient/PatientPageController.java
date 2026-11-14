@@ -357,8 +357,8 @@ public class PatientPageController {
                               RedirectAttributes redirect) {
         try {
             if (clinicalPhotoService != null && !file.isEmpty()) {
-                PhotoStage pStage = PhotoStage.valueOf(stage.toUpperCase());
-                PhotoCategory pCat = PhotoCategory.valueOf(category.toUpperCase());
+                PhotoStage pStage = parsePhotoStage(stage, PhotoStage.BEFORE);
+                PhotoCategory pCat = parsePhotoCategory(category, PhotoCategory.INTRAORAL);
                 clinicalPhotoService.uploadPhoto(id, visitId, pStage, pCat, caption, file);
                 redirect.addFlashAttribute("documentSuccess", "Đã tải lên ảnh lâm sàng mới thành công.");
             }
@@ -383,8 +383,8 @@ public class PatientPageController {
                 if (!existing) {
                     throw new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Không tìm thấy ảnh thuộc hồ sơ này.");
                 }
-                PhotoStage pStage = stage != null ? PhotoStage.valueOf(stage.toUpperCase()) : null;
-                PhotoCategory pCat = category != null ? PhotoCategory.valueOf(category.toUpperCase()) : null;
+                PhotoStage pStage = parsePhotoStage(stage, null);
+                PhotoCategory pCat = parsePhotoCategory(category, null);
                 clinicalPhotoService.updatePhoto(photoId, caption, pStage, pCat);
                 redirect.addFlashAttribute("documentSuccess", "Đã cập nhật thông tin ảnh lâm sàng.");
             }
@@ -392,6 +392,34 @@ public class PatientPageController {
             redirect.addFlashAttribute("documentError", "Lỗi: " + ex.getMessage());
         }
         return "redirect:/reception/patients/" + id + "#photos";
+    }
+
+    private PhotoStage parsePhotoStage(String stage, PhotoStage fallback) {
+        if (stage == null || stage.isBlank()) {
+            return fallback;
+        }
+        try {
+            return PhotoStage.valueOf(stage.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return fallback;
+        }
+    }
+
+    private PhotoCategory parsePhotoCategory(String category, PhotoCategory fallback) {
+        if (category == null || category.isBlank()) {
+            return fallback;
+        }
+        String normalized = category.trim().toUpperCase();
+        if ("XRAY".equals(normalized) || "PANORAMIC".equals(normalized)
+                || "CEPHALOMETRIC".equals(normalized) || "CT_CONEBEAM".equals(normalized)
+                || "CT".equals(normalized)) {
+            return PhotoCategory.OTHER;
+        }
+        try {
+            return PhotoCategory.valueOf(normalized);
+        } catch (IllegalArgumentException ex) {
+            return fallback != null ? fallback : PhotoCategory.OTHER;
+        }
     }
 
     @PostMapping("/{id}/photos/{photoId}/delete")
