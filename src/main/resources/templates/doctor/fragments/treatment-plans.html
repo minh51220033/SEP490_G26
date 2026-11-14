@@ -1039,7 +1039,7 @@
                                 </td>
                                 <td data-col-id="planName">
                                     <a th:if="${visit != null}"
-                                       th:href="@{'/doctor/examination/' + ${visit.visitId} + '/treatment-plans/create?planId=' + ${plan.planId}}"
+                                       th:href="@{'/doctor/examination/' + ${idCodec.encodeVisit(visit.visitId)} + '/treatment-plans/create?planId=' + ${plan.planId}}"
                                        class="fw-bold text-primary text-decoration-none"
                                        style="font-size: 13.5px; line-height: 1.45;"
                                        th:text="${plan.planName}"

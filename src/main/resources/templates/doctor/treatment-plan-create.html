@@ -1988,6 +1988,7 @@
         const startStr = today.toISOString().split('T')[0];
 
         const startInp = document.getElementById('planStartDate');
+        const endInp = document.getElementById('planEndDate');
         if (startInp) startInp.value = startStr;
 
         recalculatePlanEndDate();
