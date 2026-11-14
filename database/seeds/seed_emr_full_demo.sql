@@ -15,14 +15,14 @@ SELECT 'BENH_NHAN', 'Bệnh nhân', 'Đặt lịch và theo dõi hồ sơ cá nh
 WHERE NOT EXISTS (SELECT 1 FROM roles WHERE role_name = 'BENH_NHAN');
 
 INSERT INTO users (username, password, email, phone_number, branch_id, user_type, status, is_active, created_date)
-SELECT 'emr_demo_doctor', '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe',
+SELECT 'emr_demo_doctor', '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe',
        'emr.demo.doctor@dentalclinic.test', '0909001001', b.branch_id, 'STAFF', 'ACTIVE', 1, NOW()
 FROM branches b
 WHERE b.branch_code = 'CN01'
   AND NOT EXISTS (SELECT 1 FROM users WHERE username = 'emr_demo_doctor');
 
 INSERT INTO users (username, password, email, phone_number, user_type, status, is_active, created_date)
-SELECT 'emr_demo_patient', '$2a$10$5s12DPJUuk1DmfTPTZeAUOogKkXPlkSgVQ1TvTEI2NtnDOAlL4MBe',
+SELECT 'emr_demo_patient', '$2a$10$5s12DPJUuk1DmfTPTZeAUOTBXAxRXBHOzcYWLapGXz3mqXFImJlIe',
        'emr.demo.patient@dentalclinic.test', '0909002001', 'PATIENT', 'ACTIVE', 1, NOW()
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'emr_demo_patient');
 

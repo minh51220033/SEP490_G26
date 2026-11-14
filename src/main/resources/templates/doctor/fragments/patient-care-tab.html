@@ -417,7 +417,7 @@
                             </div>
                             <div class="text-end small" style="font-size: 12px;">
                                 <div>Ca khám: <strong class="text-primary font-monospace"
-                                        th:text="${visit != null and visit.visitCode != null ? visit.visitCode : ('Ca #' + (visit != null ? visit.visitId : '---'))}">VIS-001</strong>
+                                        th:text="${visit != null and visit.visitCode != null ? visit.visitCode : 'Ca khám'}">VIS-001</strong>
                                 </div>
                                 <div class="text-secondary mt-0.5"
                                     th:text="${'Bác sĩ: ' + (visit != null and visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'BS. Phụ trách')}">

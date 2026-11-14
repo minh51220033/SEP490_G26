@@ -717,7 +717,7 @@
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-success py-1 px-2 rounded-pill fw-bold"
                                     title="Vào khám ngay"
-                                    onclick="startExamFromRecall(${item.patientId})">
+                                    onclick="startExamFromRecall('${item.patientToken || ''}')">
                                 <i class="bi bi-play-circle-fill"></i>
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 rounded-pill"
@@ -872,9 +872,9 @@
         }
     }
 
-    function startExamFromRecall(patientId) {
-        if (!patientId) return;
-        window.location.href = `/doctor/examination/patient/${patientId}?newVisit=true`;
+    function startExamFromRecall(patientToken) {
+        if (!patientToken) return;
+        window.location.href = `/doctor/examination/patient/${patientToken}?newVisit=true`;
     }
 </script>
 </body>

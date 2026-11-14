@@ -1371,6 +1371,25 @@
         const createModalEl = $('createAppointmentModal');
         const createModal = createModalEl ? new bootstrap.Modal(createModalEl) : null;
 
+        let dynamicSessionWindows = {};
+        async function loadModalSessionWindows(branchId) {
+            if (!branchId) return;
+            try {
+                const list = await request(`/sessions?branchId=${encodeURIComponent(branchId)}`);
+                if (Array.isArray(list) && list.length > 0) {
+                    list.forEach(w => {
+                        dynamicSessionWindows[w.session] = w;
+                        const subEl = $(w.session === 'MORNING' ? 'subTimeMorning' : (w.session === 'AFTERNOON' ? 'subTimeAfternoon' : 'subTimeEvening'));
+                        if (subEl && w.startTime && w.endTime) {
+                            subEl.textContent = `${w.startTime.slice(0, 5)} – ${w.endTime.slice(0, 5)}`;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn('Could not load modal session windows:', e);
+            }
+        }
+
         const sessionHourOptions = {
             MORNING: [
                 { value: '', label: 'Linh động cả ca sáng' },
@@ -1389,10 +1408,10 @@
             ],
             EVENING: [
                 { value: '', label: 'Linh động cả ca tối' },
-                { value: '17', label: '17 giờ' },
                 { value: '18', label: '18 giờ' },
                 { value: '19', label: '19 giờ' },
-                { value: '20', label: '20 giờ' }
+                { value: '20', label: '20 giờ' },
+                { value: '21', label: '21 giờ' }
             ]
         };
 
@@ -1408,12 +1427,21 @@
             if (hourSelect) {
                 const prevHour = hourSelect.value;
                 hourSelect.replaceChildren();
-                const opts = sessionHourOptions[validSession] || sessionHourOptions.MORNING;
-                opts.forEach(o => hourSelect.appendChild(option(o.value, o.label)));
-                if (opts.some(o => o.value === prevHour)) {
+                const sessName = validSession === 'MORNING' ? 'ca sáng' : (validSession === 'AFTERNOON' ? 'ca chiều' : 'ca tối');
+                hourSelect.appendChild(option('', `Linh động cả ${sessName}`));
+                const win = dynamicSessionWindows[validSession];
+                let startH = validSession === 'MORNING' ? 8 : (validSession === 'AFTERNOON' ? 13 : 18);
+                let endH = validSession === 'MORNING' ? 11 : (validSession === 'AFTERNOON' ? 17 : 20);
+                if (win && win.startTime && win.endTime) {
+                    startH = parseInt(win.startTime.slice(0, 2), 10);
+                    endH = parseInt(win.endTime.slice(0, 2), 10);
+                }
+                for (let h = startH; h <= endH; h++) {
+                    const hStr = String(h).padStart(2, '0');
+                    hourSelect.appendChild(option(hStr, `${hStr} giờ`));
+                }
+                if (prevHour) {
                     hourSelect.value = prevHour;
-                } else {
-                    hourSelect.value = '';
                 }
             }
             updateCreateModalSubtitle();
@@ -1521,6 +1549,7 @@
             const modalBranch = $('modalBranchId');
             const appointmentDate = $('modalAppointmentDate');
             const help = $('modalDoctorHelp');
+            const submitBtn = $('saveAppointmentBtn');
             if (!select) return;
             select.disabled = true;
             select.replaceChildren(option('', 'Đang tải bác sĩ trực…'));
@@ -1533,18 +1562,27 @@
                 return;
             }
             try {
-                const res = await request(`/doctors?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`);
-                const list = Array.isArray(res) ? res : (Array.isArray(res?.doctors) ? res.doctors : []);
+                // Kiểm tra đồng bộ tính khả dụng theo ca làm việc thực tế và giờ đóng cửa
+                const res = await request(`/availability?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}&sessionPeriod=${encodeURIComponent(session)}`);
+                if (!res || !res.available) {
+                    select.replaceChildren(option('', '-- Ca khám không khả dụng --'));
+                    if (help) help.innerHTML = `<span class="text-danger fw-semibold"><i class="bi bi-exclamation-triangle-fill me-1"></i>${res?.reason || 'Ca khám không khả dụng hoặc đã hết giờ làm việc.'}</span>`;
+                    if (submitBtn) submitBtn.disabled = true;
+                    return;
+                }
+                const list = Array.isArray(res.doctors) ? res.doctors : [];
                 select.replaceChildren(option('', list.length ? '-- Chọn bác sĩ phụ trách --' : '-- Không có bác sĩ trực ca này --'));
                 list.forEach(d => select.appendChild(option(d.id, `BS. ${d.name}${d.specialty ? ` · ${d.specialty}` : ''}`)));
                 select.disabled = false;
+                if (submitBtn) submitBtn.disabled = false;
                 const sessNames = { MORNING: 'Ca Sáng', AFTERNOON: 'Ca Chiều', EVENING: 'Ca Tối' };
-                if (help) help.textContent = list.length
-                    ? `Có ${list.length} bác sĩ trực (${sessNames[session] || 'Ca Sáng'}) ngày ${dateLabel(date)}.`
-                    : `Chưa có bác sĩ phân ca trực ngày ${dateLabel(date)}.`;
+                if (help) help.innerHTML = list.length
+                    ? `<span class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Có ${list.length} bác sĩ trực (${sessNames[session] || 'Ca Sáng'}) ngày ${dateLabel(date)}. Còn ${res.remainingBranch} ca tiếp nhận.</span>`
+                    : `<span class="text-warning fw-semibold">Chưa có bác sĩ phân ca trực ngày ${dateLabel(date)}.</span>`;
             } catch (err) {
                 select.replaceChildren(option('', '-- Chưa có bác sĩ trực --'));
-                if (help) help.textContent = 'Chưa có bác sĩ phân ca trực hoặc tạm thời không tải được.';
+                if (help) help.innerHTML = `<span class="text-danger fw-semibold">${err?.message || 'Chưa có bác sĩ phân ca trực hoặc ca khám không khả dụng.'}</span>`;
+                if (submitBtn) submitBtn.disabled = true;
             }
         }
 
@@ -1568,8 +1606,11 @@
             const chosenDate = targetDate || dateInput.value || today();
             const chosenSession = targetSession || $('advFilterSession')?.value || 'MORNING';
             $('modalAppointmentDate').value = chosenDate;
+            $('modalAppointmentDate').min = today();
             loadModalBranches();
             loadModalServices();
+            const bId = $('modalBranchId')?.value || branch.value;
+            if (bId) await loadModalSessionWindows(bId);
             setModalSession(chosenSession);
             createModal.show();
             await loadModalDoctors();
@@ -1579,8 +1620,17 @@
             openCreateModalWith(dateInput.value || today(), $('advFilterSession')?.value || 'MORNING');
         });
 
-        $('modalBranchId')?.addEventListener('change', () => loadModalDoctors());
-        $('modalAppointmentDate')?.addEventListener('change', () => {
+        $('modalBranchId')?.addEventListener('change', async () => {
+            const bId = $('modalBranchId')?.value;
+            if (bId) await loadModalSessionWindows(bId);
+            setModalSession($('modalSession')?.value || 'MORNING');
+            loadModalDoctors();
+        });
+        $('modalAppointmentDate')?.addEventListener('change', (e) => {
+            if (e.target.value && e.target.value < today()) {
+                alert('Không thể chọn ngày trong quá khứ. Hệ thống đã tự động chuyển về ngày hôm nay.');
+                e.target.value = today();
+            }
             updateCreateModalSubtitle();
             loadModalDoctors();
         });
@@ -1911,6 +1961,10 @@
         }
 
         $('editAppointmentDate')?.addEventListener('change', async (e) => {
+            if (e.target.value && e.target.value < today()) {
+                alert('Không thể chọn ngày trong quá khứ. Hệ thống đã tự động chuyển về ngày hôm nay.');
+                e.target.value = today();
+            }
             const branchId = $('editBranchId')?.value || branch.value;
             const date = e.target.value;
             if (branchId && date) {

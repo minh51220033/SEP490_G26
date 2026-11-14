@@ -27,6 +27,9 @@ public class LaboPageController {
     private final PatientProfileRepository patientProfileRepository;
     private final BranchRepository branchRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+
     @GetMapping({"/doctor/labo", "/doctor/labo-management", "/labo"})
     public String laboManagement(
             @RequestParam(value = "tab", defaultValue = "orders") String tab,
@@ -40,7 +43,20 @@ public class LaboPageController {
         if (size != 10 && size != 25 && size != 50 && size != 100) {
             size = 10;
         }
+        com.cvdcms.entity.User currentUser = null;
+        java.util.Set<Long> allowedBranchIds = null;
+        var attrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        if (doctorVisitAccess != null && attrs instanceof org.springframework.web.context.request.ServletRequestAttributes sra) {
+            currentUser = doctorVisitAccess.requireAuthenticatedUser(sra.getRequest().getSession(false));
+            allowedBranchIds = doctorVisitAccess.resolveAccessibleBranchIds(currentUser);
+        }
         List<LaboOrderResponseDTO> allOrders = laboOrderService.getAllOrders(keyword, status, supplierId, null, null);
+        if (currentUser != null && doctorVisitAccess != null) {
+            final com.cvdcms.entity.User filterUser = currentUser;
+            allOrders = allOrders.stream()
+                    .filter(o -> doctorVisitAccess.isBranchAllowed(filterUser, o.getBranchId()))
+                    .toList();
+        }
         long totalItems = allOrders.size();
         int totalPages = totalItems == 0 ? 0 : (int) Math.ceil((double) totalItems / size);
         int currentPage = Math.max(0, Math.min(page, Math.max(0, totalPages - 1)));
@@ -53,6 +69,18 @@ public class LaboPageController {
 
         Map<String, Object> stats = laboOrderService.getLaboStatistics(null, null);
         List<Supplier> suppliers = supplierRepository.findAll();
+
+        var patientList = patientProfileRepository.findAll();
+        var branchList = branchRepository.findAll();
+        if (allowedBranchIds != null) {
+            final java.util.Set<Long> branchScope = allowedBranchIds;
+            patientList = patientList.stream()
+                    .filter(p -> p.getPreferredBranch() != null && branchScope.contains(p.getPreferredBranch().getBranchId()))
+                    .toList();
+            branchList = branchList.stream()
+                    .filter(b -> b.getBranchId() != null && branchScope.contains(b.getBranchId()))
+                    .toList();
+        }
 
         model.addAttribute("activeMenu", "labo");
         model.addAttribute("currentTab", tab);
@@ -70,8 +98,8 @@ public class LaboPageController {
         model.addAttribute("supplierId", supplierId);
         model.addAttribute("stats", stats);
         model.addAttribute("suppliers", suppliers);
-        model.addAttribute("patients", patientProfileRepository.findAll());
-        model.addAttribute("branches", branchRepository.findAll());
+        model.addAttribute("patients", patientList);
+        model.addAttribute("branches", branchList);
         model.addAttribute("allStatuses", LaboOrderStatus.values());
         model.addAttribute("pageTitle", "Quản lý Labo & Xét nghiệm - DentalSoft");
 

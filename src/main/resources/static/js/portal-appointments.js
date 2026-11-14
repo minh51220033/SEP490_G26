@@ -477,11 +477,51 @@
             await loadSlots(token);
         }
 
-        ['branchId', 'appointmentDate', 'preferredSession'].forEach(field =>
-            $(field).addEventListener('change', () => availability().catch(e => error(e.message))));
+        async function loadPortalSessions(branchId) {
+            const select = $('preferredSession');
+            if (!select || !branchId) return;
+            const prev = select.value;
+            try {
+                const res = await fetch(`/api/public/booking/sessions?branchId=${encodeURIComponent(branchId)}`);
+                const list = await res.json().catch(() => []);
+                if (Array.isArray(list) && list.length > 0) {
+                    select.replaceChildren();
+                    list.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s.session;
+                        opt.textContent = s.label || s.name;
+                        select.appendChild(opt);
+                    });
+                    if (prev && list.some(s => s.session === prev)) {
+                        select.value = prev;
+                    } else {
+                        select.value = list[0].session;
+                    }
+                }
+            } catch (err) {
+                console.warn(err);
+            }
+        }
+
+        $('branchId').addEventListener('change', async () => {
+            await loadPortalSessions($('branchId').value);
+            availability().catch(e => error(e.message));
+        });
+        ['appointmentDate', 'preferredSession'].forEach(field =>
+            $(field).addEventListener('change', () => {
+                if (field === 'appointmentDate' && $('appointmentDate').value && $('appointmentDate').value < localDate()) {
+                    alert('Không thể chọn ngày trong quá khứ. Hệ thống đã tự động chuyển về ngày hôm nay.');
+                    $('appointmentDate').value = localDate();
+                }
+                availability().catch(e => error(e.message));
+            }));
         ['doctorId', 'serviceId'].forEach(field => $(field).addEventListener('change', () => {
             if (available) loadSlots(sequence).catch(e => error(e.message));
         }));
+
+        if ($('branchId').value) {
+            await loadPortalSessions($('branchId').value);
+        }
 
         if (editing) {
             await availability();
