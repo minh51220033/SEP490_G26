@@ -86,11 +86,15 @@ public class CustomerCareTaskDTO {
     private String escalatedToDoctorName;
     private LocalDateTime escalatedAt;
     private String doctorResponse;
+    private String escalationReason;
+    private Long escalatedByUserId;
+    private String escalatedByName;
 
     // Thời hạn & Trạng thái
     private LocalDate dueDate;
     private boolean overdue;
     private boolean dueToday;
+    private String dueBucket;
     private String status;
     private String statusLabel;
     private String notes;

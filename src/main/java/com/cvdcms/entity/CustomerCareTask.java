@@ -81,6 +81,12 @@ public class CustomerCareTask {
     @Column(name = "doctor_response", columnDefinition = "TEXT")
     private String doctorResponse;
 
+    @Column(name = "escalation_reason", columnDefinition = "TEXT")
+    private String escalationReason;
+
+    @Column(name = "escalated_by_user_id")
+    private Long escalatedByUserId;
+
     @PrePersist
     public void prePersist() {
         if (this.taskCode == null || this.taskCode.isEmpty()) {

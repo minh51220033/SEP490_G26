@@ -41,6 +41,8 @@ public class PaymentServiceImpl implements PaymentService {
     private final AppointmentLifecycleService appointmentLifecycleService;
     private final BranchBankAccountRepository branchBankAccountRepository;
     private com.cvdcms.service.PaymentAllocationService paymentAllocationService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher careEventPublisher;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PaymentServiceImpl(
@@ -387,6 +389,9 @@ public class PaymentServiceImpl implements PaymentService {
         visit.setCompletedAt(LocalDateTime.now());
         visitRepository.saveAndFlush(visit);
         appointmentLifecycleService.completeByVisit(visit.getVisitId(), actorUserId);
+        if (careEventPublisher != null && visit.getVisitId() != null) {
+            careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.VisitCompletedCareEvent(visit.getVisitId()));
+        }
     }
 
     private void attachBankTransferSnapshot(Payment payment, PaymentRequestDTO request,

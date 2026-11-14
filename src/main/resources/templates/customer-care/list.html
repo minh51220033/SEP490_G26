@@ -6,8 +6,10 @@
 
 <!-- CSS và Script riêng của trang CSKH -->
 <link rel="stylesheet" th:href="@{/css/misa-pagination.css}">
-<link rel="stylesheet" th:href="@{/css/customer-care.css(v='20261112-v8')}">
-<script th:src="@{/js/customer-care.js(v='20261112-v8')}" defer></script>
+<link rel="stylesheet" th:href="@{/css/customer-care.css(v='20261114-v1')}">
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js" defer></script>
+<script th:src="@{/js/customer-care.js(v='20261114-v1')}" defer></script>
 
 <!-- Khu vực quản trị: sidebar và main content đồng bộ layout toàn hệ thống -->
 <div class="app-shell">
@@ -408,63 +410,89 @@
                     min-width: 0;
                     max-width: 100%;
                 }
-                .cc-notes-block {
+                .cc-compact-notes-cell {
                     cursor: pointer;
-                    border-radius: 8px;
                     padding: 4px 6px;
-                    margin: -4px -6px;
+                    border-radius: 8px;
+                    transition: all 0.15s ease;
+                    border: 1px solid transparent;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    gap: 3px;
                     max-width: 100%;
+                    min-width: 0;
                     overflow: hidden;
-                    transition: background-color 0.15s ease;
                 }
-                .cc-notes-block:hover {
-                    background-color: rgba(2, 132, 199, 0.08);
+                .cc-compact-notes-cell:hover {
+                    background-color: #f0f9ff;
+                    border-color: #bae6fd;
                 }
-                .cc-notes-primary {
+                .cc-compact-notes-main {
                     font-size: 12.5px;
                     font-weight: 600;
                     color: #0f172a;
-                }
-                .cc-notes-subpill {
-                    margin-top: 4px;
-                    padding: 2px 7px;
-                    border-radius: 6px;
-                    font-size: 11.5px;
                     line-height: 1.35;
-                    background: #f0f9ff;
-                    color: #0369a1;
-                    border: 1px solid #bae6fd;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    min-width: 0;
+                    max-width: 100%;
                 }
-                .cc-notes-subpill.is-doc {
+                .cc-compact-notes-sub {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 6px;
+                    min-width: 0;
+                    max-width: 100%;
+                }
+                .cc-compact-notes-tag {
+                    font-size: 11px;
+                    line-height: 1.3;
+                    padding: 1px 6px;
+                    border-radius: 4px;
+                    background: #f1f5f9;
+                    color: #475569;
+                    border: 1px solid #e2e8f0;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 175px;
+                    flex-shrink: 1;
+                }
+                .cc-compact-notes-tag.is-doc {
                     background: #f0fdf4;
                     color: #166534;
                     border-color: #bbf7d0;
                 }
-                .cc-notes-subpill.is-wait {
+                .cc-compact-notes-tag.is-wait {
                     background: #fef2f2;
                     color: #b91c1c;
                     border-color: #fecaca;
                 }
-                .cc-notes-more-link {
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 3px;
-                    margin-top: 4px;
-                    font-size: 11.5px;
+                .cc-compact-notes-more {
+                    flex-shrink: 0;
+                    font-size: 11px;
                     font-weight: 700;
                     color: #0284c7;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 2px;
                 }
+
                 .cc-action-btn-group {
                     display: inline-flex;
                     align-items: center;
                     justify-content: center;
-                    gap: 5px;
-                    flex-wrap: wrap;
+                    gap: 4px;
+                    flex-wrap: nowrap;
+                    white-space: nowrap;
                 }
-                .cc-action-btn-group .btn {
-                    height: 30px;
-                    padding: 0 8px;
-                    font-size: 12px;
+                .cc-act-btn {
+                    height: 29px;
+                    padding: 0 7px;
+                    font-size: 11.5px;
                     font-weight: 700;
                     border-radius: 7px;
                     display: inline-flex;
@@ -472,21 +500,29 @@
                     justify-content: center;
                     gap: 4px;
                     white-space: nowrap;
+                    flex-shrink: 0;
                     line-height: 1;
+                }
+                .cc-act-icon-btn {
+                    width: 29px;
+                    padding: 0;
                 }
             </style>
 
-            <!-- 1. TIÊU ĐỀ TRANG ĐỒNG BỘ DOCTOR/DAILY-VISITS -->
+            <!-- 1. TIÊU ĐỀ TRANG & NOTIFICATION CENTER -->
             <div class="d-flex flex-wrap flex-xl-nowrap align-items-center justify-content-between gap-3 mb-4">
                 <div>
                     <div class="dv-page-title">
                         <i class="bi bi-heart-pulse-fill text-primary"></i>
                         <span>Quản lý Chăm sóc Khách hàng</span>
                     </div>
-                    <p class="text-muted mb-0" style="font-size: 13.5px;">Quản lý lịch gọi hậu phẫu, tiếp nhận phản hồi và chăm sóc định kỳ bệnh nhân</p>
+                    <p class="text-muted mb-0" style="font-size: 13.5px;">Quản lý lịch gọi hậu phẫu, tiếp nhận phản hồi và chăm sóc định kỳ bệnh nhân theo thời gian thực</p>
                 </div>
 
                 <div class="d-flex align-items-center gap-2 flex-shrink-0 flex-wrap">
+                    <span id="ccWsStatusBadge" class="badge rounded-pill bg-secondary-subtle text-secondary px-2 py-2 d-inline-flex align-items-center gap-1" style="font-size: 11.5px; height: 34px;" title="Trạng thái kết nối WebSocket thời gian thực">
+                        <i class="bi bi-wifi"></i><span>Đang kết nối...</span>
+                    </span>
                     <div class="position-relative d-inline-flex align-items-center">
                         <i class="bi bi-building position-absolute text-muted" style="left: 10px; pointer-events: none; font-size: 13px;"></i>
                         <select id="branchId" name="branchId" aria-label="Chọn chi nhánh" class="form-select form-select-sm shadow-xs fw-semibold"
@@ -497,22 +533,42 @@
                     <button id="refreshBtn" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-xs d-inline-flex align-items-center gap-2" style="height: 40px; font-size: 13px;" type="button" title="Làm mới dữ liệu">
                         <i class="bi bi-arrow-clockwise"></i> Làm mới
                     </button>
-                    <button id="autoGenerateBtn" class="btn btn-outline-primary fw-semibold px-3 py-2 rounded-3 shadow-xs d-inline-flex align-items-center gap-2" style="height: 40px; font-size: 13px;" type="button" title="Tự động quét ca khám hoàn thành, đơn thuốc và lịch hẹn để tạo công việc CSKH">
-                        <i class="bi bi-magic"></i> Tổng hợp tự động
-                    </button>
+
+                    <!-- Notification Center Bell -->
+                    <div class="position-relative" id="ccNotifBellWrap">
+                        <button id="ccNotifBellBtn" type="button" class="btn btn-white bg-white border rounded-3 shadow-xs d-inline-flex align-items-center justify-content-center position-relative" style="width: 40px; height: 40px; border-color: #cbd5e1 !important;" title="Trung tâm thông báo CSKH" aria-expanded="false">
+                            <i class="bi bi-bell-fill text-primary" style="font-size: 16px;"></i>
+                            <span id="ccNotifUnreadBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" style="font-size: 10px; min-width: 18px;">0</span>
+                        </button>
+                        <div id="ccNotifDropdown" class="cc-notif-dropdown shadow-lg" hidden>
+                            <div class="cc-notif-header">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-bell-fill text-primary"></i>
+                                    <span class="fw-bold text-dark" style="font-size: 13.5px;">Thông báo CSKH</span>
+                                </div>
+                                <button id="ccNotifMarkAllBtn" type="button" class="btn btn-link btn-sm text-primary fw-semibold text-decoration-none p-0" style="font-size: 12px;">
+                                    Đánh dấu tất cả đã đọc
+                                </button>
+                            </div>
+                            <div id="ccNotifList" class="cc-notif-list">
+                                <div class="p-3 text-center text-muted small">Đang tải thông báo...</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <button id="openCreateTaskBtn" class="btn btn-primary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" type="button" style="height: 40px; font-size: 13px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
                         <i class="bi bi-plus-lg"></i> Lập lịch CSKH
                     </button>
                 </div>
             </div>
 
-            <!-- 2. 4 THẺ KPI SUMMARY CARDS (ĐỒNG BỘ DOCTOR/DAILY-VISITS) -->
+            <!-- 2. 4 THẺ KPI SUMMARY CARDS -->
             <div class="row g-3 mb-4" aria-label="Chỉ số tổng quan chăm sóc khách hàng">
                 <div class="col-xl-3 col-sm-6">
                     <div class="dv-kpi-card" id="kpiCardTotal" data-kpi-tab="ALL" role="button" tabindex="0" style="--kpi-accent: #0284c7;">
                         <div>
                             <div class="dv-kpi-num" id="statTotalTasks">—</div>
-                            <div class="dv-kpi-label">Tổng công việc CSKH</div>
+                            <div class="dv-kpi-label">Tổng công việc đang mở</div>
                             <div class="dv-kpi-sub" id="statTotalTasksSub">Đang tải dữ liệu...</div>
                         </div>
                         <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
@@ -522,40 +578,40 @@
                 </div>
 
                 <div class="col-xl-3 col-sm-6">
-                    <div class="dv-kpi-card" id="kpiCardDue" data-kpi-tab="TODAY" role="button" tabindex="0" style="--kpi-accent: #f59e0b;">
+                    <div class="dv-kpi-card" id="kpiCardDue" data-kpi-tab="OVERDUE" role="button" tabindex="0" style="--kpi-accent: #dc2626;">
                         <div>
-                            <div class="dv-kpi-num text-warning" id="statDueTasks">—</div>
-                            <div class="dv-kpi-label">Hôm nay / Quá hạn</div>
+                            <div class="dv-kpi-num text-danger" id="statDueTasks">—</div>
+                            <div class="dv-kpi-label">Quá hạn cần xử lý</div>
                             <div class="dv-kpi-sub" id="statDueTasksSub">Đang kiểm tra lịch...</div>
                         </div>
-                        <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
-                            <i class="bi bi-clock-history"></i>
+                        <div class="dv-kpi-icon" style="background: #fee2e2; color: #dc2626;">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
                         </div>
                     </div>
                 </div>
 
                 <div class="col-xl-3 col-sm-6">
-                    <div class="dv-kpi-card" id="kpiCardEscalated" data-kpi-tab="ESCALATED" role="button" tabindex="0" style="--kpi-accent: #ef4444;">
+                    <div class="dv-kpi-card" id="kpiCardToday" data-kpi-tab="TODAY" role="button" tabindex="0" style="--kpi-accent: #f59e0b;">
                         <div>
-                            <div class="dv-kpi-num text-danger" id="statEscalatedTasks">—</div>
-                            <div class="dv-kpi-label">Ca chuyển Bác sĩ</div>
+                            <div class="dv-kpi-num text-warning" id="statTodayTasks">—</div>
+                            <div class="dv-kpi-label">Hôm nay cần xử lý</div>
+                            <div class="dv-kpi-sub" id="statTodayTasksSub">Đang kiểm tra lịch...</div>
+                        </div>
+                        <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                            <i class="bi bi-calendar-check-fill"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 col-sm-6">
+                    <div class="dv-kpi-card" id="kpiCardEscalated" data-kpi-tab="ESCALATED" role="button" tabindex="0" style="--kpi-accent: #7c3aed;">
+                        <div>
+                            <div class="dv-kpi-num" style="color: #7c3aed;" id="statEscalatedTasks">—</div>
+                            <div class="dv-kpi-label">Ca chờ Bác sĩ phản hồi</div>
                             <div class="dv-kpi-sub" id="statEscalatedTasksSub">Đang kiểm tra ca BS...</div>
                         </div>
-                        <div class="dv-kpi-icon" style="background: #fee2e2; color: #dc2626;">
+                        <div class="dv-kpi-icon" style="background: #ede9fe; color: #7c3aed;">
                             <i class="bi bi-heart-pulse-fill"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-xl-3 col-sm-6">
-                    <div class="dv-kpi-card" id="kpiCardCompleted" data-kpi-tab="COMPLETED_FILTER" role="button" tabindex="0" style="--kpi-accent: #10b981;">
-                        <div>
-                            <div class="dv-kpi-num text-success" id="statCompletedTasks">—</div>
-                            <div class="dv-kpi-label">Đã hoàn thành CSKH</div>
-                            <div class="dv-kpi-sub" id="statCompletedTasksSub">Đang tính tỷ lệ...</div>
-                        </div>
-                        <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
-                            <i class="bi bi-check2-circle"></i>
                         </div>
                     </div>
                 </div>
@@ -564,43 +620,74 @@
             <!-- THÔNG BÁO HỆ THỐNG -->
             <p id="message" class="notice" role="status" aria-live="polite" hidden></p>
 
-            <!-- 3. BỘ LỌC TÌM KIẾM NHANH + FILTER TABS (ĐỒNG BỘ DOCTOR/DAILY-VISITS) -->
+            <!-- 3. BỘ LỌC TÌM KIẾM, CHẾ ĐỘ XEM & TABS TRẠNG THÁI -->
             <div class="dv-toolbar-card" id="filterToolbarSection">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-                    <!-- Filter 1: Tìm kiếm từ khóa -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <!-- Tìm kiếm từ khóa -->
                     <div class="dv-search-box task-filter-field">
                         <i class="bi bi-search search-lead-icon"></i>
                         <input id="keyword" type="search" placeholder="Tìm theo Mã CV, Mã BN, Họ tên, SĐT, Mã ca khám...">
                     </div>
 
-                    <!-- Filter 2: Quick Segmented Tabs -->
-                    <div class="dv-quick-segment" aria-label="Bộ lọc phân nhóm CSKH">
-                        <button type="button" class="dv-seg-btn tab active" data-tab="ALL">
-                            Tổng quan <span class="dv-seg-count" id="badge_ALL">0</span>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <!-- Công tắc Danh sách / Ô lịch -->
+                        <div class="dv-quick-segment" role="group" aria-label="Chế độ hiển thị">
+                            <button type="button" class="dv-seg-btn active" id="viewModeListBtn" data-view-mode="LIST">
+                                <i class="bi bi-list-ul"></i> Danh sách
+                            </button>
+                            <button type="button" class="dv-seg-btn" id="viewModeCalendarBtn" data-view-mode="CALENDAR">
+                                <i class="bi bi-calendar-week"></i> Ô lịch
+                            </button>
+                        </div>
+
+                        <!-- Bộ lọc Việc của tôi -->
+                        <button type="button" class="dv-adv-filter-btn task-filter-field" id="myTasksToggleBtn" aria-pressed="false" title="Lọc các công việc được phân công hoặc chuyển cho tôi">
+                            <i class="bi bi-person-check-fill text-primary"></i>
+                            <span>Việc của tôi</span>
+                            <span class="dv-seg-count" id="badge_MY_TASKS">0</span>
                         </button>
-                        <button type="button" class="dv-seg-btn tab" data-tab="TODAY">
-                            Hôm nay <span class="dv-seg-count" id="badge_TODAY">0</span>
+
+                        <!-- Nút Lọc nâng cao -->
+                        <button type="button" class="dv-adv-filter-btn task-filter-field" id="btnToggleAdvFilter" onclick="toggleCcAdvFilter()">
+                            <i class="bi bi-funnel-fill"></i>
+                            <span>Lọc nâng cao</span>
+                            <i class="bi bi-chevron-down small ms-1" id="advFilterChevron"></i>
                         </button>
-                        <button type="button" class="dv-seg-btn tab" data-tab="POST_TREATMENT">
-                            Sau điều trị <span class="dv-seg-count" id="badge_POST_TREATMENT">0</span>
+                    </div>
+                </div>
+
+                <!-- TABS CHÍNH THEO TRẠNG THÁI NGHIỆP VỤ -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2" id="mainStatusTabsRow">
+                    <div class="dv-quick-segment" aria-label="Phân chia trạng thái công việc CSKH">
+                        <button type="button" class="dv-seg-btn tab active" data-tab="TODAY" style="color:#b45309;">
+                            <i class="bi bi-calendar-check"></i> Cần xử lý hôm nay <span class="dv-seg-count" id="badge_TODAY" style="background:#fef3c7;color:#b45309;">0</span>
                         </button>
-                        <button type="button" class="dv-seg-btn tab" data-tab="APPOINTMENT_REMINDER">
-                            Nhắc hẹn <span class="dv-seg-count" id="badge_APPOINTMENT_REMINDER">0</span>
+                        <button type="button" class="dv-seg-btn tab" data-tab="OVERDUE" style="color:#dc2626;">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Quá hạn <span class="dv-seg-count" id="badge_OVERDUE" style="background:#fee2e2;color:#dc2626;">0</span>
                         </button>
                         <button type="button" class="dv-seg-btn tab" data-tab="ESCALATED" style="color:#b91c1c;">
-                            Chuyển BS <span class="dv-seg-count" id="badge_ESCALATED" style="background:#fee2e2;color:#b91c1c;">0</span>
+                            <i class="bi bi-heart-pulse"></i> Chờ bác sĩ <span class="dv-seg-count" id="badge_ESCALATED" style="background:#fee2e2;color:#b91c1c;">0</span>
+                        </button>
+                        <button type="button" class="dv-seg-btn tab" data-tab="ALL">
+                            <i class="bi bi-grid-fill"></i> Tất cả <span class="dv-seg-count" id="badge_ALL">0</span>
+                        </button>
+                        <button type="button" class="dv-seg-btn tab" data-tab="COMPLETED" style="color:#047857;">
+                            <i class="bi bi-check2-circle"></i> Đã hoàn thành <span class="dv-seg-count" id="badge_COMPLETED" style="background:#d1fae5;color:#047857;">0</span>
+                        </button>
+                        <button type="button" class="dv-seg-btn tab" data-tab="CANCELLED" style="color:#475569;">
+                            <i class="bi bi-x-circle"></i> Đã hủy <span class="dv-seg-count" id="badge_CANCELLED">0</span>
                         </button>
                         <button type="button" class="dv-seg-btn tab" data-tab="HISTORY">
                             <i class="bi bi-clock-history"></i> Lịch sử BN
                         </button>
                     </div>
 
-                    <!-- Filter 3: Nút Lọc nâng cao -->
-                    <button type="button" class="dv-adv-filter-btn task-filter-field" id="btnToggleAdvFilter" onclick="toggleCcAdvFilter()">
-                        <i class="bi bi-funnel-fill"></i>
-                        <span>Lọc nâng cao</span>
-                        <i class="bi bi-chevron-down small ms-1" id="advFilterChevron"></i>
-                    </button>
+                    <!-- Bộ lọc con cho Tab Chờ bác sĩ -->
+                    <div class="dv-quick-segment" id="doctorRespFilterStrip" aria-label="Lọc phản hồi bác sĩ" hidden>
+                        <button type="button" class="dv-seg-btn active" data-doc-resp-filter="ALL">Tất cả ca BS</button>
+                        <button type="button" class="dv-seg-btn" data-doc-resp-filter="WAITING" style="color:#b91c1c;">Đang chờ BS phản hồi</button>
+                        <button type="button" class="dv-seg-btn" data-doc-resp-filter="RESPONDED" style="color:#047857;">BS đã phản hồi</button>
+                    </div>
                 </div>
 
                 <!-- KHUNG LỌC NÂNG CAO -->
@@ -616,30 +703,34 @@
                     </div>
                     <div class="row g-3">
                         <div class="col-lg-3 col-md-6 task-filter-field">
-                            <label class="dv-adv-label" for="filterTabGroup"><i class="bi bi-grid text-primary"></i> Phân loại CSKH</label>
-                            <select id="filterTabGroup" class="dv-adv-control">
-                                <option value="ALL" id="opt_tab_ALL" data-label="Tổng quan" selected>Tổng quan (0)</option>
-                                <option value="TODAY" id="opt_tab_TODAY" data-label="Hôm nay">Hôm nay (0)</option>
-                                <option value="POST_TREATMENT" id="opt_tab_POST_TREATMENT" data-label="Sau điều trị">Sau điều trị (0)</option>
-                                <option value="APPOINTMENT_REMINDER" id="opt_tab_APPOINTMENT_REMINDER" data-label="Nhắc hẹn">Nhắc hẹn (0)</option>
-                                <option value="INSTALLMENT_REMINDER" id="opt_tab_INSTALLMENT_REMINDER" data-label="Trả góp">Trả góp (0)</option>
-                                <option value="NO_SHOW_RECALL" id="opt_tab_NO_SHOW_RECALL" data-label="Hẹn lỡ">Hẹn lỡ (0)</option>
-                                <option value="NO_SERVICE_FOLLOWUP" id="opt_tab_NO_SERVICE_FOLLOWUP" data-label="Chưa làm DV">Chưa làm DV (0)</option>
-                                <option value="FEEDBACK_COMPLAINT" id="opt_tab_FEEDBACK_COMPLAINT" data-label="Phản ánh">Phản ánh (0)</option>
-                                <option value="ESCALATED" id="opt_tab_ESCALATED" data-label="Chuyển Bác sĩ">Chuyển Bác sĩ (0)</option>
-                                <option value="HISTORY" id="opt_tab_HISTORY" data-label="Lịch sử CSKH BN">Lịch sử CSKH BN</option>
+                            <label class="dv-adv-label" for="filterCareGroup"><i class="bi bi-grid text-primary"></i> Nhóm chăm sóc</label>
+                            <select id="filterCareGroup" class="dv-adv-control">
+                                <option value="ALL" selected>Tất cả nhóm chăm sóc</option>
+                                <option value="POST_TREATMENT">Sau điều trị</option>
+                                <option value="MEDICATION_REMINDER">Nhắc dùng thuốc</option>
+                                <option value="APPOINTMENT_REMINDER">Nhắc lịch hẹn</option>
+                                <option value="INSTALLMENT_REMINDER">Nhắc trả góp</option>
+                                <option value="NO_SHOW_RECALL">Lịch hẹn lỡ</option>
+                                <option value="NO_SERVICE_FOLLOWUP">Chưa làm dịch vụ</option>
+                                <option value="FEEDBACK_COMPLAINT">Phản ánh / Khiếu nại</option>
                             </select>
                         </div>
-                        <div class="col-lg-3 col-md-6 task-filter-field">
+                        <div class="col-lg-2 col-md-6 task-filter-field">
                             <label class="dv-adv-label" for="filterStaffId"><i class="bi bi-person-badge text-primary"></i> Nhân viên phụ trách</label>
                             <select id="filterStaffId" class="dv-adv-control">
                                 <option value="">Tất cả nhân viên</option>
                             </select>
                         </div>
                         <div class="col-lg-2 col-md-6 task-filter-field">
-                            <label class="dv-adv-label" for="filterStatus"><i class="bi bi-flag text-primary"></i> Trạng thái</label>
+                            <label class="dv-adv-label" for="filterDoctorId"><i class="bi bi-heart-pulse text-primary"></i> Bác sĩ tiếp nhận</label>
+                            <select id="filterDoctorId" class="dv-adv-control">
+                                <option value="">Tất cả bác sĩ</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-2 col-md-6 task-filter-field">
+                            <label class="dv-adv-label" for="filterStatus"><i class="bi bi-flag text-primary"></i> Trạng thái chi tiết</label>
                             <select id="filterStatus" class="dv-adv-control">
-                                <option value="">Tất cả trạng thái</option>
+                                <option value="">Theo tab hiện tại</option>
                                 <option value="PENDING">Chờ liên hệ</option>
                                 <option value="IN_PROGRESS">Đang CS / Hẹn gọi lại</option>
                                 <option value="ESCALATED_TO_DOCTOR">Chuyển Bác sĩ</option>
@@ -647,11 +738,11 @@
                                 <option value="CANCELLED">Đã hủy</option>
                             </select>
                         </div>
-                        <div class="col-lg-2 col-md-3 task-filter-field">
-                            <label class="dv-adv-label" for="filterFromDate"><i class="bi bi-calendar-event text-primary"></i> Hạn từ ngày</label>
+                        <div class="col-lg-1 col-md-3 task-filter-field" style="min-width: 135px;">
+                            <label class="dv-adv-label" for="filterFromDate"><i class="bi bi-calendar-event text-primary"></i> Từ ngày</label>
                             <input id="filterFromDate" type="date" class="dv-adv-control">
                         </div>
-                        <div class="col-lg-2 col-md-3 task-filter-field">
+                        <div class="col-lg-1 col-md-3 task-filter-field" style="min-width: 135px;">
                             <label class="dv-adv-label" for="filterToDate"><i class="bi bi-calendar-check text-primary"></i> Đến ngày</label>
                             <input id="filterToDate" type="date" class="dv-adv-control">
                         </div>
@@ -665,7 +756,7 @@
                 <div class="dv-grid-topbar">
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <div class="fw-bold text-dark" style="font-size: 14.5px;">
-                            Hiển thị <span class="text-primary fw-bolder" id="tasksTotalBadge">0</span> công việc CSKH
+                            Danh sách công việc CSKH (<span class="text-primary fw-bolder" id="tasksTotalBadge">0</span>)
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
@@ -726,42 +817,218 @@
                 </div>
             </div>
 
-            <!-- 5. PANEL 2: LỊCH SỬ CHĂM SÓC BỆNH NHÂN TIMELINE (SCR-44.6) -->
-            <div id="historyPanel" class="dv-grid-card" hidden>
-                <div class="dv-grid-topbar">
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 w-100">
-                        <div>
-                            <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-clock-history text-primary me-2"></i>Lịch sử chăm sóc bệnh nhân (Timeline)</h6>
-                            <p class="small text-muted mb-0">Xem toàn bộ lịch sử tương tác qua Điện thoại, Zalo, SMS của từng bệnh nhân.</p>
+            <!-- 4B. CHẾ ĐỘ Ô LỊCH NGÀY / TUẦN / THÁNG (THAM CHIẾU /RECEPTION/APPOINTMENTS) -->
+            <div class="dv-grid-card p-3" id="calendarPanel" hidden>
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <button type="button" id="calPrevBtn" class="btn btn-outline-secondary btn-sm fw-semibold px-2 py-1" title="Khoảng thời gian trước">
+                            <i class="bi bi-chevron-left"></i> Trước
+                        </button>
+                        <strong id="calRangeTitle" class="px-2 text-dark" style="font-size: 14.5px;">—</strong>
+                        <button type="button" id="calNextBtn" class="btn btn-outline-secondary btn-sm fw-semibold px-2 py-1" title="Khoảng thời gian sau">
+                            Sau <i class="bi bi-chevron-right"></i>
+                        </button>
+                        <div class="ms-2 d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-calendar3 text-primary"></i>
+                            <input type="date" id="calDatePicker" class="form-control form-control-sm" style="width: 140px; height: 32px; font-size: 12.5px;" title="Chọn ngày xem lịch">
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <label for="historyPatientSelect" class="small fw-bold text-secondary mb-0">Bệnh nhân:</label>
-                            <select id="historyPatientSelect" aria-label="Chọn bệnh nhân xem lịch sử" class="form-select form-select-sm py-1" style="min-width: 250px;">
-                                <option value="">-- Chọn bệnh nhân --</option>
-                            </select>
-                            <button id="loadHistoryBtn" class="btn btn-primary btn-sm fw-bold px-3 py-2 rounded-2" type="button" style="background:linear-gradient(135deg, #0284c7, #2563eb);border:none;">
-                                Xem lịch sử
+                    </div>
+                    <div class="dv-quick-segment" role="group" aria-label="Điều hướng khoảng lịch">
+                        <button type="button" class="dv-seg-btn" id="calTodayBtn">Hôm nay</button>
+                        <button type="button" class="dv-seg-btn" id="calDayBtn">Ngày</button>
+                        <button type="button" class="dv-seg-btn active" id="calWeekBtn">Tuần</button>
+                        <button type="button" class="dv-seg-btn" id="calMonthBtn">Tháng</button>
+                    </div>
+                </div>
+
+                <!-- Bộ lọc trên lịch -->
+                <div class="row g-2 mb-3">
+                    <div class="col-md-3 col-sm-6">
+                        <select id="calFilterStaff" class="form-select form-select-sm" aria-label="Lọc nhân viên phụ trách trên lịch">
+                            <option value="">Tất cả nhân viên</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <select id="calFilterDoctor" class="form-select form-select-sm" aria-label="Lọc bác sĩ tiếp nhận trên lịch">
+                            <option value="">Tất cả bác sĩ</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <select id="calFilterCareGroup" class="form-select form-select-sm" aria-label="Lọc nhóm chăm sóc trên lịch">
+                            <option value="ALL">Tất cả nhóm CSKH</option>
+                            <option value="POST_TREATMENT">Sau điều trị</option>
+                            <option value="MEDICATION_REMINDER">Nhắc dùng thuốc</option>
+                            <option value="APPOINTMENT_REMINDER">Nhắc lịch hẹn</option>
+                            <option value="INSTALLMENT_REMINDER">Nhắc trả góp</option>
+                            <option value="NO_SHOW_RECALL">Lịch hẹn lỡ</option>
+                            <option value="NO_SERVICE_FOLLOWUP">Chưa làm dịch vụ</option>
+                            <option value="FEEDBACK_COMPLAINT">Phản ánh / Khiếu nại</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <select id="calFilterStatus" class="form-select form-select-sm" aria-label="Lọc trạng thái trên lịch">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="PENDING">Chờ liên hệ</option>
+                            <option value="IN_PROGRESS">Đang chăm sóc</option>
+                            <option value="ESCALATED_TO_DOCTOR">Chờ bác sĩ</option>
+                            <option value="COMPLETED">Đã hoàn thành</option>
+                            <option value="CANCELLED">Đã hủy</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="ccCalendarGrid" class="cc-calendar-grid" aria-live="polite"></div>
+            </div>
+
+            <!-- 5. PANEL 2: LỊCH SỬ CHĂM SÓC KHÁCH HÀNG TOÀN DIỆN (SCR-44.6) -->
+            <div id="historyPanel" class="dv-grid-card p-3" hidden>
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 pb-2 border-bottom">
+                    <div>
+                        <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-clock-history text-primary me-2"></i>Lịch sử tương tác Chăm sóc Khách hàng (SCR-44.6)</h6>
+                        <p class="small text-muted mb-0">Quản lý và tra cứu toàn bộ timeline các lần tương tác qua Điện thoại, Zalo, SMS, Trực tiếp của bệnh nhân.</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary rounded-pill px-3 py-2 fw-bold" id="histTotalBadge">0 tương tác</span>
+                        <button type="button" class="btn btn-outline-secondary btn-sm fw-bold px-3 py-1 rounded-2" id="histRefreshBtn" title="Làm mới lịch sử">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
+                        </button>
+                    </div>
+                </div>
+
+                <!-- THANH TÌM KIẾM & BỘ LỌC THỜI GIAN NHANH -->
+                <div class="hist-toolbar-card">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="hist-search-input-wrap">
+                            <i class="bi bi-search"></i>
+                            <input type="text" id="histKeyword" class="form-control form-control-sm"
+                                   placeholder="Tìm theo họ tên BN, mã BN, SĐT, mã công việc CSKH, ghi chú..."
+                                   aria-label="Tìm kiếm lịch sử tương tác">
+                        </div>
+
+                        <!-- Các mốc thời gian chuẩn giờ VN -->
+                        <div class="hist-time-segments" role="group" aria-label="Bộ lọc thời gian">
+                            <button type="button" class="hist-time-btn active" data-hist-timerange="ALL">Tất cả</button>
+                            <button type="button" class="hist-time-btn" data-hist-timerange="TODAY">Hôm nay</button>
+                            <button type="button" class="hist-time-btn" data-hist-timerange="YESTERDAY">Hôm qua</button>
+                            <button type="button" class="hist-time-btn" data-hist-timerange="THIS_WEEK">Tuần này</button>
+                            <button type="button" class="hist-time-btn" data-hist-timerange="LAST_WEEK">Tuần trước</button>
+                            <button type="button" class="hist-time-btn" data-hist-timerange="THIS_MONTH">Tháng này</button>
+                            <button type="button" class="hist-time-btn" data-hist-timerange="LAST_MONTH">Tháng trước</button>
+                            <button type="button" class="hist-time-btn" data-hist-timerange="CUSTOM">Tùy chọn...</button>
+                        </div>
+
+                        <button type="button" class="btn btn-outline-primary btn-sm fw-bold px-3 py-1 rounded-2" id="histToggleAdvBtn">
+                            <i class="bi bi-funnel me-1"></i>Lọc nâng cao <i class="bi bi-chevron-down ms-1" id="histAdvChevron"></i>
+                        </button>
+                    </div>
+
+                    <!-- Khoảng thời gian tùy chọn (chỉ hiện khi chọn CUSTOM) -->
+                    <div id="histCustomDateWrap" class="mt-2 pt-2 border-top d-flex align-items-center gap-2 flex-wrap" hidden>
+                        <span class="small fw-bold text-secondary">Khoảng thời gian tùy chọn:</span>
+                        <div class="d-flex align-items-center gap-1">
+                            <input type="date" id="histFromDate" class="form-control form-control-sm" style="width: 150px;" aria-label="Từ ngày">
+                            <span class="text-muted">–</span>
+                            <input type="date" id="histToDate" class="form-control form-control-sm" style="width: 150px;" aria-label="Đến ngày">
+                            <button type="button" class="btn btn-primary btn-sm fw-bold px-2 py-1" id="histApplyCustomDateBtn">Áp dụng</button>
+                        </div>
+                    </div>
+
+                    <!-- BỘ LỌC BỔ SUNG NÂNG CAO -->
+                    <div id="histAdvPanel" class="hist-adv-panel">
+                        <div class="hist-adv-grid">
+                            <div th:if="${isAdmin}">
+                                <label class="small fw-bold text-secondary mb-1">Cơ sở / Chi nhánh:</label>
+                                <select id="histBranchFilter" class="form-select form-select-sm" aria-label="Lọc chi nhánh">
+                                    <option value="">Tất cả cơ sở</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="small fw-bold text-secondary mb-1">Nhân viên thực hiện:</label>
+                                <select id="histStaffFilter" class="form-select form-select-sm" aria-label="Lọc nhân viên">
+                                    <option value="">Tất cả nhân viên</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="small fw-bold text-secondary mb-1">Bác sĩ liên quan:</label>
+                                <select id="histDoctorFilter" class="form-select form-select-sm" aria-label="Lọc bác sĩ">
+                                    <option value="">Tất cả bác sĩ</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="small fw-bold text-secondary mb-1">Hình thức tương tác:</label>
+                                <select id="histChannelFilter" class="form-select form-select-sm" aria-label="Lọc hình thức">
+                                    <option value="ALL">Tất cả hình thức</option>
+                                    <option value="PHONE_CALL">Gọi điện thoại</option>
+                                    <option value="ZALO">Zalo Official / Zalo</option>
+                                    <option value="SMS">Tin nhắn SMS</option>
+                                    <option value="IN_PERSON">Trực tiếp tại phòng khám</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="small fw-bold text-secondary mb-1">Kết quả tương tác:</label>
+                                <select id="histResultFilter" class="form-select form-select-sm" aria-label="Lọc kết quả">
+                                    <option value="ALL">Tất cả kết quả</option>
+                                    <option value="CONNECTED">Đã kết nối thành công</option>
+                                    <option value="BUSY">Máy bận</option>
+                                    <option value="NO_ANSWER">Không nghe máy</option>
+                                    <option value="SCHEDULED_APPOINTMENT">Đã hẹn lịch tái khám</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="small fw-bold text-secondary mb-1">Nhóm CSKH:</label>
+                                <select id="histCareGroupFilter" class="form-select form-select-sm" aria-label="Lọc nhóm chăm sóc">
+                                    <option value="ALL">Tất cả nhóm</option>
+                                    <option value="POST_TREATMENT">Hỏi thăm sau điều trị</option>
+                                    <option value="MEDICATION_REMINDER">Nhắc uống thuốc</option>
+                                    <option value="APPOINTMENT_REMINDER">Nhắc lịch hẹn</option>
+                                    <option value="INSTALLMENT_REMINDER">Nhắc thanh toán trả góp</option>
+                                    <option value="NO_SHOW_RECALL">Gọi lại lịch hẹn lỡ</option>
+                                    <option value="NO_SERVICE_FOLLOWUP">Chăm sóc chưa làm DV</option>
+                                    <option value="FEEDBACK_COMPLAINT">Phản ánh &amp; Khiếu nại</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end mt-2 pt-2 border-top">
+                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-3 py-1" id="histClearBtn">
+                                <i class="bi bi-x-circle me-1"></i>Xóa bộ lọc
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Thông tin tóm tắt bệnh nhân -->
-                <div id="historyPatientSummary" class="patient-summary-card" hidden></div>
+                <!-- DANH SÁCH VERTICAL TIMELINE CHUNG -->
+                <div class="hist-card-container">
+                    <div id="histTimelineContainer" class="cc-vtl-container">
+                        <!-- Render dynamic vertical timeline cards -->
+                    </div>
 
-                <div class="p-3" style="background:#f8fafc;">
-                    <div class="history-layout">
-                        <div class="history-column">
-                            <h3 class="sub-heading">Timeline tương tác liên hệ (<span id="timelineCount">0</span> lần)</h3>
-                            <div id="patientTimelineContainer" class="timeline-list">
-                                <p class="empty">Vui lòng chọn một bệnh nhân để xem timeline lịch sử tương tác.</p>
-                            </div>
+                    <div id="histEmptyState" class="hist-empty-state" hidden>
+                        <i class="bi bi-search"></i>
+                        <h6 class="fw-bold text-dark mt-2">Không tìm thấy lần tương tác nào</h6>
+                        <p class="small text-muted mb-0">Thử thay đổi từ khóa tìm kiếm hoặc điều chỉnh khoảng thời gian lọc.</p>
+                    </div>
+
+                    <!-- Phân trang lịch sử chung -->
+                    <div class="dv-pagination-footer mt-3 pt-3 border-top" id="histPaginationFooter">
+                        <div class="dv-page-info">
+                            Tổng số tương tác: <strong id="lblHistTotal">0</strong>
                         </div>
-
-                        <div class="history-column">
-                            <h3 class="sub-heading">Danh sách công việc CSKH của bệnh nhân (<span id="patientTasksCount">0</span> công việc)</h3>
-                            <div id="patientTasksContainer" class="patient-tasks-list">
-                                <p class="empty">Chưa chọn bệnh nhân.</p>
+                        <div class="dv-page-nav">
+                            <div class="dv-page-size-wrap">
+                                <span>Số dòng:</span>
+                                <select class="form-select dv-page-size-select" id="histPageSizeSelect" aria-label="Số dòng lịch sử mỗi trang">
+                                    <option value="10">10</option>
+                                    <option value="15" selected>15</option>
+                                    <option value="25">25</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                            <span class="dv-page-range" id="lblHistRange">0 - 0</span>
+                            <div class="btn-group dv-page-btn-group" role="group" aria-label="Điều hướng trang lịch sử">
+                                <button type="button" class="btn btn-outline-secondary dv-page-btn" id="histFirstBtn" title="Trang đầu" aria-label="Trang đầu">&laquo;</button>
+                                <button type="button" class="btn btn-outline-secondary dv-page-btn" id="histPrevBtn" title="Trang trước" aria-label="Trang trước">&lsaquo;</button>
+                                <button type="button" class="btn btn-outline-secondary dv-page-btn" id="histNextBtn" title="Trang sau" aria-label="Trang sau">&rsaquo;</button>
+                                <button type="button" class="btn btn-outline-secondary dv-page-btn" id="histLastBtn" title="Trang cuối" aria-label="Trang cuối">&raquo;</button>
                             </div>
                         </div>
                     </div>
@@ -769,6 +1036,69 @@
             </div>
 
         </main>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 6. OFFCANVAS RIGHT DRAWER: LỊCH SỬ TƯƠNG TÁC RIÊNG BỆNH NHÂN (SCR-44.6)   -->
+<!-- ========================================================================= -->
+<div class="patient-history-overlay" id="patientHistoryDrawerOverlay" onclick="closePatientHistoryDrawer()"></div>
+<div class="patient-history-drawer" id="patientHistoryDrawer" role="dialog" aria-modal="true" aria-labelledby="patientHistoryDrawerName">
+    <div class="phd-header">
+        <div class="phd-header-left">
+            <div class="phd-avatar" id="patientHistoryDrawerAvatar"><i class="bi bi-person"></i></div>
+            <div class="phd-title-block">
+                <h5 id="patientHistoryDrawerName">—</h5>
+                <div class="phd-title-meta">
+                    <span>Mã BN: <strong id="patientHistoryDrawerCode" class="phd-code-pill">—</strong></span>
+                    <span>· SĐT: <strong id="patientHistoryDrawerPhone">—</strong></span>
+                    <span id="patientHistoryDrawerBranchWrap">· Cơ sở: <strong id="patientHistoryDrawerBranch">—</strong></span>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary rounded-pill px-3 py-2 fw-bold" id="patientHistoryDrawerTotalBadge">0 tương tác</span>
+            <button type="button" class="btn-close" id="closePatientHistoryDrawerBtn" aria-label="Đóng" onclick="closePatientHistoryDrawer()"></button>
+        </div>
+    </div>
+
+    <!-- Toolbar bên trong drawer của bệnh nhân -->
+    <div class="phd-toolbar">
+        <div class="phd-search-box">
+            <i class="bi bi-search"></i>
+            <input type="text" id="patientHistoryDrawerKeyword" class="form-control form-control-sm" placeholder="Tìm trong nội dung tương tác của bệnh nhân..." aria-label="Tìm kiếm tương tác">
+        </div>
+        <select id="patientHistoryDrawerTaskFilter" class="form-select form-select-sm phd-select" aria-label="Lọc theo công việc CSKH">
+            <option value="">Tất cả công việc CSKH</option>
+        </select>
+        <select id="patientHistoryDrawerResultFilter" class="form-select form-select-sm phd-select" style="min-width: 130px;" aria-label="Lọc kết quả liên hệ">
+            <option value="">Tất cả kết quả</option>
+            <option value="CONNECTED">Đã kết nối</option>
+            <option value="BUSY">Máy bận</option>
+            <option value="NO_ANSWER">Không nghe máy</option>
+            <option value="SCHEDULED_APPOINTMENT">Đã hẹn lịch</option>
+        </select>
+    </div>
+
+    <!-- Body drawer có timeline dọc -->
+    <div class="phd-body" id="patientHistoryDrawerBody">
+        <div id="patientHistoryDrawerTimeline" class="cc-vtl-container">
+            <!-- Dynamic vertical connected timeline items -->
+        </div>
+        <div id="patientHistoryDrawerEmpty" class="text-center p-4 text-muted" hidden>
+            <i class="bi bi-inbox fs-1 d-block text-secondary mb-2"></i>
+            Chưa có lịch sử tương tác nào cho bệnh nhân này.
+        </div>
+        <div class="text-center mt-3" id="patientHistoryDrawerMoreWrap" hidden>
+            <button type="button" class="btn btn-outline-primary btn-sm px-3 fw-bold rounded-pill" id="patientHistoryDrawerMoreBtn">
+                <i class="bi bi-arrow-down-circle me-1"></i>Xem thêm tương tác cũ hơn
+            </button>
+        </div>
+    </div>
+
+    <div class="phd-footer">
+        <span class="small text-muted" id="patientHistoryDrawerFooterInfo">Đang xem lịch sử riêng của bệnh nhân</span>
+        <button type="button" class="btn btn-secondary btn-sm px-3 fw-bold rounded-2" onclick="closePatientHistoryDrawer()">Đóng</button>
     </div>
 </div>
 
@@ -1024,6 +1354,37 @@
 <!-- ========================================================================= -->
 <!-- MODAL 4: BÁC SĨ NHẬP PHẢN HỒI CHUYÊN MÔN (SCR-44.5)                       -->
 <!-- ========================================================================= -->
+<!-- MODAL: MỞ LẠI CÔNG VIỆC ĐÃ HOÀN THÀNH (CHỈ ADMIN) -->
+<div id="reopenModal" class="cc-modal-backdrop modal-backdrop" hidden>
+    <div class="cc-modal-dialog modal-dialog" role="dialog" aria-modal="true" aria-labelledby="reopenModalTitle">
+        <div class="cc-modal-content modal-content">
+            <div class="cc-modal-header modal-header">
+                <div class="modal-title-wrap">
+                    <h3 id="reopenModalTitle">Mở lại công việc CSKH đã hoàn thành</h3>
+                    <span class="sub-hint">Chỉ Quản trị viên được thực hiện. Lý do, người thực hiện và thời gian sẽ được lưu Audit Log.</span>
+                </div>
+                <button type="button" class="cc-modal-close modal-close" id="closeReopenModalBtn" aria-label="Đóng">×</button>
+            </div>
+            <div class="cc-modal-body modal-body-scroll">
+                <form id="reopenForm">
+                    <input type="hidden" id="reopenTaskId">
+                    <div id="reopenTaskSummary" class="info-banner"></div>
+                    <div class="form-grid-1">
+                        <label class="form-field">
+                            <span class="field-label">Lý do mở lại công việc <strong class="req">*</strong></span>
+                            <textarea id="reopenReason" rows="3" maxlength="1000" required class="form-control" placeholder="VD: Bệnh nhân gọi lại báo còn đau, cần tiếp tục theo dõi..."></textarea>
+                        </label>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-secondary-custom" id="cancelReopenModalBtn">Hủy</button>
+                        <button type="submit" class="btn btn-warning fw-bold" id="saveReopenBtn">Xác nhận mở lại</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="doctorResponseModal" class="cc-modal-backdrop modal-backdrop" hidden>
     <div class="cc-modal-dialog modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="doctorResponseModalTitle">
         <div class="cc-modal-content modal-content">
@@ -1085,6 +1446,64 @@
         </div>
     </div>
 </div>
+
+<!-- MODAL XEM THÊM CÔNG VIỆC TRONG NGÀY TRÊN LỊCH -->
+<div id="ccDayTasksModal" class="cc-modal-backdrop modal-backdrop" hidden>
+    <div class="cc-modal-dialog modal-dialog modal-lg" style="max-width: 920px;" role="dialog" aria-modal="true" aria-labelledby="ccDayTasksModalTitle">
+        <div class="cc-modal-content modal-content">
+            <div class="cc-modal-header modal-header">
+                <div class="modal-title-wrap">
+                    <h3 id="ccDayTasksModalTitle">Công việc CSKH trong ngày</h3>
+                    <span class="sub-hint" id="ccDayTasksModalSub">—</span>
+                </div>
+                <button type="button" class="cc-modal-close modal-close" id="closeDayTasksModalBtn" aria-label="Đóng">×</button>
+            </div>
+            <!-- Bộ lọc & tìm kiếm trong ngày -->
+            <div class="p-3 bg-light border-bottom">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-4">
+                        <div class="position-relative">
+                            <i class="bi bi-search position-absolute text-muted" style="left: 10px; top: 9px; font-size: 13px;"></i>
+                            <input type="search" id="dayTasksModalSearch" class="form-control form-control-sm ps-4" placeholder="Tìm theo Mã CV, Tên BN, SĐT...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="dayTasksModalFilterStatus" class="form-select form-select-sm" aria-label="Lọc trạng thái trong ngày">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="PENDING">Chờ liên hệ</option>
+                            <option value="IN_PROGRESS">Đang chăm sóc</option>
+                            <option value="ESCALATED_TO_DOCTOR">Chờ Bác sĩ</option>
+                            <option value="COMPLETED">Đã hoàn thành</option>
+                            <option value="CANCELLED">Đã hủy</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="dayTasksModalFilterCareGroup" class="form-select form-select-sm" aria-label="Lọc nhóm trong ngày">
+                            <option value="">Tất cả phân nhóm</option>
+                            <option value="POST_TREATMENT">Sau điều trị</option>
+                            <option value="APPOINTMENT_REMINDER">Nhắc lịch hẹn</option>
+                            <option value="INSTALLMENT_REMINDER">Nhắc viện phí / trả góp</option>
+                            <option value="NO_SHOW_RECALL">Gọi lại ca lỡ hẹn</option>
+                            <option value="FEEDBACK_COMPLAINT">Góp ý / Khiếu nại</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 text-end">
+                        <span class="badge bg-primary px-2 py-1" id="dayTasksModalFilteredCount" style="font-size: 12px;">0 công việc</span>
+                    </div>
+                </div>
+            </div>
+            <div class="cc-modal-body modal-body-scroll" style="max-height: 60vh;">
+                <div id="ccDayTasksModalList" class="d-flex flex-column gap-2"></div>
+            </div>
+            <div class="modal-footer p-2 bg-light border-top">
+                <button type="button" class="btn btn-secondary btn-sm px-3" id="cancelDayTasksModalBtn">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST REALTIME -->
+<div id="ccToastContainer" class="cc-toast-container" aria-live="polite" aria-atomic="true"></div>
 
 </body>
 </html>

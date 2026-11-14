@@ -2513,7 +2513,7 @@
                         <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 fw-bold"
                                 style="font-size: 11px;"
                                 title="Mở khám ngay cho bệnh nhân này"
-                                onclick="onSelectPatientCard(${p.profileId}, ${p.latestVisitId || 'null'}, ${p.hasActiveVisit})">
+                                onclick="onSelectPatientCard(${p.profileId}, '${p.latestVisitToken || ''}', ${p.hasActiveVisit})">
                             <i class="bi bi-arrow-right-circle-fill"></i> Vào khám
                         </button>
                     </div>
@@ -2524,13 +2524,13 @@
         container.innerHTML = html;
     }
 
-    function onSelectPatientCard(profileId, latestVisitId, hasActiveVisit) {
+    function onSelectPatientCard(profileId, latestVisitToken, hasActiveVisit) {
         const branchId = typeof getSelectedBranchId === 'function' ? getSelectedBranchId() : '';
         const branchSuffix = branchId ? '?branchId=' + branchId : '';
-        if (latestVisitId && hasActiveVisit) {
-            window.location.href = `/doctor/examination/${latestVisitId}/diagnoses${branchSuffix}`;
-        } else if (latestVisitId) {
-            window.location.href = `/doctor/examination/${latestVisitId}/diagnoses${branchSuffix}`;
+        if (latestVisitToken && hasActiveVisit) {
+            window.location.href = `/doctor/examination/${latestVisitToken}/diagnoses${branchSuffix}`;
+        } else if (latestVisitToken) {
+            window.location.href = `/doctor/examination/${latestVisitToken}/diagnoses${branchSuffix}`;
         } else {
             openOrCreatePatientVisit(profileId);
         }

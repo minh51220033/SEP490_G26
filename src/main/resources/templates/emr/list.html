@@ -385,7 +385,7 @@
                                         </form>
                                         <a class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 rounded-3"
                                            th:if="${!visit.ready}"
-                                           th:href="@{/doctor/examination/{id}/diagnoses(id=${visit.visitId})}"
+                                           th:href="@{/doctor/examination/{id}/diagnoses(id=${idCodec.encodeVisit(visit.visitId)})}"
                                            title="Mở màn hình khám để bổ sung thông tin">
                                             <i class="bi bi-pencil-square"></i> Bổ sung
                                         </a>

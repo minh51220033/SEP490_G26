@@ -38,6 +38,21 @@ public class SystemNotification {
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
 
+    @Column(name = "task_id")
+    private Long taskId;
+
+    @Column(name = "branch_id")
+    private Long branchId;
+
+    @Column(name = "read_at")
+    private LocalDateTime readAt;
+
+    @Column(name = "priority_level", length = 20)
+    private String priorityLevel;
+
+    @Column(name = "action_url", length = 255)
+    private String actionUrl;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

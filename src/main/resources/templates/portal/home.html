@@ -749,7 +749,9 @@
         <!-- 1. Chi nhánh tiếp nhận -->
         <div class="cv-form-group">
             <div class="d-flex justify-content-between align-items-center mb-1">
-                <label for="bkBranch" class="cv-form-label mb-0">Cơ sở (Chi nhánh) <span class="text-danger">*</span></label>
+                <label for="bkBranch" class="cv-form-label mb-0">
+                    <i class="bi bi-geo-alt-fill text-primary me-1"></i> Cơ sở (Chi nhánh) <span class="text-danger">*</span>
+                </label>
                 <span id="bkBranchBadge" class="small text-muted text-truncate" style="max-width: 220px; font-size: 11.5px;"></span>
             </div>
             <select id="bkBranch" name="branchId" class="cv-form-select" required>
@@ -767,7 +769,9 @@
         <!-- 2. Dịch vụ quan tâm + Nút Chi tiết dịch vụ -->
         <div class="cv-form-group">
             <div class="d-flex justify-content-between align-items-center mb-1">
-                <label for="bkService" class="cv-form-label mb-0">Dịch vụ quan tâm</label>
+                <label for="bkService" class="cv-form-label mb-0">
+                    <i class="bi bi-heart-pulse-fill text-primary me-1"></i> Dịch vụ quan tâm
+                </label>
                 <a id="bkServiceDetailBtn" href="/services" target="_blank" class="cv-btn-link-detail" style="display: none;">
                     <i class="bi bi-box-arrow-up-right"></i> Chi tiết
                 </a>
@@ -786,15 +790,19 @@
         <!-- 3. Ngày mong muốn & Buổi khám -->
         <div class="cv-form-row-2">
             <div>
-                <label for="bkDate" class="cv-form-label">Ngày mong muốn <span class="text-danger">*</span></label>
-                <input id="bkDate" name="date" type="date" class="cv-form-input" required th:min="${#temporals.format(T(java.time.LocalDate).now(), 'yyyy-MM-dd')}" />
+                <label for="bkDate" class="cv-form-label">
+                    <i class="bi bi-calendar-event-fill text-primary me-1"></i> Ngày mong muốn <span class="text-danger">*</span>
+                </label>
+                <input id="bkDate" name="date" type="date" class="cv-form-input" required />
             </div>
             <div>
-                <label for="bkSession" class="cv-form-label">Ca khám <span class="text-danger">*</span></label>
+                <label for="bkSession" class="cv-form-label">
+                    <i class="bi bi-clock-fill text-primary me-1"></i> Buổi khám <span class="text-danger">*</span>
+                </label>
                 <select id="bkSession" name="session" class="cv-form-select" required>
-                    <option value="MORNING">Ca sáng</option>
-                    <option value="AFTERNOON" selected>Ca chiều</option>
-                    <option value="EVENING">Ca tối</option>
+                    <option value="MORNING">Buổi sáng (08:00 – 12:00)</option>
+                    <option value="AFTERNOON" selected>Buổi chiều (13:30 – 17:30)</option>
+                    <option value="EVENING">Buổi tối (18:00 – 21:30)</option>
                 </select>
             </div>
         </div>
@@ -803,7 +811,9 @@
         <div class="cv-form-row-2">
             <div>
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                    <label for="bkDoctor" class="cv-form-label mb-0">Bác sĩ đích danh</label>
+                    <label for="bkDoctor" class="cv-form-label mb-0">
+                        <i class="bi bi-person-badge-fill text-primary me-1"></i> Bác sĩ chỉ định
+                    </label>
                 </div>
                 <select id="bkDoctor" name="doctorId" class="cv-form-select">
                     <option value="">Không yêu cầu bác sĩ</option>
@@ -811,7 +821,9 @@
             </div>
             <div>
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                    <label for="bkSlotTime" class="cv-form-label mb-0">Giờ hẹn dự kiến</label>
+                    <label for="bkSlotTime" class="cv-form-label mb-0">
+                        <i class="bi bi-stopwatch-fill text-primary me-1"></i> Giờ hẹn dự kiến
+                    </label>
                 </div>
                 <select id="bkSlotTime" name="slotTime" class="cv-form-select">
                     <option value="">Linh hoạt trong ca</option>
@@ -826,7 +838,7 @@
         <div class="cv-form-row-2">
             <div>
                 <label for="bkName" class="cv-form-label">
-                    Họ và tên <span class="text-danger">*</span>
+                    <i class="bi bi-person-fill text-primary me-1"></i> Họ và tên <span class="text-danger">*</span>
                 </label>
                 <input id="bkName"
                        name="name"
@@ -838,7 +850,7 @@
             </div>
             <div>
                 <label for="bkPhone" class="cv-form-label">
-                    Số điện thoại <span class="text-danger">*</span>
+                    <i class="bi bi-telephone-fill text-primary me-1"></i> Số điện thoại <span class="text-danger">*</span>
                 </label>
                 <input id="bkPhone"
                        name="phone"
@@ -852,7 +864,9 @@
         </div>
 
         <div class="cv-form-group">
-            <label for="bkNote" class="cv-form-label">Lý do đến khám / Triệu chứng ban đầu</label>
+            <label for="bkNote" class="cv-form-label">
+                <i class="bi bi-chat-left-dots-fill text-primary me-1"></i> Lý do đến khám / Triệu chứng ban đầu
+            </label>
             <textarea id="bkNote"
                       name="note"
                       rows="2"
@@ -1079,6 +1093,391 @@
         let targetDoctorName = null;
         let availSequence = 0;
 
+        // --- Custom Select Engine cho Drawer ---
+        function removeVietnameseTones(str) {
+            if (!str) return '';
+            return str.normalize('NFD')
+                      .replace(/[\u0300-\u036f]/g, '')
+                      .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+                      .toLowerCase()
+                      .trim();
+        }
+
+        function initBookingCustomSelect(selectEl, config = {}) {
+            if (!selectEl) return null;
+            if (selectEl._customSelect) return selectEl._customSelect;
+
+            selectEl.classList.add('cv-native-select-hidden');
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'cv-cselect';
+            if (config.className) wrapper.classList.add(config.className);
+
+            const trigger = document.createElement('button');
+            trigger.type = 'button';
+            trigger.className = 'cv-cselect__trigger';
+            trigger.setAttribute('aria-haspopup', 'listbox');
+            trigger.setAttribute('aria-expanded', 'false');
+
+            const valueWrap = document.createElement('div');
+            valueWrap.className = 'cv-cselect__value-wrap';
+
+            const valueText = document.createElement('span');
+            valueText.className = 'cv-cselect__value';
+            valueWrap.appendChild(valueText);
+
+            const iconsWrap = document.createElement('span');
+            iconsWrap.className = 'cv-cselect__icons';
+            iconsWrap.innerHTML = `
+                <span class="cv-cselect__spinner spinner-border spinner-border-sm" style="display: none;" role="status" aria-hidden="true"></span>
+                <i class="bi bi-chevron-down cv-cselect__arrow" aria-hidden="true"></i>
+            `;
+
+            trigger.appendChild(valueWrap);
+            trigger.appendChild(iconsWrap);
+            wrapper.appendChild(trigger);
+
+            const menu = document.createElement('div');
+            menu.className = 'cv-cselect__menu';
+            menu.setAttribute('role', 'listbox');
+
+            let searchInput = null;
+            let searchClearBtn = null;
+            if (config.search) {
+                const searchBox = document.createElement('div');
+                searchBox.className = 'cv-cselect__search-box';
+                searchBox.innerHTML = `
+                    <i class="bi bi-search cv-cselect__search-icon" aria-hidden="true"></i>
+                    <input type="text" class="cv-cselect__search-input" placeholder="${config.searchPlaceholder || 'Tìm kiếm nhanh...'}" autocomplete="off" />
+                    <button type="button" class="cv-cselect__search-clear" style="display: none;" aria-label="Xóa tìm kiếm">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </button>
+                `;
+                searchInput = searchBox.querySelector('.cv-cselect__search-input');
+                searchClearBtn = searchBox.querySelector('.cv-cselect__search-clear');
+                menu.appendChild(searchBox);
+
+                searchClearBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    searchInput.value = '';
+                    searchClearBtn.style.display = 'none';
+                    filterItems('');
+                    searchInput.focus();
+                });
+
+                searchInput.addEventListener('input', () => {
+                    const query = searchInput.value.trim();
+                    searchClearBtn.style.display = query ? 'inline-flex' : 'none';
+                    filterItems(query);
+                });
+
+                searchInput.addEventListener('click', (e) => e.stopPropagation());
+                searchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        close();
+                        trigger.focus();
+                    }
+                });
+            }
+
+            const listEl = document.createElement('div');
+            listEl.className = 'cv-cselect__list';
+            menu.appendChild(listEl);
+
+            const emptyEl = document.createElement('div');
+            emptyEl.className = 'cv-cselect__empty';
+            emptyEl.style.display = 'none';
+            emptyEl.innerHTML = '<i class="bi bi-inbox me-1"></i> Không tìm thấy kết quả phù hợp';
+            menu.appendChild(emptyEl);
+
+            wrapper.appendChild(menu);
+            selectEl.parentNode.insertBefore(wrapper, selectEl.nextSibling);
+
+            let itemsData = [];
+
+            function parseOption(opt) {
+                const rawText = (opt.textContent || '').trim();
+                const value = opt.value;
+                let title = rawText;
+                let desc = '';
+                let badge = null;
+                let badgeType = '';
+
+                if (config.type === 'branch') {
+                    const addr = opt.getAttribute('data-address');
+                    if (addr) desc = addr;
+                } else if (config.type === 'service') {
+                    if (!value) {
+                        title = 'Khám & tư vấn tổng quát';
+                        desc = 'Chưa chọn dịch vụ cụ thể';
+                    }
+                } else if (config.type === 'session') {
+                    if (rawText.includes('(')) {
+                        const parts = rawText.split('(');
+                        title = parts[0].trim();
+                        desc = parts[1].replace(')', '').trim();
+                    }
+                } else if (config.type === 'doctor') {
+                    if (!value) {
+                        if (rawText.toLowerCase().includes('không yêu cầu')) {
+                            title = 'Không yêu cầu bác sĩ';
+                            desc = 'Lễ tân điều phối khi đến';
+                        } else if (rawText.toLowerCase().includes('chưa có bác sĩ')) {
+                            title = 'Chưa có bác sĩ trực buổi này';
+                            desc = 'Vui lòng đổi ngày hoặc buổi khác';
+                        }
+                    } else {
+                        let remainingText = '';
+                        const matchSeats = rawText.match(/\(Còn\s+(\d+)\s+chỗ\)/i);
+                        if (matchSeats) {
+                            const seats = parseInt(matchSeats[1], 10);
+                            badge = `Còn ${seats} chỗ`;
+                            badgeType = seats <= 2 ? 'is-few' : '';
+                            remainingText = rawText.replace(matchSeats[0], '').trim();
+                        } else {
+                            remainingText = rawText;
+                        }
+
+                        if (remainingText.includes('·')) {
+                            const dotParts = remainingText.split('·');
+                            title = dotParts[0].trim();
+                            desc = dotParts.slice(1).join('·').trim();
+                        } else {
+                            title = remainingText;
+                        }
+                    }
+                } else if (config.type === 'slot') {
+                    if (!value) {
+                        if (rawText.toLowerCase().includes('linh hoạt')) {
+                            title = 'Linh hoạt trong ca';
+                            desc = 'Khám theo thứ tự khi đến';
+                        } else if (rawText.toLowerCase().includes('không có giờ')) {
+                            title = 'Không có giờ trống';
+                            desc = 'Vui lòng đổi buổi khám';
+                        } else if (rawText.toLowerCase().includes('đang tải')) {
+                            title = 'Đang tải giờ trống...';
+                        }
+                    } else {
+                        if (rawText.includes('·')) {
+                            const parts = rawText.split('·');
+                            title = parts[0].trim();
+                            const sub = parts[1].trim();
+                            badge = sub;
+                            if (sub.includes('1 chỗ')) badgeType = 'is-few';
+                        }
+                    }
+                }
+
+                return {
+                    value,
+                    rawText,
+                    title,
+                    desc,
+                    badge,
+                    badgeType,
+                    disabled: opt.disabled,
+                    selected: opt.selected,
+                    searchKey: removeVietnameseTones(title + ' ' + desc + ' ' + (badge || ''))
+                };
+            }
+
+            function sync() {
+                const spinner = trigger.querySelector('.cv-cselect__spinner');
+                const arrow = trigger.querySelector('.cv-cselect__arrow');
+                const firstText = selectEl.options[0]?.text || '';
+                const isLoading = selectEl.disabled && (firstText.includes('Đang tải') || firstText.includes('Đang kiểm tra'));
+
+                if (isLoading) {
+                    if (spinner) spinner.style.display = 'inline-block';
+                    if (arrow) arrow.style.display = 'none';
+                } else {
+                    if (spinner) spinner.style.display = 'none';
+                    if (arrow) arrow.style.display = 'inline-block';
+                }
+
+                wrapper.classList.toggle('is-disabled', selectEl.disabled);
+                trigger.disabled = selectEl.disabled;
+
+                itemsData = Array.from(selectEl.options).map(parseOption);
+                renderList(itemsData);
+                updateSelectedDisplay();
+            }
+
+            function renderList(items) {
+                listEl.innerHTML = '';
+                items.forEach((item, idx) => {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'cv-cselect__item';
+                    itemEl.setAttribute('role', 'option');
+                    itemEl.setAttribute('data-value', item.value);
+                    itemEl.setAttribute('data-index', String(idx));
+                    if (item.selected) itemEl.classList.add('is-selected');
+
+                    let badgeHtml = '';
+                    if (item.badge) {
+                        badgeHtml = `<span class="cv-cselect__badge-seats ${item.badgeType}">${item.badge}</span>`;
+                    }
+
+                    let descHtml = '';
+                    if (item.desc || badgeHtml) {
+                        descHtml = `<div class="cv-cselect__item-desc">
+                            ${item.desc ? `<span>${item.desc}</span>` : ''}
+                            ${badgeHtml}
+                        </div>`;
+                    }
+
+                    itemEl.innerHTML = `
+                        <div class="cv-cselect__item-content">
+                            <div class="cv-cselect__item-title" title="${item.rawText}">${item.title}</div>
+                            ${descHtml}
+                        </div>
+                        <i class="bi bi-check2 cv-cselect__item-check" aria-hidden="true"></i>
+                    `;
+
+                    itemEl.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        selectValue(item.value);
+                    });
+
+                    listEl.appendChild(itemEl);
+                });
+            }
+
+            function updateSelectedDisplay() {
+                const curOpt = selectEl.options[selectEl.selectedIndex];
+                if (curOpt) {
+                    const parsed = parseOption(curOpt);
+                    valueText.textContent = parsed.title;
+                    valueText.title = parsed.rawText;
+                } else {
+                    valueText.textContent = config.placeholder || 'Vui lòng chọn...';
+                    valueText.title = '';
+                }
+
+                listEl.querySelectorAll('.cv-cselect__item').forEach(el => {
+                    const val = el.getAttribute('data-value');
+                    el.classList.toggle('is-selected', val === selectEl.value);
+                });
+            }
+
+            function selectValue(val) {
+                if (selectEl.value !== val) {
+                    selectEl.value = val;
+                    selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                updateSelectedDisplay();
+                close();
+            }
+
+            function filterItems(query) {
+                const q = removeVietnameseTones(query);
+                let matchCount = 0;
+                const domItems = listEl.querySelectorAll('.cv-cselect__item');
+                domItems.forEach((el, idx) => {
+                    const data = itemsData[idx];
+                    if (!data) return;
+                    const matches = !q || data.searchKey.includes(q);
+                    el.style.display = matches ? 'flex' : 'none';
+                    if (matches) matchCount++;
+                });
+                emptyEl.style.display = matchCount === 0 ? 'block' : 'none';
+            }
+
+            function open() {
+                if (selectEl.disabled) return;
+                document.querySelectorAll('.cv-cselect.is-open').forEach(el => {
+                    if (el !== wrapper) el.classList.remove('is-open');
+                });
+                wrapper.classList.add('is-open');
+                trigger.setAttribute('aria-expanded', 'true');
+                if (searchInput) {
+                    searchInput.value = '';
+                    if (searchClearBtn) searchClearBtn.style.display = 'none';
+                    filterItems('');
+                    setTimeout(() => searchInput.focus(), 80);
+                }
+            }
+
+            function close() {
+                wrapper.classList.remove('is-open');
+                trigger.setAttribute('aria-expanded', 'false');
+            }
+
+            function toggle() {
+                if (wrapper.classList.contains('is-open')) close();
+                else open();
+            }
+
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggle();
+            });
+
+            trigger.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    open();
+                } else if (e.key === 'Escape') {
+                    close();
+                }
+            });
+
+            selectEl.addEventListener('change', () => {
+                updateSelectedDisplay();
+            });
+
+            const observer = new MutationObserver(() => {
+                sync();
+            });
+            observer.observe(selectEl, { childList: true, attributes: true, attributeFilter: ['disabled'] });
+
+            sync();
+
+            const api = { wrapper, selectEl, sync, open, close };
+            selectEl._customSelect = api;
+            return api;
+        }
+
+        // Khởi tạo các Custom Select cho 5 dropdown trong Drawer
+        const branchCustomSelect = initBookingCustomSelect(branchSelect, {
+            type: 'branch',
+            search: true,
+            searchPlaceholder: 'Tìm chi nhánh theo tên, địa chỉ...',
+            placeholder: 'Chọn cơ sở khám'
+        });
+
+        const serviceCustomSelect = initBookingCustomSelect(serviceSelect, {
+            type: 'service',
+            search: true,
+            searchPlaceholder: 'Tìm dịch vụ theo tên...',
+            placeholder: 'Chọn dịch vụ quan tâm'
+        });
+
+        const sessionCustomSelect = initBookingCustomSelect(sessionSelect, {
+            type: 'session',
+            search: false,
+            placeholder: 'Chọn buổi khám'
+        });
+
+        const doctorCustomSelect = initBookingCustomSelect(doctorSelect, {
+            type: 'doctor',
+            search: true,
+            searchPlaceholder: 'Tìm bác sĩ, chuyên khoa...',
+            placeholder: 'Chọn bác sĩ chỉ định'
+        });
+
+        const slotCustomSelect = initBookingCustomSelect(slotSelect, {
+            type: 'slot',
+            search: false,
+            placeholder: 'Chọn giờ hẹn dự kiến'
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.cv-cselect')) {
+                document.querySelectorAll('.cv-cselect.is-open').forEach(el => el.classList.remove('is-open'));
+            }
+        });
+
         if (dateInput) {
             const today = new Date();
             const yyyy = today.getFullYear();
@@ -1138,34 +1537,6 @@
                     footPhoneCall.textContent = phone;
                     footPhoneCall.href = 'tel:' + phone;
                 }
-            }
-        }
-
-        // Tải danh sách ca khám và giờ làm việc cấu hình thực tế của chi nhánh (không ép cứng)
-        async function loadSessionsForBranch(branchId) {
-            if (!sessionSelect || !branchId) return;
-            const prevSession = sessionSelect.value;
-            try {
-                const res = await fetch(`/api/public/booking/sessions?branchId=${encodeURIComponent(branchId)}`);
-                const list = await res.json().catch(() => []);
-                if (Array.isArray(list) && list.length > 0) {
-                    sessionSelect.innerHTML = '';
-                    list.forEach(s => {
-                        const opt = document.createElement('option');
-                        opt.value = s.session;
-                        opt.textContent = s.label || s.name;
-                        opt.setAttribute('data-start', s.startTime || '');
-                        opt.setAttribute('data-end', s.endTime || '');
-                        sessionSelect.appendChild(opt);
-                    });
-                    if (prevSession && list.some(s => s.session === prevSession)) {
-                        sessionSelect.value = prevSession;
-                    } else {
-                        sessionSelect.value = list[0].session;
-                    }
-                }
-            } catch (err) {
-                console.warn('Could not load dynamic sessions:', err);
             }
         }
 
@@ -1322,21 +1693,8 @@
         }
 
         // Lắng nghe sự kiện thay đổi của các trường trong Drawer để đồng bộ URL & giao diện
-        if (branchSelect) branchSelect.addEventListener('change', async () => {
-            updateBranchInfo();
-            await loadSessionsForBranch(branchSelect.value);
-            updateFullAppointmentUrl();
-            checkAvailability();
-        });
-        if (dateInput) dateInput.addEventListener('change', () => {
-            const todayIso = new Date().toISOString().split('T')[0];
-            if (dateInput.value && dateInput.value < todayIso) {
-                alert('Không thể chọn ngày trong quá khứ. Hệ thống đã tự động chuyển về ngày hôm nay.');
-                dateInput.value = todayIso;
-            }
-            updateFullAppointmentUrl();
-            checkAvailability();
-        });
+        if (branchSelect) branchSelect.addEventListener('change', () => { updateBranchInfo(); updateFullAppointmentUrl(); checkAvailability(); });
+        if (dateInput) dateInput.addEventListener('change', () => { updateFullAppointmentUrl(); checkAvailability(); });
         if (sessionSelect) sessionSelect.addEventListener('change', () => { updateFullAppointmentUrl(); checkAvailability(); });
         if (doctorSelect) doctorSelect.addEventListener('change', () => {
             targetDoctorId = doctorSelect.value || null;
@@ -1351,12 +1709,7 @@
             loadSlots(availSequence);
         });
 
-        // Khởi tạo dynamic sessions theo chi nhánh ban đầu
-        if (branchSelect && branchSelect.value) {
-            loadSessionsForBranch(branchSelect.value);
-        }
-
-        async function openBooking(opts = {}) {
+        function openBooking(opts = {}) {
             if (!drawer || !overlay) return;
             if (errorEl) errorEl.classList.remove('is-visible');
             if (successBox) successBox.classList.remove('is-visible');
@@ -1381,10 +1734,6 @@
                         break;
                     }
                 }
-            }
-
-            if (branchSelect && branchSelect.value) {
-                await loadSessionsForBranch(branchSelect.value);
             }
 
             // 3. Pre-fill Dịch vụ (Service)
@@ -1417,6 +1766,8 @@
             }
 
             // Cập nhật lại các liên kết & trạng thái
+            if (branchSelect) branchSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            if (serviceSelect) serviceSelect.dispatchEvent(new Event('change', { bubbles: true }));
             updateBranchInfo();
             updateServiceDetailLink();
             updateFullAppointmentUrl();
@@ -1432,6 +1783,7 @@
 
         function closeBooking() {
             if (!drawer || !overlay) return;
+            document.querySelectorAll('.cv-cselect.is-open').forEach(el => el.classList.remove('is-open'));
             drawer.classList.remove('is-open');
             overlay.classList.remove('is-open');
             document.body.style.overflow = '';

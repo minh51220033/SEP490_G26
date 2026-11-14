@@ -226,7 +226,7 @@
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item" th:href="@{'/doctor/patient-records/' + ${patient.id} + '#medical'}">
+                            <a class="dropdown-item" th:href="@{'/doctor/patient-records/' + ${idCodec.encodePatient(patient.id)} + '#medical'}">
                                 <i class="bi bi-hospital text-info me-2"></i>Quản lý BAĐT (Bác sĩ/Admin)
                             </a>
                         </li>
@@ -522,7 +522,7 @@
                                 <span class="text-secondary small">Mỗi hồ sơ bệnh nhân có thể có nhiều bệnh án điện tử gắn với các đợt khám và điều trị. Admin có quyền xem toàn bộ bệnh án trên hệ thống.</span>
                             </div>
                             <div class="d-flex gap-2">
-                                <a th:href="@{'/doctor/patient-records/' + ${patient.id} + '#medical'}" class="fin-btn fin-btn-sm fin-btn-primary">
+                                <a th:href="@{'/doctor/patient-records/' + ${idCodec.encodePatient(patient.id)} + '#medical'}" class="fin-btn fin-btn-sm fin-btn-primary">
                                     <i class="bi bi-folder2-open"></i> Mở giao diện Quản lý BAĐT đầy đủ
                                 </a>
                             </div>
@@ -532,7 +532,7 @@
                             <i class="bi bi-journal-medical text-secondary fs-1 d-block mb-2"></i>
                             <h6 class="text-secondary">Chưa có bệnh án điện tử nào</h6>
                             <p class="text-muted small mb-3">Bệnh nhân chưa có bệnh án điện tử (MS: BA-18) nào được khởi tạo.</p>
-                            <a th:href="@{'/doctor/patient-records/' + ${patient.id} + '#medical'}" class="fin-btn fin-btn-sm fin-btn-outline">
+                            <a th:href="@{'/doctor/patient-records/' + ${idCodec.encodePatient(patient.id)} + '#medical'}" class="fin-btn fin-btn-sm fin-btn-outline">
                                 <i class="bi bi-plus-circle"></i> Chuyển sang trang Khởi tạo BAĐT từ ca khám
                             </a>
                         </div>
