@@ -25,6 +25,10 @@ public class TreatmentPlanRequestDTO {
     private String startDate; // yyyy-MM-dd
     private String expectedEndDate; // yyyy-MM-dd
     private String notes;
+    private Boolean isInstallment;
+
+    @Builder.Default
+    private List<TreatmentPlanInstallmentDTO> installments = new ArrayList<>();
 
     @Builder.Default
     private List<TreatmentPlanStageRequestDTO> stages = new ArrayList<>();

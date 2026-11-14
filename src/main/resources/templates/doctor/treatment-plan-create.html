@@ -410,7 +410,7 @@
                     </div>
                     <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
                         <span class="badge bg-light text-dark border" id="diagSelectedSummary">0 đã chọn</span>
-                        <button type="button" class="btn btn-sm btn-outline-primary py-0.5 px-2.5 rounded"
+                        <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 rounded"
                                 style="font-size: 12.5px;" onclick="selectAllDiagnoses()">
                             Chọn tất cả
                         </button>
@@ -530,6 +530,101 @@
                 </div>
 
                 <!-- ========================================================================= -->
+                <!-- MỤC 5: HÌNH THỨC THANH TOÁN & LỘ TRÌNH CHIA ĐỢT (THANH GẬP MÀU XÁM)      -->
+                <!-- ========================================================================= -->
+                <div class="df-foldable-bar is-expanded" id="barSection5" onclick="toggleSection('5')">
+                    <div class="df-foldable-title">
+                        <i class="bi bi-chevron-right df-chevron" id="chevron5"></i>
+                        <span>5. HÌNH THỨC THANH TOÁN &amp; LỘ TRÌNH CHIA ĐỢT (TRẢ GÓP NHA KHOA)</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
+                        <span class="badge bg-light text-secondary border" id="installmentBadgeSummary">1 lần</span>
+                        <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                            <input class="form-check-input" type="checkbox" role="switch" id="isInstallmentSwitch"
+                                   style="width: 40px; height: 20px; cursor: pointer;" onchange="toggleInstallmentSection()">
+                            <label class="form-check-label fw-bold text-dark small" for="isInstallmentSwitch" style="cursor: pointer;">
+                                Trả theo đợt
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="df-foldable-content" id="contentSection5" style="display: none;">
+                    <div class="p-3 bg-light rounded-3 border mb-3">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                            <span class="fw-bold text-primary">
+                                <i class="bi bi-magic me-1"></i> Công cụ phân bổ đợt nhanh (DentalSoft Auto-Split)
+                            </span>
+                            <span class="badge bg-white text-secondary border">Tổng chi phí phác đồ: <strong class="text-primary" id="instPlanTotalDisplay">0 đ</strong></span>
+                        </div>
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold text-muted mb-1">Đợt 1 đóng ban đầu (Gắn mắc cài / Cọc):</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" class="form-control" id="instDownPayment" placeholder="VD: 5000000" value="5000000" min="0" step="500000">
+                                    <span class="input-group-text">đ</span>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold text-muted mb-1">Số đợt còn lại:</label>
+                                <input type="number" class="form-control form-control-sm" id="instRemainingCount" value="9" min="1" max="36">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold text-muted mb-1">Khoảng cách đợt:</label>
+                                <select class="form-select form-select-sm" id="instInterval">
+                                    <option value="1">1 tháng / đợt (Siết răng định kỳ)</option>
+                                    <option value="2">2 tháng / đợt</option>
+                                    <option value="0.5">2 tuần (14 ngày) / đợt</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-primary fw-bold flex-grow-1" onclick="autoGenerateInstallments()">
+                                    <i class="bi bi-calculator me-1"></i> Chia đều tự động
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" onclick="generateInstallmentsFromStages()" title="Chia đợt theo các Giai đoạn điều trị của Bác sĩ">
+                                    <i class="bi bi-diagram-3 me-1"></i> Theo Giai đoạn
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bảng chi tiết các đợt theo chuẩn .df-clean-table -->
+                    <div class="table-responsive">
+                        <table class="df-clean-table" id="tableInstallments">
+                            <thead>
+                                <tr>
+                                    <th style="width: 70px;" class="text-center">Đợt</th>
+                                    <th style="min-width: 220px;">Nội dung đợt / Hạng mục điều trị</th>
+                                    <th style="width: 160px;">Ngày dự kiến</th>
+                                    <th style="width: 180px;" class="text-end">Dự kiến thu (VNĐ)</th>
+                                    <th>Ghi chú</th>
+                                    <th style="width: 60px;" class="text-center">Xóa</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyInstallments">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                            <tfoot>
+                                <tr style="background: #f8fafc; font-weight: 700;">
+                                    <td colspan="3" class="text-end fw-bold">TỔNG CÁC ĐỢT DỰ KIẾN:</td>
+                                    <td class="text-end fw-bold text-primary" id="instSumDisplay">0 đ</td>
+                                    <td colspan="2" id="instDiffNotice" class="small text-muted">Chênh lệch: 0 đ</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addCustomInstallmentRow()">
+                            <i class="bi bi-plus-circle me-1"></i> Thêm đợt thủ công
+                        </button>
+                        <div class="text-muted small">
+                            <i class="bi bi-info-circle text-primary me-1"></i>
+                            <em>Lưu ý: Tiền các đợt là số tiền dự kiến để Lễ tân nhắc trước. Khi thanh toán thực tế không fix cứng số tiền (DentalSoft cascade logic).</em>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================================================= -->
                 <!-- THANH CUỐI: TỔNG GIÁ TIỀN DỰ KIẾN TOÀN PHÁC ĐỒ                          -->
                 <!-- ========================================================================= -->
                 <div class="df-footer-summary">
@@ -556,7 +651,7 @@
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <a th:href="@{'/doctor/examination/' + ${visit.visitId} + '/diagnoses#tab-treatment-plan'}"
-                           class="btn btn-outline-secondary px-3.5 py-2 fw-semibold rounded-pill">
+                           class="btn btn-outline-secondary px-3 py-2 fw-semibold rounded-pill">
                             Hủy &amp; Quay lại ca khám
                         </a>
                         <button type="button" id="btnSaveTreatmentPlan" class="btn btn-primary px-4 py-2 fw-bold rounded-pill shadow-sm d-flex align-items-center gap-2"
@@ -1077,6 +1172,16 @@
         return Math.round(amount || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + ' đ';
     }
 
+    function escapeHtml(str) {
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     function calculateDateStr(baseStr, days) {
         const d = new Date(baseStr || new Date().toISOString().split('T')[0]);
         d.setDate(d.getDate() + (parseInt(days, 10) || 0));
@@ -1101,11 +1206,14 @@
         } else {
             bar.classList.add('is-expanded');
             content.style.display = 'block';
+            if (secId === '5') {
+                renderInstallmentsTable();
+            }
         }
     }
 
     function toggleAllSections(expand) {
-        ['1', '2', '3', '4'].forEach(id => {
+        ['1', '2', '3', '4', '5'].forEach(id => {
             const bar = document.getElementById(`barSection${id}`);
             const content = document.getElementById(`contentSection${id}`);
             if (!bar || !content) return;
@@ -1291,7 +1399,7 @@
                     </td>
                     <td>
                         <div class="small">
-                            <div class="d-flex align-items-center gap-1.5 mb-1">
+                            <div class="d-flex align-items-center gap-2 mb-1">
                                 <span class="text-muted">${formatMoney(unitP)} &times;</span>
                                 <input type="number" class="form-control form-control-sm text-center fw-bold"
                                        style="width: 55px; height: 32px; font-size: 13.5px; border-color: #0284c7;"
@@ -1463,7 +1571,7 @@
                     const pool = (d.stepsPool && d.stepsPool.length > 0) ? d.stepsPool : (preset?.stepsPool || []);
                     const poolOptions = pool.map(opt => `
                         <div class="combobox-item" onclick="chooseStepItem('${d.id}', ${sIdx}, ${spIdx}, '${opt.replace(/'/g, "\\'")}')">
-                            <i class="bi bi-chevron-right text-primary me-1.5" style="font-size: 11px;"></i>
+                            <i class="bi bi-chevron-right text-primary me-1" style="font-size: 11px;"></i>
                             <span>${opt}</span>
                         </div>
                     `).join('');
@@ -1480,7 +1588,7 @@
                     }).join(' ');
 
                     const addToothBtn = `
-                        <button type="button" class="btn btn-sm btn-outline-info py-0 px-1.5" style="font-size: 11px;"
+                        <button type="button" class="btn btn-sm btn-outline-info py-0 px-2" style="font-size: 11px;"
                                 onclick="promptAddStepTooth('${d.id}', ${sIdx}, ${spIdx})" title="Thêm răng khác áp dụng cho bước này">
                             <i class="bi bi-plus-circle"></i> Răng
                         </button>
@@ -1533,7 +1641,7 @@
                                            min="0" step="10000" value="${stepPrice}"
                                            oninput="changeStepPrice('${d.id}', ${sIdx}, ${spIdx}, this.value)"
                                            placeholder="0">
-                                    <span class="input-group-text bg-light text-muted small px-1.5" style="font-size: 11px;">đ</span>
+                                    <span class="input-group-text bg-light text-muted small px-2" style="font-size: 11px;">đ</span>
                                 </div>
                             </td>
                             <td style="width: 12%;" class="text-end fw-bold text-primary" id="step-total-${d.id}-${sIdx}-${spIdx}" style="font-size: 13px;">
@@ -1556,9 +1664,9 @@
 
                 stagesHtml += `
                     <div class="card mb-3 border">
-                        <div class="card-header bg-white py-2.5 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="card-header bg-white py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
                             <div class="d-flex align-items-center gap-2 flex-grow-1">
-                                <span class="badge bg-secondary rounded-pill px-2.5 py-1 fw-bold fs-7">Giai đoạn ${sIdx + 1}</span>
+                                <span class="badge bg-secondary rounded-pill px-2 py-1 fw-bold fs-7">Giai đoạn ${sIdx + 1}</span>
                                 <input type="text" class="form-control form-control-sm fw-bold text-dark border-0 bg-light" style="max-width: 440px; font-size: 14px;"
                                        value="${st.name}">
                             </div>
@@ -1869,6 +1977,9 @@
         recalculatePlanEndDate();
         renderRoadmaps();
         renderFooter();
+        if (typeof updateInstallmentTotal === 'function') {
+            updateInstallmentTotal();
+        }
     }
 
     document.addEventListener('DOMContentLoaded', async function() {
@@ -1880,6 +1991,9 @@
 
         recalculatePlanEndDate();
         renderAll();
+        if (typeof renderInstallmentsTable === 'function') {
+            renderInstallmentsTable();
+        }
 
         // Kiểm tra nếu có tham số ?planId=... để nạp dữ liệu chi tiết kế hoạch
         const urlParams = new URLSearchParams(window.location.search);
@@ -1908,12 +2022,99 @@
                             if (p.length === 3) endInp.value = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
                         }
 
-                        // Cập nhật giao diện
+                        // Cập nhật giao diện tiêu đề
                         const cardHeader = document.querySelector('.df-main-card-header');
                         if (cardHeader) {
                             const titleEl = cardHeader.querySelector('h5');
                             if (titleEl) {
-                                titleEl.innerHTML = `<span class="badge bg-primary text-white me-2 px-2.5 py-1 rounded-pill" style="font-size: 13px;">${plan.planCode || 'KHDT'}</span>Chi tiết &amp; Cập nhật Kế hoạch điều trị`;
+                                titleEl.innerHTML = `<span class="badge bg-primary text-white me-2 px-2 py-1 rounded-pill" style="font-size: 13px;">${plan.planCode || 'KHDT'}</span>Chi tiết &amp; Cập nhật Kế hoạch điều trị`;
+                            }
+                        }
+
+                        // Nạp lại các giai đoạn & bước điều trị thật của phác đồ đang lưu
+                        if (plan.stages && plan.stages.length > 0) {
+                            DIAGNOSES.length = 0; // Xóa chẩn đoán mặc định của ca khám để hiển thị đúng phác đồ đang lưu
+                            const diagMap = new Map();
+                            plan.stages.forEach((st, sIdx) => {
+                                let diagKey = 'CD_1';
+                                let diagName = plan.planName || 'Kế hoạch điều trị';
+                                let cleanStageName = (st.stageName || '').trim();
+
+                                const cdMatch = cleanStageName.match(/^\[(CĐ\s*#?\d+)\]\s*(.*)$/i);
+                                if (cdMatch) {
+                                    diagKey = cdMatch[1].toUpperCase().replace(/\s+/g, '');
+                                    cleanStageName = cdMatch[2].trim();
+                                    if (st.description && /chẩn đoán:\s*/i.test(st.description)) {
+                                        diagName = st.description.replace(/^.*chẩn đoán:\s*/i, '').trim();
+                                    }
+                                } else if (st.description && /chẩn đoán:\s*/i.test(st.description)) {
+                                    diagName = st.description.replace(/^.*chẩn đoán:\s*/i, '').trim();
+                                }
+
+                                if (!diagMap.has(diagKey)) {
+                                    diagMap.set(diagKey, {
+                                        id: 'diag-plan-' + (diagMap.size + 1),
+                                        order: diagMap.size + 1,
+                                        type: 'Chính',
+                                        icd: 'DT',
+                                        name: diagName,
+                                        teeth: [{ num: 'Toàn hàm', disp: 'Toàn hàm', isFullJaw: true, surf: '' }],
+                                        selected: true,
+                                        autoReason: 'Phác đồ điều trị đã lưu',
+                                        serviceId: (st.items && st.items[0] && st.items[0].serviceId) || null,
+                                        stages: []
+                                    });
+                                }
+
+                                const dObj = diagMap.get(diagKey);
+                                const steps = (st.items && st.items.length > 0) ? st.items.map(it => {
+                                    const teethList = it.toothNumbers ? it.toothNumbers.split(',').map(s => s.trim()) : ['Toàn hàm'];
+                                    return {
+                                        name: it.stepName || it.serviceName || 'Thủ thuật',
+                                        activeTeeth: teethList,
+                                        qty: Number(it.quantity || 1),
+                                        price: Number(it.estimatedPrice != null ? it.estimatedPrice : (it.totalPrice != null ? it.totalPrice : 0)),
+                                        notes: it.notes || ''
+                                    };
+                                }) : [{
+                                    name: cleanStageName || 'Bước điều trị',
+                                    activeTeeth: ['Toàn hàm'],
+                                    qty: 1,
+                                    price: Number(st.stageTotalCost || 0),
+                                    notes: ''
+                                }];
+
+                                dObj.stages.push({
+                                    name: cleanStageName || st.stageName,
+                                    days: Number(st.estimatedDaysFromStart || (sIdx * 3)),
+                                    steps: steps
+                                });
+                            });
+
+                            DIAGNOSES.push(...diagMap.values());
+                            renderAll();
+                        }
+
+                        // Nạp lại danh sách đợt thanh toán (Chuẩn DentalSoft)
+                        if (plan.installments && plan.installments.length > 0) {
+                            window.CURRENT_INSTALLMENTS = plan.installments.map((inst, idx) => {
+                                let dt = inst.expectedDateRaw || inst.expectedDate || '';
+                                if (dt && /^\d{2}\/\d{2}\/\d{4}$/.test(dt)) {
+                                    const parts = dt.split('/');
+                                    dt = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                                }
+                                return {
+                                    phaseName: inst.phaseName || `Đợt ${idx + 1}`,
+                                    expectedDate: dt,
+                                    expectedAmount: Number(inst.expectedAmount || 0),
+                                    notes: inst.notes || ''
+                                };
+                            });
+                            const switchEl = document.getElementById('isInstallmentSwitch');
+                            if (switchEl) {
+                                switchEl.checked = true;
+                                toggleInstallmentSection();
+                                renderInstallmentsTable();
                             }
                         }
 
@@ -1928,6 +2129,315 @@
             }
         }
     });
+
+    // =========================================================================
+    // 5.5. QUẢN LÝ LỘ TRÌNH THANH TOÁN THEO ĐỢT (Chuẩn DentalSoft)
+    // =========================================================================
+    window.CURRENT_INSTALLMENTS = [];
+
+    function toggleInstallmentSection() {
+        const switchEl = document.getElementById('isInstallmentSwitch');
+        const section = document.getElementById('contentSection5');
+        const bar = document.getElementById('barSection5');
+        const badge = document.getElementById('installmentBadgeSummary');
+        if (!switchEl || !section) return;
+
+        if (switchEl.checked) {
+            section.style.display = 'block';
+            if (bar) bar.classList.add('is-expanded');
+            if (badge) {
+                badge.innerText = 'Trả theo đợt';
+                badge.className = 'badge bg-primary-subtle text-primary border';
+            }
+            if (!window.CURRENT_INSTALLMENTS || window.CURRENT_INSTALLMENTS.length === 0) {
+                autoGenerateInstallments();
+            } else {
+                renderInstallmentsTable();
+            }
+        } else {
+            section.style.display = 'none';
+            if (bar) bar.classList.remove('is-expanded');
+            if (badge) {
+                badge.innerText = '1 lần';
+                badge.className = 'badge bg-light text-secondary border';
+            }
+        }
+    }
+
+    function getPlanGrandTotal() {
+        let total = 0;
+        const active = DIAGNOSES.filter(d => d.selected);
+        active.forEach(d => {
+            const srv = SERVICES_DICT[d.serviceId];
+            const bp = srv ? Number(srv.price || 0) : 0;
+            let diagTotal = 0;
+            let hasSteps = false;
+            if (d.stages && d.stages.length > 0) {
+                d.stages.forEach(st => {
+                    if (st.steps && st.steps.length > 0) {
+                        hasSteps = true;
+                        st.steps.forEach(sp => {
+                            const p = (sp.price !== undefined && sp.price !== null) ? Number(sp.price) : 0;
+                            const q = Number(sp.qty || 1);
+                            diagTotal += (p * q);
+                        });
+                    }
+                });
+            }
+            total += hasSteps ? diagTotal : (bp * d.qty);
+        });
+        return total;
+    }
+
+    function autoGenerateInstallments() {
+        const switchEl = document.getElementById('isInstallmentSwitch');
+        if (switchEl && !switchEl.checked) {
+            switchEl.checked = true;
+            const badge = document.getElementById('installmentBadgeSummary');
+            if (badge) {
+                badge.innerText = 'Trả theo đợt';
+                badge.className = 'badge bg-primary-subtle text-primary border';
+            }
+        }
+
+        const grandTotal = getPlanGrandTotal();
+        const disp = document.getElementById('instPlanTotalDisplay');
+        if (disp) disp.innerText = formatMoney(grandTotal);
+
+        const downPaymentInput = document.getElementById('instDownPayment');
+        const countInput = document.getElementById('instRemainingCount');
+        const intervalInput = document.getElementById('instInterval');
+
+        let downPayment = downPaymentInput ? Number(downPaymentInput.value || 0) : 0;
+        let count = countInput ? Math.max(1, parseInt(countInput.value || 9)) : 9;
+        let intervalMonths = intervalInput ? parseFloat(intervalInput.value || 1) : 1;
+
+        if (grandTotal > 0 && downPayment > grandTotal) {
+            downPayment = grandTotal;
+            if (downPaymentInput) downPaymentInput.value = downPayment;
+        }
+
+        let remainingTotal = 0;
+        let perInst = 0;
+        if (grandTotal > 0) {
+            remainingTotal = Math.max(0, grandTotal - downPayment);
+            perInst = count > 0 ? Math.round(remainingTotal / count) : 0;
+        } else {
+            // Khi chưa tính tổng chi phí (hoặc = 0 đ), để mỗi đợt gợi ý 1.000.000 đ để bác sĩ có thể tùy chỉnh
+            perInst = 1000000;
+            remainingTotal = perInst * count;
+        }
+
+        const baseStartDate = document.getElementById('planStartDate')?.value || new Date().toISOString().split('T')[0];
+        const startDateObj = new Date(baseStartDate);
+
+        window.CURRENT_INSTALLMENTS = [];
+
+        // Đợt 1
+        window.CURRENT_INSTALLMENTS.push({
+            phaseName: 'Đợt 1: Đóng ban đầu (Gắn mắc cài / Bắt đầu)',
+            expectedDate: baseStartDate,
+            expectedAmount: downPayment > 0 ? downPayment : 5000000,
+            notes: 'Khởi đầu điều trị'
+        });
+
+        // Các đợt tiếp theo
+        let allocatedRemaining = 0;
+        for (let i = 1; i <= count; i++) {
+            const nextDate = new Date(startDateObj);
+            if (intervalMonths === 0.5) {
+                nextDate.setDate(nextDate.getDate() + (i * 14));
+            } else {
+                nextDate.setMonth(nextDate.getMonth() + Math.round(i * intervalMonths));
+            }
+            const dateStr = nextDate.toISOString().split('T')[0];
+
+            let amountForThis = (i === count) ? (remainingTotal - allocatedRemaining) : perInst;
+            allocatedRemaining += amountForThis;
+
+            window.CURRENT_INSTALLMENTS.push({
+                phaseName: `Đợt ${i + 1}: Tái khám siết răng / theo dõi tháng ${i}`,
+                expectedDate: dateStr,
+                expectedAmount: amountForThis,
+                notes: 'Tái khám định kỳ theo kế hoạch'
+            });
+        }
+
+        renderInstallmentsTable();
+    }
+
+    function generateInstallmentsFromStages() {
+        const switchEl = document.getElementById('isInstallmentSwitch');
+        if (switchEl && !switchEl.checked) {
+            switchEl.checked = true;
+            const badge = document.getElementById('installmentBadgeSummary');
+            if (badge) {
+                badge.innerText = 'Trả theo đợt';
+                badge.className = 'badge bg-primary-subtle text-primary border';
+            }
+        }
+
+        const grandTotal = getPlanGrandTotal();
+        const disp = document.getElementById('instPlanTotalDisplay');
+        if (disp) disp.innerText = formatMoney(grandTotal);
+
+        const baseStartDate = document.getElementById('planStartDate')?.value || new Date().toISOString().split('T')[0];
+        const startDateObj = new Date(baseStartDate);
+
+        const activeDiags = DIAGNOSES.filter(d => d.selected);
+        const stageList = [];
+        activeDiags.forEach(d => {
+            if (d.stages) {
+                d.stages.forEach(st => {
+                    let cost = 0;
+                    if (st.steps) {
+                        st.steps.forEach(sp => {
+                            cost += Number(sp.price || 0) * Number(sp.qty || 1);
+                        });
+                    }
+                    stageList.push({
+                        name: st.name,
+                        days: Number(st.days || 30),
+                        cost: cost
+                    });
+                });
+            }
+        });
+
+        if (stageList.length === 0) {
+            autoGenerateInstallments();
+            return;
+        }
+
+        window.CURRENT_INSTALLMENTS = [];
+        let cumDays = 0;
+        stageList.forEach((st, idx) => {
+            cumDays += st.days;
+            const targetDate = new Date(startDateObj);
+            targetDate.setDate(targetDate.getDate() + (idx === 0 ? 0 : cumDays));
+            window.CURRENT_INSTALLMENTS.push({
+                phaseName: `Đợt ${idx + 1}: ${st.name}`,
+                expectedDate: targetDate.toISOString().split('T')[0],
+                expectedAmount: st.cost > 0 ? st.cost : (grandTotal > 0 ? Math.round(grandTotal / stageList.length) : 1000000),
+                notes: `Thanh toán theo giai đoạn: ${st.name}`
+            });
+        });
+
+        renderInstallmentsTable();
+    }
+
+    function renderInstallmentsTable() {
+        const tbody = document.getElementById('tbodyInstallments');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (!window.CURRENT_INSTALLMENTS || window.CURRENT_INSTALLMENTS.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">Chưa có đợt thanh toán nào. Nhấn "Chia đều tự động" để tạo.</td></tr>`;
+            updateInstallmentTotal();
+            return;
+        }
+
+        window.CURRENT_INSTALLMENTS.forEach((inst, idx) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-center fw-bold text-muted">${idx + 1}</td>
+                <td>
+                    <input type="text" class="form-control form-control-sm" value="${escapeHtml(inst.phaseName || '')}"
+                           onchange="onInstallmentFieldChange(${idx}, 'phaseName', this.value)">
+                </td>
+                <td>
+                    <input type="date" class="form-control form-control-sm" value="${inst.expectedDate || ''}"
+                           onchange="onInstallmentFieldChange(${idx}, 'expectedDate', this.value)">
+                </td>
+                <td class="text-end">
+                    <input type="number" class="form-control form-control-sm text-end fw-bold text-primary"
+                           value="${inst.expectedAmount || 0}" min="0" step="100000"
+                           onchange="onInstallmentFieldChange(${idx}, 'expectedAmount', Number(this.value)); updateInstallmentTotal();">
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm" value="${escapeHtml(inst.notes || '')}"
+                           placeholder="Ghi chú đợt..." onchange="onInstallmentFieldChange(${idx}, 'notes', this.value)">
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger p-1" onclick="removeInstallmentRow(${idx})" title="Xóa đợt này">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        updateInstallmentTotal();
+    }
+
+    function onInstallmentFieldChange(idx, field, value) {
+        if (window.CURRENT_INSTALLMENTS && window.CURRENT_INSTALLMENTS[idx]) {
+            window.CURRENT_INSTALLMENTS[idx][field] = value;
+        }
+    }
+
+    function addCustomInstallmentRow() {
+        const switchEl = document.getElementById('isInstallmentSwitch');
+        if (switchEl && !switchEl.checked) {
+            switchEl.checked = true;
+            const badge = document.getElementById('installmentBadgeSummary');
+            if (badge) {
+                badge.innerText = 'Trả theo đợt';
+                badge.className = 'badge bg-primary-subtle text-primary border';
+            }
+        }
+
+        if (!window.CURRENT_INSTALLMENTS) window.CURRENT_INSTALLMENTS = [];
+        const nextOrder = window.CURRENT_INSTALLMENTS.length + 1;
+        const lastDate = window.CURRENT_INSTALLMENTS.length > 0
+            ? window.CURRENT_INSTALLMENTS[window.CURRENT_INSTALLMENTS.length - 1].expectedDate
+            : new Date().toISOString().split('T')[0];
+
+        const nextDateObj = new Date(lastDate || new Date());
+        nextDateObj.setMonth(nextDateObj.getMonth() + 1);
+
+        window.CURRENT_INSTALLMENTS.push({
+            phaseName: `Đợt ${nextOrder}: Thanh toán bổ sung`,
+            expectedDate: nextDateObj.toISOString().split('T')[0],
+            expectedAmount: 1000000,
+            notes: ''
+        });
+        renderInstallmentsTable();
+    }
+
+    function removeInstallmentRow(idx) {
+        if (!window.CURRENT_INSTALLMENTS) return;
+        window.CURRENT_INSTALLMENTS.splice(idx, 1);
+        renderInstallmentsTable();
+    }
+
+    function updateInstallmentTotal() {
+        const grandTotal = getPlanGrandTotal();
+        const planTotalDisplay = document.getElementById('instPlanTotalDisplay');
+        if (planTotalDisplay) planTotalDisplay.innerText = formatMoney(grandTotal);
+
+        let sum = 0;
+        if (window.CURRENT_INSTALLMENTS) {
+            window.CURRENT_INSTALLMENTS.forEach(inst => {
+                sum += Number(inst.expectedAmount || 0);
+            });
+        }
+
+        const sumDisplay = document.getElementById('instSumDisplay');
+        if (sumDisplay) sumDisplay.innerText = formatMoney(sum);
+
+        const diffNotice = document.getElementById('instDiffNotice');
+        if (diffNotice) {
+            const diff = sum - grandTotal;
+            if (diff === 0) {
+                diffNotice.innerHTML = `<span class="badge bg-success-subtle text-success border border-success"><i class="bi bi-check2-circle me-1"></i>Trùng khớp 100% chi phí phác đồ</span>`;
+            } else if (diff > 0) {
+                diffNotice.innerHTML = `<span class="badge bg-warning-subtle text-dark border border-warning">Vượt phác đồ: +${formatMoney(diff)}</span>`;
+            } else {
+                diffNotice.innerHTML = `<span class="badge bg-danger-subtle text-danger border border-danger">Còn thiếu: ${formatMoney(Math.abs(diff))}</span>`;
+            }
+        }
+    }
 
     // =========================================================================
     // 6. LƯU KẾ HOẠCH ĐIỀU TRỊ VÀO CƠ SỞ DỮ LIỆU (POST /api/doctor/treatment-plans)
@@ -2005,6 +2515,20 @@
             });
         });
 
+        const isInstallment = document.getElementById('isInstallmentSwitch')?.checked || false;
+        const installmentDTOs = [];
+        if (isInstallment && window.CURRENT_INSTALLMENTS && window.CURRENT_INSTALLMENTS.length > 0) {
+            window.CURRENT_INSTALLMENTS.forEach((inst, idx) => {
+                installmentDTOs.push({
+                    installmentOrder: idx + 1,
+                    phaseName: inst.phaseName || `Đợt ${idx + 1}`,
+                    expectedDate: inst.expectedDate || null,
+                    expectedAmount: Number(inst.expectedAmount || 0),
+                    notes: inst.notes || ''
+                });
+            });
+        }
+
         const requestPayload = {
             patientId: Number(CURRENT_PATIENT_ID),
             branchId: Number(CURRENT_BRANCH_ID),
@@ -2017,7 +2541,9 @@
             startDate: startDate || null,
             expectedEndDate: expectedEndDate || null,
             notes: 'Lập phác đồ theo chẩn đoán chuyên môn',
-            stages: stageDTOs
+            stages: stageDTOs,
+            isInstallment: isInstallment,
+            installments: installmentDTOs
         };
 
         try {
