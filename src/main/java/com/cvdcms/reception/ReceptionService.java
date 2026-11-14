@@ -122,6 +122,15 @@ public class ReceptionService {
             throw error(HttpStatus.CONFLICT, "Chỉ check-in lịch hẹn trong ngày tại chi nhánh đã đặt. Hãy đổi lịch trước.");
         }
 
+        LocalTime nowTime = LocalTime.now(CLINIC_ZONE);
+        if (branch.getClosingTime() != null && !nowTime.isBefore(branch.getClosingTime())) {
+            throw error(HttpStatus.CONFLICT, "Phòng khám đã đóng cửa trong ngày hôm nay, không thể tiếp nhận khám.");
+        }
+        if (policyService != null && policyService.sessionEnded(branch, appointment.getAppointmentDate(),
+                appointment.getPreferredSession(), LocalDateTime.now(CLINIC_ZONE))) {
+            throw error(HttpStatus.CONFLICT, "Ca khám đã kết thúc trong ngày hôm nay, không thể tiếp nhận khám.");
+        }
+
         // Enforce state transition rules (strictly rejects direct PENDING -> CHECKED_IN)
         ReceptionTransitionPolicy.appointment(appointment.getStatus(), AppointmentStatus.CHECKED_IN);
         String before = appointment.getStatus().name();
@@ -188,6 +197,15 @@ public class ReceptionService {
 
         if (!appointment.getAppointmentDate().equals(today())) {
             throw error(HttpStatus.CONFLICT, "Chỉ check-in lịch hẹn trong ngày tại chi nhánh đã đặt. Hãy đổi lịch trước.");
+        }
+
+        LocalTime nowTime = LocalTime.now(CLINIC_ZONE);
+        if (branch.getClosingTime() != null && !nowTime.isBefore(branch.getClosingTime())) {
+            throw error(HttpStatus.CONFLICT, "Phòng khám đã đóng cửa trong ngày hôm nay, không thể tiếp nhận khám.");
+        }
+        if (policyService != null && policyService.sessionEnded(branch, appointment.getAppointmentDate(),
+                appointment.getPreferredSession(), LocalDateTime.now(CLINIC_ZONE))) {
+            throw error(HttpStatus.CONFLICT, "Ca khám đã kết thúc trong ngày hôm nay, không thể tiếp nhận khám.");
         }
 
         rejectActiveVisit(patient);

@@ -787,14 +787,14 @@
         <div class="cv-form-row-2">
             <div>
                 <label for="bkDate" class="cv-form-label">Ngày mong muốn <span class="text-danger">*</span></label>
-                <input id="bkDate" name="date" type="date" class="cv-form-input" required />
+                <input id="bkDate" name="date" type="date" class="cv-form-input" required th:min="${#temporals.format(T(java.time.LocalDate).now(), 'yyyy-MM-dd')}" />
             </div>
             <div>
-                <label for="bkSession" class="cv-form-label">Buổi khám <span class="text-danger">*</span></label>
+                <label for="bkSession" class="cv-form-label">Ca khám <span class="text-danger">*</span></label>
                 <select id="bkSession" name="session" class="cv-form-select" required>
-                    <option value="MORNING">Buổi sáng (08:00 – 12:00)</option>
-                    <option value="AFTERNOON" selected>Buổi chiều (13:30 – 17:30)</option>
-                    <option value="EVENING">Buổi tối (18:00 – 21:30)</option>
+                    <option value="MORNING">Ca sáng</option>
+                    <option value="AFTERNOON" selected>Ca chiều</option>
+                    <option value="EVENING">Ca tối</option>
                 </select>
             </div>
         </div>
@@ -1141,6 +1141,34 @@
             }
         }
 
+        // Tải danh sách ca khám và giờ làm việc cấu hình thực tế của chi nhánh (không ép cứng)
+        async function loadSessionsForBranch(branchId) {
+            if (!sessionSelect || !branchId) return;
+            const prevSession = sessionSelect.value;
+            try {
+                const res = await fetch(`/api/public/booking/sessions?branchId=${encodeURIComponent(branchId)}`);
+                const list = await res.json().catch(() => []);
+                if (Array.isArray(list) && list.length > 0) {
+                    sessionSelect.innerHTML = '';
+                    list.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s.session;
+                        opt.textContent = s.label || s.name;
+                        opt.setAttribute('data-start', s.startTime || '');
+                        opt.setAttribute('data-end', s.endTime || '');
+                        sessionSelect.appendChild(opt);
+                    });
+                    if (prevSession && list.some(s => s.session === prevSession)) {
+                        sessionSelect.value = prevSession;
+                    } else {
+                        sessionSelect.value = list[0].session;
+                    }
+                }
+            } catch (err) {
+                console.warn('Could not load dynamic sessions:', err);
+            }
+        }
+
         // Kiểm tra khung giờ trống (Slots) dựa trên dịch vụ & bác sĩ
         async function loadSlots(seq) {
             if (!slotSelect || !branchSelect || !dateInput || !sessionSelect) return;
@@ -1294,8 +1322,21 @@
         }
 
         // Lắng nghe sự kiện thay đổi của các trường trong Drawer để đồng bộ URL & giao diện
-        if (branchSelect) branchSelect.addEventListener('change', () => { updateBranchInfo(); updateFullAppointmentUrl(); checkAvailability(); });
-        if (dateInput) dateInput.addEventListener('change', () => { updateFullAppointmentUrl(); checkAvailability(); });
+        if (branchSelect) branchSelect.addEventListener('change', async () => {
+            updateBranchInfo();
+            await loadSessionsForBranch(branchSelect.value);
+            updateFullAppointmentUrl();
+            checkAvailability();
+        });
+        if (dateInput) dateInput.addEventListener('change', () => {
+            const todayIso = new Date().toISOString().split('T')[0];
+            if (dateInput.value && dateInput.value < todayIso) {
+                alert('Không thể chọn ngày trong quá khứ. Hệ thống đã tự động chuyển về ngày hôm nay.');
+                dateInput.value = todayIso;
+            }
+            updateFullAppointmentUrl();
+            checkAvailability();
+        });
         if (sessionSelect) sessionSelect.addEventListener('change', () => { updateFullAppointmentUrl(); checkAvailability(); });
         if (doctorSelect) doctorSelect.addEventListener('change', () => {
             targetDoctorId = doctorSelect.value || null;
@@ -1310,7 +1351,12 @@
             loadSlots(availSequence);
         });
 
-        function openBooking(opts = {}) {
+        // Khởi tạo dynamic sessions theo chi nhánh ban đầu
+        if (branchSelect && branchSelect.value) {
+            loadSessionsForBranch(branchSelect.value);
+        }
+
+        async function openBooking(opts = {}) {
             if (!drawer || !overlay) return;
             if (errorEl) errorEl.classList.remove('is-visible');
             if (successBox) successBox.classList.remove('is-visible');
@@ -1335,6 +1381,10 @@
                         break;
                     }
                 }
+            }
+
+            if (branchSelect && branchSelect.value) {
+                await loadSessionsForBranch(branchSelect.value);
             }
 
             // 3. Pre-fill Dịch vụ (Service)

@@ -326,10 +326,21 @@
                 <div class="apt-unified-container mb-4">
                     <!-- THANH ĐIỀU KHIỂN & BỘ LỌC CHUẨN ENTERPRISE (GIỐNG DANH SÁCH KHÁM THEO NGÀY) -->
                     <div class="dv-toolbar-card">
-                    <!-- TẦNG 1: ĐIỀU HƯỚNG THỜI GIAN, PHẠM VI NGÀY/TUẦN/THÁNG & CHẾ ĐỘ XEM (DANH SÁCH / Ô LỊCH) -->
+                    <!-- HÀNG 1: TÌM KIẾM NHANH (TRÁI) & ĐIỀU HƯỚNG MỐC THỜI GIAN (PHẢI) -->
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom"
                         style="border-color: #f1f5f9 !important;">
-                        <div class="d-flex flex-wrap align-items-center gap-2.5">
+                        <!-- Live Search Box ProTable -->
+                        <div class="dv-search-box">
+                            <i class="bi bi-search search-lead-icon"></i>
+                            <input id="appointmentSearch" type="search"
+                                placeholder="Tìm nhanh theo tên KH, mã BN, SĐT, dịch vụ, bác sĩ..." autocomplete="off">
+                            <button type="button" class="search-clear-btn" id="btnClearSearch" title="Xóa từ khóa">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <!-- Cụm điều hướng & chọn mốc thời gian -->
+                        <div class="d-flex align-items-center gap-2">
                             <!-- Cụm chọn ngày: [< Thứ X, dd/MM/yyyy >] -->
                             <div class="dv-quick-segment" aria-label="Điều hướng ngày khám">
                                 <button type="button" class="dv-seg-btn px-2" id="prevDateBtn" title="Lùi lại">
@@ -362,36 +373,11 @@
                                 </button>
                             </div>
                         </div>
-
-                        <!-- Chuyển đổi hiển thị: [ Danh sách | Ô lịch ] -->
-                        <div class="d-flex align-items-center gap-2 ms-auto">
-                            <select id="filterBranch" class="d-none"></select>
-                            <div class="dv-quick-segment" role="group" aria-label="Chế độ hiển thị">
-                                <button type="button" class="dv-seg-btn active" id="viewListBtn"
-                                    title="Xem dạng bảng danh sách">
-                                    <i class="bi bi-list-ul"></i> Danh sách
-                                </button>
-                                <button type="button" class="dv-seg-btn" id="viewCalendarBtn"
-                                    title="Xem dạng lưới ô lịch">
-                                    <i class="bi bi-calendar3"></i> Ô lịch
-                                </button>
-                            </div>
-                        </div>
                     </div>
 
-                    <!-- TẦNG 2: LIVE SEARCH RỘNG RÃI, PHÂN LOẠI TRẠNG THÁI (STATUS SEGMENTS), LỌC BÁC SĨ, BỘ LỌC & IN -->
+                    <!-- HÀNG 2: PHÂN LOẠI TRẠNG THÁI (TRÁI) & CHẾ ĐỘ XEM + LỌC NÂNG CAO + IN (PHẢI) -->
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-                        <!-- Live Search Box ProTable -->
-                        <div class="dv-search-box">
-                            <i class="bi bi-search search-lead-icon"></i>
-                            <input id="appointmentSearch" type="search"
-                                placeholder="Tìm nhanh theo tên KH, mã BN, SĐT, dịch vụ, bác sĩ..." autocomplete="off">
-                            <button type="button" class="search-clear-btn" id="btnClearSearch" title="Xóa từ khóa">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                        </div>
-
-                        <!-- Phân loại trạng thái nhanh (Segment chuẩn daily-visits với đốm màu & badge count) -->
+                        <!-- Phân loại trạng thái nhanh -->
                         <div class="dv-quick-segment" aria-label="Phân loại trạng thái">
                             <button type="button" class="dv-seg-btn kpi-pill active" id="kpiTotalPill"
                                 title="Tất cả lịch hẹn">
@@ -420,18 +406,26 @@
                             </button>
                         </div>
 
-                        <!-- Cụm Lọc Bác sĩ + Nút Mở Bộ lọc + In -->
-                        <div class="d-flex align-items-center gap-2.5 ms-auto flex-wrap">
-                            <div style="min-width: 190px;">
-                                <select id="filterDoctor" class="form-select dv-adv-control">
-                                    <option value="">Tất cả bác sĩ</option>
-                                </select>
+                        <!-- Chuyển đổi hiển thị [ Danh sách | Ô lịch ] + Lọc nâng cao + In -->
+                        <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
+                            <select id="filterBranch" class="d-none"></select>
+                            <select id="filterDoctor" class="d-none"><option value="">Tất cả bác sĩ</option></select>
+
+                            <div class="dv-quick-segment" role="group" aria-label="Chế độ hiển thị">
+                                <button type="button" class="dv-seg-btn active" id="viewListBtn"
+                                    title="Xem dạng bảng danh sách">
+                                    <i class="bi bi-list-ul"></i> Danh sách
+                                </button>
+                                <button type="button" class="dv-seg-btn" id="viewCalendarBtn"
+                                    title="Xem dạng lưới ô lịch">
+                                    <i class="bi bi-calendar3"></i> Ô lịch
+                                </button>
                             </div>
 
                             <!-- Nút Lọc nâng cao chuẩn daily-visits kèm Huy hiệu số lượng filter chớp đỏ -->
                             <button type="button" class="dv-adv-filter-btn" id="btnToggleAdvancedFilter">
                                 <i class="bi bi-funnel-fill text-primary"></i>
-                                <span>Bộ lọc</span>
+                                <span>Lọc nâng cao</span>
                                 <span class="dv-filter-pulse-badge d-none" id="advFilterCount">0</span>
                                 <i class="bi bi-chevron-down small" id="advFilterChevron"></i>
                             </button>
@@ -1144,6 +1138,7 @@
                                                         HẸN <span class="text-danger">*</span></label>
                                                     <input type="date" id="modalAppointmentDate"
                                                         class="form-control form-control-sm py-2 px-3 rounded-3"
+                                                        th:min="${#temporals.format(T(java.time.LocalDate).now(), 'yyyy-MM-dd')}"
                                                         required>
                                                 </div>
                                             </div>
@@ -1161,7 +1156,7 @@
                                                             data-modal-session="MORNING">
                                                             <div class="fw-bold small"><i
                                                                     class="bi bi-sunrise me-1"></i>Ca Sáng</div>
-                                                            <div class="session-time-sub">08:00 – 12:00</div>
+                                                            <div class="session-time-sub" id="subTimeMorning">08:00 – 12:00</div>
                                                         </button>
                                                     </div>
                                                     <div class="col-4">
@@ -1170,7 +1165,7 @@
                                                             data-modal-session="AFTERNOON">
                                                             <div class="fw-bold small"><i class="bi bi-sun me-1"></i>Ca
                                                                 Chiều</div>
-                                                            <div class="session-time-sub">13:30 – 17:30</div>
+                                                            <div class="session-time-sub" id="subTimeAfternoon">13:30 – 17:30</div>
                                                         </button>
                                                     </div>
                                                     <div class="col-4">
@@ -1179,7 +1174,7 @@
                                                             data-modal-session="EVENING">
                                                             <div class="fw-bold small"><i
                                                                     class="bi bi-moon-stars me-1"></i>Ca Tối</div>
-                                                            <div class="session-time-sub">17:30 – 20:30</div>
+                                                            <div class="session-time-sub" id="subTimeEvening">18:00 – 20:30</div>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1460,6 +1455,7 @@
                                                         HẸN <span class="text-danger">*</span></label>
                                                     <input type="date" id="editAppointmentDate"
                                                         class="form-control form-control-sm py-2 px-3 rounded-3 fw-bold"
+                                                        th:min="${#temporals.format(T(java.time.LocalDate).now(), 'yyyy-MM-dd')}"
                                                         required>
                                                 </div>
                                             </div>

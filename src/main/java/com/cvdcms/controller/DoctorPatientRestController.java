@@ -327,7 +327,9 @@ public class DoctorPatientRestController {
         // Fallback: nếu không có ca khám nào và người dùng chưa chọn bộ lọc ngày cụ thể, hiển thị danh sách gần nhất
         if (visits.isEmpty() && !hasDateFilter && (searchPattern == null || searchPattern.isEmpty()) && (status == null)) {
             final Long filterBranchId = branchId;
-            visits = visitRepository.findAll().stream().filter(v -> filterBranchId == null || (v.getBranch() != null && filterBranchId.equals(v.getBranch().getBranchId())))
+            visits = visitRepository.findAll().stream()
+                    .filter(v -> filterBranchId == null || (v.getBranch() != null && filterBranchId.equals(v.getBranch().getBranchId())))
+                    .filter(v -> v.getStatus() != VisitStatus.CANCELLED)
                     .sorted((a, b) -> b.getCheckInAt().compareTo(a.getCheckInAt()))
                     .limit(20)
                     .collect(Collectors.toList());
