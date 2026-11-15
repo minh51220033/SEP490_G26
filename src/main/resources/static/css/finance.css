@@ -1058,11 +1058,15 @@
    ========================================================================== */
 #quickPayModal .fin-modal-card {
     width: 100%;
-    max-width: 660px;
+    max-width: 800px;
     max-height: calc(100vh - 32px);
     max-height: calc(100dvh - 32px);
     display: flex;
     flex-direction: column;
+}
+
+#quickPayModal .fin-modal-card.fin-modal-xl {
+    max-width: 1140px;
 }
 
 #quickPayModal .fin-modal-card>div.p-4 {
@@ -1076,13 +1080,60 @@
 }
 
 .vietqr-box .vietqr-col-qr {
-    flex: 0 0 200px;
-    max-width: 200px;
+    flex: 0 0 250px;
+    width: 250px;
+    max-width: 100%;
+}
+
+.vietqr-box .vietqr-qr-frame {
+    width: 244px;
+    height: 260px;
+}
+
+.vietqr-box .vietqr-img {
+    width: 100%;
+    height: 100%;
+    max-width: 228px;
+    max-height: 244px;
+    object-fit: contain;
 }
 
 .vietqr-box .vietqr-col-info {
-    flex: 1 1 270px;
-    min-width: 250px;
+    flex: 1 1 260px;
+    min-width: 240px;
+}
+
+/* Side-by-side modal panel: QR lớn phía trên bên cạnh form */
+.vietqr-side-panel .vietqr-box {
+    margin-top: 0 !important;
+    height: 100%;
+}
+
+.vietqr-side-panel .vietqr-body {
+    flex-direction: column !important;
+    align-items: stretch !important;
+}
+
+.vietqr-side-panel .vietqr-col-qr {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+}
+
+.vietqr-side-panel .vietqr-qr-frame {
+    width: 100%;
+    max-width: 300px;
+    height: 320px;
+}
+
+.vietqr-side-panel .vietqr-img {
+    max-width: 284px;
+    max-height: 304px;
+}
+
+.vietqr-side-panel .vietqr-col-info {
+    min-width: 0;
+    width: 100%;
 }
 
 @media (max-width: 575.98px) {

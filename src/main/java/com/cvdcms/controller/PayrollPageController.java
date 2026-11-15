@@ -111,34 +111,7 @@ public class PayrollPageController {
     }
 
     private boolean isFinanceAdminOrAccountant(Long userId, HttpSession session) {
-        if (isCurrentUserAdmin(userId, session)) {
-            return true;
-        }
-        if (session != null) {
-            Object rolesObj = session.getAttribute("roleNames");
-            if (rolesObj instanceof Collection<?> col) {
-                boolean match = col.stream()
-                        .filter(Objects::nonNull)
-                        .map(Object::toString)
-                        .anyMatch(r -> {
-                            String role = r != null ? r.trim().toUpperCase() : "";
-                            return role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
-                                    || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
-                        });
-                if (match) return true;
-            }
-        }
-        if (userId != null) {
-            List<String> roles = userRepository.findActiveRoleNamesByUserId(userId);
-            if (roles != null) {
-                return roles.stream().anyMatch(r -> {
-                    String role = r != null ? r.trim().toUpperCase() : "";
-                    return role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
-                            || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
-                });
-            }
-        }
-        return false;
+        return isCurrentUserAdmin(userId, session);
     }
 
     private List<Branch> resolveAllowedBranches(Long userId, HttpSession session) {
@@ -153,7 +126,7 @@ public class PayrollPageController {
             }
         }
         if (branchIds.isEmpty()) {
-            return branchRepository.findAll();
+            return java.util.Collections.emptyList();
         }
         return branchRepository.findAllById(branchIds);
     }
@@ -181,9 +154,14 @@ public class PayrollPageController {
         populateUserAndSidebar(model, session, "payroll");
 
         boolean isAdmin = isCurrentUserAdmin(currentUserId, session);
-        boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId, session);
         List<Branch> allowedBranches = resolveAllowedBranches(currentUserId, session);
-        List<Long> allowedBranchIds = isPrivileged ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
+        List<Long> allowedBranchIds = isAdmin ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
+        if (!isAdmin && allowedBranchIds.isEmpty()) {
+            throw new AccessDeniedException("Tài khoản nhân viên chưa được phân công chi nhánh làm việc hợp lệ.");
+        }
+        if (!isAdmin && branchId != null && !allowedBranchIds.contains(branchId)) {
+            throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu tại chi nhánh ID: " + branchId);
+        }
 
         Pageable pageable = PageRequest.of(page, size);
         Page<PayrollPeriod> periods = payrollService.getPeriods(

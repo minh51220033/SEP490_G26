@@ -156,6 +156,7 @@ public class PayrollServiceImpl implements PayrollService {
         if (currentUserId == null) {
             throw new AccessDeniedException("Người dùng chưa đăng nhập");
         }
+        requirePayrollPermission(currentUserId);
 
         validateBranchAccess(dto.getBranchId(), currentUserId);
 
@@ -507,8 +508,10 @@ public class PayrollServiceImpl implements PayrollService {
         PayrollItem item = payrollItemRepository.findWithDetailsById(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dòng lương: " + itemId));
 
-        PayrollPeriod period = item.getPayrollPeriod();
+        PayrollPeriod period = payrollPeriodRepository.findByIdForUpdate(item.getPayrollPeriod().getPeriodId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kỳ lương."));
         validateBranchAccess(period.getBranch().getBranchId(), currentUserId);
+        requirePayrollPermission(currentUserId);
 
         if (period.getStatus() != PayrollStatus.DRAFT) {
             throw new IllegalStateException("Chỉ có thể chỉnh sửa dòng lương khi kỳ lương ở trạng thái Nháp (DRAFT)");
@@ -585,7 +588,10 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     public PayrollPeriod recalculatePeriod(Long periodId, Long currentUserId) {
-        PayrollPeriod period = getPeriodDetail(periodId, currentUserId);
+        requirePayrollPermission(currentUserId);
+        PayrollPeriod period = payrollPeriodRepository.findByIdForUpdate(periodId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kỳ lương: " + periodId));
+        validateBranchAccess(period.getBranch().getBranchId(), currentUserId);
         if (period.getStatus() != PayrollStatus.DRAFT) {
             throw new IllegalStateException("Chỉ có thể tính toán lại khi kỳ lương ở trạng thái Nháp (DRAFT)");
         }
@@ -610,7 +616,10 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     public PayrollPeriod submitPeriod(Long periodId, Long currentUserId) {
-        PayrollPeriod period = getPeriodDetail(periodId, currentUserId);
+        requirePayrollPermission(currentUserId);
+        PayrollPeriod period = payrollPeriodRepository.findByIdForUpdate(periodId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kỳ lương: " + periodId));
+        validateBranchAccess(period.getBranch().getBranchId(), currentUserId);
         if (period.getStatus() != PayrollStatus.DRAFT) {
             throw new IllegalStateException("Kỳ lương không ở trạng thái Nháp (DRAFT)");
         }
@@ -696,6 +705,7 @@ public class PayrollServiceImpl implements PayrollService {
         if (currentUserId == null) {
             throw new AccessDeniedException("Người dùng chưa đăng nhập");
         }
+        requirePayrollPermission(currentUserId);
 
         User currentUser = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng"));
@@ -891,7 +901,10 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     public void deleteDraftPeriod(Long periodId, Long currentUserId) {
-        PayrollPeriod period = getPeriodDetail(periodId, currentUserId);
+        requirePayrollPermission(currentUserId);
+        PayrollPeriod period = payrollPeriodRepository.findByIdForUpdate(periodId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kỳ lương: " + periodId));
+        validateBranchAccess(period.getBranch().getBranchId(), currentUserId);
         if (period.getStatus() != PayrollStatus.DRAFT) {
             throw new IllegalStateException("Chỉ có thể xóa kỳ lương ở trạng thái Nháp (DRAFT)");
         }
@@ -916,6 +929,13 @@ public class PayrollServiceImpl implements PayrollService {
         payrollPeriodRepository.delete(period);
     }
 
+    private void requirePayrollPermission(Long currentUserId) {
+        if (currentUserId == null || (!userRepository.hasActiveAdminRole(currentUserId)
+                && !userRepository.hasActivePermission(currentUserId, "FINANCE_PAYROLL"))) {
+            throw new AccessDeniedException("Bạn không có quyền quản lý bảng lương (FINANCE_PAYROLL)");
+        }
+    }
+
     private void validateBranchAccess(Long branchId, Long currentUserId) {
         if (currentUserId == null) {
             throw new AccessDeniedException("Người dùng chưa đăng nhập");
@@ -926,9 +946,9 @@ public class PayrollServiceImpl implements PayrollService {
         boolean hasAssignment = staffBranchAssignmentRepository.hasActiveUserAssignment(
                 currentUserId, branchId, AssignmentStatus.ACTIVE);
         if (!hasAssignment) {
-            boolean isMultiBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(currentUserId, AssignmentStatus.ACTIVE).isEmpty()
+            boolean matchesUserBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(currentUserId, AssignmentStatus.ACTIVE).isEmpty()
                     && userRepository.findById(currentUserId).map(u -> u.getBranch() != null && branchId.equals(u.getBranch().getBranchId())).orElse(false);
-            if (!isMultiBranch) {
+            if (!matchesUserBranch) {
                 throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh này");
             }
         }

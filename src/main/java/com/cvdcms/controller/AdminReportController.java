@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 @Controller
@@ -60,22 +61,7 @@ public class AdminReportController {
     }
 
     private boolean isFinanceAdminOrAccountant(Long userId) {
-        if (userId == null) {
-            return false;
-        }
-        if (userRepository.hasActiveAdminRole(userId)) {
-            return true;
-        }
-        List<String> activeRoles = userRepository.findActiveRoleNamesByUserId(userId);
-        if (activeRoles != null) {
-            return activeRoles.stream().anyMatch(r -> {
-                String role = r != null ? r.trim().toUpperCase() : "";
-                return role.equals("ADMIN") || role.equals("ROLE_ADMIN")
-                        || role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
-                        || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
-            });
-        }
-        return false;
+        return userId != null && userRepository.hasActiveAdminRole(userId);
     }
 
     private List<Branch> resolveAllowedBranches(Long userId) {
@@ -90,7 +76,7 @@ public class AdminReportController {
             }
         }
         if (branchIds == null || branchIds.isEmpty()) {
-            return branchRepository.findAll();
+            return Collections.emptyList();
         }
         return branchRepository.findAllById(branchIds);
     }
@@ -104,6 +90,9 @@ public class AdminReportController {
         }
 
         List<Long> allowedIds = allowedBranches.stream().map(Branch::getBranchId).toList();
+        if (allowedIds.isEmpty()) {
+            throw new AccessDeniedException("Tài khoản nhân viên chưa được phân công chi nhánh làm việc hợp lệ.");
+        }
         if (requestedBranchId != null && requestedBranchId > 0) {
             if (!allowedIds.contains(requestedBranchId)) {
                 throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu tại chi nhánh ID: " + requestedBranchId);

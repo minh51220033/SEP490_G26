@@ -549,8 +549,11 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public Visit reopenClinicalExamination(Long visitId, String reason) {
-        Visit visit = getVisitOrThrow(visitId);
+        Visit visit = visitRepository.lockById(visitId)
+                .or(() -> visitRepository.findById(visitId))
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lượt khám ID: " + visitId));
         if (visit.getStatus() != VisitStatus.WAITING_PAYMENT) {
             throw new IllegalStateException(
                     "Chỉ có thể mở lại ca khám đang ở trạng thái Chờ thanh toán (WAITING_PAYMENT). Trạng thái hiện tại: "

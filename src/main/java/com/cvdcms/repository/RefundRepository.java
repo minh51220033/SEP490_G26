@@ -26,6 +26,18 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
     List<Refund> findByPatientProfile_ProfileIdOrderByRefundedAtDesc(Long profileId);
 
     @Query("""
+        SELECT r.refundedAt, r.amount FROM Refund r
+        WHERE (:branchIds IS NULL OR r.branch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR r.refundedAt >= :startDate)
+          AND (:endDate IS NULL OR r.refundedAt <= :endDate)
+    """)
+    List<Object[]> findDailyRefundsForPeriod(
+            @Param("branchIds") java.util.Collection<Long> branchIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query("""
         SELECT r FROM Refund r
         WHERE r.patientProfile.profileId = :profileId
           AND (:branchIds IS NULL OR r.branch.branchId IN :branchIds)

@@ -58,15 +58,15 @@ class VietQrPaymentBox {
                 <div class="vietqr-content" style="display: none;">
                     <div class="vietqr-body d-flex flex-column flex-sm-row gap-3 align-items-center align-items-sm-start">
                         <!-- Cột trái: Ảnh QR Code VietQR -->
-                        <div class="vietqr-col-qr text-center flex-shrink-0" style="width: 200px; max-width: 100%;">
-                            <div class="p-2 bg-light border rounded-3 position-relative d-flex align-items-center justify-content-center shadow-xs mx-auto" style="width: 190px; height: 190px;">
-                                <img class="vietqr-img img-fluid rounded" alt="VietQR" style="max-width: 174px; max-height: 174px; object-fit: contain; display: none; margin: 0 auto;">
+                        <div class="vietqr-col-qr text-center flex-shrink-0">
+                            <div class="vietqr-qr-frame p-2 bg-light border rounded-3 position-relative d-flex align-items-center justify-content-center shadow-xs mx-auto">
+                                <img class="vietqr-img img-fluid rounded" alt="VietQR" style="display: none; margin: 0 auto;">
                                 <div class="vietqr-img-spinner position-absolute top-50 start-50 translate-middle" style="display: none;">
                                     <div class="spinner-border text-primary"></div>
                                 </div>
                             </div>
                             <div class="mt-2 text-center">
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1" style="font-size: 0.72rem;">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1" style="font-size: 0.75rem;">
                                     <i class="bi bi-qr-code-scan me-1"></i> Quét bằng App Ngân hàng
                                 </span>
                             </div>

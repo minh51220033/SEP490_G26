@@ -67,22 +67,7 @@ public class ExpensePageController {
     }
 
     private boolean isFinanceAdminOrAccountant(Long userId) {
-        if (userId == null) {
-            return false;
-        }
-        if (userRepository.hasActiveAdminRole(userId)) {
-            return true;
-        }
-        List<String> activeRoles = userRepository.findActiveRoleNamesByUserId(userId);
-        if (activeRoles != null) {
-            return activeRoles.stream().anyMatch(r -> {
-                String role = r != null ? r.trim().toUpperCase() : "";
-                return role.equals("ADMIN") || role.equals("ROLE_ADMIN")
-                        || role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
-                        || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
-            });
-        }
-        return false;
+        return userId != null && userRepository.hasActiveAdminRole(userId);
     }
 
     private List<Branch> resolveAllowedBranches(Long userId) {
@@ -97,7 +82,7 @@ public class ExpensePageController {
             }
         }
         if (branchIds.isEmpty()) {
-            return branchRepository.findAll();
+            return java.util.Collections.emptyList();
         }
         return branchRepository.findAllById(branchIds);
     }
@@ -123,6 +108,12 @@ public class ExpensePageController {
         boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId);
         List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
         List<Long> allowedBranchIds = isPrivileged ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
+        if (!isPrivileged && allowedBranchIds.isEmpty()) {
+            throw new AccessDeniedException("Tài khoản nhân viên chưa được phân công chi nhánh làm việc hợp lệ.");
+        }
+        if (!isPrivileged && branchId != null && !allowedBranchIds.contains(branchId)) {
+            throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu tại chi nhánh ID: " + branchId);
+        }
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "expenseDate", "expenseId"));
         Page<OperatingExpense> expenses = operatingExpenseService.getExpenses(

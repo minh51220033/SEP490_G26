@@ -16,5 +16,9 @@ public class InstallmentPaymentRequestDTO {
     private BigDecimal amount = BigDecimal.ZERO;
     private PaymentMethod paymentMethod = PaymentMethod.CASH;
     private String notes;
+    private String transactionRef;
+    private String idempotencyKey;
+    private Long bankAccountId;
+    private String expectedTransferContent;
 }
 

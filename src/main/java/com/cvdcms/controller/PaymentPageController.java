@@ -117,22 +117,7 @@ public class PaymentPageController {
     }
 
     private boolean isFinanceAdminOrAccountant(Long userId) {
-        if (userId == null) {
-            return false;
-        }
-        if (userRepository.hasActiveAdminRole(userId)) {
-            return true;
-        }
-        List<String> activeRoles = userRepository.findActiveRoleNamesByUserId(userId);
-        if (activeRoles != null) {
-            return activeRoles.stream().anyMatch(r -> {
-                String role = r != null ? r.trim().toUpperCase() : "";
-                return role.equals("ADMIN") || role.equals("ROLE_ADMIN")
-                        || role.equals("KE_TOAN") || role.equals("ROLE_KE_TOAN")
-                        || role.equals("ACCOUNTANT") || role.equals("ROLE_ACCOUNTANT");
-            });
-        }
-        return false;
+        return userId != null && userRepository.hasActiveAdminRole(userId);
     }
 
     private List<Branch> resolveAllowedBranches(Long userId) {
@@ -147,7 +132,7 @@ public class PaymentPageController {
             }
         }
         if (branchIds.isEmpty()) {
-            return branchRepository.findAll();
+            return java.util.Collections.emptyList();
         }
         return branchRepository.findAllById(branchIds);
     }
@@ -164,7 +149,7 @@ public class PaymentPageController {
             }
         }
         if (activeBranchIds.isEmpty()) {
-            return requestedBranchId;
+            throw new AccessDeniedException("Tài khoản nhân viên chưa được phân công chi nhánh làm việc hợp lệ.");
         }
         if (requestedBranchId == null) {
             return activeBranchIds.get(0);
