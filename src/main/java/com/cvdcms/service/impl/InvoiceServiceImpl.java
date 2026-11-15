@@ -145,9 +145,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (!isAdmin && branchId != null) {
             boolean hasAssignment = staffBranchAssignmentRepository.hasActiveAssignment(staff.getStaffId(), branchId, AssignmentStatus.ACTIVE);
             if (!hasAssignment) {
-                boolean isMultiBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE).isEmpty()
-                        && (user.getBranch() == null || branchId.equals(user.getBranch().getBranchId()));
-                if (!isMultiBranch) {
+                boolean matchesUserBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE).isEmpty()
+                        && user.getBranch() != null && branchId.equals(user.getBranch().getBranchId());
+                if (!matchesUserBranch) {
                     throw new IllegalStateException("Nhân sự (" + staff.getFullName() + ") không có phân công hoạt động hợp lệ tại chi nhánh ID: " + branchId);
                 }
             }
@@ -162,8 +162,9 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw new IllegalArgumentException("Thông tin lập hóa đơn không hợp lệ: thiếu visitId.");
         }
 
-        // 1. Kiểm tra lượt khám & trạng thái bàn giao từ bác sĩ
-        Visit visit = visitRepository.findById(request.getVisitId())
+        // 1. Kiểm tra lượt khám & trạng thái bàn giao từ bác sĩ (khóa bi quan chống tranh chấp mở lại ca khám)
+        Visit visit = visitRepository.lockById(request.getVisitId())
+                .or(() -> visitRepository.findById(request.getVisitId()))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám ID: " + request.getVisitId()));
 
         if (visit.getStatus() != VisitStatus.WAITING_PAYMENT) {
@@ -508,7 +509,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                 request.getPromotionId(),
                 request.getVoucherId(),
                 request.getPointsToRedeem(),
-                request.getDiscountAmount()
+                request.getDiscountAmount(),
+                true
         );
 
         invoice.setDiscountAmount(benefit.memberDiscount.add(benefit.manualDiscount));
@@ -810,6 +812,11 @@ public class InvoiceServiceImpl implements InvoiceService {
             }
         }
         total = validateAdjustmentMoney(total, "Tổng tiền hóa đơn");
+        BigDecimal totalDiscountSum = discount.add(promoDiscount).add(pointDiscount);
+        if (totalDiscountSum.compareTo(totalService) > 0) {
+            throw new IllegalArgumentException("Tổng các khoản giảm giá (" + totalDiscountSum
+                    + " đ) không được vượt quá tổng tiền dịch vụ (" + totalService + " đ).");
+        }
         if (total.compareTo(oldPaid) < 0) {
             throw new IllegalArgumentException("Tổng tiền mới (" + total
                     + " đ) không được nhỏ hơn số tiền đã thanh toán (" + oldPaid
@@ -1041,7 +1048,8 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         // Hoàn nguyên voucher nếu đã dùng: chỉ hoàn trả khi chưa hết hạn và không có hóa đơn hiệu lực khác đang gắn
         if (invoice.getVoucher() != null) {
-            PatientVoucher voucher = invoice.getVoucher();
+            PatientVoucher voucher = patientVoucherRepository.findByIdForUpdate(invoice.getVoucher().getVoucherId())
+                    .orElse(invoice.getVoucher());
             if (voucher.getStatus() == VoucherStatus.USED) {
                 boolean isExpired = voucher.getExpiresAt() != null && voucher.getExpiresAt().isBefore(LocalDateTime.now());
                 boolean usedByOther = invoiceRepository.existsByVoucher_VoucherIdAndInvoiceIdNotAndStatusNot(voucher.getVoucherId(), invoice.getInvoiceId(), InvoiceStatus.CANCELLED);
@@ -1050,6 +1058,21 @@ public class InvoiceServiceImpl implements InvoiceService {
                     voucher.setUsedAt(null);
                     patientVoucherRepository.save(voucher);
                 }
+            }
+            boolean voucherWasApplied = invoiceAuditLogRepository.existsByInvoice_InvoiceIdAndActionType(invoice.getInvoiceId(), "VOUCHER_APPLIED");
+            boolean promoAlreadyReverted = invoiceAuditLogRepository.existsByInvoice_InvoiceIdAndActionType(invoice.getInvoiceId(), "PROMOTION_REVERTED");
+            if (voucherWasApplied && !promoAlreadyReverted && voucher.getPromotion() != null) {
+                Promotion vPromo = promotionRepository.findByIdForUpdate(voucher.getPromotion().getPromotionId())
+                        .orElse(voucher.getPromotion());
+                if (vPromo.getUsedCount() != null && vPromo.getUsedCount() > 0) {
+                    vPromo.setUsedCount(vPromo.getUsedCount() - 1);
+                    promotionRepository.save(vPromo);
+                }
+                InvoiceAuditLog promoRevLog = new InvoiceAuditLog();
+                promoRevLog.setInvoice(invoice);
+                promoRevLog.setActionType("PROMOTION_REVERTED");
+                promoRevLog.setReason("Hoàn trả lượt khuyến mãi voucher do hủy hóa đơn");
+                invoiceAuditLogRepository.save(promoRevLog);
             }
         }
 
@@ -1163,10 +1186,16 @@ public class InvoiceServiceImpl implements InvoiceService {
             return;
         }
 
-        // 1. Chốt sử dụng voucher nếu có
+        // 1. Chốt sử dụng voucher nếu có (khóa bi quan chống 2 hóa đơn cùng chốt 1 voucher)
         if (invoice.getVoucher() != null) {
-            PatientVoucher voucher = invoice.getVoucher();
-            if (voucher.getStatus() == VoucherStatus.AVAILABLE) {
+            boolean voucherAlreadyApplied = invoice.getInvoiceId() != null
+                    && invoiceAuditLogRepository.existsByInvoice_InvoiceIdAndActionType(invoice.getInvoiceId(), "VOUCHER_APPLIED");
+            if (!voucherAlreadyApplied) {
+                PatientVoucher voucher = patientVoucherRepository.findByIdForUpdate(invoice.getVoucher().getVoucherId())
+                        .orElse(invoice.getVoucher());
+                if (voucher.getStatus() != VoucherStatus.AVAILABLE) {
+                    throw new IllegalStateException("Voucher '" + voucher.getVoucherCode() + "' đã được sử dụng hoặc không còn khả dụng.");
+                }
                 voucher.setStatus(VoucherStatus.USED);
                 voucher.setUsedAt(LocalDateTime.now());
                 patientVoucherRepository.save(voucher);
@@ -1266,13 +1295,13 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (patient != null && patient.getMembershipTier() != null
                 && Boolean.TRUE.equals(patient.getMembershipTier().getIsActive())
                 && patient.getMembershipTier().getPointValue() != null
-                && patient.getMembershipTier().getPointValue().compareTo(BigDecimal.ZERO) > 0) {
+                && patient.getMembershipTier().getPointValue().compareTo(BigDecimal.ZERO) >= 0) {
             return patient.getMembershipTier().getPointValue();
         }
         if (membershipTierRepository != null) {
             List<MembershipTier> activeTiers = membershipTierRepository.findByIsActiveTrueOrderByMinTotalSpentAsc();
             for (MembershipTier t : activeTiers) {
-                if (t.getPointValue() != null && t.getPointValue().compareTo(BigDecimal.ZERO) > 0) {
+                if (t.getPointValue() != null && t.getPointValue().compareTo(BigDecimal.ZERO) >= 0) {
                     return t.getPointValue();
                 }
             }
@@ -1289,6 +1318,22 @@ public class InvoiceServiceImpl implements InvoiceService {
             Long voucherId,
             Integer pointsToRedeem,
             BigDecimal manualDiscountRequested
+    ) {
+        return calculateAndValidateBenefits(
+                totalServiceAmount, patient, branchId, serviceIds,
+                promotionId, voucherId, pointsToRedeem, manualDiscountRequested, false);
+    }
+
+    private BenefitCalculationResult calculateAndValidateBenefits(
+            BigDecimal totalServiceAmount,
+            PatientProfile patient,
+            Long branchId,
+            List<Long> serviceIds,
+            Long promotionId,
+            Long voucherId,
+            Integer pointsToRedeem,
+            BigDecimal manualDiscountRequested,
+            boolean acquireLocks
     ) {
         BenefitCalculationResult result = new BenefitCalculationResult();
         BigDecimal remaining = totalServiceAmount != null ? totalServiceAmount : BigDecimal.ZERO;
@@ -1313,7 +1358,9 @@ public class InvoiceServiceImpl implements InvoiceService {
         // 3. Khuyến mãi chung HOẶC Voucher
         LocalDateTime now = LocalDateTime.now();
         if (promotionId != null) {
-            Promotion promo = promotionRepository.findById(promotionId)
+            Promotion promo = (acquireLocks
+                    ? promotionRepository.findByIdForUpdate(promotionId).or(() -> promotionRepository.findById(promotionId))
+                    : promotionRepository.findById(promotionId))
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chương trình khuyến mãi ID: " + promotionId));
 
             validatePromotionEligibility(promo, patient, branchId, totalServiceAmount, serviceIds, now);
@@ -1324,7 +1371,9 @@ public class InvoiceServiceImpl implements InvoiceService {
             result.promoOrVoucherName = promo.getPromoName();
             remaining = remaining.subtract(result.promoOrVoucherDiscount);
         } else if (voucherId != null) {
-            PatientVoucher voucher = patientVoucherRepository.findById(voucherId)
+            PatientVoucher voucher = (acquireLocks
+                    ? patientVoucherRepository.findByIdForUpdate(voucherId).or(() -> patientVoucherRepository.findById(voucherId))
+                    : patientVoucherRepository.findById(voucherId))
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy voucher ID: " + voucherId));
 
             if (patient == null || !voucher.getPatientProfile().getProfileId().equals(patient.getProfileId())) {
@@ -1344,6 +1393,9 @@ public class InvoiceServiceImpl implements InvoiceService {
             if (vp == null) {
                 throw new IllegalStateException("Voucher không gắn với chương trình khuyến mãi hợp lệ.");
             }
+            if (acquireLocks && vp.getPromotionId() != null) {
+                vp = promotionRepository.findByIdForUpdate(vp.getPromotionId()).orElse(vp);
+            }
             validatePromotionEligibility(vp, patient, branchId, totalServiceAmount, serviceIds, now);
 
             BigDecimal discount = calculatePromoDiscount(vp, totalServiceAmount);
@@ -1361,7 +1413,10 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         // 5. Điểm tích lũy Loyalty: Tuyệt đối không giảm vượt quá số tiền còn lại của hóa đơn và trừ điểm chờ trên hóa đơn khác
         if (pointsToRedeem != null && pointsToRedeem > 0 && patient != null) {
-            Optional<PatientLoyaltyWallet> walletOpt = patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(patient.getProfileId());
+            Optional<PatientLoyaltyWallet> walletOpt = acquireLocks
+                    ? patientLoyaltyWalletRepository.findByProfileIdForUpdate(patient.getProfileId())
+                            .or(() -> patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(patient.getProfileId()))
+                    : patientLoyaltyWalletRepository.findByPatientProfile_ProfileId(patient.getProfileId());
             if (walletOpt.isPresent()) {
                 PatientLoyaltyWallet wallet = walletOpt.get();
                 int currentPoints = wallet.getCurrentPoints() != null ? wallet.getCurrentPoints() : 0;

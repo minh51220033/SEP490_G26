@@ -36,6 +36,12 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
         WHERE i.patientProfile.profileId = :profileId
           AND i.status != 'CANCELLED'
           AND i.paymentStatus != 'PAID'
+          AND i.pointsRedeemed > 0
+          AND NOT EXISTS (
+              SELECT 1 FROM PointTransaction pt
+              WHERE pt.invoice = i
+                AND pt.transactionType = com.cvdcms.entity.enums.PointTransactionType.REDEEM
+          )
           AND (:excludeInvoiceId IS NULL OR i.invoiceId != :excludeInvoiceId)
     """)
     Integer sumPendingPointsRedeemedByProfileId(
@@ -45,7 +51,9 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     @Query("""
         SELECT COUNT(i) FROM Invoice i
-        WHERE i.promotion.promotionId = :promoId
+        LEFT JOIN i.voucher v
+        WHERE (i.promotion.promotionId = :promoId
+               OR (v IS NOT NULL AND v.promotion.promotionId = :promoId))
           AND i.status != 'CANCELLED'
           AND i.paymentStatus != 'PAID'
           AND (:excludeInvoiceId IS NULL OR i.invoiceId != :excludeInvoiceId)

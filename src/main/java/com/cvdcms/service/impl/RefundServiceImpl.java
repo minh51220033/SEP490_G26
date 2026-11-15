@@ -112,12 +112,15 @@ public class RefundServiceImpl implements RefundService {
         }
 
         boolean isAdmin = userRepository.hasActiveAdminRole(userId);
+        if (!isAdmin && !userRepository.hasActivePermission(userId, "REFUND_MANAGE")) {
+            throw new org.springframework.security.access.AccessDeniedException("Bạn không có quyền thực hiện hoàn tiền (REFUND_MANAGE).");
+        }
         if (!isAdmin && branchId != null) {
             boolean hasAssignment = staffBranchAssignmentRepository.hasActiveAssignment(staff.getStaffId(), branchId, AssignmentStatus.ACTIVE);
             if (!hasAssignment) {
-                boolean isMultiBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE).isEmpty()
-                        && (user.getBranch() == null || branchId.equals(user.getBranch().getBranchId()));
-                if (!isMultiBranch) {
+                boolean matchesUserBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE).isEmpty()
+                        && user.getBranch() != null && branchId.equals(user.getBranch().getBranchId());
+                if (!matchesUserBranch) {
                     throw new IllegalStateException("Nhân sự (" + staff.getFullName() + ") không có phân công hoạt động hợp lệ tại chi nhánh ID: " + branchId);
                 }
             }
@@ -192,6 +195,15 @@ public class RefundServiceImpl implements RefundService {
 
             patient = invoice.getPatientProfile();
             branch = invoice.getBranch();
+
+            if (request.getProfileId() != null && patient != null
+                    && !request.getProfileId().equals(patient.getProfileId())) {
+                throw new IllegalArgumentException("Bệnh nhân được chọn không khớp với chủ sở hữu hóa đơn ID: " + invoice.getInvoiceId());
+            }
+            if (request.getBranchId() != null && branch != null
+                    && !request.getBranchId().equals(branch.getBranchId())) {
+                throw new IllegalArgumentException("Chi nhánh hoàn tiền không khớp với chi nhánh phát hành hóa đơn (" + branch.getBranchName() + ").");
+            }
         } else {
             if (request.getProfileId() == null || request.getBranchId() == null) {
                 throw new IllegalArgumentException("Thiếu thông tin bệnh nhân hoặc chi nhánh hoàn tiền.");
@@ -237,52 +249,26 @@ public class RefundServiceImpl implements RefundService {
                 // Thao tác kết hợp: Hoàn tiền kèm giảm giá trị hóa đơn (giảm nghĩa vụ viện phí)
                 BigDecimal oldTotal = invoice.getTotalAmount();
                 BigDecimal oldDiscount = Optional.ofNullable(invoice.getDiscountAmount()).orElse(BigDecimal.ZERO);
-                BigDecimal newDiscount = oldDiscount.add(request.getAmount());
-                invoice.setDiscountAmount(newDiscount);
 
-                BigDecimal totalService = Optional.ofNullable(invoice.getTotalServiceAmount()).orElse(BigDecimal.ZERO);
-                BigDecimal totalMedicine = Optional.ofNullable(invoice.getTotalMedicineAmount()).orElse(BigDecimal.ZERO);
-                BigDecimal surcharge = Optional.ofNullable(invoice.getSurchargeAmount()).orElse(BigDecimal.ZERO);
-                BigDecimal promoDiscount = Optional.ofNullable(invoice.getPromotionDiscount()).orElse(BigDecimal.ZERO);
-                BigDecimal pointDiscount = Optional.ofNullable(invoice.getPointDiscount()).orElse(BigDecimal.ZERO);
+                BigDecimal surchRoll = BigDecimal.ZERO;
+                BigDecimal unrefunded = request.getAmount();
 
-                BigDecimal beforeDiscount = totalService.add(totalMedicine).add(surcharge);
-                BigDecimal newTotal;
-                if (beforeDiscount.compareTo(BigDecimal.ZERO) > 0) {
-                    newTotal = beforeDiscount.subtract(newDiscount).subtract(promoDiscount).subtract(pointDiscount).max(BigDecimal.ZERO);
-                } else if (oldTotal != null) {
-                    newTotal = oldTotal.subtract(request.getAmount()).max(BigDecimal.ZERO);
-                } else {
-                    newTotal = BigDecimal.ZERO;
+                // Hoàn phụ thu trước nếu có (giảm trực tiếp surchargeAmount, KHÔNG cộng surchRoll vào discountAmount)
+                if (invoice.getSurchargePaidAmount() != null && invoice.getSurchargePaidAmount().compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal surchPaid = invoice.getSurchargePaidAmount();
+                    surchRoll = unrefunded.min(surchPaid);
+                    BigDecimal currentSurcharge = invoice.getSurchargeAmount() != null ? invoice.getSurchargeAmount() : BigDecimal.ZERO;
+                    surchRoll = surchRoll.min(currentSurcharge);
+                    invoice.setSurchargeAmount(currentSurcharge.subtract(surchRoll).max(BigDecimal.ZERO));
+                    invoice.setSurchargePaidAmount(surchPaid.subtract(surchRoll).max(BigDecimal.ZERO));
+                    invoice.setSurchargeRemainingDebt(invoice.getSurchargeAmount().subtract(invoice.getSurchargePaidAmount()).max(BigDecimal.ZERO));
+                    unrefunded = unrefunded.subtract(surchRoll);
                 }
 
-                invoice.setTotalAmount(newTotal);
-                BigDecimal newDebt = newTotal.subtract(newPaid).max(BigDecimal.ZERO);
-                invoice.setRemainingDebt(newDebt);
-
-                if (newDebt.compareTo(BigDecimal.ZERO) > 0) {
-                    invoice.setPaymentStatus(newPaid.compareTo(BigDecimal.ZERO) > 0 ? InvoicePaymentStatus.PARTIAL : InvoicePaymentStatus.UNPAID);
-                } else {
-                    invoice.setPaymentStatus(InvoicePaymentStatus.PAID);
-                }
-
-                // Cập nhật từng dòng chi tiết khi hoàn tiền kèm giảm tổng hóa đơn: Giảm nghĩa vụ tương ứng để không tạo nợ giả
-                if (invoiceItemRepository != null) {
+                // Cập nhật từng dòng chi tiết để đồng bộ item.payableAmount với discountAmount
+                if (invoiceItemRepository != null && unrefunded.compareTo(BigDecimal.ZERO) > 0) {
                     List<InvoiceItem> items = invoiceItemRepository.findByInvoice_InvoiceIdOrderByLineOrderAscItemIdAsc(invoice.getInvoiceId());
-                    BigDecimal unrefunded = request.getAmount();
-
-                    // Hoàn phụ thu trước nếu có (giảm luôn giá trị phụ thu)
-                    if (invoice.getSurchargePaidAmount() != null && invoice.getSurchargePaidAmount().compareTo(BigDecimal.ZERO) > 0) {
-                        BigDecimal surchPaid = invoice.getSurchargePaidAmount();
-                        BigDecimal surchRoll = unrefunded.min(surchPaid);
-                        BigDecimal currentSurcharge = invoice.getSurchargeAmount() != null ? invoice.getSurchargeAmount() : BigDecimal.ZERO;
-                        invoice.setSurchargeAmount(currentSurcharge.subtract(surchRoll).max(BigDecimal.ZERO));
-                        invoice.setSurchargePaidAmount(surchPaid.subtract(surchRoll).max(BigDecimal.ZERO));
-                        invoice.setSurchargeRemainingDebt(invoice.getSurchargeAmount().subtract(invoice.getSurchargePaidAmount()).max(BigDecimal.ZERO));
-                        unrefunded = unrefunded.subtract(surchRoll);
-                    }
-
-                    if (items != null && !items.isEmpty() && unrefunded.compareTo(BigDecimal.ZERO) > 0) {
+                    if (items != null && !items.isEmpty()) {
                         for (int i = items.size() - 1; i >= 0 && unrefunded.compareTo(BigDecimal.ZERO) > 0; i--) {
                             InvoiceItem it = items.get(i);
                             BigDecimal itPaid = it.getPaidAmount() != null ? it.getPaidAmount() : BigDecimal.ZERO;
@@ -304,6 +290,36 @@ public class RefundServiceImpl implements RefundService {
                             }
                         }
                     }
+                }
+
+                BigDecimal discountIncrease = request.getAmount().subtract(surchRoll);
+                BigDecimal newDiscount = oldDiscount.add(discountIncrease);
+                invoice.setDiscountAmount(newDiscount);
+
+                BigDecimal totalService = Optional.ofNullable(invoice.getTotalServiceAmount()).orElse(BigDecimal.ZERO);
+                BigDecimal totalMedicine = Optional.ofNullable(invoice.getTotalMedicineAmount()).orElse(BigDecimal.ZERO);
+                BigDecimal updatedSurcharge = Optional.ofNullable(invoice.getSurchargeAmount()).orElse(BigDecimal.ZERO);
+                BigDecimal promoDiscount = Optional.ofNullable(invoice.getPromotionDiscount()).orElse(BigDecimal.ZERO);
+                BigDecimal pointDiscount = Optional.ofNullable(invoice.getPointDiscount()).orElse(BigDecimal.ZERO);
+
+                BigDecimal beforeDiscount = totalService.add(totalMedicine).add(updatedSurcharge);
+                BigDecimal newTotal;
+                if (beforeDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                    newTotal = beforeDiscount.subtract(newDiscount).subtract(promoDiscount).subtract(pointDiscount).max(BigDecimal.ZERO);
+                } else if (oldTotal != null) {
+                    newTotal = oldTotal.subtract(request.getAmount()).max(BigDecimal.ZERO);
+                } else {
+                    newTotal = BigDecimal.ZERO;
+                }
+
+                invoice.setTotalAmount(newTotal);
+                BigDecimal newDebt = newTotal.subtract(newPaid).max(BigDecimal.ZERO);
+                invoice.setRemainingDebt(newDebt);
+
+                if (newDebt.compareTo(BigDecimal.ZERO) > 0) {
+                    invoice.setPaymentStatus(newPaid.compareTo(BigDecimal.ZERO) > 0 ? InvoicePaymentStatus.PARTIAL : InvoicePaymentStatus.UNPAID);
+                } else {
+                    invoice.setPaymentStatus(InvoicePaymentStatus.PAID);
                 }
 
                 // Mở lại lượt khám nếu trước đó đã COMPLETED mà nay phát sinh nợ lại

@@ -21,7 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -316,7 +319,21 @@ public class PaymentAllocationServiceImpl implements PaymentAllocationService {
             return List.of();
         }
         List<PaymentAllocation> list = paymentAllocationRepository.findByPayment_PaymentIdOrderByLineOrderAsc(paymentId);
-        return list.stream().map(this::toDTO).toList();
+        if (list == null || list.isEmpty()) {
+            return List.of();
+        }
+        Long invoiceId = list.stream()
+                .filter(a -> a.getInvoice() != null)
+                .map(a -> a.getInvoice().getInvoiceId())
+                .findFirst().orElse(null);
+        List<PaymentAllocation> chronology = invoiceId != null
+                ? paymentAllocationRepository.findByInvoice_InvoiceIdOrderByLineOrderAscCreatedAtAsc(invoiceId)
+                : List.of();
+        if (chronology == null || chronology.isEmpty()) {
+            chronology = list;
+        }
+        Map<Long, SnapshotAfter> snapshots = computeSnapshots(chronology);
+        return list.stream().map(a -> toDTO(a, snapshots.get(a.getAllocationId()))).toList();
     }
 
     @Override
@@ -326,7 +343,52 @@ public class PaymentAllocationServiceImpl implements PaymentAllocationService {
             return List.of();
         }
         List<PaymentAllocation> list = paymentAllocationRepository.findByInvoice_InvoiceIdOrderByLineOrderAscCreatedAtAsc(invoiceId);
-        return list.stream().map(this::toDTO).toList();
+        if (list == null || list.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, SnapshotAfter> snapshots = computeSnapshots(list);
+        return list.stream().map(a -> toDTO(a, snapshots.get(a.getAllocationId()))).toList();
+    }
+
+    private record SnapshotAfter(BigDecimal remainingDebt, String status) {}
+
+    private Map<Long, SnapshotAfter> computeSnapshots(List<PaymentAllocation> allocations) {
+        List<PaymentAllocation> ordered = new ArrayList<>(allocations);
+        ordered.sort(Comparator
+                .comparing((PaymentAllocation a) -> a.getCreatedAt(), Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(a -> a.getPayment() != null && a.getPayment().getPaymentId() != null ? a.getPayment().getPaymentId() : 0L)
+                .thenComparing(a -> a.getAllocationId() != null ? a.getAllocationId() : 0L));
+
+        Map<String, BigDecimal> cumulativePaidByKey = new HashMap<>();
+        Map<Long, SnapshotAfter> snapshots = new HashMap<>();
+
+        for (PaymentAllocation a : ordered) {
+            String key;
+            BigDecimal targetTotal = null;
+            if (a.getInvoiceItem() != null) {
+                InvoiceItem it = a.getInvoiceItem();
+                key = "ITEM:" + it.getItemId();
+                targetTotal = it.getPayableAmount() != null ? it.getPayableAmount()
+                        : (it.getFinalAmount() != null ? it.getFinalAmount() : BigDecimal.ZERO);
+            } else if ("SURCHARGE".equalsIgnoreCase(a.getItemType()) && a.getInvoice() != null) {
+                key = "SURCHARGE:" + a.getInvoice().getInvoiceId();
+                targetTotal = a.getInvoice().getSurchargeAmount() != null ? a.getInvoice().getSurchargeAmount() : BigDecimal.ZERO;
+            } else {
+                continue;
+            }
+
+            BigDecimal allocAmt = a.getAllocatedAmount() != null ? a.getAllocatedAmount() : BigDecimal.ZERO;
+            BigDecimal newCumPaid = cumulativePaidByKey.getOrDefault(key, BigDecimal.ZERO).add(allocAmt);
+            cumulativePaidByKey.put(key, newCumPaid);
+
+            BigDecimal rem = targetTotal.subtract(newCumPaid).max(BigDecimal.ZERO);
+            String status = rem.compareTo(BigDecimal.ZERO) == 0 ? "PAID"
+                    : (newCumPaid.compareTo(BigDecimal.ZERO) > 0 ? "PARTIAL" : "UNPAID");
+            if (a.getAllocationId() != null) {
+                snapshots.put(a.getAllocationId(), new SnapshotAfter(rem, status));
+            }
+        }
+        return snapshots;
     }
 
     @Override
@@ -338,7 +400,7 @@ public class PaymentAllocationServiceImpl implements PaymentAllocationService {
         return paymentAllocationRepository.existsByInvoice_InvoiceId(invoiceId);
     }
 
-    private PaymentAllocationDTO toDTO(PaymentAllocation entity) {
+    private PaymentAllocationDTO toDTO(PaymentAllocation entity, SnapshotAfter snapshot) {
         Payment p = entity.getPayment();
         String methodName = "Tiền mặt";
         String methodCode = "CASH";
@@ -354,21 +416,23 @@ public class PaymentAllocationServiceImpl implements PaymentAllocationService {
 
         String cashier = (p != null && p.getCashier() != null) ? p.getCashier().getFullName() : "Thu ngân";
 
-        BigDecimal remainingDebt = null;
-        String status = null;
-        if (entity.getInvoiceItem() != null) {
-            InvoiceItem it = entity.getInvoiceItem();
-            remainingDebt = it.getRemainingDebt();
-            status = it.getPaymentStatus() != null ? it.getPaymentStatus().name() : "PAID";
-        } else if ("SURCHARGE".equalsIgnoreCase(entity.getItemType()) && entity.getInvoice() != null) {
-            Invoice inv = entity.getInvoice();
-            remainingDebt = inv.getSurchargeRemainingDebt();
-            if (remainingDebt != null && remainingDebt.compareTo(BigDecimal.ZERO) == 0) {
-                status = "PAID";
-            } else if (remainingDebt != null && inv.getSurchargeAmount() != null && remainingDebt.compareTo(inv.getSurchargeAmount()) < 0) {
-                status = "PARTIAL";
-            } else {
-                status = "UNPAID";
+        BigDecimal remainingDebt = snapshot != null ? snapshot.remainingDebt() : null;
+        String status = snapshot != null ? snapshot.status() : null;
+        if (snapshot == null) {
+            if (entity.getInvoiceItem() != null) {
+                InvoiceItem it = entity.getInvoiceItem();
+                remainingDebt = it.getRemainingDebt();
+                status = it.getPaymentStatus() != null ? it.getPaymentStatus().name() : "PAID";
+            } else if ("SURCHARGE".equalsIgnoreCase(entity.getItemType()) && entity.getInvoice() != null) {
+                Invoice inv = entity.getInvoice();
+                remainingDebt = inv.getSurchargeRemainingDebt();
+                if (remainingDebt != null && remainingDebt.compareTo(BigDecimal.ZERO) == 0) {
+                    status = "PAID";
+                } else if (remainingDebt != null && inv.getSurchargeAmount() != null && remainingDebt.compareTo(inv.getSurchargeAmount()) < 0) {
+                    status = "PARTIAL";
+                } else {
+                    status = "UNPAID";
+                }
             }
         }
 

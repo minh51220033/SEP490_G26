@@ -28,6 +28,15 @@ public class PaymentRestController {
     private final RefundService refundService;
     private final PaymentAllocationService paymentAllocationService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.InvoiceRepository invoiceRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.PaymentRepository paymentRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.UserRepository userRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.StaffBranchAssignmentRepository staffBranchAssignmentRepository;
+
     public PaymentRestController(
             PaymentService paymentService,
             RefundService refundService,
@@ -38,11 +47,60 @@ public class PaymentRestController {
         this.paymentAllocationService = paymentAllocationService;
     }
 
+    private static final class UnauthenticatedException extends RuntimeException {
+        UnauthenticatedException(String message) {
+            super(message);
+        }
+    }
+
     private Long getCurrentUserId(HttpSession session) {
         if (session != null && session.getAttribute("loggedInUser") instanceof User u && u.getUserId() != null) {
             return u.getUserId();
         }
-        throw new AccessDeniedException("Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.");
+        throw new UnauthenticatedException("Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục.");
+    }
+
+    private void verifyBranchAccess(Long userId, Long branchId) {
+        if (branchId == null || userRepository == null || staffBranchAssignmentRepository == null) {
+            return;
+        }
+        if (userRepository.hasActiveAdminRole(userId)) {
+            return;
+        }
+        boolean hasAssignment = staffBranchAssignmentRepository.hasActiveUserAssignment(
+                userId, branchId, com.cvdcms.entity.enums.AssignmentStatus.ACTIVE);
+        if (!hasAssignment) {
+            boolean matchesUserBranch = staffBranchAssignmentRepository
+                    .findActiveBranchIdsByUserId(userId, com.cvdcms.entity.enums.AssignmentStatus.ACTIVE).isEmpty()
+                    && userRepository.findById(userId)
+                            .map(u -> u.getBranch() != null && branchId.equals(u.getBranch().getBranchId()))
+                            .orElse(false);
+            if (!matchesUserBranch) {
+                throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu tại chi nhánh ID: " + branchId);
+            }
+        }
+    }
+
+    private void verifyInvoiceBranchAccess(Long userId, Long invoiceId) {
+        if (invoiceId == null || invoiceRepository == null) {
+            return;
+        }
+        com.cvdcms.entity.Invoice inv = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hóa đơn ID: " + invoiceId));
+        if (inv.getBranch() != null) {
+            verifyBranchAccess(userId, inv.getBranch().getBranchId());
+        }
+    }
+
+    private void verifyPaymentBranchAccess(Long userId, Long paymentId) {
+        if (paymentId == null || paymentRepository == null) {
+            return;
+        }
+        Payment p = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu thu ID: " + paymentId));
+        if (p.getBranch() != null) {
+            verifyBranchAccess(userId, p.getBranch().getBranchId());
+        }
     }
 
     @PostMapping("/deposit")
@@ -57,8 +115,10 @@ public class PaymentRestController {
                     "patientCode", payment.getPatientProfile().getPatientCode(),
                     "depositBalance", payment.getPatientProfile().getDepositBalance()
             ));
+        } catch (UnauthenticatedException ue) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "error", ue.getMessage()));
         } catch (AccessDeniedException ade) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "error", ade.getMessage()));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("success", false, "error", ade.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
         }
@@ -74,8 +134,10 @@ public class PaymentRestController {
                     "refundCode", refund.getRefundCode(),
                     "amount", refund.getAmount()
             ));
+        } catch (UnauthenticatedException ue) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "error", ue.getMessage()));
         } catch (AccessDeniedException ade) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("success", false, "error", ade.getMessage()));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("success", false, "error", ade.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
         }
@@ -91,14 +153,17 @@ public class PaymentRestController {
             HttpSession session
     ) {
         try {
-            getCurrentUserId(session);
+            Long userId = getCurrentUserId(session);
+            verifyInvoiceBranchAccess(userId, invoiceId);
             if (paymentAllocationService == null) {
                 return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(Map.of("error", "Service phân bổ chưa sẵn sàng."));
             }
             PaymentAllocationPreviewDTO preview = paymentAllocationService.previewPaymentAllocation(invoiceId, amount);
             return ResponseEntity.ok(preview);
+        } catch (UnauthenticatedException ue) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", ue.getMessage()));
         } catch (AccessDeniedException ade) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", ade.getMessage()));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ade.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -113,14 +178,17 @@ public class PaymentRestController {
             HttpSession session
     ) {
         try {
-            getCurrentUserId(session);
+            Long userId = getCurrentUserId(session);
+            verifyPaymentBranchAccess(userId, paymentId);
             if (paymentAllocationService == null) {
                 return ResponseEntity.ok(List.of());
             }
             List<PaymentAllocationDTO> list = paymentAllocationService.getAllocationsByPaymentId(paymentId);
             return ResponseEntity.ok(list);
+        } catch (UnauthenticatedException ue) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", ue.getMessage()));
         } catch (AccessDeniedException ade) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", ade.getMessage()));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ade.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -135,14 +203,17 @@ public class PaymentRestController {
             HttpSession session
     ) {
         try {
-            getCurrentUserId(session);
+            Long userId = getCurrentUserId(session);
+            verifyInvoiceBranchAccess(userId, invoiceId);
             if (paymentAllocationService == null) {
                 return ResponseEntity.ok(List.of());
             }
             List<PaymentAllocationDTO> list = paymentAllocationService.getAllocationsByInvoiceId(invoiceId);
             return ResponseEntity.ok(list);
+        } catch (UnauthenticatedException ue) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", ue.getMessage()));
         } catch (AccessDeniedException ade) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", ade.getMessage()));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ade.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

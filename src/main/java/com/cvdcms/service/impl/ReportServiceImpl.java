@@ -131,13 +131,11 @@ public class ReportServiceImpl implements ReportService {
             }
         }
 
-        // 3. Chi phí vận hành & Chênh lệch thu chi vận hành (gồm chi phí vận hành + BHXH 21.5% phần DN chịu từ các kỳ lương đã chi trả)
+        // 3. Chi phí vận hành & Chênh lệch thu chi vận hành (gồm chi phí vận hành + BHXH 21.5% phần DN chịu từ các kỳ lương đã chi trả theo ngày chi)
         BigDecimal totalExpense = toBigDecimal(operatingExpenseRepository.sumActiveExpenses(branchIds, startDate, endDate));
         if (payrollPeriodRepository != null) {
-            BigDecimal employerInsurance = toBigDecimal(payrollPeriodRepository.sumPaidEmployerInsurance(
-                    branchIds,
-                    startDate.getMonthValue(), startDate.getYear(),
-                    endDate.getMonthValue(), endDate.getYear()
+            BigDecimal employerInsurance = toBigDecimal(payrollPeriodRepository.sumPaidEmployerInsuranceByPaidAt(
+                    branchIds, startDt, endDt
             ));
             totalExpense = totalExpense.add(employerInsurance);
         }
@@ -147,12 +145,10 @@ public class ReportServiceImpl implements ReportService {
         // Thuế & Lợi nhuận sau thuế theo cấu hình pháp nhân / chính sách
         applyDashboardTaxCalculation(dto, branchIds, endDate, taxRate);
 
-        // Thuế TNCN đã khấu trừ của nhân viên từ các bảng lương đã chi trả
+        // Thuế TNCN đã khấu trừ của nhân viên từ các bảng lương đã chi trả theo ngày chi
         if (payrollPeriodRepository != null) {
-            BigDecimal paidPit = payrollPeriodRepository.sumPaidPit(
-                    branchIds,
-                    startDate.getMonthValue(), startDate.getYear(),
-                    endDate.getMonthValue(), endDate.getYear()
+            BigDecimal paidPit = payrollPeriodRepository.sumPaidPitByPaidAt(
+                    branchIds, startDt, endDt
             );
             dto.setTotalPitWithheld(paidPit != null ? paidPit : BigDecimal.ZERO);
         }
@@ -314,10 +310,8 @@ public class ReportServiceImpl implements ReportService {
 
         BigDecimal activeExpenses = toBigDecimal(operatingExpenseRepository.sumActiveExpenses(branchIds, startDate, endDate));
         if (payrollPeriodRepository != null) {
-            BigDecimal employerInsurance = toBigDecimal(payrollPeriodRepository.sumPaidEmployerInsurance(
-                    branchIds,
-                    startDate.getMonthValue(), startDate.getYear(),
-                    endDate.getMonthValue(), endDate.getYear()
+            BigDecimal employerInsurance = toBigDecimal(payrollPeriodRepository.sumPaidEmployerInsuranceByPaidAt(
+                    branchIds, startDt, endDt
             ));
             activeExpenses = activeExpenses.add(employerInsurance);
         }
@@ -327,12 +321,10 @@ public class ReportServiceImpl implements ReportService {
         // Thuế & Lợi nhuận sau thuế theo cấu hình pháp nhân / chính sách
         applyFinancialTaxCalculation(dto, branchIds, endDate, taxRate);
 
-        // Thuế TNCN đã khấu trừ của nhân viên từ các bảng lương đã chi trả
+        // Thuế TNCN đã khấu trừ của nhân viên từ các bảng lương đã chi trả theo ngày chi
         if (payrollPeriodRepository != null) {
-            BigDecimal paidPit = payrollPeriodRepository.sumPaidPit(
-                    branchIds,
-                    startDate.getMonthValue(), startDate.getYear(),
-                    endDate.getMonthValue(), endDate.getYear()
+            BigDecimal paidPit = payrollPeriodRepository.sumPaidPitByPaidAt(
+                    branchIds, startDt, endDt
             );
             dto.setTotalPitWithheld(paidPit != null ? paidPit : BigDecimal.ZERO);
         }
@@ -502,7 +494,7 @@ public class ReportServiceImpl implements ReportService {
             }
         }
 
-        // 2. Phân bổ thực thu thanh toán theo ngày
+        // 2. Phân bổ thực thu thanh toán theo ngày (đã trừ hoàn tiền trong ngày để khớp KPI thực thu ròng)
         List<Object[]> pmtAmounts = paymentRepository.findDailyRealPaymentsForPeriod(branchIds, startDt, endDt);
         for (Object[] r : pmtAmounts) {
             if (r[0] != null) {
@@ -511,6 +503,19 @@ public class ReportServiceImpl implements ReportService {
                 DailyRevenueStat stat = map.get(d);
                 if (stat != null) {
                     stat.setRealRevenue(stat.getRealRevenue().add(amt));
+                }
+            }
+        }
+        List<Object[]> refundAmounts = refundRepository.findDailyRefundsForPeriod(branchIds, startDt, endDt);
+        if (refundAmounts != null) {
+            for (Object[] r : refundAmounts) {
+                if (r[0] != null) {
+                    LocalDate d = ((LocalDateTime) r[0]).toLocalDate();
+                    BigDecimal amt = toBigDecimal(r[1]);
+                    DailyRevenueStat stat = map.get(d);
+                    if (stat != null) {
+                        stat.setRealRevenue(stat.getRealRevenue().subtract(amt));
+                    }
                 }
             }
         }
