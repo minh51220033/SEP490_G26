@@ -1,7 +1,5 @@
 package com.cvdcms.service;
 
-import com.cvdcms.DTO.AiParsePlanRequestDTO;
-import com.cvdcms.DTO.AiParsePlanResponseDTO;
 import com.cvdcms.DTO.TreatmentPlanRequestDTO;
 import com.cvdcms.DTO.TreatmentPlanResponseDTO;
 
@@ -28,8 +26,6 @@ public interface TreatmentPlanService {
     void deletePlan(Long planId);
 
     TreatmentPlanResponseDTO handoverToAccounting(Long planId);
-
-    AiParsePlanResponseDTO parsePlanWithAi(AiParsePlanRequestDTO request);
 
     List<com.cvdcms.DTO.TreatmentPlanInstallmentDTO> getPlanInstallments(Long planId);
 

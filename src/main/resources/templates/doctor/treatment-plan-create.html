@@ -790,7 +790,7 @@
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-light text-secondary border" id="planDoctorSummary"
-                              th:text="${visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'Bác sĩ phụ trách'}">BS. Phụ trách</span>
+                              th:text="${defaultActingDoctor != null ? defaultActingDoctor.fullName : (visit != null and visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'Bác sĩ phụ trách')}">BS. Phụ trách</span>
                     </div>
                 </div>
 
@@ -805,7 +805,7 @@
                                    oninput="userEditedPlanName = true; clearFieldError('planNameError')">
                             <div id="planNameError" class="df-field-error">Vui lòng nhập tên kế hoạch điều trị trước khi lưu.</div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-3" th:with="activeDoc=${defaultActingDoctor != null ? defaultActingDoctor : (visit != null ? visit.primaryDoctor : null)}">
                             <label class="form-label fw-semibold small text-dark mb-1" for="doctorSelect">
                                 Bác sĩ phụ trách <span class="text-danger">*</span>
                             </label>
@@ -813,7 +813,7 @@
                                 <option th:each="doc : ${doctors}"
                                         th:value="${doc.staffId}"
                                         th:text="${doc.fullName + (doc.specialty != null ? ' (' + doc.specialty + ')' : '')}"
-                                        th:selected="${visit.primaryDoctor != null and visit.primaryDoctor.staffId == doc.staffId}">
+                                        th:selected="${activeDoc != null and activeDoc.staffId == doc.staffId}">
                                     Bác sĩ
                                 </option>
                             </select>

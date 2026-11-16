@@ -13,6 +13,7 @@ import com.cvdcms.entity.TreatmentPlanStage;
 import com.cvdcms.entity.User;
 import com.cvdcms.entity.Visit;
 import com.cvdcms.entity.enums.AssignmentStatus;
+import com.cvdcms.entity.enums.StaffStatus;
 import com.cvdcms.entity.enums.UserType;
 import com.cvdcms.repository.AppointmentRepository;
 import com.cvdcms.repository.ClinicalPhotoRepository;
@@ -438,5 +439,78 @@ public class DoctorVisitAccess {
             return plan.getPatientProfile().getPreferredBranch().getBranchId();
         }
         return null;
+    }
+
+    /**
+     * Xác định bác sĩ thực hiện hợp lệ cho ca khám mà không đoán bừa toàn hệ thống:
+     * 1. Nếu có requestedDoctorId: kiểm tra bác sĩ đang ACTIVE và thuộc đúng chi nhánh / bác sĩ chính / khám thay của ca.
+     * 2. Nếu không truyền và người gọi là bác sĩ (chính hoặc khám thay): lấy chính người đang đăng nhập.
+     * 3. Nếu người gọi là Admin (không có hồ sơ bác sĩ hoặc là admin): lấy bác sĩ chính của ca; nếu chưa gán -> báo lỗi rõ ràng.
+     */
+    public StaffProfile resolveActingDoctor(HttpSession session, Visit visit, Long requestedDoctorId) {
+        if (visit == null) {
+            throw new IllegalArgumentException("Không tìm thấy ca khám phù hợp.");
+        }
+        Long visitBranchId = visit.getBranch() != null ? visit.getBranch().getBranchId() : null;
+        if (requestedDoctorId != null) {
+            StaffProfile chosen = staff.findById(requestedDoctorId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bác sĩ thực hiện được chọn."));
+            if (chosen.getStatus() != StaffStatus.ACTIVE) {
+                throw new IllegalArgumentException("Bác sĩ được chọn hiện không ở trạng thái hoạt động.");
+            }
+            if (!isDoctorValidForVisit(chosen, visit, visitBranchId)) {
+                throw new IllegalArgumentException("Bác sĩ được chọn không thuộc chi nhánh của ca khám này.");
+            }
+            return chosen;
+        }
+
+        User currentUser = (session != null && session.getAttribute("loggedInUser") instanceof User u) ? u : null;
+        if (currentUser != null && !isAdmin(currentUser)) {
+            StaffProfile callerDoctor = staff.findByUserUserId(currentUser.getUserId()).orElse(null);
+            if (callerDoctor != null) {
+                return callerDoctor;
+            }
+        }
+
+        if (visit.getPrimaryDoctor() != null) {
+            return visit.getPrimaryDoctor();
+        }
+        throw new IllegalStateException("Ca khám chưa được phân công bác sĩ chính. Vui lòng phân công bác sĩ tại màn Điều phối trước khi thực hiện thủ thuật.");
+    }
+
+    private boolean isDoctorValidForVisit(StaffProfile doctor, Visit visit, Long visitBranchId) {
+        if (visit.getPrimaryDoctor() != null && doctor.getStaffId().equals(visit.getPrimaryDoctor().getStaffId())) {
+            return true;
+        }
+        if (coverGrants != null && coverGrants.existsByVisitVisitIdAndCoveringDoctorStaffIdAndRevokedAtIsNullAndExpiresAtAfter(
+                visit.getVisitId(), doctor.getStaffId(), LocalDateTime.now())) {
+            return true;
+        }
+        if (visitBranchId == null) {
+            return true;
+        }
+        boolean hasBranchMetadata = false;
+        if (doctor.getUser() != null) {
+            Set<Long> allowed = resolveAccessibleBranchIds(doctor.getUser());
+            if (allowed == null) {
+                return true;
+            }
+            if (!allowed.isEmpty()) {
+                hasBranchMetadata = true;
+                if (allowed.contains(visitBranchId)) {
+                    return true;
+                }
+            }
+        }
+        if (branchAssignments != null) {
+            List<Long> staffBranches = branchAssignments.findActiveBranchIdsByStaffId(doctor.getStaffId(), AssignmentStatus.ACTIVE);
+            if (staffBranches != null && !staffBranches.isEmpty()) {
+                hasBranchMetadata = true;
+                if (staffBranches.contains(visitBranchId)) {
+                    return true;
+                }
+            }
+        }
+        return !hasBranchMetadata;
     }
 }

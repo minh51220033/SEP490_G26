@@ -105,14 +105,22 @@
                                 <option value="ANY">Bất kỳ giờ nào</option>
                             </select>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-6" th:with="activeDoc=${defaultActingDoctor != null ? defaultActingDoctor : (visit != null ? visit.primaryDoctor : null)}">
                             <label class="form-label small fw-bold text-secondary mb-1">Bác sĩ phụ trách tái khám:</label>
-                            <select class="form-select rounded-3" id="reExamDoctorSelect" style="font-size: 13.5px; padding: 7px 12px; border-color: #cbd5e1;">
+                            <select class="form-select rounded-3" id="reExamDoctorSelect"
+                                    th:if="${isDoctorSelectorEditable == true}"
+                                    style="font-size: 13.5px; padding: 7px 12px; border-color: #cbd5e1;">
                                 <option th:each="doc : ${doctors}" th:value="${doc.staffId}" th:text="${doc.fullName}"
-                                        th:selected="${visit.primaryDoctor != null and doc.staffId == visit.primaryDoctor.staffId}">
+                                        th:selected="${activeDoc != null and doc.staffId == activeDoc.staffId}">
                                     BS. Lê Hoàng Nam
                                 </option>
                             </select>
+                            <th:block th:unless="${isDoctorSelectorEditable == true}">
+                                <input type="text" class="form-control bg-light rounded-3 text-dark fw-medium" readonly
+                                       style="font-size: 13.5px; padding: 7px 12px; border-color: #cbd5e1;"
+                                       th:value="${activeDoc != null ? activeDoc.fullName : 'Chưa gán bác sĩ'}">
+                                <input type="hidden" id="reExamDoctorSelect" th:value="${activeDoc != null ? activeDoc.staffId : ''}">
+                            </th:block>
                         </div>
                     </div>
 

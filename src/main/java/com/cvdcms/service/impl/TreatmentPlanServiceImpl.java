@@ -7,7 +7,6 @@ import com.cvdcms.entity.enums.TreatmentPlanItemStatus;
 import com.cvdcms.entity.enums.TreatmentPlanStageStatus;
 import com.cvdcms.entity.enums.TreatmentPlanStatus;
 import com.cvdcms.repository.*;
-import com.cvdcms.service.GeminiAiService;
 import com.cvdcms.service.TreatmentPlanService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +34,6 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     private final BranchRepository branchRepository;
     private final StaffProfileRepository staffProfileRepository;
     private final ServiceRepository serviceRepository;
-    private final GeminiAiService geminiAiService;
     private final PerformedServiceRepository performedServiceRepository;
     private final InvoiceItemRepository invoiceItemRepository;
     private final TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository;
@@ -483,10 +481,6 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         }
         treatmentPlanRepository.save(plan);
         return mapToResponseDTO(treatmentPlanRepository.findByIdWithDetails(planId).orElse(plan));
-    }
-
-    public AiParsePlanResponseDTO parsePlanWithAi(AiParsePlanRequestDTO request) {
-        return geminiAiService.parseTreatmentPlan(request);
     }
 
     private TreatmentPlanResponseDTO mapToResponseDTO(TreatmentPlan p) {

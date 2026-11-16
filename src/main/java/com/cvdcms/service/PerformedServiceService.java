@@ -13,6 +13,8 @@ public interface PerformedServiceService {
 
     List<StaffProfile> getAvailableDoctors();
 
+    List<StaffProfile> getAvailableDoctorsByBranch(Long branchId);
+
     List<StaffProfile> getAvailableAssistants();
 
     List<PerformedServiceResponseDTO> getPerformedServicesByVisitId(Long visitId);

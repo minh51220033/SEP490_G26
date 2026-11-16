@@ -48,6 +48,12 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
     private final com.cvdcms.repository.ClinicalWorkflowVersionRepository workflowVersionRepo;
     private final com.cvdcms.repository.ClinicalWorkflowStepRepository workflowStepRepo;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.StaffBranchAssignmentRepository staffBranchAssignmentRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository;
+
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     @Override
@@ -59,13 +65,42 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .collect(Collectors.toList());
     }
 
+    private boolean isDoctorProfile(StaffProfile s) {
+        return s != null && ((s.getStaffCode() != null && s.getStaffCode().startsWith("BS"))
+                || (s.getPositionTitle() != null && s.getPositionTitle().toLowerCase().contains("bác sĩ"))
+                || (s.getDepartment() != null && s.getDepartment().toLowerCase().contains("bác sĩ")));
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<StaffProfile> getAvailableDoctors() {
         return staffProfileRepository.findByStatus(StaffStatus.ACTIVE).stream()
-                .filter(s -> s.getStaffCode() != null && s.getStaffCode().startsWith("BS")
-                        || (s.getPositionTitle() != null && s.getPositionTitle().toLowerCase().contains("bác sĩ"))
-                        || (s.getDepartment() != null && s.getDepartment().toLowerCase().contains("bác sĩ")))
+                .filter(this::isDoctorProfile)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StaffProfile> getAvailableDoctorsByBranch(Long branchId) {
+        if (branchId == null) {
+            return getAvailableDoctors();
+        }
+        java.util.Set<Long> assignedStaffIds = new java.util.HashSet<>();
+        if (staffBranchAssignmentRepository != null) {
+            java.time.LocalDate today = java.time.LocalDate.now();
+            for (StaffBranchAssignment a : staffBranchAssignmentRepository.findByBranchAndStatus(
+                    branchId, com.cvdcms.entity.enums.AssignmentStatus.ACTIVE)) {
+                boolean started = a.getStartDate() == null || !a.getStartDate().isAfter(today);
+                boolean notEnded = a.getEndDate() == null || !a.getEndDate().isBefore(today);
+                if (started && notEnded && a.getStaff() != null && a.getStaff().getStaffId() != null) {
+                    assignedStaffIds.add(a.getStaff().getStaffId());
+                }
+            }
+        }
+        return getAvailableDoctors().stream()
+                .filter(s -> assignedStaffIds.contains(s.getStaffId())
+                        || (s.getUser() != null && s.getUser().getBranch() != null
+                            && branchId.equals(s.getUser().getBranch().getBranchId())))
                 .collect(Collectors.toList());
     }
 
@@ -105,6 +140,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
 
         StaffProfile doctor = staffProfileRepository.findById(requestDTO.getDoctorId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bác sĩ với ID: " + requestDTO.getDoctorId()));
+        if (doctor.getStatus() != null && doctor.getStatus() != StaffStatus.ACTIVE) {
+            throw new IllegalArgumentException("Bác sĩ thực hiện hiện không ở trạng thái hoạt động.");
+        }
+        validateDoctorForVisit(doctor, visit);
 
         StaffProfile assistant = null;
         if (requestDTO.getAssistantId() != null) {
@@ -347,5 +386,43 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .planName(planName)
                 .stageName(stageName)
                 .build();
+    }
+
+    private void validateDoctorForVisit(StaffProfile doctor, Visit visit) {
+        if (doctor == null || visit == null || visit.getBranch() == null) {
+            return;
+        }
+        if (visit.getPrimaryDoctor() != null && doctor.getStaffId().equals(visit.getPrimaryDoctor().getStaffId())) {
+            return;
+        }
+        if (doctorCoverGrantRepository != null && doctorCoverGrantRepository
+                .existsByVisitVisitIdAndCoveringDoctorStaffIdAndRevokedAtIsNullAndExpiresAtAfter(
+                        visit.getVisitId(), doctor.getStaffId(), LocalDateTime.now())) {
+            return;
+        }
+        Long visitBranchId = visit.getBranch().getBranchId();
+        if (visitBranchId == null) {
+            return;
+        }
+        boolean hasBranchInfo = false;
+        if (doctor.getUser() != null && doctor.getUser().getBranch() != null) {
+            hasBranchInfo = true;
+            if (visitBranchId.equals(doctor.getUser().getBranch().getBranchId())) {
+                return;
+            }
+        }
+        if (staffBranchAssignmentRepository != null) {
+            List<Long> branchIds = staffBranchAssignmentRepository.findActiveBranchIdsByStaffId(
+                    doctor.getStaffId(), com.cvdcms.entity.enums.AssignmentStatus.ACTIVE);
+            if (branchIds != null && !branchIds.isEmpty()) {
+                hasBranchInfo = true;
+                if (branchIds.contains(visitBranchId)) {
+                    return;
+                }
+            }
+        }
+        if (hasBranchInfo) {
+            throw new IllegalArgumentException("Bác sĩ thực hiện không thuộc chi nhánh của ca khám.");
+        }
     }
 }
