@@ -61,14 +61,9 @@ public class EmrAccess {
         Set<Long> branchIds = new HashSet<>(assignments.findActiveBranchIdsByUserId(
                 user.getUserId(), AssignmentStatus.ACTIVE));
         if (user.getBranch() != null) branchIds.add(user.getBranch().getBranchId());
-        if (!admin && branchIds.isEmpty() && branchRepository != null) {
-            for (Branch b : branchRepository.findByIsActiveTrueOrderByBranchNameAsc()) {
-                if (b.getBranchId() != null) branchIds.add(b.getBranchId());
-            }
-        }
         if (!admin && branchIds.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Tài khoản bác sĩ chưa được phân chi nhánh.");
+                    "Tài khoản chưa được phân chi nhánh hợp lệ.");
         }
         return new Scope(user, admin, doctor, Set.copyOf(branchIds));
     }

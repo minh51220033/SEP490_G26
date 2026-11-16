@@ -111,6 +111,9 @@
                 <th data-column-key="unit" style="min-width:90px">
                   <div class="dv-th-inner"><span>Đơn vị</span></div>
                 </th>
+                <th data-column-key="salePrice" style="min-width:120px" class="text-end">
+                  <div class="dv-th-inner justify-content-end"><span>Giá bán</span></div>
+                </th>
                 <th data-column-key="usage" style="min-width:200px">
                   <div class="dv-th-inner"><span>Hướng dẫn sử dụng</span></div>
                 </th>
@@ -124,7 +127,7 @@
             </thead>
             <tbody>
               <tr th:if="${medications.isEmpty()}">
-                <td colspan="7" class="text-center text-muted py-4">Không có thuốc nào.</td>
+                <td colspan="8" class="text-center text-muted py-4">Không có thuốc nào.</td>
               </tr>
               <tr th:each="med : ${medications}" class="dv-data-row">
                 <td data-column-key="code">
@@ -133,6 +136,8 @@
                 <td data-column-key="name" th:text="${med.drugName}">Amoxicillin</td>
                 <td data-column-key="activeIngredient" th:text="${med.activeIngredient ?: '—'}">Amoxicillin trihydrate</td>
                 <td data-column-key="unit" th:text="${med.unit}">Viên</td>
+                <td data-column-key="salePrice" class="text-end fw-semibold"
+                    th:text="${med.salePrice != null and med.salePrice.compareTo(T(java.math.BigDecimal).ZERO) > 0 ? #numbers.formatDecimal(med.salePrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</td>
                 <td data-column-key="usage" th:text="${med.usageInstruction ?: '—'}">Uống sau ăn</td>
                 <td data-column-key="status" class="text-center">
                   <span class="badge"
@@ -147,6 +152,7 @@
                           th:data-name="${med.drugName}"
                           th:data-ingredient="${med.activeIngredient}"
                           th:data-unit="${med.unit}"
+                          th:data-sale-price="${med.salePrice != null ? med.salePrice.intValue() : 0}"
                           th:data-usage="${med.usageInstruction}"
                           onclick="openEditModal(this)"
                           title="Sửa">
@@ -292,6 +298,10 @@
               <option value="ml">ml</option>
             </select>
           </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold" for="createSalePrice">Giá bán (VNĐ)</label>
+            <input id="createSalePrice" name="salePrice" type="number" class="form-control" min="0" step="500" value="0">
+          </div>
           <div class="col-12">
             <label class="form-label fw-semibold" for="createUsage">Hướng dẫn sử dụng</label>
             <input id="createUsage" name="usageInstruction" type="text" class="form-control"
@@ -352,6 +362,10 @@
               <option value="ml">ml</option>
             </select>
           </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold" for="editSalePrice">Giá bán (VNĐ)</label>
+            <input id="editSalePrice" name="salePrice" type="number" class="form-control" min="0" step="500" value="0">
+          </div>
           <div class="col-12">
             <label class="form-label fw-semibold" for="editUsage">Hướng dẫn sử dụng</label>
             <input id="editUsage" name="usageInstruction" type="text" class="form-control" maxlength="255">
@@ -386,12 +400,13 @@
 
 // Mở modal sửa và điền dữ liệu
 function openEditModal(btn) {
-  const id   = btn.dataset.id;
-  const code = btn.dataset.code;
-  const name = btn.dataset.name;
-  const ing  = btn.dataset.ingredient || '';
-  const unit = btn.dataset.unit || 'Viên';
-  const usage= btn.dataset.usage || '';
+  const id        = btn.dataset.id;
+  const code      = btn.dataset.code;
+  const name      = btn.dataset.name;
+  const ing       = btn.dataset.ingredient || '';
+  const unit      = btn.dataset.unit || 'Viên';
+  const salePrice = btn.dataset.salePrice || '0';
+  const usage     = btn.dataset.usage || '';
 
   const form = document.getElementById('formEdit');
   form.action = '/admin/medications/' + id + '/update';
@@ -399,6 +414,7 @@ function openEditModal(btn) {
   document.getElementById('editCode').value       = code;
   document.getElementById('editName').value       = name;
   document.getElementById('editIngredient').value = ing;
+  document.getElementById('editSalePrice').value  = salePrice;
   document.getElementById('editUsage').value      = usage;
 
   // Chọn đúng option unit

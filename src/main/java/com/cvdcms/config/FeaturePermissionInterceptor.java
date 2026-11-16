@@ -184,10 +184,20 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.matches("^/api/doctor/treatment-plans/\\d+/installments/pay/?$")) {
             return List.of("PAYMENT_COLLECT");
         }
-
+        if (uri.matches("^/api/doctor/treatment-plans/installments/\\d+/remind/?$")) {
+            return List.of("PAYMENT_COLLECT", "FINANCE_DASHBOARD", "TREATMENT_PLAN_MANAGE", "RECEPTION_CHECKIN");
+        }
+        if (uri.matches("^/api/doctor/treatment-plans/\\d+/installments/?$")) {
+            if (!isWriteMethod) {
+                return List.of("TREATMENT_PLAN_MANAGE", "PAYMENT_COLLECT", "FINANCE_DASHBOARD", "INVOICE_CREATE",
+                        "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+            }
+            return List.of("TREATMENT_PLAN_MANAGE", "PAYMENT_COLLECT", "INVOICE_CREATE", "FINANCE_DASHBOARD");
+        }
         if (uri.startsWith("/api/doctor/treatment-plans")) {
             if (!isWriteMethod) {
-                return List.of("TREATMENT_PLAN_MANAGE", "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+                return List.of("TREATMENT_PLAN_MANAGE", "PAYMENT_COLLECT", "FINANCE_DASHBOARD", "INVOICE_CREATE",
+                        "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
             }
             return List.of("TREATMENT_PLAN_MANAGE");
         }

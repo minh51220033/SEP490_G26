@@ -265,6 +265,15 @@
                                                 Viêm nha chu / Có túi mủ</option>
                                         </select>
                                     </div>
+                                    <div class="col-12 mt-2">
+                                        <label class="form-label small fw-semibold text-secondary mb-1" for="examSummaryAssessmentInput">
+                                            <i class="bi bi-journal-medical text-primary me-1"></i>Nhận định / Kết luận khám lâm sàng tổng quát:
+                                        </label>
+                                        <textarea class="form-control form-control-sm" id="examSummaryAssessmentInput" rows="2"
+                                            th:disabled="${isReadOnlyView == true}"
+                                            th:text="${generalExam != null ? generalExam.summaryAssessment : ''}"
+                                            placeholder="Tóm tắt tình trạng răng miệng, hướng xử trí chính (dùng đồng bộ sang Bệnh án điện tử EMR)..."></textarea>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -414,6 +423,7 @@
             const tmjSelect = document.getElementById('tmjSelect');
             const hygieneSelect = document.getElementById('hygieneSelect');
             const gingivaSelect = document.getElementById('gingivaSelect');
+            const summaryInput = document.getElementById('examSummaryAssessmentInput');
 
             const payload = {
                 visitId: parseInt(visitId),
@@ -427,7 +437,8 @@
                 underlyingDiseaseDetails: underlyingDetailsInput ? underlyingDetailsInput.value.trim() : '',
                 tmjStatus: tmjSelect ? tmjSelect.value : 'NORMAL',
                 hygieneStatus: hygieneSelect ? hygieneSelect.value : 'MEDIUM',
-                gingivaStatus: gingivaSelect ? gingivaSelect.value : 'HEALTHY'
+                gingivaStatus: gingivaSelect ? gingivaSelect.value : 'HEALTHY',
+                summaryAssessment: summaryInput ? summaryInput.value.trim() : ''
             };
 
             // Cập nhật trạng thái loading cho nút Lưu

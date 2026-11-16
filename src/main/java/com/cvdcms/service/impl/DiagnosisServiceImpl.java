@@ -53,6 +53,8 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     private com.cvdcms.repository.ParaclinicalOrderItemRepository paraclinicalOrderItemRepository;
     @Autowired(required = false)
     private org.springframework.context.ApplicationEventPublisher careEventPublisher;
+    @Autowired(required = false)
+    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
 
     @Autowired
     public DiagnosisServiceImpl(
@@ -135,12 +137,11 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 .orElseThrow(
                         () -> new IllegalArgumentException("Không tìm thấy ca khám với ID: " + request.getVisitId()));
 
-        // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi đã chuyển thanh toán
-        // hoặc hoàn thành
-        if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
-            throw new IllegalStateException(
-                    "Bệnh án lâm sàng đã được hoàn tất và khóa bất biến (BR-EMR-02). Không thể thêm chẩn đoán mới.");
-        }
+        // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi đã chuyển thanh toán, hoàn thành, hủy hoặc khóa EMR
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                visit,
+                emrRecordRepository,
+                "Bệnh án lâm sàng đã được hoàn tất và khóa bất biến. Không thể thêm chẩn đoán mới");
 
         Icd10Disease disease = icd10DiseaseRepository.findByIcd10Code(request.getIcd10Code().trim())
                 .orElseThrow(
@@ -189,12 +190,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chẩn đoán có ID: " + diagnosisId));
 
         // Quy tắc BR-EMR-02: Khóa bất biến
-        if (diagnosis.getVisit() != null &&
-                (diagnosis.getVisit().getStatus() == VisitStatus.WAITING_PAYMENT
-                        || diagnosis.getVisit().getStatus() == VisitStatus.COMPLETED)) {
-            throw new IllegalStateException(
-                    "Bệnh án lâm sàng đã được hoàn tất và khóa bất biến (BR-EMR-02). Không thể xóa chẩn đoán.");
-        }
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                diagnosis.getVisit(),
+                emrRecordRepository,
+                "Bệnh án lâm sàng đã được hoàn tất và khóa bất biến. Không thể xóa chẩn đoán");
 
         diagnosisRepository.delete(diagnosis);
     }
@@ -440,9 +439,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         }
 
         Visit visit = getVisitOrThrow(visitId);
-        if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
-            throw new IllegalStateException("Lượt khám hiện tại đã ở trạng thái " + visit.getStatus().name() + ".");
-        }
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                visit,
+                emrRecordRepository,
+                "Lượt khám hiện tại không thể hoàn tất khám do đã khóa hoặc đã hủy");
 
         // Kiểm tra xem ca khám có phát sinh chi phí cần Kế toán lập hóa đơn lẻ hay không
         // (Dịch vụ thuộc KHDT trả theo đợt đã thu qua lộ trình phân kỳ nên không đẩy sang hóa đơn lẻ)
@@ -524,6 +524,28 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             }
         }
 
+        ClinicalExamination exam = clinicalExamRepository.findByVisit_VisitId(visitId).orElse(null);
+        if (exam == null && examinations != null && visit.getPatientProfile() != null && visit.getPrimaryDoctor() != null) {
+            exam = createDefaultExamination(visit);
+        }
+        if (exam != null) {
+            String trimmedDoctorNotes = doctorNotes != null ? doctorNotes.trim() : null;
+            if (trimmedDoctorNotes != null && !trimmedDoctorNotes.isEmpty()) {
+                exam.setSummaryAssessment(trimmedDoctorNotes);
+                if (visit.getNotes() == null || visit.getNotes().isBlank()) {
+                    visit.setNotes(trimmedDoctorNotes);
+                } else if (!visit.getNotes().contains(trimmedDoctorNotes)) {
+                    visit.setNotes(visit.getNotes().trim() + " | Kết luận: " + trimmedDoctorNotes);
+                }
+            } else if (exam.getSummaryAssessment() == null || exam.getSummaryAssessment().isBlank()) {
+                String synthesized = buildDefaultSummaryAssessment(visit, exam, completedServices);
+                if (!synthesized.isBlank()) {
+                    exam.setSummaryAssessment(synthesized);
+                }
+            }
+            clinicalExamRepository.save(exam);
+        }
+
         NumberFormat vndFmt = NumberFormat.getInstance(Locale.forLanguageTag("vi-VN"));
         String svcCostStr = vndFmt
                 .format(check.getTotalServiceAmount() != null ? check.getTotalServiceAmount() : BigDecimal.ZERO) + "đ";
@@ -539,6 +561,35 @@ public class DiagnosisServiceImpl implements DiagnosisService {
 
         Visit saved = visitRepository.save(visit);
         return saved;
+    }
+
+    private String buildDefaultSummaryAssessment(Visit visit, ClinicalExamination exam, List<PerformedService> completedServices) {
+        List<String> parts = new ArrayList<>();
+        diagnosisRepository.findByVisit_VisitId(visit.getVisitId()).stream()
+                .filter(d -> d.getDiagnosisType() == DiagnosisType.MAIN)
+                .findFirst()
+                .ifPresent(main -> {
+                    String code = main.getIcd10Disease() != null ? main.getIcd10Disease().getIcd10Code() + " - " : "";
+                    String text = main.getDiagnosisText() != null ? main.getDiagnosisText() : "";
+                    if (!(code + text).isBlank()) {
+                        parts.add("Chẩn đoán chính: " + code + text.trim());
+                    }
+                });
+        if (completedServices != null && !completedServices.isEmpty()) {
+            String svcNames = completedServices.stream()
+                    .map(ps -> ps.getService() != null ? ps.getService().getServiceName() : null)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .limit(4)
+                    .collect(java.util.stream.Collectors.joining(", "));
+            if (!svcNames.isBlank()) {
+                parts.add("Thủ thuật thực hiện: " + svcNames);
+            }
+        }
+        if (parts.isEmpty() && exam.getChiefComplaint() != null && !exam.getChiefComplaint().isBlank()) {
+            parts.add(exam.getChiefComplaint().trim());
+        }
+        return String.join(". ", parts);
     }
 
     private boolean isInstallmentPlanService(PerformedService ps) {
@@ -678,6 +729,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 .hygieneStatus(exam != null && exam.getIntraoralExam() != null ? exam.getIntraoralExam() : "MEDIUM")
                 .gingivaStatus(
                         exam != null && exam.getPeriodontalStatus() != null ? exam.getPeriodontalStatus() : "HEALTHY")
+                .summaryAssessment(exam != null ? exam.getSummaryAssessment() : null)
                 .build();
     }
 
@@ -690,10 +742,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         Visit visit = getVisitOrThrow(request.getVisitId());
 
         // Kiểm tra khóa bất biến EMR (BR-EMR-02)
-        if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
-            throw new IllegalStateException(
-                    "Hồ sơ bệnh án lâm sàng đã khóa (BR-EMR-02). Không thể chỉnh sửa thông tin khám.");
-        }
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                visit,
+                emrRecordRepository,
+                "Hồ sơ bệnh án lâm sàng đã khóa. Không thể chỉnh sửa thông tin khám");
 
         // 1. Cập nhật triệu chứng ban đầu trên Visit
         if (request.getInitialSymptoms() != null) {
@@ -753,6 +805,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         if (request.getGingivaStatus() != null) {
             exam.setPeriodontalStatus(request.getGingivaStatus().trim());
         }
+        if (request.getSummaryAssessment() != null) {
+            String trimmedSummary = request.getSummaryAssessment().trim();
+            exam.setSummaryAssessment(trimmedSummary.isEmpty() ? null : trimmedSummary);
+        }
         clinicalExamRepository.save(exam);
         log.info("Đã lưu kết quả khám tổng quát cho ca khám visitId={}", visit.getVisitId());
     }
@@ -764,6 +820,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             throw new IllegalArgumentException("Mã ca khám không hợp lệ.");
         }
         Visit visit = getVisitOrThrow(visitId);
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                visit,
+                emrRecordRepository,
+                "Hồ sơ bệnh án lâm sàng đã khóa. Không thể cập nhật lời dặn bác sĩ");
 
         String trimmedNotes = (adviceNotes != null) ? adviceNotes.trim() : "";
         visit.setNotes(trimmedNotes);

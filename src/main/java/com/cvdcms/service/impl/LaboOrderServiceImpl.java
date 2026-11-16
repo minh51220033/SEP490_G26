@@ -36,6 +36,9 @@ public class LaboOrderServiceImpl implements LaboOrderService {
     private final BranchRepository branchRepository;
     private final StaffProfileRepository staffProfileRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
@@ -88,6 +91,10 @@ public class LaboOrderServiceImpl implements LaboOrderService {
         // 1. Visit (Optional)
         if (dto.getVisitId() != null) {
             Visit visit = visitRepository.findById(dto.getVisitId()).orElse(null);
+            com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                    visit,
+                    emrRecordRepository,
+                    "Hồ sơ bệnh án đã khóa hoặc đã hủy. Không thể tạo phiếu đặt xưởng Labo mới");
             order.setVisit(visit);
             if (visit != null && visit.getPatientProfile() != null && dto.getProfileId() == null) {
                 order.setPatientProfile(visit.getPatientProfile());
@@ -183,6 +190,10 @@ public class LaboOrderServiceImpl implements LaboOrderService {
     public LaboOrderResponseDTO updateOrder(Long laboId, LaboOrderRequestDTO dto, MultipartFile imageFile) throws IOException {
         LaboOrder order = laboOrderRepository.findById(laboId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu đặt xưởng ID: " + laboId));
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                order.getVisit(),
+                emrRecordRepository,
+                "Hồ sơ bệnh án đã khóa hoặc đã hủy. Không thể chỉnh sửa phiếu Labo");
 
         if (dto.getSupplierId() != null) {
             supplierRepository.findById(dto.getSupplierId()).ifPresent(order::setSupplier);
@@ -223,6 +234,9 @@ public class LaboOrderServiceImpl implements LaboOrderService {
     public LaboOrderResponseDTO updateStatus(Long laboId, LaboOrderStatus status, String note) {
         LaboOrder order = laboOrderRepository.findById(laboId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu đặt xưởng ID: " + laboId));
+        if (order.getVisit() != null && order.getVisit().getStatus() == com.cvdcms.entity.enums.VisitStatus.CANCELLED) {
+            throw new IllegalStateException("Ca khám đã hủy, không thể cập nhật trạng thái phiếu Labo (BR-EMR-02).");
+        }
 
         order.setStatus(status);
         if (status == LaboOrderStatus.DELIVERED && order.getReceivedDate() == null) {
@@ -242,6 +256,10 @@ public class LaboOrderServiceImpl implements LaboOrderService {
     public LaboOrderResponseDTO uploadImage(Long laboId, MultipartFile file, String directUrl) throws IOException {
         LaboOrder order = laboOrderRepository.findById(laboId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu đặt xưởng ID: " + laboId));
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                order.getVisit(),
+                emrRecordRepository,
+                "Hồ sơ bệnh án đã khóa hoặc đã hủy. Không thể thay đổi ảnh phiếu Labo");
 
         if (file != null && !file.isEmpty()) {
             String savedUrl = saveUploadedImage(file);
@@ -257,6 +275,12 @@ public class LaboOrderServiceImpl implements LaboOrderService {
     @Override
     @Transactional
     public void deleteOrder(Long laboId) {
+        LaboOrder order = laboOrderRepository.findById(laboId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu đặt xưởng ID: " + laboId));
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                order.getVisit(),
+                emrRecordRepository,
+                "Hồ sơ bệnh án đã khóa hoặc đã hủy. Không thể xóa phiếu Labo");
         laboOrderRepository.deleteById(laboId);
         log.info("Deleted LaboOrder ID: {}", laboId);
     }

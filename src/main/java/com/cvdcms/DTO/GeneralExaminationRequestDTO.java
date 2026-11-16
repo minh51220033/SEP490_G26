@@ -25,4 +25,5 @@ public class GeneralExaminationRequestDTO {
     private String tmjStatus;      // NORMAL, CLICKING, LIMITED, PAIN
     private String hygieneStatus;  // GOOD, MEDIUM, POOR
     private String gingivaStatus;  // HEALTHY, GINGIVITIS, PERIODONTITIS
+    private String summaryAssessment;
 }
