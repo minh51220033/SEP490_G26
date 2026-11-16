@@ -857,18 +857,24 @@
 
                     <!-- 4. BÁC SĨ & PHỤ TÁ -->
                     <div class="row g-3 mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-6" th:with="activeDoc=${defaultActingDoctor != null ? defaultActingDoctor : (visit != null ? visit.primaryDoctor : null)}">
                             <label class="form-label fw-bold small text-secondary">
                                 Bác sĩ thực hiện <span class="text-danger">*</span>
                             </label>
-                            <select class="form-select" id="treatDoctorSelect" required>
+                            <select class="form-select" id="treatDoctorSelect" required
+                                    th:if="${isDoctorSelectorEditable == true}">
                                 <option th:each="doc : ${doctors}"
                                         th:value="${doc.staffId}"
-                                        th:selected="${visit.primaryDoctor != null and doc.staffId == visit.primaryDoctor.staffId}"
-                                        th:text="${doc.fullName + ' (' + doc.staffCode + ')'}">
+                                        th:selected="${activeDoc != null and doc.staffId == activeDoc.staffId}"
+                                        th:text="${doc.fullName + (doc.staffCode != null ? ' (' + doc.staffCode + ')' : '')}">
                                     BS. CK1 Lê Hoàng Nam
                                 </option>
                             </select>
+                            <th:block th:unless="${isDoctorSelectorEditable == true}">
+                                <input type="text" class="form-control bg-light text-dark fw-medium" readonly
+                                       th:value="${activeDoc != null ? (activeDoc.fullName + (activeDoc.staffCode != null ? ' (' + activeDoc.staffCode + ')' : '')) : 'Chưa gán bác sĩ'}">
+                                <input type="hidden" id="treatDoctorSelect" th:value="${activeDoc != null ? activeDoc.staffId : ''}">
+                            </th:block>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold small text-secondary">
@@ -955,16 +961,22 @@
 
                     <!-- 3. BÁC SĨ KÊ ĐƠN, NGÀY KÊ, GIỜ KÊ -->
                     <div class="row g-3 mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-6" th:with="activeDoc=${defaultActingDoctor != null ? defaultActingDoctor : (visit != null ? visit.primaryDoctor : null)}">
                             <label class="form-label fw-bold small text-secondary">Bác sĩ kê đơn <span class="text-danger">*</span></label>
-                            <select class="form-select" id="prescDoctorSelect" required>
+                            <select class="form-select" id="prescDoctorSelect" required
+                                    th:if="${isDoctorSelectorEditable == true}">
                                 <option th:each="doc : ${doctors}"
                                         th:value="${doc.staffId}"
-                                        th:selected="${visit.primaryDoctor != null and doc.staffId == visit.primaryDoctor.staffId}"
-                                        th:text="${doc.fullName + ' (' + doc.staffCode + ' - ' + doc.specialty + ')'}">
+                                        th:selected="${activeDoc != null and doc.staffId == activeDoc.staffId}"
+                                        th:text="${doc.fullName + (doc.staffCode != null ? ' (' + doc.staffCode + (doc.specialty != null ? ' - ' + doc.specialty : '') + ')' : '')}">
                                     BS. CK1 Lê Hoàng Nam
                                 </option>
                             </select>
+                            <th:block th:unless="${isDoctorSelectorEditable == true}">
+                                <input type="text" class="form-control bg-light text-dark fw-medium" readonly
+                                       th:value="${activeDoc != null ? (activeDoc.fullName + (activeDoc.staffCode != null ? ' (' + activeDoc.staffCode + (activeDoc.specialty != null ? ' - ' + activeDoc.specialty : '') + ')' : '')) : 'Chưa gán bác sĩ'}">
+                                <input type="hidden" id="prescDoctorSelect" th:value="${activeDoc != null ? activeDoc.staffId : ''}">
+                            </th:block>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-bold small text-secondary">Ngày kê</label>

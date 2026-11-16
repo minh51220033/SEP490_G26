@@ -114,6 +114,29 @@ public class DiagnosisController {
         return branches;
     }
 
+    private List<StaffProfile> getDoctorsForVisitOrBranch(Visit visit, Long branchId, StaffProfile actingDoctor) {
+        Long resolvedBranchId = branchId;
+        if (resolvedBranchId == null && visit != null && visit.getBranch() != null) {
+            resolvedBranchId = visit.getBranch().getBranchId();
+        }
+        List<StaffProfile> result = new ArrayList<>(performedServiceService.getAvailableDoctorsByBranch(resolvedBranchId));
+        java.util.Set<Long> seenIds = new java.util.HashSet<>();
+        for (StaffProfile doc : result) {
+            if (doc != null && doc.getStaffId() != null) {
+                seenIds.add(doc.getStaffId());
+            }
+        }
+        if (visit != null && visit.getPrimaryDoctor() != null
+                && visit.getPrimaryDoctor().getStaffId() != null
+                && seenIds.add(visit.getPrimaryDoctor().getStaffId())) {
+            result.add(0, visit.getPrimaryDoctor());
+        }
+        if (actingDoctor != null && actingDoctor.getStaffId() != null && seenIds.add(actingDoctor.getStaffId())) {
+            result.add(0, actingDoctor);
+        }
+        return result;
+    }
+
     private User getLoggedInUser(jakarta.servlet.http.HttpSession session) {
         if (session == null) return null;
         Object principal = session.getAttribute("loggedInUser");
@@ -434,6 +457,12 @@ public class DiagnosisController {
         if (!readOnly) {
             doctorVisitAccess.require(session, visitId);
 
+            if (visit.getPrimaryDoctor() == null) {
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "Ca khám " + visit.getVisitCode() + " chưa được phân công bác sĩ chính. Vui lòng phân công bác sĩ tại màn Điều phối trước khi mở bàn khám!");
+                return "redirect:/doctor/daily-visits";
+            }
+
             // Kiểm tra ca khám có thuộc cơ sở của bác sĩ không
             if (isDoctorRestricted && visit.getBranch() != null && !visit.getBranch().getBranchId().equals(assignedBranch.getBranchId())) {
                 redirectAttributes.addFlashAttribute("errorMessage",
@@ -493,7 +522,8 @@ public class DiagnosisController {
         // FT16: Dịch vụ thực hiện thực tế
         List<PerformedServiceResponseDTO> performedServices = performedServiceService.getPerformedServicesByVisitId(visitId);
         List<ServiceDTO> activeServices = performedServiceService.getAllActiveServices();
-        List<StaffProfile> doctors = performedServiceService.getAvailableDoctors();
+        StaffProfile defaultActingDoctor = (!isAdmin && currentDoctor != null) ? currentDoctor : visit.getPrimaryDoctor();
+        List<StaffProfile> doctors = getDoctorsForVisitOrBranch(visit, null, defaultActingDoctor);
         List<StaffProfile> assistants = performedServiceService.getAvailableAssistants();
 
         // Tính tổng tiền dịch vụ đã thực hiện
@@ -521,6 +551,8 @@ public class DiagnosisController {
         } catch (Exception ignored) {}
         model.addAttribute("activeServicesJson", activeServicesJson);
         model.addAttribute("doctors", doctors);
+        model.addAttribute("isDoctorSelectorEditable", isAdmin);
+        model.addAttribute("defaultActingDoctor", defaultActingDoctor);
         model.addAttribute("assistants", assistants);
         model.addAttribute("totalPerformedAmount", totalPerformedAmount);
 
@@ -762,13 +794,18 @@ public class DiagnosisController {
             return "redirect:/doctor/diagnoses";
         }
 
+        if (visit.getPrimaryDoctor() == null) {
+            return "redirect:/doctor/daily-visits";
+        }
+
         if (isDoctorRestricted && visit.getBranch() != null && !visit.getBranch().getBranchId().equals(assignedBranch.getBranchId())) {
             return "redirect:/doctor/daily-visits";
         }
 
         List<DiagnosisResponseDTO> diagnoses = diagnosisService.getDiagnosesByVisitId(visitId);
         List<ServiceDTO> activeServices = performedServiceService.getAllActiveServices();
-        List<StaffProfile> doctors = performedServiceService.getAvailableDoctors();
+        StaffProfile defaultActingDoctor = (!isAdmin && currentDoctor != null) ? currentDoctor : visit.getPrimaryDoctor();
+        List<StaffProfile> doctors = getDoctorsForVisitOrBranch(visit, null, defaultActingDoctor);
         List<Visit> allVisits = (isDoctorRestricted && assignedBranch != null)
                 ? visitRepository.findRecentVisitsByStatusesAndBranch(List.of(VisitStatus.values()), assignedBranch.getBranchId())
                 : visitRepository.findAll();
@@ -792,6 +829,8 @@ public class DiagnosisController {
         model.addAttribute("preselectedDiagId", preselectedDiagId);
         model.addAttribute("activeServices", activeServices);
         model.addAttribute("doctors", doctors);
+        model.addAttribute("isDoctorSelectorEditable", isAdmin);
+        model.addAttribute("defaultActingDoctor", defaultActingDoctor);
         model.addAttribute("allVisits", allVisits);
 
         List<com.cvdcms.DTO.WorkflowTemplateResponseDTO> workflowTemplates = (clinicalWorkflowService != null)
@@ -890,7 +929,9 @@ public class DiagnosisController {
         model.addAttribute("otherVisits", Collections.emptyList());
         model.addAttribute("performedServices", Collections.emptyList());
         model.addAttribute("activeServices", Collections.emptyList());
-        model.addAttribute("doctors", performedServiceService.getAvailableDoctors());
+        model.addAttribute("doctors", getDoctorsForVisitOrBranch(null, selectedBranch != null ? selectedBranch.getBranchId() : selectedBranchId, currentDoctor));
+        model.addAttribute("isDoctorSelectorEditable", isAdmin);
+        model.addAttribute("defaultActingDoctor", currentDoctor);
         model.addAttribute("assistants", performedServiceService.getAvailableAssistants());
         model.addAttribute("totalPerformedAmount", BigDecimal.ZERO);
         model.addAttribute("treatmentPlans", Collections.emptyList());

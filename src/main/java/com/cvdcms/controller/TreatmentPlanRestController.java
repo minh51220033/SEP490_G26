@@ -1,7 +1,5 @@
 package com.cvdcms.controller;
 
-import com.cvdcms.DTO.AiParsePlanRequestDTO;
-import com.cvdcms.DTO.AiParsePlanResponseDTO;
 import com.cvdcms.DTO.TreatmentPlanRequestDTO;
 import com.cvdcms.DTO.TreatmentPlanResponseDTO;
 import com.cvdcms.DTO.TreatmentPlanInstallmentDTO;
@@ -297,18 +295,15 @@ public class TreatmentPlanRestController {
                 ));
             }
 
-            Long docId = doctorId;
-            if (docId == null) {
-                if (visit.getPrimaryDoctor() != null) {
-                    docId = visit.getPrimaryDoctor().getStaffId();
-                } else {
-                    List<com.cvdcms.entity.StaffProfile> docs = performedServiceService.getAvailableDoctors();
-                    if (!docs.isEmpty()) {
-                        docId = docs.get(0).getStaffId();
-                    } else {
-                        throw new IllegalStateException("Không tìm thấy bác sĩ thực hiện trong hệ thống!");
-                    }
-                }
+            Long docId;
+            if (doctorVisitAccess != null) {
+                docId = doctorVisitAccess.resolveActingDoctor(currentHttpSession(), visit, doctorId).getStaffId();
+            } else if (doctorId != null) {
+                docId = doctorId;
+            } else if (visit.getPrimaryDoctor() != null) {
+                docId = visit.getPrimaryDoctor().getStaffId();
+            } else {
+                throw new IllegalStateException("Ca khám chưa được phân công bác sĩ chính. Vui lòng phân công bác sĩ tại màn Điều phối trước khi thực hiện thủ thuật.");
             }
 
             boolean isInstallmentPlan = Boolean.TRUE.equals(item.getPlan().getIsInstallment());
@@ -384,35 +379,6 @@ public class TreatmentPlanRestController {
             error.put("success", false);
             error.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(error);
-        }
-    }
-
-    /**
-     * Bóc tách quy trình / phác đồ điều trị bằng Gemini AI (SCR-15.2 AI Assistant)
-     */
-    @PostMapping("/ai-parse")
-    public ResponseEntity<?> parseWithAi(@RequestBody AiParsePlanRequestDTO request) {
-        if (doctorVisitAccess != null && isHttpRequestActive()) {
-            doctorVisitAccess.requireAuthenticatedUser(currentHttpSession());
-        }
-        try {
-            AiParsePlanResponseDTO parsed = treatmentPlanService.parsePlanWithAi(request);
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Đã phân tích và bóc tách phác đồ bằng AI thành công!");
-            response.put("data", parsed);
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(error);
-        } catch (Exception e) {
-            log.error("AI Parse error: ", e);
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("message", "Lỗi phân tích AI: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
