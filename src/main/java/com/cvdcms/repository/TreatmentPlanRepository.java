@@ -24,4 +24,8 @@ public interface TreatmentPlanRepository extends JpaRepository<TreatmentPlan, Lo
            "LEFT JOIN FETCH p.doctor d " +
            "WHERE p.planId = :planId")
     Optional<TreatmentPlan> findByIdWithDetails(@Param("planId") Long planId);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM TreatmentPlan p WHERE p.planId = :planId")
+    Optional<TreatmentPlan> findByIdForUpdate(@Param("planId") Long planId);
 }

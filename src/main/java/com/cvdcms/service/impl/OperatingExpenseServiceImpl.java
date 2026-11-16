@@ -363,11 +363,14 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
         boolean hasAssignment = staffBranchAssignmentRepository.hasActiveUserAssignment(
                 currentUserId, branchId, AssignmentStatus.ACTIVE);
         if (!hasAssignment) {
-            boolean isMultiBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(currentUserId, AssignmentStatus.ACTIVE).isEmpty()
+            boolean matchesUserBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(currentUserId, AssignmentStatus.ACTIVE).isEmpty()
                     && userRepository.findById(currentUserId).map(u -> u.getBranch() != null && branchId.equals(u.getBranch().getBranchId())).orElse(false);
-            if (!isMultiBranch) {
+            if (!matchesUserBranch) {
                 throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh này");
             }
+        }
+        if (!userRepository.hasActivePermission(currentUserId, "FINANCE_EXPENSES")) {
+            throw new AccessDeniedException("Bạn không có quyền quản lý chi phí vận hành (FINANCE_EXPENSES)");
         }
     }
 }

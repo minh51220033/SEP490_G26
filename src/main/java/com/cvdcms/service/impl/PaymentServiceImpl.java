@@ -206,9 +206,9 @@ public class PaymentServiceImpl implements PaymentService {
         if (!isAdmin && branchId != null) {
             boolean hasAssignment = staffBranchAssignmentRepository.hasActiveAssignment(staff.getStaffId(), branchId, AssignmentStatus.ACTIVE);
             if (!hasAssignment) {
-                boolean isMultiBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE).isEmpty()
-                        && (user.getBranch() == null || branchId.equals(user.getBranch().getBranchId()));
-                if (!isMultiBranch) {
+                boolean matchesUserBranch = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE).isEmpty()
+                        && user.getBranch() != null && branchId.equals(user.getBranch().getBranchId());
+                if (!matchesUserBranch) {
                     throw new IllegalStateException("Nhân sự (" + staff.getFullName() + ") không có phân công hoạt động hợp lệ tại chi nhánh ID: " + branchId);
                 }
             }

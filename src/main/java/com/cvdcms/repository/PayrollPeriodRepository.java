@@ -81,4 +81,30 @@ public interface PayrollPeriodRepository extends JpaRepository<PayrollPeriod, Lo
             @Param("endMonth") Integer endMonth,
             @Param("endYear") Integer endYear
     );
+
+    @Query("""
+        SELECT COALESCE(SUM(p.totalPitAmount), 0) FROM PayrollPeriod p
+        WHERE (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
+          AND p.status = 'PAID'
+          AND (:startDt IS NULL OR p.paidAt >= :startDt)
+          AND (:endDt IS NULL OR p.paidAt <= :endDt)
+    """)
+    BigDecimal sumPaidPitByPaidAt(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDt") java.time.LocalDateTime startDt,
+            @Param("endDt") java.time.LocalDateTime endDt
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(p.totalInsuranceEmployer), 0) FROM PayrollPeriod p
+        WHERE (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
+          AND p.status = 'PAID'
+          AND (:startDt IS NULL OR p.paidAt >= :startDt)
+          AND (:endDt IS NULL OR p.paidAt <= :endDt)
+    """)
+    BigDecimal sumPaidEmployerInsuranceByPaidAt(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDt") java.time.LocalDateTime startDt,
+            @Param("endDt") java.time.LocalDateTime endDt
+    );
 }

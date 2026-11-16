@@ -133,8 +133,9 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        // 4. Admin và Kế toán có toàn quyền xem và quản lý tài chính toàn bộ hệ thống
-        if (isAdmin || isKeToan) {
+        // 4. Chỉ Admin mới có toàn quyền xem và quản lý tài chính mọi chi nhánh;
+        // Kế toán & Thu ngân phải tuân theo chi nhánh được phân công hoạt động
+        if (isAdmin) {
             request.setAttribute("isFinanceAdmin", Boolean.TRUE);
             return true;
         } else {
@@ -142,11 +143,6 @@ public class FinanceAccessInterceptor implements HandlerInterceptor {
             if ((activeBranchIds == null || activeBranchIds.isEmpty())
                     && dbUser.getBranch() != null && dbUser.getBranch().getBranchId() != null) {
                 activeBranchIds = List.of(dbUser.getBranch().getBranchId());
-            }
-            if ((activeBranchIds == null || activeBranchIds.isEmpty()) && branchRepository != null) {
-                activeBranchIds = branchRepository.findByIsActiveTrueOrderByBranchNameAsc().stream()
-                        .map(Branch::getBranchId)
-                        .toList();
             }
             if (activeBranchIds == null || activeBranchIds.isEmpty()) {
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "Tài khoản nhân viên chưa được phân công chi nhánh làm việc hợp lệ.");

@@ -425,21 +425,27 @@ public class TreatmentPlanRestController {
     public ResponseEntity<?> recordInstallmentPayment(
             @PathVariable Long id,
             @RequestBody InstallmentPaymentRequestDTO request) {
-        Long actorUserId = null;
-        jakarta.servlet.http.HttpSession session = isHttpRequestActive() ? currentHttpSession() : null;
-        if (doctorVisitAccess != null && session != null) {
-            com.cvdcms.entity.User actor = doctorVisitAccess.requireTreatmentPlanFinanceWrite(session, id);
-            actorUserId = actor != null ? actor.getUserId() : null;
-        } else if (session != null && session.getAttribute("loggedInUser") instanceof com.cvdcms.entity.User u) {
-            actorUserId = u.getUserId();
+        Long cashierUserId = null;
+        if (isHttpRequestActive()) {
+            jakarta.servlet.http.HttpSession session = currentHttpSession();
+            Object loggedObj = session != null ? session.getAttribute("loggedInUser") : null;
+            if (!(loggedObj instanceof com.cvdcms.entity.User u) || u.getUserId() == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("success", false, "message", "Chưa đăng nhập. Vui lòng đăng nhập để tiếp tục."));
+            }
+            cashierUserId = u.getUserId();
         }
         try {
-            TreatmentPlanResponseDTO updated = treatmentPlanService.recordInstallmentPayment(id, request, actorUserId);
+            TreatmentPlanResponseDTO updated = treatmentPlanService.recordInstallmentPayment(
+                    id, request, cashierUserId);
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Đã ghi nhận thanh toán thành công!");
             response.put("data", updated);
             return ResponseEntity.ok(response);
+        } catch (org.springframework.security.access.AccessDeniedException ade) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("success", false, "message", ade.getMessage()));
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);

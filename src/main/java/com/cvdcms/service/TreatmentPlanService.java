@@ -33,7 +33,7 @@ public interface TreatmentPlanService {
 
     TreatmentPlanResponseDTO recordInstallmentPayment(Long planId, java.math.BigDecimal amount, Long invoiceId);
 
-    TreatmentPlanResponseDTO recordInstallmentPayment(Long planId, com.cvdcms.DTO.InstallmentPaymentRequestDTO request, Long actorUserId);
+    TreatmentPlanResponseDTO recordInstallmentPayment(Long planId, com.cvdcms.DTO.InstallmentPaymentRequestDTO request, Long cashierUserId);
 
     com.cvdcms.DTO.TreatmentPlanInstallmentDTO markReminderSent(Long installmentId, String notes);
 

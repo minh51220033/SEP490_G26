@@ -79,6 +79,7 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
     public List<ServiceDTO> getAllActiveServices() {
         return serviceRepository.findByStatusOrderByCategory_DisplayOrderAscServiceNameAsc(ServiceStatus.ACTIVE)
                 .stream()
+                .filter(s -> s.getCategory() == null || !Boolean.FALSE.equals(s.getCategory().getIsActive()))
                 .map(this::mapToServiceDTO)
                 .collect(Collectors.toList());
     }
@@ -156,6 +157,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
 
         com.cvdcms.entity.Service service = serviceRepository.findById(requestDTO.getServiceId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ với ID: " + requestDTO.getServiceId()));
+        if (service.getStatus() != ServiceStatus.ACTIVE
+                || (service.getCategory() != null && Boolean.FALSE.equals(service.getCategory().getIsActive()))) {
+            throw new IllegalStateException("Dịch vụ hoặc nhóm dịch vụ đang ngừng hoạt động, không thể chỉ định thực hiện.");
+        }
 
         StaffProfile doctor = staffProfileRepository.findById(requestDTO.getDoctorId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bác sĩ với ID: " + requestDTO.getDoctorId()));

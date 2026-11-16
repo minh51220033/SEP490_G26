@@ -286,42 +286,13 @@
 
 <!-- Quick Pay Modal (AJAX) -->
 <div id="quickPayModal" class="fin-modal-backdrop" style="display: none;">
-    <div class="fin-modal-card">
+    <div id="qpModalCard" class="fin-modal-card">
         <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
             <h5 class="m-0 fw-bold text-primary"><i class="bi bi-cash-coin me-2"></i>Thu tiền hóa đơn nhanh</h5>
             <button type="button" class="btn-close" onclick="closeQuickPayModal()"></button>
         </div>
         <div class="p-4">
             <input type="hidden" id="qpInvoiceId">
-            <div class="mb-3">
-                <label class="form-label text-muted small fw-bold">HÓA ĐƠN &amp; BỆNH NHÂN</label>
-                <div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <span id="qpInvoiceCode" class="fw-bold text-dark"></span> - <span id="qpPatientName"></span>
-                    </div>
-                    <span id="qpDepositBadge" class="badge bg-success-subtle text-success border border-success-subtle">
-                        Ví tạm ứng: 0 đ
-                    </span>
-                </div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label text-muted small fw-bold">SỐ TIỀN CÒN NỢ</label>
-                <div class="fs-4 fw-bold text-danger" id="qpRemainingDebt">0 đ</div>
-            </div>
-            <div class="mb-3">
-                <label for="qpAmount" class="form-label fw-bold">Số tiền khách thanh toán (VNĐ) <span class="text-danger">*</span></label>
-                <input type="number" id="qpAmount" class="form-control form-control-lg fw-bold text-primary" required min="1000">
-            </div>
-            <div class="mb-3">
-                <label for="qpMethod" class="form-label fw-bold">Phương thức thanh toán</label>
-                <select id="qpMethod" class="form-select">
-                    <option value="CASH">💵 Tiền mặt</option>
-                    <option value="BANK_TRANSFER">🏦 Chuyển khoản ngân hàng (VietQR)</option>
-                    <option value="POS_CARD">💳 Quẹt thẻ máy POS</option>
-                    <option id="qpDepositOption" value="DEPOSIT_WALLET">👛 Ví tiền tạm ứng (Số dư: 0 đ)</option>
-                </select>
-            </div>
-
             <!-- Hidden inputs cho VietQR -->
             <input type="hidden" id="qpBranchId">
             <input type="hidden" id="qpProfileId">
@@ -329,18 +300,52 @@
             <input type="hidden" id="qpExpectedTransferContent">
             <input type="hidden" id="qpIdempotencyKey">
 
-            <!-- Container VietQR -->
-            <div id="qpVietQrContainer" class="mb-3" style="display: none;"></div>
+            <div class="row g-4 align-items-start">
+                <div id="qpFormCol" class="col-12">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">HÓA ĐƠN &amp; BỆNH NHÂN</label>
+                        <div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <span id="qpInvoiceCode" class="fw-bold text-dark"></span> - <span id="qpPatientName"></span>
+                            </div>
+                            <span id="qpDepositBadge" class="badge bg-success-subtle text-success border border-success-subtle">
+                                Ví tạm ứng: 0 đ
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">SỐ TIỀN CÒN NỢ</label>
+                        <div class="fs-4 fw-bold text-danger" id="qpRemainingDebt">0 đ</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="qpAmount" class="form-label fw-bold">Số tiền khách thanh toán (VNĐ) <span class="text-danger">*</span></label>
+                        <input type="number" id="qpAmount" class="form-control form-control-lg fw-bold text-primary" required min="1000">
+                    </div>
+                    <div class="mb-3">
+                        <label for="qpMethod" class="form-label fw-bold">Phương thức thanh toán</label>
+                        <select id="qpMethod" class="form-select">
+                            <option value="CASH">💵 Tiền mặt</option>
+                            <option value="BANK_TRANSFER">🏦 Chuyển khoản ngân hàng (VietQR)</option>
+                            <option value="POS_CARD">💳 Quẹt thẻ máy POS</option>
+                            <option id="qpDepositOption" value="DEPOSIT_WALLET">👛 Ví tiền tạm ứng (Số dư: 0 đ)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="qpRef" class="form-label small text-muted">Mã giao dịch ngân hàng thực tế (nếu có)</label>
+                        <input type="text" id="qpRef" class="form-control" placeholder="VD: VCB12345678, POS-9988">
+                    </div>
+                    <div class="mb-3 mb-lg-0">
+                        <label for="qpNotes" class="form-label small text-muted">Ghi chú</label>
+                        <input type="text" id="qpNotes" class="form-control" placeholder="Ghi chú thêm...">
+                    </div>
+                    <div id="qpError" class="alert alert-danger py-2 small mt-3 mb-0" style="display: none;"></div>
+                </div>
 
-            <div class="mb-3">
-                <label for="qpRef" class="form-label small text-muted">Mã giao dịch ngân hàng thực tế (nếu có)</label>
-                <input type="text" id="qpRef" class="form-control" placeholder="VD: VCB12345678, POS-9988">
+                <!-- Container VietQR bên phải -->
+                <div id="qpQrCol" class="col-12 col-lg-5" style="display: none;">
+                    <div id="qpVietQrContainer" class="vietqr-side-panel"></div>
+                </div>
             </div>
-            <div class="mb-3">
-                <label for="qpNotes" class="form-label small text-muted">Ghi chú</label>
-                <input type="text" id="qpNotes" class="form-control" placeholder="Ghi chú thêm...">
-            </div>
-            <div id="qpError" class="alert alert-danger py-2 small" style="display: none;"></div>
         </div>
         <div class="p-3 border-top d-flex justify-content-end gap-2 bg-light">
             <button type="button" class="fin-btn fin-btn-outline" onclick="closeQuickPayModal()">Hủy bỏ</button>
@@ -373,6 +378,25 @@
 <script th:src="@{/js/vietqr-payment.js}"></script>
 <script th:inline="javascript">
     let qpQrBox = null;
+
+    function syncListQuickPayLayout() {
+        const methodEl = document.getElementById('qpMethod');
+        const card = document.getElementById('qpModalCard');
+        const formCol = document.getElementById('qpFormCol');
+        const qrCol = document.getElementById('qpQrCol');
+        const isBank = methodEl && methodEl.value === 'BANK_TRANSFER';
+
+        if (card) card.classList.toggle('fin-modal-xl', isBank);
+        if (formCol) formCol.classList.toggle('col-lg-7', isBank);
+        if (qrCol) qrCol.style.display = isBank ? 'block' : 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const qpMethodEl = document.getElementById('qpMethod');
+        if (qpMethodEl) {
+            qpMethodEl.addEventListener('change', syncListQuickPayLayout);
+        }
+    });
 
     function openQuickPayModal(btn) {
         const invId = btn.getAttribute('data-invoice-id');
@@ -420,6 +444,7 @@
             qpQrBox.refresh(true);
         }
 
+        syncListQuickPayLayout();
         document.getElementById('quickPayModal').style.display = 'flex';
     }
 
@@ -427,6 +452,7 @@
         if (qpQrBox) qpQrBox.reset();
         document.getElementById('qpBankAccountId').value = '';
         document.getElementById('qpExpectedTransferContent').value = '';
+        syncListQuickPayLayout();
         document.getElementById('quickPayModal').style.display = 'none';
     }
 

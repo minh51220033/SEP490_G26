@@ -181,13 +181,13 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             }
             return List.of("CLINICAL_LABO", "LABO_SUPPLIERS", "LABO_PRICING");
         }
-        if (uri.matches("^/api/doctor/treatment-plans/\\d+/installments/pay$")) {
-            return List.of("PAYMENT_COLLECT", "INVOICE_CREATE", "FINANCE_DASHBOARD", "TREATMENT_PLAN_MANAGE");
+        if (uri.matches("^/api/doctor/treatment-plans/\\d+/installments/pay/?$")) {
+            return List.of("PAYMENT_COLLECT");
         }
-        if (uri.matches("^/api/doctor/treatment-plans/installments/\\d+/remind$")) {
+        if (uri.matches("^/api/doctor/treatment-plans/installments/\\d+/remind/?$")) {
             return List.of("PAYMENT_COLLECT", "FINANCE_DASHBOARD", "TREATMENT_PLAN_MANAGE", "RECEPTION_CHECKIN");
         }
-        if (uri.matches("^/api/doctor/treatment-plans/\\d+/installments$")) {
+        if (uri.matches("^/api/doctor/treatment-plans/\\d+/installments/?$")) {
             if (!isWriteMethod) {
                 return List.of("TREATMENT_PLAN_MANAGE", "PAYMENT_COLLECT", "FINANCE_DASHBOARD", "INVOICE_CREATE",
                         "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
@@ -242,7 +242,7 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/payments/deposits")) {
             return List.of("FINANCE_DEPOSIT", "PAYMENT_COLLECT");
         }
-        if (uri.startsWith("/payments/refunds") || uri.startsWith("/api/payments/refunds")) {
+        if (uri.startsWith("/payments/refunds") || uri.startsWith("/api/payments/refund")) {
             return List.of("REFUND_MANAGE");
         }
         if (uri.startsWith("/invoices") || uri.startsWith("/api/invoices")) {
@@ -258,10 +258,10 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             return List.of("PAYMENT_COLLECT", "FINANCE_DEPOSIT");
         }
         if (uri.startsWith("/expenses") || uri.startsWith("/api/expenses")) {
-            return List.of("FINANCE_EXPENSES", "FINANCE_DASHBOARD", "INVOICE_CREATE", "PAYMENT_COLLECT");
+            return List.of("FINANCE_EXPENSES");
         }
         if (uri.startsWith("/payroll/advances")) {
-            return List.of("FINANCE_PAYROLL_ADVANCES", "FINANCE_PAYROLL", "FINANCE_DASHBOARD");
+            return List.of("FINANCE_PAYROLL_ADVANCES", "FINANCE_PAYROLL");
         }
         if (uri.startsWith("/payroll/commission-config") || uri.startsWith("/payroll/config")) {
             return List.of("FINANCE_COMMISSION_CONFIG");
@@ -271,10 +271,10 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         }
         if (uri.startsWith("/payroll/api") || uri.startsWith("/api/payroll")) {
             return List.of("FINANCE_PAYROLL", "FINANCE_PAYROLL_ADVANCES", "FINANCE_COMMISSION_CONFIG",
-                    "FINANCE_OWNER_DISTRIBUTIONS", "FINANCE_DASHBOARD");
+                    "FINANCE_OWNER_DISTRIBUTIONS");
         }
         if (uri.startsWith("/payroll")) {
-            return List.of("FINANCE_PAYROLL", "FINANCE_DASHBOARD", "INVOICE_CREATE", "PAYMENT_COLLECT");
+            return List.of("FINANCE_PAYROLL");
         }
         if (uri.startsWith("/api/finance")) {
             return List.of("PAYMENT_COLLECT", "INVOICE_CREATE", "FINANCE_DASHBOARD", "FINANCE_DEPOSIT",

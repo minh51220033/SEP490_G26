@@ -1286,7 +1286,7 @@
 
 <!-- MODAL THU TIỀN TRẢ THEO ĐỢT (Chuẩn DentalSoft) -->
 <div class="modal fade" id="installmentPayModal" tabindex="-1" aria-labelledby="installmentPayModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div id="installmentPayDialog" class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content shadow border-0 rounded-3">
             <div class="modal-header bg-primary text-white py-3 px-4 rounded-top-3">
                 <h5 class="modal-title fw-bold" id="installmentPayModalLabel">
@@ -1297,67 +1297,73 @@
             <div class="modal-body p-4">
                 <input type="hidden" id="instPayPlanId">
                 <input type="hidden" id="instPayBranchId" th:value="${currentBranchId}">
-                
-                <div class="p-3 bg-light rounded-3 border mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="badge bg-primary-subtle text-primary border font-monospace" id="instPayPlanCode">KHDT</span>
-                        <span class="badge bg-success-subtle text-success border" id="instPayPhaseTarget">Đợt 1</span>
-                    </div>
-                    <h6 class="fw-bold text-dark m-0" id="instPayPlanName">Chỉnh nha mắc cài</h6>
-                    <div class="d-flex justify-content-between text-muted small mt-2 pt-2 border-top">
-                        <span>Còn nợ toàn phác đồ:</span>
-                        <strong class="text-danger fs-6" id="instPayRemainingDebtDisplay">0 đ</strong>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold text-dark mb-1">Số tiền thực tế bệnh nhân đóng hôm nay (VNĐ): <span class="text-danger">*</span></label>
-                    <div class="input-group input-group-lg">
-                        <input type="number" class="form-control fw-bold text-primary" id="instPayAmountInput" placeholder="Nhập số tiền..." min="1000" step="50000">
-                        <span class="input-group-text fw-bold">đ</span>
-                    </div>
-                    <!-- Nút chọn nhanh số tiền -->
-                    <div class="d-flex flex-wrap gap-1 mt-2">
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnQuickPayExpected" onclick="setPayAmountFromSuggested()">Đúng dự kiến</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPayAmount(1000000)">1.000.000 đ</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPayAmount(2000000)">2.000.000 đ</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPayAmount(5000000)">5.000.000 đ</button>
-                        <button type="button" class="btn btn-sm btn-outline-danger" id="btnQuickPayAll" onclick="setPayAmountFromRemaining()">Tất toán</button>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-semibold text-muted small mb-1">Hình thức thanh toán:</label>
-                    <select class="form-select" id="instPayMethodSelect">
-                        <option value="CASH">Tiền mặt</option>
-                        <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
-                        <option id="instPayDepositOption" value="DEPOSIT_WALLET"
-                                th:disabled="${patient == null or patient.depositBalance == null or patient.depositBalance <= 0}"
-                                th:text="'Ví tiền tạm ứng (Số dư: ' + (${patient != null and patient.depositBalance != null ? #numbers.formatDecimal(patient.depositBalance, 0, 'COMMA', 0, 'POINT') : 0}) + ' đ)'">
-                            Ví tiền tạm ứng (Số dư: 0 đ)
-                        </option>
-                        <option value="POS_CARD">Thẻ POS</option>
-                    </select>
-                </div>
-
                 <input type="hidden" id="instPayBankAccountId" name="bankAccountId">
                 <input type="hidden" id="instPayExpectedTransferContent" name="expectedTransferContent">
-                <div id="dashboardInstPayQrContainer" class="mb-3" style="display: none;"></div>
 
-                <div class="mb-3" id="instPayTransRefGroup">
-                    <label for="instPayTransRef" class="form-label fw-semibold text-muted small mb-1">Mã giao dịch / Tham chiếu:</label>
-                    <input type="text" id="instPayTransRef" class="form-control form-control-sm"
-                           placeholder="Mã giao dịch ngân hàng / hóa đơn đối soát...">
-                </div>
+                <div class="row g-4 align-items-start">
+                    <div id="instPayFormCol" class="col-12">
+                        <div class="p-3 bg-light rounded-3 border mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge bg-primary-subtle text-primary border font-monospace" id="instPayPlanCode">KHDT</span>
+                                <span class="badge bg-success-subtle text-success border" id="instPayPhaseTarget">Đợt 1</span>
+                            </div>
+                            <h6 class="fw-bold text-dark m-0" id="instPayPlanName">Chỉnh nha mắc cài</h6>
+                            <div class="d-flex justify-content-between text-muted small mt-2 pt-2 border-top">
+                                <span>Còn nợ toàn phác đồ:</span>
+                                <strong class="text-danger fs-6" id="instPayRemainingDebtDisplay">0 đ</strong>
+                            </div>
+                        </div>
 
-                <div class="mb-3">
-                    <label class="form-label fw-semibold text-muted small mb-1">Ghi chú phiếu thu:</label>
-                    <input type="text" class="form-control form-control-sm" id="instPayNotesInput" placeholder="VD: Thu tiền đợt siết răng tháng 1...">
-                </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-dark mb-1">Số tiền thực tế bệnh nhân đóng hôm nay (VNĐ): <span class="text-danger">*</span></label>
+                            <div class="input-group input-group-lg">
+                                <input type="number" class="form-control fw-bold text-primary" id="instPayAmountInput" placeholder="Nhập số tiền..." min="1000" step="50000">
+                                <span class="input-group-text fw-bold">đ</span>
+                            </div>
+                            <!-- Nút chọn nhanh số tiền -->
+                            <div class="d-flex flex-wrap gap-1 mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnQuickPayExpected" onclick="setPayAmountFromSuggested()">Đúng dự kiến</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPayAmount(1000000)">1.000.000 đ</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPayAmount(2000000)">2.000.000 đ</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setPayAmount(5000000)">5.000.000 đ</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" id="btnQuickPayAll" onclick="setPayAmountFromRemaining()">Tất toán</button>
+                            </div>
+                        </div>
 
-                <div class="alert alert-info py-2 px-3 small m-0 d-flex align-items-center gap-2">
-                    <i class="bi bi-info-circle text-primary fs-5"></i>
-                    <span><strong>Quy tắc DentalSoft:</strong> Không fix cứng số tiền. Hệ thống sẽ tự động trừ lũy kế vào các đợt theo thứ tự.</span>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-muted small mb-1">Hình thức thanh toán:</label>
+                            <select class="form-select" id="instPayMethodSelect">
+                                <option value="CASH">Tiền mặt</option>
+                                <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
+                                <option id="instPayDepositOption" value="DEPOSIT_WALLET"
+                                        th:disabled="${patient == null or patient.depositBalance == null or patient.depositBalance <= 0}"
+                                        th:text="'Ví tiền tạm ứng (Số dư: ' + (${patient != null and patient.depositBalance != null ? #numbers.formatDecimal(patient.depositBalance, 0, 'COMMA', 0, 'POINT') : 0}) + ' đ)'">
+                                    Ví tiền tạm ứng (Số dư: 0 đ)
+                                </option>
+                                <option value="POS_CARD">Thẻ POS</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3" id="instPayTransRefGroup">
+                            <label for="instPayTransRef" class="form-label fw-semibold text-muted small mb-1">Mã giao dịch / Tham chiếu:</label>
+                            <input type="text" id="instPayTransRef" class="form-control form-control-sm"
+                                   placeholder="Mã giao dịch ngân hàng / hóa đơn đối soát...">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-muted small mb-1">Ghi chú phiếu thu:</label>
+                            <input type="text" class="form-control form-control-sm" id="instPayNotesInput" placeholder="VD: Thu tiền đợt siết răng tháng 1...">
+                        </div>
+
+                        <div class="alert alert-info py-2 px-3 small m-0 d-flex align-items-center gap-2">
+                            <i class="bi bi-info-circle text-primary fs-5"></i>
+                            <span><strong>Quy tắc DentalSoft:</strong> Không fix cứng số tiền. Hệ thống sẽ tự động trừ lũy kế vào các đợt theo thứ tự.</span>
+                        </div>
+                    </div>
+
+                    <div id="instPayQrCol" class="col-12 col-lg-5" style="display: none;">
+                        <div id="dashboardInstPayQrContainer" class="vietqr-side-panel"></div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer bg-light px-4 py-3 rounded-bottom-3">
@@ -1493,7 +1499,7 @@
 <!-- MODAL GHI NHẬN THANH TOÁN (SCR-22.2) -->
 <div class="modal fade" id="quickPayModal" tabindex="-1" aria-labelledby="quickPayModalLabel"
      aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div id="dashboardQuickPayDialog" class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content shadow">
             <form th:action="@{/payments/create}" method="post">
                 <input type="hidden" name="returnUrl" th:value="${patient != null ? '/payments/dashboard?patientId=' + patient.profileId : '/payments/dashboard'}">
@@ -1505,122 +1511,128 @@
                             aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <!-- Thông tin bệnh nhân đang thanh toán -->
-                    <div class="mb-3 p-3 bg-light rounded border">
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <div>
-                                <span class="text-muted small d-block">BỆNH NHÂN THANH TOÁN:</span>
-                                <strong id="modalPatientDisplayName" class="text-primary fs-6"
-                                        th:text="${patient != null ? patient.fullName + ' (' + patient.patientCode + ')' : '-- Bệnh nhân chờ thanh toán --'}">
-                                    Nguyễn Văn An
-                                </strong>
-                            </div>
-                            <div>
-                                <span id="modalPatientDepositBadge" class="badge bg-success-subtle text-success border border-success-subtle"
-                                      th:text="'Ví tạm ứng: ' + (${patient != null ? #numbers.formatDecimal(patient.depositBalance, 0, 'COMMA', 0, 'POINT') : 0}) + ' đ'">
-                                    Ví tạm ứng: 0 đ
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="modalInvoiceSelect" class="form-label fw-bold">Chọn Hóa đơn cần thu:</label>
-                        <select id="modalInvoiceSelect" name="invoiceId" class="form-select"
-                                onchange="onModalInvoiceChange(this)" required>
-                            <option value="">-- Chọn hóa đơn chưa thanh toán đủ --</option>
-                            <th:block th:if="${patient != null}">
-                                <option th:each="inv : ${invoices}" th:if="${inv.remainingDebt > 0}"
-                                        th:value="${inv.invoiceId}"
-                                        th:data-debt="${inv.remainingDebt}"
-                                        th:data-patient-name="${patient.fullName}"
-                                        th:data-patient-code="${patient.patientCode}"
-                                        th:data-deposit-balance="${patient.depositBalance}"
-                                        th:text="${inv.invoiceCode} + ' - Còn nợ: ' + ${#numbers.formatDecimal(inv.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">
-                                </option>
-                            </th:block>
-                            <th:block th:if="${patient == null and pendingPatients != null}">
-                                <optgroup th:each="p : ${pendingPatients}" th:if="${p.unpaidInvoiceCount > 0}"
-                                          th:label="${p.fullName} + ' (' + ${p.patientCode} + ')'">
-                                    <option th:each="inv : ${p.unpaidInvoices}"
-                                            th:value="${inv.invoiceId}"
-                                            th:data-debt="${inv.remainingDebt}"
-                                            th:data-patient-name="${p.fullName}"
-                                            th:data-patient-code="${p.patientCode}"
-                                            th:data-deposit-balance="${p.depositBalance}"
-                                            th:text="${inv.invoiceCode} + ' - Còn nợ: ' + ${#numbers.formatDecimal(inv.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">
-                                    </option>
-                                </optgroup>
-                            </th:block>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-muted small">SỐ TIỀN CÒN NỢ CỦA HÓA
-                            ĐƠN:</label>
-                        <input type="text" id="modalDebtDisplay"
-                               class="form-control bg-light fw-bold text-danger" readonly value="0 đ">
-                    </div>
-                    <div class="mb-3">
-                        <label for="modalPayAmount" class="form-label fw-bold">Số tiền thanh toán đợt này
-                            (VNĐ):</label>
-                        <input type="number" id="modalPayAmount" name="amount" class="form-control" required
-                               min="1000" step="1000" oninput="triggerAllocationPreview()">
-                    </div>
-                    <!-- LIVE PREVIEW PHÂN BỔ TIỀN THU (REQUIREMENT 2) -->
-                    <div id="quickPayAllocationPreviewBox" class="mb-3" style="display: none;">
-                        <div class="card border border-primary-subtle shadow-sm bg-white">
-                            <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
-                                <span class="small fw-bold text-primary"><i class="bi bi-diagram-3-fill me-1"></i> Dự kiến phân bổ khoản thu (FIFO):</span>
-                                <span id="previewRemainingDebtBadge" class="badge bg-danger">Còn nợ: 0 đ</span>
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive" style="max-height: 200px;">
-                                    <table class="table table-sm table-bordered table-striped mb-0" style="font-size: 11.5px;">
-                                        <thead class="table-light">
-                                            <tr class="text-center">
-                                                <th style="width: 28px;">#</th>
-                                                <th>Khoản thu</th>
-                                                <th style="width: 70px;">Loại</th>
-                                                <th class="text-end" style="width: 85px;">Phải trả</th>
-                                                <th class="text-end" style="width: 75px;">Đã trả</th>
-                                                <th class="text-end text-success" style="width: 85px;">Thu đợt này</th>
-                                                <th class="text-end text-danger" style="width: 80px;">Còn nợ</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="quickPayAllocationPreviewTbody">
-                                        </tbody>
-                                    </table>
+                    <div class="row g-4 align-items-start">
+                        <div id="dashboardQuickPayFormCol" class="col-12">
+                            <!-- Thông tin bệnh nhân đang thanh toán -->
+                            <div class="mb-3 p-3 bg-light rounded border">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <div>
+                                        <span class="text-muted small d-block">BỆNH NHÂN THANH TOÁN:</span>
+                                        <strong id="modalPatientDisplayName" class="text-primary fs-6"
+                                                th:text="${patient != null ? patient.fullName + ' (' + patient.patientCode + ')' : '-- Bệnh nhân chờ thanh toán --'}">
+                                            Nguyễn Văn An
+                                        </strong>
+                                    </div>
+                                    <div>
+                                        <span id="modalPatientDepositBadge" class="badge bg-success-subtle text-success border border-success-subtle"
+                                              th:text="'Ví tạm ứng: ' + (${patient != null ? #numbers.formatDecimal(patient.depositBalance, 0, 'COMMA', 0, 'POINT') : 0}) + ' đ'">
+                                            Ví tạm ứng: 0 đ
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
+
+                            <div class="mb-3">
+                                <label for="modalInvoiceSelect" class="form-label fw-bold">Chọn Hóa đơn cần thu:</label>
+                                <select id="modalInvoiceSelect" name="invoiceId" class="form-select"
+                                        onchange="onModalInvoiceChange(this)" required>
+                                    <option value="">-- Chọn hóa đơn chưa thanh toán đủ --</option>
+                                    <th:block th:if="${patient != null}">
+                                        <option th:each="inv : ${invoices}" th:if="${inv.remainingDebt > 0}"
+                                                th:value="${inv.invoiceId}"
+                                                th:data-debt="${inv.remainingDebt}"
+                                                th:data-patient-name="${patient.fullName}"
+                                                th:data-patient-code="${patient.patientCode}"
+                                                th:data-deposit-balance="${patient.depositBalance}"
+                                                th:text="${inv.invoiceCode} + ' - Còn nợ: ' + ${#numbers.formatDecimal(inv.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                        </option>
+                                    </th:block>
+                                    <th:block th:if="${patient == null and pendingPatients != null}">
+                                        <optgroup th:each="p : ${pendingPatients}" th:if="${p.unpaidInvoiceCount > 0}"
+                                                  th:label="${p.fullName} + ' (' + ${p.patientCode} + ')'">
+                                            <option th:each="inv : ${p.unpaidInvoices}"
+                                                    th:value="${inv.invoiceId}"
+                                                    th:data-debt="${inv.remainingDebt}"
+                                                    th:data-patient-name="${p.fullName}"
+                                                    th:data-patient-code="${p.patientCode}"
+                                                    th:data-deposit-balance="${p.depositBalance}"
+                                                    th:text="${inv.invoiceCode} + ' - Còn nợ: ' + ${#numbers.formatDecimal(inv.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                            </option>
+                                        </optgroup>
+                                    </th:block>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted small">SỐ TIỀN CÒN NỢ CỦA HÓA
+                                    ĐƠN:</label>
+                                <input type="text" id="modalDebtDisplay"
+                                       class="form-control bg-light fw-bold text-danger" readonly value="0 đ">
+                            </div>
+                            <div class="mb-3">
+                                <label for="modalPayAmount" class="form-label fw-bold">Số tiền thanh toán đợt này
+                                    (VNĐ):</label>
+                                <input type="number" id="modalPayAmount" name="amount" class="form-control" required
+                                       min="1000" step="1000" oninput="triggerAllocationPreview()">
+                            </div>
+                            <!-- LIVE PREVIEW PHÂN BỔ TIỀN THU (REQUIREMENT 2) -->
+                            <div id="quickPayAllocationPreviewBox" class="mb-3" style="display: none;">
+                                <div class="card border border-primary-subtle shadow-sm bg-white">
+                                    <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                                        <span class="small fw-bold text-primary"><i class="bi bi-diagram-3-fill me-1"></i> Dự kiến phân bổ khoản thu (FIFO):</span>
+                                        <span id="previewRemainingDebtBadge" class="badge bg-danger">Còn nợ: 0 đ</span>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive" style="max-height: 200px;">
+                                            <table class="table table-sm table-bordered table-striped mb-0" style="font-size: 11.5px;">
+                                                <thead class="table-light">
+                                                    <tr class="text-center">
+                                                        <th style="width: 28px;">#</th>
+                                                        <th>Khoản thu</th>
+                                                        <th style="width: 70px;">Loại</th>
+                                                        <th class="text-end" style="width: 85px;">Phải trả</th>
+                                                        <th class="text-end" style="width: 75px;">Đã trả</th>
+                                                        <th class="text-end text-success" style="width: 85px;">Thu đợt này</th>
+                                                        <th class="text-end text-danger" style="width: 80px;">Còn nợ</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="quickPayAllocationPreviewTbody">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="modalPayMethod" class="form-label fw-bold">Phương thức thanh
+                                    toán:</label>
+                                <select id="modalPayMethod" name="paymentMethod" class="form-select">
+                                    <option value="CASH">Tiền mặt</option>
+                                    <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
+                                    <option id="modalDepositOption" value="DEPOSIT_WALLET"
+                                            th:disabled="${patient == null or patient.depositBalance <= 0}"
+                                            th:text="'Ví tiền tạm ứng (Số dư: ' + (${patient != null ? #numbers.formatDecimal(patient.depositBalance, 0, 'COMMA', 0, 'POINT') : 0}) + ' đ)'">
+                                        Ví tạm ứng
+                                    </option>
+                                    <option value="POS_CARD">Thẻ POS</option>
+                                </select>
+                            </div>
+                            <input type="hidden" id="modalBankAccountId" name="bankAccountId">
+                            <input type="hidden" id="modalExpectedTransferContent" name="expectedTransferContent">
+                            <div class="mb-3">
+                                <label for="modalTransRef" class="form-label fw-bold">Mã giao dịch / Tham
+                                    chiếu:</label>
+                                <input type="text" id="modalTransRef" name="transactionRef" class="form-control"
+                                       placeholder="Mã giao dịch ngân hàng / hóa đơn đối soát...">
+                            </div>
+                            <div class="mb-3 mb-lg-0">
+                                <label for="modalPayNotes" class="form-label">Ghi chú thanh toán:</label>
+                                <textarea id="modalPayNotes" name="notes" class="form-control" rows="2"
+                                          placeholder="Ghi chú đợt thanh toán..."></textarea>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="modalPayMethod" class="form-label fw-bold">Phương thức thanh
-                            toán:</label>
-                        <select id="modalPayMethod" name="paymentMethod" class="form-select">
-                            <option value="CASH">Tiền mặt</option>
-                            <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
-                            <option id="modalDepositOption" value="DEPOSIT_WALLET"
-                                    th:disabled="${patient == null or patient.depositBalance <= 0}"
-                                    th:text="'Ví tiền tạm ứng (Số dư: ' + (${patient != null ? #numbers.formatDecimal(patient.depositBalance, 0, 'COMMA', 0, 'POINT') : 0}) + ' đ)'">
-                                Ví tạm ứng
-                            </option>
-                            <option value="POS_CARD">Thẻ POS</option>
-                        </select>
-                    </div>
-                    <input type="hidden" id="modalBankAccountId" name="bankAccountId">
-                    <input type="hidden" id="modalExpectedTransferContent" name="expectedTransferContent">
-                    <div id="dashboardQuickPayQrContainer" class="mb-3" style="display: none;"></div>
-                    <div class="mb-3">
-                        <label for="modalTransRef" class="form-label fw-bold">Mã giao dịch / Tham
-                            chiếu:</label>
-                        <input type="text" id="modalTransRef" name="transactionRef" class="form-control"
-                               placeholder="Mã giao dịch ngân hàng / hóa đơn đối soát...">
-                    </div>
-                    <div class="mb-3">
-                        <label for="modalPayNotes" class="form-label">Ghi chú thanh toán:</label>
-                        <textarea id="modalPayNotes" name="notes" class="form-control" rows="2"
-                                  placeholder="Ghi chú đợt thanh toán..."></textarea>
+                        <div id="dashboardQuickPayQrCol" class="col-12 col-lg-5" style="display: none;">
+                            <div id="dashboardQuickPayQrContainer" class="vietqr-side-panel"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
@@ -1637,7 +1649,7 @@
 <!-- MODAL NỘP TIỀN TẠM ỨNG (SCR-22.2) -->
 <div class="modal fade" id="depositModal" tabindex="-1" aria-labelledby="depositModalLabel"
      aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div id="dashboardDepositDialog" class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content shadow">
             <form th:action="@{/payments/deposits}" method="post">
                 <input type="hidden" name="returnUrl" th:value="${patient != null ? '/payments/dashboard?patientId=' + patient.profileId : '/payments/dashboard'}">
@@ -1649,63 +1661,69 @@
                             aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="deposit-info">
-                        <i class="bi bi-info-circle-fill"></i>
-                        <span>
-                             Khoản tạm ứng được lưu vào ví của bệnh nhân
-                             và có thể sử dụng để thanh toán hóa đơn sau.
-                        </span>
-                    </div>
-                    <div class="mb-3" th:if="${patient != null}">
-                        <input type="hidden" name="profileId" th:value="${patient.profileId}">
-                        <label class="form-label fw-bold text-muted small">BỆNH NHÂN TIẾP NHẬN:</label>
-                        <input type="text" class="form-control bg-light fw-bold" readonly
-                               th:value="${patient.fullName + ' (' + patient.patientCode + ')'}">
-                    </div>
-                    <div class="mb-3" th:if="${patient == null}">
-                        <label for="depositProfileSelect" class="form-label fw-bold">Chọn Bệnh nhân tiếp nhận:</label>
-                        <select id="depositProfileSelect" name="profileId" class="form-select" required>
-                            <option value="">-- Chọn bệnh nhân nạp tạm ứng --</option>
-                            <option th:each="p : ${pendingPatients}"
-                                    th:value="${p.profileId}"
-                                    th:text="${p.fullName} + ' (' + ${p.patientCode} + ')'"></option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="depositBranchSelect" class="form-label fw-bold">Chi nhánh tiếp
-                            nhận:</label>
-                        <select id="depositBranchSelect" name="branchId" class="form-select" required>
-                            <option th:each="b : ${branches}" th:value="${b.branchId}"
-                                    th:text="${b.branchName}"
-                                    th:selected="${currentBranchId != null and b.branchId == currentBranchId}"></option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="depositAmountInput" class="form-label fw-bold">Số tiền nạp tạm ứng
-                            (VNĐ):</label>
-                        <input type="number" id="depositAmountInput" name="amount" class="form-control"
-                               required min="10000" step="10000" placeholder="Nhập số tiền tạm ứng...">
-                    </div>
-                    <div class="mb-3">
-                        <label for="depositMethodSelect" class="form-label fw-bold">Phương thức nộp:</label>
-                        <select id="depositMethodSelect" name="paymentMethod" class="form-select">
-                            <option value="CASH">Tiền mặt</option>
-                            <option value="BANK_TRANSFER">Chuyển khoản</option>
-                        </select>
-                    </div>
-                    <input type="hidden" id="depositBankAccountId" name="bankAccountId">
-                    <input type="hidden" id="depositExpectedTransferContent" name="expectedTransferContent">
-                    <div id="dashboardDepositQrContainer" class="mb-3" style="display: none;"></div>
-                    <div class="mb-3">
-                        <label for="depositTransRef" class="form-label fw-bold">Mã tham chiếu / Đối
-                            soát:</label>
-                        <input type="text" id="depositTransRef" name="transactionRef" class="form-control"
-                               placeholder="Mã chuyển khoản hoặc biên nhận giấy...">
-                    </div>
-                    <div class="mb-3">
-                        <label for="depositNotes" class="form-label">Lý do nạp tiền:</label>
-                        <textarea id="depositNotes" name="notes" class="form-control" rows="2"
-                                  placeholder="Tạm ứng điều trị chỉnh nha, cấy ghép implant..."></textarea>
+                    <div class="row g-4 align-items-start">
+                        <div id="dashboardDepositFormCol" class="col-12">
+                            <div class="deposit-info">
+                                <i class="bi bi-info-circle-fill"></i>
+                                <span>
+                                     Khoản tạm ứng được lưu vào ví của bệnh nhân
+                                     và có thể sử dụng để thanh toán hóa đơn sau.
+                                </span>
+                            </div>
+                            <div class="mb-3" th:if="${patient != null}">
+                                <input type="hidden" name="profileId" th:value="${patient.profileId}">
+                                <label class="form-label fw-bold text-muted small">BỆNH NHÂN TIẾP NHẬN:</label>
+                                <input type="text" class="form-control bg-light fw-bold" readonly
+                                       th:value="${patient.fullName + ' (' + patient.patientCode + ')'}">
+                            </div>
+                            <div class="mb-3" th:if="${patient == null}">
+                                <label for="depositProfileSelect" class="form-label fw-bold">Chọn Bệnh nhân tiếp nhận:</label>
+                                <select id="depositProfileSelect" name="profileId" class="form-select" required>
+                                    <option value="">-- Chọn bệnh nhân nạp tạm ứng --</option>
+                                    <option th:each="p : ${pendingPatients}"
+                                            th:value="${p.profileId}"
+                                            th:text="${p.fullName} + ' (' + ${p.patientCode} + ')'"></option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="depositBranchSelect" class="form-label fw-bold">Chi nhánh tiếp
+                                    nhận:</label>
+                                <select id="depositBranchSelect" name="branchId" class="form-select" required>
+                                    <option th:each="b : ${branches}" th:value="${b.branchId}"
+                                            th:text="${b.branchName}"
+                                            th:selected="${currentBranchId != null and b.branchId == currentBranchId}"></option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="depositAmountInput" class="form-label fw-bold">Số tiền nạp tạm ứng
+                                    (VNĐ):</label>
+                                <input type="number" id="depositAmountInput" name="amount" class="form-control"
+                                       required min="10000" step="10000" placeholder="Nhập số tiền tạm ứng...">
+                            </div>
+                            <div class="mb-3">
+                                <label for="depositMethodSelect" class="form-label fw-bold">Phương thức nộp:</label>
+                                <select id="depositMethodSelect" name="paymentMethod" class="form-select">
+                                    <option value="CASH">Tiền mặt</option>
+                                    <option value="BANK_TRANSFER">Chuyển khoản</option>
+                                </select>
+                            </div>
+                            <input type="hidden" id="depositBankAccountId" name="bankAccountId">
+                            <input type="hidden" id="depositExpectedTransferContent" name="expectedTransferContent">
+                            <div class="mb-3">
+                                <label for="depositTransRef" class="form-label fw-bold">Mã tham chiếu / Đối
+                                    soát:</label>
+                                <input type="text" id="depositTransRef" name="transactionRef" class="form-control"
+                                       placeholder="Mã chuyển khoản hoặc biên nhận giấy...">
+                            </div>
+                            <div class="mb-3 mb-lg-0">
+                                <label for="depositNotes" class="form-label">Lý do nạp tiền:</label>
+                                <textarea id="depositNotes" name="notes" class="form-control" rows="2"
+                                          placeholder="Tạm ứng điều trị chỉnh nha, cấy ghép implant..."></textarea>
+                            </div>
+                        </div>
+                        <div id="dashboardDepositQrCol" class="col-12 col-lg-5" style="display: none;">
+                            <div id="dashboardDepositQrContainer" class="vietqr-side-panel"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
@@ -1726,7 +1744,7 @@
      tabindex="-1"
      aria-labelledby="dashboardRefundModalLabel"
      aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content shadow">
             <form th:action="@{/payments/refunds}" method="post" onsubmit="ensureDashboardRefundKey()">
                 <input type="hidden"
@@ -2272,10 +2290,34 @@
 <script th:src="@{/js/vietqr-payment.js}"></script>
 <script th:inline="javascript">
     document.addEventListener('DOMContentLoaded', function () {
+        function syncDashboardQuickPayLayout() {
+            const methodSelect = document.getElementById('modalPayMethod');
+            const dialog = document.getElementById('dashboardQuickPayDialog');
+            const formCol = document.getElementById('dashboardQuickPayFormCol');
+            const qrCol = document.getElementById('dashboardQuickPayQrCol');
+            const isBank = methodSelect && methodSelect.value === 'BANK_TRANSFER';
+
+            if (dialog) {
+                dialog.classList.toggle('modal-xl', isBank);
+                dialog.classList.toggle('modal-lg', !isBank);
+            }
+            if (formCol) {
+                formCol.classList.toggle('col-lg-7', isBank);
+            }
+            if (qrCol) {
+                qrCol.style.display = isBank ? 'block' : 'none';
+            }
+        }
+
         let dbQuickPayQr = null;
         const qpModalEl = document.getElementById('quickPayModal');
+        const qpMethodEl = document.getElementById('modalPayMethod');
+        if (qpMethodEl) {
+            qpMethodEl.addEventListener('change', syncDashboardQuickPayLayout);
+        }
         if (qpModalEl) {
             qpModalEl.addEventListener('show.bs.modal', function () {
+                syncDashboardQuickPayLayout();
                 document.getElementById('modalBankAccountId').value = '';
                 document.getElementById('modalExpectedTransferContent').value = '';
                 if (!dbQuickPayQr) {
@@ -2299,6 +2341,7 @@
                 if (dbQuickPayQr) dbQuickPayQr.reset();
                 document.getElementById('modalBankAccountId').value = '';
                 document.getElementById('modalExpectedTransferContent').value = '';
+                syncDashboardQuickPayLayout();
             });
         }
 
@@ -2309,10 +2352,42 @@
             });
         }
 
+        function syncModalSideQrLayout(methodId, dialogId, formColId, qrColId) {
+            const methodSelect = document.getElementById(methodId);
+            const dialog = document.getElementById(dialogId);
+            const formCol = document.getElementById(formColId);
+            const qrCol = document.getElementById(qrColId);
+            const isBank = methodSelect && methodSelect.value === 'BANK_TRANSFER';
+
+            if (dialog) {
+                dialog.classList.toggle('modal-xl', isBank);
+                dialog.classList.toggle('modal-lg', !isBank);
+            }
+            if (formCol) {
+                formCol.classList.toggle('col-lg-7', isBank);
+            }
+            if (qrCol) {
+                qrCol.style.display = isBank ? 'block' : 'none';
+            }
+        }
+
+        function syncDashboardDepositLayout() {
+            syncModalSideQrLayout('depositMethodSelect', 'dashboardDepositDialog', 'dashboardDepositFormCol', 'dashboardDepositQrCol');
+        }
+
+        function syncDashboardInstPayLayout() {
+            syncModalSideQrLayout('instPayMethodSelect', 'installmentPayDialog', 'instPayFormCol', 'instPayQrCol');
+        }
+
         let dbDepositQr = null;
         const depModalEl = document.getElementById('depositModal');
+        const depMethodEl = document.getElementById('depositMethodSelect');
+        if (depMethodEl) {
+            depMethodEl.addEventListener('change', syncDashboardDepositLayout);
+        }
         if (depModalEl) {
             depModalEl.addEventListener('show.bs.modal', function () {
+                syncDashboardDepositLayout();
                 document.getElementById('depositBankAccountId').value = '';
                 document.getElementById('depositExpectedTransferContent').value = '';
                 if (!dbDepositQr) {
@@ -2336,6 +2411,7 @@
                 if (dbDepositQr) dbDepositQr.reset();
                 document.getElementById('depositBankAccountId').value = '';
                 document.getElementById('depositExpectedTransferContent').value = '';
+                syncDashboardDepositLayout();
             });
         }
 
@@ -2348,8 +2424,13 @@
 
         let dbInstPayQr = null;
         const instPayModalEl = document.getElementById('installmentPayModal');
+        const instMethodSel = document.getElementById('instPayMethodSelect');
+        if (instMethodSel) {
+            instMethodSel.addEventListener('change', syncDashboardInstPayLayout);
+        }
         if (instPayModalEl) {
             instPayModalEl.addEventListener('show.bs.modal', function () {
+                syncDashboardInstPayLayout();
                 const bAcc = document.getElementById('instPayBankAccountId');
                 if (bAcc) bAcc.value = '';
                 const expCont = document.getElementById('instPayExpectedTransferContent');
@@ -2377,10 +2458,10 @@
                 if (bAcc) bAcc.value = '';
                 const expCont = document.getElementById('instPayExpectedTransferContent');
                 if (expCont) expCont.value = '';
+                syncDashboardInstPayLayout();
             });
         }
 
-        const instMethodSel = document.getElementById('instPayMethodSelect');
         const instTransGroup = document.getElementById('instPayTransRefGroup');
         if (instMethodSel && instTransGroup) {
             const toggleInstTrans = () => {
@@ -2404,7 +2485,13 @@
         return match ? decodeURIComponent(match[1]) : '';
     }
 
+    var CURRENT_INST_IDEMPOTENCY_KEY = '';
+    function generateInstIdempotencyKey() {
+        return 'INST-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+    }
+
     window.openInstallmentPayModal = function(planId, planCode, planName, remainingDebt, suggestedAmount, phaseName, branchId) {
+        CURRENT_INST_IDEMPOTENCY_KEY = generateInstIdempotencyKey();
         const idEl = document.getElementById('instPayPlanId');
         if (idEl) idEl.value = planId || '';
         const branchEl = document.getElementById('instPayBranchId');
@@ -2483,7 +2570,12 @@
         const amount = Number(document.getElementById('instPayAmountInput').value || 0);
         const method = document.getElementById('instPayMethodSelect').value;
         const notes = document.getElementById('instPayNotesInput').value;
-        const transRef = document.getElementById('instPayTransRef')?.value;
+        const transRef = document.getElementById('instPayTransRef')?.value?.trim() || null;
+        const bankAccountIdVal = document.getElementById('instPayBankAccountId')?.value;
+        const expectedTransferContent = document.getElementById('instPayExpectedTransferContent')?.value?.trim() || null;
+        if (!CURRENT_INST_IDEMPOTENCY_KEY) {
+            CURRENT_INST_IDEMPOTENCY_KEY = generateInstIdempotencyKey();
+        }
 
         if (window.CURRENT_REMAINING_DEBT <= 0) {
             alert('Kế hoạch điều trị này đã thu đủ, không thể thu thêm!');
@@ -2498,10 +2590,7 @@
             return;
         }
 
-        let finalNotes = notes || '';
-        if (transRef && transRef.trim()) {
-            finalNotes = (finalNotes ? (finalNotes + ' - ') : '') + 'Mã GD: ' + transRef.trim();
-        }
+        let finalNotes = notes ? notes.trim() : '';
 
         const btn = document.getElementById('btnSubmitInstPay');
         if (btn) {
@@ -2517,7 +2606,15 @@
             const resp = await fetch(`/api/doctor/treatment-plans/${planId}/installments/pay`, {
                 method: 'POST',
                 headers: headers,
-                body: JSON.stringify({ amount: amount, paymentMethod: method, notes: finalNotes })
+                body: JSON.stringify({
+                    amount: amount,
+                    paymentMethod: method,
+                    notes: finalNotes,
+                    transactionRef: transRef,
+                    idempotencyKey: CURRENT_INST_IDEMPOTENCY_KEY,
+                    bankAccountId: bankAccountIdVal ? Number(bankAccountIdVal) : null,
+                    expectedTransferContent: expectedTransferContent
+                })
             });
             const res = await resp.json();
             if (resp.ok && res.success) {
