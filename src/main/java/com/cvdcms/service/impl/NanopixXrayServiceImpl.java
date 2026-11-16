@@ -48,6 +48,9 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
     private final BranchRepository branchRepository;
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -134,10 +137,14 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
         Visit visit = visitRepository.findById(dto.getVisitId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy ca khám ID: " + dto.getVisitId()));
 
-        // Kiểm tra tính toàn vẹn nghiệp vụ: Lượt khám phải thuộc đúng bệnh nhân được chọn
+        // Kiểm tra tính toàn vẹn nghiệp vụ: Lượt khám phải thuộc đúng bệnh nhân được chọn và chưa bị khóa/hủy
         if (visit.getPatientProfile() == null || !visit.getPatientProfile().getProfileId().equals(patient.getProfileId())) {
             throw new IllegalArgumentException("Lượt khám mã " + visit.getVisitCode() + " không thuộc về bệnh nhân " + patient.getFullName());
         }
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                visit,
+                emrRecordRepository,
+                "Lượt khám đã hoàn tất/chờ thanh toán/hủy hoặc EMR đã khóa. Không thể đối chiếu phim X-quang");
 
         // Kiểm tra giới hạn cơ sở: Bác sĩ / Lễ tân chỉ được liên kết ca khám thuộc cơ sở mình đang làm việc
         if (!"ADMIN".equals(role)) {

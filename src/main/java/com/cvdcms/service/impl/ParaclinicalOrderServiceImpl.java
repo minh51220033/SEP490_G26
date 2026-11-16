@@ -30,6 +30,9 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     private final PerformedServiceRepository performedServiceRepository;
     private final InvoiceItemRepository invoiceItemRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final java.util.concurrent.atomic.AtomicLong XRAY_REF_COUNTER =
             new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis() % 100000);
@@ -87,9 +90,10 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lượt khám ID: " + visitId));
 
         // Ràng buộc nghiệp vụ BR-EMR-02: Khóa bệnh án bất biến
-        if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
-            throw new IllegalStateException("Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến (BR-EMR-02). Không thể tạo thêm chỉ định cận lâm sàng.");
-        }
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                visit,
+                emrRecordRepository,
+                "Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến. Không thể tạo thêm chỉ định cận lâm sàng");
 
         // Khởi tạo các dịch vụ cận lâm sàng mẫu nếu chưa có
         initDefaultParaclinicalServicesIfMissing();
@@ -204,9 +208,10 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chỉ định ID: " + orderItemId));
 
         Visit visit = item.getOrder().getVisit();
-        if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
-            throw new IllegalStateException("Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến (BR-EMR-02).");
-        }
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                visit,
+                emrRecordRepository,
+                "Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến");
 
         if (dto.getServiceId() != null) {
             serviceRepository.findById(dto.getServiceId()).ifPresent(item::setService);
@@ -269,9 +274,10 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chỉ định ID: " + orderItemId));
 
         Visit visit = item.getOrder().getVisit();
-        if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
-            throw new IllegalStateException("Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến (BR-EMR-02).");
-        }
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                visit,
+                emrRecordRepository,
+                "Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến");
 
         item.setStatus(newStatus);
         if (newStatus == ParaclinicalOrderItemStatus.COMPLETED) {
@@ -313,9 +319,10 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chỉ định ID: " + orderItemId));
 
         Visit visit = item.getOrder().getVisit();
-        if (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED) {
-            throw new IllegalStateException("Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến (BR-EMR-02). Không thể xóa chỉ định.");
-        }
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                visit,
+                emrRecordRepository,
+                "Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến. Không thể xóa chỉ định");
 
         if (performedServiceRepository != null && invoiceItemRepository != null) {
             PerformedService ps = item.getPerformedService();

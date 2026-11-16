@@ -310,6 +310,49 @@ public class DoctorVisitAccess {
         }
     }
 
+    /**
+     * Cho phép Kế toán / Thu ngân (PAYMENT_COLLECT, INVOICE_CREATE, FINANCE_DASHBOARD, role KE_TOAN),
+     * Admin hoặc Bác sĩ phụ trách phác đồ thực hiện thao tác tài chính / chia đợt / thu tiền trả góp trong đúng chi nhánh.
+     */
+    public User requireTreatmentPlanFinanceWrite(HttpSession session, Long planId) {
+        User user = requireAuthenticatedUser(session);
+        if (treatmentPlans == null || isAdmin(user)) {
+            return user;
+        }
+        TreatmentPlan plan = treatmentPlans.findByIdWithDetails(planId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy kế hoạch điều trị."));
+        Long branchId = resolveTreatmentPlanBranchId(plan);
+        if (!isBranchAllowed(user, branchId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Không có quyền thu tiền / chỉnh sửa kế hoạch điều trị của chi nhánh khác.");
+        }
+        if (hasFinanceAccess(user)) {
+            return user;
+        }
+        StaffProfile callerDoctor = staff.findByUserUserId(user.getUserId()).orElse(null);
+        if (callerDoctor != null && plan.getDoctor() != null
+                && callerDoctor.getStaffId().equals(plan.getDoctor().getStaffId())) {
+            return user;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Chỉ Thu ngân/Kế toán hoặc Bác sĩ phụ trách mới được thao tác thu tiền phác đồ.");
+    }
+
+    private boolean hasFinanceAccess(User user) {
+        if (user == null || user.getUserId() == null) {
+            return false;
+        }
+        if (users.hasActivePermission(user.getUserId(), "PAYMENT_COLLECT")
+                || users.hasActivePermission(user.getUserId(), "INVOICE_CREATE")
+                || users.hasActivePermission(user.getUserId(), "FINANCE_DASHBOARD")) {
+            return true;
+        }
+        if (user.getRoles() != null) {
+            return user.getRoles().stream().anyMatch(r -> Boolean.TRUE.equals(r.getIsActive())
+                    && r.getRoleName() != null
+                    && ("KE_TOAN".equalsIgnoreCase(r.getRoleName()) || "ROLE_KE_TOAN".equalsIgnoreCase(r.getRoleName())));
+        }
+        return false;
+    }
+
     public void requireTreatmentStage(HttpSession session, Long stageId) {
         if (treatmentPlanStages == null) {
             requireAuthenticatedUser(session);
@@ -425,6 +468,20 @@ public class DoctorVisitAccess {
         TreatmentPlanInstallment installment = treatmentPlanInstallments.findById(installmentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đợt thanh toán."));
         if (installment.getPlan() != null) {
+            User user = requireAuthenticatedUser(session);
+            if (isAdmin(user)) {
+                return;
+            }
+            Long branchId = resolveTreatmentPlanBranchId(installment.getPlan());
+            if (!isBranchAllowed(user, branchId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Không có quyền thao tác đợt thanh toán của chi nhánh khác.");
+            }
+            boolean isReceptionOrFinance = hasFinanceAccess(user)
+                    || users.hasActivePermission(user.getUserId(), "RECEPTION_CHECKIN")
+                    || users.hasActivePermission(user.getUserId(), "APPOINTMENT_MANAGE");
+            if (isReceptionOrFinance) {
+                return;
+            }
             requireTreatmentPlanWrite(session, installment.getPlan().getPlanId());
         } else {
             requireAuthenticatedUser(session);

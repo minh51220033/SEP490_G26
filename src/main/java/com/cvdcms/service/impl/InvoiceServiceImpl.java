@@ -373,16 +373,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                     throw new IllegalArgumentException("Số lượng mua thuốc '" + pItem.getDrugName() + "' (" + requestedQty + ") vượt quá số lượng còn lại theo đơn (" + remainingQty + ").");
                 }
 
-                // Không đoán giá: Thuốc phải có giá bán hợp lệ trong cấu hình
-                BigDecimal unitPrice = pItem.getUnitPrice();
-                if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
-                    if (pItem.getMedication() != null && pItem.getMedication().getSalePrice() != null) {
-                        unitPrice = pItem.getMedication().getSalePrice();
-                    }
-                }
-                if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new IllegalStateException("Thuốc '" + pItem.getDrugName() + "' chưa có giá bán hợp lệ trong cấu hình danh mục. Không thể phát hành hóa đơn.");
-                }
+                // Không đoán giá: Thuốc phải có giá bán hợp lệ trong danh mục hoặc đơn thuốc
+                BigDecimal unitPrice = resolveMedicineSalePrice(pItem);
 
                 // Tích hợp kho: Kiểm tra tồn kho và xuất kho theo FEFO (Chặn bán nếu chưa liên kết vật tư kho)
                 Medication med = pItem.getMedication();
@@ -392,8 +384,14 @@ public class InvoiceServiceImpl implements InvoiceService {
                 if (med.getMaterial() == null || med.getMaterial().getMaterialId() == null) {
                     throw new IllegalStateException("Thuốc '" + pItem.getDrugName() + "' chưa được liên kết với vật tư kho. Chặn bán thuốc trong hóa đơn chung khi chưa liên kết kho.");
                 }
+                Material mat = med.getMaterial();
+                if (pItem.getUnit() != null && mat.getUnit() != null
+                        && !pItem.getUnit().trim().equalsIgnoreCase(mat.getUnit().trim())
+                        && (med.getUnit() == null || !pItem.getUnit().trim().equalsIgnoreCase(med.getUnit().trim()))) {
+                    throw new IllegalStateException("Đơn vị bán của thuốc ('" + pItem.getUnit() + "') không tương thích với đơn vị kho ('" + mat.getUnit() + "').");
+                }
 
-                Long matId = med.getMaterial().getMaterialId();
+                Long matId = mat.getMaterialId();
                 BranchInventory inventory = branchInventoryRepository.findForUpdate(branch.getBranchId(), matId)
                         .orElseThrow(() -> new IllegalStateException("Chi nhánh không có dữ liệu tồn kho cho vật tư/thuốc: " + pItem.getDrugName()));
 
@@ -420,7 +418,11 @@ public class InvoiceServiceImpl implements InvoiceService {
                     if (batchRemaining.compareTo(BigDecimal.ZERO) <= 0) continue;
 
                     BigDecimal takeFromBatch = batchRemaining.min(qtyToAllocate);
-                    batch.setQuantityRemaining(batchRemaining.subtract(takeFromBatch));
+                    BigDecimal nextBatchQty = batchRemaining.subtract(takeFromBatch);
+                    batch.setQuantityRemaining(nextBatchQty);
+                    if (nextBatchQty.compareTo(BigDecimal.ZERO) <= 0) {
+                        batch.setStatus(BatchStatus.OUT_OF_STOCK);
+                    }
                     materialBatchRepository.save(batch);
 
                     qtyToAllocate = qtyToAllocate.subtract(takeFromBatch);
@@ -611,15 +613,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                 PrescriptionItem pItem = prescriptionItemRepository.findById(mReq.getPrescriptionItemId())
                         .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dòng thuốc ID: " + mReq.getPrescriptionItemId()));
 
-                BigDecimal unitPrice = pItem.getUnitPrice();
-                if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
-                    if (pItem.getMedication() != null && pItem.getMedication().getSalePrice() != null) {
-                        unitPrice = pItem.getMedication().getSalePrice();
-                    }
-                }
-                if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new IllegalStateException("Thuốc '" + pItem.getDrugName() + "' chưa có giá bán hợp lệ trong cấu hình danh mục.");
-                }
+                BigDecimal unitPrice = resolveMedicineSalePrice(pItem);
 
                 BigDecimal lineTotal = unitPrice.multiply(requestedQty).setScale(2, RoundingMode.HALF_UP);
                 totalMedicine = totalMedicine.add(lineTotal);
@@ -1617,14 +1611,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             }
 
             // Đơn giá bán tại thời điểm lập hóa đơn lấy từ DB (không tin client)
-            BigDecimal unitPrice = null;
-            if (med.getSalePrice() != null && med.getSalePrice().compareTo(BigDecimal.ZERO) > 0) {
-                unitPrice = med.getSalePrice();
-            } else if (prescItem.getUnitPrice() != null && prescItem.getUnitPrice().compareTo(BigDecimal.ZERO) > 0) {
-                unitPrice = prescItem.getUnitPrice();
-            } else {
-                throw new IllegalStateException("Thuốc '" + prescItem.getDrugName() + "' chưa có giá bán hợp lệ trong hệ thống. Vui lòng cấu hình giá bán tại danh mục dược phẩm trước khi phát hành hóa đơn.");
-            }
+            BigDecimal unitPrice = resolveMedicineSalePrice(prescItem);
 
             // Trừ kho theo từng lô FEFO - Lưu đầy đủ từng lô và số lượng xuất
             BigDecimal needDeduct = buyQty;
@@ -1783,6 +1770,22 @@ public class InvoiceServiceImpl implements InvoiceService {
         prescription.setHandledBy(staff);
         prescription.setHandledAt(LocalDateTime.now());
         prescriptionRepository.save(prescription);
+    }
+
+    /** Lấy giá bán thuốc chuẩn nhất: ưu tiên giá danh mục hiện hành (Medication.salePrice), sau đó đơn giá lưu trên đơn thuốc. */
+    private BigDecimal resolveMedicineSalePrice(PrescriptionItem item) {
+        if (item == null) {
+            throw new IllegalArgumentException("Dòng thuốc không hợp lệ.");
+        }
+        if (item.getMedication() != null
+                && item.getMedication().getSalePrice() != null
+                && item.getMedication().getSalePrice().compareTo(BigDecimal.ZERO) > 0) {
+            return item.getMedication().getSalePrice();
+        }
+        if (item.getUnitPrice() != null && item.getUnitPrice().compareTo(BigDecimal.ZERO) > 0) {
+            return item.getUnitPrice();
+        }
+        throw new IllegalStateException("Thuốc '" + item.getDrugName() + "' chưa có giá bán hợp lệ trong cấu hình danh mục. Không thể phát hành hóa đơn.");
     }
 
     @Override

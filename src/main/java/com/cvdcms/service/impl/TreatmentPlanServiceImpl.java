@@ -38,6 +38,21 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     private final InvoiceItemRepository invoiceItemRepository;
     private final TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private InvoiceRepository invoiceRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private PaymentRepository paymentRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private InvoiceAuditLogRepository invoiceAuditLogRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.LoyaltyService loyaltyService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
 
@@ -230,9 +245,26 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         plan.setTotalEstimatedCost(overallCost);
         plan.setFinalEstimatedCost(finalCost);
 
+        boolean wasInstallment = Boolean.TRUE.equals(plan.getIsInstallment());
         boolean wantsInstallment = Boolean.TRUE.equals(request.getIsInstallment());
-        if (!wantsInstallment && paidAmount.compareTo(BigDecimal.ZERO) > 0 && Boolean.TRUE.equals(plan.getIsInstallment())) {
+        if (!wantsInstallment && paidAmount.compareTo(BigDecimal.ZERO) > 0 && wasInstallment) {
             throw new IllegalStateException("Phác đồ đã ghi nhận thanh toán theo đợt, không thể chuyển sang thanh toán đơn lẻ!");
+        }
+        if (wantsInstallment && !wasInstallment && plan.getStages() != null) {
+            for (TreatmentPlanStage st : plan.getStages()) {
+                if (st.getItems() == null) continue;
+                for (TreatmentPlanItem it : st.getItems()) {
+                    if (it.getPlanItemId() == null) continue;
+                    List<PerformedService> linkedServices = performedServiceRepository
+                            .findByPlanItem_PlanItemIdAndStatusNot(it.getPlanItemId(), PerformedServiceStatus.CANCELLED);
+                    for (PerformedService ps : linkedServices) {
+                        if (invoiceItemRepository != null && ps.getPerformedId() != null
+                                && invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId())) {
+                            throw new IllegalStateException("Phác đồ đã có dịch vụ được lập hóa đơn lẻ, không thể chuyển sang thanh toán theo đợt!");
+                        }
+                    }
+                }
+            }
         }
         plan.setIsInstallment(wantsInstallment);
         if (wantsInstallment) {
@@ -333,13 +365,32 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 }
             }
         } else if (newStatus == TreatmentPlanStageStatus.PENDING) {
-            stage.setCompletedAt(null);
             if (stage.getItems() != null) {
+                for (TreatmentPlanItem it : stage.getItems()) {
+                    if (it.getPlanItemId() != null) {
+                        List<PerformedService> activeServices = performedServiceRepository
+                                .findByPlanItem_PlanItemIdAndStatusNot(it.getPlanItemId(), PerformedServiceStatus.CANCELLED);
+                        for (PerformedService ps : activeServices) {
+                            com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                                    ps.getVisit(),
+                                    emrRecordRepository,
+                                    "Bệnh án lâm sàng đã khóa/hủy, không thể đặt lại trạng thái giai đoạn phác đồ");
+                            if (invoiceItemRepository != null && ps.getPerformedId() != null
+                                    && invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId())) {
+                                throw new IllegalStateException(
+                                        "Giai đoạn này có bước thủ thuật đã được lập hóa đơn viện phí, không thể hoàn tác về Chưa thực hiện!");
+                            }
+                            ps.setStatus(PerformedServiceStatus.CANCELLED);
+                            performedServiceRepository.save(ps);
+                        }
+                    }
+                }
                 for (TreatmentPlanItem it : stage.getItems()) {
                     it.setStatus(TreatmentPlanItemStatus.PLANNED);
                     it.setCompletedAt(null);
                 }
             }
+            stage.setCompletedAt(null);
         }
 
         treatmentPlanStageRepository.save(stage);
@@ -692,8 +743,29 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     @Override
     @Transactional
     public TreatmentPlanResponseDTO recordInstallmentPayment(Long planId, BigDecimal amount, Long invoiceId) {
+        InstallmentPaymentRequestDTO req = new InstallmentPaymentRequestDTO();
+        req.setPlanId(planId);
+        req.setAmount(amount);
+        return recordInstallmentPaymentInternal(planId, req, null, invoiceId);
+    }
+
+    @Override
+    @Transactional
+    public TreatmentPlanResponseDTO recordInstallmentPayment(Long planId, InstallmentPaymentRequestDTO request, Long actorUserId) {
+        return recordInstallmentPaymentInternal(planId, request, actorUserId, null);
+    }
+
+    private TreatmentPlanResponseDTO recordInstallmentPaymentInternal(
+            Long planId,
+            InstallmentPaymentRequestDTO request,
+            Long actorUserId,
+            Long externalInvoiceId) {
         TreatmentPlan plan = treatmentPlanRepository.findByIdWithDetails(planId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kế hoạch điều trị."));
+        if (plan.getStatus() == TreatmentPlanStatus.CANCELLED) {
+            throw new IllegalStateException("Không thể thu tiền cho kế hoạch điều trị đã bị hủy.");
+        }
+        BigDecimal amount = request != null ? request.getAmount() : null;
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Số tiền thanh toán phải lớn hơn 0!");
         }
@@ -710,13 +782,123 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                     amount, remainingCost));
         }
 
+        com.cvdcms.entity.enums.PaymentMethod paymentMethod =
+                (request != null && request.getPaymentMethod() != null)
+                        ? request.getPaymentMethod()
+                        : com.cvdcms.entity.enums.PaymentMethod.CASH;
+        String notes = (request != null && request.getNotes() != null && !request.getNotes().isBlank())
+                ? request.getNotes().trim() : null;
+
+        PatientProfile patient = plan.getPatientProfile();
+        if (paymentMethod == com.cvdcms.entity.enums.PaymentMethod.DEPOSIT_WALLET && patient != null) {
+            PatientProfile lockedPatient = patientProfileRepository.findByIdForUpdate(patient.getProfileId())
+                    .orElse(patient);
+            BigDecimal currentDeposit = lockedPatient.getDepositBalance() != null
+                    ? lockedPatient.getDepositBalance() : BigDecimal.ZERO;
+            if (currentDeposit.compareTo(amount) < 0) {
+                throw new IllegalStateException("Số dư ví tạm ứng (" + currentDeposit + " đ) không đủ để thanh toán " + amount + " đ.");
+            }
+            lockedPatient.setDepositBalance(currentDeposit.subtract(amount));
+            patientProfileRepository.save(lockedPatient);
+            patient = lockedPatient;
+        }
+
+        if (externalInvoiceId == null && invoiceRepository != null && paymentRepository != null && patient != null) {
+            Branch branch = plan.getBranch() != null ? plan.getBranch() : patient.getPreferredBranch();
+            StaffProfile cashier = actorUserId != null
+                    ? staffProfileRepository.findByUser_UserId(actorUserId).orElse(plan.getDoctor())
+                    : plan.getDoctor();
+            if (branch != null && cashier != null) {
+                Invoice invoice = new Invoice();
+                invoice.setInvoiceCode("HDK" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
+                        + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+                invoice.setInvoiceType(com.cvdcms.entity.enums.InvoiceType.SERVICE);
+                invoice.setPatientProfile(patient);
+                invoice.setBranch(branch);
+                invoice.setCashier(cashier);
+                invoice.setStatus(com.cvdcms.entity.enums.InvoiceStatus.CONFIRMED);
+                invoice.setPaymentStatus(com.cvdcms.entity.enums.InvoicePaymentStatus.PAID);
+                invoice.setTotalServiceAmount(amount);
+                invoice.setTotalMedicineAmount(BigDecimal.ZERO);
+                invoice.setTotalVatAmount(BigDecimal.ZERO);
+                invoice.setDiscountAmount(BigDecimal.ZERO);
+                invoice.setPromotionDiscount(BigDecimal.ZERO);
+                invoice.setPointDiscount(BigDecimal.ZERO);
+                invoice.setTotalAmount(amount);
+                invoice.setPaidAmount(amount);
+                invoice.setRemainingDebt(BigDecimal.ZERO);
+                invoice.setNotes("[Thu trả góp KHDT " + plan.getPlanCode() + "]"
+                        + (notes != null ? " " + notes : ""));
+
+                InvoiceItem invItem = new InvoiceItem();
+                invItem.setInvoice(invoice);
+                invItem.setItemType(com.cvdcms.entity.enums.InvoiceItemType.SERVICE);
+                String itemName = "Thu trả góp KHDT: " + plan.getPlanName() + " (" + plan.getPlanCode() + ")";
+                if (itemName.length() > 200) {
+                    itemName = itemName.substring(0, 200);
+                }
+                invItem.setItemName(itemName);
+                invItem.setQuantity(BigDecimal.ONE);
+                invItem.setUnit("Đợt");
+                invItem.setUnitPrice(amount);
+                invItem.setFinalAmount(amount);
+                invItem.setLineOrder(1);
+                invItem.setDiscountAmount(BigDecimal.ZERO);
+                invItem.setPayableAmount(amount);
+                invItem.setVatRate(BigDecimal.ZERO);
+                invItem.setVatAmount(BigDecimal.ZERO);
+                invItem.setPaidAmount(amount);
+                invItem.setRemainingDebt(BigDecimal.ZERO);
+                invItem.setPaymentStatus(com.cvdcms.entity.enums.InvoiceItemPaymentStatus.PAID);
+                invoice.setItems(new ArrayList<>(List.of(invItem)));
+
+                Invoice savedInvoice = invoiceRepository.save(invoice);
+
+                Payment payment = new Payment();
+                payment.setPaymentCode("TT" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
+                        + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+                payment.setInvoice(savedInvoice);
+                payment.setPatientProfile(patient);
+                payment.setBranch(branch);
+                payment.setCashier(cashier);
+                payment.setPaymentType(com.cvdcms.entity.enums.PaymentType.PAYMENT);
+                payment.setPaymentMethod(paymentMethod);
+                payment.setAmount(amount);
+                String payNotes = "[KHDT " + plan.getPlanCode() + "]" + (notes != null ? " " + notes : "");
+                if (payNotes.length() > 255) {
+                    payNotes = payNotes.substring(0, 255);
+                }
+                payment.setNotes(payNotes);
+                Payment savedPayment = paymentRepository.save(payment);
+
+                if (invoiceAuditLogRepository != null) {
+                    InvoiceAuditLog auditLog = new InvoiceAuditLog();
+                    auditLog.setInvoice(savedInvoice);
+                    auditLog.setActionType("INSTALLMENT_PAYMENT");
+                    auditLog.setOldPaidAmount(BigDecimal.ZERO);
+                    auditLog.setNewPaidAmount(amount);
+                    auditLog.setNewTotalAmount(amount);
+                    auditLog.setReason("Thu trả góp kế hoạch điều trị " + plan.getPlanCode()
+                            + " (" + savedPayment.getPaymentCode() + ")");
+                    auditLog.setDetails("Phương thức: " + paymentMethod.name() + ", Số tiền: " + amount + " đ"
+                            + (notes != null ? ", Ghi chú: " + notes : ""));
+                    auditLog.setPerformedBy(cashier);
+                    invoiceAuditLogRepository.save(auditLog);
+                }
+
+                if (loyaltyService != null && paymentMethod != com.cvdcms.entity.enums.PaymentMethod.DEPOSIT_WALLET) {
+                    loyaltyService.recordPaymentPoints(savedPayment);
+                }
+            }
+        }
+
         plan.setTotalPaidAmount(currentPaid.add(amount));
 
         recalculateInstallmentsInternal(plan);
 
         TreatmentPlan saved = treatmentPlanRepository.save(plan);
-        log.info("Ghi nhận thanh toán {} đ cho Kế hoạch điều trị {}. Tổng đã thu: {} đ",
-                amount, saved.getPlanCode(), saved.getTotalPaidAmount());
+        log.info("Ghi nhận thanh toán {} đ ({}) cho Kế hoạch điều trị {}. Tổng đã thu: {} đ",
+                amount, paymentMethod.name(), saved.getPlanCode(), saved.getTotalPaidAmount());
         return mapToResponseDTO(saved);
     }
 

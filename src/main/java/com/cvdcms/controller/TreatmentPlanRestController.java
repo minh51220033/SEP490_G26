@@ -401,7 +401,7 @@ public class TreatmentPlanRestController {
             @PathVariable Long id,
             @RequestBody List<TreatmentPlanInstallmentDTO> installmentDTOs) {
         if (doctorVisitAccess != null && isHttpRequestActive()) {
-            doctorVisitAccess.requireTreatmentPlanWrite(currentHttpSession(), id);
+            doctorVisitAccess.requireTreatmentPlanFinanceWrite(currentHttpSession(), id);
         }
         try {
             TreatmentPlanResponseDTO updated = treatmentPlanService.saveInstallments(id, installmentDTOs);
@@ -425,12 +425,16 @@ public class TreatmentPlanRestController {
     public ResponseEntity<?> recordInstallmentPayment(
             @PathVariable Long id,
             @RequestBody InstallmentPaymentRequestDTO request) {
-        if (doctorVisitAccess != null && isHttpRequestActive()) {
-            doctorVisitAccess.requireTreatmentPlanWrite(currentHttpSession(), id);
+        Long actorUserId = null;
+        jakarta.servlet.http.HttpSession session = isHttpRequestActive() ? currentHttpSession() : null;
+        if (doctorVisitAccess != null && session != null) {
+            com.cvdcms.entity.User actor = doctorVisitAccess.requireTreatmentPlanFinanceWrite(session, id);
+            actorUserId = actor != null ? actor.getUserId() : null;
+        } else if (session != null && session.getAttribute("loggedInUser") instanceof com.cvdcms.entity.User u) {
+            actorUserId = u.getUserId();
         }
         try {
-            TreatmentPlanResponseDTO updated = treatmentPlanService.recordInstallmentPayment(
-                    id, request.getAmount(), null);
+            TreatmentPlanResponseDTO updated = treatmentPlanService.recordInstallmentPayment(id, request, actorUserId);
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Đã ghi nhận thanh toán thành công!");

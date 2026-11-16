@@ -31,6 +31,8 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     private final PatientProfileRepository patientProfileRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private org.springframework.context.ApplicationEventPublisher careEventPublisher;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -74,11 +76,11 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             throw new IllegalArgumentException("Không tìm thấy ca khám hoặc hồ sơ bệnh nhân để kê đơn thuốc!");
         }
 
-        // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi chuyển thanh toán hoặc hoàn tất
-        if (visit != null
-                && (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED)) {
-            throw new IllegalStateException("Bệnh án lâm sàng đã hoàn tất và khóa bất biến (BR-EMR-02). Không thể tạo đơn thuốc mới.");
-        }
+        // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi chuyển thanh toán, hoàn tất, hủy hoặc EMR khóa
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                visit,
+                emrRecordRepository,
+                "Bệnh án lâm sàng đã hoàn tất và khóa bất biến. Không thể tạo đơn thuốc mới");
 
         PatientProfile patient = (visit != null && visit.getPatientProfile() != null)
                 ? visit.getPatientProfile()
@@ -144,8 +146,13 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 PrescriptionItem item = new PrescriptionItem();
                 item.setPrescription(prescription);
 
+                Medication med = null;
                 if (itemDTO.getMedicationId() != null) {
-                    Medication med = medicationRepository.findById(itemDTO.getMedicationId()).orElse(null);
+                    med = medicationRepository.findById(itemDTO.getMedicationId())
+                            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thuốc trong danh mục ID: " + itemDTO.getMedicationId()));
+                    if (Boolean.FALSE.equals(med.getIsActive())) {
+                        throw new IllegalStateException("Thuốc '" + med.getDrugName() + "' đã ngừng sử dụng trong danh mục.");
+                    }
                     item.setMedication(med);
                 }
 
@@ -168,16 +175,22 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 item.setUnit(
                         (itemDTO.getUnit() != null && !itemDTO.getUnit().trim().isEmpty())
                                 ? itemDTO.getUnit().trim()
-                                : "Viên"
+                                : (med != null && med.getUnit() != null && !med.getUnit().isBlank() ? med.getUnit() : "Viên")
                 );
                 item.setUsageInstruction(
                         (itemDTO.getUsageInstruction() != null && !itemDTO.getUsageInstruction().trim().isEmpty())
                                 ? itemDTO.getUsageInstruction().trim()
-                                : "Uống sau khi ăn"
+                                : (med != null && med.getUsageInstruction() != null && !med.getUsageInstruction().isBlank()
+                                        ? med.getUsageInstruction() : "Uống sau khi ăn")
                 );
 
-                BigDecimal unitPrice = itemDTO.getUnitPrice();
-                if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                // Ưu tiên giá bán niêm yết trên danh mục Medication nếu thuốc liên kết danh mục
+                BigDecimal unitPrice = null;
+                if (med != null && med.getSalePrice() != null && med.getSalePrice().compareTo(BigDecimal.ZERO) > 0) {
+                    unitPrice = med.getSalePrice();
+                } else if (itemDTO.getUnitPrice() != null && itemDTO.getUnitPrice().compareTo(BigDecimal.ZERO) > 0) {
+                    unitPrice = itemDTO.getUnitPrice();
+                } else {
                     unitPrice = getEstimatedPriceForDrug(item.getDrugName());
                 }
                 item.setUnitPrice(unitPrice);
@@ -226,9 +239,19 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         Prescription prescription = prescriptionRepository.findById(prescriptionId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn thuốc."));
 
-        if (prescription.getVisit() != null &&
-                (prescription.getVisit().getStatus() == VisitStatus.WAITING_PAYMENT || prescription.getVisit().getStatus() == VisitStatus.COMPLETED)) {
-            throw new IllegalStateException("Bệnh án lâm sàng đã khóa bất biến (BR-EMR-02). Không thể xóa đơn thuốc.");
+        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                prescription.getVisit(),
+                emrRecordRepository,
+                "Bệnh án lâm sàng đã khóa bất biến. Không thể xóa đơn thuốc");
+
+        if (prescription.getStatus() == com.cvdcms.entity.enums.PrescriptionStatus.CLINIC_PURCHASE_PARTIAL
+                || prescription.getStatus() == com.cvdcms.entity.enums.PrescriptionStatus.CLINIC_PURCHASE_COMPLETED) {
+            throw new IllegalStateException("Đơn thuốc đã phát sinh mua/xuất tại phòng khám, không thể xóa.");
+        }
+        boolean anyBought = prescription.getItems() != null && prescription.getItems().stream()
+                .anyMatch(it -> it.getBoughtQuantity() != null && it.getBoughtQuantity().compareTo(BigDecimal.ZERO) > 0);
+        if (anyBought) {
+            throw new IllegalStateException("Đơn thuốc đã có dòng thuốc được lập hóa đơn/xuất bán, không thể xóa.");
         }
 
         prescriptionRepository.delete(prescription);
@@ -244,6 +267,8 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 .unit(entity.getUnit())
                 .usageInstruction(entity.getUsageInstruction())
                 .isActive(entity.getIsActive())
+                .salePrice(entity.getSalePrice())
+                .materialId(entity.getMaterial() != null ? entity.getMaterial().getMaterialId() : null)
                 .build();
     }
 

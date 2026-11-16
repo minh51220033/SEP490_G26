@@ -240,6 +240,14 @@ public class MedicationServiceImpl implements MedicationService {
         entity.setActiveIngredient(dto.getActiveIngredient() != null ? dto.getActiveIngredient().trim() : null);
         entity.setUnit(dto.getUnit() != null && !dto.getUnit().isBlank() ? dto.getUnit().trim() : "Viên");
         entity.setUsageInstruction(dto.getUsageInstruction() != null ? dto.getUsageInstruction().trim() : null);
+        if (dto.getSalePrice() != null) {
+            if (dto.getSalePrice().compareTo(java.math.BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Giá bán thuốc không được âm.");
+            }
+            entity.setSalePrice(dto.getSalePrice());
+        } else if (entity.getSalePrice() == null) {
+            entity.setSalePrice(java.math.BigDecimal.ZERO);
+        }
     }
 
     private MedicationDTO toDTO(Medication e) {
@@ -251,6 +259,8 @@ public class MedicationServiceImpl implements MedicationService {
                 .unit(e.getUnit())
                 .usageInstruction(e.getUsageInstruction())
                 .isActive(e.getIsActive())
+                .salePrice(e.getSalePrice())
+                .materialId(e.getMaterial() != null ? e.getMaterial().getMaterialId() : null)
                 .build();
     }
 }
