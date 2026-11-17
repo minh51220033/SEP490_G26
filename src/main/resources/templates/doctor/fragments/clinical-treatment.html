@@ -630,34 +630,34 @@
 <div class="modal fade" id="chairsideWorkflowModal" tabindex="-1" aria-labelledby="chairsideWorkflowModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-            <div class="modal-header py-3" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white;">
+            <div class="modal-header bg-white border-bottom text-dark py-3 px-4">
                 <div>
                     <h5 class="modal-title fw-bold fs-6 d-flex align-items-center gap-2 mb-1" id="chairsideWorkflowModalLabel">
-                        <i class="bi bi-clipboard2-pulse-fill text-warning fs-5"></i>
+                        <i class="bi bi-clipboard2-pulse-fill text-primary fs-5"></i>
                         <span id="csWfTitle">Quy trình kỹ thuật: Cạo vôi răng &amp; Đánh bóng</span>
                     </h5>
-                    <div class="d-flex align-items-center gap-2" style="font-size: 11px; opacity: 0.9;">
-                        <span class="badge bg-white text-primary fw-bold" id="csWfCode">QTKT-CAOVOI</span>
-                        <span>• Chuẩn Hướng dẫn Quy trình Kỹ thuật Bộ Y Tế (QĐ 3207/QĐ-BYT)</span>
+                    <div class="d-flex align-items-center gap-2 df-meta-tertiary">
+                        <span class="badge rounded-pill px-2 py-1 fw-bold" style="background: #e0f2fe; color: #0369a1;" id="csWfCode">QTKT-CAOVOI</span>
+                        <span>· Chuẩn Hướng dẫn Quy trình Kỹ thuật Bộ Y Tế (QĐ 3207/QĐ-BYT)</span>
                     </div>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4" style="background-color: #f8fafc;">
                 <!-- PROGRESS BAR -->
-                <div class="bg-white p-3 rounded-3 border mb-3 shadow-sm">
+                <div class="bg-white p-3 rounded-3 border mb-3" style="border-color: #e2e8f0 !important;">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="fw-bold text-dark small">Tiến độ quy trình lâm sàng:</span>
-                        <span class="badge bg-primary rounded-pill px-2 py-1" id="csWfProgressText">0 / 4 bước (0%)</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1 df-num" id="csWfProgressText">0 / 4 bước (0%)</span>
                     </div>
-                    <div class="progress" style="height: 10px; border-radius: 5px;">
-                        <div id="csWfProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                    <div class="progress" style="height: 8px; border-radius: 5px;">
+                        <div id="csWfProgressBar" class="progress-bar bg-success"
                              role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                 </div>
 
                 <!-- DESCRIPTION BOX -->
-                <div class="alert alert-light border py-2 px-3 small mb-3 rounded-3 text-secondary" id="csWfDescBox">
+                <div class="df-soft-panel bg-white py-2 px-3 small mb-3 text-secondary" id="csWfDescBox">
                     <i class="bi bi-info-circle-fill text-primary"></i> <span id="csWfDescText">Hướng dẫn quy trình kỹ thuật chuẩn BYT.</span>
                 </div>
 
@@ -667,7 +667,7 @@
                         <i class="bi bi-list-check text-primary"></i>
                         <span>Checklist các bước kỹ thuật (Bác sĩ / Phụ tá thực hiện tại ghế):</span>
                     </h6>
-                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0 fw-semibold" style="font-size: 12px;" onclick="markAllWorkflowStepsComplete()">
+                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-semibold" style="font-size: 12px;" onclick="markAllWorkflowStepsComplete()">
                         <i class="bi bi-check-all"></i> Hoàn thành tất cả
                     </button>
                 </div>
@@ -676,12 +676,12 @@
                     <!-- Dynamic Step Checklist items -->
                 </div>
             </div>
-            <div class="modal-footer bg-white border-top py-2">
+            <div class="modal-footer bg-white border-top py-2 px-4">
                 <a th:href="@{/doctor/workflows}" target="_blank" class="btn btn-link text-primary text-decoration-none small me-auto">
-                    <i class="bi bi-box-arrow-up-right"></i> Mở trang Quản lý Quy trình Kỹ thuật (CRUD)
+                    <i class="bi bi-box-arrow-up-right"></i> Mở trang Quản lý Quy trình Kỹ thuật
                 </a>
-                <button type="button" class="btn btn-secondary px-4 rounded-pill" data-bs-dismiss="modal">Đóng</button>
-                <button type="button" class="btn btn-primary px-4 rounded-pill fw-bold" onclick="saveChairsideWorkflowProgress()">
+                <button type="button" class="btn btn-outline-secondary px-4 rounded-pill" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary px-4 rounded-pill fw-semibold" onclick="saveChairsideWorkflowProgress()">
                     <i class="bi bi-check2-circle"></i> Lưu tiến độ quy trình
                 </button>
             </div>
@@ -695,13 +695,13 @@
 <!-- ===================================================================== -->
 <div class="modal fade" id="addTreatmentModal" tabindex="-1" aria-labelledby="addTreatmentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-            <div class="modal-header text-white" style="background: var(--df-dark-header); padding: 14px 20px;">
-                <h5 class="modal-title fs-6 fw-bold d-flex align-items-center gap-2" id="addTreatmentModalLabel">
-                    <i class="bi bi-tools text-warning"></i>
-                    <span>Thêm Dịch vụ &amp; Thủ thuật thực hiện (SCR-16.1)</span>
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header bg-white border-bottom text-dark px-4 py-3">
+                <h5 class="modal-title fs-6 fw-bold d-flex align-items-center gap-2 mb-0" id="addTreatmentModalLabel">
+                    <i class="bi bi-tools text-primary"></i>
+                    <span>Thêm dịch vụ &amp; thủ thuật thực hiện (SCR-16.1)</span>
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="treatmentForm" onsubmit="submitPerformedService(event)">
                 <div class="modal-body p-4">
@@ -709,13 +709,13 @@
                     <input type="hidden" id="treatPlanItemId" value="">
 
                     <!-- CHỌN NHANH TỪ KẾ HOẠCH ĐIỀU TRỊ CỦA BỆNH NHÂN (NẾU CÓ) -->
-                    <div class="mb-3 p-2.5 rounded-3 border" style="background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%); border-color: #bae6fd !important;" th:if="${treatmentPlans != null and !treatmentPlans.isEmpty()}">
-                        <div class="d-flex align-items-center justify-content-between mb-1.5">
-                            <label class="form-label fw-bold small text-dark mb-0 d-flex align-items-center gap-1.5">
+                    <div class="mb-3 p-3 df-soft-panel" th:if="${treatmentPlans != null and !treatmentPlans.isEmpty()}">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <label class="form-label fw-bold small text-dark mb-0 d-flex align-items-center gap-2">
                                 <i class="bi bi-diagram-3-fill text-primary"></i>
                                 <span>Chọn từ Kế hoạch điều trị</span>
                             </label>
-                            <span class="badge bg-primary text-white px-2 py-0.5 rounded-pill" style="font-size: 10px;">Tự điền dịch vụ</span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-pill" style="font-size: 10.5px;">Tự điền dịch vụ</span>
                         </div>
                         <select class="form-select form-select-sm" id="treatPlanItemSelect" onchange="onPlanItemSelectChange(this)">
                             <option value="">-- Bấm để chọn bước thủ thuật trong KHDT của BN --</option>
@@ -899,9 +899,9 @@
                         <textarea class="form-control" id="treatClinicalNotes" rows="2" placeholder="Ví dụ: Lắp 2 răng sứ Titan R16 khít sát, cắn khớp tốt, dặn tái khám sau 1 tuần..."></textarea>
                     </div>
                 </div>
-                <div class="modal-footer bg-light px-4 py-3">
+                <div class="modal-footer bg-white border-top px-4 py-3">
                     <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm" id="submitTreatmentBtn">
+                    <button type="submit" class="btn btn-primary btn-sm px-4 fw-semibold" id="submitTreatmentBtn">
                         <i class="bi bi-check-circle-fill me-1"></i> Xác nhận hoàn thành (COMPLETED)
                     </button>
                 </div>
@@ -922,16 +922,16 @@
 <!-- ===================================================================== -->
 <div class="modal fade" id="addPrescriptionModal" tabindex="-1" aria-labelledby="addPrescriptionModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-            <div class="modal-header text-white" style="background: var(--df-dark-header); padding: 14px 20px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header bg-white border-bottom text-dark px-4 py-3">
                 <div>
                     <h5 class="modal-title fs-6 fw-bold d-flex align-items-center gap-2 mb-0" id="addPrescriptionModalLabel">
-                        <i class="bi bi-capsule text-warning"></i>
+                        <i class="bi bi-capsule text-primary"></i>
                         <span>Kê đơn thuốc (SCR-18.3 &amp; SCR-18.4)</span>
                     </h5>
-                    <small class="text-white-50" style="font-size: 11.5px;">Phòng khám chưa bật liên thông — đơn chỉ lưu và in tại chỗ</small>
+                    <small class="df-meta-tertiary">Phòng khám chưa bật liên thông — đơn chỉ lưu và in tại chỗ</small>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="prescriptionForm" onsubmit="submitPrescription(event)">
                 <div class="modal-body p-4">
@@ -1045,10 +1045,10 @@
                                 </tfoot>
                             </table>
                         </div>
-                        <div class="alert alert-info border border-info-subtle py-2 px-3 mt-2 mb-0 d-flex align-items-center justify-content-between small rounded-3">
+                        <div class="df-soft-panel py-2 px-3 mt-2 mb-0 d-flex align-items-center justify-content-between df-meta-tertiary">
                             <div>
                                 <i class="bi bi-send-check-fill text-primary me-1"></i>
-                                <strong>Đã đồng bộ sang Kế toán:</strong> Thông tin đơn thuốc &amp; <strong>Giá thuốc dự kiến (Tạm tính)</strong> sẽ tự động gửi sang bộ phận Kế toán xử lý (Bệnh nhân có thể chọn mua tại phòng khám hoặc tự mua ngoài).
+                                <strong class="text-dark">Đã đồng bộ sang Kế toán:</strong> Thông tin đơn thuốc &amp; <strong class="text-dark">Giá thuốc dự kiến (Tạm tính)</strong> sẽ tự động gửi sang bộ phận Kế toán xử lý (Bệnh nhân có thể chọn mua tại phòng khám hoặc tự mua ngoài).
                             </div>
                         </div>
                     </div>
@@ -1070,14 +1070,14 @@
                         <div class="col-md-4">
                             <label class="form-label fw-bold small text-secondary">Tái khám sau (ngày)</label>
                             <div class="input-group">
-                                <input type="number" class="form-control" id="prescFollowupDays" value="7" min="0" max="90">
+                                <input type="number" class="form-control df-num" id="prescFollowupDays" value="7" min="0" max="90">
                                 <span class="input-group-text">ngày</span>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-bold small text-secondary">Cân nặng (kg)</label>
                             <div class="input-group">
-                                <input type="number" class="form-control" id="prescPatientWeight" placeholder="VD: 55" min="0" step="0.5">
+                                <input type="number" class="form-control df-num" id="prescPatientWeight" placeholder="VD: 55" min="0" step="0.5">
                                 <span class="input-group-text">kg</span>
                             </div>
                         </div>
@@ -1088,9 +1088,9 @@
                     </div>
 
                 </div>
-                <div class="modal-footer bg-light px-4 py-3">
+                <div class="modal-footer bg-white border-top px-4 py-3">
                     <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm" id="submitPrescBtn" style="background: #1e3a8a; border-color: #1e3a8a;">
+                    <button type="submit" class="btn btn-primary btn-sm px-4 fw-semibold" id="submitPrescBtn">
                         <i class="bi bi-check-circle-fill me-1"></i> Lưu đơn thuốc
                     </button>
                 </div>
@@ -2340,13 +2340,13 @@
 
             document.getElementById('performedServicesTableBody').innerHTML = `
                 <tr id="emptyPerformedRow">
-                    <td colspan="9" class="text-center py-5 text-muted bg-white">
-                        <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 180px;">
-                            <h6 class="fw-bold text-dark mb-1">Chưa có dịch vụ nào được ghi nhận thực hiện trong ca khám này</h6>
-                            <p class="text-muted mb-3 small" style="max-width: 520px; line-height: 1.6;">
-                                Bác sĩ vui lòng chọn các bước thủ thuật trong <strong>Kế hoạch điều trị</strong> và nhấn <em>"Làm trong ca này"</em> để hệ thống tự động ghi nhận dịch vụ thực hiện tại ghế.
+                    <td colspan="8" class="text-center py-4 px-3" style="background: #f8fafc;">
+                        <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 120px;">
+                            <h6 class="fw-bold text-dark mb-1">Chưa có dịch vụ nào được ghi nhận trong ca khám này</h6>
+                            <p class="df-meta-tertiary mb-3" style="max-width: 480px;">
+                                Chọn các bước thủ thuật trong <strong>Kế hoạch điều trị</strong> và nhấn <em>"Làm trong ca này"</em> để tự động ghi nhận.
                             </p>
-                            <button type="button" class="btn btn-outline-primary px-3 py-1.5 rounded-2 fw-semibold"
+                            <button type="button" class="btn btn-sm df-btn-tonal-primary px-3 py-2 rounded-pill fw-semibold"
                                     onclick="switchMainTab('tab-treatment-plan')">
                                 Mở Kế hoạch điều trị &amp; Chọn bước thực hiện
                             </button>
@@ -3272,21 +3272,21 @@
                 ${adviceDisplay}
             </td>
             <td class="text-end">
-                <div class="fw-bold text-success fs-6 presc-row-amount" data-amount="${pr.totalAmount || 0}">${formattedTotal}</div>
-                <small class="text-muted d-block">${itemCount} loại thuốc</small>
-                <span class="badge bg-light text-secondary border mt-0.5" style="font-size: 10px;">
-                    <i class="bi bi-send-check text-primary me-0.5"></i>Chuyển Kế toán (Tự chọn mua)
+                <div class="fw-bold text-success fs-6 presc-row-amount df-num" data-amount="${pr.totalAmount || 0}">${formattedTotal}</div>
+                <small class="text-muted d-block df-num">${itemCount} loại thuốc</small>
+                <span class="badge bg-light text-secondary border mt-1" style="font-size: 10px;">
+                    <i class="bi bi-send-check text-primary me-1"></i>Chuyển Kế toán (Tự chọn mua)
                 </span>
             </td>
-            <td>${followupBadge}</td>
+            <td class="df-num">${followupBadge}</td>
             <td class="text-center">
                 <div class="d-flex align-items-center justify-content-center gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-primary"
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
                             title="Xem & In đơn thuốc"
                             onclick="openPrintPrescriptionModal(${pr.prescriptionId})">
-                        <i class="bi bi-printer-fill"></i> In
+                        <i class="bi bi-printer-fill text-primary"></i> In
                     </button>
-                    <button type="button" class="btn btn-sm btn-link text-danger p-0"
+                    <button type="button" class="df-btn-icon-muted"
                             title="Xóa đơn thuốc này"
                             onclick="deletePrescription(${pr.prescriptionId})">
                         <i class="bi bi-trash3-fill"></i>
@@ -3342,22 +3342,22 @@
         if (count === 0) {
             document.getElementById('prescriptionsTableBody').innerHTML = `
                 <tr id="emptyPrescRow">
-                    <td colspan="7" class="text-center" style="padding: 70px 24px 90px 24px !important; background: #ffffff;">
-                        <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 290px;">
-                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
-                                 style="width: 88px; height: 88px; background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%); border: 2px dashed #38bdf8; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.12);">
-                                <i class="bi bi-prescription2" style="font-size: 42px; color: #0284c7;"></i>
+                    <td colspan="7" class="text-center p-0 border-0">
+                        <div class="d-flex flex-column align-items-center justify-content-center py-4 px-3 rounded-3"
+                             style="min-height: 130px; background: #f8fafc; border: 1px dashed #cbd5e1;">
+                            <div class="mb-2 d-inline-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 44px; height: 44px; background: #e0f2fe; border: 1px dashed #38bdf8;">
+                                <i class="bi bi-prescription2 fs-5" style="color: #0284c7;"></i>
                             </div>
-                            <h4 class="fw-bold text-dark mb-2" style="font-size: 20px; letter-spacing: -0.3px;">
-                                Bệnh nhân chưa có Đơn thuốc nào cho ca khám này
-                            </h4>
-                            <p class="text-muted mb-4" style="font-size: 14.5px; max-width: 540px; line-height: 1.6;">
-                                Bác sĩ có thể kê đơn thuốc mới trực tiếp từ danh mục dược phẩm hoặc chọn nhanh từ các mẫu đơn thuốc đã thiết lập sẵn. Giá thuốc dự kiến sẽ tự động đồng bộ sang bộ phận Kế toán.
+                            <h5 class="fw-bold text-dark mb-1" style="font-size: 15px;">
+                                Bệnh nhân chưa có đơn thuốc trong ca khám này
+                            </h5>
+                            <p class="df-meta-tertiary mb-3" style="max-width: 480px;">
+                                Kê đơn từ danh mục dược phẩm hoặc mẫu đơn có sẵn; giá thuốc tạm tính sẽ tự đồng bộ sang Kế toán.
                             </p>
-                            <button type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
-                                    style="background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); border: none; font-size: 15px;"
+                            <button type="button" class="btn btn-sm df-btn-tonal-primary px-3 py-2 rounded-pill fw-semibold d-inline-flex align-items-center gap-2"
                                     onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">
-                                <i class="bi bi-plus-circle-fill fs-6"></i>
+                                <i class="bi bi-plus-circle-fill"></i>
                                 <span>Kê đơn thuốc mới</span>
                             </button>
                         </div>

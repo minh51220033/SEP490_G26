@@ -8,7 +8,6 @@ import com.cvdcms.entity.enums.TreatmentPlanStageStatus;
 import com.cvdcms.entity.enums.TreatmentPlanStatus;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.TreatmentPlanService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +23,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class TreatmentPlanServiceImpl implements TreatmentPlanService {
 
     private final TreatmentPlanRepository treatmentPlanRepository;
@@ -38,6 +36,56 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     private final InvoiceItemRepository invoiceItemRepository;
     private final TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    public TreatmentPlanServiceImpl(
+            TreatmentPlanRepository treatmentPlanRepository,
+            TreatmentPlanStageRepository treatmentPlanStageRepository,
+            TreatmentPlanItemRepository treatmentPlanItemRepository,
+            PatientProfileRepository patientProfileRepository,
+            BranchRepository branchRepository,
+            StaffProfileRepository staffProfileRepository,
+            ServiceRepository serviceRepository,
+            PerformedServiceRepository performedServiceRepository,
+            InvoiceItemRepository invoiceItemRepository,
+            TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository) {
+        this.treatmentPlanRepository = treatmentPlanRepository;
+        this.treatmentPlanStageRepository = treatmentPlanStageRepository;
+        this.treatmentPlanItemRepository = treatmentPlanItemRepository;
+        this.patientProfileRepository = patientProfileRepository;
+        this.branchRepository = branchRepository;
+        this.staffProfileRepository = staffProfileRepository;
+        this.serviceRepository = serviceRepository;
+        this.performedServiceRepository = performedServiceRepository;
+        this.invoiceItemRepository = invoiceItemRepository;
+        this.treatmentPlanInstallmentRepository = treatmentPlanInstallmentRepository;
+    }
+
+    // Compatibility constructor preserved for unit tests passing GeminiAiService
+    public TreatmentPlanServiceImpl(
+            TreatmentPlanRepository treatmentPlanRepository,
+            TreatmentPlanStageRepository treatmentPlanStageRepository,
+            TreatmentPlanItemRepository treatmentPlanItemRepository,
+            PatientProfileRepository patientProfileRepository,
+            BranchRepository branchRepository,
+            StaffProfileRepository staffProfileRepository,
+            ServiceRepository serviceRepository,
+            com.cvdcms.service.GeminiAiService geminiAiService,
+            PerformedServiceRepository performedServiceRepository,
+            InvoiceItemRepository invoiceItemRepository,
+            TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository) {
+        this(
+                treatmentPlanRepository,
+                treatmentPlanStageRepository,
+                treatmentPlanItemRepository,
+                patientProfileRepository,
+                branchRepository,
+                staffProfileRepository,
+                serviceRepository,
+                performedServiceRepository,
+                invoiceItemRepository,
+                treatmentPlanInstallmentRepository);
+    }
+
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private PaymentRepository paymentRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -48,6 +96,8 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     private com.cvdcms.service.LoyaltyService loyaltyService;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private BranchBankAccountRepository branchBankAccountRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
@@ -241,9 +291,26 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         plan.setTotalEstimatedCost(overallCost);
         plan.setFinalEstimatedCost(finalCost);
 
+        boolean wasInstallment = Boolean.TRUE.equals(plan.getIsInstallment());
         boolean wantsInstallment = Boolean.TRUE.equals(request.getIsInstallment());
-        if (!wantsInstallment && paidAmount.compareTo(BigDecimal.ZERO) > 0 && Boolean.TRUE.equals(plan.getIsInstallment())) {
+        if (!wantsInstallment && paidAmount.compareTo(BigDecimal.ZERO) > 0 && wasInstallment) {
             throw new IllegalStateException("Phác đồ đã ghi nhận thanh toán theo đợt, không thể chuyển sang thanh toán đơn lẻ!");
+        }
+        if (wantsInstallment && !wasInstallment && plan.getStages() != null) {
+            for (TreatmentPlanStage st : plan.getStages()) {
+                if (st.getItems() == null) continue;
+                for (TreatmentPlanItem it : st.getItems()) {
+                    if (it.getPlanItemId() == null) continue;
+                    List<PerformedService> linkedServices = performedServiceRepository
+                            .findByPlanItem_PlanItemIdAndStatusNot(it.getPlanItemId(), PerformedServiceStatus.CANCELLED);
+                    for (PerformedService ps : linkedServices) {
+                        if (invoiceItemRepository != null && ps.getPerformedId() != null
+                                && invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId())) {
+                            throw new IllegalStateException("Phác đồ đã có dịch vụ được lập hóa đơn lẻ, không thể chuyển sang thanh toán theo đợt!");
+                        }
+                    }
+                }
+            }
         }
         plan.setIsInstallment(wantsInstallment);
         if (wantsInstallment) {
@@ -344,13 +411,32 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 }
             }
         } else if (newStatus == TreatmentPlanStageStatus.PENDING) {
-            stage.setCompletedAt(null);
             if (stage.getItems() != null) {
+                for (TreatmentPlanItem it : stage.getItems()) {
+                    if (it.getPlanItemId() != null) {
+                        List<PerformedService> activeServices = performedServiceRepository
+                                .findByPlanItem_PlanItemIdAndStatusNot(it.getPlanItemId(), PerformedServiceStatus.CANCELLED);
+                        for (PerformedService ps : activeServices) {
+                            com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                                    ps.getVisit(),
+                                    emrRecordRepository,
+                                    "Bệnh án lâm sàng đã khóa/hủy, không thể đặt lại trạng thái giai đoạn phác đồ");
+                            if (invoiceItemRepository != null && ps.getPerformedId() != null
+                                    && invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId())) {
+                                throw new IllegalStateException(
+                                        "Giai đoạn này có bước thủ thuật đã được lập hóa đơn viện phí, không thể hoàn tác về Chưa thực hiện!");
+                            }
+                            ps.setStatus(PerformedServiceStatus.CANCELLED);
+                            performedServiceRepository.save(ps);
+                        }
+                    }
+                }
                 for (TreatmentPlanItem it : stage.getItems()) {
                     it.setStatus(TreatmentPlanItemStatus.PLANNED);
                     it.setCompletedAt(null);
                 }
             }
+            stage.setCompletedAt(null);
         }
 
         treatmentPlanStageRepository.save(stage);
@@ -732,6 +818,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         TreatmentPlan plan = treatmentPlanRepository.findByIdForUpdate(planId)
                 .or(() -> treatmentPlanRepository.findByIdWithDetails(planId))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kế hoạch điều trị."));
+        if (plan.getStatus() == TreatmentPlanStatus.CANCELLED) {
+            throw new IllegalStateException("Không thể thu tiền cho kế hoạch điều trị đã bị hủy.");
+        }
 
         Branch branch = plan.getBranch();
         PatientProfile patient = plan.getPatientProfile();
@@ -845,8 +934,8 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         recalculateInstallmentsInternal(plan);
 
         TreatmentPlan saved = treatmentPlanRepository.save(plan);
-        log.info("Ghi nhận thanh toán {} đ cho Kế hoạch điều trị {}. Tổng đã thu: {} đ",
-                amount, saved.getPlanCode(), saved.getTotalPaidAmount());
+        log.info("Ghi nhận thanh toán {} đ ({}) cho Kế hoạch điều trị {}. Tổng đã thu: {} đ",
+                amount, paymentMethod.name(), saved.getPlanCode(), saved.getTotalPaidAmount());
         return mapToResponseDTO(saved);
     }
 

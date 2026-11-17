@@ -8,136 +8,10 @@
 <!-- ========================================================================= -->
 <div th:fragment="clinicalPhotosSection">
     <style>
-        .df-photo-shell {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            overflow: hidden;
-        }
-        .df-photo-header {
-            background: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 12px 20px;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-        }
-        .df-photo-toolbar-card {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 12px 14px;
-            margin-bottom: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .df-photo-stage-segmented {
-            display: inline-flex;
-            align-items: center;
-            flex-wrap: wrap;
-            background: #e2e8f0;
-            padding: 3px;
-            border-radius: 10px;
-            gap: 2px;
-        }
-        .df-photo-stage-segmented .df-photo-pill {
-            border: none;
-            background: transparent;
-            color: #475569;
-            padding: 5px 10px;
-            border-radius: 7px;
-            font-size: 13px;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            transition: all 0.15s ease;
-            white-space: nowrap;
-        }
-        .df-photo-stage-segmented .df-photo-pill:hover {
-            color: #0f172a;
-            background: rgba(255, 255, 255, 0.7);
-        }
-        .df-photo-stage-segmented .df-photo-pill.active {
-            background: #ffffff;
-            color: #0284c7;
-            font-weight: 700;
-            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
-        }
-        .df-photo-stage-segmented .df-photo-pill .badge-count {
-            font-size: 11px;
-            padding: 1px 6px;
-            border-radius: 6px;
-            background: #f1f5f9;
-            color: #64748b;
-            font-weight: 600;
-            min-width: 18px;
-            text-align: center;
-        }
-        .df-photo-stage-segmented .df-photo-pill.active .badge-count {
-            background: #e0f2fe;
-            color: #0284c7;
-        }
-        .df-photo-stage-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            display: inline-block;
-            flex-shrink: 0;
-        }
-        .df-photo-search-wrap {
-            position: relative;
-            flex: 1;
-            min-width: 220px;
-            max-width: 340px;
-        }
-        .df-photo-search-wrap i {
-            position: absolute;
-            left: 11px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 13px;
-            pointer-events: none;
-        }
-        .df-photo-search-wrap input {
-            padding-left: 32px;
-            height: 34px;
-            border-radius: 8px;
-            font-size: 13px;
-            border-color: #cbd5e1;
-            background: #ffffff;
-        }
-        .df-btn-tonal-primary {
-            background: #eff6ff;
-            color: #0284c7;
-            border: 1px solid #bfdbfe;
-            font-weight: 600;
-            font-size: 13px;
-            border-radius: 8px;
-            padding: 6px 14px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.15s ease;
-        }
-        .df-btn-tonal-primary:hover {
-            background: #dbeafe;
-            color: #0369a1;
-            border-color: #93c5fd;
-        }
         .df-photo-gallery-clean {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
             gap: 16px;
-        }
-        .df-photo-gallery-clean.is-medium {
-            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-            gap: 12px;
         }
         .df-photo-card-v2 {
             background: #ffffff;
@@ -150,18 +24,16 @@
         }
         .df-photo-card-v2:hover {
             border-color: #93c5fd;
-            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.07);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
         }
         .df-photo-thumb-v2 {
             position: relative;
             width: 100%;
-            height: 195px;
-            background: #0f172a;
+            aspect-ratio: 4 / 3;
+            background: #f8fafc;
             overflow: hidden;
             cursor: pointer;
-        }
-        .df-photo-gallery-clean.is-medium .df-photo-thumb-v2 {
-            height: 150px;
+            border-bottom: 1px solid #f1f5f9;
         }
         .df-photo-thumb-v2 img {
             width: 100%;
@@ -170,51 +42,25 @@
             display: block;
             transition: transform 0.25s ease;
         }
-        .df-photo-card-v2[data-source="xray"] .df-photo-thumb-v2 img {
+        .df-photo-card-v2[data-source="xray"] .df-photo-thumb-v2,
+        .df-photo-card-v2[data-category="OTHER"] .df-photo-thumb-v2,
+        .df-photo-card-v2[data-category="XRAY"] .df-photo-thumb-v2,
+        .df-photo-card-v2[data-category="PANORAMIC"] .df-photo-thumb-v2,
+        .df-photo-card-v2[data-category="CEPHALOMETRIC"] .df-photo-thumb-v2,
+        .df-photo-card-v2[data-category="CT_CONEBEAM"] .df-photo-thumb-v2 {
+            background: #0f172a;
+        }
+        .df-photo-card-v2[data-source="xray"] .df-photo-thumb-v2 img,
+        .df-photo-card-v2[data-category="OTHER"] .df-photo-thumb-v2 img,
+        .df-photo-card-v2[data-category="XRAY"] .df-photo-thumb-v2 img,
+        .df-photo-card-v2[data-category="PANORAMIC"] .df-photo-thumb-v2 img,
+        .df-photo-card-v2[data-category="CEPHALOMETRIC"] .df-photo-thumb-v2 img,
+        .df-photo-card-v2[data-category="CT_CONEBEAM"] .df-photo-thumb-v2 img {
             object-fit: contain;
-            background: #020617;
+            background: #0f172a;
         }
         .df-photo-card-v2:hover .df-photo-thumb-v2 img {
-            transform: scale(1.03);
-        }
-        .df-photo-hover-bar {
-            position: absolute;
-            inset: auto 0 0 0;
-            padding: 8px 10px;
-            background: linear-gradient(transparent, rgba(15, 23, 42, 0.84));
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 6px;
-            opacity: 0;
-            transition: opacity 0.18s ease;
-        }
-        .df-photo-card-v2:hover .df-photo-hover-bar {
-            opacity: 1;
-        }
-        .df-photo-icon-btn {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            border: 1px solid #cbd5e1;
-            background: #ffffff;
-            color: #475569;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.15s ease;
-        }
-        .df-photo-icon-btn:hover {
-            border-color: #0284c7;
-            color: #0284c7;
-            background: #f0f9ff;
-        }
-        .df-photo-icon-btn.is-delete:hover {
-            border-color: #ef4444;
-            color: #ef4444;
-            background: #fef2f2;
+            transform: scale(1.02);
         }
         .df-photo-meta-body {
             padding: 12px 14px;
@@ -224,7 +70,7 @@
             flex: 1;
         }
         .df-stage-chip {
-            font-size: 11px;
+            font-size: 11.5px;
             font-weight: 600;
             padding: 2px 8px;
             border-radius: 999px;
@@ -234,283 +80,283 @@
             white-space: nowrap;
         }
         .df-stage-chip.stage-before { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-        .df-stage-chip.stage-during { background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
+        .df-stage-chip.stage-during { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
         .df-stage-chip.stage-after { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-        .df-stage-chip.stage-xray { background: #0f172a; color: #38bdf8; border: 1px solid #334155; }
-        .df-cat-chip {
-            font-size: 11px;
-            font-weight: 500;
-            padding: 2px 8px;
-            border-radius: 6px;
-            background: #f1f5f9;
-            color: #334155;
-            white-space: nowrap;
-        }
-        .df-photo-timeline-heading {
-            font-size: 13px;
-            font-weight: 700;
-            color: #334155;
-            padding: 6px 0;
-            border-bottom: 1px solid #e2e8f0;
-            margin: 12px 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .df-grid-toggle-btn.active {
-            background-color: #0284c7 !important;
-            color: #ffffff !important;
-        }
-        .df-grid-toggle-btn.active i {
-            color: #ffffff !important;
-        }
+        .df-stage-chip.stage-xray { background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; }
         .df-photo-empty-clean {
             background: #f8fafc;
-            border: 1px solid #e2e8f0;
+            border: 1px dashed #cbd5e1;
             border-radius: 12px;
-            padding: 28px 20px;
+            min-height: 140px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             text-align: center;
+        }
+        .df-inline-compare-frame {
+            aspect-ratio: 4 / 3;
+            background: #0f172a;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e2e8f0;
+        }
+        .df-inline-compare-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
         }
     </style>
 
-    <div class="df-photo-shell mb-4">
-        <div class="df-foldable-bar df-photo-header is-expanded" id="bar-photos" onclick="toggleMainBar('photos')">
-            <div class="df-tab-title-standard">
-                <i class="bi bi-chevron-down df-foldable-chevron text-primary me-1" id="chevron-photos"></i>
-                <i class="bi bi-images"></i>
-                <span>Film ảnh lâm sàng &amp; X-Quang</span>
-                <span class="badge bg-light text-primary border rounded-pill px-2 py-1 small" id="foldablePhotoCountBadge"
-                      th:with="clinicalCnt=${photoStats != null and photoStats.get('total') != null ? photoStats.get('total') : 0},
-                               extraXrayCnt=${galleryXrayPhotos != null ? #lists.size(galleryXrayPhotos) : (xrayCount != null ? xrayCount : 0)},
-                               totalImgs=${clinicalCnt + extraXrayCnt}"
-                      th:text="${totalImgs} + ' ảnh'">0 ảnh</span>
+    <div class="df-unified-tab-card" id="clinicalPhotosSection">
+        <div class="df-tab-content-header">
+            <div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <h6 class="df-title-primary mb-0">Kho film ảnh &amp; hình ảnh lâm sàng</h6>
+                    <span class="badge bg-light text-primary border rounded-pill px-2 py-1 small df-num" id="foldablePhotoCountBadge"
+                          th:with="clinicalCnt=${photoStats != null and photoStats.get('total') != null ? photoStats.get('total') : 0},
+                                   extraXrayCnt=${galleryXrayPhotos != null ? #lists.size(galleryXrayPhotos) : (xrayCount != null ? xrayCount : 0)},
+                                   totalImgs=${clinicalCnt + extraXrayCnt}"
+                          th:text="${totalImgs} + ' ảnh'">0 ảnh</span>
+                </div>
+                <div class="df-subtitle-secondary">Lưu trữ ảnh nụ cười, trong miệng theo từng giai đoạn điều trị và phim X-Quang cận lâm sàng.</div>
             </div>
-            <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
-                <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
-                        style="border-radius: 8px; height: 32px; font-size: 13px;"
-                        onclick="openPhotoCompareModal(null, null)"
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 px-3 py-2"
+                        id="btnToggleInlineCompare"
+                        onclick="toggleInlinePhotoCompare()"
                         title="Đối chiếu Trước &amp; Sau điều trị (SCR-17.3)">
                     <i class="bi bi-intersect"></i>
-                    <span>So sánh Trước/Sau</span>
+                    <span>So sánh Before – After</span>
                 </button>
-                <button type="button" class="df-btn-tonal-primary" th:if="${!isClinicalLocked}"
+                <button type="button" class="btn btn-sm btn-primary fw-semibold d-inline-flex align-items-center gap-1 px-3 py-2"
+                        th:if="${!isClinicalLocked}"
                         id="btnOpenUploadPhotoModal"
                         onclick="openUploadPhotoModal()">
                     <i class="bi bi-cloud-arrow-up"></i>
-                    <span>Tải ảnh mới</span>
+                    <span>Tải ảnh lên</span>
                 </button>
             </div>
         </div>
 
-        <div class="df-foldable-content" id="content-photos" style="display: block;">
-            <div class="p-3 p-md-4 bg-white" id="clinicalPhotosSection">
-                <!-- TOOLBAR LỌC THEO GIAI ĐOẠN (TRƯỚC / TRONG / SAU) & PHÂN LOẠI (GÓC CHỤP / X-QUANG) -->
-                <div class="df-photo-toolbar-card">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                        <!-- Giai đoạn điều trị & X-Quang -->
-                        <div class="df-photo-stage-segmented" id="clinicalPhotoStageControl">
-                            <button type="button" class="df-photo-pill active" data-stage="ALL" onclick="filterPhotosStage('ALL', this)">
-                                <span>Tất cả</span>
-                                <span class="badge-count" id="countPillAll"
-                                      th:with="clinicalCnt=${photoStats != null and photoStats.get('total') != null ? photoStats.get('total') : 0},
-                                               extraXrayCnt=${galleryXrayPhotos != null ? #lists.size(galleryXrayPhotos) : (xrayCount != null ? xrayCount : 0)}"
-                                      th:text="${clinicalCnt + extraXrayCnt}">0</span>
-                            </button>
-                            <button type="button" class="df-photo-pill" data-stage="BEFORE" onclick="filterPhotosStage('BEFORE', this)">
-                                <span class="df-photo-stage-dot bg-warning"></span>
-                                <span>Trước điều trị</span>
-                                <span class="badge-count" id="countPillBefore"
-                                      th:text="${photoStats != null and photoStats.get('before') != null ? photoStats.get('before') : 0}">0</span>
-                            </button>
-                            <button type="button" class="df-photo-pill" data-stage="DURING" onclick="filterPhotosStage('DURING', this)">
-                                <span class="df-photo-stage-dot bg-info"></span>
-                                <span>Trong quá trình</span>
-                                <span class="badge-count" id="countPillDuring"
-                                      th:text="${photoStats != null and photoStats.get('during') != null ? photoStats.get('during') : 0}">0</span>
-                            </button>
-                            <button type="button" class="df-photo-pill" data-stage="AFTER" onclick="filterPhotosStage('AFTER', this)">
-                                <span class="df-photo-stage-dot bg-success"></span>
-                                <span>Sau điều trị</span>
-                                <span class="badge-count" id="countPillAfter"
-                                      th:text="${photoStats != null and photoStats.get('after') != null ? photoStats.get('after') : 0}">0</span>
-                            </button>
-                            <button type="button" class="df-photo-pill" id="btnFilterXray" data-stage="XRAY" onclick="filterPhotosStage('XRAY', this)">
-                                <span class="df-photo-stage-dot" style="background: #0ea5e9;"></span>
-                                <span>X-Quang / CT</span>
-                                <span class="badge-count" id="countPillXray"
-                                      th:text="${xrayTabCount != null ? xrayTabCount : (xrayCount != null ? xrayCount : 0)}">0</span>
-                            </button>
+        <div class="p-3 p-md-4 bg-white">
+            <!-- THANH LỌC 1 HÀNG -->
+            <div class="df-soft-panel mb-3 py-2 px-3">
+                <div class="row g-2 align-items-center">
+                    <div class="col-lg-4 col-md-6">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                            <input type="search" class="form-control border-start-0" id="clinicalPhotoSearchInput"
+                                   placeholder="Tìm chú thích, răng, mã ca..." oninput="applyPhotoFilters()">
                         </div>
-
-                        <!-- Bộ lọc nhanh: Tìm kiếm, Phân loại, Ca khám, Kích thước lưới -->
-                        <div class="d-flex flex-wrap align-items-center gap-2">
-                            <div class="df-photo-search-wrap">
-                                <i class="bi bi-search"></i>
-                                <input type="search" class="form-control form-control-sm" id="clinicalPhotoSearchInput"
-                                       placeholder="Tìm chú thích, răng, mã ca..." oninput="applyPhotoFilters()">
-                            </div>
-
-                            <select class="form-select form-select-sm" id="photoCategorySelect"
-                                    style="width: 185px; height: 34px; border-radius: 8px; border-color: #cbd5e1; font-size: 13px;"
-                                    onchange="filterPhotosCategory(this.value)">
-                                <option value="ALL">Tất cả phân loại</option>
-                                <option value="SMILE">Nụ cười</option>
-                                <option value="INTRAORAL">Trong miệng</option>
-                                <option value="OCCLUSAL">Mặt nhai</option>
-                                <option value="EXTRAORAL">Mặt ngoài / Chân dung</option>
-                                <option value="OTHER">Phim X-Quang / Panorama / CT</option>
-                                <option value="XRAY">Chỉ phim X-Quang (CLS)</option>
-                            </select>
-
-                            <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
-                                    id="btnFilterVisit" onclick="filterPhotosVisit(this)"
-                                    style="border-radius: 8px; height: 34px; padding: 0 12px; font-size: 13px;"
-                                    title="Chỉ hiển thị ảnh/phim của ca khám hiện tại">
-                                <i class="bi bi-calendar2-check"></i>
-                                <span>Ca khám này</span>
+                    </div>
+                    <div class="col-lg-3 col-md-6">
+                        <select class="form-select form-select-sm" id="photoCategorySelect" onchange="filterPhotosCategory(this.value)">
+                            <option value="ALL">Tất cả phân loại</option>
+                            <option value="SMILE">Nụ cười</option>
+                            <option value="INTRAORAL">Trong miệng</option>
+                            <option value="OCCLUSAL">Mặt nhai</option>
+                            <option value="EXTRAORAL">Mặt ngoài / Chân dung</option>
+                            <option value="OTHER">Phim X-Quang / Panorama / CT</option>
+                            <option value="XRAY">Chỉ phim X-Quang (CLS)</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2 col-md-5">
+                        <select class="form-select form-select-sm" id="photoStageSelect" onchange="filterPhotosStage(this.value, null)">
+                            <option value="ALL">Tất cả giai đoạn</option>
+                            <option value="BEFORE">Trước điều trị</option>
+                            <option value="DURING">Trong quá trình</option>
+                            <option value="AFTER">Sau điều trị</option>
+                            <option value="XRAY">X-Quang / CT</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-3 col-md-7 d-flex align-items-center justify-content-lg-end gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 text-nowrap"
+                                id="btnFilterVisit" onclick="filterPhotosVisit(this)"
+                                title="Chỉ hiển thị ảnh/phim của ca khám hiện tại">
+                            <i class="bi bi-calendar2-check"></i>
+                            <span>Ca khám này</span>
+                        </button>
+                        <div class="btn-group btn-group-sm bg-white border rounded-2" role="group" aria-label="Chế độ hiển thị ảnh">
+                            <button type="button" class="btn btn-sm btn-light border-0 active px-2"
+                                    id="btnViewGrid" onclick="setPhotoViewMode('grid')" title="Hiển thị dạng Lưới">
+                                <i class="bi bi-grid-fill text-primary"></i>
                             </button>
-
-                            <div class="btn-group btn-group-sm bg-white border rounded-2 p-1" role="group" aria-label="Kích thước hiển thị ảnh"
-                                 style="border-color: #cbd5e1 !important; height: 34px;">
-                                <button type="button" class="btn btn-sm btn-light border-0 active d-inline-flex align-items-center justify-content-center px-2 df-grid-toggle-btn"
-                                        id="btnGridLarge" onclick="setPhotoGridSize('large')" title="Lưới lớn">
-                                    <i class="bi bi-grid-fill text-secondary"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-light border-0 d-inline-flex align-items-center justify-content-center px-2 df-grid-toggle-btn"
-                                        id="btnGridMedium" onclick="setPhotoGridSize('medium')" title="Lưới gọn">
-                                    <i class="bi bi-grid-3x3-gap-fill text-secondary"></i>
-                                </button>
-                            </div>
+                            <button type="button" class="btn btn-sm btn-light border-0 px-2"
+                                    id="btnViewTable" onclick="setPhotoViewMode('table')" title="Hiển thị dạng Bảng">
+                                <i class="bi bi-table text-secondary"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- LƯỚI DANH SÁCH ẢNH LÂM SÀNG & PHIM X-QUANG (SCR-17.1 GALLERY) -->
-                <div class="df-photo-gallery-clean" id="clinicalPhotoGalleryGrid">
-                    <!-- 1. ẢNH LÂM SÀNG THEO GIAI ĐOẠN TRƯỚC / TRONG / SAU (ClinicalPhoto) -->
-                    <div class="df-photo-card-v2" th:each="photo : ${clinicalPhotos}"
-                         th:attr="data-source='clinical',
-                                  data-id=${photo.photoId},
-                                  data-stage=${photo.photoStage != null ? photo.photoStage.name() : 'BEFORE'},
-                                  data-stagetext=${photo.photoStageText},
-                                  data-category=${photo.photoCategory != null ? photo.photoCategory.name() : 'OTHER'},
-                                  data-categorytext=${photo.photoCategoryText},
-                                  data-visit=${photo.visitId != null ? photo.visitId : ''},
-                                  data-visitcode=${photo.visitCode != null ? photo.visitCode : ''},
-                                  data-url=${photo.imageUrl},
-                                  data-caption=${photo.caption},
-                                  data-date=${photo.capturedAtFormatted}">
-                        <div class="df-photo-thumb-v2" onclick="openPhotoLightboxFromCard(this)">
-                            <img th:src="@{${photo.imageUrl}}" th:alt="${photo.caption ?: 'Ảnh lâm sàng'}" loading="lazy"
-                                 onerror="this.onerror=null; this.src=window.DF_PHOTO_FALLBACK_SVG;">
-                            <div class="df-photo-hover-bar" onclick="event.stopPropagation()">
-                                <button type="button" class="df-photo-icon-btn" title="Phóng to ảnh" onclick="openPhotoLightboxFromCard(this)">
+            <!-- KHỐI SO SÁNH BEFORE - AFTER TRỰC QUAN 2 CỘT ĐỐI XỨNG -->
+            <div class="df-soft-panel mb-3" id="inlinePhotoComparePanel" style="display: none;">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                    <div>
+                        <div class="fw-bold text-dark small">So sánh đối chiếu Before – After</div>
+                        <div class="df-meta-tertiary">Chọn 2 ảnh bất kỳ để đối chiếu song song ngay trên màn hình</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm df-btn-tonal-primary py-1 px-2" onclick="openPhotoCompareModal(null, null)">
+                            <i class="bi bi-sliders me-1"></i> Mở thanh trượt phóng to
+                        </button>
+                        <button type="button" class="btn-close btn-sm" aria-label="Đóng" onclick="toggleInlinePhotoCompare(false)"></button>
+                    </div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-dark mb-1" for="inlineCompareLeftSelect">Ảnh đối chiếu 1</label>
+                        <select class="form-select form-select-sm mb-2" id="inlineCompareLeftSelect" onchange="updateInlineCompareFrames()"></select>
+                        <div class="df-inline-compare-frame">
+                            <img id="inlineCompareLeftImg" src="" alt="Ảnh đối chiếu 1" loading="lazy" decoding="async">
+                        </div>
+                        <div class="df-meta-tertiary mt-1 df-num text-truncate" id="inlineCompareLeftMeta">---</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold text-dark mb-1" for="inlineCompareRightSelect">Ảnh đối chiếu 2</label>
+                        <select class="form-select form-select-sm mb-2" id="inlineCompareRightSelect" onchange="updateInlineCompareFrames()"></select>
+                        <div class="df-inline-compare-frame">
+                            <img id="inlineCompareRightImg" src="" alt="Ảnh đối chiếu 2" loading="lazy" decoding="async">
+                        </div>
+                        <div class="df-meta-tertiary mt-1 df-num text-truncate" id="inlineCompareRightMeta">---</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LƯỚI DANH SÁCH ẢNH LÂM SÀNG & PHIM X-QUANG (SCR-17.1 GALLERY) -->
+            <div class="df-photo-gallery-clean" id="clinicalPhotoGalleryGrid">
+                <!-- 1. ẢNH LÂM SÀNG THEO GIAI ĐOẠN TRƯỚC / TRONG / SAU (ClinicalPhoto) -->
+                <div class="df-photo-card-v2" th:each="photo : ${clinicalPhotos}"
+                     th:attr="data-source='clinical',
+                              data-id=${photo.photoId},
+                              data-stage=${photo.photoStage != null ? photo.photoStage.name() : 'BEFORE'},
+                              data-stagetext=${photo.photoStageText},
+                              data-category=${photo.photoCategory != null ? photo.photoCategory.name() : 'OTHER'},
+                              data-categorytext=${photo.photoCategoryText},
+                              data-visit=${photo.visitId != null ? photo.visitId : ''},
+                              data-visitcode=${photo.visitCode != null ? photo.visitCode : ''},
+                              data-url=${photo.imageUrl},
+                              data-caption=${photo.caption},
+                              data-date=${photo.capturedAtFormatted}">
+                    <div class="df-photo-thumb-v2" onclick="openPhotoLightboxFromCard(this)">
+                        <img th:src="@{${photo.imageUrl}}" th:alt="${photo.caption ?: 'Ảnh lâm sàng'}" loading="lazy" decoding="async"
+                             onerror="this.onerror=null; this.src=window.DF_PHOTO_FALLBACK_SVG;">
+                    </div>
+                    <div class="df-photo-meta-body">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-1">
+                            <span class="df-stage-chip"
+                                  th:classappend="${photo.photoStage != null and photo.photoStage.name() == 'BEFORE'} ? 'stage-before' : (${photo.photoStage != null and photo.photoStage.name() == 'AFTER'} ? 'stage-after' : 'stage-during')"
+                                  th:text="${photo.photoStage != null and photo.photoStage.name() == 'BEFORE'} ? 'Trước ĐT' : (${photo.photoStage != null and photo.photoStage.name() == 'AFTER'} ? 'Sau ĐT' : 'Trong ĐT')">
+                                Trước ĐT
+                            </span>
+                            <span class="chip-tooth" th:text="${photo.photoCategoryText ?: 'Ảnh lâm sàng'}">Nụ cười</span>
+                        </div>
+                        <div class="fw-semibold text-dark small" style="line-height: 1.4; min-height: 2.8em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+                             th:text="${photo.caption != null and !photo.caption.isBlank() ? photo.caption : 'Ảnh chụp lâm sàng'}"
+                             th:title="${photo.caption}">Chú thích ảnh</div>
+                        <div class="d-flex align-items-center justify-content-between pt-2 border-top mt-auto gap-1" style="border-color: #f1f5f9 !important;">
+                            <div class="df-meta-tertiary df-num text-truncate">
+                                <i class="bi bi-clock me-1"></i>
+                                <span th:text="${photo.capturedAtFormatted}">23/10/2026 09:00</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                <button type="button" class="df-btn-icon-muted" title="Xem phóng to" onclick="openPhotoLightboxFromCard(this)">
                                     <i class="bi bi-arrows-fullscreen"></i>
                                 </button>
-                                <button type="button" class="df-photo-icon-btn" title="Đưa vào so sánh Trước/Sau" onclick="selectPhotoForCompareFromCard(this)">
-                                    <i class="bi bi-intersect"></i>
-                                </button>
-                                <button type="button" class="df-photo-icon-btn" th:if="${!isClinicalLocked}" title="Chỉnh sửa giai đoạn / phân loại / ghi chú" onclick="openEditPhotoModalFromCard(this)">
+                                <button type="button" class="df-btn-icon-muted" th:if="${!isClinicalLocked}" title="Chỉnh sửa thông tin ảnh" onclick="openEditPhotoModalFromCard(this)">
                                     <i class="bi bi-pencil"></i>
                                 </button>
-                                <button type="button" class="df-photo-icon-btn is-delete" th:if="${!isClinicalLocked}" title="Xóa ảnh" onclick="deleteClinicalPhotoFromCard(this)">
+                                <button type="button" class="df-btn-icon-muted" th:if="${!isClinicalLocked}" title="Xóa ảnh" onclick="deleteClinicalPhotoFromCard(this)">
                                     <i class="bi bi-trash3"></i>
                                 </button>
                             </div>
                         </div>
-                        <div class="df-photo-meta-body">
-                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-1">
-                                <span class="df-stage-chip"
-                                      th:classappend="${photo.photoStage != null and photo.photoStage.name() == 'BEFORE'} ? 'stage-before' : (${photo.photoStage != null and photo.photoStage.name() == 'AFTER'} ? 'stage-after' : 'stage-during')"
-                                      th:text="${photo.photoStage != null and photo.photoStage.name() == 'BEFORE'} ? 'Trước ĐT' : (${photo.photoStage != null and photo.photoStage.name() == 'AFTER'} ? 'Sau ĐT' : 'Trong ĐT')">
-                                    Trước ĐT
-                                </span>
-                                <span class="df-cat-chip"
-                                      th:text="${photo.photoCategoryText ?: 'Ảnh lâm sàng'}">Nụ cười</span>
-                            </div>
-                            <div class="fw-semibold text-dark small" style="line-height: 1.4; min-height: 2.8em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
-                                 th:text="${photo.caption != null and !photo.caption.isBlank() ? photo.caption : 'Ảnh chụp lâm sàng'}"
-                                 th:title="${photo.caption}">Chú thích ảnh</div>
-                            <div class="d-flex align-items-center justify-content-between text-muted pt-2 border-top mt-auto" style="font-size: 11.5px; border-color: #f1f5f9 !important;">
-                                <span>
-                                    <i class="bi bi-clock me-1"></i>
-                                    <span th:text="${photo.capturedAtFormatted}">23/10/2026 09:00</span>
-                                </span>
-                                <span th:if="${photo.visitCode != null and !photo.visitCode.isBlank()}"
-                                      class="badge bg-light text-secondary border" style="font-size: 10.5px;"
-                                      th:text="${photo.visitCode}">VIS</span>
-                            </div>
-                        </div>
                     </div>
+                </div>
 
-                    <!-- 2. PHIM X-QUANG / CẬN LÂM SÀNG HÌNH ẢNH (ParaclinicalOrder + NanoPix) -->
-                    <div class="df-photo-card-v2" th:each="xray : ${galleryXrayPhotos != null ? galleryXrayPhotos : xrayPhotos}"
-                         th:attr="data-source='xray',
-                                  data-id=${xray['id']},
-                                  data-stage='XRAY',
-                                  data-stagetext='X-Quang / CT',
-                                  data-category='XRAY',
-                                  data-categorytext=${xray['serviceName']},
-                                  data-service=${xray['serviceName']},
-                                  data-ref=${xray['refCode']},
-                                  data-tooth=${xray['toothNumbers']},
-                                  data-summary=${xray['resultSummary']},
-                                  data-visit=${xray['visitId'] != null ? xray['visitId'] : ''},
-                                  data-visitcode=${xray['visitCode'] != null ? xray['visitCode'] : ''},
-                                  data-url=${xray['imageUrl']},
-                                  data-caption=${xray['serviceName']},
-                                  data-date=${xray['capturedAtFormatted']}">
-                        <div class="df-photo-thumb-v2" onclick="openXrayCardViewer(this)">
-                            <img th:src="@{${xray['imageUrl']}}" th:alt="${xray['serviceName']}" loading="lazy"
-                                 onerror="this.onerror=null; this.src=window.DF_PHOTO_FALLBACK_SVG;">
-                            <div class="df-photo-hover-bar" onclick="event.stopPropagation()">
-                                <button type="button" class="df-photo-icon-btn" title="Mở trình soi phim X-quang (Zoom/Xoay/Âm bản)" onclick="openXrayCardViewer(this)">
-                                    <i class="bi bi-zoom-in"></i>
+                <!-- 2. PHIM X-QUANG / CẬN LÂM SÀNG HÌNH ẢNH (ParaclinicalOrder + NanoPix) -->
+                <div class="df-photo-card-v2" th:each="xray : ${galleryXrayPhotos != null ? galleryXrayPhotos : xrayPhotos}"
+                     th:attr="data-source='xray',
+                              data-id=${xray['id']},
+                              data-stage='XRAY',
+                              data-stagetext='X-Quang / CT',
+                              data-category='XRAY',
+                              data-categorytext=${xray['serviceName']},
+                              data-service=${xray['serviceName']},
+                              data-ref=${xray['refCode']},
+                              data-tooth=${xray['toothNumbers']},
+                              data-summary=${xray['resultSummary']},
+                              data-visit=${xray['visitId'] != null ? xray['visitId'] : ''},
+                              data-visitcode=${xray['visitCode'] != null ? xray['visitCode'] : ''},
+                              data-url=${xray['imageUrl']},
+                              data-caption=${xray['serviceName']},
+                              data-date=${xray['capturedAtFormatted']}">
+                    <div class="df-photo-thumb-v2" onclick="openXrayCardViewer(this)">
+                        <img th:src="@{${xray['imageUrl']}}" th:alt="${xray['serviceName']}" loading="lazy" decoding="async"
+                             onerror="this.onerror=null; this.src=window.DF_PHOTO_FALLBACK_SVG;">
+                    </div>
+                    <div class="df-photo-meta-body">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-1">
+                            <span class="df-stage-chip stage-xray">X-Quang / CT</span>
+                            <span class="chip-tooth" th:text="${xray['toothNumbers'] ?: 'Toàn hàm'}">Toàn hàm</span>
+                        </div>
+                        <div class="fw-semibold text-dark small text-truncate" th:text="${xray['serviceName']}" th:title="${xray['serviceName']}">Chụp X-Quang</div>
+                        <div class="df-meta-tertiary text-truncate"
+                             th:text="${xray['resultSummary'] != null and !xray['resultSummary'].isEmpty() ? xray['resultSummary'] : (xray['refCode'] != null and !xray['refCode'].isEmpty() ? 'Mã chụp: ' + xray['refCode'] : 'Phim chẩn đoán hình ảnh')}">
+                            Kết quả
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between pt-2 border-top mt-auto gap-1" style="border-color: #f1f5f9 !important;">
+                            <div class="df-meta-tertiary df-num text-truncate">
+                                <i class="bi bi-clock me-1"></i>
+                                <span th:text="${xray['capturedAtFormatted'] ?: '—'}">—</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                <button type="button" class="df-btn-icon-muted" title="Mở trình soi phim X-Quang" onclick="openXrayCardViewer(this)">
+                                    <i class="bi bi-arrows-fullscreen"></i>
                                 </button>
                             </div>
                         </div>
-                        <div class="df-photo-meta-body">
-                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-1">
-                                <span class="df-stage-chip stage-xray">
-                                    <i class="bi bi-x-diamond-fill"></i> X-Quang / CT
-                                </span>
-                                <span class="df-cat-chip" th:text="${xray['toothNumbers']}">Toàn hàm</span>
-                            </div>
-                            <div class="fw-semibold text-dark small text-truncate" th:text="${xray['serviceName']}" th:title="${xray['serviceName']}">Chụp X-Quang</div>
-                            <div class="text-muted small text-truncate" style="font-size: 12px;"
-                                 th:text="${xray['resultSummary'] != null and !xray['resultSummary'].isEmpty() ? xray['resultSummary'] : (xray['refCode'] != null and !xray['refCode'].isEmpty() ? 'Mã chụp: ' + xray['refCode'] : 'Phim chẩn đoán hình ảnh')}">
-                                Kết quả
-                            </div>
-                            <div class="d-flex align-items-center justify-content-between text-muted pt-2 border-top mt-auto" style="font-size: 11.5px; border-color: #f1f5f9 !important;">
-                                <span>
-                                    <i class="bi bi-clock me-1"></i>
-                                    <span th:text="${xray['capturedAtFormatted'] ?: '—'}">—</span>
-                                </span>
-                                <span th:if="${xray['refCode'] != null and !xray['refCode'].isEmpty()}"
-                                      class="badge bg-info-subtle text-info-emphasis border border-info-subtle" style="font-size: 10.5px;"
-                                      th:text="${xray['refCode']}">XQ101</span>
-                            </div>
-                        </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- EMPTY STATE (GỌN NHẸ CHUẨN POLARIS) -->
-                <div class="df-photo-empty-clean my-2" id="clinicalPhotoEmptyState"
-                     th:style="${(clinicalPhotos == null or clinicalPhotos.isEmpty()) and (xrayPhotos == null or xrayPhotos.isEmpty())} ? 'display: block;' : 'display: none;'">
-                    <div class="d-flex flex-column align-items-center justify-content-center py-2">
-                        <i class="bi bi-images text-secondary mb-2" style="font-size: 28px;"></i>
-                        <div class="fw-bold text-dark mb-1" id="clinicalPhotoEmptyTitle" style="font-size: 15px;">
-                            Chưa có ảnh lâm sàng hoặc phim X-quang
-                        </div>
-                        <p class="text-muted small mb-3" id="clinicalPhotoEmptySubtitle" style="max-width: 480px;">
-                            Tải ảnh nụ cười, trong miệng theo từng giai đoạn (Trước / Trong / Sau điều trị) hoặc chụp X-quang cận lâm sàng để đối chiếu trực quan.
-                        </p>
-                        <button type="button" class="df-btn-tonal-primary" th:if="${!isClinicalLocked}" onclick="openUploadPhotoModal()">
-                            <i class="bi bi-cloud-arrow-up"></i>
-                            <span>Tải ảnh lâm sàng mới</span>
-                        </button>
-                    </div>
+            <!-- DẠNG BẢNG (CHUYỂN ĐỔI LƯỚI / BẢNG) -->
+            <div class="table-responsive" id="clinicalPhotoTableWrap" style="display: none;">
+                <table class="df-clean-table" data-disable-floating-actions="true">
+                    <thead>
+                        <tr>
+                            <th style="width: 72px;">Ảnh</th>
+                            <th>Chú thích / Tên phim</th>
+                            <th>Phân loại</th>
+                            <th>Giai đoạn</th>
+                            <th class="df-num">Ngày chụp</th>
+                            <th class="text-end" style="width: 110px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clinicalPhotoTableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- EMPTY STATE (CAO ~140PX, NỀN #F8FAFC, VIỀN DASHED) -->
+            <div class="df-photo-empty-clean my-2" id="clinicalPhotoEmptyState"
+                 th:style="${(clinicalPhotos == null or clinicalPhotos.isEmpty()) and (xrayPhotos == null or xrayPhotos.isEmpty())} ? 'display: flex;' : 'display: none;'">
+                <div class="fw-semibold text-dark mb-1" id="clinicalPhotoEmptyTitle" style="font-size: 14.5px;">
+                    Chưa có ảnh lâm sàng hoặc phim X-quang
                 </div>
+                <p class="df-subtitle-secondary mb-3" id="clinicalPhotoEmptySubtitle" style="max-width: 480px;">
+                    Tải ảnh theo từng giai đoạn điều trị hoặc đồng bộ phim X-Quang để đối chiếu trực quan.
+                </p>
+                <button type="button" class="btn btn-sm df-btn-tonal-primary" th:if="${!isClinicalLocked}" onclick="openUploadPhotoModal()">
+                    <i class="bi bi-cloud-arrow-up"></i>
+                    <span>Tải ảnh lên</span>
+                </button>
             </div>
         </div>
     </div>
@@ -524,7 +370,7 @@
     <div class="modal fade" id="clinicalPhotoUploadModal" tabindex="-1" aria-labelledby="photoUploadModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
-                <div class="modal-header py-3 px-4 border-bottom bg-light">
+                <div class="modal-header py-3 px-4 bg-white border-bottom text-dark">
                     <div>
                         <h5 class="modal-title fw-bold mb-0 text-dark d-flex align-items-center gap-2" id="photoUploadModalLabel" style="font-size: 16px;">
                             <i class="bi bi-cloud-arrow-up text-primary"></i>
@@ -538,10 +384,10 @@
                     <div class="modal-body p-4">
                         <div id="photoUploadErrorAlert" class="alert alert-danger py-2 px-3 small d-none mb-3"></div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-dark small">Tệp hình ảnh <span class="text-danger">*</span></label>
-                            <div id="photoDropZone" class="border rounded-3 p-3 text-center bg-light"
-                                 style="border: 1.5px dashed #cbd5e1 !important; cursor: pointer;"
+                        <div class="df-soft-panel mb-3">
+                            <label class="form-label fw-semibold text-dark small mb-2">Tệp hình ảnh <span class="text-danger">*</span></label>
+                            <div id="photoDropZone" class="rounded-3 p-3 text-center bg-white"
+                                 style="border: 1.5px dashed #cbd5e1; cursor: pointer;"
                                  onclick="document.getElementById('photoFileInput').click()">
                                 <i class="bi bi-images text-primary fs-2 mb-1 d-block"></i>
                                 <div class="fw-semibold text-dark small" id="dropZoneText">Chọn tệp ảnh từ máy tính</div>
@@ -559,30 +405,32 @@
                             </div>
                         </div>
 
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold text-dark small" for="photoStageInput">Giai đoạn điều trị <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="photoStageInput" required>
-                                    <option value="BEFORE" selected>Trước điều trị (Before)</option>
-                                    <option value="DURING">Trong quá trình (During)</option>
-                                    <option value="AFTER">Sau điều trị (After)</option>
-                                </select>
+                        <div class="df-soft-panel">
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-dark small" for="photoStageInput">Giai đoạn điều trị <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="photoStageInput" required>
+                                        <option value="BEFORE" selected>Trước điều trị (Before)</option>
+                                        <option value="DURING">Trong quá trình (During)</option>
+                                        <option value="AFTER">Sau điều trị (After)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-dark small" for="photoCategoryInput">Phân loại ảnh / phim <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="photoCategoryInput" required>
+                                        <option value="SMILE" selected>Nụ cười</option>
+                                        <option value="INTRAORAL">Trong miệng</option>
+                                        <option value="OCCLUSAL">Mặt nhai</option>
+                                        <option value="EXTRAORAL">Ngoài mặt / Chân dung</option>
+                                        <option value="OTHER">Phim X-Quang / Panorama / CT</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold text-dark small" for="photoCategoryInput">Phân loại ảnh / phim <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="photoCategoryInput" required>
-                                    <option value="SMILE" selected>Nụ cười</option>
-                                    <option value="INTRAORAL">Trong miệng</option>
-                                    <option value="OCCLUSAL">Mặt nhai</option>
-                                    <option value="EXTRAORAL">Ngoài mặt / Chân dung</option>
-                                    <option value="OTHER">Phim X-Quang / Panorama / CT</option>
-                                </select>
-                            </div>
-                        </div>
 
-                        <div class="mb-1">
-                            <label class="form-label fw-semibold text-dark small" for="photoCaptionInput">Chú thích lâm sàng</label>
-                            <input type="text" class="form-control form-control-sm" id="photoCaptionInput" placeholder="Ví dụ: Răng 16 trước điều trị tủy..." maxlength="255">
+                            <div>
+                                <label class="form-label fw-semibold text-dark small" for="photoCaptionInput">Chú thích lâm sàng</label>
+                                <input type="text" class="form-control form-control-sm" id="photoCaptionInput" placeholder="Ví dụ: Răng 16 trước điều trị tủy..." maxlength="255">
+                            </div>
                         </div>
                     </div>
 
@@ -602,7 +450,7 @@
     <div class="modal fade" id="clinicalPhotoEditModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 14px; overflow: hidden;">
-                <div class="modal-header py-3 px-4 border-bottom bg-light">
+                <div class="modal-header py-3 px-4 bg-white border-bottom text-dark">
                     <h5 class="modal-title fw-bold mb-0 text-dark" style="font-size: 16px;">
                         <i class="bi bi-pencil-square text-primary me-2"></i>Cập nhật thông tin ảnh lâm sàng
                     </h5>
@@ -612,29 +460,31 @@
                     <input type="hidden" id="editPhotoIdInput">
                     <div class="modal-body p-4">
                         <div id="photoEditErrorAlert" class="alert alert-danger py-2 px-3 small d-none mb-3"></div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold text-dark small" for="editPhotoStageInput">Giai đoạn <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="editPhotoStageInput" required>
-                                    <option value="BEFORE">Trước điều trị (Before)</option>
-                                    <option value="DURING">Trong quá trình (During)</option>
-                                    <option value="AFTER">Sau điều trị (After)</option>
-                                </select>
+                        <div class="df-soft-panel">
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-dark small" for="editPhotoStageInput">Giai đoạn <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="editPhotoStageInput" required>
+                                        <option value="BEFORE">Trước điều trị (Before)</option>
+                                        <option value="DURING">Trong quá trình (During)</option>
+                                        <option value="AFTER">Sau điều trị (After)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold text-dark small" for="editPhotoCategoryInput">Phân loại ảnh / phim <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm" id="editPhotoCategoryInput" required>
+                                        <option value="SMILE">Nụ cười</option>
+                                        <option value="INTRAORAL">Trong miệng</option>
+                                        <option value="OCCLUSAL">Mặt nhai</option>
+                                        <option value="EXTRAORAL">Ngoài mặt / Chân dung</option>
+                                        <option value="OTHER">Phim X-Quang / Panorama / CT</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold text-dark small" for="editPhotoCategoryInput">Phân loại ảnh / phim <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-sm" id="editPhotoCategoryInput" required>
-                                    <option value="SMILE">Nụ cười</option>
-                                    <option value="INTRAORAL">Trong miệng</option>
-                                    <option value="OCCLUSAL">Mặt nhai</option>
-                                    <option value="EXTRAORAL">Ngoài mặt / Chân dung</option>
-                                    <option value="OTHER">Phim X-Quang / Panorama / CT</option>
-                                </select>
+                            <div>
+                                <label class="form-label fw-semibold text-dark small" for="editPhotoCaptionInput">Chú thích lâm sàng</label>
+                                <input type="text" class="form-control form-control-sm" id="editPhotoCaptionInput" maxlength="255">
                             </div>
-                        </div>
-                        <div class="mb-1">
-                            <label class="form-label fw-semibold text-dark small" for="editPhotoCaptionInput">Chú thích lâm sàng</label>
-                            <input type="text" class="form-control form-control-sm" id="editPhotoCaptionInput" maxlength="255">
                         </div>
                     </div>
                     <div class="modal-footer bg-light py-2 px-4 border-top justify-content-between">
@@ -649,61 +499,63 @@
     <!-- 3. MODAL: SO SÁNH ĐỐI CHIẾU ẢNH TRƯỚC & SAU (SCR-17.3 BEFORE/AFTER SLIDER) -->
     <div class="modal fade" id="clinicalPhotoCompareModal" tabindex="-1" aria-labelledby="compareModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #0b1329;">
-                <div class="modal-header py-3 border-0" style="background: #0f172a; color: white;">
+            <div class="modal-content border-0 shadow-lg bg-white" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header py-3 px-4 bg-white border-bottom text-dark">
                     <div class="d-flex align-items-center gap-3">
                         <div class="p-2 bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
                             <i class="bi bi-intersect fs-5"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title fw-bold mb-0 text-white" id="compareModalLabel" style="font-size: 16px;">
+                            <h5 class="modal-title fw-bold mb-0 text-dark" id="compareModalLabel" style="font-size: 16px;">
                                 Đối chiếu ảnh Trước &amp; Sau điều trị
                             </h5>
-                            <small class="text-white-50">Chọn ảnh Trước và ảnh Sau để kéo thanh trượt hoặc đặt song song</small>
+                            <small class="text-muted">Chọn ảnh Trước và ảnh Sau để kéo thanh trượt hoặc đặt song song</small>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" class="btn btn-outline-light active" id="btnModeSlider" onclick="switchCompareMode('slider')">
+                            <button type="button" class="btn btn-outline-secondary active" id="btnModeSlider" onclick="switchCompareMode('slider')">
                                 <i class="bi bi-sliders me-1"></i> Thanh trượt
                             </button>
-                            <button type="button" class="btn btn-outline-light" id="btnModeSide" onclick="switchCompareMode('side')">
+                            <button type="button" class="btn btn-outline-secondary" id="btnModeSide" onclick="switchCompareMode('side')">
                                 <i class="bi bi-layout-split me-1"></i> Song song
                             </button>
                         </div>
-                        <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                        <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Đóng"></button>
                     </div>
                 </div>
 
-                <div class="modal-body p-4 text-white">
-                    <div id="compareInsufficientNotice" class="alert alert-secondary border-0 text-center py-4 mb-0 d-none" style="background: rgba(30,41,59,0.75); color: #e2e8f0;">
-                        <i class="bi bi-images fs-2 d-block mb-2 text-info"></i>
-                        <div class="fw-semibold mb-1">Chưa đủ dữ liệu ảnh lâm sàng để đối chiếu Trước / Sau</div>
-                        <small class="text-white-50">Vui lòng tải lên ít nhất 1 ảnh Trước điều trị và 1 ảnh Trong/Sau điều trị.</small>
+                <div class="modal-body p-4 bg-white">
+                    <div id="compareInsufficientNotice" class="df-photo-empty-clean text-center py-4 mb-0 d-none">
+                        <i class="bi bi-images fs-2 d-block mb-2 text-primary"></i>
+                        <div class="fw-semibold text-dark mb-1">Chưa đủ dữ liệu ảnh lâm sàng để đối chiếu Trước / Sau</div>
+                        <small class="text-muted">Vui lòng tải lên ít nhất 2 ảnh lâm sàng để đối chiếu.</small>
                     </div>
 
                     <div id="compareWorkspaceContent">
-                        <div class="row g-3 align-items-center p-3 rounded-3 mb-4" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1);">
-                            <div class="col-md-5">
-                                <label class="form-label small text-warning fw-bold mb-1">
-                                    <i class="bi bi-clock-history"></i> 1. Ảnh Trước điều trị:
-                                </label>
-                                <select class="form-select form-select-sm bg-dark text-white border-secondary" id="compareSelectBefore" onchange="updateCompareImages()"></select>
-                            </div>
-                            <div class="col-md-2 text-center">
-                                <button type="button" class="btn btn-outline-light btn-sm rounded-circle p-2 mt-3" onclick="swapCompareImages()" title="Hoán đổi 2 ảnh">
-                                    <i class="bi bi-arrow-left-right"></i>
-                                </button>
-                            </div>
-                            <div class="col-md-5">
-                                <label class="form-label small text-success fw-bold mb-1">
-                                    <i class="bi bi-check-circle-fill"></i> 2. Ảnh Sau / Trong điều trị:
-                                </label>
-                                <select class="form-select form-select-sm bg-dark text-white border-secondary" id="compareSelectAfter" onchange="updateCompareImages()"></select>
+                        <div class="df-soft-panel mb-3">
+                            <div class="row g-3 align-items-center">
+                                <div class="col-md-5">
+                                    <label class="form-label small text-dark fw-semibold mb-1">
+                                        1. Ảnh Trước điều trị:
+                                    </label>
+                                    <select class="form-select form-select-sm" id="compareSelectBefore" onchange="updateCompareImages()"></select>
+                                </div>
+                                <div class="col-md-2 text-center">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-circle p-2 mt-3" onclick="swapCompareImages()" title="Hoán đổi 2 ảnh">
+                                        <i class="bi bi-arrow-left-right"></i>
+                                    </button>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label small text-dark fw-semibold mb-1">
+                                        2. Ảnh Sau / Trong điều trị:
+                                    </label>
+                                    <select class="form-select form-select-sm" id="compareSelectAfter" onchange="updateCompareImages()"></select>
+                                </div>
                             </div>
                         </div>
 
-                        <div id="compareSliderWrap" class="df-ba-wrapper">
+                        <div id="compareSliderWrap" class="df-ba-wrapper rounded-3 overflow-hidden border">
                             <div class="df-ba-container" id="baContainer">
                                 <img id="baImgAfter" src="" alt="Sau điều trị" class="df-ba-img-after">
                                 <div class="df-ba-before-wrap" id="baBeforeWrap">
@@ -718,11 +570,11 @@
                                 <span class="df-ba-badge df-ba-badge-before">Trước điều trị</span>
                                 <span class="df-ba-badge df-ba-badge-after">Sau điều trị</span>
                             </div>
-                            <div class="p-3 text-center bg-dark border-top border-secondary">
+                            <div class="p-3 text-center bg-light border-top">
                                 <div class="d-flex align-items-center justify-content-center gap-3">
-                                    <span class="small text-warning fw-bold">Trước</span>
+                                    <span class="small text-secondary fw-semibold">Trước</span>
                                     <input type="range" class="form-range" id="baRangeSlider" min="0" max="100" value="50" style="max-width: 400px;" oninput="applySliderPercent(this.value)">
-                                    <span class="small text-success fw-bold">Sau</span>
+                                    <span class="small text-secondary fw-semibold">Sau</span>
                                 </div>
                             </div>
                         </div>
@@ -735,7 +587,7 @@
                                 <img id="sideImgBefore" src="" alt="Ảnh trước">
                                 <div class="df-side-card-footer">
                                     <span id="sideCaptionBefore" class="text-truncate">Chú thích ảnh trước</span>
-                                    <span id="sideDateBefore" class="small text-white-50">Ngày chụp</span>
+                                    <span id="sideDateBefore" class="small text-white-50 df-num">Ngày chụp</span>
                                 </div>
                             </div>
                             <div class="df-side-card">
@@ -745,15 +597,15 @@
                                 <img id="sideImgAfter" src="" alt="Ảnh sau">
                                 <div class="df-side-card-footer">
                                     <span id="sideCaptionAfter" class="text-truncate">Chú thích ảnh sau</span>
-                                    <span id="sideDateAfter" class="small text-white-50">Ngày chụp</span>
+                                    <span id="sideDateAfter" class="small text-white-50 df-num">Ngày chụp</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="modal-footer border-0 py-2 px-4" style="background: #0f172a;">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                <div class="modal-footer border-top py-2 px-4 bg-light">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
                 </div>
             </div>
         </div>
@@ -762,32 +614,32 @@
     <!-- 4. MODAL: LIGHTBOX PHÓNG TO XEM CHI TIẾT ẢNH -->
     <div class="modal fade" id="clinicalPhotoLightboxModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg bg-dark text-white" style="border-radius: 16px; overflow: hidden;">
-                <div class="modal-header py-2 px-3 border-0 bg-black">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-primary" id="lightboxBadgeStage">Trước điều trị</span>
-                        <span class="badge bg-secondary" id="lightboxBadgeCategory">Nụ cười</span>
-                        <span class="fw-bold text-white small" id="lightboxTitle">Chi tiết ảnh lâm sàng</span>
+            <div class="modal-content border-0 shadow-lg bg-white" style="border-radius: 14px; overflow: hidden;">
+                <div class="modal-header py-3 px-4 bg-white border-bottom text-dark">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle" id="lightboxBadgeStage">Trước điều trị</span>
+                        <span class="badge bg-light text-secondary border" id="lightboxBadgeCategory">Nụ cười</span>
+                        <span class="fw-bold text-dark small" id="lightboxTitle">Chi tiết ảnh lâm sàng</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-outline-light btn-sm py-0 px-2" onclick="rotateLightboxImg()" title="Xoay ảnh 90 độ">
+                        <button type="button" class="btn btn-outline-secondary btn-sm py-1 px-2" onclick="rotateLightboxImg()" title="Xoay ảnh 90 độ">
                             <i class="bi bi-arrow-repeat"></i> Xoay
                         </button>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                     </div>
                 </div>
-                <div class="modal-body p-0 text-center bg-black position-relative" style="min-height: 400px; display: flex; align-items: center; justify-content: center;">
+                <div class="modal-body p-0 text-center position-relative" style="min-height: 400px; display: flex; align-items: center; justify-content: center; background: #0f172a;">
                     <img id="lightboxImg" src="" alt="Chi tiết ảnh" style="max-height: 70vh; max-width: 100%; object-fit: contain; transition: transform 0.25s ease;">
                 </div>
-                <div class="modal-footer py-2 px-3 border-0 bg-dark justify-content-between">
-                    <div class="small text-white-50">
-                        <i class="bi bi-clock me-1"></i> Ngày chụp: <span id="lightboxDate" class="text-white">---</span>
+                <div class="modal-footer py-2 px-4 border-top bg-light justify-content-between">
+                    <div class="small text-muted df-num">
+                        <i class="bi bi-clock me-1"></i> Ngày chụp: <span id="lightboxDate" class="text-dark fw-semibold">---</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <a id="lightboxDownloadBtn" href="#" download class="btn btn-outline-light btn-sm">
+                        <a id="lightboxDownloadBtn" href="#" download class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-download me-1"></i> Tải xuống
                         </a>
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
                     </div>
                 </div>
             </div>
@@ -823,12 +675,17 @@
 
     let currentPhotoFilterStage = 'ALL';
     let currentPhotoFilterCategory = 'ALL';
+    let currentPhotoViewMode = 'grid';
     let isPhotoOnlyCurrentVisit = false;
     let currentLightboxRotation = 0;
     let isBaSliderDragging = false;
 
     function filterPhotosStage(stage, btn) {
         currentPhotoFilterStage = stage || 'ALL';
+        const stageSelect = document.getElementById('photoStageSelect');
+        if (stageSelect && stageSelect.value !== currentPhotoFilterStage) {
+            stageSelect.value = currentPhotoFilterStage;
+        }
         document.querySelectorAll('#clinicalPhotoStageControl .df-photo-pill').forEach(p => {
             p.classList.toggle('active', (p.getAttribute('data-stage') || '') === currentPhotoFilterStage);
         });
@@ -849,10 +706,137 @@
         if (btn) {
             btn.classList.toggle('active', isPhotoOnlyCurrentVisit);
             btn.classList.toggle('btn-outline-secondary', !isPhotoOnlyCurrentVisit);
-            btn.classList.toggle('btn-primary', isPhotoOnlyCurrentVisit);
-            btn.classList.toggle('text-white', isPhotoOnlyCurrentVisit);
+            btn.classList.toggle('df-btn-tonal-primary', isPhotoOnlyCurrentVisit);
         }
         applyPhotoFilters();
+    }
+
+    function setPhotoViewMode(mode) {
+        currentPhotoViewMode = (mode === 'table') ? 'table' : 'grid';
+        const grid = document.getElementById('clinicalPhotoGalleryGrid');
+        const tableWrap = document.getElementById('clinicalPhotoTableWrap');
+        const btnGrid = document.getElementById('btnViewGrid');
+        const btnTable = document.getElementById('btnViewTable');
+        if (grid) grid.style.display = currentPhotoViewMode === 'grid' ? 'grid' : 'none';
+        if (tableWrap) tableWrap.style.display = currentPhotoViewMode === 'table' ? 'block' : 'none';
+        if (btnGrid) btnGrid.classList.toggle('active', currentPhotoViewMode === 'grid');
+        if (btnTable) btnTable.classList.toggle('active', currentPhotoViewMode === 'table');
+        if (currentPhotoViewMode === 'table') {
+            renderClinicalPhotoTable();
+        }
+        applyPhotoFilters();
+    }
+
+    function renderClinicalPhotoTable() {
+        const tbody = document.getElementById('clinicalPhotoTableBody');
+        if (!tbody) return;
+        const cards = Array.from(document.querySelectorAll('#clinicalPhotoGalleryGrid .df-photo-card-v2'));
+        const esc = (typeof escapeHtml === 'function') ? escapeHtml : (s => String(s || ''));
+        const visibleCards = cards.filter(c => c.style.display !== 'none');
+        if (visibleCards.length === 0) {
+            tbody.innerHTML = '';
+            return;
+        }
+        tbody.innerHTML = visibleCards.map((card, idx) => {
+            const src = card.getAttribute('data-source') || 'clinical';
+            const url = card.getAttribute('data-url') || '';
+            const caption = card.getAttribute('data-caption') || 'Ảnh lâm sàng';
+            const cat = card.getAttribute('data-categorytext') || card.getAttribute('data-category') || '';
+            const st = card.getAttribute('data-stage') || 'BEFORE';
+            const stText = card.getAttribute('data-stagetext') || STAGE_LABELS_VI[st] || st;
+            const dateStr = card.getAttribute('data-date') || '—';
+            const stCls = src === 'xray' ? 'stage-xray' : (st === 'BEFORE' ? 'stage-before' : (st === 'AFTER' ? 'stage-after' : 'stage-during'));
+            const actionsHtml = src === 'xray'
+                ? `<button type="button" class="df-btn-icon-muted" title="Xem phim X-Quang" onclick="document.querySelectorAll('#clinicalPhotoGalleryGrid .df-photo-card-v2')[${cards.indexOf(card)}]?.querySelector('.df-photo-thumb-v2')?.click()"><i class="bi bi-arrows-fullscreen"></i></button>`
+                : `
+                    <button type="button" class="df-btn-icon-muted" title="Xem phóng to" onclick="document.querySelectorAll('#clinicalPhotoGalleryGrid .df-photo-card-v2')[${cards.indexOf(card)}]?.querySelector('.df-photo-thumb-v2')?.click()"><i class="bi bi-arrows-fullscreen"></i></button>
+                    ${ft17IsClinicalLocked ? '' : `
+                    <button type="button" class="df-btn-icon-muted" title="Sửa" onclick="openEditPhotoModalFromCard(document.querySelectorAll('#clinicalPhotoGalleryGrid .df-photo-card-v2')[${cards.indexOf(card)}])"><i class="bi bi-pencil"></i></button>
+                    <button type="button" class="df-btn-icon-muted" title="Xóa" onclick="deleteClinicalPhotoFromCard(document.querySelectorAll('#clinicalPhotoGalleryGrid .df-photo-card-v2')[${cards.indexOf(card)}])"><i class="bi bi-trash3"></i></button>
+                    `}
+                  `;
+            return `
+                <tr>
+                    <td>
+                        <img src="${esc(url)}" alt="${esc(caption)}" loading="lazy" decoding="async"
+                             style="width: 56px; height: 42px; border-radius: 6px; object-fit: ${src === 'xray' ? 'contain' : 'cover'}; background: ${src === 'xray' ? '#0f172a' : '#f8fafc'}; border: 1px solid #e2e8f0;"
+                             onerror="this.onerror=null;this.src=window.DF_PHOTO_FALLBACK_SVG;">
+                    </td>
+                    <td class="fw-semibold text-dark">${esc(caption)}</td>
+                    <td><span class="chip-tooth">${esc(cat)}</span></td>
+                    <td><span class="df-stage-chip ${stCls}">${esc(stText)}</span></td>
+                    <td class="df-num text-muted small">${esc(dateStr)}</td>
+                    <td class="text-end">${actionsHtml}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function toggleInlinePhotoCompare(forceShow) {
+        const panel = document.getElementById('inlinePhotoComparePanel');
+        if (!panel) return;
+        const show = typeof forceShow === 'boolean' ? forceShow : (panel.style.display === 'none');
+        panel.style.display = show ? 'block' : 'none';
+        if (show) {
+            populateInlineCompareSelectors();
+        }
+    }
+
+    function populateInlineCompareSelectors() {
+        const leftSel = document.getElementById('inlineCompareLeftSelect');
+        const rightSel = document.getElementById('inlineCompareRightSelect');
+        if (!leftSel || !rightSel) return;
+        const allCards = Array.from(document.querySelectorAll('#clinicalPhotoGalleryGrid .df-photo-card-v2'));
+        leftSel.innerHTML = '';
+        rightSel.innerHTML = '';
+        if (allCards.length === 0) {
+            updateInlineCompareFrames();
+            return;
+        }
+        allCards.forEach((c, i) => {
+            const url = c.getAttribute('data-url') || '';
+            const stText = c.getAttribute('data-stagetext') || c.getAttribute('data-stage') || '';
+            const cap = c.getAttribute('data-caption') || 'Ảnh';
+            const dt = c.getAttribute('data-date') || '';
+            const label = `[${stText}] ${cap}${dt ? ' (' + dt + ')' : ''}`;
+            [leftSel, rightSel].forEach(sel => {
+                const opt = document.createElement('option');
+                opt.value = url;
+                opt.textContent = label;
+                opt.setAttribute('data-meta', `${stText} • ${dt || '---'}`);
+                sel.appendChild(opt);
+            });
+        });
+        if (rightSel.options.length > 1) {
+            rightSel.selectedIndex = 1;
+        }
+        updateInlineCompareFrames();
+    }
+
+    function updateInlineCompareFrames() {
+        const leftSel = document.getElementById('inlineCompareLeftSelect');
+        const rightSel = document.getElementById('inlineCompareRightSelect');
+        const leftImg = document.getElementById('inlineCompareLeftImg');
+        const rightImg = document.getElementById('inlineCompareRightImg');
+        const leftMeta = document.getElementById('inlineCompareLeftMeta');
+        const rightMeta = document.getElementById('inlineCompareRightMeta');
+        if (leftImg && leftSel) {
+            const opt = leftSel.options[leftSel.selectedIndex];
+            leftImg.src = leftSel.value || window.DF_PHOTO_FALLBACK_SVG;
+            if (leftMeta) leftMeta.textContent = opt ? (opt.getAttribute('data-meta') || '---') : '---';
+        }
+        if (rightImg && rightSel) {
+            const opt = rightSel.options[rightSel.selectedIndex];
+            rightImg.src = rightSel.value || window.DF_PHOTO_FALLBACK_SVG;
+            if (rightMeta) rightMeta.textContent = opt ? (opt.getAttribute('data-meta') || '---') : '---';
+        }
+    }
+
+    function syncTabBadgePhotoCount(total) {
+        const badge = document.getElementById('tabBadge-tab-clinical-photos');
+        if (badge) badge.textContent = String(total);
+        const foldableBadge = document.getElementById('foldablePhotoCountBadge');
+        if (foldableBadge) foldableBadge.textContent = total + ' ảnh';
     }
 
     function applyPhotoFilters() {
@@ -892,46 +876,39 @@
             }
         });
 
+        const grid = document.getElementById('clinicalPhotoGalleryGrid');
+        const tableWrap = document.getElementById('clinicalPhotoTableWrap');
+        if (currentPhotoViewMode === 'table') {
+            renderClinicalPhotoTable();
+            if (tableWrap) tableWrap.style.display = visibleCount > 0 ? 'block' : 'none';
+            if (grid) grid.style.display = 'none';
+        } else {
+            if (grid) grid.style.display = visibleCount > 0 ? 'grid' : 'none';
+            if (tableWrap) tableWrap.style.display = 'none';
+        }
+
         const emptyBox = document.getElementById('clinicalPhotoEmptyState');
         if (emptyBox) {
-            emptyBox.style.display = (visibleCount === 0) ? 'block' : 'none';
+            emptyBox.style.display = (visibleCount === 0) ? 'flex' : 'none';
             const emptyTitle = document.getElementById('clinicalPhotoEmptyTitle');
             const emptySubtitle = document.getElementById('clinicalPhotoEmptySubtitle');
             if (emptyTitle && emptySubtitle) {
                 if (cards.length === 0) {
                     emptyTitle.textContent = 'Chưa có ảnh lâm sàng hoặc phim X-quang';
-                    emptySubtitle.textContent = 'Tải ảnh nụ cười, trong miệng theo từng giai đoạn (Trước / Trong / Sau điều trị) hoặc chụp X-quang cận lâm sàng để đối chiếu trực quan.';
+                    emptySubtitle.textContent = 'Tải ảnh theo từng giai đoạn điều trị hoặc đồng bộ phim X-Quang để đối chiếu trực quan.';
                 } else if (visibleCount === 0) {
                     emptyTitle.textContent = 'Không tìm thấy ảnh phù hợp bộ lọc';
-                    emptySubtitle.textContent = 'Thử chuyển về tab "Tất cả" hoặc xóa từ khóa tìm kiếm để xem lại toàn bộ thư viện ảnh.';
+                    emptySubtitle.textContent = 'Thử chọn "Tất cả giai đoạn" hoặc xóa từ khóa tìm kiếm để xem lại toàn bộ thư viện ảnh.';
                 }
             }
         }
     }
 
-    function setPhotoGridSize(size) {
-        const grid = document.getElementById('clinicalPhotoGalleryGrid');
-        const btnL = document.getElementById('btnGridLarge');
-        const btnM = document.getElementById('btnGridMedium');
-        if (!grid) return;
-        const isMed = (size === 'medium');
-        grid.classList.toggle('is-medium', isMed);
-        if (btnM) btnM.classList.toggle('active', isMed);
-        if (btnL) btnL.classList.toggle('active', !isMed);
-        try { localStorage.setItem('df_photo_grid_size', isMed ? 'medium' : 'large'); } catch (e) {}
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        try {
-            if (localStorage.getItem('df_photo_grid_size') === 'medium') {
-                setPhotoGridSize('medium');
-            }
-        } catch (e) {}
-    });
-
     function openUploadPhotoModal(defaultCategory, defaultStage) {
         if (ft17IsClinicalLocked) {
-            alert('Bệnh án đã khóa (BR-EMR-02). Không thể tải thêm ảnh.');
+            const msg = 'Bệnh án đã khóa (BR-EMR-02). Không thể tải thêm ảnh.';
+            if (typeof showToast === 'function') showToast(msg, true);
+            else alert(msg);
             return;
         }
         const form = document.getElementById('clinicalPhotoUploadForm');
@@ -1036,9 +1013,9 @@
         }
     }
 
-    function openEditPhotoModalFromCard(btn) {
+    function openEditPhotoModalFromCard(el) {
         if (ft17IsClinicalLocked) return;
-        const card = btn.closest('.df-photo-card-v2');
+        const card = el.classList && el.classList.contains('df-photo-card-v2') ? el : el.closest('.df-photo-card-v2');
         if (!card) return;
         document.getElementById('editPhotoIdInput').value = card.getAttribute('data-id') || '';
         document.getElementById('editPhotoStageInput').value = card.getAttribute('data-stage') || 'BEFORE';
@@ -1090,9 +1067,9 @@
     }
 
     // DELETE /api/doctor/clinical-photos/{photoId}
-    async function deleteClinicalPhotoFromCard(btn) {
+    async function deleteClinicalPhotoFromCard(el) {
         if (ft17IsClinicalLocked) return;
-        const card = btn.closest('.df-photo-card-v2');
+        const card = el.classList && el.classList.contains('df-photo-card-v2') ? el : el.closest('.df-photo-card-v2');
         const photoId = card ? card.getAttribute('data-id') : null;
         if (!photoId || !confirm('Bạn có chắc chắn muốn xóa ảnh lâm sàng này khỏi hồ sơ bệnh nhân?')) return;
 
@@ -1103,10 +1080,14 @@
                 if (typeof showToast === 'function') showToast('✓ Đã xóa ảnh lâm sàng thành công!');
                 await reloadClinicalPhotos();
             } else {
-                alert(data.message || 'Không thể xóa ảnh lâm sàng.');
+                const msg = data.message || 'Không thể xóa ảnh lâm sàng.';
+                if (typeof showToast === 'function') showToast(msg, true);
+                else alert(msg);
             }
         } catch (e) {
-            alert('Lỗi khi xóa ảnh: ' + e.message);
+            const msg = 'Lỗi khi xóa ảnh: ' + e.message;
+            if (typeof showToast === 'function') showToast(msg, true);
+            else alert(msg);
         }
     }
 
@@ -1132,31 +1113,22 @@
                 }
             });
 
-            let countBefore = 0;
-            let countDuring = 0;
-            let countAfter = 0;
-            let countClinicalOther = 0;
             const esc = (typeof escapeHtml === 'function') ? escapeHtml : (s => String(s || ''));
 
             // Chèn ảnh lâm sàng mới lên đầu (trước các phim X-quang)
             const firstXray = grid.querySelector('.df-photo-card-v2[data-source="xray"]');
             photos.forEach(photo => {
                 const st = photo.photoStage || 'BEFORE';
-                if (st === 'BEFORE') countBefore++;
-                else if (st === 'DURING') countDuring++;
-                else if (st === 'AFTER') countAfter++;
-
                 const stageChipClass = st === 'BEFORE' ? 'stage-before' : (st === 'AFTER' ? 'stage-after' : 'stage-during');
                 const stageLabel = STAGE_LABELS_VI[st] || 'Trước ĐT';
                 const catCode = photo.photoCategory || 'OTHER';
-                if (catCode === 'OTHER' || catCode === 'XRAY') countClinicalOther++;
                 const catLabel = photo.photoCategoryText || CATEGORY_LABELS_VI[catCode] || 'Ảnh lâm sàng';
                 const caption = photo.caption && photo.caption.trim() ? photo.caption.trim() : 'Ảnh chụp lâm sàng';
                 const editDeleteBtns = ft17IsClinicalLocked ? '' : `
-                    <button type="button" class="df-photo-icon-btn" title="Chỉnh sửa giai đoạn / phân loại / ghi chú" onclick="openEditPhotoModalFromCard(this)">
+                    <button type="button" class="df-btn-icon-muted" title="Chỉnh sửa thông tin ảnh" onclick="openEditPhotoModalFromCard(this)">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <button type="button" class="df-photo-icon-btn is-delete" title="Xóa ảnh" onclick="deleteClinicalPhotoFromCard(this)">
+                    <button type="button" class="df-btn-icon-muted" title="Xóa ảnh" onclick="deleteClinicalPhotoFromCard(this)">
                         <i class="bi bi-trash3"></i>
                     </button>
                 `;
@@ -1175,26 +1147,22 @@
                          data-caption="${esc(caption)}"
                          data-date="${esc(photo.capturedAtFormatted || '')}">
                         <div class="df-photo-thumb-v2" onclick="openPhotoLightboxFromCard(this)">
-                            <img src="${esc(photo.imageUrl)}" alt="${esc(caption)}" loading="lazy" onerror="this.onerror=null;this.src=window.DF_PHOTO_FALLBACK_SVG;">
-                            <div class="df-photo-hover-bar" onclick="event.stopPropagation()">
-                                <button type="button" class="df-photo-icon-btn" title="Phóng to ảnh" onclick="openPhotoLightboxFromCard(this)">
-                                    <i class="bi bi-arrows-fullscreen"></i>
-                                </button>
-                                <button type="button" class="df-photo-icon-btn" title="Đưa vào so sánh Trước/Sau" onclick="selectPhotoForCompareFromCard(this)">
-                                    <i class="bi bi-intersect"></i>
-                                </button>
-                                ${editDeleteBtns}
-                            </div>
+                            <img src="${esc(photo.imageUrl)}" alt="${esc(caption)}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src=window.DF_PHOTO_FALLBACK_SVG;">
                         </div>
                         <div class="df-photo-meta-body">
                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-1">
                                 <span class="df-stage-chip ${stageChipClass}">${esc(stageLabel)}</span>
-                                <span class="df-cat-chip">${esc(catLabel)}</span>
+                                <span class="chip-tooth">${esc(catLabel)}</span>
                             </div>
                             <div class="fw-semibold text-dark small" style="line-height: 1.4; min-height: 2.8em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${esc(caption)}">${esc(caption)}</div>
-                            <div class="d-flex align-items-center justify-content-between text-muted pt-2 border-top mt-auto" style="font-size: 11.5px; border-color: #f1f5f9 !important;">
-                                <span><i class="bi bi-clock me-1"></i><span>${esc(photo.capturedAtFormatted || '')}</span></span>
-                                ${photo.visitCode ? `<span class="badge bg-light text-secondary border" style="font-size: 10.5px;">${esc(photo.visitCode)}</span>` : ''}
+                            <div class="d-flex align-items-center justify-content-between pt-2 border-top mt-auto gap-1" style="border-color: #f1f5f9 !important;">
+                                <div class="df-meta-tertiary df-num text-truncate"><i class="bi bi-clock me-1"></i><span>${esc(photo.capturedAtFormatted || '')}</span></div>
+                                <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                    <button type="button" class="df-btn-icon-muted" title="Xem phóng to" onclick="openPhotoLightboxFromCard(this)">
+                                        <i class="bi bi-arrows-fullscreen"></i>
+                                    </button>
+                                    ${editDeleteBtns}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1208,16 +1176,10 @@
 
             const xrayCardsCount = grid.querySelectorAll('.df-photo-card-v2[data-source="xray"]').length;
             const countAll = photos.length + xrayCardsCount;
-
-            document.getElementById('countPillAll').innerText = countAll;
-            document.getElementById('countPillBefore').innerText = countBefore;
-            document.getElementById('countPillDuring').innerText = countDuring;
-            document.getElementById('countPillAfter').innerText = countAfter;
-            const xrayPill = document.getElementById('countPillXray');
-            if (xrayPill) xrayPill.innerText = xrayCardsCount + countClinicalOther;
-
-            const foldableBadge = document.getElementById('foldablePhotoCountBadge');
-            if (foldableBadge) foldableBadge.innerText = countAll + ' ảnh';
+            syncTabBadgePhotoCount(countAll);
+            if (document.getElementById('inlinePhotoComparePanel')?.style.display === 'block') {
+                populateInlineCompareSelectors();
+            }
 
             applyPhotoFilters();
         } catch (e) {
@@ -1254,23 +1216,22 @@
                      data-visit="${esc(ft17CurrentVisitId)}" data-url="${esc(url)}"
                      data-caption="${esc(ord.serviceName)}" data-date="${esc(timeStr)}">
                     <div class="df-photo-thumb-v2" onclick="openXrayCardViewer(this)">
-                        <img src="${esc(url)}" alt="${esc(ord.serviceName)}" loading="lazy" onerror="this.onerror=null;this.src=window.DF_PHOTO_FALLBACK_SVG;">
-                        <div class="df-photo-hover-bar" onclick="event.stopPropagation()">
-                            <button type="button" class="df-photo-icon-btn" title="Mở trình soi phim X-quang" onclick="openXrayCardViewer(this)">
-                                <i class="bi bi-zoom-in"></i>
-                            </button>
-                        </div>
+                        <img src="${esc(url)}" alt="${esc(ord.serviceName)}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src=window.DF_PHOTO_FALLBACK_SVG;">
                     </div>
                     <div class="df-photo-meta-body">
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-1">
-                            <span class="df-stage-chip stage-xray"><i class="bi bi-x-diamond-fill"></i> X-Quang / CT</span>
-                            <span class="df-cat-chip">${esc(ord.toothNumbers || 'Toàn hàm')}</span>
+                            <span class="df-stage-chip stage-xray">X-Quang / CT</span>
+                            <span class="chip-tooth">${esc(ord.toothNumbers || 'Toàn hàm')}</span>
                         </div>
                         <div class="fw-semibold text-dark small text-truncate">${esc(ord.serviceName)}</div>
-                        <div class="text-muted small text-truncate" style="font-size: 12px;">${esc(ord.resultSummary || (refCode ? 'Mã chụp: ' + refCode : 'Phim chẩn đoán hình ảnh'))}</div>
-                        <div class="d-flex align-items-center justify-content-between text-muted pt-2 border-top mt-auto" style="font-size: 11.5px; border-color: #f1f5f9 !important;">
-                            <span><i class="bi bi-clock me-1"></i><span>${esc(timeStr || '—')}</span></span>
-                            ${refCode ? `<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" style="font-size: 10.5px;">${esc(refCode)}</span>` : ''}
+                        <div class="df-meta-tertiary text-truncate">${esc(ord.resultSummary || (refCode ? 'Mã chụp: ' + refCode : 'Phim chẩn đoán hình ảnh'))}</div>
+                        <div class="d-flex align-items-center justify-content-between pt-2 border-top mt-auto gap-1" style="border-color: #f1f5f9 !important;">
+                            <div class="df-meta-tertiary df-num text-truncate"><i class="bi bi-clock me-1"></i><span>${esc(timeStr || '—')}</span></div>
+                            <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                <button type="button" class="df-btn-icon-muted" title="Mở trình soi phim X-Quang" onclick="openXrayCardViewer(this)">
+                                    <i class="bi bi-arrows-fullscreen"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1278,19 +1239,12 @@
             grid.insertAdjacentHTML('beforeend', cardHtml);
         });
 
-        const clinicalCards = grid.querySelectorAll('.df-photo-card-v2[data-source="clinical"]');
-        const clinicalCnt = clinicalCards.length;
-        let clinicalOtherCnt = 0;
-        clinicalCards.forEach(el => {
-            const cat = el.getAttribute('data-category') || '';
-            if (cat === 'OTHER' || cat === 'XRAY') clinicalOtherCnt++;
-        });
+        const clinicalCnt = grid.querySelectorAll('.df-photo-card-v2[data-source="clinical"]').length;
         const xrayCnt = grid.querySelectorAll('.df-photo-card-v2[data-source="xray"]').length;
-        document.getElementById('countPillAll').innerText = clinicalCnt + xrayCnt;
-        const xrayPill = document.getElementById('countPillXray');
-        if (xrayPill) xrayPill.innerText = xrayCnt + clinicalOtherCnt;
-        const foldableBadge = document.getElementById('foldablePhotoCountBadge');
-        if (foldableBadge) foldableBadge.innerText = (clinicalCnt + xrayCnt) + ' ảnh';
+        syncTabBadgePhotoCount(clinicalCnt + xrayCnt);
+        if (document.getElementById('inlinePhotoComparePanel')?.style.display === 'block') {
+            populateInlineCompareSelectors();
+        }
         applyPhotoFilters();
     };
 

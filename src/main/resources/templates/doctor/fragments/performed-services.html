@@ -11,17 +11,17 @@
     <style>
         .dv-grid-card {
             background: #ffffff;
-            border: 1.5px solid #cbd5e1;
+            border: 1px solid #e2e8f0;
             border-radius: 16px;
-            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
             overflow: hidden;
             position: relative;
         }
 
         .dv-grid-topbar {
-            padding: 14px 22px;
-            background: #f8fafc;
-            border-bottom: 1.5px solid #e2e8f0;
+            padding: 16px 20px;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -44,15 +44,15 @@
         }
 
         .dv-amis-table thead th {
-            background: #f1f5f9;
-            color: #334155;
-            font-size: 13px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-            padding: 14px 18px;
-            border-bottom: 2px solid #cbd5e1;
-            border-right: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #475569;
+            font-size: 12.5px;
+            font-weight: 600;
+            text-transform: none;
+            letter-spacing: normal;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: none;
             white-space: nowrap;
             position: sticky;
             top: 0;
@@ -60,11 +60,11 @@
         }
 
         .dv-amis-table tbody tr.dv-data-row td {
-            padding: 14px 18px;
-            border-bottom: 1px solid #e2e8f0;
-            border-right: 1px solid #f1f5f9;
+            padding: 13px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            border-right: none;
             vertical-align: middle;
-            font-size: 14px;
+            font-size: 13.5px;
             color: #1e293b;
             background: #ffffff;
             transition: background-color 0.12s ease;
@@ -81,12 +81,12 @@
             right: 0 !important;
             z-index: 15 !important;
             background: #ffffff !important;
-            border-left: 1.5px solid #cbd5e1 !important;
-            box-shadow: -6px 0 14px -4px rgba(15, 23, 42, 0.08);
+            border-left: 1px solid #e2e8f0 !important;
+            box-shadow: -6px 0 14px -4px rgba(15, 23, 42, 0.06);
         }
 
         .dv-amis-table thead th.dv-col-pinned-right {
-            background: #f1f5f9 !important;
+            background: #f8fafc !important;
             z-index: 20 !important;
         }
 
@@ -98,9 +98,9 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 12px 22px;
-            background: #f8fafc;
-            border-top: 1.5px solid #e2e8f0;
+            padding: 12px 20px;
+            background: #ffffff;
+            border-top: 1px solid #e2e8f0;
             font-size: 13.5px;
             color: #475569;
         }
@@ -111,7 +111,7 @@
     <!-- Nhóm theo: Kế hoạch -> Chẩn đoán / Giai đoạn -> Dịch vụ & Bước    -->
     <!-- ================================================================= -->
     <style>
-        .ps-plan-card { border: 1.5px solid #cbd5e1; border-radius: 12px; overflow: hidden; background: #fff; }
+        .ps-plan-card { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff; }
         .ps-plan-head { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 12px 16px; }
         .ps-stage-card { border: 1px solid #e2e8f0; border-left: 4px solid #cbd5e1; border-radius: 10px; padding: 12px 14px; background: #fff; }
         .ps-stage-card.is-completed { border-left-color: #10b981; background: #f0fdf4; }
@@ -120,23 +120,23 @@
         .ps-step-done .ps-step-name { color: #047857; }
         .ps-step-todo .ps-step-name { color: #475569; }
     </style>
-    <div class="dv-grid-card mb-4" id="planProgressSection" th:if="${treatmentPlans != null and !treatmentPlans.isEmpty()}">
+    <div class="dv-grid-card df-unified-tab-card mb-4" id="planProgressSection" th:if="${treatmentPlans != null and !treatmentPlans.isEmpty()}">
         <div class="dv-grid-topbar df-tab-content-header">
-            <div class="df-tab-title-standard">
-                <i class="bi bi-list-check"></i>
-                <span>TIẾN ĐỘ THỰC HIỆN THEO KẾ HOẠCH ĐIỀU TRỊ</span>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-0.5 ms-1"
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <i class="bi bi-list-check text-primary fs-5"></i>
+                <h2 class="df-title-primary mb-0">Tiến độ thực hiện theo kế hoạch điều trị</h2>
+                <span class="df-tab-count df-num"
                       id="psTotalServicesDoneBadge"
-                      th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ đã làm'" style="text-transform: none; letter-spacing: normal;">
+                      th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ đã làm'">
                     0 dịch vụ đã làm
                 </span>
             </div>
             <div class="d-flex align-items-center flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary px-3 py-1.5 rounded-2 fw-semibold" onclick="switchMainTab('tab-treatment-plan')"
+                <button type="button" class="btn btn-sm btn-outline-secondary px-3 py-2 rounded-2 fw-semibold" onclick="switchMainTab('tab-treatment-plan')"
                         title="Chuyển sang Kế hoạch điều trị để thao tác">
                     Kế hoạch điều trị
                 </button>
-                <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-2 fw-semibold">
+                <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-2 rounded-2 fw-semibold">
                     Đã khóa bệnh án
                 </span>
             </div>
@@ -151,51 +151,52 @@
     <!-- PHẦN 2: DANH SÁCH DỊCH VỤ / THỦ THUẬT ĐÃ THỰC HIỆN TẠI GHẾ         -->
     <!-- (ĐỒNG BỘ CHUẨN 100% GIAO DIỆN DAILY-VISITS: CARD, TOPBAR, AMIS-GRID)-->
     <!-- ================================================================= -->
-    <div class="dv-grid-card mb-4" id="performedServicesSection">
+    <div class="dv-grid-card df-unified-tab-card mb-4" id="performedServicesSection">
         <!-- Topbar danh sách dịch vụ đã thực hiện theo style daily-visits -->
         <div class="dv-grid-topbar df-tab-content-header">
-            <div class="df-tab-title-standard">
-                <i class="bi bi-tools"></i>
-                <span>DỊCH VỤ / THỦ THUẬT ĐÃ THỰC HIỆN TẠI GHẾ</span>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-0.5 ms-1" id="performedCountBadge"
-                      th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ'" style="text-transform: none; letter-spacing: normal;">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <i class="bi bi-tools text-primary fs-5"></i>
+                <h2 class="df-title-primary mb-0">Dịch vụ &amp; thủ thuật đã thực hiện tại ghế</h2>
+                <span class="df-tab-count df-num" id="performedCountBadge"
+                      th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ'">
                     0 dịch vụ
                 </span>
-                <span class="df-tab-subtitle-text d-none d-lg-inline">(Đã đồng bộ sang Kế toán)</span>
+                <span class="df-subtitle-secondary d-none d-lg-inline">· Đã đồng bộ sang Kế toán</span>
             </div>
 
             <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-light text-secondary border px-3 py-1.5 rounded-2 fw-semibold" style="font-size: 13px;">
-                    Tổng tiền: <strong class="text-primary fs-6 ms-1" id="totalPerformedText"
-                                       th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</strong>
+                <span class="df-soft-panel py-1 px-3 fw-semibold df-subtitle-secondary d-inline-flex align-items-center gap-2">
+                    <span>Tổng tiền:</span>
+                    <strong class="text-primary fs-6 df-num" id="totalPerformedText"
+                            th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</strong>
                 </span>
             </div>
         </div>
 
         <!-- Bảng dữ liệu chuẩn Enterprise Grid của daily-visits -->
         <div class="dv-table-scroll-container">
-            <table class="dv-amis-table table table-hover align-middle mb-0" id="performedServicesTable">
+            <table class="dv-amis-table df-clean-table table table-hover align-middle mb-0" id="performedServicesTable" data-disable-floating-actions="true">
                 <thead>
                 <tr>
-                    <th style="width: 130px; white-space: nowrap;">MÃ DV</th>
-                    <th style="min-width: 320px;">TÊN DỊCH VỤ ĐIỀU TRỊ &amp; QUY TRÌNH</th>
-                    <th style="width: 90px; white-space: nowrap;" class="text-center">RĂNG</th>
-                    <th style="width: 130px; white-space: nowrap;" class="text-end">ĐƠN GIÁ</th>
+                    <th style="width: 130px; white-space: nowrap;">Mã DV</th>
+                    <th style="min-width: 320px;">Tên dịch vụ điều trị &amp; quy trình</th>
+                    <th style="width: 90px; white-space: nowrap;" class="text-center">Răng</th>
+                    <th style="width: 130px; white-space: nowrap;" class="text-end">Đơn giá</th>
                     <th style="width: 70px; white-space: nowrap;" class="text-center">SL</th>
-                    <th style="width: 140px; white-space: nowrap;" class="text-end">THÀNH TIỀN</th>
-                    <th style="width: 200px; min-width: 180px; white-space: nowrap;">BÁC SĨ &amp; PHỤ TÁ</th>
-                    <th style="width: 130px; white-space: nowrap;" class="text-center">TRẠNG THÁI</th>
+                    <th style="width: 140px; white-space: nowrap;" class="text-end">Thành tiền</th>
+                    <th style="width: 200px; min-width: 180px; white-space: nowrap;">Bác sĩ &amp; phụ tá</th>
+                    <th style="width: 130px; white-space: nowrap;" class="text-center">Trạng thái</th>
                 </tr>
                 </thead>
                 <tbody id="performedServicesTableBody">
                 <tr th:if="${performedServices == null or performedServices.isEmpty()}" id="emptyPerformedRow">
-                    <td colspan="8" class="text-center py-5 text-muted bg-white">
-                        <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 180px;">
-                            <h6 class="fw-bold text-dark mb-1">Chưa có dịch vụ nào được ghi nhận thực hiện trong ca khám này</h6>
-                            <p class="text-muted mb-3 small" style="max-width: 520px; line-height: 1.6;">
-                                Bác sĩ vui lòng chọn các bước thủ thuật trong <strong>Kế hoạch điều trị</strong> và nhấn <em>"Làm trong ca này"</em> để hệ thống tự động ghi nhận dịch vụ thực hiện tại ghế.
+                    <td colspan="8" class="text-center py-4 px-3" style="background: #f8fafc;">
+                        <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 120px;">
+                            <h6 class="fw-bold text-dark mb-1">Chưa có dịch vụ nào được ghi nhận trong ca khám này</h6>
+                            <p class="df-meta-tertiary mb-3" style="max-width: 480px;">
+                                Chọn các bước thủ thuật trong <strong>Kế hoạch điều trị</strong> và nhấn <em>"Làm trong ca này"</em> để tự động ghi nhận.
                             </p>
-                            <button type="button" class="btn btn-outline-primary px-3 py-1.5 rounded-2 fw-semibold"
+                            <button type="button" class="btn btn-sm df-btn-tonal-primary px-3 py-2 rounded-pill fw-semibold"
                                     onclick="switchMainTab('tab-treatment-plan')">
                                 Mở Kế hoạch điều trị &amp; Chọn bước thực hiện
                             </button>
@@ -204,7 +205,7 @@
                 </tr>
                 <tr th:each="ps : ${performedServices}" th:id="'ps-row-' + ${ps.performedId}" th:data-plan-item-id="${ps.planItemId}" class="dv-data-row">
                     <td style="white-space: nowrap;">
-                        <span class="badge bg-light text-dark border fw-bold" th:text="${ps.serviceCode != null ? ps.serviceCode : 'DV1001'}">DV1001</span>
+                        <span class="badge bg-light text-dark border fw-bold df-num" th:text="${ps.serviceCode != null ? ps.serviceCode : 'DV1001'}">DV1001</span>
                     </td>
                     <td>
                         <div class="fw-bold text-dark" th:text="${ps.stepName != null and !ps.stepName.isEmpty() ? ps.stepName : ps.serviceName}">Hàn răng sâu Composite</div>
@@ -216,15 +217,15 @@
                         </div>
                     </td>
                     <td class="text-center" style="white-space: nowrap;">
-                        <span class="badge bg-light text-dark border" th:text="${ps.toothNumbers != null and !ps.toothNumbers.isEmpty() ? ((ps.toothNumbers == 'Toàn hàm' and ps.serviceName != null and ps.serviceName.toLowerCase().contains('răng khôn')) ? '18, 28, 38, 48' : ps.toothNumbers) : 'Toàn hàm'}">R16</span>
+                        <span class="chip-tooth df-num" th:text="${ps.toothNumbers != null and !ps.toothNumbers.isEmpty() ? ((ps.toothNumbers == 'Toàn hàm' and ps.serviceName != null and ps.serviceName.toLowerCase().contains('răng khôn')) ? '18, 28, 38, 48' : ps.toothNumbers) : 'Toàn hàm'}">R16</span>
                     </td>
-                    <td class="text-end text-muted small" style="white-space: nowrap;" th:text="${ps.unitPrice != null ? #numbers.formatDecimal(ps.unitPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                    <td class="text-end text-muted small df-num" style="white-space: nowrap;" th:text="${ps.unitPrice != null ? #numbers.formatDecimal(ps.unitPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
                         350,000 đ
                     </td>
-                    <td class="text-center fw-semibold" style="white-space: nowrap;" th:text="${ps.quantity != null ? ps.quantity : 1}">
+                    <td class="text-center fw-semibold df-num" style="white-space: nowrap;" th:text="${ps.quantity != null ? ps.quantity : 1}">
                         1
                     </td>
-                    <td class="text-end fw-bold text-dark" style="white-space: nowrap;" th:text="${ps.finalPrice != null ? #numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
+                    <td class="text-end fw-bold text-dark df-num" style="white-space: nowrap;" th:text="${ps.finalPrice != null ? #numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
                         350,000 đ
                     </td>
                     <td style="white-space: nowrap;">
@@ -244,10 +245,10 @@
         <!-- Footer tổng kết chuẩn MISA AMIS của daily-visits -->
         <div class="misa-pagination-footer">
             <div>
-                Tổng số: <strong class="text-dark" id="dvTotalCountText" th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ'">0 dịch vụ</strong>
+                Tổng số: <strong class="text-dark df-num" id="dvTotalCountText" th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ'">0 dịch vụ</strong>
             </div>
             <div>
-                Tổng thanh toán: <strong class="text-primary fw-bold" id="footerTotalPerformedText"
+                Tổng thanh toán: <strong class="text-primary fw-bold df-num" id="footerTotalPerformedText"
                                          th:text="${totalPerformedAmount != null ? #numbers.formatDecimal(totalPerformedAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</strong>
             </div>
         </div>

@@ -401,7 +401,7 @@ public class TreatmentPlanRestController {
             @PathVariable Long id,
             @RequestBody List<TreatmentPlanInstallmentDTO> installmentDTOs) {
         if (doctorVisitAccess != null && isHttpRequestActive()) {
-            doctorVisitAccess.requireTreatmentPlanWrite(currentHttpSession(), id);
+            doctorVisitAccess.requireTreatmentPlanFinanceWrite(currentHttpSession(), id);
         }
         try {
             TreatmentPlanResponseDTO updated = treatmentPlanService.saveInstallments(id, installmentDTOs);

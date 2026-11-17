@@ -677,7 +677,7 @@ public class DiagnosisController {
             }
         }
         String patientRecordBackUrl = useReceptionPath
-                ? (resolvedFromPatientId != null ? "/reception/patients/" + resolvedFromPatientId : "/reception/patients") + "#tab-treatment"
+                ? (resolvedFromPatientId != null ? "/reception/patients/" + encodePatient(resolvedFromPatientId) : "/reception/patients") + "#tab-treatment"
                 : (resolvedFromPatientId != null ? "/doctor/patient-records/" + encodePatient(resolvedFromPatientId) : "/doctor/patient-records") + "#tab-treatment";
         model.addAttribute("patientRecordBackUrl", patientRecordBackUrl);
         model.addAttribute("readonlySidebarMenu", useReceptionPath ? "patients" : "doctor-records");

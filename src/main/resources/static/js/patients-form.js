@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const linkCell = document.createElement('td');
             const link = document.createElement('a');
-            link.href = `/reception/patients/${encodeURIComponent(candidate.id)}`;
+            link.href = `/reception/patients/${encodeURIComponent(candidate.patientToken || candidate.id)}`;
             link.target = '_blank';
             link.rel = 'noopener';
             link.textContent = 'Xem hồ sơ';
@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(msg);
             }
             const patient = await response.json();
-            window.location.assign(`/reception/patients/${encodeURIComponent(patient.id)}?saved=1`);
+            window.location.assign(`/reception/patients/${encodeURIComponent(patient.patientToken || patient.id)}?saved=1`);
         } catch (cause) {
             showError(cause.message);
         } finally {

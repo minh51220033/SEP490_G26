@@ -17,9 +17,13 @@
 
             <style>
                 :root {
+                    --df-font-sans: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, sans-serif;
+                    --df-font-mono: 'JetBrains Mono', monospace;
                     --df-primary: #0284c7;
                     --df-primary-dark: #0369a1;
+                    --df-primary-deep: #075985;
                     --df-primary-soft: #e0f2fe;
+                    --df-primary-subtle: #f0f9ff;
                     --df-border: #e2e8f0;
                     --df-border-subtle: #f1f5f9;
                     --df-border-dark: #cbd5e1;
@@ -30,10 +34,35 @@
                     --df-text-muted: #64748b;
                 }
 
-                /* 1. HEADER BỆNH NHÂN ĐỒNG BỘ */
+                .app-content,
+                .df-unified-header,
+                .df-main-card,
+                #fdiToothPopover,
+                #dfToastContainer {
+                    font-family: var(--df-font-sans);
+                }
+
+                .font-monospace {
+                    font-family: var(--df-font-mono) !important;
+                }
+
+                /* Khung giới hạn chiều rộng đồng trục cho cả Header và Main Card */
+                .df-bound-container {
+                    max-width: 1360px;
+                    margin-left: auto;
+                    margin-right: auto;
+                    width: 100%;
+                }
+
+                /* 1. HEADER BỆNH NHÂN ĐỒNG BỘ & GHIM CỐ ĐỊNH TRÊN ĐỈNH */
                 .df-unified-header {
                     background: #ffffff;
                     border-bottom: 1px solid var(--df-border);
+                    position: sticky;
+                    top: 0;
+                    z-index: 25;
+                    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+                    overflow: visible;
                 }
 
                 .df-unified-top-bar {
@@ -51,13 +80,13 @@
                     background: transparent;
                 }
                 .df-exam-breadcrumb-nav .breadcrumb-item a {
-                    color: #1a2f6e !important;
+                    color: var(--df-primary-deep) !important;
                     text-decoration: none !important;
                     font-weight: 600 !important;
                     transition: color 0.15s ease;
                 }
                 .df-exam-breadcrumb-nav .breadcrumb-item a:hover {
-                    color: #0284c7 !important;
+                    color: var(--df-primary) !important;
                     text-decoration: underline !important;
                 }
                 .df-exam-breadcrumb-nav .breadcrumb-item.active {
@@ -73,7 +102,7 @@
                     width: 42px;
                     height: 42px;
                     border-radius: 50%;
-                    background: #0284c7;
+                    background: var(--df-primary);
                     color: #ffffff;
                     font-size: 15px;
                     font-weight: 700;
@@ -83,12 +112,13 @@
                     flex-shrink: 0;
                 }
 
-                /* 2. CARD CHÍNH TỐI GIẢN - BÓNG MỀM 2 TẦNG */
+                /* 2. CARD CHÍNH TỐI GIẢN - GIỚI HẠN TRỤC 1360PX */
                 .df-main-card {
                     background: #ffffff;
                     border: 1px solid var(--df-border);
                     border-radius: 16px;
-                    margin: 18px 24px 40px;
+                    max-width: 1360px;
+                    margin: 18px auto 32px;
                     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.03);
                     overflow: visible;
                 }
@@ -536,20 +566,13 @@
                     display: block;
                 }
 
-                /* 6. THANH TỔNG TIỀN & THANH HÀNH ĐỘNG ĐÁY */
-                .df-footer-summary {
-                    background: #ffffff;
-                    border-top: 1px solid var(--df-border);
-                    padding: 18px 24px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    flex-wrap: wrap;
-                    gap: 14px;
-                }
-
-                .df-action-bar {
-                    background: #f8fafc;
+                /* 6. THANH TỔNG TIỀN & HÀNH ĐỘNG GHIM CỐ ĐỊNH Ở ĐÁY */
+                .df-sticky-bottom-bar {
+                    position: sticky;
+                    bottom: 0;
+                    z-index: 30;
+                    background: rgba(255, 255, 255, 0.96);
+                    backdrop-filter: blur(8px);
                     border-top: 1px solid var(--df-border);
                     border-radius: 0 0 16px 16px;
                     padding: 14px 24px;
@@ -557,46 +580,56 @@
                     align-items: center;
                     justify-content: space-between;
                     flex-wrap: wrap;
-                    gap: 12px;
+                    gap: 16px;
+                    box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.06);
+                }
+
+                /* Căn thẳng cột mọi con số tiền tệ, số lượng, mã răng */
+                .df-num, #footerGrandTotalDisplay, .df-clean-table td, .df-steps-table td {
+                    font-variant-numeric: tabular-nums;
                 }
             </style>
 
             <!-- 1. BREADCRUMB & PATIENT BAR -->
             <header class="df-unified-header">
-                <div class="df-unified-top-bar d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div class="d-flex align-items-center flex-wrap gap-2">
-                        <button type="button" class="btn btn-sm btn-light border d-lg-none py-1 px-2 text-primary fw-bold"
-                                data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
-                            <i class="bi bi-list fs-6"></i>
-                        </button>
-                        <nav aria-label="breadcrumb" class="df-exam-breadcrumb-nav mb-0">
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
-                                <li class="breadcrumb-item"><a th:href="@{/doctor/daily-visits}">DS Khám</a></li>
-                                <li class="breadcrumb-item"><a th:href="${visit != null ? '/doctor/examination/' + idCodec.encodeVisit(visit.visitId) + '/diagnoses' : '/doctor/examination'}">Khám &amp; Điều trị</a></li>
-                                <li class="breadcrumb-item active" aria-current="page">Lập kế hoạch điều trị</li>
-                            </ol>
-                        </nav>
+                <div class="df-unified-top-bar">
+                    <div class="df-bound-container d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm btn-light border d-lg-none py-1 px-2 text-primary fw-bold"
+                                    data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
+                                <i class="bi bi-list fs-6"></i>
+                            </button>
+                            <nav aria-label="breadcrumb" class="df-exam-breadcrumb-nav mb-0">
+                                <ol class="breadcrumb mb-0">
+                                    <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+                                    <li class="breadcrumb-item"><a th:href="@{/doctor/daily-visits}">DS Khám</a></li>
+                                    <li class="breadcrumb-item"><a th:href="${visit != null ? '/doctor/examination/' + idCodec.encodeVisit(visit.visitId) + '/diagnoses' : '/doctor/examination'}">Khám &amp; Điều trị</a></li>
+                                    <li class="breadcrumb-item active" aria-current="page">Lập kế hoạch điều trị</li>
+                                </ol>
+                            </nav>
+                        </div>
                     </div>
                 </div>
 
-                <div class="py-3 px-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="df-avatar-circle"
-                             th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? #strings.substring(patient.fullName, 0, 1) : 'BN'}">
-                            NA
-                        </div>
-                        <div>
-                            <div class="d-flex align-items-center flex-wrap gap-2">
-                                <strong class="fs-6 text-dark" th:text="${patient != null ? patient.fullName : 'Bệnh nhân'}">Nguyễn Văn An</strong>
-                                <span class="badge bg-light text-dark border" th:text="'Mã: ' + (${patient != null ? patient.patientCode : '---'})">Mã: BN-0008</span>
-                                <span class="badge bg-light text-secondary border"
-                                      th:text="(${patient != null and patient.gender != null ? patient.gender : 'Nam'})">Nam</span>
+                <div class="py-3 px-4">
+                    <div class="df-bound-container d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="df-avatar-circle"
+                                 th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? #strings.substring(patient.fullName, 0, 1) : 'BN'}">
+                                NA
                             </div>
-                            <div class="df-meta-tertiary mt-1">
-                                SĐT: <span class="fw-semibold text-dark" th:text="${patient != null and patient.phoneNumber != null ? patient.phoneNumber : '---'}">0901 234 567</span> •
-                                Ca khám: <span class="fw-semibold text-dark" th:text="${visit.visitCode != null ? visit.visitCode : 'VIS-001'}">VIS-001</span> •
-                                Cơ sở: <span class="fw-semibold text-dark" th:text="${visit.branch != null ? visit.branch.branchName : 'Phòng khám'}">SmileCare</span>
+                            <div>
+                                <div class="d-flex align-items-center flex-wrap gap-2">
+                                    <strong class="fs-6 text-dark" th:text="${patient != null ? patient.fullName : 'Bệnh nhân'}">Nguyễn Văn An</strong>
+                                    <span class="badge bg-light text-dark border" th:text="'Mã: ' + (${patient != null ? patient.patientCode : '---'})">Mã: BN-0008</span>
+                                    <span class="badge bg-light text-secondary border"
+                                          th:text="(${patient != null and patient.gender != null ? patient.gender : 'Nam'})">Nam</span>
+                                </div>
+                                <div class="df-meta-tertiary mt-1">
+                                    SĐT: <span class="fw-semibold text-dark" th:text="${patient != null and patient.phoneNumber != null ? patient.phoneNumber : '---'}">0901 234 567</span> •
+                                    Ca khám: <span class="fw-semibold text-dark" th:text="${visit.visitCode != null ? visit.visitCode : 'VIS-001'}">VIS-001</span> •
+                                    Cơ sở: <span class="fw-semibold text-dark" th:text="${visit.branch != null ? visit.branch.branchName : 'Phòng khám'}">SmileCare</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -685,12 +718,11 @@
                         <table class="df-clean-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 55px;" class="text-center">Chọn</th>
-                                    <th style="width: 130px;">Chẩn đoán</th>
-                                    <th style="width: 240px;">Vị trí răng &amp; mặt răng</th>
-                                    <th style="width: 110px;">Mã ICD-10</th>
-                                    <th>Tên bệnh lý</th>
-                                    <th style="width: 130px;" class="text-center">Phân loại</th>
+                                    <th style="width: 52px;" class="text-center">Chọn</th>
+                                    <th style="width: 120px;">Chẩn đoán</th>
+                                    <th style="width: 220px;">Vị trí răng &amp; mặt răng</th>
+                                    <th style="width: 100px;">Mã ICD-10</th>
+                                    <th>Tên bệnh lý &amp; Phân loại</th>
                                 </tr>
                             </thead>
                             <tbody id="diagTableBody">
@@ -715,47 +747,64 @@
                 </div>
 
                 <div class="df-foldable-content" id="contentSection2">
-                    <!-- Khối thêm nhanh dịch vụ -->
+                    <!-- Khối thêm nhanh dịch vụ (1 hàng combobox hợp nhất) -->
                     <div class="df-soft-panel mb-3">
                         <div class="row g-2 align-items-end">
-                            <div class="col-md-5">
-                                <label class="form-label small fw-semibold text-dark mb-1" for="serviceSearchInput">
-                                    Tìm dịch vụ phòng khám <span class="text-danger">*</span>
+                            <!-- 1 Control duy nhất: Gõ lọc + Xổ danh sách dịch vụ ngay bên dưới -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-dark mb-1" for="serviceComboInput">
+                                    Tìm &amp; chọn dịch vụ điều trị <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control form-control-sm" id="serviceSearchInput"
-                                       placeholder="Lọc nhanh theo tên hoặc mã dịch vụ..."
-                                       oninput="filterServiceDropdownOptions(this.value)">
+                                <div class="combobox-box" id="servicePickerCombo">
+                                    <input type="text" class="combobox-input" id="serviceComboInput"
+                                           placeholder="Gõ mã hoặc tên dịch vụ (VD: Răng sứ, Trám, Nhổ răng khôn)..."
+                                           autocomplete="off"
+                                           onfocus="openServiceCombo()"
+                                           oninput="filterServiceCombo(this.value)"
+                                           onkeydown="handleServiceComboKey(event)">
+                                    <input type="hidden" id="selectedServiceIdHidden">
+                                    <button type="button" class="combobox-btn" onclick="toggleServiceCombo(event)" title="Mở danh sách dịch vụ">
+                                        <i class="bi bi-chevron-down"></i>
+                                    </button>
+                                    <div class="combobox-menu w-100" id="serviceComboMenu" style="min-width: 100%; max-height: 320px;"></div>
+                                </div>
                             </div>
+
+                            <!-- Vị trí răng: kích thước vừa đủ + nút mở Sơ đồ răng FDI -->
                             <div class="col-md-3">
                                 <label class="form-label small fw-semibold text-dark mb-1" for="quickAddTeethInput">
                                     Vị trí răng / phạm vi
                                 </label>
-                                <div class="input-group input-group-sm">
+                                <div class="input-group input-group-sm" style="height: 36px;">
                                     <input type="text" class="form-control" id="quickAddTeethInput"
-                                           placeholder="VD: 16, 26 hoặc để trống">
-                                    <button type="button" class="btn btn-outline-secondary"
+                                           placeholder="VD: 16, 26..."
+                                           onkeydown="if(event.key==='Enter'){event.preventDefault(); addServiceFromPicker();}">
+                                    <button type="button" class="btn btn-outline-secondary px-2"
+                                            onclick="openFdiToothPopover(this, 'quickAddTeethInput')" title="Chọn trên sơ đồ răng">
+                                        <i class="bi bi-grid-3x3-gap"></i> Răng
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary px-2"
                                             onclick="document.getElementById('quickAddTeethInput').value='Toàn hàm'"
                                             title="Đặt phạm vi Toàn hàm">
                                         Toàn hàm
                                     </button>
                                 </div>
                             </div>
-                            <div class="col-md-2">
-                                <label class="form-label small fw-semibold text-dark mb-1" for="quickAddQtyInput">Số lượng</label>
+
+                            <!-- Số lượng: cố định độ rộng ngắn -->
+                            <div class="col-md-1">
+                                <label class="form-label small fw-semibold text-dark mb-1" for="quickAddQtyInput">SL</label>
                                 <input type="number" class="form-control form-control-sm text-center fw-semibold" id="quickAddQtyInput"
-                                       value="1" min="1" max="32" step="1">
+                                       style="height: 36px;" value="1" min="1" max="32" step="1">
                             </div>
+
+                            <!-- Nút thêm dịch vụ -->
                             <div class="col-md-2">
-                                <button type="button" class="btn btn-sm df-btn-tonal-primary w-100 py-2 d-flex align-items-center justify-content-center gap-1"
-                                        onclick="addServiceFromPicker()">
+                                <button type="button" class="btn btn-sm df-btn-tonal-primary w-100 d-flex align-items-center justify-content-center gap-1"
+                                        style="height: 36px;" onclick="addServiceFromPicker()">
                                     <i class="bi bi-plus-lg"></i>
                                     <span>Thêm dịch vụ</span>
                                 </button>
-                            </div>
-                            <div class="col-12 mt-2">
-                                <select class="form-select form-select-sm fw-medium" id="quickAddServiceSelect" aria-label="Danh sách dịch vụ phòng khám">
-                                    <!-- Populated by JS -->
-                                </select>
                             </div>
                         </div>
                         <div class="mt-2 d-flex flex-wrap align-items-center gap-2" id="quickServiceSuggestionBar" style="display: none;"></div>
@@ -763,7 +812,7 @@
 
                     <div class="table-responsive">
                         <table class="df-clean-table">
-                            <thead>
+                            <thead id="mappingTableHead">
                                 <tr>
                                     <th style="width: 28%;">Dịch vụ điều trị</th>
                                     <th style="width: 22%;">Vị trí răng &amp; phạm vi</th>
@@ -948,31 +997,24 @@
                 </div>
 
                 <!-- ========================================================================= -->
-                <!-- THANH TỔNG KẾT CHI PHÍ                                                    -->
+                <!-- THANH TỔNG KẾT & HÀNH ĐỘNG GHIM CỐ ĐỊNH Ở ĐÁY (SECONDARY TRÁI - PRIMARY PHẢI) -->
                 <!-- ========================================================================= -->
-                <div class="df-footer-summary">
+                <div class="df-sticky-bottom-bar">
+                    <!-- Bên trái: Chi tiết phân bổ dịch vụ -->
                     <div>
-                        <div class="fw-semibold text-dark">
-                            Tổng chi phí dự kiến toàn phác đồ
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-semibold text-dark small">Tổng chi phí dự kiến:</span>
+                            <span class="df-meta-tertiary" id="footerStatsSummary">0 dịch vụ • 0 giai đoạn</span>
                         </div>
-                        <div id="footerBreakdownBadges" class="d-flex flex-wrap align-items-center gap-2 mt-2">
-                            <!-- Rendered by JS -->
-                        </div>
+                        <div id="footerBreakdownBadges" class="d-flex flex-wrap align-items-center gap-1 mt-1"></div>
                     </div>
-                    <div class="text-end">
-                        <div class="fw-bold text-primary" style="font-size: 26px; letter-spacing: -0.02em;"
-                             id="footerGrandTotalDisplay">0 đ</div>
-                        <div class="df-meta-tertiary" id="footerStatsSummary">0 dịch vụ • 0 giai đoạn</div>
-                    </div>
-                </div>
 
-                <!-- THANH HÀNH ĐỘNG ĐÁY (SECONDARY TRÁI — 1 PRIMARY DUY NHẤT BÊN PHẢI) -->
-                <div class="df-action-bar">
-                    <div class="df-meta-tertiary d-flex align-items-center gap-2">
-                        <i class="bi bi-shield-check text-success fs-6"></i>
-                        <span>Kế hoạch sẽ được đồng bộ trực tiếp vào hồ sơ khám.</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
+                    <!-- Bên phải: Tổng tiền nổi bật + Nút Hủy + 1 Primary CTA duy nhất -->
+                    <div class="d-flex align-items-center gap-3 ms-auto">
+                        <div class="text-end me-2">
+                            <div class="fw-bold text-primary" style="font-size: 24px; line-height: 1.1;" id="footerGrandTotalDisplay">0 đ</div>
+                            <div class="df-meta-tertiary" style="font-size: 11.5px;">Đồng bộ trực tiếp vào hồ sơ</div>
+                        </div>
                         <a th:href="@{'/doctor/examination/' + ${idCodec.encodeVisit(visit.visitId)} + '/diagnoses#tab-treatment-plan'}"
                            class="btn btn-outline-secondary px-3 py-2 fw-semibold">
                             Hủy
@@ -988,6 +1030,33 @@
             </section>
 
         </main>
+    </div>
+</div>
+
+<!-- TOAST CONTAINER CHUẨN Y TẾ (Thay window.alert) -->
+<div id="dfToastContainer" style="position: fixed; top: 72px; right: 24px; z-index: 10500; display: flex; flex-direction: column; gap: 8px;"></div>
+
+<!-- POPOVER SƠ ĐỒ RĂNG FDI (Thay window.prompt) -->
+<div id="fdiToothPopover" class="card shadow-lg border"
+     style="display: none; position: fixed; z-index: 10000; width: 420px; border-radius: 12px;">
+    <div class="card-header bg-white py-2 px-3 d-flex justify-content-between align-items-center">
+        <span class="fw-bold small text-dark"><i class="bi bi-grid-3x3-gap text-primary me-1"></i> Chọn vị trí răng (Chuẩn FDI)</span>
+        <button type="button" class="btn-close btn-sm" onclick="closeFdiToothPopover()"></button>
+    </div>
+    <div class="card-body p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="small text-muted">Hàm trên (Phải &larr; | &rarr; Trái)</span>
+            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 11.5px;"
+                    onclick="selectFdiFullJaw()">Chọn Toàn hàm</button>
+        </div>
+        <div id="fdiUpperRow" class="d-grid gap-1 mb-2" style="grid-template-columns: repeat(16, 1fr);"></div>
+        <div class="border-top my-2"></div>
+        <div id="fdiLowerRow" class="d-grid gap-1 mb-2" style="grid-template-columns: repeat(16, 1fr);"></div>
+        <div class="small text-muted mb-3">Hàm dưới (Phải &larr; | &rarr; Trái)</div>
+        <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-sm btn-light border" onclick="closeFdiToothPopover()">Hủy</button>
+            <button type="button" class="btn btn-sm btn-primary fw-semibold px-3" onclick="applyFdiToothSelection()">Áp dụng răng đã chọn</button>
+        </div>
     </div>
 </div>
 
@@ -1295,6 +1364,25 @@
         if (el) el.classList.remove('show');
     }
 
+    function showToast(message, type = 'warning') {
+        const container = document.getElementById('dfToastContainer');
+        if (!container) return;
+        const isErr = type === 'error';
+        const toast = document.createElement('div');
+        toast.className = 'shadow-sm border rounded-3 px-3 py-2 d-flex align-items-center gap-2 bg-white';
+        toast.style.cssText = `min-width: 280px; max-width: 420px; border-left: 4px solid ${isErr ? '#dc2626' : '#f59e0b'} !important; font-size: 13.5px;`;
+        toast.innerHTML = `
+            <i class="bi ${isErr ? 'bi-x-circle-fill text-danger' : 'bi-exclamation-triangle-fill text-warning'}"></i>
+            <span class="text-dark fw-medium flex-grow-1">${escapeHtml(message)}</span>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.25s ease';
+            setTimeout(() => toast.remove(), 250);
+        }, 3500);
+    }
+
     function syncDoctorSummaryBadge() {
         const sel = document.getElementById('doctorSelect');
         const summary = document.getElementById('planDoctorSummary');
@@ -1334,34 +1422,74 @@
             : '<i class="bi bi-arrows-angle-expand me-1"></i> Mở rộng tất cả';
     }
 
-    function populateServiceDropdown(filterQuery) {
-        const selectEl = document.getElementById('quickAddServiceSelect');
-        if (!selectEl) return;
+    function renderServiceComboItems(filterQuery = '') {
+        const menu = document.getElementById('serviceComboMenu');
+        if (!menu) return;
+        const normQ = normalizeText(filterQuery);
+        const list = Object.values(SERVICES_DICT).filter(s =>
+            !normQ || normalizeText(`${s.code} ${s.name}`).includes(normQ)
+        );
 
-        const normQ = normalizeText(filterQuery || '');
-        const allServices = Object.values(SERVICES_DICT);
-        const filtered = normQ
-            ? allServices.filter(s => normalizeText(`${s.code || ''} ${s.name || ''}`).includes(normQ))
-            : allServices;
-
-        if (filtered.length === 0) {
-            selectEl.innerHTML = '<option value="">-- Không tìm thấy dịch vụ phù hợp --</option>';
+        if (list.length === 0) {
+            menu.innerHTML = `<div class="p-3 text-center text-muted small">Không tìm thấy dịch vụ phù hợp.</div>`;
             return;
         }
 
-        const prevVal = selectEl.value;
-        selectEl.innerHTML = filtered.map(s => {
-            const codePrefix = s.code ? `[${escapeHtml(s.code)}] ` : '';
-            return `<option value="${s.id}">${codePrefix}${escapeHtml(s.name)} — ${formatMoney(s.price)} / ${escapeHtml(s.unit)}</option>`;
-        }).join('');
+        menu.innerHTML = list.map(s => `
+            <div class="combobox-item d-flex justify-content-between align-items-center gap-2"
+                 onclick="selectServiceFromCombo('${escapeJsAttr(s.id)}')">
+                <div>
+                    ${s.code ? `<span class="badge bg-light text-secondary border me-1 font-monospace">${escapeHtml(s.code)}</span>` : ''}
+                    <span class="fw-semibold text-dark">${escapeHtml(s.name)}</span>
+                </div>
+                <span class="text-primary fw-bold small text-nowrap df-num">${formatMoney(s.price)} / ${escapeHtml(s.unit)}</span>
+            </div>
+        `).join('');
+    }
 
-        if (prevVal && filtered.some(s => String(s.id) === String(prevVal))) {
-            selectEl.value = prevVal;
+    function openServiceCombo() {
+        const input = document.getElementById('serviceComboInput');
+        renderServiceComboItems(input ? input.value : '');
+        document.getElementById('serviceComboMenu')?.classList.add('show');
+    }
+
+    function filterServiceCombo(val) {
+        const hiddenEl = document.getElementById('selectedServiceIdHidden');
+        if (hiddenEl) hiddenEl.value = '';
+        renderServiceComboItems(val);
+        document.getElementById('serviceComboMenu')?.classList.add('show');
+    }
+
+    function toggleServiceCombo(event) {
+        if (event) event.stopPropagation();
+        const menu = document.getElementById('serviceComboMenu');
+        if (!menu) return;
+        const willShow = !menu.classList.contains('show');
+        document.querySelectorAll('.combobox-menu').forEach(m => m.classList.remove('show'));
+        if (willShow) {
+            const input = document.getElementById('serviceComboInput');
+            renderServiceComboItems(input ? input.value : '');
+            menu.classList.add('show');
+            input?.focus();
         }
     }
 
-    function filterServiceDropdownOptions(query) {
-        populateServiceDropdown(query);
+    function selectServiceFromCombo(srvId) {
+        const srv = SERVICES_DICT[srvId];
+        if (!srv) return;
+        document.getElementById('selectedServiceIdHidden').value = srv.id;
+        document.getElementById('serviceComboInput').value = `${srv.code ? '[' + srv.code + '] ' : ''}${srv.name} — ${formatMoney(srv.price)}`;
+        document.getElementById('serviceComboMenu')?.classList.remove('show');
+        document.getElementById('quickAddTeethInput')?.focus();
+    }
+
+    function handleServiceComboKey(e) {
+        if (e.key === 'Escape') {
+            document.getElementById('serviceComboMenu')?.classList.remove('show');
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            addServiceFromPicker();
+        }
     }
 
     function parseTeethInput(rawStr, serviceId) {
@@ -1381,14 +1509,16 @@
     }
 
     function addServiceFromPicker(overrideSrvId, overrideTeethStr, overrideQty) {
-        const selectEl = document.getElementById('quickAddServiceSelect');
+        const comboInput = document.getElementById('serviceComboInput');
+        const hiddenEl = document.getElementById('selectedServiceIdHidden');
         const teethInp = document.getElementById('quickAddTeethInput');
         const qtyInp = document.getElementById('quickAddQtyInput');
 
-        const srvId = overrideSrvId || (selectEl ? selectEl.value : '');
+        const srvId = overrideSrvId || (hiddenEl ? hiddenEl.value : '');
         if (!srvId || !SERVICES_DICT[srvId]) {
             showInlineBanner('Vui lòng chọn một dịch vụ trong bảng giá phòng khám trước khi thêm.', 'error');
-            selectEl?.focus();
+            comboInput?.focus();
+            openServiceCombo();
             return;
         }
         hideInlineBanner();
@@ -1424,6 +1554,8 @@
         PLAN_SERVICES.push(serviceEntry);
 
         if (overrideSrvId === undefined) {
+            if (hiddenEl) hiddenEl.value = '';
+            if (comboInput) comboInput.value = '';
             if (teethInp) teethInp.value = '';
             if (qtyInp) qtyInp.value = '1';
         }
@@ -1439,7 +1571,7 @@
             : diag.teeth.map(t => t.num).join(', ');
         const matchedSrvId = diag.serviceId || findBestServiceForDiagnosis(diag.icd, diag.name, teethStr);
         if (!matchedSrvId || !SERVICES_DICT[matchedSrvId]) {
-            alert('Chưa tìm thấy dịch vụ tương ứng trong Bảng giá. Vui lòng chọn trực tiếp ở ô tìm dịch vụ!');
+            showToast('Chưa tìm thấy dịch vụ tương ứng trong Bảng giá. Vui lòng chọn trực tiếp ở ô tìm dịch vụ!', 'warning');
             return;
         }
 
@@ -1485,7 +1617,7 @@
         const idx = PLAN_SERVICES.findIndex(x => x.id === id);
         if (idx < 0) return;
         if (hasServiceLockedSteps(PLAN_SERVICES[idx])) {
-            alert('Không thể xóa dịch vụ đã có bước thủ thuật đang thực hiện hoặc đã hoàn thành trong ca khám!');
+            showToast('Không thể xóa dịch vụ đã có bước thủ thuật đang thực hiện hoặc đã hoàn thành trong ca khám!', 'warning');
             return;
         }
         PLAN_SERVICES.splice(idx, 1);
@@ -1493,31 +1625,32 @@
         renderAll();
     }
 
-    function promptEditServiceTeeth(id) {
+    function promptEditServiceTeeth(id, anchorEl) {
         const d = PLAN_SERVICES.find(x => x.id === id);
         if (!d) return;
         if (hasServiceLockedSteps(d)) {
-            alert('Dịch vụ này đã có bước thực hiện trong ca khám, không thể đổi toàn bộ phạm vi răng!');
+            showToast('Dịch vụ này đã có bước thực hiện trong ca khám, không thể đổi toàn bộ phạm vi răng!', 'warning');
             return;
         }
-        const currStr = d.teeth.some(t => t.isFullJaw) ? 'Toàn hàm' : d.teeth.map(t => t.num).join(', ');
-        const input = prompt('Nhập vị trí răng áp dụng (VD: 16, 26) hoặc nhập "Toàn hàm":', currStr);
-        if (input === null) return;
-        d.teeth = parseTeethInput(input, d.serviceId);
         const isPkg = isPackageService(d.serviceId);
-        if (!isPkg && !d.teeth.some(t => t.isFullJaw)) {
-            d.qty = d.teeth.length || 1;
-        }
-        const activeNums = isPkg ? ['Toàn hàm'] : d.teeth.map(t => t.num);
-        d.stages.forEach(st => {
-            (st.steps || []).forEach(sp => {
-                if (!sp.isLocked) {
-                    sp.activeTeeth = [...activeNums];
-                    sp.qty = isPkg ? 1 : (activeNums.length || 1);
-                }
+        const initialTeeth = d.teeth.map(t => t.num);
+        openFdiToothPopover(anchorEl || document.getElementById('barSection2'), (selectedArr) => {
+            const rawStr = selectedArr.length === 0 ? '' : (selectedArr[0] === 'Toàn hàm' ? 'Toàn hàm' : selectedArr.join(', '));
+            d.teeth = parseTeethInput(rawStr, d.serviceId);
+            if (!isPkg && !d.teeth.some(t => t.isFullJaw)) {
+                d.qty = d.teeth.length || 1;
+            }
+            const activeNums = isPkg ? ['Toàn hàm'] : d.teeth.map(t => t.num);
+            d.stages.forEach(st => {
+                (st.steps || []).forEach(sp => {
+                    if (!sp.isLocked) {
+                        sp.activeTeeth = [...activeNums];
+                        sp.qty = isPkg ? 1 : (activeNums.length || 1);
+                    }
+                });
             });
-        });
-        renderAll();
+            renderAll();
+        }, initialTeeth);
     }
 
     // Khởi tạo / cập nhật quy trình kỹ thuật & lộ trình ĐI THEO DỊCH VỤ ĐƯỢC CHỌN
@@ -1792,7 +1925,13 @@
             bar.classList.add('is-expanded');
             content.style.display = 'block';
             if (secId === '5') {
-                renderInstallmentsTable();
+                const switchEl = document.getElementById('isInstallmentSwitch');
+                if (switchEl && !switchEl.checked) {
+                    switchEl.checked = true;
+                    toggleInstallmentSection();
+                } else {
+                    renderInstallmentsTable();
+                }
             }
         }
         updateToggleAllBtnLabel();
@@ -1818,6 +1957,8 @@
     // 1. RENDER BƯỚC 1: DỊCH VỤ ĐIỀU TRỊ ĐÃ CHỌN & PHÁC ĐỒ CHUẨN
     // =========================================================================
     function renderMappingTable() {
+        const thead = document.getElementById('mappingTableHead');
+        if (thead) thead.style.display = PLAN_SERVICES.length === 0 ? 'none' : '';
         const tbody = document.getElementById('mappingTableBody');
         const countBadge = document.getElementById('servicesCountBadge');
         if (countBadge) {
@@ -1898,7 +2039,7 @@
                     <td>
                         <div class="d-flex flex-wrap align-items-center gap-1 mb-1">${teethText}</div>
                         <button type="button" class="btn btn-sm btn-link text-secondary p-0 text-decoration-none" style="font-size: 12px;"
-                                ${hasLocked ? 'disabled' : `onclick="promptEditServiceTeeth('${escapeJsAttr(d.id)}')" `}>
+                                ${hasLocked ? 'disabled' : `onclick="promptEditServiceTeeth('${escapeJsAttr(d.id)}', this)" `}>
                             <i class="bi bi-pencil me-1"></i>Đổi vị trí răng
                         </button>
                     </td>
@@ -2166,7 +2307,7 @@
         if (DIAGNOSES.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="text-center py-3 text-muted small">
+                    <td colspan="5" class="text-center py-3 text-muted small">
                         Ca khám hiện chưa ghi nhận chẩn đoán ICD-10. Bác sĩ có thể chọn dịch vụ ở <strong>Bước 2</strong> hoặc bấm nút gắn mã ICD-10 phía trên nếu cần.
                     </td>
                 </tr>
@@ -2206,10 +2347,8 @@
                         <span class="badge bg-light text-dark border font-monospace">${escapeHtml(d.icd)}</span>
                     </td>
                     <td>
-                        <strong class="text-dark">${escapeHtml(d.name)}</strong>
-                    </td>
-                    <td class="text-center">
-                        <span class="badge ${d.type === 'Chính' ? 'bg-danger-subtle text-danger border border-danger-subtle fw-bold' : 'bg-light text-secondary border'}">
+                        <strong class="text-dark me-2">${escapeHtml(d.name)}</strong>
+                        <span class="badge ${d.type === 'Chính' ? 'bg-danger-subtle text-danger border border-danger-subtle fw-semibold' : 'bg-light text-secondary border'}">
                             ${d.type === 'Chính' ? '★ Chính' : '⊕ Kèm theo'}
                         </span>
                     </td>
@@ -2315,7 +2454,7 @@
 
                     const addToothBtn = isLocked ? '' : `
                         <button type="button" class="btn btn-sm btn-link text-primary text-decoration-none p-0 ms-1" style="font-size: 11.5px;"
-                                onclick="promptAddStepTooth('${escapeJsAttr(d.id)}', ${sIdx}, ${spIdx})" title="Thêm răng khác cho bước này">
+                                onclick="promptAddStepTooth('${escapeJsAttr(d.id)}', ${sIdx}, ${spIdx}, this)" title="Thêm răng khác cho bước này">
                             + Răng
                         </button>
                     `;
@@ -2442,7 +2581,7 @@
                         <button type="button" class="df-stage-insert-btn"
                                 onclick="addNewStage('${escapeJsAttr(d.id)}', ${sIdx})"
                                 title="Chèn thêm giai đoạn vào giữa GĐ ${sIdx + 1} và GĐ ${sIdx + 2}">
-                            <i class="bi bi-plus-circle me-1"></i>Thêm giai đoạn vào giữa (GĐ ${sIdx + 1} - ${sIdx + 2})
+                            <i class="bi bi-plus-circle me-1"></i>Thêm giai đoạn giữa GĐ ${sIdx + 1} &rarr; GĐ ${sIdx + 2}
                         </button>
                     </div>` : `
                     <div class="df-stage-insert-bar is-bottom">
@@ -2487,13 +2626,85 @@
     }
 
     document.addEventListener('click', function (ev) {
-        document.querySelectorAll('.combobox-menu').forEach(m => m.classList.remove('show'));
+        if (!ev.target.closest('.combobox-box')) {
+            document.querySelectorAll('.combobox-menu').forEach(m => m.classList.remove('show'));
+        }
         const icdDropdown = document.getElementById('icdCatalogDropdown');
         const icdInput = document.getElementById('icdCatalogSearchInput');
         if (icdDropdown && icdInput && !icdDropdown.contains(ev.target) && ev.target !== icdInput) {
             icdDropdown.style.display = 'none';
         }
+        const fdiPop = document.getElementById('fdiToothPopover');
+        if (fdiPop && fdiPop.style.display === 'block' && !fdiPop.contains(ev.target) && !(fdiAnchorEl && fdiAnchorEl.contains(ev.target))) {
+            closeFdiToothPopover();
+        }
     });
+
+    // =========================================================================
+    // POPOVER SƠ ĐỒ RĂNG FDI (Thay window.prompt)
+    // =========================================================================
+    let fdiActiveCallback = null;
+    let fdiSelectedSet = new Set();
+    let fdiAnchorEl = null;
+
+    function openFdiToothPopover(anchorEl, targetInputIdOrCallback, initialTeeth = []) {
+        const pop = document.getElementById('fdiToothPopover');
+        if (!pop) return;
+
+        fdiAnchorEl = anchorEl || null;
+        fdiSelectedSet = new Set((initialTeeth || []).filter(t => t && t !== 'Toàn hàm'));
+        if (typeof targetInputIdOrCallback === 'string') {
+            const inp = document.getElementById(targetInputIdOrCallback);
+            const existing = (inp?.value || '').match(/\b([1-4][1-8])\b/g) || [];
+            existing.forEach(n => fdiSelectedSet.add(n));
+            fdiActiveCallback = (arr) => {
+                if (inp) inp.value = arr.length === 0 ? '' : (arr[0] === 'Toàn hàm' ? 'Toàn hàm' : arr.join(', '));
+            };
+        } else {
+            fdiActiveCallback = targetInputIdOrCallback;
+        }
+
+        renderFdiGrid();
+        const rect = anchorEl ? anchorEl.getBoundingClientRect() : { bottom: 180, left: window.innerWidth / 2 };
+        pop.style.top = Math.max(16, Math.min(window.innerHeight - 260, rect.bottom + 6)) + 'px';
+        pop.style.left = Math.max(16, Math.min(window.innerWidth - 436, rect.left - 120)) + 'px';
+        pop.style.display = 'block';
+    }
+
+    function renderFdiGrid() {
+        const upper = ['18', '17', '16', '15', '14', '13', '12', '11', '21', '22', '23', '24', '25', '26', '27', '28'];
+        const lower = ['48', '47', '46', '45', '44', '43', '42', '41', '31', '32', '33', '34', '35', '36', '37', '38'];
+        const renderRow = (arr) => arr.map(num => {
+            const active = fdiSelectedSet.has(num);
+            return `<button type="button" class="btn btn-sm p-0 fw-semibold ${active ? 'btn-primary' : 'btn-outline-secondary'}"
+                            style="height: 28px; font-size: 11px;"
+                            onclick="toggleFdiNum('${num}')">${num}</button>`;
+        }).join('');
+        document.getElementById('fdiUpperRow').innerHTML = renderRow(upper);
+        document.getElementById('fdiLowerRow').innerHTML = renderRow(lower);
+    }
+
+    function toggleFdiNum(num) {
+        if (fdiSelectedSet.has(num)) fdiSelectedSet.delete(num);
+        else fdiSelectedSet.add(num);
+        renderFdiGrid();
+    }
+
+    function selectFdiFullJaw() {
+        if (fdiActiveCallback) fdiActiveCallback(['Toàn hàm']);
+        closeFdiToothPopover();
+    }
+
+    function applyFdiToothSelection() {
+        if (fdiActiveCallback) fdiActiveCallback(Array.from(fdiSelectedSet));
+        closeFdiToothPopover();
+    }
+
+    function closeFdiToothPopover() {
+        const pop = document.getElementById('fdiToothPopover');
+        if (pop) pop.style.display = 'none';
+        fdiAnchorEl = null;
+    }
 
     function chooseStepItem(id, sIdx, spIdx, val) {
         const d = PLAN_SERVICES.find(x => x.id === id);
@@ -2517,31 +2728,37 @@
         }
     }
 
-    function promptAddStepTooth(id, sIdx, spIdx) {
+    function promptAddStepTooth(id, sIdx, spIdx, anchorEl) {
         const d = PLAN_SERVICES.find(x => x.id === id);
         if (!d || !d.stages[sIdx] || !d.stages[sIdx].steps[spIdx]) return;
         const sp = d.stages[sIdx].steps[spIdx];
         if (sp.isLocked) return;
 
-        const toothInput = prompt('Nhập số răng muốn áp dụng cho bước này (Ví dụ: 16, 26, 36, 46...):');
-        if (!toothInput) return;
-        const cleaned = toothInput.replace(/[^0-9]/g, '').trim();
-        if (!cleaned || cleaned.length < 2) {
-            alert('Số răng không hợp lệ. Vui lòng nhập số răng chuẩn (Ví dụ: 11, 16, 28, 48...)');
-            return;
-        }
-        if (!d.teeth.some(t => t.num === cleaned)) {
-            d.teeth.push({ num: cleaned, surf: '', disp: `R-${cleaned}`, isFullJaw: false });
-            if (!isPackageService(d.serviceId)) {
-                d.qty = d.teeth.filter(t => !t.isFullJaw).length || 1;
+        openFdiToothPopover(anchorEl || document.getElementById('barSection4'), (selectedArr) => {
+            if (!Array.isArray(selectedArr) || selectedArr.length === 0) {
+                showToast('Mỗi bước phải áp dụng cho ít nhất 1 răng/phạm vi.', 'warning');
+                return;
             }
-        }
-        if (!sp.activeTeeth) sp.activeTeeth = [];
-        if (!sp.activeTeeth.includes(cleaned)) {
-            sp.activeTeeth.push(cleaned);
-        }
-        sp.qty = sp.activeTeeth.length;
-        renderAll();
+            const isPkg = isPackageService(d.serviceId);
+            selectedArr.forEach(num => {
+                const isFullJaw = (num === 'Toàn hàm');
+                if (!d.teeth.some(t => t.num === num)) {
+                    d.teeth.push({
+                        num: num,
+                        surf: '',
+                        disp: isFullJaw ? 'Toàn hàm' : `R-${num}`,
+                        isFullJaw: isFullJaw
+                    });
+                }
+            });
+            if (!isPkg) {
+                const fdiCount = d.teeth.filter(t => !t.isFullJaw).length;
+                if (fdiCount > 0) d.qty = fdiCount;
+            }
+            sp.activeTeeth = [...selectedArr];
+            sp.qty = isPkg ? (d.qty || 1) : sp.activeTeeth.length;
+            renderAll();
+        }, sp.activeTeeth || []);
     }
 
     function toggleStepTooth(id, sIdx, spIdx, num) {
@@ -2553,7 +2770,7 @@
         const i = sp.activeTeeth.indexOf(num);
         if (i >= 0) {
             if (sp.activeTeeth.length === 1) {
-                alert('Mỗi bước phải áp dụng cho ít nhất 1 răng/phạm vi.');
+                showToast('Mỗi bước phải áp dụng cho ít nhất 1 răng/phạm vi.', 'warning');
                 return;
             }
             sp.activeTeeth.splice(i, 1);
@@ -2595,13 +2812,13 @@
         const uLabel = getServiceUnitLabel(d.serviceId);
 
         if (String(val).includes('.') || String(val).includes(',')) {
-            alert('Số lượng phải là số nguyên (1, 2...), không được nhập số lẻ.');
+            showToast('Số lượng phải là số nguyên (1, 2...), không được nhập số lẻ.', 'warning');
         }
 
         let num = Math.round(parseFloat(val));
         if (isNaN(num) || num < 1) num = 1;
         if (!isPackage && num > maxT) {
-            alert(`Số lượng không được vượt quá ${maxT} ${uLabel}.`);
+            showToast(`Số lượng không được vượt quá ${maxT} ${uLabel}.`, 'warning');
             num = maxT;
         }
         d.stages[sIdx].steps[spIdx].qty = num;
@@ -2651,7 +2868,7 @@
         const d = PLAN_SERVICES.find(x => x.id === id);
         if (!d || !d.stages[sIdx] || !d.stages[sIdx].steps[spIdx]) return;
         if (d.stages[sIdx].steps[spIdx].isLocked) {
-            alert('Không thể xóa bước thủ thuật đang thực hiện hoặc đã hoàn thành trong ca khám!');
+            showToast('Không thể xóa bước thủ thuật đang thực hiện hoặc đã hoàn thành trong ca khám!', 'warning');
             return;
         }
         d.stages[sIdx].steps.splice(spIdx, 1);
@@ -2718,11 +2935,11 @@
         const d = PLAN_SERVICES.find(x => x.id === id);
         if (!d || !d.stages[sIdx]) return;
         if ((d.stages[sIdx].steps || []).some(sp => sp.isLocked)) {
-            alert('Không thể xóa giai đoạn có bước đã thực hiện trong ca khám!');
+            showToast('Không thể xóa giai đoạn có bước đã thực hiện trong ca khám!', 'warning');
             return;
         }
         if (d.stages.length <= 1) {
-            alert('Mỗi dịch vụ cần ít nhất 1 giai đoạn điều trị.');
+            showToast('Mỗi dịch vụ cần ít nhất 1 giai đoạn điều trị.', 'warning');
             return;
         }
         d.stages.splice(sIdx, 1);
@@ -2803,7 +3020,7 @@
         if (startInp) startInp.value = startStr;
 
         recalculatePlanEndDate();
-        populateServiceDropdown('');
+        renderServiceComboItems('');
         renderCommonIcdChips();
         renderServiceSuggestionsBar();
 
@@ -2993,7 +3210,7 @@
         }
         updateToggleAllBtnLabel();
         if (!editPlanId && PLAN_SERVICES.length === 0) {
-            document.getElementById('serviceSearchInput')?.focus();
+            document.getElementById('serviceComboInput')?.focus();
         }
     });
 
@@ -3319,7 +3536,8 @@
             showInlineBanner('Vui lòng chọn ít nhất 1 dịch vụ ở Bước 2 trước khi lưu kế hoạch điều trị.', 'error');
             const bar2 = document.getElementById('barSection2');
             if (bar2 && !bar2.classList.contains('is-expanded')) toggleSection('2');
-            document.getElementById('quickAddServiceSelect')?.focus();
+            document.getElementById('serviceComboInput')?.focus();
+            openServiceCombo();
             return;
         }
 
@@ -3452,13 +3670,17 @@
                     window.location.href = `/doctor/examination/${CURRENT_VISIT_TOKEN}/diagnoses#tab-treatment-plan`;
                 }, 700);
             } else {
-                alert('Lỗi lưu kế hoạch: ' + (result.message || 'Không thể lưu vào cơ sở dữ liệu!'));
+                const errMsg = 'Lỗi lưu kế hoạch: ' + (result.message || 'Không thể lưu vào cơ sở dữ liệu!');
+                showToast(errMsg, 'error');
+                showInlineBanner(errMsg, 'error');
                 btnSave.disabled = false;
                 btnSave.innerHTML = defaultBtnHtml;
             }
         } catch (err) {
             console.error('Lỗi khi gửi yêu cầu lưu phác đồ:', err);
-            alert('Lỗi kết nối máy chủ khi lưu kế hoạch điều trị: ' + err.message);
+            const connErrMsg = 'Lỗi kết nối máy chủ khi lưu kế hoạch điều trị: ' + err.message;
+            showToast(connErrMsg, 'error');
+            showInlineBanner(connErrMsg, 'error');
             btnSave.disabled = false;
             btnSave.innerHTML = defaultBtnHtml;
         }

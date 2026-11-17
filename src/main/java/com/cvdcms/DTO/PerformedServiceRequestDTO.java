@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @Builder
@@ -40,4 +41,14 @@ public class PerformedServiceRequestDTO {
     private String clinicalNotes;
 
     private Long planItemId;
+
+    private List<MaterialUsageDTO> consumedMaterials;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class MaterialUsageDTO {
+        private Long materialId;
+        private BigDecimal quantity;
+    }
 }

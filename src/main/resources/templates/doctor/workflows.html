@@ -47,14 +47,14 @@
                 }
 
                 .dv-page-title {
-                    font-size: 26px;
+                    font-size: 24px;
                     font-weight: 800;
                     color: #0f172a;
                     letter-spacing: -0.5px;
                     display: flex;
                     align-items: center;
-                    gap: 12px;
-                    margin-bottom: 4px;
+                    gap: 10px;
+                    margin-bottom: 0;
                 }
 
                 .dv-kpi-card {
@@ -519,38 +519,40 @@
             </style>
 
             <!-- ========================================================================= -->
-            <!-- 1. TIÊU ĐỀ TRANG & NÚT HÀNH ĐỘNG                                          -->
+            <!-- 1. TIÊU ĐỀ TRANG & NÚT HÀNH ĐỘNG (ĐỒNG BỘ HEADER CHUẨN HỆ THỐNG)          -->
             <!-- ========================================================================= -->
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-                <div>
-
-                    <h1 class="dv-page-title">
-                        <span class="d-inline-flex align-items-center justify-content-center rounded-3 text-white shadow-sm"
-                              style="width: 42px; height: 42px; background: linear-gradient(135deg, #0284c7, #1d4ed8); font-size: 20px;">
-                            <i class="bi bi-journal-medical"></i>
-                        </span>
-                        <span>Quy trình Kỹ thuật Lâm sàng</span>
-                        <span class="badge rounded-pill px-2.5 py-1 text-white shadow-xs" style="background: linear-gradient(135deg, #ef4444, #dc2626); font-size: 11px; font-weight: 800; letter-spacing: 0.5px;">MOH BYT</span>
-                    </h1>
-                    <p class="text-muted small mb-0 d-flex align-items-center gap-1.5" style="margin-top: 4px;">
-                        <i class="bi bi-shield-check text-success"></i>
-                        <span>Chuẩn Hướng dẫn Quy trình Kỹ thuật Khám chữa bệnh chuyên ngành Răng Hàm Mặt (Quyết định số 3207/QĐ-BYT)</span>
-                    </p>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dv-header-icon"
+                        style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
+                        <i class="bi bi-journal-medical"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <h1 class="dv-page-title mb-0">Quy trình Kỹ thuật Lâm sàng</h1>
+                            <span class="badge rounded-pill px-2 py-1 text-white shadow-sm"
+                                style="background: linear-gradient(135deg, #ef4444, #dc2626); font-size: 11px; font-weight: 800; letter-spacing: 0.5px;">MOH BYT</span>
+                        </div>
+                        <p class="dv-page-subtitle mb-0">
+                            <i class="bi bi-shield-check text-success me-1"></i>Chuẩn Hướng dẫn Quy trình Kỹ thuật Khám chữa bệnh chuyên ngành Răng Hàm Mặt (Quyết định số 3207/QĐ-BYT)
+                        </p>
+                    </div>
                 </div>
 
-                <div class="d-flex align-items-center gap-2.5 flex-wrap">
-                    <button type="button" class="btn btn-white bg-white border fw-bold px-3.5 py-2 rounded-3 shadow-xs d-inline-flex align-items-center gap-2"
-                            style="font-size: 14px; border-color: #cbd5e1 !important;" onclick="fetchWorkflows()">
-                        <i class="bi bi-arrow-clockwise text-primary fs-6"></i>
+                <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                    <button type="button"
+                        class="btn btn-outline-secondary bg-white fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                        style="font-size: 14px;" onclick="fetchWorkflows()">
+                        <i class="bi bi-arrow-clockwise text-primary"></i>
                         <span>Làm mới dữ liệu</span>
                     </button>
-
-                    <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-
-                    <button type="button" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
-                            style="font-size: 14.5px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;" onclick="openAddWorkflowModal()">
+                    <button type="button"
+                        class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                        style="font-size: 14px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;"
+                        onclick="openAddWorkflowModal()">
                         <i class="bi bi-plus-lg"></i>
-                        <span>+ Thêm quy trình mới</span>
+                        <span>Thêm quy trình mới</span>
                     </button>
                 </div>
             </div>

@@ -263,7 +263,7 @@ public class DoctorRecordPageController {
     public String edit(HttpSession session, @PathVariable String patientRef) {
         Long id = decodePatientRef(patientRef);
         records.get(session, id);
-        return "redirect:/reception/patients/" + id + "/edit";
+        return "redirect:/reception/patients/" + encodePatient(id) + "/edit";
     }
 
     @PostMapping("/{patientRef}/documents")

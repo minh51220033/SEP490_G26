@@ -55,9 +55,17 @@
                     transition: all 0.2s ease;
                     width: 100%;
                 }
+                .df-unified-header {
+                    position: sticky;
+                    top: 0;
+                    z-index: 25;
+                    background: #ffffff;
+                    border-bottom: 1px solid #e2e8f0;
+                    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+                }
                 .df-tb-input:focus {
-                    border-color: #2b50aa;
-                    box-shadow: 0 0 0 3px rgba(43, 80, 170, 0.12);
+                    border-color: #0284c7;
+                    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
                 }
                 .df-tb-search-icon {
                     position: absolute;
@@ -105,15 +113,15 @@
                     border-color: #9ca3af;
                 }
                 .df-tb-btn-primary {
-                    background-color: #2b50aa;
-                    border: 1px solid #2b50aa;
+                    background-color: #0284c7;
+                    border: 1px solid #0284c7;
                     color: #ffffff;
                     font-weight: 600;
                     box-shadow: 0 1px 2px rgba(0,0,0,0.06);
                 }
                 .df-tb-btn-primary:hover {
-                    background-color: #1e3a8a;
-                    border-color: #1e3a8a;
+                    background-color: #0369a1;
+                    border-color: #0369a1;
                     color: #ffffff;
                 }
                 .df-tb-select {
@@ -137,8 +145,8 @@
                     background-position: right 10px center;
                 }
                 .df-tb-select:focus {
-                    border-color: #2b50aa;
-                    box-shadow: 0 0 0 3px rgba(43, 80, 170, 0.12);
+                    border-color: #0284c7;
+                    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
                 }
 
                 /* CHẾ ĐỘ CHỈ XEM (READ-ONLY) CHO CHI TIẾT LƯỢT KHÁM TỪ HỒ SƠ BỆNH NHÂN */
@@ -298,7 +306,7 @@
                 .df-tab-title-standard i,
                 .df-session-title i,
                 .df-foldable-bar i.df-foldable-chevron {
-                    color: #2b50aa !important;
+                    color: #0284c7 !important;
                     font-size: 16px;
                 }
                 .df-tab-title-standard .df-tab-subtitle-text {
@@ -315,64 +323,65 @@
             <!-- 1. UNIFIED PATIENT & RECORD HEADER (GỘP THỐNG NHẤT, GỌN GÀNG) -->
             <!-- ========================================================= -->
             <div class="df-unified-header">
-                <!-- HÀNG 1: BREADCRUMB & THANH TÌM KIẾM BỆNH NHÂN -->
-                                <!-- HÀNG 1: BREADCRUMB & THANH CÔNG CỤ ĐIỀU PHỐI CƠ SỞ (DEMO) THEO CHUẨN MẪU -->
-                <div class="df-unified-top-bar d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 border-bottom bg-white">
-                    <!-- THONG BAO CANH BAO TU FLASH ATTRIBUTE -->
-                    <div th:if="${errorMessage != null}" class="w-100 alert alert-warning border-0 shadow-sm rounded-3 d-flex align-items-center gap-2 mb-2 px-3 py-2" style="background: #fffbeb; border-left: 4px solid #f59e0b !important;">
-                        <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0"></i>
-                        <div class="fw-semibold text-dark small" th:text="${errorMessage}">Cảnh báo quyền truy cập</div>
-                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <!-- Nút mở menu sidebar trên thiết bị di động / màn hình nhỏ -->
-                        <button type="button" class="btn btn-sm btn-light border d-lg-none py-1 px-2 text-primary fw-bold"
-                                data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
-                            <i class="bi bi-list fs-6"></i>
-                        </button>
-                        <!-- BREADCRUMB PHÂN CẤP CHUẨN BOOTSTRAP (MÀU XANH ĐEN THƯƠNG HIỆU) -->
-                        <nav aria-label="breadcrumb" class="df-exam-breadcrumb-nav mb-0" th:if="${isReadOnlyView == true}">
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
-                                <li class="breadcrumb-item">
-                                    <a th:href="${patientRecordBackUrl != null ? patientRecordBackUrl : (patientToken != null ? '/doctor/patient-records/' + patientToken + '#tab-treatment' : (fromPatientId != null ? '/doctor/patient-records/' + idCodec.encodePatient(fromPatientId) + '#tab-treatment' : (patient != null ? '/doctor/patient-records/' + idCodec.encodePatient(patient.profileId) + '#tab-treatment' : '/doctor/patient-records')))}">Hồ sơ bệnh nhân</a>
-                                </li>
-                                <li class="breadcrumb-item" th:if="${patient != null and patient.patientCode != null}">
-                                    <span th:text="${patient.patientCode}">---</span>
-                                </li>
-                                <li class="breadcrumb-item active" aria-current="page">
-                                    Chi tiết lượt khám (<span th:text="${visit != null ? visit.visitCode : ''}">VIS</span>)
-                                </li>
-                            </ol>
-                        </nav>
-                        <nav aria-label="breadcrumb" class="df-exam-breadcrumb-nav mb-0" th:unless="${isReadOnlyView == true}">
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
-                                <li class="breadcrumb-item"><a th:href="@{/doctor/daily-visits}">DS Khám</a></li>
-                                <li class="breadcrumb-item">
-                                    <a th:href="${visitToken != null ? '/doctor/examination/' + visitToken + '/diagnoses' : (visit != null ? '/doctor/examination/' + idCodec.encodeVisit(visit.visitId) + '/diagnoses' : '/doctor/examination')}">Bàn khám bệnh</a>
-                                </li>
-                                <li class="breadcrumb-item active" aria-current="page" id="breadcrumbActiveTab">Khám &amp; Điều trị</li>
-                            </ol>
-                        </nav>
-                    </div>
+                <!-- HÀNG 1: BREADCRUMB & THANH CÔNG CỤ ĐIỀU PHỐI CƠ SỞ -->
+                <div class="df-unified-top-bar px-3 py-2 border-bottom bg-white">
+                    <div class="df-exam-bound d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <!-- THONG BAO CANH BAO TU FLASH ATTRIBUTE -->
+                        <div th:if="${errorMessage != null}" class="w-100 alert alert-warning border-0 shadow-sm rounded-3 d-flex align-items-center gap-2 mb-2 px-3 py-2" style="background: #fffbeb; border-left: 4px solid #f59e0b !important;">
+                            <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0"></i>
+                            <div class="fw-semibold text-dark small" th:text="${errorMessage}">Cảnh báo quyền truy cập</div>
+                            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <!-- Nút mở menu sidebar trên thiết bị di động / màn hình nhỏ -->
+                            <button type="button" class="btn btn-sm btn-light border d-lg-none py-1 px-2 text-primary fw-bold"
+                                    data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
+                                <i class="bi bi-list fs-6"></i>
+                            </button>
+                            <!-- BREADCRUMB PHÂN CẤP CHUẨN BOOTSTRAP -->
+                            <nav aria-label="breadcrumb" class="df-exam-breadcrumb-nav mb-0" th:if="${isReadOnlyView == true}">
+                                <ol class="breadcrumb mb-0">
+                                    <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+                                    <li class="breadcrumb-item">
+                                        <a th:href="${patientRecordBackUrl != null ? patientRecordBackUrl : (patientToken != null ? '/doctor/patient-records/' + patientToken + '#tab-treatment' : (fromPatientId != null ? '/doctor/patient-records/' + idCodec.encodePatient(fromPatientId) + '#tab-treatment' : (patient != null ? '/doctor/patient-records/' + idCodec.encodePatient(patient.profileId) + '#tab-treatment' : '/doctor/patient-records')))}">Hồ sơ bệnh nhân</a>
+                                    </li>
+                                    <li class="breadcrumb-item" th:if="${patient != null and patient.patientCode != null}">
+                                        <span th:text="${patient.patientCode}">---</span>
+                                    </li>
+                                    <li class="breadcrumb-item active" aria-current="page">
+                                        Chi tiết lượt khám (<span th:text="${visit != null ? visit.visitCode : ''}">VIS</span>)
+                                    </li>
+                                </ol>
+                            </nav>
+                            <nav aria-label="breadcrumb" class="df-exam-breadcrumb-nav mb-0" th:unless="${isReadOnlyView == true}">
+                                <ol class="breadcrumb mb-0">
+                                    <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+                                    <li class="breadcrumb-item"><a th:href="@{/doctor/daily-visits}">DS Khám</a></li>
+                                    <li class="breadcrumb-item">
+                                        <a th:href="${visitToken != null ? '/doctor/examination/' + visitToken + '/diagnoses' : (visit != null ? '/doctor/examination/' + idCodec.encodeVisit(visit.visitId) + '/diagnoses' : '/doctor/examination')}">Bàn khám bệnh</a>
+                                    </li>
+                                    <li class="breadcrumb-item active" aria-current="page" id="breadcrumbActiveTab">Khám &amp; Điều trị</li>
+                                </ol>
+                            </nav>
+                        </div>
 
-                    <!-- THANH CÔNG CỤ KHI Ở CHẾ ĐỘ CHỈ XEM CHI TIẾT LƯỢT KHÁM -->
-                    <div class="d-flex align-items-center gap-2" th:if="${isReadOnlyView == true}">
-                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-2 rounded-pill fw-bold">
-                            <i class="bi bi-eye-fill me-1"></i>Chế độ Chỉ xem (Không chỉnh sửa)
-                        </span>
-                    </div>
+                        <!-- THANH CÔNG CỤ KHI Ở CHẾ ĐỘ CHỈ XEM CHI TIẾT LƯỢT KHÁM -->
+                        <div class="d-flex align-items-center gap-2" th:if="${isReadOnlyView == true}">
+                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-2 rounded-pill fw-bold">
+                                <i class="bi bi-eye-fill me-1"></i>Chế độ Chỉ xem (Không chỉnh sửa)
+                            </span>
+                        </div>
 
-                    <!-- THANH CÔNG CỤ -->
-                    <div class="df-clinic-toolbar d-flex align-items-center flex-wrap gap-2" th:unless="${isReadOnlyView == true}">
-                        <!-- Dropdown Cơ sở chuẩn DentalSoft -->
-                        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                        <!-- THANH CÔNG CỤ -->
+                        <div class="df-clinic-toolbar d-flex align-items-center flex-wrap gap-2" th:unless="${isReadOnlyView == true}">
+                            <!-- Dropdown Cơ sở chuẩn DentalSoft -->
+                            <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- MÀN HÌNH RỖNG KHI CƠ SỞ CHƯA CÓ CA KHÁM NÀO -->
-                <div th:if="${visit == null}" class="p-5 my-5 text-center">
+                <div th:if="${visit == null}" class="df-exam-bound p-5 my-5 text-center">
                     <div class="mb-3">
                         <div class="d-inline-flex align-items-center justify-content-center rounded-circle"
                              style="width: 80px; height: 80px; background: #f8fafc; color: #94a3b8; font-size: 38px; border: 2px dashed #cbd5e1;">
@@ -395,158 +404,178 @@
 
                 <th:block th:if="${visit != null}">
                 <!-- HÀNG 2: THÔNG TIN HỒ SƠ BỆNH NHÂN & TÀI CHÍNH -->
-                <div class="p-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="df-avatar-circle"
-                             th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? #strings.substring(patient.fullName, 0, 1) : 'BN'}">
-                            NA
-                        </div>
-                        <div>
-                            <div class="d-flex align-items-center gap-2">
-                                <h4 class="mb-0 fw-bold text-dark"
-                                    th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? patient.fullName : 'Bệnh nhân mẫu 1'}">
-                                    Nguyễn Văn An
-                                </h4>
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle"
-                                      th:text="${'Mã KH: ' + (patient != null and patient.patientCode != null ? patient.patientCode : '---')}">---</span>
-                                <span th:if="${visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}"
-                                      class="badge bg-warning-subtle text-warning-emphasis border border-warning rounded-pill">
-                                    <i class="bi bi-hourglass-split me-1"></i>Chờ thanh toán (Khóa BR-EMR-02)
-                                </span>
-                                <span th:if="${visit.status != null and visit.status.name() == 'COMPLETED'}"
-                                      class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
-                                    <i class="bi bi-check-circle-fill me-1"></i>Đã hoàn tất ca khám
-                                </span>
-                                <span th:if="${visit.status != null and visit.status.name() == 'IN_EXAM'}"
-                                      class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill">
-                                    <i class="bi bi-stethoscope me-1"></i>Đang khám
-                                </span>
+                <div class="p-3">
+                    <div class="df-exam-bound d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="df-avatar-circle"
+                                 th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? #strings.substring(patient.fullName, 0, 1) : 'BN'}">
+                                NA
                             </div>
-                            <!-- DẢI THÔNG TIN LÂM SÀNG LIỀN MẠCH -->
-                            <div class="d-flex flex-wrap align-items-center gap-2 mt-1 text-muted small">
-                                <span><i class="bi bi-telephone text-secondary"></i> <strong th:text="${patient != null and patient.phoneNumber != null ? patient.phoneNumber : '---'}">0900000001</strong></span>
-                                <span th:if="${patient != null and patient.gender != null}"><span class="text-secondary opacity-50">•</span> Giới tính: <strong class="text-dark" th:text="${patient.gender}">Nam</strong></span>
-                                <span th:if="${patient != null and patient.dob != null}"><span class="text-secondary opacity-50">•</span> Ngày sinh: <strong class="text-dark" th:text="${#temporals.format(patient.dob, 'dd/MM/yyyy')}">20/05/1995</strong></span>
-                                <span th:if="${visit.primaryDoctor != null and visit.primaryDoctor.fullName != null}"><span class="text-secondary opacity-50">•</span> Bác sĩ: <strong class="text-primary" th:text="${visit.primaryDoctor.fullName}">Bác sĩ mẫu 1</strong></span>
-                                <span th:if="${visit.visitCode != null}"><span class="text-secondary opacity-50">•</span> Mã ca: <strong class="text-dark" th:text="${visit.visitCode}">VIS-MAU-01</strong></span>
-                                <span th:if="${visit.branch != null and visit.branch.branchName != null}"><span class="text-secondary opacity-50">•</span> Cơ sở: <span class="text-dark" th:text="${visit.branch.branchName}">Cơ sở mẫu 1</span></span>
+                            <div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h4 class="mb-0 fw-bold text-dark"
+                                        th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? patient.fullName : 'Bệnh nhân mẫu 1'}">
+                                        Nguyễn Văn An
+                                    </h4>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle df-num"
+                                          th:text="${'Mã KH: ' + (patient != null and patient.patientCode != null ? patient.patientCode : '---')}">---</span>
+                                    <span th:if="${visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}"
+                                          class="badge bg-warning-subtle text-warning-emphasis border border-warning rounded-pill">
+                                        <i class="bi bi-hourglass-split me-1"></i>Chờ thanh toán (Khóa BR-EMR-02)
+                                    </span>
+                                    <span th:if="${visit.status != null and visit.status.name() == 'COMPLETED'}"
+                                          class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Đã hoàn tất ca khám
+                                    </span>
+                                    <span th:if="${visit.status != null and visit.status.name() == 'IN_EXAM'}"
+                                          class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill">
+                                        <i class="bi bi-stethoscope me-1"></i>Đang khám
+                                    </span>
+                                </div>
+                                <!-- DẢI THÔNG TIN LÂM SÀNG LIỀN MẠCH -->
+                                <div class="d-flex flex-wrap align-items-center gap-2 mt-1 text-muted small df-num">
+                                    <span><i class="bi bi-telephone text-secondary"></i> <strong th:text="${patient != null and patient.phoneNumber != null ? patient.phoneNumber : '---'}">0900000001</strong></span>
+                                    <span th:if="${patient != null and patient.gender != null}"><span class="text-secondary opacity-50">•</span> Giới tính: <strong class="text-dark" th:text="${patient.gender}">Nam</strong></span>
+                                    <span th:if="${patient != null and patient.dob != null}"><span class="text-secondary opacity-50">•</span> Ngày sinh: <strong class="text-dark" th:text="${#temporals.format(patient.dob, 'dd/MM/yyyy')}">20/05/1995</strong></span>
+                                    <span th:if="${visit.primaryDoctor != null and visit.primaryDoctor.fullName != null}"><span class="text-secondary opacity-50">•</span> Bác sĩ: <strong class="text-primary" th:text="${visit.primaryDoctor.fullName}">Bác sĩ mẫu 1</strong></span>
+                                    <span th:if="${visit.visitCode != null}"><span class="text-secondary opacity-50">•</span> Mã ca: <strong class="text-dark" th:text="${visit.visitCode}">VIS-MAU-01</strong></span>
+                                    <span th:if="${visit.branch != null and visit.branch.branchName != null}"><span class="text-secondary opacity-50">•</span> Cơ sở: <span class="text-dark" th:text="${visit.branch.branchName}">Cơ sở mẫu 1</span></span>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- NÚT CHUYÊN MÔN HOÀN TẤT KHÁM & BÀN GIAO SANG KẾ TOÁN (TÁCH BIỆT CHUYÊN MÔN & TÀI CHÍNH) -->
-                    <div class="d-flex flex-column align-items-end gap-1" th:if="${isReadOnlyView == true}">
-                        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 rounded-pill fw-semibold d-inline-flex align-items-center gap-2">
-                                <i class="bi bi-lock-fill"></i>
-                                <span>Chế độ chỉ xem chi tiết lượt khám</span>
-                            </span>
-                            <a th:href="${patientToken != null ? '/doctor/patient-records/' + patientToken + '#emr' : (fromPatientId != null ? '/doctor/patient-records/' + idCodec.encodePatient(fromPatientId) + '#emr' : (patient != null ? '/doctor/patient-records/' + idCodec.encodePatient(patient.profileId) + '#emr' : (visit != null and visit.patientProfile != null ? '/doctor/patient-records/' + idCodec.encodePatient(visit.patientProfile.profileId) + '#emr' : '/doctor/patient-records')))}"
-                               class="btn btn-outline-primary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2"
-                               title="Xem bệnh án điện tử EMR của bệnh nhân">
-                                <i class="bi bi-file-earmark-medical text-primary"></i>
-                                <span>Bệnh án EMR</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="d-flex flex-column align-items-end gap-1" th:unless="${isReadOnlyView == true}">
-                        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-                            <th:block th:if="${visit.status == null or (visit.status.name() != 'WAITING_PAYMENT' and visit.status.name() != 'COMPLETED')}">
-                                <button type="button" id="btnDirectHandover"
-                                        class="btn btn-primary rounded-pill px-4 py-2 fw-bold d-inline-flex align-items-center gap-2 shadow-sm text-white"
-                                        style="background: #0284c7; border-color: #0284c7;"
-                                        th:data-visit-id="${visit.visitId}"
-                                        onclick="confirmDirectHandover(this.getAttribute('data-visit-id'))"
-                                        title="Hoàn tất ca khám lâm sàng và khóa hồ sơ bệnh án (BR-EMR-02)">
-                                    <i class="bi bi-check2-circle fs-5"></i>
-                                    <span>Hoàn tất khám</span>
-                                </button>
-                            </th:block>
-
-                            <th:block th:if="${visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}">
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1"
-                                        th:data-visit-id="${visit.visitId}"
-                                        onclick="reopenClinicalExamination(this.getAttribute('data-visit-id'))"
-                                        title="Mở lại ca khám để bổ sung/sửa đổi nếu Kế toán chưa thu tiền">
-                                    <i class="bi bi-unlock text-secondary"></i>
-                                    <span>Mở lại khám</span>
-                                </button>
-                            </th:block>
-
-                            <th:block th:if="${visit.status != null and visit.status.name() == 'COMPLETED'}">
-                                <a th:href="@{/emr/records(query=${visit.visitCode})}"
+                        <!-- NÚT CHUYÊN MÔN HOÀN TẤT KHÁM & BÀN GIAO SANG KẾ TOÁN -->
+                        <div class="d-flex flex-column align-items-end gap-1" th:if="${isReadOnlyView == true}">
+                            <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 rounded-pill fw-semibold d-inline-flex align-items-center gap-2">
+                                    <i class="bi bi-lock-fill"></i>
+                                    <span>Chế độ chỉ xem chi tiết lượt khám</span>
+                                </span>
+                                <a th:href="${patientToken != null ? '/doctor/patient-records/' + patientToken + '#emr' : (fromPatientId != null ? '/doctor/patient-records/' + idCodec.encodePatient(fromPatientId) + '#emr' : (patient != null ? '/doctor/patient-records/' + idCodec.encodePatient(patient.profileId) + '#emr' : (visit != null and visit.patientProfile != null ? '/doctor/patient-records/' + idCodec.encodePatient(visit.patientProfile.profileId) + '#emr' : '/doctor/patient-records')))}"
                                    class="btn btn-outline-primary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2"
-                                   title="Xem hoặc tạo bệnh án điện tử EMR cho ca khám này">
+                                   title="Xem bệnh án điện tử EMR của bệnh nhân">
                                     <i class="bi bi-file-earmark-medical text-primary"></i>
                                     <span>Bệnh án EMR</span>
                                 </a>
-                                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-semibold d-inline-flex align-items-center gap-2">
-                                    <i class="bi bi-check-circle-fill text-success"></i>
-                                    <span>Đã hoàn tất ca khám</span>
-                                </span>
-                            </th:block>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-column align-items-end gap-1" th:unless="${isReadOnlyView == true}">
+                            <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                                <th:block th:if="${visit.status == null or (visit.status.name() != 'WAITING_PAYMENT' and visit.status.name() != 'COMPLETED')}">
+                                    <button type="button" id="btnDirectHandover"
+                                            class="btn btn-primary rounded-pill px-4 py-2 fw-bold d-inline-flex align-items-center gap-2 shadow-sm text-white"
+                                            style="background: #0284c7; border-color: #0284c7;"
+                                            th:data-visit-id="${visit.visitId}"
+                                            onclick="confirmDirectHandover(this.getAttribute('data-visit-id'))"
+                                            title="Hoàn tất ca khám lâm sàng và khóa hồ sơ bệnh án (BR-EMR-02)">
+                                        <i class="bi bi-check2-circle fs-5"></i>
+                                        <span>Hoàn tất khám</span>
+                                    </button>
+                                </th:block>
+
+                                <th:block th:if="${visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1"
+                                            th:data-visit-id="${visit.visitId}"
+                                            onclick="reopenClinicalExamination(this.getAttribute('data-visit-id'))"
+                                            title="Mở lại ca khám để bổ sung/sửa đổi nếu Kế toán chưa thu tiền">
+                                        <i class="bi bi-unlock text-secondary"></i>
+                                        <span>Mở lại khám</span>
+                                    </button>
+                                </th:block>
+
+                                <th:block th:if="${visit.status != null and visit.status.name() == 'COMPLETED'}">
+                                    <a th:href="@{/emr/records(query=${visit.visitCode})}"
+                                       class="btn btn-outline-primary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2"
+                                       title="Xem hoặc tạo bệnh án điện tử EMR cho ca khám này">
+                                        <i class="bi bi-file-earmark-medical text-primary"></i>
+                                        <span>Bệnh án EMR</span>
+                                    </a>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-semibold d-inline-flex align-items-center gap-2">
+                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                        <span>Đã hoàn tất ca khám</span>
+                                    </span>
+                                </th:block>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- DẢI CẢNH BÁO Y KHOA: DỊ ỨNG & BỆNH NỀN CỐ ĐỊNH Ở ĐẦU MÀN BÁC SĨ (CHUẨN FT03 & FT14) -->
-                <div class="px-3 py-2 bg-danger-subtle border-top border-bottom border-danger-subtle text-danger d-flex align-items-center justify-content-between gap-2"
+                <!-- DẢI CẢNH BÁO Y KHOA: DỊ ỨNG & BỆNH NỀN CỐ ĐỊNH Ở ĐẦU MÀN BÁC SĨ -->
+                <div class="px-3 py-2 bg-danger-subtle border-top border-bottom border-danger-subtle text-danger"
                      th:if="${patient != null and ((patient.allergyDetails != null and !patient.allergyDetails.isBlank()) or (patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()))}">
-                    <div class="d-flex align-items-center gap-2 small">
-                        <i class="bi bi-exclamation-octagon-fill text-danger fs-6"></i>
-                        <strong class="text-danger-emphasis">CẢNH BÁO Y KHOA:</strong>
-                        <span th:if="${patient.allergyDetails != null and !patient.allergyDetails.isBlank()}">
-                            <strong>Dị ứng:</strong> <span th:text="${patient.allergyDetails}"></span>
-                        </span>
-                        <span th:if="${patient.allergyDetails != null and !patient.allergyDetails.isBlank() and patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()}" class="text-secondary opacity-50">•</span>
-                        <span th:if="${patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()}">
-                            <strong>Bệnh nền:</strong> <span th:text="${patient.underlyingDiseaseDetails}"></span>
-                        </span>
+                    <div class="df-exam-bound d-flex align-items-center justify-content-between gap-2">
+                        <div class="d-flex align-items-center gap-2 small">
+                            <i class="bi bi-exclamation-octagon-fill text-danger fs-6"></i>
+                            <strong class="text-danger-emphasis">CẢNH BÁO Y KHOA:</strong>
+                            <span th:if="${patient.allergyDetails != null and !patient.allergyDetails.isBlank()}">
+                                <strong>Dị ứng:</strong> <span th:text="${patient.allergyDetails}"></span>
+                            </span>
+                            <span th:if="${patient.allergyDetails != null and !patient.allergyDetails.isBlank() and patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()}" class="text-secondary opacity-50">•</span>
+                            <span th:if="${patient.underlyingDiseaseDetails != null and !patient.underlyingDiseaseDetails.isBlank()}">
+                                <strong>Bệnh nền:</strong> <span th:text="${patient.underlyingDiseaseDetails}"></span>
+                            </span>
+                        </div>
+                        <span class="badge bg-danger text-white text-uppercase" style="font-size: 10px;">Lưu ý an toàn lâm sàng</span>
                     </div>
-                    <span class="badge bg-danger text-white text-uppercase" style="font-size: 10px;">Lưu ý an toàn lâm sàng</span>
                 </div>
-                <!-- HÀNG 3: THANH TAB ĐIỀU HƯỚNG GẮN LIỀN VÀO ĐÁY PANEL (CÓ CUỘN NGANG & HIỆU ỨNG 1S) -->
+                <!-- HÀNG 3: THANH TAB ĐIỀU HƯỚNG GẮN LIỀN VÀO ĐÁY PANEL -->
                 <div class="df-subnav-container">
-                    <button type="button" class="df-subnav-arrow df-subnav-arrow-left" onclick="scrollSubnav(-200)" aria-label="Cuộn trái">
-                        <i class="bi bi-chevron-left"></i>
-                    </button>
+                    <div class="df-exam-bound position-relative d-flex align-items-center">
+                        <button type="button" class="df-subnav-arrow df-subnav-arrow-left" onclick="scrollSubnav(-200)" aria-label="Cuộn trái">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
 
-                    <nav class="df-subnav" id="mainSubnav">
-                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-patient-info" onclick="switchMainTab('tab-patient-info', this)">
-                            <i class="bi bi-person-lines-fill"></i> Thông tin bệnh nhân
-                        </a>
-                        <a href="javascript:void(0)" class="df-subnav-item active" data-tab="tab-examination" onclick="switchMainTab('tab-examination', this)">
-                            <i class="bi bi-heart-pulse-fill"></i> Khám &amp; Điều trị
-                        </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-treatment-plan" onclick="switchMainTab('tab-treatment-plan', this)">
-                            <i class="bi bi-diagram-3"></i> Kế hoạch điều trị
-                        </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-prescriptions" onclick="switchMainTab('tab-prescriptions', this)">
-                            <i class="bi bi-capsule"></i> Đơn thuốc
-                        </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-appointments" onclick="switchMainTab('tab-appointments', this)">
-                            <i class="bi bi-calendar-event"></i> Lịch hẹn
-                        </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-customer-care" onclick="switchMainTab('tab-customer-care', this)">
-                            <i class="bi bi-chat-heart"></i> Chăm sóc
-                        </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-performed-services" onclick="switchMainTab('tab-performed-services', this)">
-                            <i class="bi bi-tools"></i> Dịch vụ thực hiện
-                        </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-labo" onclick="switchMainTab('tab-labo', this)">
-                            <i class="bi bi-box-seam"></i> Đặt xưởng
-                        </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-clinical-photos" onclick="switchMainTab('tab-clinical-photos', this)">
-                            <i class="bi bi-images"></i> Film ảnh
-                        </a>
-                        <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-instructions" onclick="switchMainTab('tab-instructions', this)">
-                            <i class="bi bi-card-checklist"></i> Lời dặn
-                        </a>
-                    </nav>
+                        <nav class="df-subnav" id="mainSubnav">
+                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-patient-info" onclick="switchMainTab('tab-patient-info', this)">
+                                <i class="bi bi-person-lines-fill"></i> Thông tin bệnh nhân
+                            </a>
+                            <a href="javascript:void(0)" class="df-subnav-item active" data-tab="tab-examination" onclick="switchMainTab('tab-examination', this)">
+                                <i class="bi bi-heart-pulse-fill"></i> Khám &amp; Điều trị
+                            </a>
+                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-treatment-plan" onclick="switchMainTab('tab-treatment-plan', this)">
+                                <i class="bi bi-diagram-3"></i> Kế hoạch điều trị
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-treatment-plan"
+                                      th:text="${treatmentPlans != null ? #lists.size(treatmentPlans) : 0}">0</span>
+                            </a>
+                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-prescriptions" onclick="switchMainTab('tab-prescriptions', this)">
+                                <i class="bi bi-capsule"></i> Đơn thuốc
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-prescriptions"
+                                      th:text="${prescriptions != null ? #lists.size(prescriptions) : 0}">0</span>
+                            </a>
+                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-appointments" onclick="switchMainTab('tab-appointments', this)">
+                                <i class="bi bi-calendar-event"></i> Lịch hẹn
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-appointments"
+                                      th:text="${reExaminations != null ? #lists.size(reExaminations) : 0}">0</span>
+                            </a>
+                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-customer-care" onclick="switchMainTab('tab-customer-care', this)">
+                                <i class="bi bi-chat-heart"></i> Chăm sóc
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-customer-care"
+                                      th:text="${(careTasks != null ? #lists.size(careTasks) : 0) + (careInteractions != null ? #lists.size(careInteractions) : 0)}">0</span>
+                            </a>
+                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-performed-services" onclick="switchMainTab('tab-performed-services', this)">
+                                <i class="bi bi-tools"></i> Dịch vụ thực hiện
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-performed-services"
+                                      th:text="${performedServices != null ? #lists.size(performedServices) : 0}">0</span>
+                            </a>
+                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-labo" onclick="switchMainTab('tab-labo', this)">
+                                <i class="bi bi-box-seam"></i> Đặt xưởng
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-labo"
+                                      th:text="${laboOrders != null ? #lists.size(laboOrders) : 0}">0</span>
+                            </a>
+                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-clinical-photos" onclick="switchMainTab('tab-clinical-photos', this)">
+                                <i class="bi bi-images"></i> Film ảnh
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-clinical-photos"
+                                      th:text="${(clinicalPhotos != null ? #lists.size(clinicalPhotos) : 0) + (galleryXrayPhotos != null ? #lists.size(galleryXrayPhotos) : 0)}">0</span>
+                            </a>
+                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-instructions" onclick="switchMainTab('tab-instructions', this)">
+                                <i class="bi bi-card-checklist"></i> Lời dặn
+                            </a>
+                        </nav>
 
-                    <button type="button" class="df-subnav-arrow df-subnav-arrow-right" onclick="scrollSubnav(200)" aria-label="Cuộn phải">
-                        <i class="bi bi-chevron-right"></i>
-                    </button>
+                        <button type="button" class="df-subnav-arrow df-subnav-arrow-right" onclick="scrollSubnav(200)" aria-label="Cuộn phải">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -554,6 +583,7 @@
             <!-- TAB CONTENT CONTAINER (CHUYỂN ĐỔI TAB & KÉO CUỘN ĐỘC LẬP) -->
             <!-- ========================================================= -->
             <div class="df-tab-content-container p-3 p-md-4" id="mainTabContainer" style="background: #f8fafc;">
+                <div class="df-exam-bound">
 
                 <!-- TAB 1: THÔNG TIN BỆNH NHÂN -->
                 <div class="df-tab-pane" id="tab-patient-info" style="display: none;">
@@ -658,6 +688,7 @@
                     <div th:replace="~{doctor/fragments/instructions-tab :: instructionsTab}"></div>
                 </div>
 
+                </div>
             </div>
             </th:block>
 
@@ -677,11 +708,12 @@
 <div class="modal fade" id="quickAddPatientModal" tabindex="-1" aria-labelledby="quickAddPatientModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
-            <div class="modal-header text-white" style="background: linear-gradient(135deg, #1e3a8a, #2b50aa);">
-                <h5 class="modal-title fw-bold" id="quickAddPatientModalLabel">
-                    <i class="bi bi-person-plus-fill me-2"></i>Thêm bệnh nhân vào khám ngay
+            <div class="modal-header bg-white border-bottom text-dark">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="quickAddPatientModalLabel">
+                    <i class="bi bi-person-plus-fill text-primary"></i>
+                    <span>Thêm bệnh nhân vào khám ngay</span>
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
             <form id="quickAddPatientForm" onsubmit="handleQuickAddPatient(event)">
                 <div class="modal-body p-4">
@@ -720,7 +752,7 @@
                 </div>
                 <div class="modal-footer bg-light border-top p-3">
                     <button type="button" class="btn btn-secondary rounded-3 px-3 fw-semibold" data-bs-dismiss="modal">Hủy bỏ</button>
-                    <button type="submit" class="btn btn-primary rounded-3 px-4 fw-bold d-inline-flex align-items-center gap-2" style="background-color: #2b50aa; border: none;" id="btnSubmitQuickAdd">
+                    <button type="submit" class="btn btn-primary rounded-3 px-4 fw-bold d-inline-flex align-items-center gap-2" id="btnSubmitQuickAdd">
                         <i class="bi bi-check-circle-fill"></i>
                         <span>Tiếp nhận & Vào khám ngay</span>
                     </button>
@@ -858,7 +890,7 @@
 </th:block>
 
 <!-- TOAST THÔNG BÁO -->
-<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2060;">
     <div id="liveToast" class="toast align-items-center text-white bg-success border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body" id="toastMessage">
@@ -872,17 +904,18 @@
 <!-- MODAL THÔNG BÁO HOÀN TẤT CA KHÁM VÀ MỞ NHANH BỆNH ÁN ĐIỆN TỬ (EMR) -->
 <div class="modal fade" id="examCompletedSuccessModal" tabindex="-1" aria-labelledby="examCompletedSuccessModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 520px;">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 18px; overflow: hidden;">
-            <div class="modal-header border-0 text-white p-4" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header bg-white border-bottom text-dark p-4">
                 <div class="d-flex align-items-center gap-3">
-                    <div style="width: 50px; height: 50px; border-radius: 12px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 26px;">
+                    <div class="bg-primary-subtle text-primary" style="width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">
                         <i class="bi bi-check2-circle"></i>
                     </div>
                     <div>
-                        <h5 class="modal-title fw-bold mb-0" id="examCompletedSuccessModalLabel">Hoàn tất ca khám thành công!</h5>
-                        <p class="mb-0 small text-white-50">Hồ sơ lâm sàng đã được khóa theo chuẩn BR-EMR-02</p>
+                        <h5 class="modal-title fw-bold mb-0 text-dark" id="examCompletedSuccessModalLabel">Hoàn tất ca khám thành công!</h5>
+                        <p class="mb-0 small text-muted">Hồ sơ lâm sàng đã được khóa theo chuẩn BR-EMR-02</p>
                     </div>
                 </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
             <div class="modal-body p-4 text-center">
                 <p class="text-secondary mb-4" style="font-size: 15px;">
@@ -1003,15 +1036,6 @@
         if (activePane) {
             activePane.style.display = 'block';
             activePane.classList.add('active');
-
-            if (tabId === 'tab-clinical-photos') {
-                const contentPhotos = document.getElementById('content-photos');
-                if (contentPhotos) contentPhotos.style.display = 'block';
-                const barPhotos = document.getElementById('bar-photos');
-                if (barPhotos) barPhotos.classList.add('is-expanded');
-                const chevPhotos = document.getElementById('chevron-photos');
-                if (chevPhotos) chevPhotos.className = 'bi bi-chevron-down df-foldable-chevron text-primary';
-            }
 
             if (tabId === 'tab-performed-services' && typeof window.renderDiagnosisProgressTables === 'function') {
                 window.renderDiagnosisProgressTables();
@@ -1650,7 +1674,7 @@
                         <div>
                             ${isCurrent
                                 ? '<span class="text-primary fw-bold small"><i class="bi bi-check2-circle"></i> Đang mở</span>'
-                                : '<button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-0.5 fw-bold" style="font-size: 11px;">Vào khám <i class="bi bi-chevron-right"></i></button>'
+                                : '<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 fw-bold" style="font-size: 11px;">Vào khám <i class="bi bi-chevron-right"></i></button>'
                             }
                         </div>
                     </div>
@@ -1760,18 +1784,23 @@
                     window.location.reload();
                 }, 1000);
             } else {
-                alert('Không thể mở lại ca khám: ' + (result.message || 'Lỗi không xác định'));
+                const msg = 'Không thể mở lại ca khám: ' + (result.message || 'Lỗi không xác định');
+                if (typeof showToast === 'function') showToast(msg, true);
+                else alert(msg);
             }
         } catch (err) {
             console.error('Error reopening exam:', err);
-            alert('Lỗi kết nối: ' + err.message);
+            const msg = 'Lỗi kết nối: ' + err.message;
+            if (typeof showToast === 'function') showToast(msg, true);
+            else alert(msg);
         }
     }
 
     async function confirmDirectHandover(visitId) {
         const targetVisitId = visitId || getCurrentExamVisitId() || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null);
         if (!targetVisitId) {
-            alert('Không tìm thấy thông tin ca khám.');
+            if (typeof showToast === 'function') showToast('Không tìm thấy thông tin ca khám.', true);
+            else alert('Không tìm thấy thông tin ca khám.');
             return;
         }
 
@@ -1838,7 +1867,9 @@
                     }
                 }
             } else {
-                alert('Không thể hoàn tất khám:\n' + (result.message || 'Vui lòng kiểm tra lại điều kiện lâm sàng.'));
+                const msg = 'Không thể hoàn tất khám: ' + (result.message || 'Vui lòng kiểm tra lại điều kiện lâm sàng.');
+                if (typeof showToast === 'function') showToast(msg, true);
+                else alert(msg);
                 if (btn) {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i> <span>Hoàn tất khám</span>';
@@ -1846,7 +1877,9 @@
             }
         } catch (err) {
             console.error('Error completing clinical exam:', err);
-            alert('Lỗi kết nối khi hoàn tất khám: ' + err.message);
+            const msg = 'Lỗi kết nối khi hoàn tất khám: ' + err.message;
+            if (typeof showToast === 'function') showToast(msg, true);
+            else alert(msg);
             if (btn) {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i> <span>Hoàn tất khám</span>';
@@ -1910,7 +1943,7 @@
 </th:block>
 
     <!-- MODAL CẢNH BÁO GIỚI HẠN PHÂN QUYỀN CƠ SỞ CHO BÁC SĨ -->
-    <div class="modal fade" id="branchWarningModal" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+    <div class="modal fade" id="branchWarningModal" tabindex="-1" aria-hidden="true" style="z-index: 2055;">
         <div class="modal-dialog modal-dialog-centered" style="max-width: 450px;">
             <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
                 <div class="modal-body p-4 text-center">

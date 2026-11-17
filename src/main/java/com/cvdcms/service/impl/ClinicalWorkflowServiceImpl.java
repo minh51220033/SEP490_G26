@@ -41,6 +41,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
     private final SystemAuditLogRepository auditRepo;
     private final SystemAuditLogService auditService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+
     private static final DateTimeFormatter DT_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     @Override
@@ -115,32 +118,51 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
 
         template = templateRepo.save(template);
 
-        // Version
-        ClinicalWorkflowVersion version = versionRepo.findFirstByTemplate_TemplateIdOrderByVersionNumberDesc(template.getTemplateId())
+        // Version: không bao giờ ghi đè/xóa các bước của version đang PUBLISHED hoặc đã có execution
+        ClinicalWorkflowVersion existingLatest = versionRepo
+                .findFirstByTemplate_TemplateIdOrderByVersionNumberDesc(template.getTemplateId())
                 .orElse(null);
 
-        if (version == null) {
-            version = new ClinicalWorkflowVersion();
-            version.setTemplate(template);
-            version.setVersionNumber(1);
-            version.setStatus(WorkflowVersionStatus.PUBLISHED);
-            version.setFlowMode(FlowMode.CONTINUOUS);
-            version.setChangeSummary("Khởi tạo quy trình chuẩn Bộ Y Tế");
-            version.setCreatedBy(userId);
-            version.setPublishedAt(LocalDateTime.now());
-            version = versionRepo.save(version);
+        ClinicalWorkflowVersion targetVersion;
+        if (existingLatest == null) {
+            targetVersion = new ClinicalWorkflowVersion();
+            targetVersion.setTemplate(template);
+            targetVersion.setVersionNumber(1);
+            targetVersion.setStatus(WorkflowVersionStatus.PUBLISHED);
+            targetVersion.setFlowMode(FlowMode.CONTINUOUS);
+            targetVersion.setChangeSummary("Khởi tạo quy trình chuẩn Bộ Y Tế");
+            targetVersion.setCreatedBy(userId);
+            targetVersion.setPublishedAt(LocalDateTime.now());
+            targetVersion = versionRepo.save(targetVersion);
+        } else if (dto.getSteps() != null && existingLatest.getStatus() == WorkflowVersionStatus.PUBLISHED) {
+            existingLatest.setStatus(WorkflowVersionStatus.RETIRED);
+            versionRepo.save(existingLatest);
+
+            int nextVersion = (existingLatest.getVersionNumber() != null ? existingLatest.getVersionNumber() : 1) + 1;
+            targetVersion = new ClinicalWorkflowVersion();
+            targetVersion.setTemplate(template);
+            targetVersion.setVersionNumber(nextVersion);
+            targetVersion.setStatus(WorkflowVersionStatus.PUBLISHED);
+            targetVersion.setFlowMode(existingLatest.getFlowMode() != null ? existingLatest.getFlowMode() : FlowMode.CONTINUOUS);
+            targetVersion.setChangeSummary("Cập nhật quy trình phiên bản v" + nextVersion);
+            targetVersion.setCreatedBy(userId);
+            targetVersion.setPublishedAt(LocalDateTime.now());
+            targetVersion = versionRepo.save(targetVersion);
+        } else {
+            targetVersion = existingLatest;
         }
 
-        // Cập nhật các bước (Steps)
+        // Cập nhật các bước (Steps) trên DRAFT mới tạo hoặc version mới phát hành
         if (dto.getSteps() != null) {
-            // Xóa các bước cũ của version này
-            stepRepo.deleteByVersion_VersionId(version.getVersionId());
-            stepRepo.flush();
+            if (targetVersion == existingLatest) {
+                stepRepo.deleteByVersion_VersionId(targetVersion.getVersionId());
+                stepRepo.flush();
+            }
 
             int seq = 1;
             for (WorkflowStepDTO sDto : dto.getSteps()) {
                 ClinicalWorkflowStep step = new ClinicalWorkflowStep();
-                step.setVersion(version);
+                step.setVersion(targetVersion);
                 step.setSequenceOrder(sDto.getSequenceOrder() != null ? sDto.getSequenceOrder() : seq++);
                 step.setStepCode(sDto.getStepCode() != null && !sDto.getStepCode().isEmpty() 
                         ? sDto.getStepCode() : "STEP-" + step.getSequenceOrder());
@@ -177,6 +199,14 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy quy trình với ID: " + templateId));
 
         List<ClinicalWorkflowVersion> versions = versionRepo.findByTemplate_TemplateIdOrderByVersionNumberDesc(templateId);
+        for (ClinicalWorkflowVersion v : versions) {
+            boolean hasExecutions = executionRepo.findAll().stream()
+                    .anyMatch(ex -> ex.getVersion() != null && v.getVersionId().equals(ex.getVersion().getVersionId()));
+            if (hasExecutions) {
+                throw new IllegalStateException(
+                        "Không thể xóa quy trình kỹ thuật đã được sử dụng trong lượt khám thực tế. Hãy chuyển trạng thái sang Ngừng áp dụng.");
+            }
+        }
         for (ClinicalWorkflowVersion v : versions) {
             stepRepo.deleteByVersion_VersionId(v.getVersionId());
             versionRepo.delete(v);
@@ -583,16 +613,22 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return null;
     }
 
-    /** Ca khám đã chuyển thu ngân / hoàn tất / hủy thì khóa toàn bộ thao tác quy trình (BR-EMR-02). */
+    /** Ca khám đã chuyển thu ngân / hoàn tất / hủy hoặc đã khóa EMR thì khóa toàn bộ thao tác quy trình (BR-EMR-02). */
     private String lockReason(Visit visit) {
-        if (visit == null || visit.getStatus() == null || !LOCKED_VISIT_STATUSES.contains(visit.getStatus())) {
-            return null;
+        if (visit != null && visit.getStatus() != null && LOCKED_VISIT_STATUSES.contains(visit.getStatus())) {
+            return switch (visit.getStatus()) {
+                case CANCELLED -> "Lượt khám đã bị hủy, không thể thao tác quy trình.";
+                case COMPLETED -> "Lượt khám đã hoàn tất, quy trình được khóa.";
+                default -> "Lượt khám đang chờ thanh toán, quy trình được khóa. Hãy mở lại ca khám nếu cần chỉnh sửa.";
+            };
         }
-        return switch (visit.getStatus()) {
-            case CANCELLED -> "Lượt khám đã bị hủy, không thể thao tác quy trình.";
-            case COMPLETED -> "Lượt khám đã hoàn tất, quy trình được khóa.";
-            default -> "Lượt khám đang chờ thanh toán, quy trình được khóa. Hãy mở lại ca khám nếu cần chỉnh sửa.";
-        };
+        if (visit != null && emrRecordRepository != null && visit.getVisitId() != null) {
+            Optional<com.cvdcms.emr.EmrRecord> emrOpt = emrRecordRepository.findByVisit_VisitId(visit.getVisitId());
+            if (emrOpt.isPresent() && com.cvdcms.emr.EmrStatePolicy.isEmrLockedStatus(emrOpt.get().getStatus())) {
+                return "Hồ sơ bệnh án điện tử (EMR) đã khóa hoặc ký số xác thực, quy trình được khóa.";
+            }
+        }
+        return null;
     }
 
     private StaffProfile staffOf(Long userId) {

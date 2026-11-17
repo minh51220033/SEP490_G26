@@ -75,6 +75,8 @@ public class EmrModuleService {
     private final StaffProfileRepository staffProfiles;
     private final PatientProfileRepository patientProfiles;
     private final ObjectMapper mapper;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private DoctorCoverGrantRepository coverGrants;
 
     public EmrModuleService(EmrAccess access, EmrRecordRepository records,
             EmrRecordVersionRepository versions, EmrAuditEventRepository audits,
@@ -203,6 +205,7 @@ public class EmrModuleService {
         Visit visit = visits.findWithDetailsById(visitId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy lượt khám."));
         access.requireBranch(scope, visit.getBranch().getBranchId());
+        requireWriteAccess(scope, visit);
 
         Optional<EmrRecord> existingOpt = records.findByVisit_VisitId(visitId);
         if (existingOpt.isPresent()) {
@@ -260,6 +263,7 @@ public class EmrModuleService {
     public void softDeleteDraft(HttpSession session, Long recordId) {
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
+        requireWriteAccess(scope, record.getVisit());
         if (record.getStatus() != EmrRecordStatus.DRAFT && record.getStatus() != EmrRecordStatus.AMENDMENT_DRAFT) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Chỉ bản nháp bệnh án chưa khóa hoặc chưa ký mới được phép xóa theo đúng quy định y tế.");
@@ -283,6 +287,7 @@ public class EmrModuleService {
     public void updatePatientDemographics(HttpSession session, Long recordId, Map<String, String> fields) {
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
+        requireWriteAccess(scope, record.getVisit());
         if (!EmrStatePolicy.canRefresh(record.getStatus())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Chỉ có thể cập nhật thông tin khi bệnh án còn ở trạng thái nháp/chờ khóa.");
@@ -351,6 +356,7 @@ public class EmrModuleService {
     public void refresh(HttpSession session, Long recordId) {
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
+        requireWriteAccess(scope, record.getVisit());
         if (!EmrStatePolicy.canRefresh(record.getStatus())) {
             conflict("Chỉ có thể làm mới bệnh án đang ở trạng thái nháp/chờ khóa.");
         }
@@ -367,6 +373,7 @@ public class EmrModuleService {
     public ValidationResult validate(HttpSession session, Long recordId) {
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
+        requireWriteAccess(scope, record.getVisit());
         if (!EmrStatePolicy.canValidate(record.getStatus()))
             conflict("Trạng thái hiện tại không cho phép kiểm tra.");
         EmrRecordVersion version = currentVersion(record);
@@ -396,6 +403,7 @@ public class EmrModuleService {
     public void lock(HttpSession session, Long recordId) {
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
+        requireWriteAccess(scope, record.getVisit());
         if (!EmrStatePolicy.canLock(record.getStatus()))
             conflict("Bệnh án phải được kiểm tra hợp lệ trước khi khóa.");
         EmrRecordVersion version = currentVersion(record);
@@ -448,9 +456,9 @@ public class EmrModuleService {
         EmrRecord record = requireRecord(recordId, scope);
         if (!EmrStatePolicy.canDoctorSign(record.getStatus()))
             conflict("Bệnh án chưa ở bước bác sĩ ký.");
-        if (record.getVisit().getPrimaryDoctor() == null || !Objects.equals(
-                record.getVisit().getPrimaryDoctor().getUser().getUserId(), scope.user().getUserId()))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Chỉ bác sĩ khám được ký hồ sơ này.");
+        if (!isAuthorizedDoctorOrCover(record.getVisit(), scope.user()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Chỉ bác sĩ phụ trách ca khám hoặc bác sĩ được ủy quyền khám thay mới được ký hồ sơ này.");
         StaffProfile signingDoctor = staffProfiles.findByUser_UserId(scope.user().getUserId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Chưa có hồ sơ bác sĩ."));
         if (signingDoctor.getPracticeLicenseNo() == null || signingDoctor.getPracticeLicenseNo().isBlank())
@@ -474,10 +482,19 @@ public class EmrModuleService {
     public void createAmendment(HttpSession session, Long recordId, String reason) {
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
+        requireWriteAccess(scope, record.getVisit());
         if (!EmrStatePolicy.canAmend(record.getStatus()))
             conflict("Chỉ bệnh án đã ký mới được tạo bản sửa đổi.");
         if (reason == null || reason.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Phải nhập lý do sửa đổi.");
+        }
+        EmrRecordVersion previousVersion = currentVersion(record);
+        Map<String, Map<String, String>> inheritedManualFields = new LinkedHashMap<>();
+        for (EmrDocument prevDoc : previousVersion.getDocuments()) {
+            Map<String, String> prevManual = documentManualFields(prevDoc);
+            if (!prevManual.isEmpty()) {
+                inheritedManualFields.put(prevDoc.getDocumentCode(), new LinkedHashMap<>(prevManual));
+            }
         }
         int next = record.getCurrentVersionNumber() + 1;
         EmrRecordVersion version = new EmrRecordVersion();
@@ -487,6 +504,17 @@ public class EmrModuleService {
         version.setCreatedBy(scope.user());
         versions.save(version);
         capture(version, record.getVisit());
+        if (!inheritedManualFields.isEmpty()) {
+            for (EmrDocument doc : version.getDocuments()) {
+                Map<String, String> prevManual = inheritedManualFields.get(doc.getDocumentCode());
+                if (prevManual != null && !prevManual.isEmpty()) {
+                    Map<String, Object> payload = documentPayload(doc);
+                    payload.put("manual", prevManual);
+                    doc.setContentJson(toJson(payload));
+                    doc.setDocumentHash(EmrHashing.sha256(doc.getDocumentCode() + "|" + doc.getContentJson()));
+                }
+            }
+        }
         record.setCurrentVersionNumber(next);
         record.setStatus(EmrRecordStatus.AMENDMENT_DRAFT);
         audit(record, version, scope.user(), "CREATE_AMENDMENT", reason.trim());
@@ -497,6 +525,7 @@ public class EmrModuleService {
             Map<String, String> submittedFields) {
         EmrAccess.Scope scope = access.require(session);
         EmrRecord record = requireRecord(recordId, scope);
+        requireWriteAccess(scope, record.getVisit());
         if (!EmrStatePolicy.canRefresh(record.getStatus())) {
             conflict("Chỉ có thể chỉnh sửa biểu mẫu khi bệnh án còn ở trạng thái nháp/chờ khóa.");
         }
@@ -521,7 +550,7 @@ public class EmrModuleService {
         if (submittedFields != null) {
             for (Map.Entry<String, String> entry : submittedFields.entrySet()) {
                 String field = entry.getKey();
-                if (field == null || field.isBlank() || field.startsWith("_"))
+                if (field == null || field.isBlank() || field.startsWith("_") || !allowedFields.contains(field))
                     continue;
                 String value = entry.getValue();
                 String normalized = value == null ? "" : value.trim();
@@ -1025,7 +1054,10 @@ public class EmrModuleService {
             missing.add("Thiếu chẩn đoán chính.");
         else if (main.get().getIcd10Disease() == null)
             missing.add("Chẩn đoán chính chưa có mã ICD-10.");
-        if (exam != null && blank(exam.getSummaryAssessment()))
+        if (exam != null && blank(exam.getSummaryAssessment())
+                && blank(visit.getNotes())
+                && main.isEmpty()
+                && performedServices.findByVisitIdWithDetails(visit.getVisitId()).isEmpty())
             missing.add("Thiếu kết luận khám lâm sàng.");
         if (visit.getPrimaryDoctor() != null && blank(visit.getPrimaryDoctor().getPracticeLicenseNo()))
             missing.add("Bác sĩ khám chưa có số giấy phép hành nghề.");
@@ -1036,7 +1068,43 @@ public class EmrModuleService {
         EmrRecord record = records.findDetailsById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy bệnh án."));
         access.requireBranch(scope, record.getBranch().getBranchId());
+        if (isSoftDeleted(record)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Hồ sơ bệnh án đã bị xóa nháp.");
+        }
         return record;
+    }
+
+    private void requireWriteAccess(EmrAccess.Scope scope, Visit visit) {
+        if (visit == null) {
+            if (scope.admin()) {
+                return;
+            }
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Chỉ bác sĩ phụ trách ca khám hoặc bác sĩ được ủy quyền khám thay mới có quyền chỉnh sửa bệnh án này.");
+        }
+        if (isAuthorizedDoctorOrCover(visit, scope.user())) {
+            return;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Chỉ bác sĩ phụ trách ca khám hoặc bác sĩ được ủy quyền khám thay mới có quyền chỉnh sửa bệnh án này.");
+    }
+
+    private boolean isAuthorizedDoctorOrCover(Visit visit, User actor) {
+        if (visit == null || actor == null || actor.getUserId() == null) {
+            return false;
+        }
+        if (visit.getPrimaryDoctor() != null && visit.getPrimaryDoctor().getUser() != null
+                && Objects.equals(visit.getPrimaryDoctor().getUser().getUserId(), actor.getUserId())) {
+            return true;
+        }
+        if (coverGrants != null && staffProfiles != null && visit.getVisitId() != null) {
+            Optional<StaffProfile> staffOpt = staffProfiles.findByUser_UserId(actor.getUserId());
+            if (staffOpt.isPresent()) {
+                return coverGrants.existsByVisitVisitIdAndCoveringDoctorStaffIdAndRevokedAtIsNullAndExpiresAtAfter(
+                        visit.getVisitId(), staffOpt.get().getStaffId(), LocalDateTime.now());
+            }
+        }
+        return false;
     }
 
     private EmrRecordVersion currentVersion(EmrRecord record) {

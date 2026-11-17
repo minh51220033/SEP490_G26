@@ -115,12 +115,12 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         // =====================================================================
         if (uri.startsWith("/reception/patients") || uri.startsWith("/api/reception/patients")) {
             if (isWriteMethod) {
-                if (uri.matches("^/reception/patients/\\d+/photos.*") || uri.matches("^/api/reception/patients/\\d+/photos.*")) {
+                if (uri.matches("^/reception/patients/[^/]+/photos.*") || uri.matches("^/api/reception/patients/[^/]+/photos.*")) {
                     return List.of("PATIENT_PROFILE_MANAGE", "CLINICAL_PHOTOS");
                 }
                 return List.of("PATIENT_PROFILE_MANAGE");
             }
-            if (uri.equals("/reception/patients/new") || uri.matches("^/reception/patients/\\d+/edit.*")) {
+            if (uri.equals("/reception/patients/new") || uri.matches("^/reception/patients/[^/]+/edit.*")) {
                 return List.of("PATIENT_PROFILE_MANAGE");
             }
             return List.of("PATIENT_PROFILE_MANAGE", "MEDICAL_RECORD_VIEW");
@@ -184,10 +184,20 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.matches("^/api/doctor/treatment-plans/\\d+/installments/pay/?$")) {
             return List.of("PAYMENT_COLLECT");
         }
-
+        if (uri.matches("^/api/doctor/treatment-plans/installments/\\d+/remind/?$")) {
+            return List.of("PAYMENT_COLLECT", "FINANCE_DASHBOARD", "TREATMENT_PLAN_MANAGE", "RECEPTION_CHECKIN");
+        }
+        if (uri.matches("^/api/doctor/treatment-plans/\\d+/installments/?$")) {
+            if (!isWriteMethod) {
+                return List.of("TREATMENT_PLAN_MANAGE", "PAYMENT_COLLECT", "FINANCE_DASHBOARD", "INVOICE_CREATE",
+                        "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+            }
+            return List.of("TREATMENT_PLAN_MANAGE", "PAYMENT_COLLECT", "INVOICE_CREATE", "FINANCE_DASHBOARD");
+        }
         if (uri.startsWith("/api/doctor/treatment-plans")) {
             if (!isWriteMethod) {
-                return List.of("TREATMENT_PLAN_MANAGE", "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+                return List.of("TREATMENT_PLAN_MANAGE", "PAYMENT_COLLECT", "FINANCE_DASHBOARD", "INVOICE_CREATE",
+                        "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
             }
             return List.of("TREATMENT_PLAN_MANAGE");
         }

@@ -1475,7 +1475,7 @@
                                                 <td class="text-center text-muted fw-bold" th:text="${stat.count}">1
                                                 </td>
                                                 <td class="text-nowrap">
-                                                    <a th:href="${recordBasePath == '/doctor/patient-records' ? '/doctor/patient-records/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId) : (recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '/visits/' + item.visitId}"
+                                                    <a th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId)}"
                                                         class="dv-code-pill mb-1"
                                                         th:text="${item.visitCode}">VIS-001</a>
                                                     <div class="text-muted small fw-semibold d-flex align-items-center gap-1 mt-1">
@@ -1568,7 +1568,7 @@
                                                     </form>
                                                 </td>
                                                 <td class="text-center">
-                                                    <a th:href="${recordBasePath == '/doctor/patient-records' ? '/doctor/patient-records/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId) : (recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '/visits/' + item.visitId}"
+                                                    <a th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId)}"
                                                         class="dv-equal-btn-primary"
                                                         title="Xem chi tiết lượt khám">
                                                         <i class="bi bi-eye-fill"></i>
@@ -1577,7 +1577,7 @@
                                                 </td>
                                                 <td class="dv-floating-actions-track">
                                                     <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
-                                                        <a th:href="${recordBasePath == '/doctor/patient-records' ? '/doctor/patient-records/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId) : (recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '/visits/' + item.visitId}"
+                                                        <a th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId)}"
                                                             class="dv-equal-btn-primary"
                                                             title="Xem chi tiết lượt khám">
                                                             <i class="bi bi-eye-fill"></i>
@@ -2126,7 +2126,7 @@
                                             </td>
                                             <td class="text-nowrap">
                                                 <a th:if="${emr.visitId != null}"
-                                                    th:href="${recordBasePath == '/doctor/patient-records' ? '/doctor/patient-records/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(emr.visitId) : (recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '/visits/' + emr.visitId}"
+                                                    th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(emr.visitId)}"
                                                     class="dv-code-pill"
                                                     title="Xem chi tiết lượt khám">
                                                     <i class="bi bi-box-arrow-up-right text-primary"></i>

@@ -2487,7 +2487,7 @@
                 const targetBranchName = escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác');
                 const isOtherDoctor = Boolean(isDoctorAccount && currentDoctorStaffId && v.doctorId && v.doctorId != currentDoctorStaffId);
                 const patientProfileUrl = v.profileId
-                    ? ((isDoctorAccount ? `/doctor/patient-records/${v.patientToken || v.profileId}` : `/reception/patients/${v.profileId}`) + '?from=daily-visits')
+                    ? ((isDoctorAccount ? `/doctor/patient-records/${v.patientToken || v.profileId}` : `/reception/patients/${v.patientToken || v.profileId}`) + '?from=daily-visits')
                     : '#';
                 tbodyHtml += `<tr class="dv-data-row" ondblclick="handleVisitRowDblClick(event, '${v.visitToken || ''}', ${v.branchId || 'null'}, '${targetBranchName}', ${v.doctorId || 'null'})">`;
 
@@ -2640,7 +2640,7 @@
                 case 'actions':
                     const isOther = Boolean(isDoctorAccount && currentDoctorStaffId && v.doctorId && v.doctorId != currentDoctorStaffId);
                     const cellProfileUrl = v.profileId
-                        ? ((isDoctorAccount ? `/doctor/patient-records/${v.patientToken || v.profileId}` : `/reception/patients/${v.profileId}`) + '?from=daily-visits')
+                        ? ((isDoctorAccount ? `/doctor/patient-records/${v.patientToken || v.profileId}` : `/reception/patients/${v.patientToken || v.profileId}`) + '?from=daily-visits')
                         : '#';
                     if (isOther) {
                         return `
@@ -2748,7 +2748,7 @@
                 const firstLetter = v.fullName ? v.fullName.trim().charAt(0).toUpperCase() : 'B';
                 const isOtherCard = Boolean(isDoctorAccount && currentDoctorStaffId && v.doctorId && v.doctorId != currentDoctorStaffId);
                 const cardProfileUrl = v.profileId
-                    ? ((isDoctorAccount ? `/doctor/patient-records/${v.patientToken || v.profileId}` : `/reception/patients/${v.profileId}`) + '?from=daily-visits')
+                    ? ((isDoctorAccount ? `/doctor/patient-records/${v.patientToken || v.profileId}` : `/reception/patients/${v.patientToken || v.profileId}`) + '?from=daily-visits')
                     : '#';
                 const actionBtnHtml = isOtherCard
                     ? `<span class="badge bg-secondary-subtle text-secondary py-2 px-3 fw-bold border" style="font-size: 12px;"><i class="bi bi-lock-fill me-1"></i>BS khác phụ trách</span>`

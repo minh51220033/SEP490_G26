@@ -152,6 +152,10 @@ public class ReceptionAppointmentService {
                     doctorId, doctorName, serviceId, serviceName, date, session, symptoms,
                     source, status, rescheduleCount, cancelReason, doctorUnavailable, createdAt, null, null, 30, null, null);
         }
+
+        public String getPatientToken() {
+            return com.cvdcms.security.UrlIdCodec.shared().encodePatient(profileId);
+        }
     }
     public record HistoryView(String action, String oldValue, String newValue, String reason, LocalDateTime createdAt) {}
     public record Detail(AppointmentView appointment, List<HistoryView> history) {}
