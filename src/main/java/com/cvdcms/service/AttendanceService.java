@@ -381,6 +381,9 @@ public class AttendanceService {
 
     @Transactional(readOnly = true)
     public List<AttendanceRecord> getBranchHistory(Long branchId, YearMonth month) {
+        if (branchId == null) {
+            return attendanceRepository.findAllByRange(month.atDay(1), month.atEndOfMonth());
+        }
         return attendanceRepository.findByBranchAndRange(branchId, month.atDay(1), month.atEndOfMonth());
     }
 
@@ -432,10 +435,11 @@ public class AttendanceService {
         Map<Long, List<AttendanceRecord>> groupedRecords = new LinkedHashMap<>();
         Map<Long, java.util.Set<LocalDate>> scheduledDatesByStaff = new LinkedHashMap<>();
 
-        // 1. Lấy toàn bộ hồ sơ nhân sự đã được xếp ca tại chi nhánh trong tháng (trừ ca đã hủy)
-        if (branchId != null && month != null) {
-            List<StaffSchedule> schedules = scheduleRepository.findByBranchAndRange(
-                    branchId, month.atDay(1), month.atEndOfMonth());
+        // 1. Lấy toàn bộ hồ sơ nhân sự đã được xếp ca trong tháng (trừ ca đã hủy)
+        if (month != null) {
+            List<StaffSchedule> schedules = (branchId != null)
+                    ? scheduleRepository.findByBranchAndRange(branchId, month.atDay(1), month.atEndOfMonth())
+                    : scheduleRepository.findAllByRange(month.atDay(1), month.atEndOfMonth());
             for (StaffSchedule sc : schedules) {
                 if (sc.getStatus() == ScheduleStatus.CANCELLED || sc.getStaff() == null) {
                     continue;

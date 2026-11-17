@@ -22,6 +22,13 @@ public interface StaffScheduleRepository extends JpaRepository<StaffSchedule, Lo
                                              @Param("from") LocalDate from,
                                              @Param("to") LocalDate to);
 
+    // Toàn bộ ca đã xếp toàn hệ thống trong khoảng ngày
+    @Query("SELECT s FROM StaffSchedule s JOIN FETCH s.staff JOIN FETCH s.shift LEFT JOIN FETCH s.branch "
+            + "WHERE s.workDate BETWEEN :from AND :to "
+            + "ORDER BY s.workDate ASC, s.shift.startTime ASC, s.staff.fullName ASC")
+    List<StaffSchedule> findAllByRange(@Param("from") LocalDate from,
+                                       @Param("to") LocalDate to);
+
     // Lịch cá nhân của một nhân viên trong khoảng ngày (SCR-33.3).
     @Query("SELECT s FROM StaffSchedule s JOIN FETCH s.branch JOIN FETCH s.shift "
             + "WHERE s.staff.staffId = :staffId AND s.workDate BETWEEN :from AND :to "

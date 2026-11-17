@@ -235,6 +235,11 @@ public class LeaveRequestService {
             throw new IllegalArgumentException("Đơn nghỉ này đã được xử lý từ trước (Trạng thái: " + leave.getStatus() + ").");
         }
 
+        if (leave.getStaff() != null && leave.getStaff().getUser() != null 
+                && leave.getStaff().getUser().getUserId().equals(reviewerUserId)) {
+            throw new IllegalArgumentException("Bạn không thể tự phê duyệt đơn xin nghỉ của chính mình.");
+        }
+
         User reviewer = userRepository.findById(reviewerUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Người duyệt không hợp lệ."));
 
@@ -297,13 +302,21 @@ public class LeaveRequestService {
             );
             if (potential != null && !potential.isEmpty()) {
                 affectedAppointments = new ArrayList<>();
+                Long leaveBranchId = leave.getBranch() != null ? leave.getBranch().getBranchId() : null;
                 for (Appointment app : potential) {
-                    // Nếu đơn nghỉ theo ca cụ thể: chỉ xử lý lịch hẹn thuộc khung giờ ca đó
-                    if (leave.getShift() != null && app.getExpectedTime() != null) {
-                        LocalTime sStart = leave.getShift().getStartTime();
-                        LocalTime sEnd = leave.getShift().getEndTime();
-                        if (app.getExpectedTime().isBefore(sStart) || app.getExpectedTime().isAfter(sEnd)) {
-                            continue;
+                    // Chỉ xử lý lịch hẹn thuộc đúng chi nhánh xin nghỉ
+                    if (leaveBranchId != null && app.getBranch() != null 
+                            && !leaveBranchId.equals(app.getBranch().getBranchId())) {
+                        continue;
+                    }
+                    // Nếu đơn nghỉ theo ca cụ thể:
+                    if (leave.getShift() != null) {
+                        if (app.getExpectedTime() != null) {
+                            LocalTime sStart = leave.getShift().getStartTime();
+                            LocalTime sEnd = leave.getShift().getEndTime();
+                            if (app.getExpectedTime().isBefore(sStart) || app.getExpectedTime().isAfter(sEnd)) {
+                                continue;
+                            }
                         }
                     }
                     affectedAppointments.add(app);
@@ -390,6 +403,11 @@ public class LeaveRequestService {
             throw new IllegalArgumentException("Đơn nghỉ này đã được xử lý từ trước.");
         }
 
+        if (leave.getStaff() != null && leave.getStaff().getUser() != null 
+                && leave.getStaff().getUser().getUserId().equals(reviewerUserId)) {
+            throw new IllegalArgumentException("Bạn không thể tự từ chối đơn xin nghỉ của chính mình.");
+        }
+
         if (reviewNote == null || reviewNote.trim().isBlank()) {
             throw new IllegalArgumentException("Vui lòng nhập lý do từ chối đơn nghỉ phép.");
         }
@@ -429,22 +447,26 @@ public class LeaveRequestService {
                 List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED)
         );
 
-        if (leave.getShift() == null) {
-            // Nghỉ cả ngày -> Toàn bộ lịch hẹn trong khoảng ngày đều bị ảnh hưởng
-            return allInDateRange;
-        }
-
-        // Nghỉ theo ca cụ thể -> Lọc các lịch hẹn có giờ hẹn nằm trong khung giờ của ca trực
-        LocalTime shiftStart = leave.getShift().getStartTime();
-        LocalTime shiftEnd = leave.getShift().getEndTime();
-
+        Long leaveBranchId = leave.getBranch() != null ? leave.getBranch().getBranchId() : null;
         List<Appointment> affected = new ArrayList<>();
         for (Appointment a : allInDateRange) {
-            LocalTime apptTime = a.getExpectedTime();
-            if (apptTime == null) {
-                // Nếu không ghi giờ cụ thể thì mặc định tính là bị ảnh hưởng
-                affected.add(a);
-            } else if (!apptTime.isBefore(shiftStart) && apptTime.isBefore(shiftEnd)) {
+            // Lọc đúng chi nhánh xin nghỉ
+            if (leaveBranchId != null && a.getBranch() != null 
+                    && !leaveBranchId.equals(a.getBranch().getBranchId())) {
+                continue;
+            }
+            if (leave.getShift() != null) {
+                LocalTime shiftStart = leave.getShift().getStartTime();
+                LocalTime shiftEnd = leave.getShift().getEndTime();
+                LocalTime apptTime = a.getExpectedTime();
+                if (apptTime != null) {
+                    if (!apptTime.isBefore(shiftStart) && apptTime.isBefore(shiftEnd)) {
+                        affected.add(a);
+                    }
+                } else {
+                    affected.add(a);
+                }
+            } else {
                 affected.add(a);
             }
         }

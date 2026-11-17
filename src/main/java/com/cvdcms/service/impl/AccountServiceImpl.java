@@ -570,10 +570,10 @@ public class AccountServiceImpl implements AccountService {
                 .collect(Collectors.toSet());
         Map<String, String> impliedMap = Map.of(
                 "APPOINTMENT_MANAGE", "APPOINTMENT_VIEW",
-                "CLINICAL_EXAM_WRITE", "MEDICAL_RECORD_VIEW",
-                "INVOICE_CREATE", "INVOICE_VIEW",
-                "PAYMENT_COLLECT", "INVOICE_VIEW",
-                "INVENTORY_MANAGE", "INVENTORY_VIEW"
+                "MEDICAL_RECORD_EDIT", "MEDICAL_RECORD_VIEW",
+                "INVOICE_CREATE", "INVOICE_READ",
+                "PAYMENT_COLLECT", "INVOICE_READ",
+                "INVENTORY_UPDATE", "INVENTORY_VIEW"
         );
         for (Map.Entry<String, String> entry : impliedMap.entrySet()) {
             if (selectedCodes.contains(entry.getKey()) && !selectedCodes.contains(entry.getValue())) {

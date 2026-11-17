@@ -92,6 +92,8 @@ public class StaffScheduleController {
             branchId = branches.get(0).getBranchId();
         }
         model.addAttribute("selectedBranchId", branchId);
+        model.addAttribute("currentBranchId", branchId);
+        model.addAttribute("activeMenu", "schedules");
 
         if (branchId != null) {
             List<WorkShift> shifts = scheduleService.getShifts(branchId);
