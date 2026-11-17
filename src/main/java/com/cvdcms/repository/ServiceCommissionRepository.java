@@ -21,6 +21,8 @@ public interface ServiceCommissionRepository extends JpaRepository<ServiceCommis
             CommissionRoleType roleType
     );
 
+    List<ServiceCommission> findByPerformedService_PerformedId(Long performedId);
+
     List<ServiceCommission> findByPayrollItem_ItemId(Long itemId);
 
     List<ServiceCommission> findByPayrollItem_PayrollPeriod_PeriodId(Long periodId);

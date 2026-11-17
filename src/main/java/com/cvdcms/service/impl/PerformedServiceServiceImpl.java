@@ -72,6 +72,13 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.BranchInventoryRepository branchInventoryRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ServiceCommissionService serviceCommissionService;
+
+    public void setServiceCommissionService(com.cvdcms.service.ServiceCommissionService serviceCommissionService) {
+        this.serviceCommissionService = serviceCommissionService;
+    }
+
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     @Override
@@ -260,6 +267,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         recordMaterialConsumptions(saved, doctor, requestDTO.getConsumedMaterials());
         log.info("Performed service created successfully with id={}", saved.getPerformedId());
 
+        if (serviceCommissionService != null) {
+            serviceCommissionService.calculateCommissionsForPerformedService(saved);
+        }
+
         return mapToResponseDTO(saved);
     }
 
@@ -325,6 +336,9 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
             }
         }
 
+        if (serviceCommissionService != null) {
+            serviceCommissionService.cancelPendingCommissionsForPerformedService(ps.getPerformedId());
+        }
         performedServiceRepository.delete(ps);
     }
 

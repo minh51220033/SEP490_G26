@@ -42,12 +42,19 @@ public class RefundServiceImpl implements RefundService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private VisitRepository visitRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private PaymentAllocationRepository paymentAllocationRepository;
+
     public void setInvoiceItemRepository(InvoiceItemRepository invoiceItemRepository) {
         this.invoiceItemRepository = invoiceItemRepository;
     }
 
     public void setVisitRepository(VisitRepository visitRepository) {
         this.visitRepository = visitRepository;
+    }
+
+    public void setPaymentAllocationRepository(PaymentAllocationRepository paymentAllocationRepository) {
+        this.paymentAllocationRepository = paymentAllocationRepository;
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -262,6 +269,7 @@ public class RefundServiceImpl implements RefundService {
                     invoice.setSurchargeAmount(currentSurcharge.subtract(surchRoll).max(BigDecimal.ZERO));
                     invoice.setSurchargePaidAmount(surchPaid.subtract(surchRoll).max(BigDecimal.ZERO));
                     invoice.setSurchargeRemainingDebt(invoice.getSurchargeAmount().subtract(invoice.getSurchargePaidAmount()).max(BigDecimal.ZERO));
+                    rollbackSurchargeAllocations(invoice.getInvoiceId(), surchRoll, savedRefund.getRefundCode());
                     unrefunded = unrefunded.subtract(surchRoll);
                 }
 
@@ -286,6 +294,7 @@ public class RefundServiceImpl implements RefundService {
                                 it.setRemainingDebt(newItDebt);
                                 it.setPaymentStatus(newItDebt.compareTo(BigDecimal.ZERO) == 0 ? com.cvdcms.entity.enums.InvoiceItemPaymentStatus.PAID : (newItPaid.compareTo(BigDecimal.ZERO) > 0 ? com.cvdcms.entity.enums.InvoiceItemPaymentStatus.PARTIAL : com.cvdcms.entity.enums.InvoiceItemPaymentStatus.UNPAID));
                                 invoiceItemRepository.save(it);
+                                rollbackItemAllocations(it.getItemId(), itRollback, savedRefund.getRefundCode());
                                 unrefunded = unrefunded.subtract(itRollback);
                             }
                         }
@@ -378,6 +387,7 @@ public class RefundServiceImpl implements RefundService {
                         invoice.setSurchargePaidAmount(surchPaid.subtract(surchRoll));
                         BigDecimal surchDebt = invoice.getSurchargeRemainingDebt() != null ? invoice.getSurchargeRemainingDebt() : BigDecimal.ZERO;
                         invoice.setSurchargeRemainingDebt(surchDebt.add(surchRoll));
+                        rollbackSurchargeAllocations(invoice.getInvoiceId(), surchRoll, savedRefund.getRefundCode());
                         unrefunded = unrefunded.subtract(surchRoll);
                     }
 
@@ -394,6 +404,7 @@ public class RefundServiceImpl implements RefundService {
                                 it.setRemainingDebt(newItDebt);
                                 it.setPaymentStatus(newItDebt.compareTo(BigDecimal.ZERO) == 0 ? com.cvdcms.entity.enums.InvoiceItemPaymentStatus.PAID : (newItPaid.compareTo(BigDecimal.ZERO) > 0 ? com.cvdcms.entity.enums.InvoiceItemPaymentStatus.PARTIAL : com.cvdcms.entity.enums.InvoiceItemPaymentStatus.UNPAID));
                                 invoiceItemRepository.save(it);
+                                rollbackItemAllocations(it.getItemId(), itRollback, savedRefund.getRefundCode());
                                 unrefunded = unrefunded.subtract(itRollback);
                             }
                         }
@@ -467,5 +478,70 @@ public class RefundServiceImpl implements RefundService {
     public Refund getRefundById(Long refundId) {
         return refundRepository.findWithDetailsById(refundId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu hoàn tiền ID: " + refundId));
+    }
+
+    private void rollbackSurchargeAllocations(Long invoiceId, BigDecimal amountToRollback, String refundCode) {
+        if (paymentAllocationRepository == null || invoiceId == null
+                || amountToRollback == null || amountToRollback.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        List<PaymentAllocation> invoiceAllocs = paymentAllocationRepository
+                .findByInvoice_InvoiceIdOrderByLineOrderAscCreatedAtAsc(invoiceId);
+        if (invoiceAllocs == null || invoiceAllocs.isEmpty()) {
+            return;
+        }
+        List<PaymentAllocation> surchargeAllocs = invoiceAllocs.stream()
+                .filter(pa -> "SURCHARGE".equalsIgnoreCase(pa.getItemType()))
+                .toList();
+        rollbackAllocationsList(surchargeAllocs, amountToRollback, refundCode);
+    }
+
+    private void rollbackItemAllocations(Long itemId, BigDecimal amountToRollback, String refundCode) {
+        if (paymentAllocationRepository == null || itemId == null
+                || amountToRollback == null || amountToRollback.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        List<PaymentAllocation> itemAllocs = paymentAllocationRepository.findByInvoiceItem_ItemIdOrderByCreatedAtAsc(itemId);
+        rollbackAllocationsList(itemAllocs, amountToRollback, refundCode);
+    }
+
+    private void rollbackAllocationsList(List<PaymentAllocation> allocations, BigDecimal amountToRollback, String refundCode) {
+        if (allocations == null || allocations.isEmpty()
+                || amountToRollback == null || amountToRollback.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        List<PaymentAllocation> lifo = new java.util.ArrayList<>(allocations);
+        lifo.sort(java.util.Comparator
+                .comparing(PaymentAllocation::getCreatedAt, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                .thenComparing(pa -> pa.getAllocationId() != null ? pa.getAllocationId() : 0L)
+                .reversed());
+
+        BigDecimal remaining = amountToRollback;
+        for (PaymentAllocation pa : lifo) {
+            if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+                break;
+            }
+            BigDecimal currentAlloc = pa.getAllocatedAmount() != null ? pa.getAllocatedAmount() : BigDecimal.ZERO;
+            if (currentAlloc.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            BigDecimal delta = remaining.min(currentAlloc);
+            BigDecimal updated = currentAlloc.subtract(delta);
+            if (updated.compareTo(BigDecimal.ZERO) <= 0) {
+                paymentAllocationRepository.delete(pa);
+            } else {
+                pa.setAllocatedAmount(updated);
+                appendRefundNote(pa, refundCode, delta);
+                paymentAllocationRepository.save(pa);
+            }
+            remaining = remaining.subtract(delta);
+        }
+    }
+
+    private void appendRefundNote(PaymentAllocation pa, String refundCode, BigDecimal refundedAmount) {
+        String addition = "[Hoàn " + refundedAmount.stripTrailingZeros().toPlainString() + " đ - " + refundCode + "]";
+        String existing = pa.getNotes();
+        String merged = (existing == null || existing.isBlank()) ? addition : existing + " " + addition;
+        pa.setNotes(merged.length() > 255 ? merged.substring(0, 255) : merged);
     }
 }

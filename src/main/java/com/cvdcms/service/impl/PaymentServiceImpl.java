@@ -45,6 +45,8 @@ public class PaymentServiceImpl implements PaymentService {
     private com.cvdcms.service.PaymentAllocationService paymentAllocationService;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private org.springframework.context.ApplicationEventPublisher careEventPublisher;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ServiceCommissionService serviceCommissionService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PaymentServiceImpl(
@@ -177,6 +179,10 @@ public class PaymentServiceImpl implements PaymentService {
 
     public void setPaymentAllocationService(com.cvdcms.service.PaymentAllocationService paymentAllocationService) {
         this.paymentAllocationService = paymentAllocationService;
+    }
+
+    public void setServiceCommissionService(com.cvdcms.service.ServiceCommissionService serviceCommissionService) {
+        this.serviceCommissionService = serviceCommissionService;
     }
 
     /**
@@ -344,6 +350,9 @@ public class PaymentServiceImpl implements PaymentService {
             invoice.setPaymentStatus(InvoicePaymentStatus.PAID);
             if (invoiceService != null) {
                 invoiceService.finalizeInvoiceBenefits(invoice);
+            }
+            if (serviceCommissionService != null) {
+                serviceCommissionService.ensureCommissionsForInvoice(invoice);
             }
             completeVisit(invoice, cashierUserId);
         } else {

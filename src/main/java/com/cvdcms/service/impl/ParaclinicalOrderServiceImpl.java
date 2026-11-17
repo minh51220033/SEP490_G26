@@ -33,6 +33,13 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ServiceCommissionService serviceCommissionService;
+
+    public void setServiceCommissionService(com.cvdcms.service.ServiceCommissionService serviceCommissionService) {
+        this.serviceCommissionService = serviceCommissionService;
+    }
+
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final java.util.concurrent.atomic.AtomicLong XRAY_REF_COUNTER =
             new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis() % 100000);
@@ -380,12 +387,18 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
 
             PerformedService savedPs = performedServiceRepository.save(ps);
             item.setPerformedService(savedPs);
+            if (serviceCommissionService != null) {
+                serviceCommissionService.calculateCommissionsForPerformedService(savedPs);
+            }
         } else {
             // Khi trạng thái chưa hoàn thành hoặc hủy
             PerformedService ps = item.getPerformedService();
             if (ps != null) {
                 boolean isBilled = invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId());
                 if (!isBilled) {
+                    if (serviceCommissionService != null) {
+                        serviceCommissionService.cancelPendingCommissionsForPerformedService(ps.getPerformedId());
+                    }
                     ps.setStatus(PerformedServiceStatus.CANCELLED);
                     performedServiceRepository.save(ps);
                 }
