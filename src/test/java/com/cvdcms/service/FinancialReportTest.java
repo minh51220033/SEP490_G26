@@ -6,27 +6,17 @@ import org.junit.jupiter.api.DisplayName;
 
 import com.cvdcms.DTO.PatientDebtSummaryDTO;
 import com.cvdcms.DTO.report.*;
-import com.cvdcms.controller.AdminReportController;
 import com.cvdcms.entity.*;
-import com.cvdcms.entity.enums.AssignmentStatus;
 import com.cvdcms.entity.enums.PaymentMethod;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.impl.ReportServiceImpl;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import com.cvdcms.entity.enums.PaymentType;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mock.web.MockHttpSession;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.ui.ConcurrentModel;
-import org.springframework.ui.Model;
 
-import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -165,9 +155,10 @@ public class FinancialReportTest {
     }
 
     @Test
-    @DisplayName("UTCID04 - B - Hoàn tiền lớn hơn thực thu thì doanh thu thuần chặn tại 0")
+    @DisplayName("UTCID04 - B - Hoàn tiền lớn hơn thực thu thì doanh thu thuần âm")
     void UTCID04() throws Exception {
-        when(paymentRepository.sumAmountByMethodAndBranches(any(),eq(PaymentMethod.CASH),isNull(),any(),any())).thenReturn(new BigDecimal("100"));when(refundRepository.sumRefundAmountByBranches(any(),any(),any())).thenReturn(new BigDecimal("200"));FinancialReportDTO r=financial(new BigDecimal("20"));assertEquals(0,r.getTotalCollected().compareTo(new BigDecimal("100")));assertEquals(0,r.getNetRevenue().compareTo(BigDecimal.ZERO));
+        when(paymentRepository.sumAmountByMethodAndBranches(any(),eq(PaymentMethod.CASH),eq(PaymentType.PAYMENT),any(),any())).thenReturn(new BigDecimal("100"));when(refundRepository.sumRefundAmountByBranches(any(),any(),any())).thenReturn(new BigDecimal("200"));FinancialReportDTO r=financial(new BigDecimal("20"));assertEquals(0,r.getTotalCollected().compareTo(new BigDecimal("100")));assertEquals(0,
+                r.getNetRevenue().compareTo(new BigDecimal("-100")));
     }
 
     @Test
@@ -179,7 +170,7 @@ public class FinancialReportTest {
     @Test
     @DisplayName("UTCID06 - N - Thuế suất tùy chọn 10% tính đúng trên phần chênh lệch dương")
     void UTCID06() throws Exception {
-        when(paymentRepository.sumAmountByMethodAndBranches(any(),eq(PaymentMethod.CASH),isNull(),any(),any())).thenReturn(new BigDecimal("1000"));when(operatingExpenseRepository.sumActiveExpenses(any(),any(),any())).thenReturn(new BigDecimal("200"));FinancialReportDTO r=financial(new BigDecimal("10"));assertEquals(0,r.getEstimatedTaxAmount().compareTo(new BigDecimal("80")));assertEquals(0,r.getNetProfitAfterTax().compareTo(new BigDecimal("720")));
+        when(paymentRepository.sumAmountByMethodAndBranches(any(),eq(PaymentMethod.CASH),eq(PaymentType.PAYMENT),any(),any())).thenReturn(new BigDecimal("1000"));when(operatingExpenseRepository.sumActiveExpenses(any(),any(),any())).thenReturn(new BigDecimal("200"));FinancialReportDTO r=financial(new BigDecimal("10"));assertEquals(0,r.getEstimatedTaxAmount().compareTo(new BigDecimal("80")));assertEquals(0,r.getNetProfitAfterTax().compareTo(new BigDecimal("720")));
     }
 
     @Test
