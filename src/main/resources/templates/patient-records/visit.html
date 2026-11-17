@@ -8,7 +8,7 @@
          th:with="snap=${@emrModuleService.getVisitSnapshot(visit.id)},
                   emrRecord=${@emrModuleService.getEmrRecordViewForVisit(visit.id)},
                   resolvedBasePath=${recordBasePath != null ? recordBasePath : '/reception/patients'},
-                  resolvedRouteId=${patientRouteId != null ? patientRouteId : (resolvedBasePath == '/doctor/patient-records' ? idCodec.encodePatient(patient.id) : patient.id)},
+                  resolvedRouteId=${patientRouteId != null ? patientRouteId : idCodec.encodePatient(patient.id)},
                   backPatientUrl=${resolvedBasePath + '/' + resolvedRouteId + '?tab=treatment'}">
 
         <aside th:replace="~{fragments/sidebar :: sidebar(${sidebarMenu != null ? sidebarMenu : 'patients'})}"></aside>

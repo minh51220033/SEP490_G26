@@ -39,6 +39,20 @@ public class PatientPageController {
     private com.cvdcms.repository.UserRepository userRepository;
     @Autowired(required = false)
     private com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+    @Autowired(required = false)
+    private com.cvdcms.security.UrlIdCodec urlIdCodec = new com.cvdcms.security.UrlIdCodec();
+
+    private Long decodePatientRef(String patientRef) {
+        return urlIdCodec.decodePatientOrThrow(patientRef);
+    }
+
+    private Long decodeVisitRef(String visitRef) {
+        return urlIdCodec.decodeVisitOrThrow(visitRef);
+    }
+
+    private String encodePatient(Long id) {
+        return urlIdCodec.encodePatient(id);
+    }
 
     public PatientPageController(PatientService service,
                                  com.cvdcms.repository.InvoiceRepository invoiceRepository,
@@ -124,20 +138,23 @@ public class PatientPageController {
         return "reception/patients/form";
     }
 
-    @GetMapping("/{id}/edit")
-    public String edit(@PathVariable Long id, Model model, HttpSession session) {
+    @GetMapping("/{patientRef}/edit")
+    public String edit(@PathVariable String patientRef, Model model, HttpSession session) {
+        Long id = decodePatientRef(patientRef);
         model.addAttribute("patient", service.get(session, id));
+        model.addAttribute("patientRouteId", encodePatient(id));
         model.addAttribute("branches", service.branches(session));
         return "reception/patients/form";
     }
 
-    @GetMapping("/{id}")
-    public String detail(@PathVariable Long id,
+    @GetMapping("/{patientRef}")
+    public String detail(@PathVariable String patientRef,
                          @RequestParam(required = false) String tab,
                          Model model, HttpSession session) {
+        Long id = decodePatientRef(patientRef);
         PatientView patient = service.get(session, id);
         model.addAttribute("patient", patient);
-        model.addAttribute("patientRouteId", String.valueOf(id));
+        model.addAttribute("patientRouteId", encodePatient(id));
 
         List<ReceptionVisitView> visitList = service.visits(session, id);
         model.addAttribute("visits", visitList);
@@ -259,102 +276,116 @@ public class PatientPageController {
         return "patient-records/detail";
     }
 
-    @PostMapping("/{id}/health-notes")
-    public String updateHealthNotes(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/health-notes")
+    public String updateHealthNotes(HttpSession session, @PathVariable String patientRef,
                                     @RequestParam(required = false) String allergyDetails,
                                     @RequestParam(required = false) String underlyingDiseaseDetails,
                                     RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         try {
             service.updateHealthNotes(session, id, allergyDetails, underlyingDiseaseDetails);
             redirect.addFlashAttribute("documentSuccess", "Đã cập nhật thông tin dị ứng và bệnh nền thành công.");
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Không thể cập nhật: " + ex.getMessage());
         }
-        return "redirect:/reception/patients/" + id;
+        return "redirect:/reception/patients/" + routeRef;
     }
 
-    @PostMapping("/{id}/change-code")
-    public String changeCode(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/change-code")
+    public String changeCode(HttpSession session, @PathVariable String patientRef,
                              @RequestParam String newCode,
                              RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         try {
             service.updatePatientCode(session, id, newCode);
             redirect.addFlashAttribute("documentSuccess", "Đã đổi mã bệnh nhân thành công.");
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Không thể đổi mã: " + ex.getMessage());
         }
-        return "redirect:/reception/patients/" + id;
+        return "redirect:/reception/patients/" + routeRef;
     }
 
-    @PostMapping("/{id}/merge")
-    public String mergeRecords(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/merge")
+    public String mergeRecords(HttpSession session, @PathVariable String patientRef,
                                @RequestParam(required = false) String targetCode,
                                RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         if (targetCode == null || targetCode.isBlank()) {
             redirect.addFlashAttribute("documentError", "Vui lòng nhập mã hồ sơ bệnh nhân cần gộp.");
-            return "redirect:/reception/patients/" + id;
+            return "redirect:/reception/patients/" + routeRef;
         }
         try {
             PatientView current = service.get(session, id);
             if (targetCode.trim().equalsIgnoreCase(current.code())) {
                 redirect.addFlashAttribute("documentError", "Mã hồ sơ phụ cần gộp phải khác mã hồ sơ hiện tại.");
-                return "redirect:/reception/patients/" + id;
+                return "redirect:/reception/patients/" + routeRef;
             }
             redirect.addFlashAttribute("documentError", "Chức năng tự động gộp dữ liệu hồ sơ lâm sàng đang tạm khóa để đảm bảo toàn vẹn dữ liệu EMR và hóa đơn đã lập. Vui lòng liên hệ Quản trị viên chi nhánh để thực hiện quy trình gộp đối soát.");
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Không thể thực hiện yêu cầu gộp hồ sơ: " + ex.getMessage());
         }
-        return "redirect:/reception/patients/" + id;
+        return "redirect:/reception/patients/" + routeRef;
     }
 
-    @PostMapping("/{id}/documents")
-    public String uploadDocument(@PathVariable Long id, @RequestParam DocumentType documentType,
+    @PostMapping("/{patientRef}/documents")
+    public String uploadDocument(@PathVariable String patientRef, @RequestParam DocumentType documentType,
             @RequestParam("file") MultipartFile file, HttpSession session,
             RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         try {
             service.uploadDocument(session, id, documentType, file);
             redirect.addFlashAttribute("documentSuccess", "Đã tải lên bản scan giấy tờ.");
         } catch (ResponseStatusException ex) {
             redirect.addFlashAttribute("documentError", ex.getReason());
         }
-        return "redirect:/reception/patients/" + id;
+        return "redirect:/reception/patients/" + routeRef;
     }
 
-    @PostMapping("/{id}/documents/{documentId}/type")
-    public String updateDocumentType(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/documents/{documentId}/type")
+    public String updateDocumentType(HttpSession session, @PathVariable String patientRef,
                                      @PathVariable Long documentId,
                                      @RequestParam DocumentType newType,
                                      RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         try {
             service.updateDocumentType(session, id, documentId, newType);
             redirect.addFlashAttribute("documentSuccess", "Đã cập nhật loại giấy tờ.");
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Lỗi: " + ex.getMessage());
         }
-        return "redirect:/reception/patients/" + id;
+        return "redirect:/reception/patients/" + routeRef;
     }
 
-    @PostMapping("/{id}/documents/{documentId}/delete")
-    public String deleteDocument(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/documents/{documentId}/delete")
+    public String deleteDocument(HttpSession session, @PathVariable String patientRef,
                                  @PathVariable Long documentId,
                                  RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         try {
             service.deleteDocument(session, id, documentId);
             redirect.addFlashAttribute("documentSuccess", "Đã xóa bản scan giấy tờ.");
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Lỗi: " + ex.getMessage());
         }
-        return "redirect:/reception/patients/" + id;
+        return "redirect:/reception/patients/" + routeRef;
     }
 
-    @PostMapping("/{id}/photos")
-    public String uploadPhoto(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/photos")
+    public String uploadPhoto(HttpSession session, @PathVariable String patientRef,
                               @RequestParam(required = false) Long visitId,
                               @RequestParam(defaultValue = "BEFORE") String stage,
                               @RequestParam(defaultValue = "INTRAORAL") String category,
                               @RequestParam(required = false) String caption,
                               @RequestParam("file") MultipartFile file,
                               RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         try {
             if (clinicalPhotoService != null && !file.isEmpty()) {
                 PhotoStage pStage = parsePhotoStage(stage, PhotoStage.BEFORE);
@@ -365,16 +396,18 @@ public class PatientPageController {
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Không thể tải ảnh: " + ex.getMessage());
         }
-        return "redirect:/reception/patients/" + id + "#photos";
+        return "redirect:/reception/patients/" + routeRef + "#photos";
     }
 
-    @PostMapping("/{id}/photos/{photoId}/edit")
-    public String editPhoto(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/photos/{photoId}/edit")
+    public String editPhoto(HttpSession session, @PathVariable String patientRef,
                             @PathVariable Long photoId,
                             @RequestParam(required = false) String caption,
                             @RequestParam(required = false) String stage,
                             @RequestParam(required = false) String category,
                             RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         service.get(session, id);
         try {
             if (clinicalPhotoService != null) {
@@ -391,7 +424,7 @@ public class PatientPageController {
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Lỗi: " + ex.getMessage());
         }
-        return "redirect:/reception/patients/" + id + "#photos";
+        return "redirect:/reception/patients/" + routeRef + "#photos";
     }
 
     private PhotoStage parsePhotoStage(String stage, PhotoStage fallback) {
@@ -422,10 +455,12 @@ public class PatientPageController {
         }
     }
 
-    @PostMapping("/{id}/photos/{photoId}/delete")
-    public String deletePhoto(HttpSession session, @PathVariable Long id,
+    @PostMapping("/{patientRef}/photos/{photoId}/delete")
+    public String deletePhoto(HttpSession session, @PathVariable String patientRef,
                               @PathVariable Long photoId,
                               RedirectAttributes redirect) {
+        Long id = decodePatientRef(patientRef);
+        String routeRef = encodePatient(id);
         service.get(session, id);
         try {
             if (clinicalPhotoService != null) {
@@ -440,16 +475,18 @@ public class PatientPageController {
         } catch (Exception ex) {
             redirect.addFlashAttribute("documentError", "Lỗi: " + ex.getMessage());
         }
-        return "redirect:/reception/patients/" + id + "#photos";
+        return "redirect:/reception/patients/" + routeRef + "#photos";
     }
 
-    @GetMapping("/{id}/visits/{visitId}")
-    public String visit(@PathVariable Long id, @PathVariable Long visitId, Model model,
+    @GetMapping("/{patientRef}/visits/{visitRef}")
+    public String visit(@PathVariable String patientRef, @PathVariable String visitRef, Model model,
                         HttpSession session) {
+        Long id = decodePatientRef(patientRef);
+        Long visitId = decodeVisitRef(visitRef);
         var detail = service.visit(session, id, visitId);
         PatientView patient = service.get(session, id);
         model.addAttribute("patient", patient);
-        model.addAttribute("patientRouteId", String.valueOf(id));
+        model.addAttribute("patientRouteId", encodePatient(id));
         model.addAttribute("detail", detail);
         model.addAttribute("visit", detail.visit());
         model.addAttribute("followUps", detail.followUps() != null ? detail.followUps() : List.of());
@@ -460,9 +497,10 @@ public class PatientPageController {
         return "patient-records/visit";
     }
 
-    @GetMapping("/{id}/documents/{documentId}")
-    public ResponseEntity<Resource> downloadDocument(@PathVariable Long id,
+    @GetMapping("/{patientRef}/documents/{documentId}")
+    public ResponseEntity<Resource> downloadDocument(@PathVariable String patientRef,
             @PathVariable Long documentId, HttpSession session) {
+        Long id = decodePatientRef(patientRef);
         var file = service.downloadDocument(session, id, documentId);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(file.contentType()))

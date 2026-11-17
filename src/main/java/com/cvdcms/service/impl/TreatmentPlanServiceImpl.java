@@ -8,7 +8,6 @@ import com.cvdcms.entity.enums.TreatmentPlanStageStatus;
 import com.cvdcms.entity.enums.TreatmentPlanStatus;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.TreatmentPlanService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +23,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class TreatmentPlanServiceImpl implements TreatmentPlanService {
 
     private final TreatmentPlanRepository treatmentPlanRepository;
@@ -38,7 +36,56 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     private final InvoiceItemRepository invoiceItemRepository;
     private final TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository;
 
-    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    @org.springframework.beans.factory.annotation.Autowired
+    public TreatmentPlanServiceImpl(
+            TreatmentPlanRepository treatmentPlanRepository,
+            TreatmentPlanStageRepository treatmentPlanStageRepository,
+            TreatmentPlanItemRepository treatmentPlanItemRepository,
+            PatientProfileRepository patientProfileRepository,
+            BranchRepository branchRepository,
+            StaffProfileRepository staffProfileRepository,
+            ServiceRepository serviceRepository,
+            PerformedServiceRepository performedServiceRepository,
+            InvoiceItemRepository invoiceItemRepository,
+            TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository) {
+        this.treatmentPlanRepository = treatmentPlanRepository;
+        this.treatmentPlanStageRepository = treatmentPlanStageRepository;
+        this.treatmentPlanItemRepository = treatmentPlanItemRepository;
+        this.patientProfileRepository = patientProfileRepository;
+        this.branchRepository = branchRepository;
+        this.staffProfileRepository = staffProfileRepository;
+        this.serviceRepository = serviceRepository;
+        this.performedServiceRepository = performedServiceRepository;
+        this.invoiceItemRepository = invoiceItemRepository;
+        this.treatmentPlanInstallmentRepository = treatmentPlanInstallmentRepository;
+    }
+
+    // Compatibility constructor preserved for unit tests passing GeminiAiService
+    public TreatmentPlanServiceImpl(
+            TreatmentPlanRepository treatmentPlanRepository,
+            TreatmentPlanStageRepository treatmentPlanStageRepository,
+            TreatmentPlanItemRepository treatmentPlanItemRepository,
+            PatientProfileRepository patientProfileRepository,
+            BranchRepository branchRepository,
+            StaffProfileRepository staffProfileRepository,
+            ServiceRepository serviceRepository,
+            com.cvdcms.service.GeminiAiService geminiAiService,
+            PerformedServiceRepository performedServiceRepository,
+            InvoiceItemRepository invoiceItemRepository,
+            TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository) {
+        this(
+                treatmentPlanRepository,
+                treatmentPlanStageRepository,
+                treatmentPlanItemRepository,
+                patientProfileRepository,
+                branchRepository,
+                staffProfileRepository,
+                serviceRepository,
+                performedServiceRepository,
+                invoiceItemRepository,
+                treatmentPlanInstallmentRepository);
+    }
+
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private PaymentRepository paymentRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)

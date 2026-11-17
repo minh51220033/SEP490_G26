@@ -115,12 +115,12 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         // =====================================================================
         if (uri.startsWith("/reception/patients") || uri.startsWith("/api/reception/patients")) {
             if (isWriteMethod) {
-                if (uri.matches("^/reception/patients/\\d+/photos.*") || uri.matches("^/api/reception/patients/\\d+/photos.*")) {
+                if (uri.matches("^/reception/patients/[^/]+/photos.*") || uri.matches("^/api/reception/patients/[^/]+/photos.*")) {
                     return List.of("PATIENT_PROFILE_MANAGE", "CLINICAL_PHOTOS");
                 }
                 return List.of("PATIENT_PROFILE_MANAGE");
             }
-            if (uri.equals("/reception/patients/new") || uri.matches("^/reception/patients/\\d+/edit.*")) {
+            if (uri.equals("/reception/patients/new") || uri.matches("^/reception/patients/[^/]+/edit.*")) {
                 return List.of("PATIENT_PROFILE_MANAGE");
             }
             return List.of("PATIENT_PROFILE_MANAGE", "MEDICAL_RECORD_VIEW");

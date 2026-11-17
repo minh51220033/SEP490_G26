@@ -1095,9 +1095,10 @@
 
                 // 3. Mã KH
                 const tdCode = document.createElement('td');
+                const patientRef = a.patientToken || a.profileId;
                 if (a.profileId) {
                     const codeLink = document.createElement('a');
-                    codeLink.setAttribute('href', `/reception/patients/${a.profileId}`);
+                    codeLink.setAttribute('href', `/reception/patients/${patientRef}`);
                     codeLink.className = 'customer-code-badge';
                     codeLink.textContent = a.patientCode || `BN#${a.profileId}`;
                     tdCode.appendChild(codeLink);
@@ -1113,7 +1114,7 @@
                 const tdPatient = document.createElement('td');
                 if (a.profileId) {
                     const nameLink = document.createElement('a');
-                    nameLink.setAttribute('href', `/reception/patients/${a.profileId}`);
+                    nameLink.setAttribute('href', `/reception/patients/${patientRef}`);
                     nameLink.className = 'customer-name-link';
                     nameLink.textContent = a.patientName || 'Khách hàng';
                     tdPatient.appendChild(nameLink);
