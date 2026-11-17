@@ -39,7 +39,6 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     private final TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    @org.springframework.beans.factory.annotation.Autowired(required = false)
     private PaymentRepository paymentRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private UserRepository userRepository;

@@ -83,7 +83,6 @@ class AuditRegressionUnitTest {
                 branchRepository,
                 staffProfileRepository,
                 serviceRepository,
-                geminiAiService,
                 performedServiceRepository,
                 invoiceItemRepository,
                 treatmentPlanInstallmentRepository
