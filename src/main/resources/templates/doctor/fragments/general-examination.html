@@ -11,11 +11,11 @@
         <!-- FOLDABLE HEADER -->
         <div class="df-foldable-bar is-expanded d-flex align-items-center justify-content-between" id="bar-exam"
             onclick="toggleMainBar('exam')">
-            <div class="d-flex align-items-center flex-grow-1">
+            <div class="d-flex align-items-center flex-grow-1 gap-2">
                 <i class="bi bi-chevron-down df-foldable-chevron text-primary" id="chevron-exam"></i>
-                <span class="df-foldable-title">1. Khám tổng quát</span>
-                <span class="df-foldable-subtitle d-none d-md-inline ms-2 text-muted">(Triệu chứng ban đầu, tiền sử y
-                    khoa dị ứng &amp; khám mô mềm / khớp TMJ)</span>
+                <span class="df-step-num">1</span>
+                <span class="df-foldable-title">Khám tổng quát</span>
+                <span class="df-meta-tertiary d-none d-md-inline ms-1">(Triệu chứng ban đầu, tiền sử y khoa dị ứng &amp; khám mô mềm / khớp TMJ)</span>
             </div>
         </div>
 
@@ -27,9 +27,7 @@
                     <!-- 1. LÝ DO ĐẾN KHÁM & TRIỆU CHỨNG BAN ĐẦU                    -->
                     <!-- ========================================================= -->
                     <div class="col-lg-6">
-                        <div class="card h-100 border rounded-3 shadow-none"
-                            style="background: #f8fafc; border-color: #e2e8f0 !important;">
-                            <div class="card-body p-3">
+                        <div class="df-soft-panel h-100">
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <div class="d-flex align-items-center">
                                         <span class="p-1 rounded bg-primary-subtle text-primary me-2">
@@ -93,7 +91,6 @@
                                 <textarea class="form-control form-control-sm" id="examSymptomsInput" rows="3"
                                     placeholder="Mô tả chi tiết triệu chứng, vị trí răng đau, thời gian khởi phát..."
                                     th:text="${generalExam != null and generalExam.initialSymptoms != null ? generalExam.initialSymptoms : (visit != null and visit.initialSymptoms != null ? visit.initialSymptoms : '')}"></textarea>
-                            </div>
                         </div>
                     </div>
 
@@ -101,9 +98,7 @@
                     <!-- 2. TIỀN SỬ Y KHOA & CẢNH BÁO DỊ ỨNG                       -->
                     <!-- ========================================================= -->
                     <div class="col-lg-6">
-                        <div class="card h-100 border rounded-3 shadow-none"
-                            style="background: #f8fafc; border-color: #e2e8f0 !important;" id="medicalHistoryCard">
-                            <div class="card-body p-3">
+                        <div class="df-soft-panel h-100" id="medicalHistoryCard">
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <div class="d-flex align-items-center">
                                         <span class="p-1 rounded bg-danger-subtle text-danger me-2">
@@ -193,7 +188,6 @@
                                             th:value="${generalExam != null ? generalExam.underlyingDiseaseDetails : (patient != null ? patient.underlyingDiseaseDetails : '')}">
                                     </div>
                                 </div>
-                            </div>
                         </div>
                     </div>
 
@@ -201,9 +195,7 @@
                     <!-- 3. KHÁM MÔ MỀM & KHỚP THÁI DƯƠNG HÀM (TMJ)                -->
                     <!-- ========================================================= -->
                     <div class="col-12">
-                        <div class="card border rounded-3 shadow-none"
-                            style="background: #f8fafc; border-color: #e2e8f0 !important;">
-                            <div class="card-body p-3">
+                        <div class="df-soft-panel">
                                 <div class="d-flex align-items-center mb-2">
                                     <span class="p-1 rounded bg-info-subtle text-info me-2">
                                         <i class="bi bi-person-lines-fill"></i>
@@ -275,7 +267,6 @@
                                             placeholder="Tóm tắt tình trạng răng miệng, hướng xử trí chính (dùng đồng bộ sang Bệnh án điện tử EMR)..."></textarea>
                                     </div>
                                 </div>
-                            </div>
                         </div>
                     </div>
 

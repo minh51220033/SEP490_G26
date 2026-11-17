@@ -7,63 +7,62 @@
 <!-- Frontend Fragment: doctor/fragments/instructions-tab.html            -->
 <!-- ===================================================================== -->
 <div th:fragment="instructionsTab">
-    <div class="card border shadow-sm rounded-3 mb-4 overflow-hidden bg-white">
+    <div class="df-unified-tab-card mb-4 overflow-hidden bg-white">
         <!-- Header -->
-        <div class="card-header df-tab-content-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
-            <div class="df-tab-title-standard">
-                <i class="bi bi-card-checklist"></i>
-                <span>LỜI DẶN &amp; HƯỚNG DẪN CHĂM SÓC TẠI NHÀ</span>
-                <span class="df-tab-subtitle-text d-none d-lg-inline">(Vệ sinh răng miệng, chế độ ăn &amp; xử trí đau nhức)</span>
+        <div class="df-tab-content-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3 border-bottom">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <i class="bi bi-card-checklist text-primary fs-5"></i>
+                <h2 class="df-title-primary mb-0">Lời dặn &amp; hướng dẫn chăm sóc tại nhà</h2>
+                <span class="df-subtitle-secondary d-none d-lg-inline">· Vệ sinh răng miệng, chế độ ăn &amp; xử trí đau nhức</span>
             </div>
 
-            <!-- Cụm nút Thao tác: Tạo lời dặn & In phiếu dặn dò -->
+            <!-- Cụm nút Thao tác: In phiếu dặn dò & Tạo lời dặn (Secondary trái — Primary phải) -->
             <div class="d-flex align-items-center flex-wrap gap-2">
-                <button type="button" class="df-btn-add-plan text-decoration-none border-0 text-white"
-                        onclick="openDoctorInstructionModal()"
-                        title="Soạn lời dặn dò riêng cho bệnh nhân sau ca khám này">
-                    <i class="bi bi-pencil-square me-1"></i>
-                    <span>Tạo / Soạn lời dặn</span>
-                </button>
-
-                <button type="button" class="df-btn-white-plan"
+                <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold"
                         onclick="printDoctorInstructions()"
                         title="In phiếu hướng dẫn dặn dò cho bệnh nhân mang về">
                     <i class="bi bi-printer text-primary"></i>
                     <span>In phiếu dặn dò</span>
                 </button>
+                <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold text-white"
+                        onclick="openDoctorInstructionModal()"
+                        title="Soạn lời dặn dò riêng cho bệnh nhân sau ca khám này">
+                    <i class="bi bi-pencil-square"></i>
+                    <span>Tạo / Soạn lời dặn</span>
+                </button>
             </div>
         </div>
 
-        <div class="card-body p-4 bg-white">
+        <div class="p-4 bg-white">
             <div class="row g-4">
                 <!-- 1. HƯỚNG DẪN CHUNG SAU ĐIỀU TRỊ (CHẾ ĐỘ TIÊU CHUẨN) -->
                 <div class="col-lg-6">
-                    <div class="border rounded-3 p-3.5 bg-light-subtle h-100">
-                        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3 d-flex align-items-center gap-1.5">
+                    <div class="df-soft-panel p-3 h-100">
+                        <h6 class="fw-bold text-dark border-bottom pb-2 mb-3 d-flex align-items-center gap-2">
                             <i class="bi bi-shield-check text-success fs-5"></i>
-                            <span>Chế độ kiêng cữ &amp; Vệ sinh tại nhà tiêu chuẩn</span>
+                            <span>Chế độ kiêng cữ &amp; vệ sinh tại nhà tiêu chuẩn</span>
                         </h6>
                         <div class="d-flex flex-column gap-3 small text-secondary">
-                            <div class="d-flex align-items-start gap-2.5">
-                                <span class="badge bg-primary text-white rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 20px; height: 20px; font-size: 11px;">1</span>
+                            <div class="d-flex align-items-start gap-2">
+                                <span class="df-step-num df-num flex-shrink-0">1</span>
                                 <div>
                                     <strong class="text-dark">Cắn gòn / Cầm máu:</strong> Cắn chặt gạc tại vị trí can thiệp trong vòng 45 - 60 phút. Không khạc nhổ nước bọt, không dùng lưỡi hoặc vật lạ chạm vào vết mổ.
                                 </div>
                             </div>
-                            <div class="d-flex align-items-start gap-2.5">
-                                <span class="badge bg-primary text-white rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 20px; height: 20px; font-size: 11px;">2</span>
+                            <div class="d-flex align-items-start gap-2">
+                                <span class="df-step-num df-num flex-shrink-0">2</span>
                                 <div>
                                     <strong class="text-dark">Chườm má giảm sưng:</strong> Trong 24h đầu chườm lạnh ngoài má (15 phút chườm, 15 phút nghỉ). Từ ngày thứ 2 chườm ấm để tan máu bầm và lưu thông khí huyết.
                                 </div>
                             </div>
-                            <div class="d-flex align-items-start gap-2.5">
-                                <span class="badge bg-primary text-white rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 20px; height: 20px; font-size: 11px;">3</span>
+                            <div class="d-flex align-items-start gap-2">
+                                <span class="df-step-num df-num flex-shrink-0">3</span>
                                 <div>
                                     <strong class="text-dark">Chế độ ăn uống:</strong> Dùng thức ăn mềm, nguội, lỏng (cháo, súp). Tránh đồ ăn quá cay nóng, giòn cứng. Tuyệt đối không dùng rượu bia, không hút thuốc lá trong 72 giờ đầu.
                                 </div>
                             </div>
-                            <div class="d-flex align-items-start gap-2.5">
-                                <span class="badge bg-primary text-white rounded-circle p-1 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 20px; height: 20px; font-size: 11px;">4</span>
+                            <div class="d-flex align-items-start gap-2">
+                                <span class="df-step-num df-num flex-shrink-0">4</span>
                                 <div>
                                     <strong class="text-dark">Vệ sinh răng miệng:</strong> Đánh răng nhẹ nhàng tránh vùng vết thương. Ngày đầu không súc miệng nước muối quá mạnh để tránh bong cục máu đông.
                                 </div>
@@ -74,12 +73,12 @@
 
                 <!-- 2. LỜI DẶN RIÊNG CỦA BÁC SĨ TRONG CA KHÁM NÀY -->
                 <div class="col-lg-6">
-                    <div class="border rounded-3 p-3.5 bg-white h-100 d-flex flex-column justify-content-between shadow-xs">
+                    <div class="border rounded-3 p-3 bg-white h-100 d-flex flex-column justify-content-between" style="border-color: #e2e8f0 !important;">
                         <div>
                             <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3">
-                                <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-1.5">
+                                <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
                                     <i class="bi bi-chat-left-dots text-primary fs-5"></i>
-                                    <span>Ghi chú dặn dò riêng của Bác sĩ cho ca này</span>
+                                    <span>Ghi chú dặn dò riêng của bác sĩ cho ca này</span>
                                 </h6>
                                 <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 text-primary small fw-semibold"
                                         onclick="openDoctorInstructionModal()">
@@ -88,8 +87,8 @@
                             </div>
 
                             <!-- Khung hiển thị Lời dặn -->
-                            <div class="p-3 bg-light rounded-3 text-dark small mb-3 border" style="background: #f8fafc !important; border-color: #e2e8f0 !important; line-height: 1.6;">
-                                <i class="bi bi-quote fs-3 text-primary opacity-50 d-block mb-1"></i>
+                            <div class="df-soft-panel p-3 text-dark small mb-3" style="line-height: 1.6;">
+                                <i class="bi bi-quote fs-4 text-primary opacity-50 d-block mb-1"></i>
                                 <span id="displayDoctorAdviceText" class="fw-medium"
                                       th:text="${(visit != null and visit.notes != null and !visit.notes.isEmpty() and !visit.notes.contains('BR-EMR-02') and !visit.notes.contains('hoàn tất khám lâm sàng')) ? visit.notes : ((prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null and !prescriptions[0].adviceNotes.isEmpty()) ? prescriptions[0].adviceNotes : 'Bác sĩ chưa nhập dặn dò riêng cho ca khám này. Nhấn nút Tạo / Soạn lời dặn ở trên để bổ sung hướng dẫn chi tiết cho bệnh nhân.')}">
                                     Bác sĩ chưa nhập dặn dò riêng cho ca khám này. Nhấn nút "Tạo / Soạn lời dặn" ở trên để bổ sung hướng dẫn chi tiết cho bệnh nhân.
@@ -98,13 +97,13 @@
                         </div>
 
                         <!-- HOTLINE KHẨN CẤP 24/7 -->
-                        <div class="alert alert-danger border-danger-subtle d-flex align-items-center gap-3 p-3 rounded-3 mb-0">
-                            <i class="bi bi-telephone-inbound-fill fs-2 text-danger flex-shrink-0"></i>
+                        <div class="d-flex align-items-center gap-3 p-3 rounded-3 mb-0 border" style="background: #fef2f2; border-color: #fecaca !important;">
+                            <i class="bi bi-telephone-inbound-fill fs-3 text-danger flex-shrink-0"></i>
                             <div>
-                                <div class="fw-bold text-danger" style="letter-spacing: 0.3px;">HỖ TRỢ Y TẾ KHẨN CẤP 24/7</div>
-                                <div class="small text-secondary mt-0.5">
+                                <div class="fw-bold text-danger" style="font-size: 13.5px;">Hỗ trợ y tế khẩn cấp 24/7</div>
+                                <div class="small text-secondary mt-1">
                                     Khi có triệu chứng bất thường (chảy máu kéo dài &gt; 2h, sốt &gt; 38.5°C, sưng đau tăng dần):
-                                    <strong class="text-danger d-block mt-0.5 fs-6">Hotline: 1900 6868 &bull; 024 3999 8888</strong>
+                                    <strong class="text-danger d-block mt-1 fs-6 df-num">Hotline: 1900 6868 &bull; 024 3999 8888</strong>
                                 </div>
                             </div>
                         </div>
@@ -150,16 +149,16 @@
          th:data-visit-id="${visit != null ? visit.visitId : ''}">
         <div class="modal-dialog modal-lg modal-dialog-centered" style="z-index: 2051 !important; position: relative;">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #ffffff !important; position: relative; z-index: 2052 !important;">
-                <div class="modal-header py-3 px-4 bg-light border-bottom">
-                    <div class="d-flex align-items-center gap-2.5">
-                        <div class="p-2 rounded bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                <div class="modal-header py-3 px-4 bg-white border-bottom text-dark">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 rounded d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; background: #e0f2fe; color: #0284c7;">
                             <i class="bi bi-pencil-square fs-5"></i>
                         </div>
                         <div>
                             <h5 class="modal-title fw-bold text-dark mb-0 fs-6" id="doctorInstructionModalLabel">
-                                Soạn lời dặn dò &amp; Hướng dẫn chăm sóc tại nhà
+                                Soạn lời dặn dò &amp; hướng dẫn chăm sóc tại nhà
                             </h5>
-                            <div class="text-muted small" style="font-size: 12px;">
+                            <div class="df-meta-tertiary">
                                 Lời dặn sẽ được lưu vào hồ sơ bệnh án, đồng bộ sang đơn thuốc và in ra phiếu cho bệnh nhân
                             </div>
                         </div>
@@ -170,33 +169,33 @@
                 <div class="modal-body p-4 bg-white" style="background: #ffffff !important;">
                     <!-- Mẫu dặn dò nhanh theo thủ thuật -->
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary mb-1.5 d-block text-uppercase" style="font-size: 11px; letter-spacing: 0.04em;">
+                        <label class="form-label small fw-semibold text-secondary mb-2 d-block">
                             Chọn nhanh mẫu dặn dò theo thủ thuật:
                         </label>
-                        <div class="d-flex flex-wrap gap-1.5">
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 small"
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2 small"
                                     onclick="applyInstructionPreset('NHO_RANG')">
-                                <i class="bi bi-plus me-0.5"></i>Nhổ răng / Cắt chỉ
+                                <i class="bi bi-plus me-1"></i>Nhổ răng / Cắt chỉ
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 small"
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2 small"
                                     onclick="applyInstructionPreset('IMPLANT')">
-                                <i class="bi bi-plus me-0.5"></i>Cấy ghép Implant
+                                <i class="bi bi-plus me-1"></i>Cấy ghép Implant
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 small"
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2 small"
                                     onclick="applyInstructionPreset('CHUA_TUY')">
-                                <i class="bi bi-plus me-0.5"></i>Điều trị tủy
+                                <i class="bi bi-plus me-1"></i>Điều trị tủy
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 small"
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2 small"
                                     onclick="applyInstructionPreset('BOC_SU')">
-                                <i class="bi bi-plus me-0.5"></i>Bọc răng sứ
+                                <i class="bi bi-plus me-1"></i>Bọc răng sứ
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 small"
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2 small"
                                     onclick="applyInstructionPreset('CHINH_NHA')">
-                                <i class="bi bi-plus me-0.5"></i>Niềng răng / Chỉnh nha
+                                <i class="bi bi-plus me-1"></i>Niềng răng / Chỉnh nha
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 small"
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2 small"
                                     onclick="applyInstructionPreset('TAY_TRANG')">
-                                <i class="bi bi-plus me-0.5"></i>Tẩy trắng răng
+                                <i class="bi bi-plus me-1"></i>Tẩy trắng răng
                             </button>
                         </div>
                     </div>
@@ -204,20 +203,20 @@
                     <!-- Ô nhập Lời dặn -->
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-secondary mb-1">
-                            Nội dung lời dặn chi tiết của Bác sĩ: <span class="text-danger">*</span>
+                            Nội dung lời dặn chi tiết của bác sĩ: <span class="text-danger">*</span>
                         </label>
                         <textarea class="form-control rounded-3" id="doctorInstructionTextarea" rows="6"
                                   placeholder="Nhập nội dung dặn dò, chế độ dùng thuốc, kiêng cữ thức ăn và theo dõi vết thương..."
                                   style="font-size: 13.5px; padding: 10px 14px; border-color: #cbd5e1; line-height: 1.6; background: #ffffff !important;"></textarea>
-                        <div class="form-text text-muted small mt-1" style="font-size: 11.5px;">
+                        <div class="form-text df-meta-tertiary mt-1">
                             Bác sĩ có thể bấm các nút mẫu nhanh ở trên để chèn nhanh, sau đó bổ sung dặn dò riêng theo tình trạng thực tế của bệnh nhân.
                         </div>
                     </div>
                 </div>
 
-                <div class="modal-footer py-2.5 px-4 bg-light border-top d-flex justify-content-end gap-2">
-                    <button type="button" class="btn btn-light btn-sm px-3.5 rounded-pill text-secondary fw-semibold border" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" class="btn btn-primary btn-sm px-4 fw-bold rounded-pill shadow-xs" id="btnSaveDoctorInstruction" onclick="submitDoctorInstructions()">
+                <div class="modal-footer py-2 px-4 bg-white border-top d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-3 rounded-pill fw-semibold" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary btn-sm px-4 fw-semibold rounded-pill" id="btnSaveDoctorInstruction" onclick="submitDoctorInstructions()">
                         <i class="bi bi-check-circle-fill me-1"></i>Lưu lời dặn bác sĩ
                     </button>
                 </div>

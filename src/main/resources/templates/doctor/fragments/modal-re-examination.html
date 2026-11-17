@@ -30,16 +30,16 @@
         <div class="modal-dialog modal-lg modal-dialog-centered" style="z-index: 2051 !important; position: relative;">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #ffffff !important; position: relative; z-index: 2052 !important;">
                 <!-- Modal Header -->
-                <div class="modal-header py-3 px-4" style="background: #ffffff; border-bottom: 1px solid #f1f5f9;">
-                    <div class="d-flex align-items-center gap-2.5">
-                        <div class="p-2 rounded bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                <div class="modal-header py-3 px-4 bg-white border-bottom text-dark">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 rounded d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: #e0f2fe; color: #0284c7;">
                             <i class="bi bi-calendar2-plus-fill fs-5"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title fw-bold text-dark mb-0" id="reExamBookingModalLabel" style="font-size: 1.15rem; letter-spacing: -0.01em;">
+                            <h5 class="modal-title fw-bold text-dark mb-0 fs-6" id="reExamBookingModalLabel">
                                 Hẹn tái khám sau điều trị (SCR-18.1)
                             </h5>
-                            <div class="text-muted small" style="font-size: 12.5px;">
+                            <div class="df-meta-tertiary">
                                 Lập lịch tái khám, kiểm tra vết thương, dặn dò &amp; phân công nhắc hẹn CSKH
                             </div>
                         </div>
@@ -50,15 +50,15 @@
                 <!-- Modal Body -->
                 <div class="modal-body p-4 pt-3">
                     <!-- Patient summary banner -->
-                    <div class="p-2.5 px-3 rounded-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2" style="background: #f8fafc; border: 1px solid #e2e8f0;">
-                        <div class="d-flex align-items-center gap-2.5">
-                            <div style="width: 36px; height: 36px; border-radius: 50%; background: #e0e7ff; color: #4338ca; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"
+                    <div class="df-soft-panel p-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"
                                  th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? #strings.substring(patient.fullName, 0, 1) : 'BN'}">BN</div>
                             <div>
                                 <div class="fw-bold text-dark" style="font-size: 14px;" th:text="${patient != null ? patient.fullName : 'Bệnh nhân'}">Bệnh nhân</div>
-                                <div class="small text-secondary" style="font-size: 12px;">
+                                <div class="df-meta-tertiary df-num">
                                     <span th:text="${'Mã KH: ' + (patient != null ? patient.patientCode : '---')}">Mã KH</span>
-                                    <span class="mx-1">•</span>
+                                    <span class="mx-1">·</span>
                                     <span th:text="${'SĐT: ' + (patient != null ? patient.phoneNumber : '---')}">SĐT</span>
                                 </div>
                             </div>
@@ -69,7 +69,7 @@
                         </div>
                     </div>
 
-                    <!-- Hàng 1: Mốc hẹn nhanh & Ngày hẹn tái khám (Cột dọc lựa chọn, không ngoặc chi tiết) -->
+                    <!-- Hàng 1: Mốc hẹn nhanh & Ngày hẹn tái khám -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-secondary mb-1">
@@ -89,8 +89,8 @@
                             <label class="form-label small fw-bold text-secondary mb-1">
                                 Ngày hẹn tái khám: <span class="text-danger">*</span>
                             </label>
-                            <input type="date" class="form-control rounded-3" id="reExamDateInput" required onchange="onManualDateChange()" style="font-size: 13.5px; padding: 7px 12px; border-color: #cbd5e1;">
-                            <div class="mt-1 small" id="reExamDateFormatted" style="font-size: 12px; color: #0284c7; font-weight: 600;"></div>
+                            <input type="date" class="form-control rounded-3 df-num" id="reExamDateInput" required onchange="onManualDateChange()" style="font-size: 13.5px; padding: 7px 12px; border-color: #cbd5e1;">
+                            <div class="mt-1 small df-num" id="reExamDateFormatted" style="font-size: 12px; color: #0284c7; font-weight: 600;"></div>
                         </div>
                     </div>
 
@@ -142,26 +142,26 @@
                             <option value="OTHER">Khác (Tự nhập chi tiết bên dưới)</option>
                         </select>
                         
-                        <!-- Ô nhập dặn dò chi tiết (được tự động điền khi chọn dropdown trên, bác sĩ có thể gõ thêm lời dặn) -->
+                        <!-- Ô nhập dặn dò chi tiết -->
                         <input type="text" class="form-control rounded-3" id="reExamReasonInput"
                                placeholder="Nội dung hoặc lời dặn chi tiết cho bệnh nhân..."
                                value="Tái khám cắt chỉ R38 &amp; kiểm tra lành thương"
                                style="font-size: 13.5px; padding: 7px 12px; border-color: #cbd5e1;">
 
-                        <!-- Ẩn select serviceId nguyên bản nhưng vẫn giữ id="reExamServiceSelect" để API nhận serviceId nếu cần -->
+                        <!-- Ẩn select serviceId nguyên bản -->
                         <select id="reExamServiceSelect" class="d-none">
                             <option value="">-- Khám thông thường --</option>
                             <option th:each="svc : ${activeServices}" th:value="${svc.serviceId}" th:text="${svc.serviceName}"></option>
                         </select>
                     </div>
 
-                    <!-- Hàng 4: Toggle Tự động nhắc hẹn CSKH (Nhỏ gọn, tinh tế) -->
-                    <div class="p-2.5 px-3 rounded-3 mb-3 d-flex align-items-center justify-content-between" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                    <!-- Hàng 4: Toggle Tự động nhắc hẹn CSKH -->
+                    <div class="df-soft-panel p-3 mb-3 d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-headset text-primary fs-5"></i>
                             <div>
                                 <span class="fw-semibold text-dark small">Tự động phân công CSKH / Lễ tân gọi nhắc hẹn trước 1 ngày</span>
-                                <div class="text-muted" style="font-size: 11.5px;">Đồng bộ vào danh sách "Nhắc hẹn tái khám" của phòng khám</div>
+                                <div class="df-meta-tertiary">Đồng bộ vào danh sách "Nhắc hẹn tái khám" của phòng khám</div>
                             </div>
                         </div>
                         <div class="form-check form-switch m-0">
@@ -169,17 +169,17 @@
                         </div>
                     </div>
 
-                    <!-- Hàng 5: Danh sách các lịch hẹn đã tạo (Collapsible dạng gập/mở, không choán diện tích) -->
+                    <!-- Hàng 5: Danh sách các lịch hẹn đã tạo -->
                     <div class="border rounded-3 bg-white" style="border-color: #e2e8f0 !important; overflow: hidden;">
                         <div class="d-flex align-items-center justify-content-between p-2 px-3 bg-light"
                              style="cursor: pointer; user-select: none;"
                              data-bs-toggle="collapse" data-bs-target="#collapseExistingReExams" aria-expanded="false">
                             <div class="d-flex align-items-center gap-2">
                                 <i class="bi bi-clock-history text-secondary"></i>
-                                <span class="small fw-bold text-secondary text-uppercase" style="font-size: 11px; letter-spacing: 0.04em;">
+                                <span class="small fw-semibold text-secondary">
                                     Lịch hẹn tái khám đã tạo của bệnh nhân:
                                 </span>
-                                <span class="badge rounded-pill bg-white text-dark border" id="reExamExistingCount" style="font-size: 11px;">0 lịch hẹn</span>
+                                <span class="badge rounded-pill bg-white text-dark border df-num" id="reExamExistingCount" style="font-size: 11px;">0 lịch hẹn</span>
                             </div>
                             <span class="small text-primary fw-semibold" style="font-size: 12px;">
                                 Xem danh sách <i class="bi bi-chevron-down ms-1"></i>
@@ -188,8 +188,8 @@
                         <div class="collapse" id="collapseExistingReExams">
                             <div class="p-2 border-top">
                                 <div class="table-responsive" style="max-height: 140px; overflow-y: auto;">
-                                    <table class="table table-sm table-hover align-middle mb-0" style="font-size: 12px;">
-                                        <thead class="table-light">
+                                    <table class="table df-clean-table table-hover align-middle mb-0" data-disable-floating-actions="true" style="font-size: 12px;">
+                                        <thead>
                                         <tr>
                                             <th>Mã hẹn</th>
                                             <th>Ngày hẹn</th>
@@ -218,9 +218,9 @@
                 </div>
 
                 <!-- Modal Footer -->
-                <div class="modal-footer py-2.5 px-4 bg-white border-top d-flex justify-content-end gap-2">
-                    <button type="button" class="btn btn-light btn-sm px-3.5 rounded-pill text-secondary fw-semibold border" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" class="btn btn-primary btn-sm px-4 fw-bold rounded-pill shadow-xs" onclick="submitReExamBooking()">
+                <div class="modal-footer py-2 px-4 bg-white border-top d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-3 rounded-pill fw-semibold" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary btn-sm px-4 fw-semibold rounded-pill" onclick="submitReExamBooking()">
                         <i class="bi bi-check-circle-fill me-1"></i>
                         Xác nhận đặt hẹn tái khám
                     </button>
@@ -400,22 +400,22 @@
                 if (!list || list.length === 0) {
                     mainTbody.innerHTML = `
                         <tr id="emptyReExamRow">
-                            <td colspan="8" class="text-center" style="padding: 70px 24px 90px 24px !important; background: #ffffff;">
-                                <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 290px;">
-                                    <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
-                                         style="width: 88px; height: 88px; background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border: 2px dashed #c084fc; box-shadow: 0 8px 24px rgba(147, 51, 234, 0.12);">
-                                        <i class="bi bi-calendar2-check-fill" style="font-size: 42px; color: #7c3aed;"></i>
+                            <td colspan="8" class="text-center p-0 border-0">
+                                <div class="d-flex flex-column align-items-center justify-content-center py-4 px-3 rounded-3"
+                                     style="min-height: 130px; background: #f8fafc; border: 1px dashed #cbd5e1;">
+                                    <div class="mb-2 d-inline-flex align-items-center justify-content-center rounded-circle"
+                                         style="width: 44px; height: 44px; background: #e0f2fe; border: 1px dashed #38bdf8;">
+                                        <i class="bi bi-calendar2-check-fill fs-5" style="color: #0284c7;"></i>
                                     </div>
-                                    <h4 class="fw-bold text-dark mb-2" style="font-size: 20px; letter-spacing: -0.3px;">
-                                        Bệnh nhân chưa có Lịch hẹn tái khám nào
-                                    </h4>
-                                    <p class="text-muted mb-4" style="font-size: 14.5px; max-width: 540px; line-height: 1.6;">
-                                        Hẹn lịch tái khám giúp theo dõi tiến trình hồi phục vết thương, kiểm tra định kỳ hoặc phân bổ các công đoạn trong phác đồ điều trị kế tiếp.
+                                    <h5 class="fw-bold text-dark mb-1" style="font-size: 15px;">
+                                        Bệnh nhân chưa có lịch hẹn tái khám
+                                    </h5>
+                                    <p class="df-meta-tertiary mb-3" style="max-width: 480px;">
+                                        Đặt hẹn tái khám để theo dõi tiến trình hồi phục, cắt chỉ hoặc thực hiện công đoạn tiếp theo.
                                     </p>
-                                    <button type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
-                                            style="background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%); border: none; font-size: 15px;"
+                                    <button type="button" class="btn btn-sm df-btn-tonal-primary px-3 py-2 rounded-pill fw-semibold d-inline-flex align-items-center gap-2"
                                             onclick="openReExamModal()">
-                                        <i class="bi bi-calendar2-plus-fill fs-6"></i>
+                                        <i class="bi bi-calendar2-plus-fill"></i>
                                         <span>Đặt hẹn tái khám mới</span>
                                     </button>
                                 </div>
