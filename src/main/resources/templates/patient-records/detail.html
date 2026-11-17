@@ -1009,6 +1009,11 @@
                             data-bs-target="#tab-instructions" type="button" role="tab" aria-controls="tab-instructions"
                             aria-selected="false">Lời dặn</button>
                     </li>
+                    <li class="nav-item" role="presentation" th:if="${canViewBilling != false}">
+                        <button class="nav-link" id="tab-billing-btn" data-bs-toggle="tab"
+                            data-bs-target="#tab-billing" type="button" role="tab" aria-controls="tab-billing"
+                            aria-selected="false">Thanh toán</button>
+                    </li>
 
                     <!-- TAB DROPDOWN "THÊM ▾" CHUẨN DENTALSOFT -->
                     <li class="nav-item dropdown">
@@ -4768,7 +4773,7 @@
             if (clean === 'labo') return 'tab-labo';
             if (clean === 'photos') return 'tab-photos';
             if (clean === 'instructions') return 'tab-instructions';
-            if (clean === 'invoices' || clean === 'billing') return 'tab-info';
+            if (clean === 'invoices' || clean === 'billing') return 'tab-billing';
             if (clean === 'audit') return 'tab-treatment';
             if (!clean.startsWith('tab-')) {
                 clean = 'tab-' + clean;
