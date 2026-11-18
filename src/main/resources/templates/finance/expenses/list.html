@@ -330,6 +330,7 @@
                 <div class="modal fade" id="cancelExpenseModal" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <form id="cancelExpenseForm" method="post">
+                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                             <div class="modal-content">
                                 <div class="modal-header bg-danger text-white">
                                     <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận hủy phiếu chi</h5>

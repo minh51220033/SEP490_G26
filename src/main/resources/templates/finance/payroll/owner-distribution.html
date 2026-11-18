@@ -256,6 +256,7 @@
                 <div class="modal fade" id="payDistModal" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <form id="payDistForm" method="post">
+                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                             <div class="modal-content">
                                 <div class="modal-header bg-success text-white">
                                     <h5 class="modal-title"><i class="bi bi-cash-coin me-2"></i>Xác nhận chi trả lợi nhuận</h5>

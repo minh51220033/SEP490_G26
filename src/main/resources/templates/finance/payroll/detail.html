@@ -287,6 +287,7 @@
 <div class="modal fade" id="editItemModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <form id="editItemForm" method="post">
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
             <input type="hidden" name="periodId" th:value="${period.periodId}">
             <div class="modal-content">
                 <div class="modal-header">
