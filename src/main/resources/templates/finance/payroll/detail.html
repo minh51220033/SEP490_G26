@@ -163,6 +163,46 @@
                 </div>
             </div>
 
+            <!-- Cảnh báo hoa hồng phát sinh muộn sau khi kỳ đã chốt/đóng -->
+            <div class="alert alert-warning border-warning mb-4"
+                 th:if="${lateCommissions != null and !lateCommissions.isEmpty()}">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                        <h6 class="fw-bold mb-1">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            Phát hiện <span th:text="${lateCommissions.size()}">0</span> khoản hoa hồng phát sinh muộn trong kỳ
+                            (<span th:text="${#numbers.formatDecimal(lateCommissionsTotal, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</span>)
+                        </h6>
+                        <p class="small mb-2">
+                            Các khoản này phát sinh ngày hoàn thành thuộc kỳ <strong th:text="${period.month + '/' + period.year}"></strong>
+                            nhưng được ghi nhận sau khi kỳ đã trình/đóng. Chứng từ kỳ đã đóng được giữ nguyên; vui lòng đối soát để bù trừ thủ công tại kỳ lương mở (Thưởng/Điều chỉnh) hoặc trả về Nháp nếu kỳ chưa chi trả (PAID).
+                        </p>
+                    </div>
+                </div>
+                <div class="table-responsive bg-white rounded border">
+                    <table class="table table-sm mb-0 small">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Nhân sự</th>
+                            <th>Dịch vụ</th>
+                            <th>Vai trò</th>
+                            <th>Ngày hoàn thành</th>
+                            <th class="text-end">Hoa hồng</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="lc : ${lateCommissions}">
+                            <td th:text="${lc.staff != null ? lc.staff.fullName : '—'}">Bác sĩ</td>
+                            <td th:text="${lc.performedService != null and lc.performedService.service != null ? lc.performedService.service.serviceName : '—'}">Dịch vụ</td>
+                            <td th:text="${lc.roleType != null ? lc.roleType.name() : '—'}">MAIN_DOCTOR</td>
+                            <td th:text="${lc.calculatedAt != null ? #temporals.format(lc.calculatedAt, 'dd/MM/yyyy HH:mm') : '—'}">01/01/2026</td>
+                            <td class="text-end fw-bold" th:text="${#numbers.formatDecimal(lc.commissionAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Payroll Items Table (SCR-32.2) -->
             <div class="fin-card fin-table-card p-0 mb-4">
                 <div class="fin-grid-topbar d-flex justify-content-between align-items-center">

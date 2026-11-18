@@ -227,9 +227,22 @@ public class PayrollPageController {
             linkedExpense = operatingExpenseRepository.findByPayrollPeriod_PeriodId(period.getPeriodId()).orElse(null);
         }
 
+        List<ServiceCommission> lateCommissions = java.util.Collections.emptyList();
+        java.math.BigDecimal lateCommissionsTotal = java.math.BigDecimal.ZERO;
+        if (period.getStatus() != PayrollStatus.DRAFT) {
+            lateCommissions = payrollService.getLateUnboundCommissionsForPeriod(id, currentUserId);
+            for (ServiceCommission lc : lateCommissions) {
+                if (lc.getCommissionAmount() != null) {
+                    lateCommissionsTotal = lateCommissionsTotal.add(lc.getCommissionAmount());
+                }
+            }
+        }
+
         model.addAttribute("period", period);
         model.addAttribute("items", items);
         model.addAttribute("linkedExpense", linkedExpense);
+        model.addAttribute("lateCommissions", lateCommissions);
+        model.addAttribute("lateCommissionsTotal", lateCommissionsTotal);
         model.addAttribute("isAdmin", isAdmin);
         model.addAttribute("paymentMethods", RefundMethod.values());
 
