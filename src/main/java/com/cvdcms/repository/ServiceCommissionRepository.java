@@ -24,6 +24,10 @@ public interface ServiceCommissionRepository extends JpaRepository<ServiceCommis
 
     List<ServiceCommission> findByPerformedService_PerformedId(Long performedId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT sc FROM ServiceCommission sc WHERE sc.performedService.performedId = :performedId ORDER BY sc.commissionId ASC")
+    List<ServiceCommission> findByPerformedService_PerformedIdForUpdate(@Param("performedId") Long performedId);
+
     List<ServiceCommission> findByPayrollItem_ItemId(Long itemId);
 
     List<ServiceCommission> findByPayrollItem_PayrollPeriod_PeriodId(Long periodId);

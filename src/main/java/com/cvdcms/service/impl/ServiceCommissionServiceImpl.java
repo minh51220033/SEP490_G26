@@ -4,12 +4,16 @@ import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.CommissionRoleType;
 import com.cvdcms.entity.enums.CommissionStatus;
 import com.cvdcms.entity.enums.CommissionType;
+import com.cvdcms.entity.enums.PayrollStatus;
 import com.cvdcms.entity.enums.PerformedServiceStatus;
 import com.cvdcms.repository.CommissionPolicyRepository;
 import com.cvdcms.repository.InvoiceItemRepository;
+import com.cvdcms.repository.PayrollPeriodRepository;
 import com.cvdcms.repository.ServiceCommissionRepository;
+import com.cvdcms.service.PayrollService;
 import com.cvdcms.service.ServiceCommissionService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +31,21 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
     private final CommissionPolicyRepository commissionPolicyRepository;
     private final ServiceCommissionRepository serviceCommissionRepository;
     private final InvoiceItemRepository invoiceItemRepository;
+
+    @Autowired(required = false)
+    private PayrollPeriodRepository payrollPeriodRepository;
+
+    @Lazy
+    @Autowired(required = false)
+    private PayrollService payrollService;
+
+    public void setPayrollPeriodRepository(PayrollPeriodRepository payrollPeriodRepository) {
+        this.payrollPeriodRepository = payrollPeriodRepository;
+    }
+
+    public void setPayrollService(PayrollService payrollService) {
+        this.payrollService = payrollService;
+    }
 
     @Autowired
     public ServiceCommissionServiceImpl(
@@ -67,15 +86,94 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         if (performedId == null || serviceCommissionRepository == null) {
             return;
         }
-        List<ServiceCommission> existing = serviceCommissionRepository.findByPerformedService_PerformedId(performedId);
+        List<ServiceCommission> initial = serviceCommissionRepository.findByPerformedService_PerformedId(performedId);
+        if (initial == null || initial.isEmpty()) {
+            return;
+        }
+
+        // Tuân thủ thứ tự lock toàn cục: PayrollPeriod -> ServiceCommission
+        Map<Long, PayrollPeriod> lockedPeriods = new LinkedHashMap<>();
+        if (payrollPeriodRepository != null) {
+            initial.stream()
+                    .map(ServiceCommission::getPayrollItem)
+                    .filter(Objects::nonNull)
+                    .map(PayrollItem::getPayrollPeriod)
+                    .filter(Objects::nonNull)
+                    .map(PayrollPeriod::getPeriodId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .sorted()
+                    .forEach(pid -> payrollPeriodRepository.findByIdForUpdate(pid)
+                            .ifPresent(p -> lockedPeriods.put(pid, p)));
+        }
+
+        List<ServiceCommission> locked = serviceCommissionRepository.findByPerformedService_PerformedIdForUpdate(performedId);
+        List<ServiceCommission> existing = (locked != null && !locked.isEmpty())
+                ? locked
+                : serviceCommissionRepository.findByPerformedService_PerformedId(performedId);
         if (existing == null || existing.isEmpty()) {
             return;
         }
+
+        Set<Long> draftItemIdsToRecalc = new LinkedHashSet<>();
+        boolean deletedAny = false;
+
         for (ServiceCommission sc : existing) {
-            if (sc.getPayrollItem() == null && sc.getStatus() == CommissionStatus.PENDING) {
+            if (sc.getStatus() == CommissionStatus.PAID) {
+                throw new IllegalStateException("Hoa hồng ID " + sc.getCommissionId()
+                        + " đã được chi trả (PAID). Không thể hủy hoặc sửa dịch vụ đã tất toán lương.");
+            }
+            if (sc.getPayrollItem() != null) {
+                PayrollItem pItem = sc.getPayrollItem();
+                PayrollPeriod period = pItem.getPayrollPeriod();
+                if (period != null && period.getPeriodId() != null && lockedPeriods.containsKey(period.getPeriodId())) {
+                    period = lockedPeriods.get(period.getPeriodId());
+                }
+                if (period == null || period.getStatus() == PayrollStatus.PAID) {
+                    throw new IllegalStateException("Hoa hồng ID " + sc.getCommissionId()
+                            + " đã gắn vào kỳ lương chi trả (PAID), không thể sửa hoặc hủy dịch vụ.");
+                }
+                if (period.getStatus() == PayrollStatus.SUBMITTED || period.getStatus() == PayrollStatus.APPROVED) {
+                    throw new IllegalStateException("Hoa hồng đang gắn vào kỳ lương ở trạng thái " + period.getStatus()
+                            + ". Vui lòng trả bảng lương về Nháp (DRAFT) trước khi sửa hoặc hủy dịch vụ.");
+                }
+                if (period.getStatus() != PayrollStatus.DRAFT) {
+                    throw new IllegalStateException("Trạng thái kỳ lương không hợp lệ để sửa hoa hồng: " + period.getStatus());
+                }
+                if (payrollService == null) {
+                    throw new IllegalStateException("Không thể tính lại dòng lương Nháp vì thiếu PayrollService.");
+                }
+                if (pItem.getItemId() != null) {
+                    draftItemIdsToRecalc.add(pItem.getItemId());
+                }
+                sc.setPayrollItem(null);
                 serviceCommissionRepository.delete(sc);
+                deletedAny = true;
+            } else {
+                if (sc.getStatus() != CommissionStatus.PENDING) {
+                    throw new IllegalStateException("Hoa hồng ID " + sc.getCommissionId()
+                            + " đang ở trạng thái " + sc.getStatus() + ", không thể tự động hủy.");
+                }
+                serviceCommissionRepository.delete(sc);
+                deletedAny = true;
             }
         }
+
+        if (deletedAny) {
+            serviceCommissionRepository.flush();
+        }
+        for (Long itemId : draftItemIdsToRecalc) {
+            payrollService.recalculateDraftItemAfterCommissionChange(itemId);
+        }
+    }
+
+    @Override
+    public void recalculateCommissionsForPerformedService(PerformedService performedService) {
+        if (performedService == null || performedService.getPerformedId() == null) {
+            return;
+        }
+        cancelPendingCommissionsForPerformedService(performedService.getPerformedId());
+        calculateCommissionsForPerformedService(performedService);
     }
 
     @Override

@@ -588,6 +588,90 @@ public class PayrollServiceImpl implements PayrollService {
     }
 
     @Override
+    public void recalculateDraftItemAfterCommissionChange(Long payrollItemId) {
+        if (payrollItemId == null) {
+            return;
+        }
+        PayrollItem item = payrollItemRepository.findWithDetailsById(payrollItemId).orElse(null);
+        if (item == null || item.getPayrollPeriod() == null) {
+            return;
+        }
+        PayrollPeriod period = payrollPeriodRepository.findByIdForUpdate(item.getPayrollPeriod().getPeriodId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kỳ lương."));
+        if (period.getStatus() != PayrollStatus.DRAFT) {
+            throw new IllegalStateException("Chỉ có thể tính lại dòng lương khi kỳ lương ở trạng thái Nháp (DRAFT)");
+        }
+
+        BigDecimal newCommission = BigDecimal.ZERO;
+        if (serviceCommissionRepository != null) {
+            List<ServiceCommission> bound = serviceCommissionRepository.findByPayrollItem_ItemId(payrollItemId);
+            if (bound != null) {
+                for (ServiceCommission sc : bound) {
+                    if (sc.getStatus() == CommissionStatus.PENDING
+                            && (sc.getPerformedService() == null || sc.getPerformedService().getStatus() == PerformedServiceStatus.COMPLETED)
+                            && sc.getCommissionAmount() != null) {
+                        newCommission = newCommission.add(sc.getCommissionAmount());
+                    }
+                }
+            }
+        }
+        item.setTotalCommission(newCommission);
+
+        BigDecimal base = item.getActualBaseSalary() != null ? item.getActualBaseSalary() : BigDecimal.ZERO;
+        BigDecimal allowance = item.getTotalAllowance() != null ? item.getTotalAllowance() : BigDecimal.ZERO;
+        BigDecimal bonus = item.getBonusAmount() != null ? item.getBonusAmount() : BigDecimal.ZERO;
+        BigDecimal deduction = item.getDeductionAmount() != null ? item.getDeductionAmount() : BigDecimal.ZERO;
+        BigDecimal grossSalary = base.add(allowance).add(bonus).add(newCommission);
+        item.setGrossSalary(grossSalary);
+
+        if (taxCalculationService != null) {
+            LocalDate periodDate = LocalDate.of(period.getYear(), period.getMonth(), 1);
+            PitCalculationResult pitResult = taxCalculationService.calculatePitStrict(
+                    grossSalary,
+                    item.getNonTaxableIncome() != null ? item.getNonTaxableIncome() : BigDecimal.ZERO,
+                    item.getStaff(),
+                    periodDate
+            );
+            item.setInsuranceEmployeeDeduction(pitResult.getInsuranceEmployeeDeduction());
+            item.setInsuranceEmployerAmount(pitResult.getInsuranceEmployerAmount());
+            item.setPersonalDeductionAmount(pitResult.getPersonalDeductionAmount());
+            item.setDependentDeductionAmount(pitResult.getDependentDeductionAmount());
+            item.setTaxableIncome(pitResult.getTaxableIncome());
+            item.setAssessableIncome(pitResult.getAssessableIncome());
+            item.setPitAmount(pitResult.getPitAmount());
+            item.setTaxPolicyCode(pitResult.getTaxPolicyCode());
+            item.setTaxCalculationDetail(pitResult.getTaxCalculationDetail());
+
+            BigDecimal mandatory = pitResult.getInsuranceEmployeeDeduction().add(pitResult.getPitAmount());
+            item.setNetSalary(grossSalary.subtract(mandatory).subtract(deduction).max(BigDecimal.ZERO));
+        } else {
+            item.setInsuranceEmployeeDeduction(BigDecimal.ZERO);
+            item.setInsuranceEmployerAmount(BigDecimal.ZERO);
+            item.setPersonalDeductionAmount(BigDecimal.ZERO);
+            item.setDependentDeductionAmount(BigDecimal.ZERO);
+            item.setTaxableIncome(grossSalary);
+            item.setAssessableIncome(BigDecimal.ZERO);
+            item.setPitAmount(BigDecimal.ZERO);
+            item.setNetSalary(grossSalary.subtract(deduction).max(BigDecimal.ZERO));
+        }
+
+        List<SalaryAdvanceAllocation> oldAllocations = salaryAdvanceAllocationRepository.findByPayrollItem_ItemId(payrollItemId);
+        if (oldAllocations != null && !oldAllocations.isEmpty()) {
+            salaryAdvanceAllocationRepository.deleteAll(oldAllocations);
+            salaryAdvanceAllocationRepository.flush();
+        }
+
+        BigDecimal netSalary = item.getNetSalary();
+        BigDecimal allocatedAdvance = reserveAdvanceAllocationsForItem(item, netSalary);
+        item.setAdvanceAllocatedAmount(allocatedAdvance);
+        item.setRemainingPayable(netSalary.subtract(allocatedAdvance).max(BigDecimal.ZERO));
+
+        payrollItemRepository.save(item);
+        payrollItemRepository.flush();
+        recalculatePeriodTotals(period.getPeriodId());
+    }
+
+    @Override
     public PayrollPeriod recalculatePeriod(Long periodId, Long currentUserId) {
         requirePayrollPermission(currentUserId);
         PayrollPeriod period = payrollPeriodRepository.findByIdForUpdate(periodId)

@@ -47,4 +47,7 @@ public interface PayrollService {
     default List<ServiceCommission> getLateUnboundCommissionsForPeriod(Long periodId, Long currentUserId) {
         return Collections.emptyList();
     }
+
+    default void recalculateDraftItemAfterCommissionChange(Long payrollItemId) {
+    }
 }
