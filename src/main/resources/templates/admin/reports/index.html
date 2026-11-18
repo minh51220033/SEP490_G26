@@ -339,7 +339,7 @@
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-                    <a th:href="@{/admin/reports(branchId=${selectedBranchId}, startDate=${filter.startDate}, endDate=${filter.endDate}, tab=${activeTab})}"
+                    <a th:href="@{/admin/reports(branchId=${selectedBranchId}, startDate=${filter.startDate}, endDate=${filter.endDate}, taxRate=${filter.taxRate}, tab=${activeTab})}"
                        class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" title="Làm mới dữ liệu">
                         <i class="bi bi-arrow-clockwise"></i> Làm mới
                     </a>
@@ -382,10 +382,18 @@
                         </label>
                         <select id="taxRateSelect" name="taxRate" class="form-select form-select-sm" onchange="this.form.submit()">
                             <option value="" th:selected="${filter.taxRate == null}">Theo cấu hình chi nhánh</option>
-                            <option value="20" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 20}">20% (Doanh nghiệp chuẩn)</option>
-                            <option value="15" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 15}">15% (Ưu đãi DN nhỏ)</option>
-                            <option value="2" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 2}">2% (Khoán trên Doanh thu)</option>
-                            <option value="0" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 0}">0% (Miễn thuế / Y tế công)</option>
+                            <option value="20" th:selected="${filter.taxRate != null and filter.taxRate.compareTo(T(java.math.BigDecimal).valueOf(20)) == 0}">20% (Doanh nghiệp chuẩn)</option>
+                            <option value="15" th:selected="${filter.taxRate != null and filter.taxRate.compareTo(T(java.math.BigDecimal).valueOf(15)) == 0}">15% (Ưu đãi DN nhỏ)</option>
+                            <option value="2" th:selected="${filter.taxRate != null and filter.taxRate.compareTo(T(java.math.BigDecimal).valueOf(2)) == 0}">2% (Khoán trên Doanh thu)</option>
+                            <option value="0" th:selected="${filter.taxRate != null and filter.taxRate.compareTo(T(java.math.BigDecimal).ZERO) == 0}">0% (Miễn thuế / Y tế công)</option>
+                            <option th:if="${filter.taxRate != null
+                                            and filter.taxRate.compareTo(T(java.math.BigDecimal).valueOf(20)) != 0
+                                            and filter.taxRate.compareTo(T(java.math.BigDecimal).valueOf(15)) != 0
+                                            and filter.taxRate.compareTo(T(java.math.BigDecimal).valueOf(2)) != 0
+                                            and filter.taxRate.compareTo(T(java.math.BigDecimal).ZERO) != 0}"
+                                    th:value="${filter.taxRate}"
+                                    th:text="${filter.taxRate.stripTrailingZeros().toPlainString() + '% (Tùy chỉnh)'}"
+                                    selected></option>
                         </select>
                     </div>
 

@@ -100,11 +100,12 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public ReportDashboardDTO getDashboardReport(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate, String branchName) {
-        return getDashboardReport(branchIds, startDate, endDate, branchName, BigDecimal.valueOf(20));
+        return getDashboardReport(branchIds, startDate, endDate, branchName, null);
     }
 
     @Override
     public ReportDashboardDTO getDashboardReport(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate, String branchName, BigDecimal taxRate) {
+        BigDecimal validatedTaxRate = validateRequestedTaxRate(taxRate);
         LocalDateTime startDt = startDate.atStartOfDay();
         LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
 
@@ -143,7 +144,7 @@ public class ReportServiceImpl implements ReportService {
         dto.setOperatingMargin(netRealRevenue.subtract(dto.getTotalExpenseAmount()));
 
         // Thuế & Lợi nhuận sau thuế theo cấu hình pháp nhân / chính sách
-        applyDashboardTaxCalculation(dto, branchIds, endDate, taxRate);
+        applyDashboardTaxCalculation(dto, branchIds, endDate, validatedTaxRate);
 
         // Thuế TNCN đã khấu trừ của nhân viên từ các bảng lương đã chi trả theo ngày chi
         if (payrollPeriodRepository != null) {
@@ -214,7 +215,26 @@ public class ReportServiceImpl implements ReportService {
         return patientProfileRepository.countNewPatientsByBranchesAndPeriod(branchIds, startDt, endDt);
     }
 
-    private void applyDashboardTaxCalculation(ReportDashboardDTO dto, Collection<Long> branchIds, LocalDate targetDate, BigDecimal requestedTaxRate) {
+    private record ResolvedTaxContext(
+            boolean configured,
+            BigDecimal effectiveRate,
+            boolean householdRegime,
+            String regimeName,
+            String calculationBasis
+    ) {}
+
+    private BigDecimal validateRequestedTaxRate(BigDecimal requestedTaxRate) {
+        if (requestedTaxRate == null) {
+            return null;
+        }
+        if (requestedTaxRate.compareTo(BigDecimal.ZERO) < 0 || requestedTaxRate.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new IllegalArgumentException("Thuế suất phải nằm trong khoảng 0% đến 100%");
+        }
+        return requestedTaxRate;
+    }
+
+    private ResolvedTaxContext resolveTaxContext(Collection<Long> branchIds, LocalDate targetDate, BigDecimal requestedTaxRate) {
+        BigDecimal validatedRate = validateRequestedTaxRate(requestedTaxRate);
         Long singleBranchId = (branchIds != null && branchIds.size() == 1) ? branchIds.iterator().next() : null;
         Optional<BranchTaxConfig> configOpt = (singleBranchId != null && taxCalculationService != null)
                 ? taxCalculationService.getBranchTaxConfig(singleBranchId, targetDate)
@@ -222,53 +242,65 @@ public class ReportServiceImpl implements ReportService {
 
         if (configOpt.isPresent()) {
             BranchTaxConfig config = configOpt.get();
-            dto.setTaxConfigured(true);
             if ("HOUSEHOLD".equalsIgnoreCase(config.getEntityType()) || "REVENUE_PERCENT".equalsIgnoreCase(config.getTaxRegime())) {
                 BigDecimal svcRate = config.getServiceTaxRate() != null ? config.getServiceTaxRate() : BigDecimal.valueOf(2.0);
-                dto.setTaxRate(svcRate);
-                dto.setTaxRegimeName("Hộ kinh doanh cá thể (Thuế khoán trên doanh thu)");
-                dto.setTaxCalculationBasis(config.getLegalReference() != null ? config.getLegalReference() : "Thông tư 40/2021/TT-BTC: 2% trên doanh thu dịch vụ y tế");
-                BigDecimal estimatedTax = dto.getTotalRealRevenue().multiply(svcRate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-                dto.setEstimatedTaxAmount(estimatedTax);
-                dto.setNetProfitAfterTax(dto.getOperatingMargin().subtract(estimatedTax));
-            } else {
-                BigDecimal rate = (requestedTaxRate != null && requestedTaxRate.compareTo(BigDecimal.ZERO) >= 0)
-                        ? requestedTaxRate
-                        : (config.getCitRate() != null ? config.getCitRate() : BigDecimal.valueOf(20));
-                dto.setTaxRate(rate);
-                dto.setTaxRegimeName("Doanh nghiệp (TNDN tạm tính quản trị)");
-                dto.setTaxCalculationBasis(config.getLegalReference() != null ? config.getLegalReference() : "Luật Thuế TNDN 14/2008/QH12 (Tạm tính theo thặng dư vận hành)");
-                BigDecimal taxableIncome = dto.getOperatingMargin().max(BigDecimal.ZERO);
-                BigDecimal estimatedTax = taxableIncome.multiply(rate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-                dto.setEstimatedTaxAmount(estimatedTax);
-                dto.setNetProfitAfterTax(dto.getOperatingMargin().subtract(estimatedTax));
+                String basis = config.getLegalReference() != null
+                        ? config.getLegalReference()
+                        : "Thông tư 40/2021/TT-BTC: 2% trên doanh thu dịch vụ y tế";
+                return new ResolvedTaxContext(true, svcRate, true, "Hộ kinh doanh cá thể (Thuế khoán trên doanh thu)", basis);
             }
-        } else {
-            // Chi nhánh chưa cấu hình hồ sơ thuế riêng hoặc xem toàn hệ thống: Tạm tính quản trị
-            dto.setTaxConfigured(false);
-            BigDecimal rate = (requestedTaxRate != null && requestedTaxRate.compareTo(BigDecimal.ZERO) >= 0) ? requestedTaxRate : BigDecimal.valueOf(20);
-            dto.setTaxRate(rate);
-            if (singleBranchId != null) {
-                dto.setTaxRegimeName("Doanh nghiệp (TNDN tạm tính quản trị)");
-                dto.setTaxCalculationBasis("Chi nhánh chưa có hồ sơ thuế riêng. Tạm tính quản trị " + rate.stripTrailingZeros().toPlainString() + "% theo Luật Thuế TNDN 14/2008/QH12.");
-            } else {
-                dto.setTaxRegimeName("Tổng hợp toàn hệ thống (TNDN tạm tính quản trị)");
-                dto.setTaxCalculationBasis("Tạm tính quản trị " + rate.stripTrailingZeros().toPlainString() + "% trên thặng dư vận hành dương phục vụ quản trị nội bộ");
-            }
-            BigDecimal taxableIncome = dto.getOperatingMargin().max(BigDecimal.ZERO);
-            BigDecimal estimatedTax = taxableIncome.multiply(rate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-            dto.setEstimatedTaxAmount(estimatedTax);
-            dto.setNetProfitAfterTax(dto.getOperatingMargin().subtract(estimatedTax));
+            BigDecimal rate = (validatedRate != null)
+                    ? validatedRate
+                    : (config.getCitRate() != null ? config.getCitRate() : BigDecimal.valueOf(20));
+            String basis = config.getLegalReference() != null
+                    ? config.getLegalReference()
+                    : "Luật Thuế TNDN 14/2008/QH12 (Tạm tính theo thặng dư vận hành)";
+            return new ResolvedTaxContext(true, rate, false, "Doanh nghiệp (TNDN tạm tính quản trị)", basis);
         }
+
+        BigDecimal rate = (validatedRate != null) ? validatedRate : BigDecimal.valueOf(20);
+        String rateDisplay = rate.stripTrailingZeros().toPlainString();
+        if (singleBranchId != null) {
+            return new ResolvedTaxContext(
+                    false,
+                    rate,
+                    false,
+                    "Doanh nghiệp (TNDN tạm tính quản trị)",
+                    "Chi nhánh chưa có hồ sơ thuế riêng. Tạm tính quản trị " + rateDisplay + "% theo Luật Thuế TNDN 14/2008/QH12."
+            );
+        }
+        return new ResolvedTaxContext(
+                false,
+                rate,
+                false,
+                "Tổng hợp toàn hệ thống (TNDN tạm tính quản trị)",
+                "Tạm tính quản trị " + rateDisplay + "% trên thặng dư vận hành dương phục vụ quản trị nội bộ"
+        );
+    }
+
+    private void applyDashboardTaxCalculation(ReportDashboardDTO dto, Collection<Long> branchIds, LocalDate targetDate, BigDecimal requestedTaxRate) {
+        ResolvedTaxContext ctx = resolveTaxContext(branchIds, targetDate, requestedTaxRate);
+        dto.setTaxConfigured(ctx.configured());
+        dto.setTaxRate(ctx.effectiveRate());
+        dto.setTaxRegimeName(ctx.regimeName());
+        dto.setTaxCalculationBasis(ctx.calculationBasis());
+
+        BigDecimal taxableBase = ctx.householdRegime()
+                ? dto.getTotalRealRevenue()
+                : dto.getOperatingMargin().max(BigDecimal.ZERO);
+        BigDecimal estimatedTax = taxableBase.multiply(ctx.effectiveRate()).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+        dto.setEstimatedTaxAmount(estimatedTax);
+        dto.setNetProfitAfterTax(dto.getOperatingMargin().subtract(estimatedTax));
     }
 
     @Override
     public FinancialReportDTO getFinancialReport(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate) {
-        return getFinancialReport(branchIds, startDate, endDate, BigDecimal.valueOf(20));
+        return getFinancialReport(branchIds, startDate, endDate, null);
     }
 
     @Override
     public FinancialReportDTO getFinancialReport(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate, BigDecimal taxRate) {
+        BigDecimal validatedTaxRate = validateRequestedTaxRate(taxRate);
         LocalDateTime startDt = startDate.atStartOfDay();
         LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
 
@@ -319,7 +351,7 @@ public class ReportServiceImpl implements ReportService {
         dto.setOperatingMargin(dto.getNetRevenue().subtract(dto.getOperatingExpenses()));
 
         // Thuế & Lợi nhuận sau thuế theo cấu hình pháp nhân / chính sách
-        applyFinancialTaxCalculation(dto, branchIds, endDate, taxRate);
+        applyFinancialTaxCalculation(dto, branchIds, endDate, validatedTaxRate);
 
         // Thuế TNCN đã khấu trừ của nhân viên từ các bảng lương đã chi trả theo ngày chi
         if (payrollPeriodRepository != null) {
@@ -343,51 +375,18 @@ public class ReportServiceImpl implements ReportService {
     }
 
     private void applyFinancialTaxCalculation(FinancialReportDTO dto, Collection<Long> branchIds, LocalDate targetDate, BigDecimal requestedTaxRate) {
-        Long singleBranchId = (branchIds != null && branchIds.size() == 1) ? branchIds.iterator().next() : null;
-        Optional<BranchTaxConfig> configOpt = (singleBranchId != null && taxCalculationService != null)
-                ? taxCalculationService.getBranchTaxConfig(singleBranchId, targetDate)
-                : Optional.empty();
+        ResolvedTaxContext ctx = resolveTaxContext(branchIds, targetDate, requestedTaxRate);
+        dto.setTaxConfigured(ctx.configured());
+        dto.setTaxRate(ctx.effectiveRate());
+        dto.setTaxRegimeName(ctx.regimeName());
+        dto.setTaxCalculationBasis(ctx.calculationBasis());
 
-        if (configOpt.isPresent()) {
-            BranchTaxConfig config = configOpt.get();
-            dto.setTaxConfigured(true);
-            if ("HOUSEHOLD".equalsIgnoreCase(config.getEntityType()) || "REVENUE_PERCENT".equalsIgnoreCase(config.getTaxRegime())) {
-                BigDecimal svcRate = config.getServiceTaxRate() != null ? config.getServiceTaxRate() : BigDecimal.valueOf(2.0);
-                dto.setTaxRate(svcRate);
-                dto.setTaxRegimeName("Hộ kinh doanh cá thể (Thuế khoán trên doanh thu)");
-                dto.setTaxCalculationBasis(config.getLegalReference() != null ? config.getLegalReference() : "Thông tư 40/2021/TT-BTC: 2% trên doanh thu dịch vụ y tế");
-                BigDecimal estimatedTax = dto.getNetRevenue().multiply(svcRate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-                dto.setEstimatedTaxAmount(estimatedTax);
-                dto.setNetProfitAfterTax(dto.getOperatingMargin().subtract(estimatedTax));
-            } else {
-                BigDecimal rate = (requestedTaxRate != null && requestedTaxRate.compareTo(BigDecimal.ZERO) >= 0)
-                        ? requestedTaxRate
-                        : (config.getCitRate() != null ? config.getCitRate() : BigDecimal.valueOf(20));
-                dto.setTaxRate(rate);
-                dto.setTaxRegimeName("Doanh nghiệp (TNDN tạm tính quản trị)");
-                dto.setTaxCalculationBasis(config.getLegalReference() != null ? config.getLegalReference() : "Luật Thuế TNDN 14/2008/QH12 (Tạm tính theo thặng dư vận hành)");
-                BigDecimal taxableIncome = dto.getOperatingMargin().max(BigDecimal.ZERO);
-                BigDecimal estimatedTax = taxableIncome.multiply(rate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-                dto.setEstimatedTaxAmount(estimatedTax);
-                dto.setNetProfitAfterTax(dto.getOperatingMargin().subtract(estimatedTax));
-            }
-        } else {
-            // Chi nhánh chưa cấu hình hồ sơ thuế riêng hoặc xem toàn hệ thống: Tạm tính quản trị
-            dto.setTaxConfigured(false);
-            BigDecimal rate = (requestedTaxRate != null && requestedTaxRate.compareTo(BigDecimal.ZERO) >= 0) ? requestedTaxRate : BigDecimal.valueOf(20);
-            dto.setTaxRate(rate);
-            if (singleBranchId != null) {
-                dto.setTaxRegimeName("Doanh nghiệp (TNDN tạm tính quản trị)");
-                dto.setTaxCalculationBasis("Chi nhánh chưa có hồ sơ thuế riêng. Tạm tính quản trị " + rate.stripTrailingZeros().toPlainString() + "% theo Luật Thuế TNDN 14/2008/QH12.");
-            } else {
-                dto.setTaxRegimeName("Tổng hợp toàn hệ thống (TNDN tạm tính quản trị)");
-                dto.setTaxCalculationBasis("Tạm tính quản trị " + rate.stripTrailingZeros().toPlainString() + "% trên thặng dư vận hành dương phục vụ quản trị nội bộ");
-            }
-            BigDecimal taxableIncome = dto.getOperatingMargin().max(BigDecimal.ZERO);
-            BigDecimal estimatedTax = taxableIncome.multiply(rate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-            dto.setEstimatedTaxAmount(estimatedTax);
-            dto.setNetProfitAfterTax(dto.getOperatingMargin().subtract(estimatedTax));
-        }
+        BigDecimal taxableBase = ctx.householdRegime()
+                ? dto.getNetRevenue()
+                : dto.getOperatingMargin().max(BigDecimal.ZERO);
+        BigDecimal estimatedTax = taxableBase.multiply(ctx.effectiveRate()).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+        dto.setEstimatedTaxAmount(estimatedTax);
+        dto.setNetProfitAfterTax(dto.getOperatingMargin().subtract(estimatedTax));
     }
 
     @Override
@@ -540,11 +539,12 @@ public class ReportServiceImpl implements ReportService {
     // =========================================================================
     @Override
     public byte[] exportReportToExcel(String reportType, Collection<Long> branchIds, LocalDate startDate, LocalDate endDate, String branchName) {
-        return exportReportToExcel(reportType, branchIds, startDate, endDate, branchName, BigDecimal.valueOf(20));
+        return exportReportToExcel(reportType, branchIds, startDate, endDate, branchName, null);
     }
 
     @Override
     public byte[] exportReportToExcel(String reportType, Collection<Long> branchIds, LocalDate startDate, LocalDate endDate, String branchName, BigDecimal taxRate) {
+        BigDecimal validatedTaxRate = validateRequestedTaxRate(taxRate);
         LocalDateTime startDt = startDate.atStartOfDay();
         LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
 
@@ -557,7 +557,7 @@ public class ReportServiceImpl implements ReportService {
 
             switch (safeType) {
                 case "FINANCIAL" -> {
-                    FinancialReportDTO financialDTO = getFinancialReport(branchIds, startDate, endDate, taxRate);
+                    FinancialReportDTO financialDTO = getFinancialReport(branchIds, startDate, endDate, validatedTaxRate);
                     buildFinancialSummarySheet(workbook, styles, financialDTO, branchName, startDate, endDate);
                     buildInvoicesDetailSheet(workbook, styles, branchIds, startDt, endDt);
                     buildDebtsDetailSheet(workbook, styles, financialDTO.getPatientDebts(), branchName);
@@ -572,9 +572,9 @@ public class ReportServiceImpl implements ReportService {
                     buildDebtsDetailSheet(workbook, styles, debts, branchName);
                 }
                 default -> { // "OVERVIEW" or "ALL"
-                    ReportDashboardDTO dashboardDTO = getDashboardReport(branchIds, startDate, endDate, branchName, taxRate);
+                    ReportDashboardDTO dashboardDTO = getDashboardReport(branchIds, startDate, endDate, branchName, validatedTaxRate);
                     buildDashboardSummarySheet(workbook, styles, dashboardDTO, branchName, startDate, endDate);
-                    FinancialReportDTO financialDTO = getFinancialReport(branchIds, startDate, endDate, taxRate);
+                    FinancialReportDTO financialDTO = getFinancialReport(branchIds, startDate, endDate, validatedTaxRate);
                     buildFinancialSummarySheet(workbook, styles, financialDTO, branchName, startDate, endDate);
                     OperationalReportDTO operationalDTO = getOperationalReport(branchIds, startDate, endDate);
                     buildOperationalSummarySheet(workbook, styles, operationalDTO, branchName, startDate, endDate);

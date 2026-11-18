@@ -174,14 +174,82 @@ public class FinancialReportTest {
     }
 
     @Test
-    @DisplayName("UTCID07 - A - Thuế suất âm được dùng giá trị mặc định 20% của source")
-    void UTCID07() throws Exception {
-        FinancialReportDTO r=financial(new BigDecimal("-1"));assertEquals(0,r.getTaxRate().compareTo(new BigDecimal("20")));
+    @DisplayName("UTCID07 - A - Chặn thuế suất thủ công không hợp lệ (âm hoặc > 100%)")
+    void UTCID07() {
+        assertThrows(IllegalArgumentException.class, () -> financial(new BigDecimal("-1")));
+        assertThrows(IllegalArgumentException.class, () -> financial(new BigDecimal("101")));
     }
 
     @Test
     @DisplayName("UTCID08 - N - Truyền đúng danh sách chi nhánh và khoảng ngày sang repository")
     void UTCID08() throws Exception {
         financial(BigDecimal.ZERO);verify(invoiceRepository).sumInvoiceBreakdownByBranches(eq(List.of(1L)),eq(reportStart.atStartOfDay()),eq(reportEnd.atTime(java.time.LocalTime.MAX)));verify(invoiceRepository).findAllPatientDebtsByBranches(List.of(1L));
+    }
+
+    @Test
+    @DisplayName("UTCID09 - N - AUTO (null) và overload không truyền taxRate dùng cấu hình chi nhánh 15%")
+    void UTCID09() {
+        TaxCalculationService mockTaxService = mock(TaxCalculationService.class);
+        BranchTaxConfig config = new BranchTaxConfig();
+        config.setEntityType("ENTERPRISE");
+        config.setCitRate(new BigDecimal("15"));
+        when(mockTaxService.getBranchTaxConfig(1L, reportEnd)).thenReturn(Optional.of(config));
+
+        ReportServiceImpl configuredService = new ReportServiceImpl(
+                invoiceRepository,
+                paymentRepository,
+                refundRepository,
+                operatingExpenseRepository,
+                visitRepository,
+                appointmentRepository,
+                mockTaxService,
+                null,
+                null
+        );
+        when(paymentRepository.sumAmountByMethodAndBranches(any(), eq(PaymentMethod.CASH), eq(PaymentType.PAYMENT), any(), any()))
+                .thenReturn(new BigDecimal("1000"));
+        when(paymentRepository.sumRealRevenueByBranches(any(), any(), any()))
+                .thenReturn(new BigDecimal("1000"));
+        when(operatingExpenseRepository.sumActiveExpenses(any(), any(), any()))
+                .thenReturn(new BigDecimal("200"));
+
+        FinancialReportDTO autoFinancial = configuredService.getFinancialReport(List.of(1L), reportStart, reportEnd, null);
+        FinancialReportDTO overloadFinancial = configuredService.getFinancialReport(List.of(1L), reportStart, reportEnd);
+        ReportDashboardDTO overloadDashboard = configuredService.getDashboardReport(List.of(1L), reportStart, reportEnd, "CN 1");
+
+        assertEquals(0, new BigDecimal("15").compareTo(autoFinancial.getTaxRate()));
+        assertEquals(0, new BigDecimal("120").compareTo(autoFinancial.getEstimatedTaxAmount()));
+        assertEquals(0, new BigDecimal("15").compareTo(overloadFinancial.getTaxRate()));
+        assertEquals(0, new BigDecimal("15").compareTo(overloadDashboard.getTaxRate()));
+    }
+
+    @Test
+    @DisplayName("UTCID10 - N - Chọn 0% không bị ép sang 20% hay cấu hình chi nhánh 15%")
+    void UTCID10() {
+        TaxCalculationService mockTaxService = mock(TaxCalculationService.class);
+        BranchTaxConfig config = new BranchTaxConfig();
+        config.setEntityType("ENTERPRISE");
+        config.setCitRate(new BigDecimal("15"));
+        when(mockTaxService.getBranchTaxConfig(1L, reportEnd)).thenReturn(Optional.of(config));
+
+        ReportServiceImpl configuredService = new ReportServiceImpl(
+                invoiceRepository,
+                paymentRepository,
+                refundRepository,
+                operatingExpenseRepository,
+                visitRepository,
+                appointmentRepository,
+                mockTaxService,
+                null,
+                null
+        );
+        when(paymentRepository.sumAmountByMethodAndBranches(any(), eq(PaymentMethod.CASH), eq(PaymentType.PAYMENT), any(), any()))
+                .thenReturn(new BigDecimal("1000"));
+
+        FinancialReportDTO zeroRate = configuredService.getFinancialReport(List.of(1L), reportStart, reportEnd, BigDecimal.ZERO);
+
+        assertEquals(0, BigDecimal.ZERO.compareTo(zeroRate.getTaxRate()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(zeroRate.getEstimatedTaxAmount()));
+        assertEquals(0, new BigDecimal("1000").compareTo(zeroRate.getNetProfitAfterTax()));
     }
 }
