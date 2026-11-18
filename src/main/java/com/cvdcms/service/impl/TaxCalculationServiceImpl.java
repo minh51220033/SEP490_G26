@@ -52,15 +52,18 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
         this.branchTaxConfigRepository = branchTaxConfigRepository;
     }
 
+    private static final LocalDate EFFECTIVE_DATE_2026 = LocalDate.of(2026, 1, 1);
+
     @Override
     public TaxPolicy getActiveTaxPolicy(LocalDate effectiveDate) {
-        if (taxPolicyRepository == null) {
-            return createFallbackPolicy();
-        }
         LocalDate target = effectiveDate != null ? effectiveDate : LocalDate.now();
+        if (taxPolicyRepository == null) {
+            return createFallbackPolicyForDate(target);
+        }
         List<TaxPolicy> policies = taxPolicyRepository.findActivePoliciesAtDate(target, PageRequest.of(0, 2));
         if (policies == null || policies.isEmpty()) {
-            return createFallbackPolicy();
+            log.warn("Không tìm thấy chính sách thuế TNCN hiệu lực trong DB tại ngày {}; dùng chính sách tham khảo tạm thời cho màn xem.", target);
+            return createFallbackPolicyForDate(target);
         }
         if (policies.size() > 1) {
             log.warn("Phát hiện chính sách thuế TNCN chồng hiệu lực tại ngày {}: chọn tạm {} (ID={}) thay vì {} (ID={}).",
@@ -72,13 +75,14 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
 
     @Override
     public TaxPolicy getActiveTaxPolicyStrict(LocalDate effectiveDate) {
-        if (taxPolicyRepository == null) {
-            return createFallbackPolicy();
-        }
         LocalDate target = effectiveDate != null ? effectiveDate : LocalDate.now();
+        if (taxPolicyRepository == null) {
+            return createFallbackPolicyForDate(target);
+        }
         List<TaxPolicy> policies = taxPolicyRepository.findActivePoliciesAtDate(target, PageRequest.of(0, 2));
         if (policies == null || policies.isEmpty()) {
-            return createFallbackPolicy();
+            throw new IllegalStateException("Không tìm thấy chính sách thuế TNCN đang hiệu lực tại ngày " + target
+                    + ". Vui lòng cấu hình bảng tax_policies trước khi tính hoặc chốt lương.");
         }
         if (policies.size() > 1) {
             throw new IllegalStateException("Phát hiện chính sách thuế TNCN đang chồng hiệu lực tại ngày " + target
@@ -88,18 +92,31 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
         return policies.get(0);
     }
 
-    private TaxPolicy createFallbackPolicy() {
+    private TaxPolicy createFallbackPolicyForDate(LocalDate targetDate) {
+        LocalDate target = targetDate != null ? targetDate : LocalDate.now();
         TaxPolicy p = new TaxPolicy();
-        p.setPolicyCode("PIT_VN_2020");
-        p.setPolicyName("Chính sách thuế TNCN & Bảo hiểm theo NQ 954/2020/UBTVQH14");
-        p.setEffectiveFrom(LocalDate.of(2020, 7, 1));
-        p.setPersonalRelief(BigDecimal.valueOf(11000000));
-        p.setDependentRelief(BigDecimal.valueOf(4400000));
+        if (!target.isBefore(EFFECTIVE_DATE_2026)) {
+            p.setPolicyCode("PIT_VN_2026_REF");
+            p.setPolicyName("Chính sách thuế TNCN 2026 tham khảo (NQ 110/2025/UBTVQH15 & Luật 109/2025/QH15)");
+            p.setEffectiveFrom(EFFECTIVE_DATE_2026);
+            p.setPersonalRelief(BigDecimal.valueOf(15500000));
+            p.setDependentRelief(BigDecimal.valueOf(6200000));
+            p.setProgressiveSchedule("PROGRESSIVE_5_2026");
+            p.setLegalReference("Nghị quyết 110/2025/UBTVQH15 & Luật Thuế TNCN 109/2025/QH15 (5 bậc)");
+        } else {
+            p.setPolicyCode("PIT_VN_2020_REF");
+            p.setPolicyName("Chính sách thuế TNCN tham khảo (NQ 954/2020/UBTVQH14)");
+            p.setEffectiveFrom(LocalDate.of(2020, 7, 1));
+            p.setEffectiveTo(LocalDate.of(2025, 12, 31));
+            p.setPersonalRelief(BigDecimal.valueOf(11000000));
+            p.setDependentRelief(BigDecimal.valueOf(4400000));
+            p.setProgressiveSchedule("PROGRESSIVE_7_2007");
+            p.setLegalReference("Nghị quyết 954/2020/UBTVQH14, Điều 22 Luật Thuế TNCN 04/2007/QH12, TT 111/2013/TT-BTC");
+        }
         p.setCasualTaxRate(BigDecimal.valueOf(10.0));
         p.setNonResidentTaxRate(BigDecimal.valueOf(20.0));
         p.setInsuranceEmployeeRate(BigDecimal.valueOf(10.5));
         p.setInsuranceEmployerRate(BigDecimal.valueOf(21.5));
-        p.setLegalReference("Nghị quyết 954/2020/UBTVQH14, Điều 22 Luật Thuế TNCN 04/2007/QH12, TT 111/2013/TT-BTC");
         p.setIsActive(true);
         return p;
     }
@@ -181,10 +198,10 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
             TaxPolicy policy,
             LocalDate effectiveDate
     ) {
-        if (policy == null) {
-            policy = createFallbackPolicy();
-        }
         LocalDate targetDate = effectiveDate != null ? effectiveDate : LocalDate.now();
+        if (policy == null) {
+            policy = createFallbackPolicyForDate(targetDate);
+        }
 
         BigDecimal gross = grossSalary != null ? grossSalary : BigDecimal.ZERO;
         BigDecimal nonTaxable = nonTaxableIncome != null ? nonTaxableIncome : BigDecimal.ZERO;
@@ -192,26 +209,17 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
 
         InsuranceBasis ins = resolveInsuranceBasis(staff, policy, targetDate);
 
-        // Trường hợp nhân sự chưa có thông tin hợp đồng (legacy hoặc chưa khai báo thuế)
+        // Trường hợp nhân sự thiếu loại hợp đồng: chỉ cho xem tạm nháp, đánh dấu pitVerified=false để chặn khi chốt
         if (staff == null || staff.getContractType() == null) {
-            return PitCalculationResult.builder()
-                    .grossSalary(gross)
-                    .nonTaxableIncome(nonTaxable)
-                    .insuranceEmployeeDeduction(ins.employeeAmount)
-                    .insuranceEmployerAmount(ins.employerAmount)
-                    .insuranceParticipationStatus(ins.status)
-                    .insuranceVerified(ins.verified)
-                    .insuranceBaseSalarySnapshot(ins.baseSalarySnapshot)
-                    .insuranceEmployeeRateSnapshot(ins.employeeRateSnapshot)
-                    .insuranceEmployerRateSnapshot(ins.employerRateSnapshot)
-                    .insuranceBasisNote(ins.basisNote)
+            return basePitBuilder(gross, nonTaxable, taxableIncome, ins, policy)
                     .personalDeductionAmount(BigDecimal.ZERO)
                     .dependentDeductionAmount(BigDecimal.ZERO)
-                    .taxableIncome(taxableIncome)
                     .assessableIncome(taxableIncome)
                     .pitAmount(BigDecimal.ZERO)
-                    .taxPolicyCode(policy.getPolicyCode())
-                    .taxCalculationDetail("Chưa thiết lập loại hợp đồng lao động trên hồ sơ nhân sự. Tạm thời không khấu trừ thuế.")
+                    .calculationMethod("MISSING_CONTRACT_TYPE")
+                    .pitScheduleSnapshot("Thiếu loại hợp đồng lao động (Kỳ " + targetDate + ")")
+                    .pitVerified(false)
+                    .taxCalculationDetail("CHƯA ĐỦ CĂN CỨ PIT: Chưa thiết lập loại hợp đồng lao động trên hồ sơ nhân sự. Không thể chốt bảng lương với PIT = 0.")
                     .build();
         }
 
@@ -222,32 +230,22 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
         boolean hasCommitment = Boolean.TRUE.equals(staff.getHasTaxCommitment());
 
         BigDecimal insuranceEmployee = ins.employeeAmount;
-        BigDecimal insuranceEmployer = ins.employerAmount;
 
         // Phân nhánh tính thuế TNCN theo đối tượng (tách biệt với diện tham gia bảo hiểm)
         if (!isResident || contractType == StaffContractType.NON_RESIDENT) {
             BigDecimal nonResRate = policy.getNonResidentTaxRate() != null ? policy.getNonResidentTaxRate() : BigDecimal.valueOf(20.0);
             BigDecimal pit = taxableIncome.multiply(nonResRate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-            String detail = String.format("Khấu trừ thuế TNCN không cư trú: %s%% trên TNCT %s đ = %s đ (Điều 18 Thông tư 111/2013/TT-BTC)",
-                    nonResRate.stripTrailingZeros().toPlainString(), formatVnd(taxableIncome), formatVnd(pit));
+            String detail = String.format("Khấu trừ thuế TNCN không cư trú: %s%% trên TNCT %s đ = %s đ (Điều 18 Thông tư 111/2013/TT-BTC, kỳ %s)",
+                    nonResRate.stripTrailingZeros().toPlainString(), formatVnd(taxableIncome), formatVnd(pit), targetDate);
 
-            return PitCalculationResult.builder()
-                    .grossSalary(gross)
-                    .nonTaxableIncome(nonTaxable)
-                    .insuranceEmployeeDeduction(insuranceEmployee)
-                    .insuranceEmployerAmount(insuranceEmployer)
-                    .insuranceParticipationStatus(ins.status)
-                    .insuranceVerified(ins.verified)
-                    .insuranceBaseSalarySnapshot(ins.baseSalarySnapshot)
-                    .insuranceEmployeeRateSnapshot(ins.employeeRateSnapshot)
-                    .insuranceEmployerRateSnapshot(ins.employerRateSnapshot)
-                    .insuranceBasisNote(ins.basisNote)
+            return basePitBuilder(gross, nonTaxable, taxableIncome, ins, policy)
                     .personalDeductionAmount(BigDecimal.ZERO)
                     .dependentDeductionAmount(BigDecimal.ZERO)
-                    .taxableIncome(taxableIncome)
                     .assessableIncome(taxableIncome)
                     .pitAmount(pit)
-                    .taxPolicyCode(policy.getPolicyCode())
+                    .calculationMethod("NON_RESIDENT_FLAT_20")
+                    .pitScheduleSnapshot("Khấu trừ 20% không cư trú (Điều 18 TT 111/2013/TT-BTC)")
+                    .pitVerified(true)
                     .taxCalculationDetail(detail)
                     .build();
         }
@@ -260,23 +258,14 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
 
             if (hasCommitment) {
                 String detail = "Nhân sự có cam kết Mẫu 08/CK-TNCN (ước tính tổng thu nhập trong năm dưới mức chịu thuế). Tạm thời chưa khấu trừ 10% tại nguồn.";
-                return PitCalculationResult.builder()
-                        .grossSalary(gross)
-                        .nonTaxableIncome(nonTaxable)
-                        .insuranceEmployeeDeduction(insuranceEmployee)
-                        .insuranceEmployerAmount(insuranceEmployer)
-                        .insuranceParticipationStatus(ins.status)
-                        .insuranceVerified(ins.verified)
-                        .insuranceBaseSalarySnapshot(ins.baseSalarySnapshot)
-                        .insuranceEmployeeRateSnapshot(ins.employeeRateSnapshot)
-                        .insuranceEmployerRateSnapshot(ins.employerRateSnapshot)
-                        .insuranceBasisNote(ins.basisNote)
+                return basePitBuilder(gross, nonTaxable, taxableIncome, ins, policy)
                         .personalDeductionAmount(BigDecimal.ZERO)
                         .dependentDeductionAmount(BigDecimal.ZERO)
-                        .taxableIncome(taxableIncome)
                         .assessableIncome(taxableIncome)
                         .pitAmount(BigDecimal.ZERO)
-                        .taxPolicyCode(policy.getPolicyCode())
+                        .calculationMethod("CASUAL_COMMITMENT_08")
+                        .pitScheduleSnapshot("Cam kết Mẫu 08/CK-TNCN (TT 80/2021/TT-BTC)")
+                        .pitVerified(true)
                         .taxCalculationDetail(detail)
                         .build();
             }
@@ -286,53 +275,37 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
                 BigDecimal pit = taxableIncome.multiply(casualRate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
                 String detail = String.format("Khấu trừ 10%% tại nguồn cho HĐ dưới 3 tháng / vãng lai (chi trả từ 2,000,000 đ theo Điểm i Khoản 1 Điều 25 TT 111/2013/TT-BTC): %s đ",
                         formatVnd(pit));
-                return PitCalculationResult.builder()
-                        .grossSalary(gross)
-                        .nonTaxableIncome(nonTaxable)
-                        .insuranceEmployeeDeduction(insuranceEmployee)
-                        .insuranceEmployerAmount(insuranceEmployer)
-                        .insuranceParticipationStatus(ins.status)
-                        .insuranceVerified(ins.verified)
-                        .insuranceBaseSalarySnapshot(ins.baseSalarySnapshot)
-                        .insuranceEmployeeRateSnapshot(ins.employeeRateSnapshot)
-                        .insuranceEmployerRateSnapshot(ins.employerRateSnapshot)
-                        .insuranceBasisNote(ins.basisNote)
+                return basePitBuilder(gross, nonTaxable, taxableIncome, ins, policy)
                         .personalDeductionAmount(BigDecimal.ZERO)
                         .dependentDeductionAmount(BigDecimal.ZERO)
-                        .taxableIncome(taxableIncome)
                         .assessableIncome(taxableIncome)
                         .pitAmount(pit)
-                        .taxPolicyCode(policy.getPolicyCode())
+                        .calculationMethod("CASUAL_FLAT_10")
+                        .pitScheduleSnapshot("Khấu trừ 10% tại nguồn (Điểm i K1 Đ25 TT 111/2013/TT-BTC)")
+                        .pitVerified(true)
                         .taxCalculationDetail(detail)
                         .build();
             } else {
                 String detail = "Thu nhập chi trả dưới ngưỡng khấu trừ 2,000,000 đ/lần. Chưa phát sinh thuế khấu trừ.";
-                return PitCalculationResult.builder()
-                        .grossSalary(gross)
-                        .nonTaxableIncome(nonTaxable)
-                        .insuranceEmployeeDeduction(insuranceEmployee)
-                        .insuranceEmployerAmount(insuranceEmployer)
-                        .insuranceParticipationStatus(ins.status)
-                        .insuranceVerified(ins.verified)
-                        .insuranceBaseSalarySnapshot(ins.baseSalarySnapshot)
-                        .insuranceEmployeeRateSnapshot(ins.employeeRateSnapshot)
-                        .insuranceEmployerRateSnapshot(ins.employerRateSnapshot)
-                        .insuranceBasisNote(ins.basisNote)
+                return basePitBuilder(gross, nonTaxable, taxableIncome, ins, policy)
                         .personalDeductionAmount(BigDecimal.ZERO)
                         .dependentDeductionAmount(BigDecimal.ZERO)
-                        .taxableIncome(taxableIncome)
                         .assessableIncome(taxableIncome)
                         .pitAmount(BigDecimal.ZERO)
-                        .taxPolicyCode(policy.getPolicyCode())
+                        .calculationMethod("CASUAL_BELOW_THRESHOLD")
+                        .pitScheduleSnapshot("Dưới ngưỡng khấu trừ 2.000.000 đ/lần")
+                        .pitVerified(true)
                         .taxCalculationDetail(detail)
                         .build();
             }
         }
 
-        // HỢP ĐỒNG LAO ĐỘNG TỪ 3 THÁNG TRỞ LÊN: BIỂU THUẾ LŨY TIẾN TỪNG PHẦN 7 BẬC
+        // HỢP ĐỒNG LAO ĐỘNG TỪ 3 THÁNG TRỞ LÊN: BIỂU THUẾ LŨY TIẾN THEO PHIÊN BẢN CHÍNH SÁCH
+        if (policy.getPersonalRelief() == null || policy.getDependentRelief() == null) {
+            throw new IllegalStateException("Chính sách thuế " + policy.getPolicyCode() + " thiếu mức giảm trừ bản thân hoặc người phụ thuộc.");
+        }
         BigDecimal personalRelief = hasPersonalDeduction ? policy.getPersonalRelief() : BigDecimal.ZERO;
-        BigDecimal dependentReliefUnit = policy.getDependentRelief();
-        BigDecimal dependentRelief = dependentReliefUnit.multiply(BigDecimal.valueOf(dependentCount));
+        BigDecimal dependentRelief = policy.getDependentRelief().multiply(BigDecimal.valueOf(dependentCount));
 
         // Thu nhập tính thuế = Thu nhập chịu thuế - Các khoản bảo hiểm - Giảm trừ gia cảnh
         BigDecimal assessableIncome = taxableIncome
@@ -341,27 +314,59 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
                 .subtract(dependentRelief)
                 .max(BigDecimal.ZERO);
 
-        ProgressiveTaxDetail prog = calculateProgressivePit(assessableIncome);
+        String scheduleCode = resolveProgressiveSchedule(policy);
+        ProgressiveTaxDetail prog = calculateProgressivePit(assessableIncome, scheduleCode);
+        String scheduleSnapshot = "PROGRESSIVE_5_2026".equals(scheduleCode)
+                ? "Biểu 5 bậc (Luật Thuế TNCN 109/2025/QH15) — Kỳ " + targetDate
+                : "Biểu 7 bậc (Luật Thuế TNCN 04/2007/QH12) — Kỳ " + targetDate;
 
+        return basePitBuilder(gross, nonTaxable, taxableIncome, ins, policy)
+                .personalDeductionAmount(personalRelief)
+                .dependentDeductionAmount(dependentRelief)
+                .assessableIncome(assessableIncome)
+                .pitAmount(prog.totalTax)
+                .calculationMethod(scheduleCode)
+                .pitScheduleSnapshot(scheduleSnapshot)
+                .pitVerified(true)
+                .taxCalculationDetail(prog.explanation)
+                .build();
+    }
+
+    private PitCalculationResult.PitCalculationResultBuilder basePitBuilder(
+            BigDecimal gross,
+            BigDecimal nonTaxable,
+            BigDecimal taxableIncome,
+            InsuranceBasis ins,
+            TaxPolicy policy
+    ) {
         return PitCalculationResult.builder()
                 .grossSalary(gross)
                 .nonTaxableIncome(nonTaxable)
-                .insuranceEmployeeDeduction(insuranceEmployee)
-                .insuranceEmployerAmount(insuranceEmployer)
+                .taxableIncome(taxableIncome)
+                .insuranceEmployeeDeduction(ins.employeeAmount)
+                .insuranceEmployerAmount(ins.employerAmount)
                 .insuranceParticipationStatus(ins.status)
                 .insuranceVerified(ins.verified)
                 .insuranceBaseSalarySnapshot(ins.baseSalarySnapshot)
                 .insuranceEmployeeRateSnapshot(ins.employeeRateSnapshot)
                 .insuranceEmployerRateSnapshot(ins.employerRateSnapshot)
                 .insuranceBasisNote(ins.basisNote)
-                .personalDeductionAmount(personalRelief)
-                .dependentDeductionAmount(dependentRelief)
-                .taxableIncome(taxableIncome)
-                .assessableIncome(assessableIncome)
-                .pitAmount(prog.totalTax)
-                .taxPolicyCode(policy.getPolicyCode())
-                .taxCalculationDetail(prog.explanation)
-                .build();
+                .taxPolicyCode(policy.getPolicyCode());
+    }
+
+    private String resolveProgressiveSchedule(TaxPolicy policy) {
+        String code = policy.getProgressiveSchedule();
+        if (code != null && !code.isBlank()) {
+            String normalized = code.trim().toUpperCase();
+            if ("PROGRESSIVE_5_2026".equals(normalized) || "PROGRESSIVE_7_2007".equals(normalized)) {
+                return normalized;
+            }
+            throw new IllegalStateException("Biểu thuế lũy tiến không được hỗ trợ: " + code);
+        }
+        if (policy.getEffectiveFrom() != null && !policy.getEffectiveFrom().isBefore(EFFECTIVE_DATE_2026)) {
+            return "PROGRESSIVE_5_2026";
+        }
+        return "PROGRESSIVE_7_2007";
     }
 
     private InsuranceBasis resolveInsuranceBasis(StaffProfile staff, TaxPolicy policy, LocalDate targetDate) {
@@ -478,85 +483,61 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
             String basisNote
     ) {}
 
-    private ProgressiveTaxDetail calculateProgressivePit(BigDecimal assessable) {
+    private ProgressiveTaxDetail calculateProgressivePit(BigDecimal assessable, String scheduleCode) {
         if (assessable.compareTo(BigDecimal.ZERO) <= 0) {
             return new ProgressiveTaxDetail(BigDecimal.ZERO, "Thu nhập tính thuế <= 0 đ. Thuế TNCN = 0 đ.");
+        }
+
+        List<TaxBracket> brackets;
+        String legalFootnote;
+        if ("PROGRESSIVE_5_2026".equals(scheduleCode)) {
+            brackets = List.of(
+                    new TaxBracket(BigDecimal.valueOf(10_000_000L), BigDecimal.valueOf(0.05), "Bậc 1 (<= 10M - 5%)"),
+                    new TaxBracket(BigDecimal.valueOf(20_000_000L), BigDecimal.valueOf(0.10), "Bậc 2 (10M-30M - 10%)"),
+                    new TaxBracket(BigDecimal.valueOf(30_000_000L), BigDecimal.valueOf(0.20), "Bậc 3 (30M-60M - 20%)"),
+                    new TaxBracket(BigDecimal.valueOf(40_000_000L), BigDecimal.valueOf(0.30), "Bậc 4 (60M-100M - 30%)"),
+                    new TaxBracket(null, BigDecimal.valueOf(0.35), "Bậc 5 (> 100M - 35%)")
+            );
+            legalFootnote = "Luật Thuế TNCN 109/2025/QH15 (Biểu 5 bậc) & NQ 110/2025/UBTVQH15";
+        } else {
+            brackets = List.of(
+                    new TaxBracket(B1_MAX, BigDecimal.valueOf(0.05), "Bậc 1 (<= 5M - 5%)"),
+                    new TaxBracket(B2_MAX.subtract(B1_MAX), BigDecimal.valueOf(0.10), "Bậc 2 (5M-10M - 10%)"),
+                    new TaxBracket(B3_MAX.subtract(B2_MAX), BigDecimal.valueOf(0.15), "Bậc 3 (10M-18M - 15%)"),
+                    new TaxBracket(B4_MAX.subtract(B3_MAX), BigDecimal.valueOf(0.20), "Bậc 4 (18M-32M - 20%)"),
+                    new TaxBracket(B5_MAX.subtract(B4_MAX), BigDecimal.valueOf(0.25), "Bậc 5 (32M-52M - 25%)"),
+                    new TaxBracket(B6_MAX.subtract(B5_MAX), BigDecimal.valueOf(0.30), "Bậc 6 (52M-80M - 30%)"),
+                    new TaxBracket(null, BigDecimal.valueOf(0.35), "Bậc 7 (> 80M - 35%)")
+            );
+            legalFootnote = "Điều 22 Luật Thuế TNCN 04/2007/QH12 & NQ 954/2020/UBTVQH14";
         }
 
         BigDecimal rem = assessable;
         BigDecimal totalTax = BigDecimal.ZERO;
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("Biểu thuế lũy tiến từng phần (TNTT: %s đ):\n", formatVnd(assessable)));
+        sb.append(String.format("Biểu thuế lũy tiến từng phần %s (TNTT: %s đ):\n",
+                "PROGRESSIVE_5_2026".equals(scheduleCode) ? "5 bậc (2026)" : "7 bậc (2007)",
+                formatVnd(assessable)));
 
-        // Bậc 1: Đến 5 triệu đ (5%)
-        BigDecimal b1Portion = rem.min(B1_MAX);
-        if (b1Portion.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal t1 = b1Portion.multiply(BigDecimal.valueOf(0.05)).setScale(0, RoundingMode.HALF_UP);
-            totalTax = totalTax.add(t1);
-            sb.append(String.format("• Bậc 1 (<= 5M - 5%%): %s đ x 5%% = %s đ\n", formatVnd(b1Portion), formatVnd(t1)));
-            rem = rem.subtract(b1Portion);
+        for (TaxBracket bracket : brackets) {
+            if (rem.compareTo(BigDecimal.ZERO) <= 0) {
+                break;
+            }
+            BigDecimal portion = bracket.width() != null ? rem.min(bracket.width()) : rem;
+            if (portion.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal tax = portion.multiply(bracket.rate()).setScale(0, RoundingMode.HALF_UP);
+                totalTax = totalTax.add(tax);
+                String ratePct = bracket.rate().multiply(BigDecimal.valueOf(100)).stripTrailingZeros().toPlainString();
+                sb.append(String.format("• %s: %s đ x %s%% = %s đ\n", bracket.label(), formatVnd(portion), ratePct, formatVnd(tax)));
+                rem = rem.subtract(portion);
+            }
         }
 
-        // Bậc 2: Trên 5 đến 10 triệu đ (10%)
-        if (rem.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal b2Cap = B2_MAX.subtract(B1_MAX); // 5 triệu
-            BigDecimal b2Portion = rem.min(b2Cap);
-            BigDecimal t2 = b2Portion.multiply(BigDecimal.valueOf(0.10)).setScale(0, RoundingMode.HALF_UP);
-            totalTax = totalTax.add(t2);
-            sb.append(String.format("• Bậc 2 (5M-10M - 10%%): %s đ x 10%% = %s đ\n", formatVnd(b2Portion), formatVnd(t2)));
-            rem = rem.subtract(b2Portion);
-        }
-
-        // Bậc 3: Trên 10 đến 18 triệu đ (15%)
-        if (rem.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal b3Cap = B3_MAX.subtract(B2_MAX); // 8 triệu
-            BigDecimal b3Portion = rem.min(b3Cap);
-            BigDecimal t3 = b3Portion.multiply(BigDecimal.valueOf(0.15)).setScale(0, RoundingMode.HALF_UP);
-            totalTax = totalTax.add(t3);
-            sb.append(String.format("• Bậc 3 (10M-18M - 15%%): %s đ x 15%% = %s đ\n", formatVnd(b3Portion), formatVnd(t3)));
-            rem = rem.subtract(b3Portion);
-        }
-
-        // Bậc 4: Trên 18 đến 32 triệu đ (20%)
-        if (rem.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal b4Cap = B4_MAX.subtract(B3_MAX); // 14 triệu
-            BigDecimal b4Portion = rem.min(b4Cap);
-            BigDecimal t4 = b4Portion.multiply(BigDecimal.valueOf(0.20)).setScale(0, RoundingMode.HALF_UP);
-            totalTax = totalTax.add(t4);
-            sb.append(String.format("• Bậc 4 (18M-32M - 20%%): %s đ x 20%% = %s đ\n", formatVnd(b4Portion), formatVnd(t4)));
-            rem = rem.subtract(b4Portion);
-        }
-
-        // Bậc 5: Trên 32 đến 52 triệu đ (25%)
-        if (rem.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal b5Cap = B5_MAX.subtract(B4_MAX); // 20 triệu
-            BigDecimal b5Portion = rem.min(b5Cap);
-            BigDecimal t5 = b5Portion.multiply(BigDecimal.valueOf(0.25)).setScale(0, RoundingMode.HALF_UP);
-            totalTax = totalTax.add(t5);
-            sb.append(String.format("• Bậc 5 (32M-52M - 25%%): %s đ x 25%% = %s đ\n", formatVnd(b5Portion), formatVnd(t5)));
-            rem = rem.subtract(b5Portion);
-        }
-
-        // Bậc 6: Trên 52 đến 80 triệu đ (30%)
-        if (rem.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal b6Cap = B6_MAX.subtract(B5_MAX); // 28 triệu
-            BigDecimal b6Portion = rem.min(b6Cap);
-            BigDecimal t6 = b6Portion.multiply(BigDecimal.valueOf(0.30)).setScale(0, RoundingMode.HALF_UP);
-            totalTax = totalTax.add(t6);
-            sb.append(String.format("• Bậc 6 (52M-80M - 30%%): %s đ x 30%% = %s đ\n", formatVnd(b6Portion), formatVnd(t6)));
-            rem = rem.subtract(b6Portion);
-        }
-
-        // Bậc 7: Trên 80 triệu đ (35%)
-        if (rem.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal t7 = rem.multiply(BigDecimal.valueOf(0.35)).setScale(0, RoundingMode.HALF_UP);
-            totalTax = totalTax.add(t7);
-            sb.append(String.format("• Bậc 7 (> 80M - 35%%): %s đ x 35%% = %s đ\n", formatVnd(rem), formatVnd(t7)));
-        }
-
-        sb.append(String.format("=> Tổng thuế TNCN khấu trừ = %s đ (Điều 22 Luật Thuế TNCN & TT 111/2013/TT-BTC)", formatVnd(totalTax)));
+        sb.append(String.format("=> Tổng thuế TNCN khấu trừ = %s đ (%s)", formatVnd(totalTax), legalFootnote));
         return new ProgressiveTaxDetail(totalTax, sb.toString());
     }
+
+    private record TaxBracket(BigDecimal width, BigDecimal rate, String label) {}
 
     private String formatVnd(BigDecimal amount) {
         if (amount == null) return "0";

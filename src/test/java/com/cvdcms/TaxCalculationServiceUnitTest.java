@@ -354,15 +354,22 @@ public class TaxCalculationServiceUnitTest {
     }
 
     @Test
-    @DisplayName("Kịch bản 17: Tra cứu policy thuế khi có 0/1/2 bản ghi (màn xem chọn tạm, chốt báo lỗi)")
+    @DisplayName("Kịch bản 17: Tra cứu policy thuế khi có 0/1/2 bản ghi (màn xem fallback theo kỳ, chốt báo lỗi)")
     void testTaxPolicyOverlap_ViewVsStrictFinalization() {
-        LocalDate target = LocalDate.of(2026, 7, 1);
+        LocalDate target2026 = LocalDate.of(2026, 7, 1);
+        LocalDate target2025 = LocalDate.of(2025, 11, 1);
 
-        // 0 kết quả -> dùng fallback policy
-        when(taxPolicyRepository.findActivePoliciesAtDate(eq(target), eq(PageRequest.of(0, 2))))
+        // 0 kết quả -> màn xem fallback theo kỳ áp dụng; chốt chặt phải báo lỗi không fallback im lặng
+        when(taxPolicyRepository.findActivePoliciesAtDate(eq(target2026), eq(PageRequest.of(0, 2))))
                 .thenReturn(Collections.emptyList());
-        assertEquals("PIT_VN_2020", taxCalculationService.getActiveTaxPolicy(target).getPolicyCode());
-        assertEquals("PIT_VN_2020", taxCalculationService.getActiveTaxPolicyStrict(target).getPolicyCode());
+        when(taxPolicyRepository.findActivePoliciesAtDate(eq(target2025), eq(PageRequest.of(0, 2))))
+                .thenReturn(Collections.emptyList());
+
+        assertEquals("PIT_VN_2026_REF", taxCalculationService.getActiveTaxPolicy(target2026).getPolicyCode());
+        assertEquals("PIT_VN_2020_REF", taxCalculationService.getActiveTaxPolicy(target2025).getPolicyCode());
+        IllegalStateException missingEx = assertThrows(IllegalStateException.class,
+                () -> taxCalculationService.getActiveTaxPolicyStrict(target2026));
+        assertTrue(missingEx.getMessage().contains("Không tìm thấy chính sách thuế"));
 
         // 2 kết quả chồng hiệu lực -> màn xem lấy bản ghi đầu theo thứ tự, chốt chặt báo IllegalStateException
         TaxPolicy newer = new TaxPolicy();
@@ -372,12 +379,12 @@ public class TaxCalculationServiceUnitTest {
         older.setPolicyId(11L);
         older.setPolicyCode("PIT_2026_V1");
 
-        when(taxPolicyRepository.findActivePoliciesAtDate(eq(target), eq(PageRequest.of(0, 2))))
+        when(taxPolicyRepository.findActivePoliciesAtDate(eq(target2026), eq(PageRequest.of(0, 2))))
                 .thenReturn(List.of(newer, older));
 
-        assertEquals("PIT_2026_V2", taxCalculationService.getActiveTaxPolicy(target).getPolicyCode());
+        assertEquals("PIT_2026_V2", taxCalculationService.getActiveTaxPolicy(target2026).getPolicyCode());
         IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> taxCalculationService.getActiveTaxPolicyStrict(target));
+                () -> taxCalculationService.getActiveTaxPolicyStrict(target2026));
         assertTrue(ex.getMessage().contains("chồng hiệu lực"));
     }
 
@@ -475,5 +482,61 @@ public class TaxCalculationServiceUnitTest {
         assertEquals(InsuranceParticipationStatus.UNVERIFIED, r2.getInsuranceParticipationStatus());
         assertFalse(Boolean.TRUE.equals(r2.getInsuranceVerified()));
         assertTrue(r2.getInsuranceBasisNote().contains("CHƯA ĐỦ CĂN CỨ"));
+    }
+
+    @Test
+    @DisplayName("Kịch bản 23: Policy 2026 (15.5M/6.2M - biểu 5 bậc) vs Policy 2020 (11M/4.4M - biểu 7 bậc) theo kỳ")
+    void testPitPolicyVersioning_2020Vs2026() {
+        TaxPolicy policy2026 = new TaxPolicy();
+        policy2026.setPolicyId(2L);
+        policy2026.setPolicyCode("PIT_VN_2026");
+        policy2026.setEffectiveFrom(LocalDate.of(2026, 1, 1));
+        policy2026.setPersonalRelief(new BigDecimal("15500000"));
+        policy2026.setDependentRelief(new BigDecimal("6200000"));
+        policy2026.setCasualTaxRate(new BigDecimal("10.0"));
+        policy2026.setNonResidentTaxRate(new BigDecimal("20.0"));
+        policy2026.setProgressiveSchedule("PROGRESSIVE_5_2026");
+        policy2026.setInsuranceEmployeeRate(new BigDecimal("10.5"));
+        policy2026.setInsuranceEmployerRate(new BigDecimal("21.5"));
+        policy2026.setIsActive(true);
+
+        LocalDate date2025 = LocalDate.of(2025, 12, 1);
+        LocalDate date2026 = LocalDate.of(2026, 7, 1);
+        when(taxPolicyRepository.findActivePoliciesAtDate(eq(date2025), any(Pageable.class)))
+                .thenReturn(List.of(standardPolicy));
+        when(taxPolicyRepository.findActivePoliciesAtDate(eq(date2026), any(Pageable.class)))
+                .thenReturn(List.of(policy2026));
+
+        StaffProfile staff = createStaff(StaffContractType.FULL_CONTRACT, true, true, 1, false, BigDecimal.ZERO);
+
+        // Kỳ 2025: GTBT 11M + 1 NPT 4.4M = 15.4M. Gross 35.4M -> TNTT = 20M (7 bậc: 250k + 500k + 1.2M + 400k = 2,350,000)
+        PitCalculationResult r2025 = taxCalculationService.calculatePitStrict(new BigDecimal("35400000"), BigDecimal.ZERO, staff, date2025);
+        assertEquals("PIT_VN_2020", r2025.getTaxPolicyCode());
+        assertEquals("PROGRESSIVE_7_2007", r2025.getCalculationMethod());
+        assertEquals(new BigDecimal("20000000"), r2025.getAssessableIncome());
+        assertEquals(new BigDecimal("2350000"), r2025.getPitAmount());
+
+        // Kỳ 2026: GTBT 15.5M + 1 NPT 6.2M = 21.7M.
+        // Test ranh giới Bậc 2 (TNTT = 30M -> Gross = 51.7M): 10M*5% + 20M*10% = 500k + 2M = 2,500,000
+        PitCalculationResult r2026B2 = taxCalculationService.calculatePitStrict(new BigDecimal("51700000"), BigDecimal.ZERO, staff, date2026);
+        assertEquals("PIT_VN_2026", r2026B2.getTaxPolicyCode());
+        assertEquals("PROGRESSIVE_5_2026", r2026B2.getCalculationMethod());
+        assertEquals(new BigDecimal("30000000"), r2026B2.getAssessableIncome());
+        assertEquals(new BigDecimal("2500000"), r2026B2.getPitAmount());
+
+        // Test ranh giới Bậc 5 (TNTT = 120M -> Gross = 141.7M): 500k + 2M + 30M*20%(6M) + 40M*30%(12M) + 20M*35%(7M) = 27,500,000
+        PitCalculationResult r2026B5 = taxCalculationService.calculatePitStrict(new BigDecimal("141700000"), BigDecimal.ZERO, staff, date2026);
+        assertEquals(new BigDecimal("120000000"), r2026B5.getAssessableIncome());
+        assertEquals(new BigDecimal("27500000"), r2026B5.getPitAmount());
+    }
+
+    @Test
+    @DisplayName("Kịch bản 24: Thiếu loại hợp đồng lao động bị đánh dấu chưa đủ căn cứ PIT (MISSING_CONTRACT_TYPE)")
+    void testPit_MissingContractTypeNotVerified() {
+        StaffProfile staff = createStaff(null, true, true, 0, false, BigDecimal.ZERO);
+        PitCalculationResult r = taxCalculationService.calculatePit(new BigDecimal("30000000"), BigDecimal.ZERO, staff, LocalDate.of(2026, 7, 1));
+        assertEquals("MISSING_CONTRACT_TYPE", r.getCalculationMethod());
+        assertFalse(Boolean.TRUE.equals(r.getPitVerified()));
+        assertTrue(r.getTaxCalculationDetail().contains("CHƯA ĐỦ CĂN CỨ PIT"));
     }
 }

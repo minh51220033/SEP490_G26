@@ -1134,6 +1134,8 @@ public class PayrollServiceImpl implements PayrollService {
         item.setAssessableIncome(pitResult.getAssessableIncome());
         item.setPitAmount(pitResult.getPitAmount());
         item.setTaxPolicyCode(pitResult.getTaxPolicyCode());
+        item.setPitCalculationMethod(pitResult.getCalculationMethod());
+        item.setPitScheduleSnapshot(pitResult.getPitScheduleSnapshot());
         item.setTaxCalculationDetail(pitResult.getTaxCalculationDetail());
     }
 
@@ -1152,6 +1154,14 @@ public class PayrollServiceImpl implements PayrollService {
                 throw new IllegalStateException("Nhân sự " + staffName
                         + " chưa đủ căn cứ bảo hiểm hợp lệ (trạng thái UNVERIFIED/thiếu thông số). "
                         + "Vui lòng xác minh diện tham gia bảo hiểm trên hồ sơ nhân sự và tính lại bảng lương trước khi trình duyệt hoặc chi trả.");
+            }
+            boolean missingContract = "MISSING_CONTRACT_TYPE".equals(item.getPitCalculationMethod())
+                    || (taxCalculationService != null && item.getStaff() != null && item.getStaff().getContractType() == null);
+            if (missingContract) {
+                String staffName = item.getStaff() != null ? item.getStaff().getFullName() : String.valueOf(item.getItemId());
+                throw new IllegalStateException("Nhân sự " + staffName
+                        + " chưa thiết lập loại hợp đồng lao động để tính thuế TNCN (MISSING_CONTRACT_TYPE). "
+                        + "Vui lòng cập nhật hồ sơ nhân sự và tính lại bảng lương trước khi trình duyệt hoặc chi trả.");
             }
         }
     }

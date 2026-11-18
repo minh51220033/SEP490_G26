@@ -105,6 +105,12 @@ public class PayrollItem {
     @Column(name = "tax_policy_code", length = 50)
     private String taxPolicyCode;
 
+    @Column(name = "pit_calculation_method", length = 60)
+    private String pitCalculationMethod;
+
+    @Column(name = "pit_schedule_snapshot", length = 120)
+    private String pitScheduleSnapshot;
+
     @Column(name = "tax_calculation_detail", length = 1000)
     private String taxCalculationDetail;
 

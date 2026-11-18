@@ -27,6 +27,8 @@ public class PitCalculationResult {
     private BigDecimal assessableIncome;
     private BigDecimal pitAmount;
     private String taxPolicyCode;
+    private String pitScheduleSnapshot;
+    private Boolean pitVerified;
     private String taxCalculationDetail;
     private String calculationMethod;
 }
