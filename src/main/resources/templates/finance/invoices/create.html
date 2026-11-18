@@ -690,6 +690,7 @@
 
                 <!-- Form ẩn để đổi sang mua tại PK (Hoàn toàn nằm NGOÀI invoiceForm, ngăn chặn nested form) -->
                 <form id="formSwitchToClinic" method="post" action="" style="display: none;">
+                    <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                     <input type="hidden" name="choice" value="CLINIC">
                     <input type="hidden" name="visitId"
                         th:value="${selectedVisit != null ? selectedVisit.visitId : ''}">
@@ -703,6 +704,7 @@
                     aria-labelledby="modalChoiceExternalLabel" aria-hidden="true">
                     <div class="modal-dialog">
                         <form id="formChoiceExternal" method="post" action="">
+                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                             <input type="hidden" name="choice" value="EXTERNAL">
                             <input type="hidden" name="visitId"
                                 th:value="${selectedVisit != null ? selectedVisit.visitId : ''}">
