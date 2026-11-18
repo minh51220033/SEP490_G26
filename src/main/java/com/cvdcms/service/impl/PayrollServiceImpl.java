@@ -307,8 +307,8 @@ public class PayrollServiceImpl implements PayrollService {
             item.setNonTaxableIncome(BigDecimal.ZERO);
 
             if (taxCalculationService != null) {
-                // Tính BHXH người lao động, các khoản giảm trừ và thuế TNCN (PIT)
-                PitCalculationResult pitResult = taxCalculationService.calculatePit(
+                // Tính BHXH người lao động, các khoản giảm trừ và thuế TNCN (PIT) (kiểm tra chặt không cho phép chồng hiệu lực)
+                PitCalculationResult pitResult = taxCalculationService.calculatePitStrict(
                         grossSalary,
                         BigDecimal.ZERO,
                         staff,
@@ -533,7 +533,7 @@ public class PayrollServiceImpl implements PayrollService {
                 .add(item.getTotalCommission());
 
         LocalDate periodDate = LocalDate.of(period.getYear(), period.getMonth(), 1);
-        PitCalculationResult pitResult = taxCalculationService.calculatePit(
+        PitCalculationResult pitResult = taxCalculationService.calculatePitStrict(
                 grossSalary,
                 item.getNonTaxableIncome() != null ? item.getNonTaxableIncome() : BigDecimal.ZERO,
                 item.getStaff(),
@@ -628,6 +628,7 @@ public class PayrollServiceImpl implements PayrollService {
         if (items.isEmpty()) {
             throw new IllegalStateException("Bảng lương chưa có nhân viên nào. Không thể trình duyệt.");
         }
+        assertUnambiguousTaxPolicyForPeriod(period);
 
         StaffProfile submitter = staffProfileRepository.findByUser_UserId(currentUserId).orElse(null);
 
@@ -652,6 +653,7 @@ public class PayrollServiceImpl implements PayrollService {
         if (period.getStatus() != PayrollStatus.SUBMITTED) {
             throw new IllegalStateException("Kỳ lương phải ở trạng thái Chờ duyệt (SUBMITTED) mới có thể phê duyệt");
         }
+        assertUnambiguousTaxPolicyForPeriod(period);
 
         StaffProfile approver = staffProfileRepository.findByUser_UserId(currentUserId).orElse(null);
 
@@ -727,6 +729,7 @@ public class PayrollServiceImpl implements PayrollService {
         if (items.isEmpty()) {
             throw new IllegalStateException("Bảng lương không có dòng dữ liệu nào");
         }
+        assertUnambiguousTaxPolicyForPeriod(period);
 
         // BẢO VỆ BẤT BIẾN VÀ ĐỐI SOÁT TOÀN DIỆN TRƯỚC KHI CHI TRẢ
         BigDecimal runningNet = BigDecimal.ZERO;
@@ -951,6 +954,12 @@ public class PayrollServiceImpl implements PayrollService {
             if (!matchesUserBranch) {
                 throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh này");
             }
+        }
+    }
+
+    private void assertUnambiguousTaxPolicyForPeriod(PayrollPeriod period) {
+        if (taxCalculationService != null && period != null && period.getYear() != null && period.getMonth() != null) {
+            taxCalculationService.getActiveTaxPolicyStrict(LocalDate.of(period.getYear(), period.getMonth(), 1));
         }
     }
 }

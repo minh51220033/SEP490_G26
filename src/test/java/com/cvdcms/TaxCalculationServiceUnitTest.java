@@ -16,7 +16,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -52,7 +56,8 @@ public class TaxCalculationServiceUnitTest {
         standardPolicy.setInsuranceEmployerRate(new BigDecimal("21.5"));
         standardPolicy.setIsActive(true);
 
-        lenient().when(taxPolicyRepository.findActivePolicyAtDate(any())).thenReturn(Optional.of(standardPolicy));
+        lenient().when(taxPolicyRepository.findActivePoliciesAtDate(any(), any(Pageable.class)))
+                .thenReturn(List.of(standardPolicy));
     }
 
     private StaffProfile createStaff(StaffContractType contractType, boolean isResident, boolean hasPersonalDeduction, int dependents, boolean hasCommitment, BigDecimal insuranceSalary) {
@@ -308,7 +313,8 @@ public class TaxCalculationServiceUnitTest {
         config.setEffectiveFrom(LocalDate.of(2020, 1, 1));
         config.setLegalReference("Luật Thuế TNDN 14/2008/QH12");
 
-        when(branchTaxConfigRepository.findActiveConfigAtDate(eq(1L), any())).thenReturn(Optional.of(config));
+        when(branchTaxConfigRepository.findActiveConfigsAtDate(eq(1L), any(), any(Pageable.class)))
+                .thenReturn(List.of(config));
 
         Optional<BranchTaxConfig> activeConfig = taxCalculationService.getBranchTaxConfig(1L, LocalDate.now());
         assertTrue(activeConfig.isPresent());
@@ -333,12 +339,70 @@ public class TaxCalculationServiceUnitTest {
         config.setEffectiveFrom(LocalDate.of(2021, 8, 1));
         config.setLegalReference("Thông tư 40/2021/TT-BTC");
 
-        when(branchTaxConfigRepository.findActiveConfigAtDate(eq(2L), any())).thenReturn(Optional.of(config));
+        when(branchTaxConfigRepository.findActiveConfigsAtDate(eq(2L), any(), any(Pageable.class)))
+                .thenReturn(List.of(config));
 
         Optional<BranchTaxConfig> activeConfig = taxCalculationService.getBranchTaxConfig(2L, LocalDate.now());
         assertTrue(activeConfig.isPresent());
         assertEquals("HOUSEHOLD", activeConfig.get().getEntityType());
         assertEquals("REVENUE_PERCENT", activeConfig.get().getTaxRegime());
         assertEquals(new BigDecimal("2.0"), activeConfig.get().getServiceTaxRate());
+    }
+
+    @Test
+    @DisplayName("Kịch bản 17: Tra cứu policy thuế khi có 0/1/2 bản ghi (màn xem chọn tạm, chốt báo lỗi)")
+    void testTaxPolicyOverlap_ViewVsStrictFinalization() {
+        LocalDate target = LocalDate.of(2026, 7, 1);
+
+        // 0 kết quả -> dùng fallback policy
+        when(taxPolicyRepository.findActivePoliciesAtDate(eq(target), eq(PageRequest.of(0, 2))))
+                .thenReturn(Collections.emptyList());
+        assertEquals("PIT_VN_2020", taxCalculationService.getActiveTaxPolicy(target).getPolicyCode());
+        assertEquals("PIT_VN_2020", taxCalculationService.getActiveTaxPolicyStrict(target).getPolicyCode());
+
+        // 2 kết quả chồng hiệu lực -> màn xem lấy bản ghi đầu theo thứ tự, chốt chặt báo IllegalStateException
+        TaxPolicy newer = new TaxPolicy();
+        newer.setPolicyId(12L);
+        newer.setPolicyCode("PIT_2026_V2");
+        TaxPolicy older = new TaxPolicy();
+        older.setPolicyId(11L);
+        older.setPolicyCode("PIT_2026_V1");
+
+        when(taxPolicyRepository.findActivePoliciesAtDate(eq(target), eq(PageRequest.of(0, 2))))
+                .thenReturn(List.of(newer, older));
+
+        assertEquals("PIT_2026_V2", taxCalculationService.getActiveTaxPolicy(target).getPolicyCode());
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> taxCalculationService.getActiveTaxPolicyStrict(target));
+        assertTrue(ex.getMessage().contains("chồng hiệu lực"));
+    }
+
+    @Test
+    @DisplayName("Kịch bản 18: Tra cứu cấu hình thuế chi nhánh khi có 0/2 bản ghi chồng hiệu lực")
+    void testBranchTaxConfigOverlap_ViewVsStrictFinalization() {
+        LocalDate target = LocalDate.of(2026, 7, 1);
+
+        when(branchTaxConfigRepository.findActiveConfigsAtDate(eq(1L), eq(target), eq(PageRequest.of(0, 2))))
+                .thenReturn(Collections.emptyList());
+        assertTrue(taxCalculationService.getBranchTaxConfig(1L, target).isEmpty());
+        assertTrue(taxCalculationService.getBranchTaxConfigStrict(1L, target).isEmpty());
+
+        BranchTaxConfig cfgNew = new BranchTaxConfig();
+        cfgNew.setConfigId(22L);
+        cfgNew.setEntityType("ENTERPRISE");
+        BranchTaxConfig cfgOld = new BranchTaxConfig();
+        cfgOld.setConfigId(21L);
+        cfgOld.setEntityType("HOUSEHOLD");
+
+        when(branchTaxConfigRepository.findActiveConfigsAtDate(eq(1L), eq(target), eq(PageRequest.of(0, 2))))
+                .thenReturn(List.of(cfgNew, cfgOld));
+
+        Optional<BranchTaxConfig> viewCfg = taxCalculationService.getBranchTaxConfig(1L, target);
+        assertTrue(viewCfg.isPresent());
+        assertEquals(22L, viewCfg.get().getConfigId());
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> taxCalculationService.getBranchTaxConfigStrict(1L, target));
+        assertTrue(ex.getMessage().contains("chồng hiệu lực"));
     }
 }

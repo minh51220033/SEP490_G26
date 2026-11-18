@@ -1455,6 +1455,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             List<Long> serviceIds,
             LocalDateTime now
     ) {
+        PromotionServiceImpl.validatePromotionDiscountConfig(promo);
         if (!Boolean.TRUE.equals(promo.getIsActive())) {
             throw new IllegalStateException("Chương trình khuyến mãi '" + promo.getPromoName() + "' đang bị vô hiệu hóa.");
         }
@@ -1499,15 +1500,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     private BigDecimal calculatePromoDiscount(Promotion promo, BigDecimal totalServiceAmount) {
-        if (promo.getPromoType() == PromotionType.PERCENTAGE) {
-            BigDecimal calc = totalServiceAmount.multiply(promo.getDiscountValue()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-            if (promo.getMaxDiscountAmount() != null && calc.compareTo(promo.getMaxDiscountAmount()) > 0) {
-                calc = promo.getMaxDiscountAmount();
-            }
-            return calc;
-        } else {
-            return promo.getDiscountValue().min(totalServiceAmount);
-        }
+        return PromotionServiceImpl.computeBoundedDiscount(promo, totalServiceAmount);
     }
 
     @Override

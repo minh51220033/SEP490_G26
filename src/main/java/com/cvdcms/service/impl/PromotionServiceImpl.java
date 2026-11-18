@@ -109,12 +109,12 @@ public class PromotionServiceImpl implements PromotionService {
         if (dto == null) {
             throw new IllegalArgumentException("Dữ liệu chương trình khuyến mãi không được để trống.");
         }
+        validatePromotionDto(dto);
+
         String cleanCode = dto.getPromoCode().trim().toUpperCase();
         if (promotionRepository.existsByPromoCode(cleanCode)) {
             throw new IllegalArgumentException("Mã khuyến mãi '" + cleanCode + "' đã tồn tại.");
         }
-
-        validatePromotionDto(dto);
 
         Promotion promo = new Promotion();
         promo.setPromoCode(cleanCode);
@@ -156,14 +156,14 @@ public class PromotionServiceImpl implements PromotionService {
         if (dto == null) {
             throw new IllegalArgumentException("Dữ liệu cập nhật khuyến mãi không được rỗng.");
         }
+        validatePromotionDto(dto);
+
         Promotion existing = getPromotionById(promotionId);
         String cleanCode = dto.getPromoCode().trim().toUpperCase();
 
         if (promotionRepository.existsByPromoCodeAndPromotionIdNot(cleanCode, promotionId)) {
             throw new IllegalArgumentException("Mã khuyến mãi '" + cleanCode + "' đã được sử dụng bởi chương trình khác.");
         }
-
-        validatePromotionDto(dto);
 
         if (dto.getUsageLimit() != null && dto.getUsageLimit() < existing.getUsedCount()) {
             throw new IllegalArgumentException("Giới hạn lượt dùng (" + dto.getUsageLimit() + ") không được nhỏ hơn số lượt đã dùng thực tế (" + existing.getUsedCount() + ").");
@@ -296,17 +296,53 @@ public class PromotionServiceImpl implements PromotionService {
         if (promo.getMinBillAmount() != null && billAmount.compareTo(promo.getMinBillAmount()) < 0) {
             return BigDecimal.ZERO;
         }
+        return computeBoundedDiscount(promo, billAmount);
+    }
 
-        BigDecimal discount = BigDecimal.ZERO;
+    /**
+     * Tính mức giảm khuyến mãi được giới hạn trong [0, eligibleAmount] cho cả preview và lập hóa đơn.
+     */
+    public static BigDecimal computeBoundedDiscount(Promotion promo, BigDecimal eligibleAmount) {
+        if (promo == null || eligibleAmount == null || eligibleAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        if (promo.getDiscountValue() == null || promo.getDiscountValue().compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal discount;
         if (promo.getPromoType() == PromotionType.PERCENTAGE) {
-            discount = billAmount.multiply(promo.getDiscountValue()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            discount = eligibleAmount.multiply(promo.getDiscountValue()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
             if (promo.getMaxDiscountAmount() != null && discount.compareTo(promo.getMaxDiscountAmount()) > 0) {
                 discount = promo.getMaxDiscountAmount();
             }
         } else {
-            discount = promo.getDiscountValue().min(billAmount);
+            discount = promo.getDiscountValue();
         }
-        return discount.max(BigDecimal.ZERO);
+        return discount.max(BigDecimal.ZERO).min(eligibleAmount);
+    }
+
+    /**
+     * Chặn cấu hình giảm giá không hợp lệ (kể cả dữ liệu legacy âm) trước khi áp dụng vào hóa đơn.
+     */
+    public static void validatePromotionDiscountConfig(Promotion promo) {
+        if (promo == null) {
+            throw new IllegalArgumentException("Không tìm thấy chương trình khuyến mãi.");
+        }
+        if (promo.getPromoType() == null) {
+            throw new IllegalStateException("Chương trình khuyến mãi '" + promo.getPromoName() + "' thiếu loại chiết khấu.");
+        }
+        if (promo.getDiscountValue() == null || promo.getDiscountValue().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalStateException("Chương trình khuyến mãi '" + promo.getPromoName() + "' có giá trị giảm không hợp lệ.");
+        }
+        if (promo.getPromoType() == PromotionType.PERCENTAGE && promo.getDiscountValue().compareTo(new BigDecimal("100.00")) > 0) {
+            throw new IllegalStateException("Chương trình khuyến mãi '" + promo.getPromoName() + "' có tỷ lệ giảm vượt quá 100%.");
+        }
+        if (promo.getMaxDiscountAmount() != null && promo.getMaxDiscountAmount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException("Chương trình khuyến mãi '" + promo.getPromoName() + "' có mức giảm tối đa âm không hợp lệ.");
+        }
+        if (promo.getMinBillAmount() != null && promo.getMinBillAmount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException("Chương trình khuyến mãi '" + promo.getPromoName() + "' có giá trị hóa đơn tối thiểu âm không hợp lệ.");
+        }
     }
 
     @Override
@@ -318,9 +354,7 @@ public class PromotionServiceImpl implements PromotionService {
             List<Long> serviceIds,
             Branch branch
     ) {
-        if (promo == null) {
-            throw new IllegalArgumentException("Không tìm thấy chương trình khuyến mãi.");
-        }
+        validatePromotionDiscountConfig(promo);
         if (!Boolean.TRUE.equals(promo.getIsActive())) {
             throw new IllegalStateException("Chương trình khuyến mãi '" + promo.getPromoName() + "' đang tạm ngừng hoạt động.");
         }
@@ -367,6 +401,15 @@ public class PromotionServiceImpl implements PromotionService {
     }
 
     private void validatePromotionDto(PromotionDTO dto) {
+        if (dto.getPromoCode() == null || dto.getPromoCode().trim().isEmpty()) {
+            throw new IllegalArgumentException("Mã khuyến mãi không được để trống.");
+        }
+        if (dto.getPromoName() == null || dto.getPromoName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Tên chương trình khuyến mãi không được để trống.");
+        }
+        if (dto.getPromoType() == null) {
+            throw new IllegalArgumentException("Loại chiết khấu không được để trống.");
+        }
         if (dto.getStartDate() == null || dto.getEndDate() == null) {
             throw new IllegalArgumentException("Thời gian bắt đầu và kết thúc không được để trống.");
         }
@@ -381,6 +424,9 @@ public class PromotionServiceImpl implements PromotionService {
             if (dto.getDiscountValue() == null || dto.getDiscountValue().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException("Mức giảm tiền cố định phải lớn hơn 0 đ.");
             }
+        }
+        if (dto.getMaxDiscountAmount() != null && dto.getMaxDiscountAmount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Mức giảm tối đa không được âm.");
         }
         if (dto.getMinBillAmount() != null && dto.getMinBillAmount().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Giá trị hóa đơn tối thiểu không được âm.");

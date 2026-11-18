@@ -8,14 +8,18 @@ import com.cvdcms.entity.enums.StaffContractType;
 import com.cvdcms.repository.BranchTaxConfigRepository;
 import com.cvdcms.repository.TaxPolicyRepository;
 import com.cvdcms.service.TaxCalculationService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 public class TaxCalculationServiceImpl implements TaxCalculationService {
@@ -53,8 +57,34 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
             return createFallbackPolicy();
         }
         LocalDate target = effectiveDate != null ? effectiveDate : LocalDate.now();
-        return taxPolicyRepository.findActivePolicyAtDate(target)
-                .orElseGet(this::createFallbackPolicy);
+        List<TaxPolicy> policies = taxPolicyRepository.findActivePoliciesAtDate(target, PageRequest.of(0, 2));
+        if (policies == null || policies.isEmpty()) {
+            return createFallbackPolicy();
+        }
+        if (policies.size() > 1) {
+            log.warn("Phát hiện chính sách thuế TNCN chồng hiệu lực tại ngày {}: chọn tạm {} (ID={}) thay vì {} (ID={}).",
+                    target, policies.get(0).getPolicyCode(), policies.get(0).getPolicyId(),
+                    policies.get(1).getPolicyCode(), policies.get(1).getPolicyId());
+        }
+        return policies.get(0);
+    }
+
+    @Override
+    public TaxPolicy getActiveTaxPolicyStrict(LocalDate effectiveDate) {
+        if (taxPolicyRepository == null) {
+            return createFallbackPolicy();
+        }
+        LocalDate target = effectiveDate != null ? effectiveDate : LocalDate.now();
+        List<TaxPolicy> policies = taxPolicyRepository.findActivePoliciesAtDate(target, PageRequest.of(0, 2));
+        if (policies == null || policies.isEmpty()) {
+            return createFallbackPolicy();
+        }
+        if (policies.size() > 1) {
+            throw new IllegalStateException("Phát hiện chính sách thuế TNCN đang chồng hiệu lực tại ngày " + target
+                    + " (" + policies.get(0).getPolicyCode() + " và " + policies.get(1).getPolicyCode()
+                    + "). Vui lòng cấu hình lại khoảng hiệu lực trước khi tính hoặc chốt tài chính.");
+        }
+        return policies.get(0);
     }
 
     private TaxPolicy createFallbackPolicy() {
@@ -79,7 +109,34 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
             return Optional.empty();
         }
         LocalDate target = effectiveDate != null ? effectiveDate : LocalDate.now();
-        return branchTaxConfigRepository.findActiveConfigAtDate(branchId, target);
+        List<BranchTaxConfig> configs = branchTaxConfigRepository.findActiveConfigsAtDate(branchId, target, PageRequest.of(0, 2));
+        if (configs == null || configs.isEmpty()) {
+            return Optional.empty();
+        }
+        if (configs.size() > 1) {
+            log.warn("Phát hiện cấu hình thuế chi nhánh {} chồng hiệu lực tại ngày {}: chọn tạm configId={} thay vì configId={}.",
+                    branchId, target, configs.get(0).getConfigId(), configs.get(1).getConfigId());
+        }
+        return Optional.of(configs.get(0));
+    }
+
+    @Override
+    public Optional<BranchTaxConfig> getBranchTaxConfigStrict(Long branchId, LocalDate effectiveDate) {
+        if (branchId == null || branchTaxConfigRepository == null) {
+            return Optional.empty();
+        }
+        LocalDate target = effectiveDate != null ? effectiveDate : LocalDate.now();
+        List<BranchTaxConfig> configs = branchTaxConfigRepository.findActiveConfigsAtDate(branchId, target, PageRequest.of(0, 2));
+        if (configs == null || configs.isEmpty()) {
+            return Optional.empty();
+        }
+        if (configs.size() > 1) {
+            throw new IllegalStateException("Phát hiện cấu hình thuế chi nhánh (branchId=" + branchId
+                    + ") đang chồng hiệu lực tại ngày " + target
+                    + " (configId=" + configs.get(0).getConfigId() + " và " + configs.get(1).getConfigId()
+                    + "). Vui lòng rà soát lại khoảng hiệu lực.");
+        }
+        return Optional.of(configs.get(0));
     }
 
     @Override
@@ -90,6 +147,17 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
             LocalDate effectiveDate
     ) {
         TaxPolicy policy = getActiveTaxPolicy(effectiveDate);
+        return calculatePitWithPolicy(grossSalary, nonTaxableIncome, staff, policy);
+    }
+
+    @Override
+    public PitCalculationResult calculatePitStrict(
+            BigDecimal grossSalary,
+            BigDecimal nonTaxableIncome,
+            StaffProfile staff,
+            LocalDate effectiveDate
+    ) {
+        TaxPolicy policy = getActiveTaxPolicyStrict(effectiveDate);
         return calculatePitWithPolicy(grossSalary, nonTaxableIncome, staff, policy);
     }
 
