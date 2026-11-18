@@ -266,11 +266,12 @@ public class FinancialReportTest {
         when(mockBranchRepo.findByIsActiveTrueOrderByBranchNameAsc()).thenReturn(List.of(b1));
 
         BranchTaxConfig hhConfig = new BranchTaxConfig();
+        hhConfig.setConfigId(1L);
         hhConfig.setEntityType("HOUSEHOLD");
         hhConfig.setTaxRegime("REVENUE_PERCENT");
         hhConfig.setServiceTaxRate(new BigDecimal("2.0"));
         hhConfig.setMedicineTaxRate(new BigDecimal("0.5"));
-        when(mockTaxService.getBranchTaxConfig(1L, reportEnd)).thenReturn(Optional.of(hhConfig));
+        when(mockTaxService.getBranchTaxConfig(eq(1L), any(LocalDate.class))).thenReturn(Optional.of(hhConfig));
 
         // Dòng tiền: 8tr trả trực tiếp + 5tr nạp ví = 13tr; dùng ví 4tr (cấn vào DV+Thuốc) không cộng dòng tiền; hoàn ví 1tr
         when(paymentRepository.sumRealRevenueByBranches(any(), any(), any())).thenReturn(new BigDecimal("13000000"));
@@ -285,15 +286,34 @@ public class FinancialReportTest {
                 new Object[]{1L, PaymentType.ADVANCE_DEPOSIT, PaymentMethod.BANK_TRANSFER, new BigDecimal("5000000")},
                 new Object[]{1L, PaymentType.PAYMENT, PaymentMethod.DEPOSIT_WALLET, new BigDecimal("4000000")}
         ));
-        when(mockAllocRepo.sumAllocatedByBranchAndItemType(any(), any(), any())).thenReturn(List.of(
-                new Object[]{1L, "SERVICE", new BigDecimal("8000000")},
-                new Object[]{1L, "MEDICINE", new BigDecimal("4000000")}
+
+        Payment pCash = new Payment();
+        pCash.setPaymentId(101L);
+        pCash.setBranch(b1);
+        pCash.setPaymentType(PaymentType.PAYMENT);
+        pCash.setPaymentMethod(PaymentMethod.CASH);
+        pCash.setAmount(new BigDecimal("8000000"));
+        pCash.setPaidAt(reportStart.atTime(10, 0));
+
+        Payment pWallet = new Payment();
+        pWallet.setPaymentId(102L);
+        pWallet.setBranch(b1);
+        pWallet.setPaymentType(PaymentType.PAYMENT);
+        pWallet.setPaymentMethod(PaymentMethod.DEPOSIT_WALLET);
+        pWallet.setAmount(new BigDecimal("4000000"));
+        pWallet.setPaidAt(reportStart.atTime(15, 0));
+
+        when(paymentRepository.findPaidPaymentsForPeriod(any(), any(), any())).thenReturn(List.of(pCash, pWallet));
+        when(mockAllocRepo.sumAllocatedByPaymentAndItemType(any(), any(), any())).thenReturn(List.of(
+                new Object[]{101L, "SERVICE", new BigDecimal("8000000")},
+                new Object[]{102L, "MEDICINE", new BigDecimal("4000000")}
         ));
 
         Refund walletRefund = new Refund();
         walletRefund.setBranch(b1);
         walletRefund.setInvoice(null); // Hoàn từ ví tạm ứng -> KHÔNG trừ vào doanh thu DV/Thuốc
         walletRefund.setAmount(new BigDecimal("1000000"));
+        walletRefund.setRefundedAt(reportEnd.atTime(12, 0));
         when(refundRepository.findAllRefundsForReport(any(), any(), any())).thenReturn(List.of(walletRefund));
 
         ReportServiceImpl configuredService = new ReportServiceImpl(
@@ -336,17 +356,19 @@ public class FinancialReportTest {
         when(mockBranchRepo.findByIsActiveTrueOrderByBranchNameAsc()).thenReturn(List.of(b1, b2));
 
         BranchTaxConfig hhConfig = new BranchTaxConfig();
+        hhConfig.setConfigId(1L);
         hhConfig.setEntityType("HOUSEHOLD");
         hhConfig.setTaxRegime("REVENUE_PERCENT");
         hhConfig.setServiceTaxRate(new BigDecimal("2.0"));
         hhConfig.setMedicineTaxRate(new BigDecimal("0.5"));
-        when(mockTaxService.getBranchTaxConfig(1L, reportEnd)).thenReturn(Optional.of(hhConfig));
+        when(mockTaxService.getBranchTaxConfig(eq(1L), any(LocalDate.class))).thenReturn(Optional.of(hhConfig));
 
         BranchTaxConfig entConfig = new BranchTaxConfig();
+        entConfig.setConfigId(2L);
         entConfig.setEntityType("ENTERPRISE");
         entConfig.setTaxRegime("CIT_STANDARD");
         entConfig.setCitRate(new BigDecimal("15.0"));
-        when(mockTaxService.getBranchTaxConfig(2L, reportEnd)).thenReturn(Optional.of(entConfig));
+        when(mockTaxService.getBranchTaxConfig(eq(2L), any(LocalDate.class))).thenReturn(Optional.of(entConfig));
 
         when(paymentRepository.sumRealRevenueByBranches(any(), any(), any())).thenReturn(new BigDecimal("14000000"));
         when(operatingExpenseRepository.sumActiveExpenses(any(), any(), any())).thenReturn(BigDecimal.ZERO);
@@ -355,9 +377,26 @@ public class FinancialReportTest {
                 new Object[]{1L, PaymentType.PAYMENT, PaymentMethod.CASH, new BigDecimal("4000000")},
                 new Object[]{2L, PaymentType.PAYMENT, PaymentMethod.BANK_TRANSFER, new BigDecimal("10000000")}
         ));
-        when(mockAllocRepo.sumAllocatedByBranchAndItemType(any(), any(), any())).thenReturn(List.of(
-                new Object[]{1L, "SERVICE", new BigDecimal("2000000")},
-                new Object[]{1L, "MEDICINE", new BigDecimal("2000000")}
+
+        Payment p1 = new Payment();
+        p1.setPaymentId(201L);
+        p1.setBranch(b1);
+        p1.setPaymentType(PaymentType.PAYMENT);
+        p1.setAmount(new BigDecimal("4000000"));
+        p1.setPaidAt(reportStart.atTime(9, 0));
+
+        Payment p2 = new Payment();
+        p2.setPaymentId(202L);
+        p2.setBranch(b2);
+        p2.setPaymentType(PaymentType.PAYMENT);
+        p2.setAmount(new BigDecimal("10000000"));
+        p2.setPaidAt(reportStart.atTime(10, 0));
+
+        when(paymentRepository.findPaidPaymentsForPeriod(any(), any(), any())).thenReturn(List.of(p1, p2));
+        when(mockAllocRepo.sumAllocatedByPaymentAndItemType(any(), any(), any())).thenReturn(List.of(
+                new Object[]{201L, "SERVICE", new BigDecimal("2000000")},
+                new Object[]{201L, "MEDICINE", new BigDecimal("2000000")},
+                new Object[]{202L, "SERVICE", new BigDecimal("10000000")}
         ));
 
         ReportServiceImpl configuredService = new ReportServiceImpl(
@@ -391,19 +430,36 @@ public class FinancialReportTest {
         when(mockBranchRepo.findByIsActiveTrueOrderByBranchNameAsc()).thenReturn(List.of(b1, b2));
 
         BranchTaxConfig incompleteHh = new BranchTaxConfig();
+        incompleteHh.setConfigId(1L);
         incompleteHh.setEntityType("HOUSEHOLD");
         incompleteHh.setTaxRegime("REVENUE_PERCENT");
         incompleteHh.setServiceTaxRate(new BigDecimal("2.0"));
         incompleteHh.setMedicineTaxRate(null); // thiếu rate thuốc trong khi có doanh thu thuốc
-        when(mockTaxService.getBranchTaxConfig(1L, reportEnd)).thenReturn(Optional.of(incompleteHh));
-        when(mockTaxService.getBranchTaxConfig(2L, reportEnd)).thenReturn(Optional.empty());
+        when(mockTaxService.getBranchTaxConfig(eq(1L), any(LocalDate.class))).thenReturn(Optional.of(incompleteHh));
+        when(mockTaxService.getBranchTaxConfig(eq(2L), any(LocalDate.class))).thenReturn(Optional.empty());
 
         when(paymentRepository.sumPaymentsByBranchTypeAndMethod(any(), any(), any())).thenReturn(List.of(
                 new Object[]{1L, PaymentType.PAYMENT, PaymentMethod.CASH, new BigDecimal("1000000")},
                 new Object[]{2L, PaymentType.PAYMENT, PaymentMethod.CASH, new BigDecimal("2000000")}
         ));
-        when(mockAllocRepo.sumAllocatedByBranchAndItemType(any(), any(), any())).thenReturn(List.of(
-                new Object[]{1L, "MEDICINE", new BigDecimal("1000000")}
+
+        Payment p1 = new Payment();
+        p1.setPaymentId(301L);
+        p1.setBranch(b1);
+        p1.setPaymentType(PaymentType.PAYMENT);
+        p1.setAmount(new BigDecimal("1000000"));
+        p1.setPaidAt(reportStart.atTime(9, 0));
+
+        Payment p2 = new Payment();
+        p2.setPaymentId(302L);
+        p2.setBranch(b2);
+        p2.setPaymentType(PaymentType.PAYMENT);
+        p2.setAmount(new BigDecimal("2000000"));
+        p2.setPaidAt(reportStart.atTime(10, 0));
+
+        when(paymentRepository.findPaidPaymentsForPeriod(any(), any(), any())).thenReturn(List.of(p1, p2));
+        when(mockAllocRepo.sumAllocatedByPaymentAndItemType(any(), any(), any())).thenReturn(Collections.singletonList(
+                new Object[]{301L, "MEDICINE", new BigDecimal("1000000")}
         ));
 
         ReportServiceImpl configuredService = new ReportServiceImpl(
@@ -416,5 +472,132 @@ public class FinancialReportTest {
 
         assertFalse(report.isTaxConfigured());
         assertTrue(report.getTaxCalculationBasis().contains("CHƯA ĐỦ CĂN CỨ"));
+    }
+
+    @Test
+    @DisplayName("UTCID14 - N - DB10-04: Hoàn tiền tháng sau giảm allocation trong DB không làm sai lịch sử kỳ thu tháng trước")
+    void UTCID14() {
+        TaxCalculationService mockTaxService = mock(TaxCalculationService.class);
+        PaymentAllocationRepository mockAllocRepo = mock(PaymentAllocationRepository.class);
+        BranchRepository mockBranchRepo = mock(BranchRepository.class);
+
+        Branch b1 = new Branch();
+        b1.setBranchId(1L);
+        b1.setBranchName("CN1 Hộ KD");
+        when(mockBranchRepo.findByIsActiveTrueOrderByBranchNameAsc()).thenReturn(List.of(b1));
+
+        BranchTaxConfig hhConfig = new BranchTaxConfig();
+        hhConfig.setConfigId(1L);
+        hhConfig.setEntityType("HOUSEHOLD");
+        hhConfig.setTaxRegime("REVENUE_PERCENT");
+        hhConfig.setServiceTaxRate(new BigDecimal("2.0"));
+        hhConfig.setMedicineTaxRate(new BigDecimal("0.5"));
+        when(mockTaxService.getBranchTaxConfig(eq(1L), any(LocalDate.class))).thenReturn(Optional.of(hhConfig));
+
+        Invoice singleServiceInv = new Invoice();
+        singleServiceInv.setInvoiceId(500L);
+        singleServiceInv.setTotalServiceAmount(new BigDecimal("1000000"));
+        singleServiceInv.setTotalMedicineAmount(BigDecimal.ZERO);
+        singleServiceInv.setSurchargeAmount(BigDecimal.ZERO);
+
+        LocalDate octStart = LocalDate.of(2026, 10, 1);
+        LocalDate octEnd = LocalDate.of(2026, 10, 31);
+        LocalDateTime octStartDt = octStart.atStartOfDay();
+        LocalDateTime octEndExcl = octEnd.plusDays(1).atStartOfDay();
+
+        Payment octPayment = new Payment();
+        octPayment.setPaymentId(401L);
+        octPayment.setBranch(b1);
+        octPayment.setInvoice(singleServiceInv);
+        octPayment.setPaymentType(PaymentType.PAYMENT);
+        octPayment.setPaymentMethod(PaymentMethod.CASH);
+        octPayment.setAmount(new BigDecimal("1000000"));
+        octPayment.setPaidAt(LocalDateTime.of(2026, 10, 15, 10, 0));
+
+        // Tháng 11 có hoàn tiền 200,000 đã ghi giảm allocation trong DB từ 1,000,000 xuống còn 800,000
+        when(paymentRepository.sumPaymentsByBranchTypeAndMethod(any(), eq(octStartDt), eq(octEndExcl)))
+                .thenReturn(Collections.singletonList(new Object[]{1L, PaymentType.PAYMENT, PaymentMethod.CASH, new BigDecimal("1000000")}));
+        when(paymentRepository.findPaidPaymentsForPeriod(any(), eq(octStartDt), eq(octEndExcl)))
+                .thenReturn(List.of(octPayment));
+        when(mockAllocRepo.sumAllocatedByPaymentAndItemType(any(), eq(octStartDt), eq(octEndExcl)))
+                .thenReturn(Collections.singletonList(new Object[]{401L, "SERVICE", new BigDecimal("800000")}));
+        when(refundRepository.findAllRefundsForReport(any(), eq(octStartDt), eq(octEndExcl)))
+                .thenReturn(Collections.emptyList());
+
+        ReportServiceImpl service = new ReportServiceImpl(
+                invoiceRepository, paymentRepository, refundRepository,
+                operatingExpenseRepository, visitRepository, appointmentRepository,
+                mockTaxService, null, null, mockAllocRepo, mockBranchRepo
+        );
+
+        FinancialReportDTO octReport = service.getFinancialReport(List.of(1L), octStart, octEnd);
+        assertEquals(0, new BigDecimal("1000000").compareTo(octReport.getServiceTaxBase()));
+        assertEquals(0, new BigDecimal("20000").compareTo(octReport.getEstimatedTaxAmount()));
+
+        // Kiểm tra toàn khoảng Tháng 10 - Tháng 11 (gồm hoàn tiền 200,000 phát sinh ở Tháng 11): không trừ 2 lần, còn đúng 800,000 -> 16,000 thuế
+        LocalDate novEnd = LocalDate.of(2026, 11, 30);
+        LocalDateTime novEndExcl = novEnd.plusDays(1).atStartOfDay();
+        Refund novRefund = new Refund();
+        novRefund.setBranch(b1);
+        novRefund.setInvoice(singleServiceInv);
+        novRefund.setAmount(new BigDecimal("200000"));
+        novRefund.setRefundedAt(LocalDateTime.of(2026, 11, 5, 11, 0));
+
+        when(paymentRepository.sumPaymentsByBranchTypeAndMethod(any(), eq(octStartDt), eq(novEndExcl)))
+                .thenReturn(Collections.singletonList(new Object[]{1L, PaymentType.PAYMENT, PaymentMethod.CASH, new BigDecimal("1000000")}));
+        when(paymentRepository.findPaidPaymentsForPeriod(any(), eq(octStartDt), eq(novEndExcl)))
+                .thenReturn(List.of(octPayment));
+        when(mockAllocRepo.sumAllocatedByPaymentAndItemType(any(), eq(octStartDt), eq(novEndExcl)))
+                .thenReturn(Collections.singletonList(new Object[]{401L, "SERVICE", new BigDecimal("800000")}));
+        when(refundRepository.findAllRefundsForReport(any(), eq(octStartDt), eq(novEndExcl)))
+                .thenReturn(List.of(novRefund));
+
+        FinancialReportDTO twoMonthReport = service.getFinancialReport(List.of(1L), octStart, novEnd);
+        assertEquals(0, new BigDecimal("800000").compareTo(twoMonthReport.getServiceTaxBase()));
+        assertEquals(0, new BigDecimal("16000").compareTo(twoMonthReport.getEstimatedTaxAmount()));
+        verify(paymentRepository).sumRealRevenueByBranches(any(), eq(octStartDt), eq(novEndExcl));
+    }
+
+    @Test
+    @DisplayName("UTCID15 - A - DB10-05: Nhánh Doanh nghiệp chỉ nạp ví 10tr không tính thuế TNDN 20% trên dòng tiền nạp ví và không báo đã đủ căn cứ")
+    void UTCID15() {
+        TaxCalculationService mockTaxService = mock(TaxCalculationService.class);
+        PaymentAllocationRepository mockAllocRepo = mock(PaymentAllocationRepository.class);
+        BranchRepository mockBranchRepo = mock(BranchRepository.class);
+
+        Branch b1 = new Branch();
+        b1.setBranchId(1L);
+        b1.setBranchName("CN1 Công ty");
+        when(mockBranchRepo.findByIsActiveTrueOrderByBranchNameAsc()).thenReturn(List.of(b1));
+
+        BranchTaxConfig entConfig = new BranchTaxConfig();
+        entConfig.setConfigId(1L);
+        entConfig.setEntityType("ENTERPRISE");
+        entConfig.setTaxRegime("CIT_STANDARD");
+        entConfig.setCitRate(new BigDecimal("20.0"));
+        when(mockTaxService.getBranchTaxConfig(eq(1L), any(LocalDate.class))).thenReturn(Optional.of(entConfig));
+
+        // Chỉ có nạp ví 10,000,000 đ, chưa phát sinh thanh toán hóa đơn / doanh thu phân loại
+        when(paymentRepository.sumRealRevenueByBranches(any(), any(), any())).thenReturn(new BigDecimal("10000000"));
+        when(paymentRepository.sumAdvanceDepositByBranches(any(), any(), any())).thenReturn(new BigDecimal("10000000"));
+        when(operatingExpenseRepository.sumActiveExpenses(any(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(paymentRepository.sumPaymentsByBranchTypeAndMethod(any(), any(), any())).thenReturn(Collections.singletonList(
+                new Object[]{1L, PaymentType.ADVANCE_DEPOSIT, PaymentMethod.CASH, new BigDecimal("10000000")}
+        ));
+        when(paymentRepository.findPaidPaymentsForPeriod(any(), any(), any())).thenReturn(Collections.emptyList());
+
+        ReportServiceImpl service = new ReportServiceImpl(
+                invoiceRepository, paymentRepository, refundRepository,
+                operatingExpenseRepository, visitRepository, appointmentRepository,
+                mockTaxService, null, null, mockAllocRepo, mockBranchRepo
+        );
+
+        FinancialReportDTO depositOnlyReport = service.getFinancialReport(List.of(1L), reportStart, reportEnd);
+
+        // Chênh lệch dòng tiền quản trị = 10tr nhưng căn cứ doanh thu phân loại = 0 -> thuế TNDN = 0, chưa đủ căn cứ
+        assertEquals(0, new BigDecimal("10000000").compareTo(depositOnlyReport.getOperatingMargin()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(depositOnlyReport.getEstimatedTaxAmount()));
+        assertFalse(depositOnlyReport.isTaxConfigured());
+        assertTrue(depositOnlyReport.getTaxCalculationBasis().contains("CHƯA ĐỦ CĂN CỨ"));
     }
 }

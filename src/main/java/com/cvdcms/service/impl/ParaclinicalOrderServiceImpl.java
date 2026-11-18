@@ -37,8 +37,15 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.ServiceCommissionService serviceCommissionService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ServiceCommissionRepository serviceCommissionRepository;
+
     public void setServiceCommissionService(com.cvdcms.service.ServiceCommissionService serviceCommissionService) {
         this.serviceCommissionService = serviceCommissionService;
+    }
+
+    public void setServiceCommissionRepository(ServiceCommissionRepository serviceCommissionRepository) {
+        this.serviceCommissionRepository = serviceCommissionRepository;
     }
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -369,6 +376,19 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 "Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến. Không thể xóa chỉ định");
 
         PerformedService ps = item.getPerformedService();
+        boolean hasAnyInvoiceHistory = ps != null && invoiceItemRepository != null
+                && invoiceItemRepository.existsByPerformedService_PerformedId(ps.getPerformedId());
+        boolean hasCommissionHistory = ps != null && serviceCommissionRepository != null
+                && !serviceCommissionRepository.findByPerformedService_PerformedId(ps.getPerformedId()).isEmpty();
+        boolean hasExternalRef = item.getExternalRefId() != null && !item.getExternalRefId().isBlank();
+        boolean hasResultOrMedia = (item.getResultSummary() != null && !item.getResultSummary().isBlank())
+                || (item.getResultsJson() != null && !item.getResultsJson().isBlank())
+                || item.getPerformedAt() != null
+                || (item.getAttachments() != null && !item.getAttachments().isEmpty())
+                || item.getLabExternalOrder() != null
+                || item.getStatus() == ParaclinicalOrderItemStatus.COMPLETED
+                || item.getStatus() == ParaclinicalOrderItemStatus.IN_PROGRESS;
+
         if (ps != null) {
             boolean isBilled = invoiceItemRepository != null
                     && invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId());
@@ -380,20 +400,15 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             }
         }
 
-        boolean hasAnyInvoiceHistory = ps != null && invoiceItemRepository != null
-                && invoiceItemRepository.existsByPerformedService_PerformedId(ps.getPerformedId());
-        boolean hasAttachmentsOrLab = (item.getAttachments() != null && !item.getAttachments().isEmpty())
-                || item.getLabExternalOrder() != null;
-
-        // Giữ lại lịch sử liên kết (hóa đơn CANCELLED, ảnh, externalRefId, ID gốc) bằng hủy mềm
-        if (hasAnyInvoiceHistory || hasAttachmentsOrLab) {
+        // Giữ lại lịch sử liên kết (externalRefId, kết quả, ảnh/labo, hóa đơn CANCELLED, hoa hồng từng phát sinh) bằng hủy mềm
+        if (hasAnyInvoiceHistory || hasCommissionHistory || hasExternalRef || hasResultOrMedia) {
             if (ps != null) {
                 ps.setStatus(PerformedServiceStatus.CANCELLED);
                 performedServiceRepository.save(ps);
             }
             item.setStatus(ParaclinicalOrderItemStatus.CANCELLED);
             paraclinicalOrderItemRepository.save(item);
-            log.info("Đã hủy mềm chỉ định cận lâm sàng có lịch sử liên kết ID: {}", orderItemId);
+            log.info("Đã hủy mềm chỉ định cận lâm sàng có lịch sử liên kết ID: {}, ExternalRefId={}", orderItemId, item.getExternalRefId());
             return;
         }
 
@@ -404,7 +419,7 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         }
 
         paraclinicalOrderItemRepository.delete(item);
-        log.info("Đã xóa chỉ định cận lâm sàng ID: {}", orderItemId);
+        log.info("Đã xóa chỉ định cận lâm sàng nháp ID: {}", orderItemId);
     }
 
     private void syncOrderItemToPerformedService(ParaclinicalOrderItem item, boolean serviceChanged) {

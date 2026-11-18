@@ -29,12 +29,12 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
         SELECT r.refundedAt, r.amount FROM Refund r
         WHERE (:branchIds IS NULL OR r.branch.branchId IN :branchIds)
           AND (:startDate IS NULL OR r.refundedAt >= :startDate)
-          AND (:endDate IS NULL OR r.refundedAt <= :endDate)
+          AND (:endExclusive IS NULL OR r.refundedAt < :endExclusive)
     """)
     List<Object[]> findDailyRefundsForPeriod(
             @Param("branchIds") java.util.Collection<Long> branchIds,
             @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+            @Param("endExclusive") LocalDateTime endExclusive
     );
 
     @Query("""
@@ -101,12 +101,12 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
         SELECT COALESCE(SUM(r.amount), 0) FROM Refund r
         WHERE (:branchIds IS NULL OR r.branch.branchId IN :branchIds)
           AND (:startDate IS NULL OR r.refundedAt >= :startDate)
-          AND (:endDate IS NULL OR r.refundedAt <= :endDate)
+          AND (:endExclusive IS NULL OR r.refundedAt < :endExclusive)
     """)
     BigDecimal sumRefundAmountByBranches(
             @Param("branchIds") java.util.Collection<Long> branchIds,
             @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+            @Param("endExclusive") LocalDateTime endExclusive
     );
 
     @Query("""
@@ -117,12 +117,18 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
         LEFT JOIN FETCH r.invoice inv
         WHERE (:branchIds IS NULL OR b.branchId IN :branchIds)
           AND (:startDate IS NULL OR r.refundedAt >= :startDate)
-          AND (:endDate IS NULL OR r.refundedAt <= :endDate)
+          AND (:endExclusive IS NULL OR r.refundedAt < :endExclusive)
         ORDER BY r.refundedAt DESC
     """)
     List<Refund> findAllRefundsForReport(
             @Param("branchIds") java.util.Collection<Long> branchIds,
             @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+            @Param("endExclusive") LocalDateTime endExclusive
     );
+
+    @Query("""
+        SELECT DISTINCT r.invoice.invoiceId FROM Refund r
+        WHERE r.invoice.invoiceId IN :invoiceIds
+    """)
+    List<Long> findInvoiceIdsWithRefunds(@Param("invoiceIds") java.util.Collection<Long> invoiceIds);
 }

@@ -32,37 +32,20 @@ public interface PaymentAllocationRepository extends JpaRepository<PaymentAlloca
     BigDecimal sumAllocatedByInvoiceSurcharge(@Param("invoiceId") Long invoiceId);
 
     @Query("""
-        SELECT pa.payment.branch.branchId,
+        SELECT pa.payment.paymentId,
                UPPER(pa.itemType),
                COALESCE(SUM(pa.allocatedAmount), 0)
         FROM PaymentAllocation pa
         WHERE (:branchIds IS NULL OR pa.payment.branch.branchId IN :branchIds)
           AND pa.payment.paymentType = com.cvdcms.entity.enums.PaymentType.PAYMENT
           AND (:startDate IS NULL OR pa.payment.paidAt >= :startDate)
-          AND (:endDate IS NULL OR pa.payment.paidAt <= :endDate)
-        GROUP BY pa.payment.branch.branchId, UPPER(pa.itemType)
+          AND (:endExclusive IS NULL OR pa.payment.paidAt < :endExclusive)
+        GROUP BY pa.payment.paymentId, UPPER(pa.itemType)
     """)
-    List<Object[]> sumAllocatedByBranchAndItemType(
+    List<Object[]> sumAllocatedByPaymentAndItemType(
             @Param("branchIds") Collection<Long> branchIds,
             @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
-    );
-
-    @Query("""
-        SELECT pa.payment.branch.branchId,
-               pa.invoice.invoiceId,
-               COALESCE(SUM(pa.allocatedAmount), 0)
-        FROM PaymentAllocation pa
-        WHERE (:branchIds IS NULL OR pa.payment.branch.branchId IN :branchIds)
-          AND pa.payment.paymentType = com.cvdcms.entity.enums.PaymentType.PAYMENT
-          AND (:startDate IS NULL OR pa.payment.paidAt >= :startDate)
-          AND (:endDate IS NULL OR pa.payment.paidAt <= :endDate)
-        GROUP BY pa.payment.branch.branchId, pa.invoice.invoiceId
-    """)
-    List<Object[]> sumAllocatedByBranchAndInvoice(
-            @Param("branchIds") Collection<Long> branchIds,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+            @Param("endExclusive") LocalDateTime endExclusive
     );
 }
 

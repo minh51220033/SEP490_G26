@@ -87,12 +87,12 @@ public interface PayrollPeriodRepository extends JpaRepository<PayrollPeriod, Lo
         WHERE (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
           AND p.status = 'PAID'
           AND (:startDt IS NULL OR p.paidAt >= :startDt)
-          AND (:endDt IS NULL OR p.paidAt <= :endDt)
+          AND (:endExclusive IS NULL OR p.paidAt < :endExclusive)
     """)
     BigDecimal sumPaidPitByPaidAt(
             @Param("branchIds") Collection<Long> branchIds,
             @Param("startDt") java.time.LocalDateTime startDt,
-            @Param("endDt") java.time.LocalDateTime endDt
+            @Param("endExclusive") java.time.LocalDateTime endExclusive
     );
 
     @Query("""
@@ -100,12 +100,12 @@ public interface PayrollPeriodRepository extends JpaRepository<PayrollPeriod, Lo
         WHERE (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
           AND p.status = 'PAID'
           AND (:startDt IS NULL OR p.paidAt >= :startDt)
-          AND (:endDt IS NULL OR p.paidAt <= :endDt)
+          AND (:endExclusive IS NULL OR p.paidAt < :endExclusive)
     """)
     BigDecimal sumPaidEmployerInsuranceByPaidAt(
             @Param("branchIds") Collection<Long> branchIds,
             @Param("startDt") java.time.LocalDateTime startDt,
-            @Param("endDt") java.time.LocalDateTime endDt
+            @Param("endExclusive") java.time.LocalDateTime endExclusive
     );
 
     @Query("""
@@ -113,12 +113,12 @@ public interface PayrollPeriodRepository extends JpaRepository<PayrollPeriod, Lo
         WHERE (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
           AND p.status = 'PAID'
           AND (:startDt IS NULL OR p.paidAt >= :startDt)
-          AND (:endDt IS NULL OR p.paidAt <= :endDt)
+          AND (:endExclusive IS NULL OR p.paidAt < :endExclusive)
         GROUP BY p.branch.branchId
     """)
     java.util.List<Object[]> sumPaidEmployerInsuranceByBranchAndPaidAt(
             @Param("branchIds") Collection<Long> branchIds,
             @Param("startDt") java.time.LocalDateTime startDt,
-            @Param("endDt") java.time.LocalDateTime endDt
+            @Param("endExclusive") java.time.LocalDateTime endExclusive
     );
 }
