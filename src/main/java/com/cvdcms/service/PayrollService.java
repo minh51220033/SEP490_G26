@@ -4,11 +4,13 @@ import com.cvdcms.DTO.PayrollItemUpdateDTO;
 import com.cvdcms.DTO.PayrollPeriodCreateDTO;
 import com.cvdcms.entity.PayrollItem;
 import com.cvdcms.entity.PayrollPeriod;
+import com.cvdcms.entity.ServiceCommission;
 import com.cvdcms.entity.enums.PayrollStatus;
 import com.cvdcms.entity.enums.RefundMethod;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Collections;
 import java.util.List;
 
 public interface PayrollService {
@@ -41,4 +43,8 @@ public interface PayrollService {
     PayrollPeriod payPeriod(Long periodId, RefundMethod paymentMethod, String paymentReference, Long currentUserId);
 
     void deleteDraftPeriod(Long periodId, Long currentUserId);
+
+    default List<ServiceCommission> getLateUnboundCommissionsForPeriod(Long periodId, Long currentUserId) {
+        return Collections.emptyList();
+    }
 }

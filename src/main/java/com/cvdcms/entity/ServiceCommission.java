@@ -6,7 +6,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -51,7 +50,13 @@ public class ServiceCommission {
     @JoinColumn(name = "payroll_item_id")
     private PayrollItem payrollItem;
 
-    @CreationTimestamp
-    @Column(name = "calculated_at", nullable = false, updatable = false)
+    @Column(name = "calculated_at", nullable = false)
     private LocalDateTime calculatedAt;
+
+    @PrePersist
+    protected void prePersist() {
+        if (this.calculatedAt == null) {
+            this.calculatedAt = LocalDateTime.now();
+        }
+    }
 }
