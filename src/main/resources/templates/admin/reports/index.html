@@ -902,7 +902,10 @@
                                     <td class="fw-semibold">2. Tiền hoàn trả cho bệnh nhân</td>
                                     <td class="text-end fw-bold text-danger"
                                         th:text="'-' + ${#numbers.formatDecimal(financial.totalRefundAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</td>
-                                    <td class="small text-muted">Bao gồm hoàn tiền hóa đơn và hoàn trả số dư cọc</td>
+                                    <td class="small text-muted">
+                                        Hoàn hóa đơn: <b th:text="${#numbers.formatDecimal(financial.invoiceRefundAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b>
+                                        | Hoàn ví tạm ứng: <b th:text="${#numbers.formatDecimal(financial.walletRefundAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b>
+                                    </td>
                                 </tr>
                                 <tr class="table-success">
                                     <td class="fw-bold text-uppercase">3. Thực thu thuần sau hoàn trả (= 1 - 2)</td>
@@ -941,8 +944,15 @@
                                 </tr>
                                 <tr class="table-light">
                                     <td colspan="3" class="py-2">
-                                        <div class="d-flex flex-wrap justify-content-between align-items-center small text-muted px-2">
-                                            <span><i class="bi bi-info-circle me-1"></i> <b>Nghĩa vụ thuế khác trong kỳ:</b> Thuế GTGT đầu ra (Thuốc 5%, DV KCT): <b class="text-primary" th:text="${#numbers.formatDecimal(financial.totalVatAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b> | Thuế TNCN khấu trừ từ lương: <b class="text-danger" th:text="${#numbers.formatDecimal(financial.totalPitWithheld, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b></span>
+                                        <div class="d-flex flex-wrap justify-content-between align-items-center small text-muted px-2 gap-2">
+                                            <span>
+                                                <i class="bi bi-layers me-1"></i> <b>Căn cứ phân bổ đã thu (không đếm trùng nạp/cấn ví):</b>
+                                                Dịch vụ: <b class="text-dark" th:text="${#numbers.formatDecimal(financial.serviceTaxBase, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b>
+                                                | Thuốc: <b class="text-dark" th:text="${#numbers.formatDecimal(financial.medicineTaxBase, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b>
+                                                | Phụ thu: <b class="text-dark" th:text="${#numbers.formatDecimal(financial.surchargeTaxBase, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b>
+                                                | Ứng trước chưa đối trừ: <b class="text-dark" th:text="${#numbers.formatDecimal(financial.unsettledAdvanceDeposit, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b>
+                                            </span>
+                                            <span><i class="bi bi-info-circle me-1"></i> <b>Nghĩa vụ thuế khác trong kỳ:</b> Thuế GTGT đầu ra: <b class="text-primary" th:text="${#numbers.formatDecimal(financial.totalVatAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b> | Thuế TNCN khấu trừ từ lương: <b class="text-danger" th:text="${#numbers.formatDecimal(financial.totalPitWithheld, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b></span>
                                             <span th:if="${!financial.taxConfigured}" class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> Chưa đủ cơ sở tính thuế</span>
                                         </div>
                                     </td>

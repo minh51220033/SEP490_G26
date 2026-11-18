@@ -82,6 +82,20 @@ public interface OperatingExpenseRepository extends JpaRepository<OperatingExpen
     );
 
     @Query("""
+        SELECT e.branch.branchId, COALESCE(SUM(e.amount), 0) FROM OperatingExpense e
+        WHERE (:branchIds IS NULL OR e.branch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR e.expenseDate >= :startDate)
+          AND (:endDate IS NULL OR e.expenseDate <= :endDate)
+          AND e.isCancelled = false
+        GROUP BY e.branch.branchId
+    """)
+    List<Object[]> sumActiveExpensesByBranch(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query("""
         SELECT COALESCE(SUM(e.amount), 0) FROM OperatingExpense e
         WHERE (:branchIds IS NULL OR e.branch.branchId IN :branchIds)
           AND (:category IS NULL OR :category = '' OR e.category = :category)

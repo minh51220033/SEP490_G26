@@ -51,6 +51,15 @@ public class FinancialReportDTO {
     private BigDecimal totalPitWithheld = BigDecimal.ZERO;
     private BigDecimal totalVatAmount = BigDecimal.ZERO;
 
+    // Căn cứ phân loại doanh thu tính thuế & hoàn trả tách bạch
+    private BigDecimal serviceTaxBase = BigDecimal.ZERO;
+    private BigDecimal medicineTaxBase = BigDecimal.ZERO;
+    private BigDecimal surchargeTaxBase = BigDecimal.ZERO;
+    private BigDecimal unclassifiedInvoiceBase = BigDecimal.ZERO;
+    private BigDecimal invoiceRefundAmount = BigDecimal.ZERO;
+    private BigDecimal walletRefundAmount = BigDecimal.ZERO;
+    private BigDecimal unsettledAdvanceDeposit = BigDecimal.ZERO;
+
     // 5. Công nợ
     private BigDecimal periodDebt = BigDecimal.ZERO;           // Nợ phát sinh của hóa đơn trong kỳ
     private BigDecimal currentTotalOutstandingDebt = BigDecimal.ZERO; // Nợ lũy kế hiện tại

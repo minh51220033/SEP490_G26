@@ -265,4 +265,56 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     boolean existsByBankAccount_AccountId(Long accountId);
 
     long countByBankAccount_AccountId(Long accountId);
+
+    @Query("""
+        SELECT p.branch.branchId,
+               p.paymentType,
+               p.paymentMethod,
+               COALESCE(SUM(p.amount), 0)
+        FROM Payment p
+        WHERE (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR p.paidAt >= :startDate)
+          AND (:endDate IS NULL OR p.paidAt <= :endDate)
+        GROUP BY p.branch.branchId, p.paymentType, p.paymentMethod
+    """)
+    List<Object[]> sumPaymentsByBranchTypeAndMethod(
+            @Param("branchIds") java.util.Collection<Long> branchIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query("""
+        SELECT p.branch.branchId,
+               p.invoice.invoiceId,
+               COALESCE(SUM(p.amount), 0)
+        FROM Payment p
+        WHERE (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
+          AND p.paymentType = com.cvdcms.entity.enums.PaymentType.PAYMENT
+          AND p.invoice IS NOT NULL
+          AND (:startDate IS NULL OR p.paidAt >= :startDate)
+          AND (:endDate IS NULL OR p.paidAt <= :endDate)
+          AND EXISTS (SELECT 1 FROM PaymentAllocation pa WHERE pa.payment = p)
+        GROUP BY p.branch.branchId, p.invoice.invoiceId
+    """)
+    List<Object[]> sumAllocatedPaymentTotalsByBranchAndInvoice(
+            @Param("branchIds") java.util.Collection<Long> branchIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
+    @Query("""
+        SELECT p FROM Payment p
+        JOIN FETCH p.branch b
+        LEFT JOIN FETCH p.invoice inv
+        WHERE (:branchIds IS NULL OR b.branchId IN :branchIds)
+          AND p.paymentType = com.cvdcms.entity.enums.PaymentType.PAYMENT
+          AND (:startDate IS NULL OR p.paidAt >= :startDate)
+          AND (:endDate IS NULL OR p.paidAt <= :endDate)
+          AND NOT EXISTS (SELECT 1 FROM PaymentAllocation pa WHERE pa.payment = p)
+    """)
+    List<Payment> findUnallocatedPaymentsForPeriod(
+            @Param("branchIds") java.util.Collection<Long> branchIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
 }
