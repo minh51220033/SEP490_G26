@@ -38,6 +38,7 @@ public class PromotionDTO {
     @DecimalMin(value = "0.01", message = "Giá trị giảm phải lớn hơn 0")
     private BigDecimal discountValue;
 
+    @DecimalMin(value = "0.00", message = "Mức giảm tối đa không được âm")
     private BigDecimal maxDiscountAmount;
 
     @DecimalMin(value = "0.00", message = "Giá trị hóa đơn tối thiểu phải >= 0")
