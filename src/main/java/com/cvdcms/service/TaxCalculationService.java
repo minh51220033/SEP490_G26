@@ -27,6 +27,23 @@ public interface TaxCalculationService {
 
     TaxPolicy getActiveTaxPolicy(LocalDate effectiveDate);
 
+    default TaxPolicy getActiveTaxPolicyStrict(LocalDate effectiveDate) {
+        return getActiveTaxPolicy(effectiveDate);
+    }
+
     Optional<BranchTaxConfig> getBranchTaxConfig(Long branchId, LocalDate effectiveDate);
+
+    default Optional<BranchTaxConfig> getBranchTaxConfigStrict(Long branchId, LocalDate effectiveDate) {
+        return getBranchTaxConfig(branchId, effectiveDate);
+    }
+
+    default PitCalculationResult calculatePitStrict(
+            BigDecimal grossSalary,
+            BigDecimal nonTaxableIncome,
+            StaffProfile staff,
+            LocalDate effectiveDate
+    ) {
+        return calculatePit(grossSalary, nonTaxableIncome, staff, effectiveDate);
+    }
 }
 
