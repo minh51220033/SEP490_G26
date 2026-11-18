@@ -1,5 +1,7 @@
 package com.cvdcms.DTO;
 
+import com.cvdcms.entity.enums.InsuranceParticipationStatus;
+import com.cvdcms.entity.enums.StaffContractType;
 import com.cvdcms.entity.enums.StaffGender;
 import com.cvdcms.entity.enums.StaffStatus;
 import lombok.Getter;
@@ -46,6 +48,32 @@ public class StaffFormDTO {
     private BigDecimal allowanceAmount;
 
     private BigDecimal insuranceSalary;
+
+    private InsuranceParticipationStatus insuranceParticipationStatus = InsuranceParticipationStatus.UNVERIFIED;
+
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate insuranceEffectiveFrom;
+
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate insuranceEffectiveTo;
+
+    private BigDecimal insuranceEmployeeRateOverride;
+
+    private BigDecimal insuranceEmployerRateOverride;
+
+    private String insuranceExemptionReason;
+
+    private StaffContractType contractType = StaffContractType.FULL_CONTRACT;
+
+    private Boolean isTaxResident = true;
+
+    private String taxCode;
+
+    private Boolean hasPersonalDeduction = true;
+
+    private Integer dependentCount = 0;
+
+    private Boolean hasTaxCommitment = false;
 
     private String bankAccountNumber;
 

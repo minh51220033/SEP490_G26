@@ -1,5 +1,6 @@
 package com.cvdcms.service;
 
+import com.cvdcms.DTO.ParaclinicalBackfillReportDTO;
 import com.cvdcms.DTO.ParaclinicalOrderCreateDTO;
 import com.cvdcms.DTO.ParaclinicalOrderItemResponseDTO;
 import com.cvdcms.DTO.ServiceDTO;
@@ -15,4 +16,14 @@ public interface ParaclinicalOrderService {
     void deleteOrder(Long orderItemId);
     List<ServiceDTO> getParaclinicalServices();
     void syncParaclinicalOrdersToPerformedServices(Long visitId);
+
+    default ParaclinicalBackfillReportDTO reconcileCompletedOrdersMissingPerformedService() {
+        return reconcileCompletedOrdersMissingPerformedService(true);
+    }
+
+    default ParaclinicalBackfillReportDTO reconcileCompletedOrdersMissingPerformedService(boolean dryRun) {
+        ParaclinicalBackfillReportDTO report = new ParaclinicalBackfillReportDTO();
+        report.setDryRun(dryRun);
+        return report;
+    }
 }

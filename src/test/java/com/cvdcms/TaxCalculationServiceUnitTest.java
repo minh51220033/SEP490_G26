@@ -2,6 +2,7 @@ package com.cvdcms;
 
 import com.cvdcms.DTO.PitCalculationResult;
 import com.cvdcms.entity.*;
+import com.cvdcms.entity.enums.InsuranceParticipationStatus;
 import com.cvdcms.entity.enums.StaffContractType;
 import com.cvdcms.entity.enums.StaffStatus;
 import com.cvdcms.repository.BranchTaxConfigRepository;
@@ -72,6 +73,9 @@ public class TaxCalculationServiceUnitTest {
         staff.setDependentCount(dependents);
         staff.setHasTaxCommitment(hasCommitment);
         staff.setInsuranceSalary(insuranceSalary);
+        staff.setInsuranceParticipationStatus(insuranceSalary != null && insuranceSalary.compareTo(BigDecimal.ZERO) > 0
+                ? InsuranceParticipationStatus.PARTICIPATING
+                : InsuranceParticipationStatus.EXEMPT);
         return staff;
     }
 
@@ -404,5 +408,72 @@ public class TaxCalculationServiceUnitTest {
         IllegalStateException ex = assertThrows(IllegalStateException.class,
                 () -> taxCalculationService.getBranchTaxConfigStrict(1L, target));
         assertTrue(ex.getMessage().contains("chồng hiệu lực"));
+    }
+
+    @Test
+    @DisplayName("Kịch bản 19: PART_TIME_HOURLY / COLLABORATOR tham gia BHXH không bị tự miễn")
+    void testInsurance_PartTimeAndCollaboratorParticipating() {
+        StaffProfile partTime = createStaff(StaffContractType.PART_TIME_HOURLY, true, false, 0, false, new BigDecimal("10000000"));
+        partTime.setInsuranceParticipationStatus(InsuranceParticipationStatus.PARTICIPATING);
+
+        PitCalculationResult r1 = taxCalculationService.calculatePit(new BigDecimal("15000000"), BigDecimal.ZERO, partTime, LocalDate.of(2026, 7, 1));
+        assertEquals(InsuranceParticipationStatus.PARTICIPATING, r1.getInsuranceParticipationStatus());
+        assertTrue(Boolean.TRUE.equals(r1.getInsuranceVerified()));
+        assertEquals(new BigDecimal("1050000"), r1.getInsuranceEmployeeDeduction());
+        assertEquals(new BigDecimal("2150000"), r1.getInsuranceEmployerAmount());
+
+        StaffProfile collab = createStaff(StaffContractType.COLLABORATOR, true, false, 0, false, new BigDecimal("8000000"));
+        collab.setInsuranceParticipationStatus(InsuranceParticipationStatus.PARTICIPATING);
+        PitCalculationResult r2 = taxCalculationService.calculatePit(new BigDecimal("12000000"), BigDecimal.ZERO, collab, LocalDate.of(2026, 7, 1));
+        assertEquals(new BigDecimal("840000"), r2.getInsuranceEmployeeDeduction());
+        assertEquals(new BigDecimal("1720000"), r2.getInsuranceEmployerAmount());
+    }
+
+    @Test
+    @DisplayName("Kịch bản 20: NON_RESIDENT không tự quyết định miễn bảo hiểm")
+    void testInsurance_NonResidentParticipating() {
+        StaffProfile nonRes = createStaff(StaffContractType.NON_RESIDENT, false, false, 0, false, new BigDecimal("10000000"));
+        nonRes.setInsuranceParticipationStatus(InsuranceParticipationStatus.PARTICIPATING);
+
+        PitCalculationResult r = taxCalculationService.calculatePit(new BigDecimal("30000000"), BigDecimal.ZERO, nonRes, LocalDate.of(2026, 7, 1));
+        assertEquals(InsuranceParticipationStatus.PARTICIPATING, r.getInsuranceParticipationStatus());
+        assertTrue(Boolean.TRUE.equals(r.getInsuranceVerified()));
+        assertEquals(new BigDecimal("1050000"), r.getInsuranceEmployeeDeduction());
+        assertEquals(new BigDecimal("2150000"), r.getInsuranceEmployerAmount());
+    }
+
+    @Test
+    @DisplayName("Kịch bản 21: Tỷ lệ bảo hiểm override riêng theo hồ sơ thay vì cứng 10.5%/21.5%")
+    void testInsurance_CustomRateOverrideSnapshot() {
+        StaffProfile staff = createStaff(StaffContractType.FULL_CONTRACT, true, true, 0, false, new BigDecimal("10000000"));
+        staff.setInsuranceParticipationStatus(InsuranceParticipationStatus.PARTICIPATING);
+        staff.setInsuranceEmployeeRateOverride(new BigDecimal("9.50"));
+        staff.setInsuranceEmployerRateOverride(new BigDecimal("20.50"));
+
+        PitCalculationResult r = taxCalculationService.calculatePit(new BigDecimal("20000000"), BigDecimal.ZERO, staff, LocalDate.of(2026, 7, 1));
+        assertEquals(new BigDecimal("950000"), r.getInsuranceEmployeeDeduction());
+        assertEquals(new BigDecimal("2050000"), r.getInsuranceEmployerAmount());
+        assertEquals(new BigDecimal("9.50"), r.getInsuranceEmployeeRateSnapshot());
+        assertEquals(new BigDecimal("20.50"), r.getInsuranceEmployerRateSnapshot());
+    }
+
+    @Test
+    @DisplayName("Kịch bản 22: Hồ sơ UNVERIFIED hoặc ngoài ngày hiệu lực không được coi là 0 hợp lệ")
+    void testInsurance_UnverifiedOrOutOfEffectiveDate() {
+        StaffProfile unverified = createStaff(StaffContractType.FULL_CONTRACT, true, true, 0, false, BigDecimal.ZERO);
+        unverified.setInsuranceParticipationStatus(InsuranceParticipationStatus.UNVERIFIED);
+
+        PitCalculationResult r1 = taxCalculationService.calculatePit(new BigDecimal("20000000"), BigDecimal.ZERO, unverified, LocalDate.of(2026, 7, 1));
+        assertEquals(InsuranceParticipationStatus.UNVERIFIED, r1.getInsuranceParticipationStatus());
+        assertFalse(Boolean.TRUE.equals(r1.getInsuranceVerified()));
+        assertTrue(r1.getInsuranceBasisNote().contains("CHƯA ĐỦ CĂN CỨ"));
+
+        StaffProfile expired = createStaff(StaffContractType.FULL_CONTRACT, true, true, 0, false, new BigDecimal("10000000"));
+        expired.setInsuranceParticipationStatus(InsuranceParticipationStatus.PARTICIPATING);
+        expired.setInsuranceEffectiveFrom(LocalDate.of(2026, 8, 1));
+        PitCalculationResult r2 = taxCalculationService.calculatePit(new BigDecimal("20000000"), BigDecimal.ZERO, expired, LocalDate.of(2026, 7, 1));
+        assertEquals(InsuranceParticipationStatus.UNVERIFIED, r2.getInsuranceParticipationStatus());
+        assertFalse(Boolean.TRUE.equals(r2.getInsuranceVerified()));
+        assertTrue(r2.getInsuranceBasisNote().contains("CHƯA ĐỦ CĂN CỨ"));
     }
 }

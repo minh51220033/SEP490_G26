@@ -1,5 +1,6 @@
 package com.cvdcms.entity;
 
+import com.cvdcms.entity.enums.InsuranceParticipationStatus;
 import com.cvdcms.entity.enums.PayrollItemStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -69,6 +70,22 @@ public class PayrollItem {
 
     @Column(name = "insurance_employer_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal insuranceEmployerAmount = BigDecimal.ZERO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "insurance_participation_status", length = 30)
+    private InsuranceParticipationStatus insuranceParticipationStatus;
+
+    @Column(name = "insurance_base_salary_snapshot", precision = 15, scale = 2)
+    private BigDecimal insuranceBaseSalarySnapshot;
+
+    @Column(name = "insurance_employee_rate_snapshot", precision = 5, scale = 2)
+    private BigDecimal insuranceEmployeeRateSnapshot;
+
+    @Column(name = "insurance_employer_rate_snapshot", precision = 5, scale = 2)
+    private BigDecimal insuranceEmployerRateSnapshot;
+
+    @Column(name = "insurance_basis_note", length = 500)
+    private String insuranceBasisNote;
 
     @Column(name = "personal_deduction_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal personalDeductionAmount = BigDecimal.ZERO;

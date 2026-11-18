@@ -1,5 +1,6 @@
 package com.cvdcms.DTO;
 
+import com.cvdcms.entity.enums.InsuranceParticipationStatus;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,6 +15,12 @@ public class PitCalculationResult {
     private BigDecimal nonTaxableIncome;
     private BigDecimal insuranceEmployeeDeduction;
     private BigDecimal insuranceEmployerAmount;
+    private InsuranceParticipationStatus insuranceParticipationStatus;
+    private Boolean insuranceVerified;
+    private BigDecimal insuranceBaseSalarySnapshot;
+    private BigDecimal insuranceEmployeeRateSnapshot;
+    private BigDecimal insuranceEmployerRateSnapshot;
+    private String insuranceBasisNote;
     private BigDecimal personalDeductionAmount;
     private BigDecimal dependentDeductionAmount;
     private BigDecimal taxableIncome;

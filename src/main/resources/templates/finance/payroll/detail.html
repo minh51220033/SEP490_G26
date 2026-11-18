@@ -203,6 +203,15 @@
                 </div>
             </div>
 
+            <!-- Cảnh báo hồ sơ bảo hiểm chưa xác minh trên kỳ Nháp -->
+            <div class="alert alert-danger border-danger mb-3"
+                 th:if="${period.status.name() == 'DRAFT' and items != null and items.?[insuranceParticipationStatus == null or insuranceParticipationStatus.name() == 'UNVERIFIED'].size() > 0}">
+                <i class="bi bi-shield-exclamation me-2"></i>
+                <strong>Chưa đủ căn cứ bảo hiểm:</strong> Có
+                <span th:text="${items.?[insuranceParticipationStatus == null or insuranceParticipationStatus.name() == 'UNVERIFIED'].size()}">0</span>
+                nhân sự có hồ sơ bảo hiểm ở trạng thái <strong>UNVERIFIED / Ngoài hiệu lực</strong>. Không thể trình duyệt hoặc chi trả cho đến khi xác minh hồ sơ bảo hiểm và bấm <em>Tính toán lại</em>.
+            </div>
+
             <!-- Payroll Items Table (SCR-32.2) -->
             <div class="fin-card fin-table-card p-0 mb-4">
                 <div class="fin-grid-topbar d-flex justify-content-between align-items-center">
@@ -266,7 +275,15 @@
                             <td data-column-key="bonus" class="text-end text-primary" th:text="${#numbers.formatDecimal(it.bonusAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
                             <td data-column-key="commission" class="text-end text-info" th:text="${#numbers.formatDecimal(it.totalCommission, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
                             <td data-column-key="gross" class="text-end fw-semibold text-primary" th:text="${#numbers.formatDecimal(it.grossSalary != null ? it.grossSalary : it.actualBaseSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                            <td data-column-key="insurance" class="text-end text-secondary" th:text="${#numbers.formatDecimal(it.insuranceEmployeeDeduction != null ? it.insuranceEmployeeDeduction : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                            <td data-column-key="insurance" class="text-end text-secondary">
+                                <span th:text="${#numbers.formatDecimal(it.insuranceEmployeeDeduction != null ? it.insuranceEmployeeDeduction : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'"></span>
+                                <span th:if="${it.insuranceParticipationStatus != null and it.insuranceParticipationStatus.name() == 'UNVERIFIED'}"
+                                      class="d-block badge bg-warning text-dark mt-1"
+                                      th:title="${it.insuranceBasisNote}">Chưa xác minh BH</span>
+                                <span th:if="${it.insuranceParticipationStatus != null and it.insuranceParticipationStatus.name() == 'EXEMPT'}"
+                                      class="d-block text-muted small"
+                                      th:title="${it.insuranceBasisNote}">Miễn BH</span>
+                            </td>
                             <td data-column-key="relief" class="text-end small text-muted" th:text="${#numbers.formatDecimal((it.personalDeductionAmount != null ? it.personalDeductionAmount : 0).add(it.dependentDeductionAmount != null ? it.dependentDeductionAmount : 0), 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
                             <td data-column-key="taxable" class="text-end small" th:text="${#numbers.formatDecimal(it.assessableIncome != null ? it.assessableIncome : 0, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
                             <td data-column-key="pit" class="text-end">

@@ -323,15 +323,7 @@ public class PayrollServiceImpl implements PayrollService {
                         periodStartDate
                 );
 
-                item.setInsuranceEmployeeDeduction(pitResult.getInsuranceEmployeeDeduction());
-                item.setInsuranceEmployerAmount(pitResult.getInsuranceEmployerAmount());
-                item.setPersonalDeductionAmount(pitResult.getPersonalDeductionAmount());
-                item.setDependentDeductionAmount(pitResult.getDependentDeductionAmount());
-                item.setTaxableIncome(pitResult.getTaxableIncome());
-                item.setAssessableIncome(pitResult.getAssessableIncome());
-                item.setPitAmount(pitResult.getPitAmount());
-                item.setTaxPolicyCode(pitResult.getTaxPolicyCode());
-                item.setTaxCalculationDetail(pitResult.getTaxCalculationDetail());
+                applyPitResultToPayrollItem(item, pitResult);
 
                 // Lương Net = Gross - BHXH NLĐ - Thuế TNCN - Giảm trừ khác
                 BigDecimal netSalary = grossSalary
@@ -345,6 +337,10 @@ public class PayrollServiceImpl implements PayrollService {
             } else {
                 item.setInsuranceEmployeeDeduction(BigDecimal.ZERO);
                 item.setInsuranceEmployerAmount(BigDecimal.ZERO);
+                item.setInsuranceParticipationStatus(staff.getInsuranceParticipationStatus() != null
+                        ? staff.getInsuranceParticipationStatus()
+                        : InsuranceParticipationStatus.UNVERIFIED);
+                item.setInsuranceBasisNote("Không có dịch vụ tính thuế/bảo hiểm.");
                 item.setPersonalDeductionAmount(BigDecimal.ZERO);
                 item.setDependentDeductionAmount(BigDecimal.ZERO);
                 item.setTaxableIncome(grossSalary);
@@ -556,15 +552,7 @@ public class PayrollServiceImpl implements PayrollService {
         item.setGrossSalary(grossSalary);
         item.setBonusAmount(bonus);
         item.setDeductionAmount(deduction);
-        item.setInsuranceEmployeeDeduction(pitResult.getInsuranceEmployeeDeduction());
-        item.setInsuranceEmployerAmount(pitResult.getInsuranceEmployerAmount());
-        item.setPersonalDeductionAmount(pitResult.getPersonalDeductionAmount());
-        item.setDependentDeductionAmount(pitResult.getDependentDeductionAmount());
-        item.setTaxableIncome(pitResult.getTaxableIncome());
-        item.setAssessableIncome(pitResult.getAssessableIncome());
-        item.setPitAmount(pitResult.getPitAmount());
-        item.setTaxPolicyCode(pitResult.getTaxPolicyCode());
-        item.setTaxCalculationDetail(pitResult.getTaxCalculationDetail());
+        applyPitResultToPayrollItem(item, pitResult);
         item.setNote(dto.getNote() != null ? dto.getNote().trim() : null);
 
         BigDecimal netSalary = grossSalary.subtract(mandatoryDeductions).subtract(deduction).max(BigDecimal.ZERO);
@@ -632,21 +620,17 @@ public class PayrollServiceImpl implements PayrollService {
                     item.getStaff(),
                     periodDate
             );
-            item.setInsuranceEmployeeDeduction(pitResult.getInsuranceEmployeeDeduction());
-            item.setInsuranceEmployerAmount(pitResult.getInsuranceEmployerAmount());
-            item.setPersonalDeductionAmount(pitResult.getPersonalDeductionAmount());
-            item.setDependentDeductionAmount(pitResult.getDependentDeductionAmount());
-            item.setTaxableIncome(pitResult.getTaxableIncome());
-            item.setAssessableIncome(pitResult.getAssessableIncome());
-            item.setPitAmount(pitResult.getPitAmount());
-            item.setTaxPolicyCode(pitResult.getTaxPolicyCode());
-            item.setTaxCalculationDetail(pitResult.getTaxCalculationDetail());
+            applyPitResultToPayrollItem(item, pitResult);
 
             BigDecimal mandatory = pitResult.getInsuranceEmployeeDeduction().add(pitResult.getPitAmount());
             item.setNetSalary(grossSalary.subtract(mandatory).subtract(deduction).max(BigDecimal.ZERO));
         } else {
             item.setInsuranceEmployeeDeduction(BigDecimal.ZERO);
             item.setInsuranceEmployerAmount(BigDecimal.ZERO);
+            item.setInsuranceParticipationStatus(item.getStaff() != null && item.getStaff().getInsuranceParticipationStatus() != null
+                    ? item.getStaff().getInsuranceParticipationStatus()
+                    : InsuranceParticipationStatus.UNVERIFIED);
+            item.setInsuranceBasisNote("Không có dịch vụ tính thuế/bảo hiểm.");
             item.setPersonalDeductionAmount(BigDecimal.ZERO);
             item.setDependentDeductionAmount(BigDecimal.ZERO);
             item.setTaxableIncome(grossSalary);
@@ -718,6 +702,7 @@ public class PayrollServiceImpl implements PayrollService {
             throw new IllegalStateException("Bảng lương chưa có nhân viên nào. Không thể trình duyệt.");
         }
         assertUnambiguousTaxPolicyForPeriod(period);
+        assertInsuranceBasisVerifiedForPeriod(items);
         reconcileBoundCommissionsForPeriod(period, items);
 
         StaffProfile submitter = staffProfileRepository.findByUser_UserId(currentUserId).orElse(null);
@@ -744,6 +729,8 @@ public class PayrollServiceImpl implements PayrollService {
             throw new IllegalStateException("Kỳ lương phải ở trạng thái Chờ duyệt (SUBMITTED) mới có thể phê duyệt");
         }
         assertUnambiguousTaxPolicyForPeriod(period);
+        List<PayrollItem> items = payrollItemRepository.findByPayrollPeriod_PeriodId(periodId);
+        assertInsuranceBasisVerifiedForPeriod(items);
 
         StaffProfile approver = staffProfileRepository.findByUser_UserId(currentUserId).orElse(null);
 
@@ -820,6 +807,7 @@ public class PayrollServiceImpl implements PayrollService {
             throw new IllegalStateException("Bảng lương không có dòng dữ liệu nào");
         }
         assertUnambiguousTaxPolicyForPeriod(period);
+        assertInsuranceBasisVerifiedForPeriod(items);
         reconcileBoundCommissionsForPeriod(period, items);
 
         // BẢO VỆ BẤT BIẾN VÀ ĐỐI SOÁT TOÀN DIỆN TRƯỚC KHI CHI TRẢ
@@ -1129,6 +1117,42 @@ public class PayrollServiceImpl implements PayrollService {
     private void assertUnambiguousTaxPolicyForPeriod(PayrollPeriod period) {
         if (taxCalculationService != null && period != null && period.getYear() != null && period.getMonth() != null) {
             taxCalculationService.getActiveTaxPolicyStrict(LocalDate.of(period.getYear(), period.getMonth(), 1));
+        }
+    }
+
+    private void applyPitResultToPayrollItem(PayrollItem item, PitCalculationResult pitResult) {
+        item.setInsuranceEmployeeDeduction(pitResult.getInsuranceEmployeeDeduction());
+        item.setInsuranceEmployerAmount(pitResult.getInsuranceEmployerAmount());
+        item.setInsuranceParticipationStatus(pitResult.getInsuranceParticipationStatus());
+        item.setInsuranceBaseSalarySnapshot(pitResult.getInsuranceBaseSalarySnapshot());
+        item.setInsuranceEmployeeRateSnapshot(pitResult.getInsuranceEmployeeRateSnapshot());
+        item.setInsuranceEmployerRateSnapshot(pitResult.getInsuranceEmployerRateSnapshot());
+        item.setInsuranceBasisNote(pitResult.getInsuranceBasisNote());
+        item.setPersonalDeductionAmount(pitResult.getPersonalDeductionAmount());
+        item.setDependentDeductionAmount(pitResult.getDependentDeductionAmount());
+        item.setTaxableIncome(pitResult.getTaxableIncome());
+        item.setAssessableIncome(pitResult.getAssessableIncome());
+        item.setPitAmount(pitResult.getPitAmount());
+        item.setTaxPolicyCode(pitResult.getTaxPolicyCode());
+        item.setTaxCalculationDetail(pitResult.getTaxCalculationDetail());
+    }
+
+    private void assertInsuranceBasisVerifiedForPeriod(List<PayrollItem> items) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        for (PayrollItem item : items) {
+            InsuranceParticipationStatus status = item.getInsuranceParticipationStatus();
+            String note = item.getInsuranceBasisNote();
+            boolean missingWithTaxService = taxCalculationService != null && status == null;
+            boolean explicitlyUnverified = status == InsuranceParticipationStatus.UNVERIFIED
+                    || (note != null && note.startsWith("CHƯA ĐỦ CĂN CỨ"));
+            if (missingWithTaxService || explicitlyUnverified) {
+                String staffName = item.getStaff() != null ? item.getStaff().getFullName() : String.valueOf(item.getItemId());
+                throw new IllegalStateException("Nhân sự " + staffName
+                        + " chưa đủ căn cứ bảo hiểm hợp lệ (trạng thái UNVERIFIED/thiếu thông số). "
+                        + "Vui lòng xác minh diện tham gia bảo hiểm trên hồ sơ nhân sự và tính lại bảng lương trước khi trình duyệt hoặc chi trả.");
+            }
         }
     }
 }
