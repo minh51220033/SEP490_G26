@@ -428,6 +428,8 @@ public class StaffController {
         model.addAttribute("users", staffService.getLinkableUsers(currentUserId));
         model.addAttribute("genders", StaffGender.values());
         model.addAttribute("statuses", StaffStatus.values());
+        model.addAttribute("contractTypes", com.cvdcms.entity.enums.StaffContractType.values());
+        model.addAttribute("insuranceStatuses", com.cvdcms.entity.enums.InsuranceParticipationStatus.values());
         model.addAttribute("specialtySuggestions", List.of(
                 "Răng hàm mặt", "Chỉnh nha", "Implant", "Nội nha", "Nha chu",
                 "Phục hình răng", "Nha khoa trẻ em", "Phẫu thuật hàm mặt"));
@@ -450,6 +452,18 @@ public class StaffController {
         f.setBaseSalary(s.getBaseSalary() != null ? java.math.BigDecimal.valueOf(s.getBaseSalary().longValue()) : null);
         f.setAllowanceAmount(s.getAllowanceAmount() != null ? java.math.BigDecimal.valueOf(s.getAllowanceAmount().longValue()) : null);
         f.setInsuranceSalary(s.getInsuranceSalary() != null ? java.math.BigDecimal.valueOf(s.getInsuranceSalary().longValue()) : null);
+        f.setInsuranceParticipationStatus(s.getInsuranceParticipationStatus());
+        f.setInsuranceEffectiveFrom(s.getInsuranceEffectiveFrom());
+        f.setInsuranceEffectiveTo(s.getInsuranceEffectiveTo());
+        f.setInsuranceEmployeeRateOverride(s.getInsuranceEmployeeRateOverride());
+        f.setInsuranceEmployerRateOverride(s.getInsuranceEmployerRateOverride());
+        f.setInsuranceExemptionReason(s.getInsuranceExemptionReason());
+        f.setContractType(s.getContractType());
+        f.setIsTaxResident(s.getIsTaxResident());
+        f.setTaxCode(s.getTaxCode());
+        f.setHasPersonalDeduction(s.getHasPersonalDeduction());
+        f.setDependentCount(s.getDependentCount());
+        f.setHasTaxCommitment(s.getHasTaxCommitment());
         f.setBankAccountNumber(s.getBankAccountNumber());
         f.setBankName(s.getBankName());
         f.setHireDate(s.getHireDate());

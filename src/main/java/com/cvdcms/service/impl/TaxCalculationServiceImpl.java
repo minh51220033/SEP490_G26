@@ -4,6 +4,7 @@ import com.cvdcms.DTO.PitCalculationResult;
 import com.cvdcms.entity.BranchTaxConfig;
 import com.cvdcms.entity.StaffProfile;
 import com.cvdcms.entity.TaxPolicy;
+import com.cvdcms.entity.enums.InsuranceParticipationStatus;
 import com.cvdcms.entity.enums.StaffContractType;
 import com.cvdcms.repository.BranchTaxConfigRepository;
 import com.cvdcms.repository.TaxPolicyRepository;
@@ -146,8 +147,9 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
             StaffProfile staff,
             LocalDate effectiveDate
     ) {
-        TaxPolicy policy = getActiveTaxPolicy(effectiveDate);
-        return calculatePitWithPolicy(grossSalary, nonTaxableIncome, staff, policy);
+        LocalDate targetDate = effectiveDate != null ? effectiveDate : LocalDate.now();
+        TaxPolicy policy = getActiveTaxPolicy(targetDate);
+        return calculatePitWithPolicy(grossSalary, nonTaxableIncome, staff, policy, targetDate);
     }
 
     @Override
@@ -157,8 +159,9 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
             StaffProfile staff,
             LocalDate effectiveDate
     ) {
-        TaxPolicy policy = getActiveTaxPolicyStrict(effectiveDate);
-        return calculatePitWithPolicy(grossSalary, nonTaxableIncome, staff, policy);
+        LocalDate targetDate = effectiveDate != null ? effectiveDate : LocalDate.now();
+        TaxPolicy policy = getActiveTaxPolicyStrict(targetDate);
+        return calculatePitWithPolicy(grossSalary, nonTaxableIncome, staff, policy, targetDate);
     }
 
     @Override
@@ -168,21 +171,40 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
             StaffProfile staff,
             TaxPolicy policy
     ) {
+        return calculatePitWithPolicy(grossSalary, nonTaxableIncome, staff, policy, LocalDate.now());
+    }
+
+    private PitCalculationResult calculatePitWithPolicy(
+            BigDecimal grossSalary,
+            BigDecimal nonTaxableIncome,
+            StaffProfile staff,
+            TaxPolicy policy,
+            LocalDate effectiveDate
+    ) {
         if (policy == null) {
             policy = createFallbackPolicy();
         }
+        LocalDate targetDate = effectiveDate != null ? effectiveDate : LocalDate.now();
 
         BigDecimal gross = grossSalary != null ? grossSalary : BigDecimal.ZERO;
         BigDecimal nonTaxable = nonTaxableIncome != null ? nonTaxableIncome : BigDecimal.ZERO;
         BigDecimal taxableIncome = gross.subtract(nonTaxable).max(BigDecimal.ZERO);
 
-        // Trường hợp nhân sự chưa có thông tin hợp đồng (legacy mock hoặc chưa khai báo thuế)
+        InsuranceBasis ins = resolveInsuranceBasis(staff, policy, targetDate);
+
+        // Trường hợp nhân sự chưa có thông tin hợp đồng (legacy hoặc chưa khai báo thuế)
         if (staff == null || staff.getContractType() == null) {
             return PitCalculationResult.builder()
                     .grossSalary(gross)
                     .nonTaxableIncome(nonTaxable)
-                    .insuranceEmployeeDeduction(BigDecimal.ZERO)
-                    .insuranceEmployerAmount(BigDecimal.ZERO)
+                    .insuranceEmployeeDeduction(ins.employeeAmount)
+                    .insuranceEmployerAmount(ins.employerAmount)
+                    .insuranceParticipationStatus(ins.status)
+                    .insuranceVerified(ins.verified)
+                    .insuranceBaseSalarySnapshot(ins.baseSalarySnapshot)
+                    .insuranceEmployeeRateSnapshot(ins.employeeRateSnapshot)
+                    .insuranceEmployerRateSnapshot(ins.employerRateSnapshot)
+                    .insuranceBasisNote(ins.basisNote)
                     .personalDeductionAmount(BigDecimal.ZERO)
                     .dependentDeductionAmount(BigDecimal.ZERO)
                     .taxableIncome(taxableIncome)
@@ -199,17 +221,11 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
         int dependentCount = staff.getDependentCount() != null ? Math.max(0, staff.getDependentCount()) : 0;
         boolean hasCommitment = Boolean.TRUE.equals(staff.getHasTaxCommitment());
 
-        // 1. Tính bảo hiểm bắt buộc người lao động và đơn vị đóng (tính trên insuranceSalary nếu có, hoặc baseSalary nếu là HĐ chính thức)
-        BigDecimal insSalary = staff.getInsuranceSalary() != null ? staff.getInsuranceSalary() : BigDecimal.ZERO;
-        BigDecimal insRateEmployee = policy.getInsuranceEmployeeRate() != null ? policy.getInsuranceEmployeeRate() : BigDecimal.valueOf(10.5);
-        BigDecimal insRateEmployer = policy.getInsuranceEmployerRate() != null ? policy.getInsuranceEmployerRate() : BigDecimal.valueOf(21.5);
+        BigDecimal insuranceEmployee = ins.employeeAmount;
+        BigDecimal insuranceEmployer = ins.employerAmount;
 
-        BigDecimal insuranceEmployee = insSalary.multiply(insRateEmployee).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-        BigDecimal insuranceEmployer = insSalary.multiply(insRateEmployer).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-
-        // Phân nhánh tính thuế TNCN theo đối tượng
+        // Phân nhánh tính thuế TNCN theo đối tượng (tách biệt với diện tham gia bảo hiểm)
         if (!isResident || contractType == StaffContractType.NON_RESIDENT) {
-            // Cá nhân không cư trú: Khấu trừ 20% trên toàn bộ thu nhập chịu thuế (Điều 18 TT 111/2013/TT-BTC)
             BigDecimal nonResRate = policy.getNonResidentTaxRate() != null ? policy.getNonResidentTaxRate() : BigDecimal.valueOf(20.0);
             BigDecimal pit = taxableIncome.multiply(nonResRate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
             String detail = String.format("Khấu trừ thuế TNCN không cư trú: %s%% trên TNCT %s đ = %s đ (Điều 18 Thông tư 111/2013/TT-BTC)",
@@ -220,6 +236,12 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
                     .nonTaxableIncome(nonTaxable)
                     .insuranceEmployeeDeduction(insuranceEmployee)
                     .insuranceEmployerAmount(insuranceEmployer)
+                    .insuranceParticipationStatus(ins.status)
+                    .insuranceVerified(ins.verified)
+                    .insuranceBaseSalarySnapshot(ins.baseSalarySnapshot)
+                    .insuranceEmployeeRateSnapshot(ins.employeeRateSnapshot)
+                    .insuranceEmployerRateSnapshot(ins.employerRateSnapshot)
+                    .insuranceBasisNote(ins.basisNote)
                     .personalDeductionAmount(BigDecimal.ZERO)
                     .dependentDeductionAmount(BigDecimal.ZERO)
                     .taxableIncome(taxableIncome)
@@ -237,13 +259,18 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
                 || contractType == StaffContractType.COLLABORATOR) {
 
             if (hasCommitment) {
-                // Có cam kết Mẫu 08/CK-TNCN theo Thông tư 80/2021/TT-BTC -> Tạm thời không khấu trừ 10%
                 String detail = "Nhân sự có cam kết Mẫu 08/CK-TNCN (ước tính tổng thu nhập trong năm dưới mức chịu thuế). Tạm thời chưa khấu trừ 10% tại nguồn.";
                 return PitCalculationResult.builder()
                         .grossSalary(gross)
                         .nonTaxableIncome(nonTaxable)
                         .insuranceEmployeeDeduction(insuranceEmployee)
                         .insuranceEmployerAmount(insuranceEmployer)
+                        .insuranceParticipationStatus(ins.status)
+                        .insuranceVerified(ins.verified)
+                        .insuranceBaseSalarySnapshot(ins.baseSalarySnapshot)
+                        .insuranceEmployeeRateSnapshot(ins.employeeRateSnapshot)
+                        .insuranceEmployerRateSnapshot(ins.employerRateSnapshot)
+                        .insuranceBasisNote(ins.basisNote)
                         .personalDeductionAmount(BigDecimal.ZERO)
                         .dependentDeductionAmount(BigDecimal.ZERO)
                         .taxableIncome(taxableIncome)
@@ -264,6 +291,12 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
                         .nonTaxableIncome(nonTaxable)
                         .insuranceEmployeeDeduction(insuranceEmployee)
                         .insuranceEmployerAmount(insuranceEmployer)
+                        .insuranceParticipationStatus(ins.status)
+                        .insuranceVerified(ins.verified)
+                        .insuranceBaseSalarySnapshot(ins.baseSalarySnapshot)
+                        .insuranceEmployeeRateSnapshot(ins.employeeRateSnapshot)
+                        .insuranceEmployerRateSnapshot(ins.employerRateSnapshot)
+                        .insuranceBasisNote(ins.basisNote)
                         .personalDeductionAmount(BigDecimal.ZERO)
                         .dependentDeductionAmount(BigDecimal.ZERO)
                         .taxableIncome(taxableIncome)
@@ -279,6 +312,12 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
                         .nonTaxableIncome(nonTaxable)
                         .insuranceEmployeeDeduction(insuranceEmployee)
                         .insuranceEmployerAmount(insuranceEmployer)
+                        .insuranceParticipationStatus(ins.status)
+                        .insuranceVerified(ins.verified)
+                        .insuranceBaseSalarySnapshot(ins.baseSalarySnapshot)
+                        .insuranceEmployeeRateSnapshot(ins.employeeRateSnapshot)
+                        .insuranceEmployerRateSnapshot(ins.employerRateSnapshot)
+                        .insuranceBasisNote(ins.basisNote)
                         .personalDeductionAmount(BigDecimal.ZERO)
                         .dependentDeductionAmount(BigDecimal.ZERO)
                         .taxableIncome(taxableIncome)
@@ -290,7 +329,7 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
             }
         }
 
-        // HỢP ĐỒNG LAO ĐỘNG TỪ 3 THÁNG TRỞ LÊN (FULL_TIME_OFFICIAL): BIỂU THUẾ LŨY TIẾN TỪNG PHẦN 7 BẬC
+        // HỢP ĐỒNG LAO ĐỘNG TỪ 3 THÁNG TRỞ LÊN: BIỂU THUẾ LŨY TIẾN TỪNG PHẦN 7 BẬC
         BigDecimal personalRelief = hasPersonalDeduction ? policy.getPersonalRelief() : BigDecimal.ZERO;
         BigDecimal dependentReliefUnit = policy.getDependentRelief();
         BigDecimal dependentRelief = dependentReliefUnit.multiply(BigDecimal.valueOf(dependentCount));
@@ -309,6 +348,12 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
                 .nonTaxableIncome(nonTaxable)
                 .insuranceEmployeeDeduction(insuranceEmployee)
                 .insuranceEmployerAmount(insuranceEmployer)
+                .insuranceParticipationStatus(ins.status)
+                .insuranceVerified(ins.verified)
+                .insuranceBaseSalarySnapshot(ins.baseSalarySnapshot)
+                .insuranceEmployeeRateSnapshot(ins.employeeRateSnapshot)
+                .insuranceEmployerRateSnapshot(ins.employerRateSnapshot)
+                .insuranceBasisNote(ins.basisNote)
                 .personalDeductionAmount(personalRelief)
                 .dependentDeductionAmount(dependentRelief)
                 .taxableIncome(taxableIncome)
@@ -318,6 +363,120 @@ public class TaxCalculationServiceImpl implements TaxCalculationService {
                 .taxCalculationDetail(prog.explanation)
                 .build();
     }
+
+    private InsuranceBasis resolveInsuranceBasis(StaffProfile staff, TaxPolicy policy, LocalDate targetDate) {
+        if (staff == null || staff.getInsuranceParticipationStatus() == null
+                || staff.getInsuranceParticipationStatus() == InsuranceParticipationStatus.UNVERIFIED) {
+            return new InsuranceBasis(
+                    InsuranceParticipationStatus.UNVERIFIED,
+                    false,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    null,
+                    null,
+                    "CHƯA ĐỦ CĂN CỨ: Hồ sơ bảo hiểm chưa được xác minh (UNVERIFIED)."
+            );
+        }
+
+        InsuranceParticipationStatus configuredStatus = staff.getInsuranceParticipationStatus();
+        LocalDate effFrom = staff.getInsuranceEffectiveFrom();
+        LocalDate effTo = staff.getInsuranceEffectiveTo();
+        if ((effFrom != null && targetDate.isBefore(effFrom)) || (effTo != null && targetDate.isAfter(effTo))) {
+            return new InsuranceBasis(
+                    InsuranceParticipationStatus.UNVERIFIED,
+                    false,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    null,
+                    null,
+                    "CHƯA ĐỦ CĂN CỨ: Hồ sơ bảo hiểm (" + configuredStatus.name()
+                            + ") ngoài thời gian hiệu lực tại kỳ " + targetDate + "."
+            );
+        }
+
+        if (configuredStatus == InsuranceParticipationStatus.EXEMPT) {
+            String reason = staff.getInsuranceExemptionReason();
+            String note = "Miễn tham gia bảo hiểm"
+                    + (reason != null && !reason.isBlank() ? " (" + reason.trim() + ")" : "");
+            return new InsuranceBasis(
+                    InsuranceParticipationStatus.EXEMPT,
+                    true,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    note
+            );
+        }
+
+        // PARTICIPATING
+        BigDecimal insSalary = staff.getInsuranceSalary();
+        if (insSalary == null || insSalary.compareTo(BigDecimal.ZERO) <= 0) {
+            return new InsuranceBasis(
+                    InsuranceParticipationStatus.UNVERIFIED,
+                    false,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    null,
+                    null,
+                    "CHƯA ĐỦ CĂN CỨ: Nhân sự thuộc diện tham gia BH nhưng lương đóng BHXH chưa lớn hơn 0."
+            );
+        }
+
+        BigDecimal empRate = staff.getInsuranceEmployeeRateOverride() != null
+                ? staff.getInsuranceEmployeeRateOverride()
+                : (policy != null ? policy.getInsuranceEmployeeRate() : null);
+        BigDecimal erRate = staff.getInsuranceEmployerRateOverride() != null
+                ? staff.getInsuranceEmployerRateOverride()
+                : (policy != null ? policy.getInsuranceEmployerRate() : null);
+
+        if (empRate == null || erRate == null
+                || empRate.compareTo(BigDecimal.ZERO) < 0 || erRate.compareTo(BigDecimal.ZERO) < 0) {
+            return new InsuranceBasis(
+                    InsuranceParticipationStatus.UNVERIFIED,
+                    false,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    null,
+                    null,
+                    "CHƯA ĐỦ CĂN CỨ: Thiếu tỷ lệ đóng bảo hiểm hợp lệ từ chính sách hoặc cấu hình nhân sự."
+            );
+        }
+
+        BigDecimal empAmt = insSalary.multiply(empRate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+        BigDecimal erAmt = insSalary.multiply(erRate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+        String note = String.format("Tham gia BH: Mức đóng %s đ (NLĐ %s%%, NSDLĐ %s%%)",
+                formatVnd(insSalary),
+                empRate.stripTrailingZeros().toPlainString(),
+                erRate.stripTrailingZeros().toPlainString());
+
+        return new InsuranceBasis(
+                InsuranceParticipationStatus.PARTICIPATING,
+                true,
+                empAmt,
+                erAmt,
+                insSalary,
+                empRate,
+                erRate,
+                note
+        );
+    }
+
+    private record InsuranceBasis(
+            InsuranceParticipationStatus status,
+            boolean verified,
+            BigDecimal employeeAmount,
+            BigDecimal employerAmount,
+            BigDecimal baseSalarySnapshot,
+            BigDecimal employeeRateSnapshot,
+            BigDecimal employerRateSnapshot,
+            String basisNote
+    ) {}
 
     private ProgressiveTaxDetail calculateProgressivePit(BigDecimal assessable) {
         if (assessable.compareTo(BigDecimal.ZERO) <= 0) {

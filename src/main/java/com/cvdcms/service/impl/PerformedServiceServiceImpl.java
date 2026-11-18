@@ -75,6 +75,12 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.ServiceCommissionService serviceCommissionService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.ServiceCommissionRepository serviceCommissionRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.ParaclinicalOrderItemRepository paraclinicalOrderItemRepository;
+
     public void setServiceCommissionService(com.cvdcms.service.ServiceCommissionService serviceCommissionService) {
         this.serviceCommissionService = serviceCommissionService;
     }
@@ -278,8 +284,13 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
     @Transactional
     public void cancelPerformedService(Long performedId) {
         log.info("Cancelling/Deleting performed service with id={}", performedId);
-        PerformedService ps = performedServiceRepository.findById(performedId)
+        PerformedService ps = performedServiceRepository.findByIdForUpdate(performedId)
+                .or(() -> performedServiceRepository.findById(performedId))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ thực hiện với ID: " + performedId));
+
+        if (ps.getStatus() == PerformedServiceStatus.CANCELLED) {
+            return;
+        }
 
         // Quy tắc BR-EMR-02: Khóa bất biến theo VisitStatus & trạng thái EMR
         com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
@@ -292,7 +303,7 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
             throw new IllegalStateException("Dịch vụ thực hiện đã được Kế toán xuất hóa đơn còn hiệu lực, không thể hủy hoặc xóa.");
         }
 
-        // Hoàn lại vật tư tiêu hao lâm sàng (nếu có) trước khi xóa
+        // Hoàn lại vật tư tiêu hao lâm sàng (nếu có) trước khi hủy
         revertMaterialConsumptions(ps);
 
         // Nếu dịch vụ này gắn với bước trong Kế hoạch điều trị (FT15), hoàn tác lại trạng thái nếu không còn dịch vụ khác thực hiện
@@ -339,7 +350,20 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         if (serviceCommissionService != null) {
             serviceCommissionService.cancelPendingCommissionsForPerformedService(ps.getPerformedId());
         }
-        performedServiceRepository.delete(ps);
+
+        boolean hasAnyInvoiceHistory = invoiceItemRepository != null
+                && invoiceItemRepository.existsByPerformedService_PerformedId(performedId);
+        boolean hasParaclinicalLink = paraclinicalOrderItemRepository != null
+                && paraclinicalOrderItemRepository.existsByPerformedService_PerformedId(performedId);
+        boolean hasRemainingCommission = serviceCommissionRepository != null
+                && !serviceCommissionRepository.findByPerformedService_PerformedId(performedId).isEmpty();
+
+        if (hasAnyInvoiceHistory || hasParaclinicalLink || hasRemainingCommission) {
+            ps.setStatus(PerformedServiceStatus.CANCELLED);
+            performedServiceRepository.save(ps);
+        } else {
+            performedServiceRepository.delete(ps);
+        }
     }
 
     private void recordMaterialConsumptions(
