@@ -47,6 +47,17 @@ public class ReportDashboardDTO {
     private BigDecimal totalPitWithheld = BigDecimal.ZERO;
     private BigDecimal totalVatAmount = BigDecimal.ZERO;
 
+    // Căn cứ phân loại doanh thu / dòng tiền ví & hoàn trả (không đếm trùng nạp/cấn ví)
+    private BigDecimal serviceTaxBase = BigDecimal.ZERO;
+    private BigDecimal medicineTaxBase = BigDecimal.ZERO;
+    private BigDecimal surchargeTaxBase = BigDecimal.ZERO;
+    private BigDecimal unclassifiedInvoiceBase = BigDecimal.ZERO;
+    private BigDecimal advanceDepositInflow = BigDecimal.ZERO;
+    private BigDecimal depositWalletUsed = BigDecimal.ZERO;
+    private BigDecimal invoiceRefundAmount = BigDecimal.ZERO;
+    private BigDecimal walletRefundAmount = BigDecimal.ZERO;
+    private BigDecimal unsettledAdvanceDeposit = BigDecimal.ZERO;
+
     // Dữ liệu xu hướng theo ngày phục vụ vẽ biểu đồ
     private List<DailyRevenueStat> dailyStats = new ArrayList<>();
 }

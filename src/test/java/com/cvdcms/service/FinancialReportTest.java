@@ -174,14 +174,247 @@ public class FinancialReportTest {
     }
 
     @Test
-    @DisplayName("UTCID07 - A - Thuế suất âm được dùng giá trị mặc định 20% của source")
-    void UTCID07() throws Exception {
-        FinancialReportDTO r=financial(new BigDecimal("-1"));assertEquals(0,r.getTaxRate().compareTo(new BigDecimal("20")));
+    @DisplayName("UTCID07 - A - Chặn thuế suất thủ công không hợp lệ (âm hoặc > 100%)")
+    void UTCID07() {
+        assertThrows(IllegalArgumentException.class, () -> financial(new BigDecimal("-1")));
+        assertThrows(IllegalArgumentException.class, () -> financial(new BigDecimal("101")));
     }
 
     @Test
     @DisplayName("UTCID08 - N - Truyền đúng danh sách chi nhánh và khoảng ngày sang repository")
     void UTCID08() throws Exception {
         financial(BigDecimal.ZERO);verify(invoiceRepository).sumInvoiceBreakdownByBranches(eq(List.of(1L)),eq(reportStart.atStartOfDay()),eq(reportEnd.atTime(java.time.LocalTime.MAX)));verify(invoiceRepository).findAllPatientDebtsByBranches(List.of(1L));
+    }
+
+    @Test
+    @DisplayName("UTCID09 - N - AUTO (null) và overload không truyền taxRate dùng cấu hình chi nhánh 15%")
+    void UTCID09() {
+        TaxCalculationService mockTaxService = mock(TaxCalculationService.class);
+        BranchTaxConfig config = new BranchTaxConfig();
+        config.setEntityType("ENTERPRISE");
+        config.setCitRate(new BigDecimal("15"));
+        when(mockTaxService.getBranchTaxConfig(1L, reportEnd)).thenReturn(Optional.of(config));
+
+        ReportServiceImpl configuredService = new ReportServiceImpl(
+                invoiceRepository,
+                paymentRepository,
+                refundRepository,
+                operatingExpenseRepository,
+                visitRepository,
+                appointmentRepository,
+                mockTaxService,
+                null,
+                null
+        );
+        when(paymentRepository.sumAmountByMethodAndBranches(any(), eq(PaymentMethod.CASH), eq(PaymentType.PAYMENT), any(), any()))
+                .thenReturn(new BigDecimal("1000"));
+        when(paymentRepository.sumRealRevenueByBranches(any(), any(), any()))
+                .thenReturn(new BigDecimal("1000"));
+        when(operatingExpenseRepository.sumActiveExpenses(any(), any(), any()))
+                .thenReturn(new BigDecimal("200"));
+
+        FinancialReportDTO autoFinancial = configuredService.getFinancialReport(List.of(1L), reportStart, reportEnd, null);
+        FinancialReportDTO overloadFinancial = configuredService.getFinancialReport(List.of(1L), reportStart, reportEnd);
+        ReportDashboardDTO overloadDashboard = configuredService.getDashboardReport(List.of(1L), reportStart, reportEnd, "CN 1");
+
+        assertEquals(0, new BigDecimal("15").compareTo(autoFinancial.getTaxRate()));
+        assertEquals(0, new BigDecimal("120").compareTo(autoFinancial.getEstimatedTaxAmount()));
+        assertEquals(0, new BigDecimal("15").compareTo(overloadFinancial.getTaxRate()));
+        assertEquals(0, new BigDecimal("15").compareTo(overloadDashboard.getTaxRate()));
+    }
+
+    @Test
+    @DisplayName("UTCID10 - N - Chọn 0% không bị ép sang 20% hay cấu hình chi nhánh 15%")
+    void UTCID10() {
+        TaxCalculationService mockTaxService = mock(TaxCalculationService.class);
+        BranchTaxConfig config = new BranchTaxConfig();
+        config.setEntityType("ENTERPRISE");
+        config.setCitRate(new BigDecimal("15"));
+        when(mockTaxService.getBranchTaxConfig(1L, reportEnd)).thenReturn(Optional.of(config));
+
+        ReportServiceImpl configuredService = new ReportServiceImpl(
+                invoiceRepository,
+                paymentRepository,
+                refundRepository,
+                operatingExpenseRepository,
+                visitRepository,
+                appointmentRepository,
+                mockTaxService,
+                null,
+                null
+        );
+        when(paymentRepository.sumAmountByMethodAndBranches(any(), eq(PaymentMethod.CASH), eq(PaymentType.PAYMENT), any(), any()))
+                .thenReturn(new BigDecimal("1000"));
+
+        FinancialReportDTO zeroRate = configuredService.getFinancialReport(List.of(1L), reportStart, reportEnd, BigDecimal.ZERO);
+
+        assertEquals(0, BigDecimal.ZERO.compareTo(zeroRate.getTaxRate()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(zeroRate.getEstimatedTaxAmount()));
+        assertEquals(0, new BigDecimal("1000").compareTo(zeroRate.getNetProfitAfterTax()));
+    }
+
+    @Test
+    @DisplayName("UTCID11 - N - HKD phân tách Dịch vụ/Thuốc theo PaymentAllocation, không đếm trùng nạp/cấn ví và tách hoàn ví")
+    void UTCID11() throws Exception {
+        TaxCalculationService mockTaxService = mock(TaxCalculationService.class);
+        PaymentAllocationRepository mockAllocRepo = mock(PaymentAllocationRepository.class);
+        BranchRepository mockBranchRepo = mock(BranchRepository.class);
+
+        Branch b1 = new Branch();
+        b1.setBranchId(1L);
+        b1.setBranchName("CN Hộ KD");
+        when(mockBranchRepo.findByIsActiveTrueOrderByBranchNameAsc()).thenReturn(List.of(b1));
+
+        BranchTaxConfig hhConfig = new BranchTaxConfig();
+        hhConfig.setEntityType("HOUSEHOLD");
+        hhConfig.setTaxRegime("REVENUE_PERCENT");
+        hhConfig.setServiceTaxRate(new BigDecimal("2.0"));
+        hhConfig.setMedicineTaxRate(new BigDecimal("0.5"));
+        when(mockTaxService.getBranchTaxConfig(1L, reportEnd)).thenReturn(Optional.of(hhConfig));
+
+        // Dòng tiền: 8tr trả trực tiếp + 5tr nạp ví = 13tr; dùng ví 4tr (cấn vào DV+Thuốc) không cộng dòng tiền; hoàn ví 1tr
+        when(paymentRepository.sumRealRevenueByBranches(any(), any(), any())).thenReturn(new BigDecimal("13000000"));
+        when(paymentRepository.sumAmountByMethodAndBranches(any(), eq(PaymentMethod.CASH), eq(PaymentType.PAYMENT), any(), any()))
+                .thenReturn(new BigDecimal("8000000"));
+        when(paymentRepository.sumAdvanceDepositByBranches(any(), any(), any())).thenReturn(new BigDecimal("5000000"));
+        when(paymentRepository.sumDepositWalletUsedByBranches(any(), any(), any())).thenReturn(new BigDecimal("4000000"));
+        when(refundRepository.sumRefundAmountByBranches(any(), any(), any())).thenReturn(new BigDecimal("1000000"));
+
+        when(paymentRepository.sumPaymentsByBranchTypeAndMethod(any(), any(), any())).thenReturn(List.of(
+                new Object[]{1L, PaymentType.PAYMENT, PaymentMethod.CASH, new BigDecimal("8000000")},
+                new Object[]{1L, PaymentType.ADVANCE_DEPOSIT, PaymentMethod.BANK_TRANSFER, new BigDecimal("5000000")},
+                new Object[]{1L, PaymentType.PAYMENT, PaymentMethod.DEPOSIT_WALLET, new BigDecimal("4000000")}
+        ));
+        when(mockAllocRepo.sumAllocatedByBranchAndItemType(any(), any(), any())).thenReturn(List.of(
+                new Object[]{1L, "SERVICE", new BigDecimal("8000000")},
+                new Object[]{1L, "MEDICINE", new BigDecimal("4000000")}
+        ));
+
+        Refund walletRefund = new Refund();
+        walletRefund.setBranch(b1);
+        walletRefund.setInvoice(null); // Hoàn từ ví tạm ứng -> KHÔNG trừ vào doanh thu DV/Thuốc
+        walletRefund.setAmount(new BigDecimal("1000000"));
+        when(refundRepository.findAllRefundsForReport(any(), any(), any())).thenReturn(List.of(walletRefund));
+
+        ReportServiceImpl configuredService = new ReportServiceImpl(
+                invoiceRepository, paymentRepository, refundRepository,
+                operatingExpenseRepository, visitRepository, appointmentRepository,
+                mockTaxService, null, null, mockAllocRepo, mockBranchRepo
+        );
+
+        ReportDashboardDTO dash = configuredService.getDashboardReport(List.of(1L), reportStart, reportEnd, "CN Hộ KD");
+        FinancialReportDTO fin = configuredService.getFinancialReport(List.of(1L), reportStart, reportEnd);
+        byte[] excel = configuredService.exportReportToExcel("OVERVIEW", List.of(1L), reportStart, reportEnd, "CN Hộ KD");
+
+        // Thuế = 8,000,000 * 2% (160,000) + 4,000,000 * 0.5% (20,000) = 180,000 (không nhân 2% lên dòng tiền 12tr)
+        BigDecimal expectedTax = new BigDecimal("180000");
+        assertTrue(dash.isTaxConfigured());
+        assertEquals(0, expectedTax.compareTo(dash.getEstimatedTaxAmount()));
+        assertEquals(0, expectedTax.compareTo(fin.getEstimatedTaxAmount()));
+        assertEquals(0, new BigDecimal("8000000").compareTo(fin.getServiceTaxBase()));
+        assertEquals(0, new BigDecimal("4000000").compareTo(fin.getMedicineTaxBase()));
+        assertEquals(0, new BigDecimal("1000000").compareTo(fin.getWalletRefundAmount()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(fin.getInvoiceRefundAmount()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(fin.getUnsettledAdvanceDeposit()));
+        assertNotNull(excel);
+        assertTrue(excel.length > 0);
+    }
+
+    @Test
+    @DisplayName("UTCID12 - N - Hai chi nhánh khác chế độ (HKD và Doanh nghiệp 15%) tính độc lập rồi tổng hợp")
+    void UTCID12() {
+        TaxCalculationService mockTaxService = mock(TaxCalculationService.class);
+        PaymentAllocationRepository mockAllocRepo = mock(PaymentAllocationRepository.class);
+        BranchRepository mockBranchRepo = mock(BranchRepository.class);
+
+        Branch b1 = new Branch();
+        b1.setBranchId(1L);
+        b1.setBranchName("CN1 Hộ KD");
+        Branch b2 = new Branch();
+        b2.setBranchId(2L);
+        b2.setBranchName("CN2 Công ty");
+        when(mockBranchRepo.findByIsActiveTrueOrderByBranchNameAsc()).thenReturn(List.of(b1, b2));
+
+        BranchTaxConfig hhConfig = new BranchTaxConfig();
+        hhConfig.setEntityType("HOUSEHOLD");
+        hhConfig.setTaxRegime("REVENUE_PERCENT");
+        hhConfig.setServiceTaxRate(new BigDecimal("2.0"));
+        hhConfig.setMedicineTaxRate(new BigDecimal("0.5"));
+        when(mockTaxService.getBranchTaxConfig(1L, reportEnd)).thenReturn(Optional.of(hhConfig));
+
+        BranchTaxConfig entConfig = new BranchTaxConfig();
+        entConfig.setEntityType("ENTERPRISE");
+        entConfig.setTaxRegime("CIT_STANDARD");
+        entConfig.setCitRate(new BigDecimal("15.0"));
+        when(mockTaxService.getBranchTaxConfig(2L, reportEnd)).thenReturn(Optional.of(entConfig));
+
+        when(paymentRepository.sumRealRevenueByBranches(any(), any(), any())).thenReturn(new BigDecimal("14000000"));
+        when(operatingExpenseRepository.sumActiveExpenses(any(), any(), any())).thenReturn(BigDecimal.ZERO);
+
+        when(paymentRepository.sumPaymentsByBranchTypeAndMethod(any(), any(), any())).thenReturn(List.of(
+                new Object[]{1L, PaymentType.PAYMENT, PaymentMethod.CASH, new BigDecimal("4000000")},
+                new Object[]{2L, PaymentType.PAYMENT, PaymentMethod.BANK_TRANSFER, new BigDecimal("10000000")}
+        ));
+        when(mockAllocRepo.sumAllocatedByBranchAndItemType(any(), any(), any())).thenReturn(List.of(
+                new Object[]{1L, "SERVICE", new BigDecimal("2000000")},
+                new Object[]{1L, "MEDICINE", new BigDecimal("2000000")}
+        ));
+
+        ReportServiceImpl configuredService = new ReportServiceImpl(
+                invoiceRepository, paymentRepository, refundRepository,
+                operatingExpenseRepository, visitRepository, appointmentRepository,
+                mockTaxService, null, null, mockAllocRepo, mockBranchRepo
+        );
+
+        FinancialReportDTO report = configuredService.getFinancialReport(List.of(1L, 2L), reportStart, reportEnd);
+
+        // CN1 (HKD): 2M*2% (40k) + 2M*0.5% (10k) = 50,000
+        // CN2 (DN 15%): 10M*15% = 1,500,000 -> Tổng = 1,550,000 (không bị ép chung 20%)
+        assertTrue(report.isTaxConfigured());
+        assertEquals(0, new BigDecimal("1550000").compareTo(report.getEstimatedTaxAmount()));
+        assertTrue(report.getTaxRegimeName().contains("đa chế độ"));
+    }
+
+    @Test
+    @DisplayName("UTCID13 - A - Thiếu cấu hình chi nhánh hoặc thiếu rate nhóm bị đánh dấu chưa đủ căn cứ")
+    void UTCID13() {
+        TaxCalculationService mockTaxService = mock(TaxCalculationService.class);
+        PaymentAllocationRepository mockAllocRepo = mock(PaymentAllocationRepository.class);
+        BranchRepository mockBranchRepo = mock(BranchRepository.class);
+
+        Branch b1 = new Branch();
+        b1.setBranchId(1L);
+        b1.setBranchName("CN1 Hộ KD thiếu rate thuốc");
+        Branch b2 = new Branch();
+        b2.setBranchId(2L);
+        b2.setBranchName("CN2 Chưa cấu hình");
+        when(mockBranchRepo.findByIsActiveTrueOrderByBranchNameAsc()).thenReturn(List.of(b1, b2));
+
+        BranchTaxConfig incompleteHh = new BranchTaxConfig();
+        incompleteHh.setEntityType("HOUSEHOLD");
+        incompleteHh.setTaxRegime("REVENUE_PERCENT");
+        incompleteHh.setServiceTaxRate(new BigDecimal("2.0"));
+        incompleteHh.setMedicineTaxRate(null); // thiếu rate thuốc trong khi có doanh thu thuốc
+        when(mockTaxService.getBranchTaxConfig(1L, reportEnd)).thenReturn(Optional.of(incompleteHh));
+        when(mockTaxService.getBranchTaxConfig(2L, reportEnd)).thenReturn(Optional.empty());
+
+        when(paymentRepository.sumPaymentsByBranchTypeAndMethod(any(), any(), any())).thenReturn(List.of(
+                new Object[]{1L, PaymentType.PAYMENT, PaymentMethod.CASH, new BigDecimal("1000000")},
+                new Object[]{2L, PaymentType.PAYMENT, PaymentMethod.CASH, new BigDecimal("2000000")}
+        ));
+        when(mockAllocRepo.sumAllocatedByBranchAndItemType(any(), any(), any())).thenReturn(List.of(
+                new Object[]{1L, "MEDICINE", new BigDecimal("1000000")}
+        ));
+
+        ReportServiceImpl configuredService = new ReportServiceImpl(
+                invoiceRepository, paymentRepository, refundRepository,
+                operatingExpenseRepository, visitRepository, appointmentRepository,
+                mockTaxService, null, null, mockAllocRepo, mockBranchRepo
+        );
+
+        FinancialReportDTO report = configuredService.getFinancialReport(List.of(1L, 2L), reportStart, reportEnd);
+
+        assertFalse(report.isTaxConfigured());
+        assertTrue(report.getTaxCalculationBasis().contains("CHƯA ĐỦ CĂN CỨ"));
     }
 }

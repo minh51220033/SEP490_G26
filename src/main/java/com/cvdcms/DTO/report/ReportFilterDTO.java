@@ -28,9 +28,9 @@ public class ReportFilterDTO {
     private String tab = "overview";
 
     /**
-     * Thuế suất TNDN (%) áp dụng: mặc định 20%
+     * Thuế suất TNDN (%) áp dụng: null = AUTO (theo cấu hình chi nhánh)
      */
-    private BigDecimal taxRate = BigDecimal.valueOf(20);
+    private BigDecimal taxRate;
 
     /**
      * Định dạng xuất Excel: xlsx

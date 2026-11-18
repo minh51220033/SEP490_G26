@@ -125,11 +125,12 @@ public class AdminReportController {
             @RequestParam(required = false) Long branchId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false, defaultValue = "20") BigDecimal taxRate,
+            @RequestParam(required = false) BigDecimal taxRate,
             @RequestParam(required = false, defaultValue = "overview") String tab,
             Model model,
             HttpSession session
     ) {
+        BigDecimal safeTaxRate = validateTaxRate(taxRate);
         Long currentUserId = getCurrentUserId(session);
         boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
         if (isAdmin) {
@@ -137,7 +138,7 @@ public class AdminReportController {
             if (branchId != null) builder.queryParam("branchId", branchId);
             if (startDate != null) builder.queryParam("startDate", startDate);
             if (endDate != null) builder.queryParam("endDate", endDate);
-            if (taxRate != null) builder.queryParam("taxRate", taxRate);
+            if (safeTaxRate != null) builder.queryParam("taxRate", safeTaxRate);
             if (tab != null && !tab.isBlank()) builder.queryParam("tab", tab);
             return "redirect:" + builder.toUriString();
         }
@@ -154,7 +155,6 @@ public class AdminReportController {
         }
 
         boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId);
-        BigDecimal safeTaxRate = (taxRate != null && taxRate.compareTo(BigDecimal.ZERO) >= 0) ? taxRate : BigDecimal.valueOf(20);
         String branchDisplayName = resolveBranchDisplayName(branchId, resolvedBranchIds, allowedBranches, isPrivileged);
 
         // Lấy dữ liệu cho từng tab
@@ -188,9 +188,10 @@ public class AdminReportController {
             @RequestParam(required = false) Long branchId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false, defaultValue = "20") BigDecimal taxRate,
+            @RequestParam(required = false) BigDecimal taxRate,
             HttpSession session
     ) {
+        BigDecimal safeTaxRate = validateTaxRate(taxRate);
         Long currentUserId = getCurrentUserId(session);
 
         boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
@@ -204,7 +205,6 @@ public class AdminReportController {
         }
 
         boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId);
-        BigDecimal safeTaxRate = (taxRate != null && taxRate.compareTo(BigDecimal.ZERO) >= 0) ? taxRate : BigDecimal.valueOf(20);
         String branchDisplayName = resolveBranchDisplayName(branchId, resolvedBranchIds, allowedBranches, isPrivileged);
 
         byte[] excelBytes = reportService.exportReportToExcel(reportType, resolvedBranchIds, safeStart, safeEnd, branchDisplayName, safeTaxRate);
@@ -224,5 +224,18 @@ public class AdminReportController {
                 .header(HttpHeaders.EXPIRES, "0")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(excelBytes);
+    }
+
+    private BigDecimal validateTaxRate(BigDecimal taxRate) {
+        if (taxRate == null) {
+            return null;
+        }
+        if (taxRate.compareTo(BigDecimal.ZERO) < 0 || taxRate.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "Thuế suất phải nằm trong khoảng 0% đến 100%"
+            );
+        }
+        return taxRate;
     }
 }

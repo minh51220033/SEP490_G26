@@ -375,7 +375,7 @@
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-                    <a th:href="@{/home(branchId=${selectedBranchId}, startDate=${filter != null ? filter.startDate : null}, endDate=${filter != null ? filter.endDate : null}, tab=${activeTab})}"
+                    <a th:href="@{/home(branchId=${selectedBranchId}, startDate=${filter != null ? filter.startDate : null}, endDate=${filter != null ? filter.endDate : null}, taxRate=${filter != null ? filter.taxRate : null}, tab=${activeTab})}"
                        class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="font-size: 13.5px;" title="Làm mới dữ liệu">
                         <i class="bi bi-arrow-clockwise"></i> Làm mới
                     </a>
@@ -459,10 +459,18 @@
                         </label>
                         <select id="taxRateSelect" name="taxRate" class="form-select form-select-sm" onchange="this.form.submit()">
                             <option value="" th:selected="${filter.taxRate == null}">Theo cấu hình chi nhánh</option>
-                            <option value="20" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 20}">20% (Doanh nghiệp chuẩn)</option>
-                            <option value="15" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 15}">15% (Ưu đãi DN nhỏ)</option>
-                            <option value="2" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 2}">2% (Khoán trên Doanh thu)</option>
-                            <option value="0" th:selected="${filter.taxRate != null and filter.taxRate.intValue() == 0}">0% (Miễn thuế / Y tế công)</option>
+                            <option value="20" th:selected="${filter.taxRate != null and filter.taxRate.compareTo(T(java.math.BigDecimal).valueOf(20)) == 0}">20% (Doanh nghiệp chuẩn)</option>
+                            <option value="15" th:selected="${filter.taxRate != null and filter.taxRate.compareTo(T(java.math.BigDecimal).valueOf(15)) == 0}">15% (Ưu đãi DN nhỏ)</option>
+                            <option value="2" th:selected="${filter.taxRate != null and filter.taxRate.compareTo(T(java.math.BigDecimal).valueOf(2)) == 0}">2% (Khoán trên Doanh thu)</option>
+                            <option value="0" th:selected="${filter.taxRate != null and filter.taxRate.compareTo(T(java.math.BigDecimal).ZERO) == 0}">0% (Miễn thuế / Y tế công)</option>
+                            <option th:if="${filter.taxRate != null
+                                            and filter.taxRate.compareTo(T(java.math.BigDecimal).valueOf(20)) != 0
+                                            and filter.taxRate.compareTo(T(java.math.BigDecimal).valueOf(15)) != 0
+                                            and filter.taxRate.compareTo(T(java.math.BigDecimal).valueOf(2)) != 0
+                                            and filter.taxRate.compareTo(T(java.math.BigDecimal).ZERO) != 0}"
+                                    th:value="${filter.taxRate}"
+                                    th:text="${filter.taxRate.stripTrailingZeros().toPlainString() + '% (Tùy chỉnh)'}"
+                                    selected></option>
                         </select>
                     </div>
 
@@ -954,7 +962,10 @@
                                     <td class="fw-semibold">2. Tiền hoàn trả cho bệnh nhân</td>
                                     <td class="text-end fw-bold text-danger"
                                         th:text="'-' + ${#numbers.formatDecimal(financial.totalRefundAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">-0 đ</td>
-                                    <td class="small text-muted">Bao gồm hoàn tiền hóa đơn và hoàn trả số dư cọc</td>
+                                    <td class="small text-muted">
+                                        Hoàn hóa đơn: <b th:text="${#numbers.formatDecimal(financial.invoiceRefundAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b>
+                                        | Hoàn ví tạm ứng: <b th:text="${#numbers.formatDecimal(financial.walletRefundAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b>
+                                    </td>
                                 </tr>
                                 <tr class="table-success">
                                     <td class="fw-bold text-uppercase">3. Thực thu thuần sau hoàn trả (= 1 - 2)</td>
@@ -993,8 +1004,15 @@
                                 </tr>
                                 <tr class="table-light">
                                     <td colspan="3" class="py-2">
-                                        <div class="d-flex flex-wrap justify-content-between align-items-center small text-muted px-2">
-                                            <span><i class="bi bi-info-circle me-1"></i> <b>Nghĩa vụ thuế khác trong kỳ:</b> Thuế GTGT đầu ra (Thuốc 5%, DV KCT): <b class="text-primary" th:text="${#numbers.formatDecimal(financial.totalVatAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b> | Thuế TNCN khấu trừ từ lương: <b class="text-danger" th:text="${#numbers.formatDecimal(financial.totalPitWithheld, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b></span>
+                                        <div class="d-flex flex-wrap justify-content-between align-items-center small text-muted px-2 gap-2">
+                                            <span>
+                                                <i class="bi bi-layers me-1"></i> <b>Căn cứ phân bổ đã thu (không đếm trùng nạp/cấn ví):</b>
+                                                Dịch vụ: <b class="text-dark" th:text="${#numbers.formatDecimal(financial.serviceTaxBase, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b>
+                                                | Thuốc: <b class="text-dark" th:text="${#numbers.formatDecimal(financial.medicineTaxBase, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b>
+                                                | Phụ thu: <b class="text-dark" th:text="${#numbers.formatDecimal(financial.surchargeTaxBase, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b>
+                                                | Ứng trước chưa đối trừ: <b class="text-dark" th:text="${#numbers.formatDecimal(financial.unsettledAdvanceDeposit, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b>
+                                            </span>
+                                            <span><i class="bi bi-info-circle me-1"></i> <b>Nghĩa vụ thuế khác trong kỳ:</b> Thuế GTGT đầu ra: <b class="text-primary" th:text="${#numbers.formatDecimal(financial.totalVatAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b> | Thuế TNCN khấu trừ từ lương: <b class="text-danger" th:text="${#numbers.formatDecimal(financial.totalPitWithheld, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</b></span>
                                             <span th:if="${!financial.taxConfigured}" class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> Chưa đủ cơ sở tính thuế</span>
                                         </div>
                                     </td>
@@ -1346,7 +1364,7 @@
                         </select>
                     </div>
 
-                    <input type="hidden" name="taxRate" th:value="${filter != null ? filter.taxRate : 20}">
+                    <input type="hidden" name="taxRate" th:value="${filter != null ? filter.taxRate : ''}">
 
                     <div class="row g-2 mb-3">
                         <div class="col-6">

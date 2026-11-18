@@ -297,7 +297,7 @@ public class UserController {
             @RequestParam(value = "branchId", required = false) Long branchId,
             @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(value = "taxRate", required = false, defaultValue = "20") BigDecimal taxRate,
+            @RequestParam(value = "taxRate", required = false) BigDecimal taxRate,
             @RequestParam(value = "tab", required = false, defaultValue = "overview") String tab,
             HttpSession session,
             Model model
@@ -462,7 +462,7 @@ public class UserController {
             model.addAttribute("warningMessage", "Ngày bắt đầu không được lớn hơn ngày kết thúc. Hệ thống đã tự động điều chỉnh về đầu tháng.");
         }
 
-        BigDecimal safeTaxRate = (taxRate != null && taxRate.compareTo(BigDecimal.ZERO) >= 0) ? taxRate : BigDecimal.valueOf(20);
+        BigDecimal safeTaxRate = validateTaxRate(taxRate);
         String branchDisplayName = resolveBranchDisplayName(effectiveBranchId, allowedBranches);
 
         ReportDashboardDTO dashboard = reportService.getDashboardReport(resolvedBranchIds, safeStart, safeEnd, branchDisplayName, safeTaxRate);
@@ -489,6 +489,19 @@ public class UserController {
         model.addAttribute("activeTab", filter.getTab());
         model.addAttribute("todayAppointments", todayAppointments);
         model.addAttribute("waitingPatients", waitingPatients);
+    }
+
+    private BigDecimal validateTaxRate(BigDecimal taxRate) {
+        if (taxRate == null) {
+            return null;
+        }
+        if (taxRate.compareTo(BigDecimal.ZERO) < 0 || taxRate.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "Thuế suất phải nằm trong khoảng 0% đến 100%"
+            );
+        }
+        return taxRate;
     }
 
     private String resolveBranchDisplayName(Long branchId, List<Branch> allowedBranches) {
