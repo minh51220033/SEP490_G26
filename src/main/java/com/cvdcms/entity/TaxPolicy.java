@@ -54,6 +54,9 @@ public class TaxPolicy {
     @Column(name = "non_resident_tax_rate", nullable = false, precision = 5, scale = 2)
     private BigDecimal nonResidentTaxRate = BigDecimal.valueOf(20.0);
 
+    @Column(name = "progressive_schedule", nullable = false, length = 30)
+    private String progressiveSchedule = "PROGRESSIVE_7_2007";
+
     @Column(name = "insurance_employee_rate", nullable = false, precision = 5, scale = 2)
     private BigDecimal insuranceEmployeeRate = BigDecimal.valueOf(10.5);
 

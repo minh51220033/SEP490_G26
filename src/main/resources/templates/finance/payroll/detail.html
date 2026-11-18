@@ -258,11 +258,11 @@
                                 <span class="d-block text-muted small" th:text="${it.staff.staffCode}"></span>
                             </td>
                             <td data-column-key="contract">
-                                <span th:if="${it.staff.contractType != null and it.staff.contractType.name() == 'FULL_TIME_OFFICIAL'}" class="badge bg-success-subtle text-success border">Chính thức</span>
-                                <span th:if="${it.staff.contractType != null and it.staff.contractType.name() == 'FULL_TIME_PROBATION'}" class="badge bg-warning-subtle text-warning border">Thử việc (10%)</span>
+                                <span th:if="${it.staff.contractType != null and (it.staff.contractType.name() == 'FULL_TIME_OFFICIAL' or it.staff.contractType.name() == 'FULL_CONTRACT')}" class="badge bg-success-subtle text-success border">Chính thức</span>
+                                <span th:if="${it.staff.contractType != null and (it.staff.contractType.name() == 'FULL_TIME_PROBATION' or it.staff.contractType.name() == 'PROBATION_OR_CASUAL')}" class="badge bg-warning-subtle text-warning border">Thử việc (10%)</span>
                                 <span th:if="${it.staff.contractType != null and (it.staff.contractType.name() == 'PART_TIME_HOURLY' or it.staff.contractType.name() == 'COLLABORATOR')}" class="badge bg-info-subtle text-info border">CTV / Vãng lai (10%)</span>
                                 <span th:if="${it.staff.contractType != null and it.staff.contractType.name() == 'NON_RESIDENT'}" class="badge bg-danger-subtle text-danger border">Không cư trú (20%)</span>
-                                <span th:if="${it.staff.contractType == null}" class="badge bg-light text-dark border">Chính thức</span>
+                                <span th:if="${it.staff.contractType == null or it.pitCalculationMethod == 'MISSING_CONTRACT_TYPE'}" class="badge bg-danger text-white">Thiếu HĐLĐ</span>
                                 <span th:if="${it.staff.taxCode != null}" class="d-block text-muted small" th:text="'MST: ' + ${it.staff.taxCode}"></span>
                                 <span th:if="${it.staff.taxCode == null}" class="d-block text-muted small">NPT: <b th:text="${it.staff.dependentCount != null ? it.staff.dependentCount : 0}"></b></span>
                             </td>
@@ -293,7 +293,9 @@
                                             th:data-staff-name="${it.staff.fullName}"
                                             th:data-staff-code="${it.staff.staffCode}"
                                             th:data-tax-code="${it.staff.taxCode != null ? it.staff.taxCode : 'Chưa đăng ký'}"
-                                            th:data-contract-type="${it.staff.contractType != null ? it.staff.contractType.name() : 'FULL_TIME_OFFICIAL'}"
+                                            th:data-contract-type="${it.staff.contractType != null ? it.staff.contractType.name() : 'MISSING'}"
+                                            th:data-pit-method="${it.pitCalculationMethod != null ? it.pitCalculationMethod : ''}"
+                                            th:data-pit-schedule="${it.pitScheduleSnapshot != null ? it.pitScheduleSnapshot : ''}"
                                             th:data-gross="${it.grossSalary != null ? it.grossSalary : 0}"
                                             th:data-insurance="${it.insuranceEmployeeDeduction != null ? it.insuranceEmployeeDeduction : 0}"
                                             th:data-personal-relief="${it.personalDeductionAmount != null ? it.personalDeductionAmount : 0}"
@@ -445,12 +447,12 @@
                         <tr>
                             <td><b>4. Giảm trừ bản thân</b></td>
                             <td class="text-end text-muted" id="pitPersonalRelief">0 đ</td>
-                            <td class="small text-muted">11.000.000 đ/tháng (Nghị quyết 954/2020/UBTVQH14)</td>
+                            <td class="small text-muted">Theo phiên bản chính sách thuế của kỳ áp dụng</td>
                         </tr>
                         <tr>
                             <td><b>5. Giảm trừ người phụ thuộc</b></td>
                             <td class="text-end text-muted" id="pitDependentRelief">0 đ</td>
-                            <td class="small text-muted">4.400.000 đ/người/tháng (Nghị quyết 954/2020/UBTVQH14)</td>
+                            <td class="small text-muted">Số NPT &times; mức giảm trừ của chính sách kỳ áp dụng</td>
                         </tr>
                         <tr class="table-warning">
                             <td><b>6. Thu nhập tính thuế (TNTT)</b></td>
@@ -553,17 +555,21 @@
         document.getElementById('pitTaxCode').textContent = btn.getAttribute('data-tax-code') || 'Chưa đăng ký';
         
         const contractType = btn.getAttribute('data-contract-type') || '';
+        const pitSchedule = btn.getAttribute('data-pit-schedule') || '';
         let contractLabel = 'HĐLĐ Chính thức';
-        let methodLabel = 'Biểu thuế lũy tiến từng phần 7 bậc (Khoản 2 Điều 7 Thông tư 111/2013/TT-BTC)';
-        if (contractType === 'FULL_TIME_PROBATION') {
-            contractLabel = 'Thử việc';
-            methodLabel = 'Khấu trừ 10% tại nguồn (Điều 25 Thông tư 111/2013/TT-BTC)';
+        let methodLabel = pitSchedule || 'Biểu thuế lũy tiến từng phần theo chính sách kỳ áp dụng';
+        if (contractType === 'MISSING') {
+            contractLabel = 'Thiếu loại hợp đồng';
+            methodLabel = 'Chưa đủ căn cứ tính PIT (MISSING_CONTRACT_TYPE)';
+        } else if (contractType === 'FULL_TIME_PROBATION' || contractType === 'PROBATION_OR_CASUAL') {
+            contractLabel = 'Thử việc / Dưới 3 tháng';
+            methodLabel = pitSchedule || 'Khấu trừ 10% tại nguồn (Điều 25 Thông tư 111/2013/TT-BTC)';
         } else if (contractType === 'PART_TIME_HOURLY' || contractType === 'COLLABORATOR') {
             contractLabel = 'Cộng tác viên / Vãng lai';
-            methodLabel = 'Khấu trừ 10% tại nguồn (Điều 25 Thông tư 111/2013/TT-BTC)';
+            methodLabel = pitSchedule || 'Khấu trừ 10% tại nguồn (Điều 25 Thông tư 111/2013/TT-BTC)';
         } else if (contractType === 'NON_RESIDENT') {
             contractLabel = 'Cá nhân không cư trú';
-            methodLabel = 'Khấu trừ 20% trên thu nhập chịu thuế (Điều 18 Thông tư 111/2013/TT-BTC)';
+            methodLabel = pitSchedule || 'Khấu trừ 20% trên thu nhập chịu thuế (Điều 18 Thông tư 111/2013/TT-BTC)';
         }
         document.getElementById('pitContractType').textContent = contractLabel;
         document.getElementById('pitDependentCount').textContent = btn.getAttribute('data-dependent-count') || '0';
