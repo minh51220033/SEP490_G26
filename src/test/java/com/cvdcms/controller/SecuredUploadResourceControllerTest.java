@@ -306,4 +306,18 @@ class SecuredUploadResourceControllerTest {
         ResponseEntity<Resource> response = controller.getSecuredFile("nanopix", "branch2_xray_admin.jpg", sessionWithAdmin);
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
+
+    @Test
+    @DisplayName("13. Chặn bệnh nhân truy cập chứng từ hóa đơn nhập kho NCC (invoices) -> Ném 403 FORBIDDEN")
+    void getSecuredFile_patientBlockedFromSupplierInvoices_returns403() throws IOException {
+        Path categoryDir = tempDir.resolve("invoices");
+        Files.createDirectories(categoryDir);
+        Path testFile = categoryDir.resolve("inv_supplier_01.png");
+        Files.writeString(testFile, "MOCK_SUPPLIER_INVOICE");
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                controller.getSecuredFile("invoices", "inv_supplier_01.png", sessionWithPatient)
+        );
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+    }
 }
