@@ -195,7 +195,7 @@ public class SecuredUploadResourceController {
                 || roleNames.contains("KE_TOAN") || roleNames.contains("ROLE_KE_TOAN")
                 || roleNames.contains("QUAN_LY_KHO") || roleNames.contains("ROLE_QUAN_LY_KHO");
 
-        if ("signatures".equals(category) || "labo".equals(category)) {
+        if ("signatures".equals(category) || "labo".equals(category) || "invoices".equals(category)) {
             if (!isAuthorizedStaff) {
                 log.warn("Từ chối người dùng không phải nhân viên phòng khám (User {}) xem tài liệu nội bộ {}/{}",
                         effectiveUser.getUserId(), category, fileName);
@@ -204,6 +204,10 @@ public class SecuredUploadResourceController {
         } else if ("invoices".equals(category)) {
             if (!isAuthorizedStaff && !isPatient) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem hóa đơn tài chính.");
+            }
+        } else if ("clinical_photos".equals(category)) {
+            if (!isAuthorizedStaff && !isPatient) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem ảnh lâm sàng.");
             }
         }
     }
