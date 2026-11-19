@@ -78,8 +78,24 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
     @Override
     @Transactional
     public WorkflowTemplateResponseDTO saveTemplate(WorkflowTemplateRequestDTO dto, Long userId) {
-        ClinicalWorkflowTemplate template;
+        if (dto == null) {
+            throw new IllegalArgumentException("Dữ liệu quy trình không được để trống.");
+        }
+        String templateName = dto.getTemplateName() != null ? dto.getTemplateName().trim() : "";
+        if (templateName.isEmpty()) {
+            throw new IllegalArgumentException("Tên quy trình kỹ thuật không được để trống.");
+        }
 
+        FlowMode requestedFlowMode = null;
+        if (dto.getFlowMode() != null && !dto.getFlowMode().isBlank()) {
+            try {
+                requestedFlowMode = FlowMode.valueOf(dto.getFlowMode().trim().toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException("Chế độ luồng quy trình (flowMode) không hợp lệ: " + dto.getFlowMode());
+            }
+        }
+
+        ClinicalWorkflowTemplate template;
         if (dto.getTemplateId() != null) {
             template = templateRepo.findById(dto.getTemplateId())
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy quy trình với ID: " + dto.getTemplateId()));
@@ -93,14 +109,62 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         if (code.isEmpty()) {
             code = "QTKT-" + System.currentTimeMillis() % 100000;
         }
+        Optional<ClinicalWorkflowTemplate> existingByCode = templateRepo.findByTemplateCode(code);
+        if (existingByCode.isPresent()
+                && (template.getTemplateId() == null || !existingByCode.get().getTemplateId().equals(template.getTemplateId()))) {
+            throw new IllegalStateException("Mã quy trình '" + code + "' đã tồn tại trên hệ thống. Vui lòng chọn mã khác.");
+        }
+
+        // Chặn thay đổi dịch vụ liên kết nếu quy trình đã phát sinh lượt thực hiện (executions)
+        if (template.getTemplateId() != null) {
+            Long currentServiceId = template.getService() != null ? template.getService().getServiceId() : null;
+            Long requestedServiceId = dto.getServiceId();
+            if (!Objects.equals(currentServiceId, requestedServiceId)) {
+                boolean hasTemplateExecutions = executionRepo.findAll().stream()
+                        .anyMatch(ex -> ex.getVersion() != null
+                                && ex.getVersion().getTemplate() != null
+                                && template.getTemplateId().equals(ex.getVersion().getTemplate().getTemplateId()));
+                if (hasTemplateExecutions) {
+                    throw new IllegalStateException(
+                            "Không thể thay đổi dịch vụ liên kết vì quy trình đã có lượt khám thực hiện.");
+                }
+            }
+        }
+
+        // Validate danh sách bước trước khi cập nhật DB (tránh lỗi trùng stepCode hoặc tên trống gây 500)
+        if (dto.getSteps() != null) {
+            Set<String> seenStepCodes = new HashSet<>();
+            int seqCheck = 1;
+            for (WorkflowStepDTO sDto : dto.getSteps()) {
+                if (sDto == null || sDto.getStepName() == null || sDto.getStepName().trim().isEmpty()) {
+                    throw new IllegalArgumentException("Tên bước quy trình không được để trống.");
+                }
+                int seqOrder = sDto.getSequenceOrder() != null ? sDto.getSequenceOrder() : seqCheck;
+                seqCheck++;
+                String stepCode = (sDto.getStepCode() != null && !sDto.getStepCode().trim().isEmpty())
+                        ? sDto.getStepCode().trim().toUpperCase()
+                        : "STEP-" + seqOrder;
+                if (!seenStepCodes.add(stepCode)) {
+                    throw new IllegalStateException("Mã bước '" + stepCode + "' bị trùng lặp trong cùng quy trình.");
+                }
+                if (sDto.getTargetQueueType() != null && !sDto.getTargetQueueType().isBlank()) {
+                    try {
+                        QueueType.valueOf(sDto.getTargetQueueType().trim().toUpperCase());
+                    } catch (IllegalArgumentException ex) {
+                        throw new IllegalArgumentException("Loại hàng đợi đích (targetQueueType) không hợp lệ: " + sDto.getTargetQueueType());
+                    }
+                }
+            }
+        }
+
         template.setTemplateCode(code);
-        template.setTemplateName(dto.getTemplateName());
+        template.setTemplateName(templateName);
         template.setDescription(dto.getDescription());
 
         // Status
         if (dto.getStatus() != null && !dto.getStatus().isEmpty()) {
             try {
-                template.setStatus(WorkflowTemplateStatus.valueOf(dto.getStatus()));
+                template.setStatus(WorkflowTemplateStatus.valueOf(dto.getStatus().trim().toUpperCase()));
             } catch (Exception ignored) {
                 template.setStatus(WorkflowTemplateStatus.ACTIVE);
             }
@@ -110,7 +174,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
 
         // Link Service
         if (dto.getServiceId() != null) {
-            com.cvdcms.entity.Service s = serviceRepo.findById(dto.getServiceId()).orElse(null);
+            com.cvdcms.entity.Service s = serviceRepo.findById(dto.getServiceId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ với ID: " + dto.getServiceId()));
             template.setService(s);
         } else {
             template.setService(null);
@@ -129,7 +194,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             targetVersion.setTemplate(template);
             targetVersion.setVersionNumber(1);
             targetVersion.setStatus(WorkflowVersionStatus.PUBLISHED);
-            targetVersion.setFlowMode(FlowMode.CONTINUOUS);
+            targetVersion.setFlowMode(requestedFlowMode != null ? requestedFlowMode : FlowMode.CONTINUOUS);
             targetVersion.setChangeSummary("Khởi tạo quy trình chuẩn Bộ Y Tế");
             targetVersion.setCreatedBy(userId);
             targetVersion.setPublishedAt(LocalDateTime.now());
@@ -143,19 +208,45 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             targetVersion.setTemplate(template);
             targetVersion.setVersionNumber(nextVersion);
             targetVersion.setStatus(WorkflowVersionStatus.PUBLISHED);
-            targetVersion.setFlowMode(existingLatest.getFlowMode() != null ? existingLatest.getFlowMode() : FlowMode.CONTINUOUS);
+            targetVersion.setFlowMode(requestedFlowMode != null
+                    ? requestedFlowMode
+                    : (existingLatest.getFlowMode() != null ? existingLatest.getFlowMode() : FlowMode.CONTINUOUS));
             targetVersion.setChangeSummary("Cập nhật quy trình phiên bản v" + nextVersion);
             targetVersion.setCreatedBy(userId);
             targetVersion.setPublishedAt(LocalDateTime.now());
             targetVersion = versionRepo.save(targetVersion);
         } else {
             targetVersion = existingLatest;
+            if (requestedFlowMode != null && targetVersion.getFlowMode() != requestedFlowMode) {
+                targetVersion.setFlowMode(requestedFlowMode);
+                targetVersion = versionRepo.save(targetVersion);
+            }
         }
 
         // Cập nhật các bước (Steps) trên DRAFT mới tạo hoặc version mới phát hành
         if (dto.getSteps() != null) {
             if (targetVersion == existingLatest) {
-                stepRepo.deleteByVersion_VersionId(targetVersion.getVersionId());
+                Long targetVersionId = targetVersion.getVersionId();
+                boolean versionHasExecutions = executionRepo.findAll().stream()
+                        .anyMatch(ex -> ex.getVersion() != null && targetVersionId.equals(ex.getVersion().getVersionId()));
+                if (!versionHasExecutions) {
+                    List<ClinicalWorkflowStep> oldSteps = stepRepo.findByVersion_VersionIdOrderBySequenceOrderAsc(targetVersionId);
+                    if (oldSteps != null && !oldSteps.isEmpty()) {
+                        Set<Long> oldStepIds = oldSteps.stream()
+                                .map(ClinicalWorkflowStep::getStepId)
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.toSet());
+                        if (!oldStepIds.isEmpty()) {
+                            versionHasExecutions = stepExecutionRepo.findAll().stream()
+                                    .anyMatch(se -> se.getStep() != null && oldStepIds.contains(se.getStep().getStepId()));
+                        }
+                    }
+                }
+                if (versionHasExecutions) {
+                    throw new IllegalStateException(
+                            "Không thể xóa hoặc ghi đè các bước của phiên bản đã có lượt khám thực hiện.");
+                }
+                stepRepo.deleteByVersion_VersionId(targetVersionId);
                 stepRepo.flush();
             }
 
@@ -163,10 +254,12 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             for (WorkflowStepDTO sDto : dto.getSteps()) {
                 ClinicalWorkflowStep step = new ClinicalWorkflowStep();
                 step.setVersion(targetVersion);
-                step.setSequenceOrder(sDto.getSequenceOrder() != null ? sDto.getSequenceOrder() : seq++);
-                step.setStepCode(sDto.getStepCode() != null && !sDto.getStepCode().isEmpty() 
-                        ? sDto.getStepCode() : "STEP-" + step.getSequenceOrder());
-                step.setStepName(sDto.getStepName());
+                int seqOrder = sDto.getSequenceOrder() != null ? sDto.getSequenceOrder() : seq;
+                seq++;
+                step.setSequenceOrder(seqOrder);
+                step.setStepCode(sDto.getStepCode() != null && !sDto.getStepCode().trim().isEmpty()
+                        ? sDto.getStepCode().trim().toUpperCase() : "STEP-" + seqOrder);
+                step.setStepName(sDto.getStepName().trim());
                 step.setStepDescription(sDto.getStepDescription());
                 step.setCompletionCriteria(sDto.getCompletionCriteria());
                 step.setEstimatedDurationMinutes(sDto.getEstimatedDurationMinutes() != null ? sDto.getEstimatedDurationMinutes() : 10);
@@ -176,12 +269,18 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
 
                 if (sDto.getStepType() != null && !sDto.getStepType().isEmpty()) {
                     try {
-                        step.setStepType(StepType.valueOf(sDto.getStepType().toUpperCase()));
+                        step.setStepType(StepType.valueOf(sDto.getStepType().trim().toUpperCase()));
                     } catch (Exception ignored) {
                         step.setStepType(StepType.CLINICAL);
                     }
                 } else {
                     step.setStepType(StepType.CLINICAL);
+                }
+
+                if (sDto.getTargetQueueType() != null && !sDto.getTargetQueueType().isBlank()) {
+                    step.setTargetQueueType(QueueType.valueOf(sDto.getTargetQueueType().trim().toUpperCase()));
+                } else {
+                    step.setTargetQueueType(null);
                 }
 
                 step.setStatus(StepStatus.ACTIVE);
@@ -737,6 +836,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     .stepType(s.getStepType() != null ? s.getStepType().name() : "CLINICAL")
                     .isOptional(s.getIsOptional())
                     .requiresClinicalApproval(s.getRequiresClinicalApproval())
+                    .targetQueueType(s.getTargetQueueType() != null ? s.getTargetQueueType().name() : null)
                     .status(s.getStatus() != null ? s.getStatus().name() : "ACTIVE")
                     .build()).collect(Collectors.toList());
 

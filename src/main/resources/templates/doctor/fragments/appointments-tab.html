@@ -12,7 +12,7 @@
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <i class="bi bi-calendar2-check text-primary fs-5"></i>
                 <h2 class="df-title-primary mb-0">Lịch hẹn &amp; kế hoạch tái khám</h2>
-                <span class="df-tab-count df-num"
+                <span class="df-tab-count df-num" id="appointmentsTabCountBadge"
                       th:text="${reExaminations != null ? reExaminations.size() : 0} + ' lịch hẹn'">0 lịch hẹn</span>
                 <span class="df-subtitle-secondary d-none d-lg-inline">· Theo dõi lịch hẹn theo lộ trình điều trị</span>
             </div>
@@ -68,7 +68,8 @@
                         <div class="small text-muted df-num" th:if="${re.expectedTime != null}" th:text="${#temporals.format(re.expectedTime, 'HH:mm')}">09:00</div>
                     </td>
                     <td class="text-center">
-                        <span class="badge bg-primary-subtle text-primary border" th:text="${re.preferredSession != null ? (re.preferredSession.name() == 'MORNING' ? 'Sáng' : (re.preferredSession.name() == 'AFTERNOON' ? 'Chiều' : 'Cả ngày')) : 'Sáng'}">Sáng</span>
+                        <span class="badge bg-primary-subtle text-primary border"
+                              th:text="${re.preferredSession != null ? (re.preferredSession.name() == 'MORNING' ? 'Sáng' : (re.preferredSession.name() == 'AFTERNOON' ? 'Chiều' : (re.preferredSession.name() == 'EVENING' ? 'Tối' : 'Cả ngày'))) : 'Sáng'}">Sáng</span>
                     </td>
                     <td>
                         <div class="small fw-semibold text-dark" th:text="${re.doctorName != null ? re.doctorName : 'BS. Lê Hoàng Nam'}">BS. Lê Hoàng Nam</div>
@@ -80,13 +81,23 @@
                         <span class="small text-secondary" th:text="${re.initialSymptoms != null and !re.initialSymptoms.isEmpty() ? re.initialSymptoms : 'Tái khám định kỳ sau điều trị'}">Tái khám định kỳ</span>
                     </td>
                     <td class="text-center">
-                        <span class="badge bg-warning-subtle text-dark border border-warning"
-                              th:text="${re.status != null ? re.status.name() : 'Chờ khám'}">
+                        <span class="badge"
+                              th:classappend="${re.status != null and re.status.name() == 'COMPLETED' ? 'bg-success-subtle text-success border border-success-subtle' : (re.status != null and re.status.name() == 'CANCELLED' ? 'bg-secondary-subtle text-secondary border' : (re.status != null and re.status.name() == 'CONFIRMED' ? 'bg-primary-subtle text-primary border border-primary-subtle' : (re.status != null and re.status.name() == 'CHECKED_IN' ? 'bg-info-subtle text-info border border-info-subtle' : 'bg-warning-subtle text-dark border border-warning')))}"
+                              th:text="${re.status != null ? (re.status.name() == 'COMPLETED' ? 'Đã khám' : (re.status.name() == 'CANCELLED' ? 'Đã hủy' : (re.status.name() == 'CONFIRMED' ? 'Đã xác nhận' : (re.status.name() == 'CHECKED_IN' ? 'Đã check-in' : 'Chờ khám')))) : 'Chờ khám'}">
                             Chờ khám
                         </span>
                     </td>
                     <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" title="Chỉnh sửa hẹn" onclick="openReExamModal()">
+                        <button type="button" class="btn btn-sm btn-outline-primary" title="Chỉnh sửa hẹn"
+                                th:if="${re.status == null or (re.status.name() != 'COMPLETED' and re.status.name() != 'CANCELLED' and re.status.name() != 'CHECKED_IN')}"
+                                th:data-id="${re.appointmentId}"
+                                th:data-code="${re.appointmentCode}"
+                                th:data-date="${re.appointmentDate != null ? #temporals.format(re.appointmentDate, 'yyyy-MM-dd') : ''}"
+                                th:data-time="${re.expectedTime != null ? #temporals.format(re.expectedTime, 'HH:mm') : ''}"
+                                th:data-session="${re.preferredSession != null ? re.preferredSession.name() : 'MORNING'}"
+                                th:data-doctor-id="${re.doctorId}"
+                                th:data-reason="${re.initialSymptoms}"
+                                onclick="openEditReExamModal(this)">
                             <i class="bi bi-pencil-square"></i>
                         </button>
                     </td>

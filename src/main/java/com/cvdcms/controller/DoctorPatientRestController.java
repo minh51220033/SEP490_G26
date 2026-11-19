@@ -169,6 +169,22 @@ public class DoctorPatientRestController {
             Visit activeVisit = activeVisitOpt.get();
             Long activeBranchId = activeVisit.getBranch() != null ? activeVisit.getBranch().getBranchId() : null;
             if (isAdmin || assignedBranch == null || (activeBranchId != null && activeBranchId.equals(assignedBranch.getBranchId()))) {
+                StaffProfile actingDoctor = (!isAdmin && currentUser != null)
+                        ? staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null)
+                        : null;
+                boolean canAccessVisit = isAdmin || (actingDoctor != null && (
+                        (activeVisit.getPrimaryDoctor() != null && actingDoctor.getStaffId().equals(activeVisit.getPrimaryDoctor().getStaffId()))
+                        || (doctorCoverGrantRepository != null && doctorCoverGrantRepository.existsByVisitVisitIdAndCoveringDoctorStaffIdAndRevokedAtIsNullAndExpiresAtAfter(
+                                activeVisit.getVisitId(), actingDoctor.getStaffId(), LocalDateTime.now()))
+                ));
+                if (!canAccessVisit) {
+                    String ownerName = activeVisit.getPrimaryDoctor() != null && activeVisit.getPrimaryDoctor().getFullName() != null
+                            ? activeVisit.getPrimaryDoctor().getFullName()
+                            : "bác sĩ khác";
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                            "message", "Bệnh nhân đang có ca khám hoạt động (" + activeVisit.getVisitCode() + ") do " + ownerName + " phụ trách và bạn chưa được ủy quyền khám thay."
+                    ));
+                }
                 String visitToken = encodeVisit(activeVisit.getVisitId());
                 return ResponseEntity.ok(Map.of(
                         "visitId", activeVisit.getVisitId(),
@@ -303,14 +319,40 @@ public class DoctorPatientRestController {
             @RequestParam(value = "branchId", required = false) Long branchId,
             HttpSession session) {
 
-        User currentUser = getLoggedInUser(session);
-        boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
-        StaffProfile currentDoctor = (currentUser != null && !isAdmin)
+        User currentUser = doctorVisitAccess != null
+                ? doctorVisitAccess.requireAuthenticatedUser(session)
+                : getLoggedInUser(session);
+        if (currentUser == null || currentUser.getUserId() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
+        boolean isAdmin = doctorVisitAccess != null
+                ? doctorVisitAccess.isAdmin(currentUser)
+                : userRepository.hasActiveAdminRole(currentUser.getUserId());
+        StaffProfile currentDoctor = !isAdmin
                 ? staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null)
                 : null;
-        Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
-        if (!isAdmin && assignedBranch != null) {
-            branchId = assignedBranch.getBranchId();
+        Set<Long> allowedBranches = null;
+        if (!isAdmin) {
+            Set<Long> resolved = doctorVisitAccess != null
+                    ? doctorVisitAccess.resolveAccessibleBranchIds(currentUser)
+                    : Collections.emptySet();
+            allowedBranches = new LinkedHashSet<>(resolved != null ? resolved : Collections.emptySet());
+            if (allowedBranches.isEmpty()) {
+                Branch assignedBranch = getDoctorAssignedBranch(currentUser);
+                if (assignedBranch != null && assignedBranch.getBranchId() != null) {
+                    allowedBranches.add(assignedBranch.getBranchId());
+                }
+            }
+            if (allowedBranches.isEmpty()) {
+                return ResponseEntity.ok(Collections.emptyList());
+            }
+            if (branchId != null) {
+                if (!allowedBranches.contains(branchId)) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Không có quyền truy cập dữ liệu của chi nhánh khác.");
+                }
+            } else if (allowedBranches.size() == 1) {
+                branchId = allowedBranches.iterator().next();
+            }
         }
 
         LocalDateTime start = null;
@@ -382,22 +424,42 @@ public class DoctorPatientRestController {
                     .collect(Collectors.toList());
         }
 
+        if (allowedBranches != null) {
+            final Set<Long> branchFilter = allowedBranches;
+            visits = visits.stream()
+                    .filter(v -> v.getBranch() != null && branchFilter.contains(v.getBranch().getBranchId()))
+                    .collect(Collectors.toList());
+        }
+
         // LỌC CỨNG (Cách 1): Bác sĩ chỉ thấy danh sách ca khám thuộc về mình hoặc được ủy quyền khám thay
+        final Set<Long> coveredIds;
         if (currentDoctor != null) {
             final Long docStaffId = currentDoctor.getStaffId();
-            Set<Long> coveredIds = doctorCoverGrantRepository != null
+            coveredIds = doctorCoverGrantRepository != null
                     ? doctorCoverGrantRepository.findActiveCoveredVisitIds(docStaffId, LocalDateTime.now())
                     : Collections.emptySet();
             visits = visits.stream()
                     .filter(v -> (v.getPrimaryDoctor() != null && docStaffId.equals(v.getPrimaryDoctor().getStaffId()))
                             || coveredIds.contains(v.getVisitId()))
                     .collect(Collectors.toList());
+        } else {
+            coveredIds = Collections.emptySet();
         }
 
         Map<Long, ResolvedTurnInfo> turnMap = resolveDailyTurnNumbers(visits, branchId);
 
+        final Long currentDocStaffId = currentDoctor != null ? currentDoctor.getStaffId() : null;
         List<com.cvdcms.DTO.DailyVisitDTO> result = visits.stream()
-                .map(v -> mapToDailyVisitDTO(v, currentVisitId, turnMap.get(v.getVisitId())))
+                .map(v -> {
+                    boolean isPrimary = currentDocStaffId != null
+                            && v.getPrimaryDoctor() != null
+                            && currentDocStaffId.equals(v.getPrimaryDoctor().getStaffId());
+                    boolean isCovered = currentDocStaffId != null
+                            && !isPrimary
+                            && coveredIds.contains(v.getVisitId());
+                    boolean isAccessible = isAdmin || currentDocStaffId == null || isPrimary || isCovered;
+                    return mapToDailyVisitDTO(v, currentVisitId, turnMap.get(v.getVisitId()), isCovered, isAccessible);
+                })
                 .sorted(Comparator
                         .comparing((com.cvdcms.DTO.DailyVisitDTO d) -> d.getCheckInIso() != null ? d.getCheckInIso() : "", Comparator.reverseOrder())
                         .thenComparingInt(this::getVisitStatusSortRank)
@@ -413,8 +475,8 @@ public class DoctorPatientRestController {
     private int getVisitStatusSortRank(com.cvdcms.DTO.DailyVisitDTO d) {
         if (d == null || d.getStatus() == null) return 2;
         String s = d.getStatus().toUpperCase();
-        if (s.contains("EXAM") || s.contains("TREATMENT") || s.equals("ORDERED")) {
-            return 0; // Đang khám / Điều trị: Ưu tiên cao nhất
+        if (s.contains("EXAM") || s.contains("TREATMENT") || s.equals("WAITING_PARACLINICAL") || s.equals("WAITING_RESULT") || s.equals("ORDERED")) {
+            return 0; // Đang khám / Điều trị / Cận lâm sàng: Ưu tiên cao nhất
         }
         if (s.equals("WAITING")) {
             return 1; // Đang chờ khám: Ưu tiên kế tiếp
@@ -676,7 +738,12 @@ public class DoctorPatientRestController {
         return clinicalQueueTicketRepository.save(ticket);
     }
 
-    private com.cvdcms.DTO.DailyVisitDTO mapToDailyVisitDTO(Visit v, Long currentVisitId, ResolvedTurnInfo turnInfo) {
+    private com.cvdcms.DTO.DailyVisitDTO mapToDailyVisitDTO(
+            Visit v,
+            Long currentVisitId,
+            ResolvedTurnInfo turnInfo,
+            boolean coveredByCurrentDoctor,
+            boolean accessibleByCurrentDoctor) {
         PatientProfile p = v.getPatientProfile();
 
         String patientCode = p != null ? p.getPatientCode() : "N/A";
@@ -783,125 +850,9 @@ public class DoctorPatientRestController {
                 .isEmergency(isEmergency)
                 .priorityReason(priorityReason)
                 .visitType(visitTypeName)
+                .coveredByCurrentDoctor(coveredByCurrentDoctor)
+                .accessibleByCurrentDoctor(accessibleByCurrentDoctor)
                 .build();
-    }
-
-    @PostMapping("/quick-create")
-    @Transactional
-    public ResponseEntity<Map<String, Object>> quickCreatePatientAndVisit(
-            @RequestBody Map<String, String> payload,
-            HttpSession session) {
-        String fullName = payload.get("fullName");
-        String phoneNumber = payload.get("phoneNumber");
-        String gender = payload.getOrDefault("gender", "Nam");
-        String dobStr = payload.get("dob");
-        String symptoms = payload.getOrDefault("symptoms", "Khám & Điều trị tại ghế");
-        String branchIdStr = payload.get("branchId");
-
-        if (fullName == null || fullName.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Họ tên bệnh nhân không được để trống"));
-        }
-        if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Số điện thoại không được để trống"));
-        }
-
-        User currentUser = doctorVisitAccess != null
-                ? doctorVisitAccess.requireAuthenticatedUser(session)
-                : getLoggedInUser(session);
-        boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
-        Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
-
-        Long branchId = null;
-        if (branchIdStr != null && !branchIdStr.trim().isEmpty()) {
-            try {
-                branchId = Long.parseLong(branchIdStr.trim());
-            } catch (Exception ignored) {}
-        }
-
-        if (!isAdmin && assignedBranch != null) {
-            if (branchId != null && !branchId.equals(assignedBranch.getBranchId())) {
-                String fullBranchName = (assignedBranch.getBranchCode() != null ? assignedBranch.getBranchCode() + " - " : "") + assignedBranch.getBranchName();
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-                        "message", "Cảnh báo: Bác sĩ chỉ được phép tiếp nhận bệnh nhân tại cơ sở đang làm việc (" + fullBranchName + ")!"
-                ));
-            }
-            branchId = assignedBranch.getBranchId();
-        }
-
-        Branch branch = null;
-        if (branchId != null) {
-            branch = branchRepository.findById(branchId).orElse(null);
-        }
-        if (branch == null && assignedBranch != null) {
-            branch = assignedBranch;
-        }
-        if (branch == null) {
-            branch = branchRepository.findAll().stream().findFirst().orElse(null);
-        }
-
-        LocalDate dob = null;
-        if (dobStr != null && !dobStr.trim().isEmpty()) {
-            try {
-                dob = LocalDate.parse(dobStr.trim());
-            } catch (Exception ignored) {}
-        }
-
-        PatientProfile patient = new PatientProfile();
-        patient.setFullName(fullName.trim());
-        patient.setPhoneNumber(phoneNumber.trim());
-        patient.setGender(gender);
-        patient.setDob(dob);
-        patient.setPreferredBranch(branch);
-        patient.setStatus("ACTIVE");
-        patient.setDepositBalance(java.math.BigDecimal.ZERO);
-
-        long pCount = patientProfileRepository.count() + 1;
-        patient.setPatientCode("BN" + String.format("%05d", pCount));
-        patient = patientProfileRepository.save(patient);
-
-        Visit visit = new Visit();
-        visit.setPatientProfile(patient);
-        visit.setCheckInAt(LocalDateTime.now());
-        visit.setStatus(VisitStatus.IN_EXAM);
-        visit.setVisitType(VisitType.WALK_IN);
-        visit.setInitialSymptoms(symptoms);
-        visit.setBranch(branch);
-
-        StaffProfile doctor = null;
-        if (currentUser != null) {
-            doctor = staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null);
-        }
-        if (doctor == null) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Chỉ tài khoản bác sĩ đã liên kết hồ sơ nhân sự (StaffProfile) mới được tạo nhanh ca khám.");
-        }
-        visit.setPrimaryDoctor(doctor);
-
-        long vCount = visitRepository.count() + 1;
-        String vCode = "VIS" + (10000 + vCount);
-        if (visitRepository.findByVisitCode(vCode).isPresent()) {
-            vCode = "VIS" + System.currentTimeMillis();
-        }
-        visit.setVisitCode(vCode);
-        visit = visitRepository.save(visit);
-        examinations.ensureForAssignedVisit(visit.getVisitId());
-        ensureQueueTicketForVisit(visit);
-
-        String createdVisitToken = encodeVisit(visit.getVisitId());
-        String redirectUrl = "/doctor/examination/" + createdVisitToken + "/diagnoses";
-        if (branch != null) {
-            redirectUrl += "?branchId=" + branch.getBranchId();
-        }
-
-        return ResponseEntity.ok(Map.of(
-                "profileId", patient.getProfileId(),
-                "patientToken", encodePatient(patient.getProfileId()),
-                "patientCode", patient.getPatientCode(),
-                "visitId", visit.getVisitId(),
-                "visitToken", createdVisitToken,
-                "visitCode", visit.getVisitCode(),
-                "redirectUrl", redirectUrl
-        ));
     }
 
 }

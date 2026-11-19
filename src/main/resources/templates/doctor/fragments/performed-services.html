@@ -186,11 +186,12 @@
                     <th style="width: 140px; white-space: nowrap;" class="text-end">Thành tiền</th>
                     <th style="width: 200px; min-width: 180px; white-space: nowrap;">Bác sĩ &amp; phụ tá</th>
                     <th style="width: 130px; white-space: nowrap;" class="text-center">Trạng thái</th>
+                    <th th:if="${!(isClinicalLocked == true or isReadOnlyView == true)}" style="width: 72px; white-space: nowrap;" class="text-center">Thao tác</th>
                 </tr>
                 </thead>
                 <tbody id="performedServicesTableBody">
                 <tr th:if="${performedServices == null or performedServices.isEmpty()}" id="emptyPerformedRow">
-                    <td colspan="8" class="text-center py-4 px-3" style="background: #f8fafc;">
+                    <td colspan="8" th:attr="colspan=${!(isClinicalLocked == true or isReadOnlyView == true) ? 9 : 8}" class="text-center py-4 px-3" style="background: #f8fafc;">
                         <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 120px;">
                             <h6 class="fw-bold text-dark mb-1">Chưa có dịch vụ nào được ghi nhận trong ca khám này</h6>
                             <p class="df-meta-tertiary mb-3" style="max-width: 480px;">
@@ -203,21 +204,30 @@
                         </div>
                     </td>
                 </tr>
-                <tr th:each="ps : ${performedServices}" th:id="'ps-row-' + ${ps.performedId}" th:data-plan-item-id="${ps.planItemId}" class="dv-data-row">
+                <tr th:each="ps : ${performedServices}" th:id="'ps-row-' + ${ps.performedId}" th:data-plan-item-id="${ps.planItemId}" th:data-final-price="${ps.finalPrice != null ? ps.finalPrice : 0}" class="dv-data-row">
                     <td style="white-space: nowrap;">
                         <span class="badge bg-light text-dark border fw-bold df-num" th:text="${ps.serviceCode != null ? ps.serviceCode : 'DV1001'}">DV1001</span>
                     </td>
                     <td>
                         <div class="fw-bold text-dark" th:text="${ps.stepName != null and !ps.stepName.isEmpty() ? ps.stepName : ps.serviceName}">Hàn răng sâu Composite</div>
-                        <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
-                            <span class="badge bg-light text-primary border" style="font-size: 11px; font-weight: 500;">
-                                Từ KHDT: <span th:text="${ps.serviceName}">Dịch vụ</span>
+                        <div class="d-flex align-items-center gap-1 mt-1 flex-wrap"
+                             th:if="${ps.planItemId != null or (ps.planName != null and !ps.planName.isEmpty()) or (ps.categoryName != null and !ps.categoryName.isEmpty())}">
+                            <span class="badge bg-light text-primary border" style="font-size: 11px; font-weight: 500;"
+                                  th:if="${ps.planItemId != null or (ps.planName != null and !ps.planName.isEmpty())}">
+                                Từ KHDT: <span th:text="${ps.planName != null and !ps.planName.isEmpty() ? ps.planName : ps.serviceName}">KHDT</span>
                                 <span th:if="${ps.stageName != null and !ps.stageName.isEmpty()}" th:text="' - ' + ${ps.stageName}"> - Giai đoạn</span>
+                            </span>
+                            <span class="badge bg-light text-secondary border" style="font-size: 11px; font-weight: 500;"
+                                  th:if="${ps.planItemId == null and (ps.planName == null or ps.planName.isEmpty()) and ps.categoryName != null and !ps.categoryName.isEmpty()}"
+                                  th:text="${ps.categoryName}">Danh mục</span>
+                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" style="font-size: 11px; font-weight: 500;"
+                                  th:if="${ps.planItemId != null and ps.finalPrice != null and ps.finalPrice.signum() == 0 and ps.clinicalNotes != null and ps.clinicalNotes.contains('Đã bao gồm trong KHĐT')}">
+                                Trả theo đợt (0 đ)
                             </span>
                         </div>
                     </td>
                     <td class="text-center" style="white-space: nowrap;">
-                        <span class="chip-tooth df-num" th:text="${ps.toothNumbers != null and !ps.toothNumbers.isEmpty() ? ((ps.toothNumbers == 'Toàn hàm' and ps.serviceName != null and ps.serviceName.toLowerCase().contains('răng khôn')) ? '18, 28, 38, 48' : ps.toothNumbers) : 'Toàn hàm'}">R16</span>
+                        <span class="chip-tooth df-num" th:text="${ps.toothNumbers != null and !ps.toothNumbers.isEmpty() ? ps.toothNumbers : 'Toàn hàm'}">R16</span>
                     </td>
                     <td class="text-end text-muted small df-num" style="white-space: nowrap;" th:text="${ps.unitPrice != null ? #numbers.formatDecimal(ps.unitPrice, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">
                         350,000 đ
@@ -236,6 +246,15 @@
                         <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
                             Đã thực hiện
                         </span>
+                    </td>
+                    <td th:if="${!(isClinicalLocked == true or isReadOnlyView == true)}" class="text-center" style="white-space: nowrap;">
+                        <button th:if="${ps.status != 'CANCELLED'}"
+                                type="button"
+                                class="df-btn-icon-muted"
+                                title="Hủy dịch vụ thực hiện này"
+                                th:onclick="'deletePerformedService(' + ${ps.performedId} + ')'">
+                            <i class="bi bi-trash3"></i>
+                        </button>
                     </td>
                 </tr>
                 </tbody>

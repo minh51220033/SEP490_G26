@@ -183,10 +183,20 @@ public class DiagnosisController {
                 session.setAttribute("doctorSelectedBranchId", branchId);
             }
         } else {
+            Object modelBranchId = model.getAttribute("currentBranchId");
             if (branchId != null && session != null) {
+                session.setAttribute("currentBranchId", branchId);
                 session.setAttribute("doctorSelectedBranchId", branchId);
-            } else if (session != null && session.getAttribute("doctorSelectedBranchId") != null) {
-                branchId = (Long) session.getAttribute("doctorSelectedBranchId");
+            } else if (modelBranchId instanceof Long mBranchId) {
+                branchId = mBranchId;
+                if (session != null) {
+                    session.setAttribute("doctorSelectedBranchId", branchId);
+                }
+            } else if (session != null && session.getAttribute("currentBranchId") instanceof Long sBranchId) {
+                branchId = sBranchId;
+                session.setAttribute("doctorSelectedBranchId", branchId);
+            } else if (session != null) {
+                session.removeAttribute("doctorSelectedBranchId");
             }
         }
 
@@ -269,10 +279,20 @@ public class DiagnosisController {
                 session.setAttribute("doctorSelectedBranchId", branchId);
             }
         } else {
+            Object modelBranchId = model.getAttribute("currentBranchId");
             if (branchId != null && session != null) {
+                session.setAttribute("currentBranchId", branchId);
                 session.setAttribute("doctorSelectedBranchId", branchId);
-            } else if (session != null && session.getAttribute("doctorSelectedBranchId") != null) {
-                branchId = (Long) session.getAttribute("doctorSelectedBranchId");
+            } else if (modelBranchId instanceof Long mBranchId) {
+                branchId = mBranchId;
+                if (session != null) {
+                    session.setAttribute("doctorSelectedBranchId", branchId);
+                }
+            } else if (session != null && session.getAttribute("currentBranchId") instanceof Long sBranchId) {
+                branchId = sBranchId;
+                session.setAttribute("doctorSelectedBranchId", branchId);
+            } else if (session != null) {
+                session.removeAttribute("doctorSelectedBranchId");
             }
         }
 
@@ -326,11 +346,27 @@ public class DiagnosisController {
         return renderEmptyDiagnosisPage(branchId, session, model);
     }
 
+    private boolean canDoctorAccessVisitForExam(boolean isAdmin, StaffProfile currentDoctor, Visit visit) {
+        if (isAdmin) {
+            return true;
+        }
+        if (currentDoctor == null || visit == null) {
+            return false;
+        }
+        if (visit.getPrimaryDoctor() != null && currentDoctor.getStaffId().equals(visit.getPrimaryDoctor().getStaffId())) {
+            return true;
+        }
+        return doctorCoverGrantRepository != null
+                && doctorCoverGrantRepository.existsByVisitVisitIdAndCoveringDoctorStaffIdAndRevokedAtIsNullAndExpiresAtAfter(
+                        visit.getVisitId(), currentDoctor.getStaffId(), LocalDateTime.now());
+    }
+
     @GetMapping("/doctor/examination/patient/{patientRef}")
     public String examinationByPatient(
             @PathVariable("patientRef") String patientRef,
             @RequestParam(value = "newVisit", defaultValue = "false") boolean forceNewVisit,
-            jakarta.servlet.http.HttpSession session
+            jakarta.servlet.http.HttpSession session,
+            RedirectAttributes redirectAttributes
     ) {
         Long patientId = decodePatientRef(patientRef);
         doctorVisitAccess.requirePatientWrite(session, patientId);
@@ -350,14 +386,25 @@ public class DiagnosisController {
             if (activeVisitOpt.isPresent()) {
                 Visit av = activeVisitOpt.get();
                 if (isAdmin || assignedBranch == null || (av.getBranch() != null && av.getBranch().getBranchId().equals(assignedBranch.getBranchId()))) {
-                    return "redirect:/doctor/examination/" + encodeVisit(av.getVisitId()) + "/diagnoses";
+                    if (canDoctorAccessVisitForExam(isAdmin, currentDoctor, av)) {
+                        return "redirect:/doctor/examination/" + encodeVisit(av.getVisitId()) + "/diagnoses";
+                    }
+                    String ownerName = av.getPrimaryDoctor() != null && av.getPrimaryDoctor().getFullName() != null
+                            ? av.getPrimaryDoctor().getFullName()
+                            : "bác sĩ khác";
+                    redirectAttributes.addFlashAttribute("errorMessage",
+                            "Bệnh nhân đang có ca khám hoạt động (" + av.getVisitCode() + ") do " + ownerName + " phụ trách và bạn chưa được ủy quyền khám thay.");
+                    return "redirect:/doctor/daily-visits";
                 }
             }
             Optional<Visit> latestVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdOrderByCheckInAtDesc(patientId);
             if (latestVisitOpt.isPresent()) {
                 Visit lv = latestVisitOpt.get();
                 if (isAdmin || assignedBranch == null || (lv.getBranch() != null && lv.getBranch().getBranchId().equals(assignedBranch.getBranchId()))) {
-                    return "redirect:/doctor/examination/" + encodeVisit(lv.getVisitId()) + "/diagnoses";
+                    if (canDoctorAccessVisitForExam(isAdmin, currentDoctor, lv)) {
+                        return "redirect:/doctor/examination/" + encodeVisit(lv.getVisitId()) + "/diagnoses";
+                    }
+                    return "redirect:/doctor/examination/" + encodeVisit(lv.getVisitId()) + "/diagnoses?readOnly=true&fromPatientRef=" + patientRef;
                 }
             }
         }

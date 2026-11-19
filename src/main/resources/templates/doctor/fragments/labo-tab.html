@@ -6,7 +6,8 @@
 <!-- TAB: ĐẶT XƯỞNG / LABO PHỤC HÌNH & MẪU XÉT NGHIỆM GỬI NGOÀI (SCR-15.3, 13.1) -->
 <!-- Frontend Fragment: doctor/fragments/labo-tab.html                         -->
 <!-- ========================================================================= -->
-<div th:fragment="laboTab">
+<div th:fragment="laboTab"
+     th:with="isLaboLocked=${(isClinicalLocked == true) or (isReadOnlyView == true) or (visit != null and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED' or visit.status.name() == 'CANCELLED'))}">
     <div class="df-unified-tab-card mb-4 overflow-hidden bg-white">
         <!-- HEADER -->
         <div class="df-tab-content-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3 border-bottom">
@@ -24,6 +25,7 @@
                     <span>Trang Quản lý Labo</span>
                 </a>
                 <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-white"
+                        th:unless="${isLaboLocked}"
                         onclick="openCreateLaboModal()">
                     <i class="bi bi-plus-circle-fill"></i>
                     <span>Lập phiếu đặt xưởng / Gửi mẫu</span>
@@ -108,8 +110,9 @@
                                  style="min-height: 125px; background: #f8fafc;">
                                 <i class="bi bi-box-seam fs-3 d-block mb-2 text-primary opacity-75"></i>
                                 <div class="fw-semibold text-dark mb-1">Chưa có phiếu đặt xưởng hoặc mẫu gửi xét nghiệm</div>
-                                <p class="df-meta-tertiary mb-3">Tạo phiếu để gửi mẫu xét nghiệm hoặc đặt chế tác phục hình từ xưởng Labo.</p>
+                                <p class="df-meta-tertiary mb-3" th:unless="${isLaboLocked}">Tạo phiếu để gửi mẫu xét nghiệm hoặc đặt chế tác phục hình từ xưởng Labo.</p>
                                 <button type="button" class="btn btn-sm df-btn-tonal-primary px-3 py-2 rounded-pill fw-semibold"
+                                        th:unless="${isLaboLocked}"
                                         onclick="openCreateLaboModal()">
                                     <i class="bi bi-plus-circle-fill me-1"></i>Lập phiếu đặt xưởng / Gửi mẫu
                                 </button>
@@ -176,6 +179,7 @@
                                     </span>
                                 </a>
                                 <button type="button" class="btn btn-sm btn-link text-primary p-0 text-decoration-none" style="font-size: 11px;"
+                                        th:unless="${isLaboLocked}"
                                         th:data-id="${order.laboId}" th:data-code="${order.laboCode}"
                                         onclick="openQuickUploadImageModal(this.getAttribute('data-id'), this.getAttribute('data-code'))">
                                     Đổi ảnh
@@ -185,16 +189,18 @@
                             <!-- NẾU CHƯA CÓ ẢNH: NÚT ĐÍNH KÈM ẢNH -->
                             <div th:unless="${order.imageUrl != null and !#strings.isEmpty(order.imageUrl)}">
                                 <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style="font-size: 12px;"
+                                        th:unless="${isLaboLocked}"
                                         th:data-id="${order.laboId}" th:data-code="${order.laboCode}"
                                         onclick="openQuickUploadImageModal(this.getAttribute('data-id'), this.getAttribute('data-code'))"
                                         title="Chụp ảnh giấy xét nghiệm hoặc phiếu gửi xưởng đính kèm">
                                     <i class="bi bi-camera-fill text-primary me-1"></i>+ Gắn ảnh KQ
                                 </button>
+                                <span th:if="${isLaboLocked}" class="text-muted small">—</span>
                             </div>
                         </td>
                         <td class="text-center">
                             <span class="badge" th:classappend="${order.statusBadgeClass}" th:text="${order.statusLabel}">Mới gửi</span>
-                            <div class="mt-1">
+                            <div class="mt-1" th:unless="${isLaboLocked}">
                                 <button type="button" class="btn btn-sm btn-link text-secondary p-0 text-decoration-none" style="font-size: 11.5px;"
                                         th:data-id="${order.laboId}" th:data-status="${order.status}"
                                         onclick="quickUpdateLaboStatus(this.getAttribute('data-id'), this.getAttribute('data-status'))"
@@ -213,11 +219,13 @@
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center p-0"
                                         style="width: 32px; height: 32px; border-radius: 8px;"
+                                        th:unless="${isLaboLocked}"
                                         title="Chỉnh sửa phiếu"
                                         th:data-id="${order.laboId}" onclick="openEditLaboModal(this.getAttribute('data-id'))">
                                     <i class="bi bi-pencil-square" style="font-size: 14px;"></i>
                                 </button>
                                 <button type="button" class="df-btn-icon-muted"
+                                        th:unless="${isLaboLocked}"
                                         title="Xóa phiếu"
                                         th:data-id="${order.laboId}" onclick="deleteLaboOrder(this.getAttribute('data-id'))">
                                     <i class="bi bi-trash3-fill" style="font-size: 14px;"></i>
@@ -525,7 +533,38 @@
 <script th:fragment="laboTabScript">
     let currentImageRotation = 0;
 
+    function isLaboClinicalLocked() {
+        return (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal)
+            || (typeof isReadOnlyViewVal !== 'undefined' && isReadOnlyViewVal);
+    }
+
+    function setLaboSelectValueWithFallback(selectEl, value) {
+        if (!selectEl) return;
+        selectEl.querySelectorAll('option[data-dynamic-fallback="true"]').forEach(opt => opt.remove());
+        if (!value) {
+            selectEl.value = '';
+            return;
+        }
+        selectEl.value = value;
+        if (selectEl.value !== value) {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = value;
+            opt.setAttribute('data-dynamic-fallback', 'true');
+            selectEl.appendChild(opt);
+            selectEl.value = value;
+        }
+    }
+
     function openCreateLaboModal() {
+        if (isLaboClinicalLocked()) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tạo phiếu đặt xưởng mới.');
+            return;
+        }
+        const matSelect = document.getElementById('laboMaterialType');
+        if (matSelect) {
+            matSelect.querySelectorAll('option[data-dynamic-fallback="true"]').forEach(opt => opt.remove());
+        }
         document.getElementById('laboOrderForm')?.reset();
         document.getElementById('laboFormId').value = '';
         document.getElementById('laboOrderModalLabel').innerText = 'Thêm phiếu đặt xưởng labo & Gửi mẫu';
@@ -554,6 +593,10 @@
     }
 
     async function openEditLaboModal(laboId) {
+        if (isLaboClinicalLocked()) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể chỉnh sửa phiếu đặt xưởng.');
+            return;
+        }
         try {
             const res = await fetch(`/api/doctor/labo-orders/${laboId}`);
             if (!res.ok) throw new Error('Không thể tải thông tin phiếu');
@@ -564,7 +607,7 @@
             document.getElementById('laboFormId').value = order.laboId;
             document.getElementById('laboOrderModalLabel').innerText = `Chỉnh sửa phiếu đặt xưởng: ${order.laboCode}`;
 
-            document.getElementById('laboMaterialType').value = order.materialType || '';
+            setLaboSelectValueWithFallback(document.getElementById('laboMaterialType'), order.materialType || '');
             if (order.supplierId) {
                 document.getElementById('laboSupplierSelect').value = order.supplierId;
             }
@@ -676,6 +719,10 @@
     }
 
     async function submitLaboOrderForm() {
+        if (isLaboClinicalLocked()) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể lưu phiếu đặt xưởng.');
+            return;
+        }
         const formId = document.getElementById('laboFormId').value;
         const isEdit = (formId && formId.trim().length > 0);
         let visitId = (typeof getCurrentVisitId === 'function') ? getCurrentVisitId() : null;
@@ -714,14 +761,15 @@
         formData.append('toothPositions', document.getElementById('laboToothPositions').value);
         formData.append('notes', document.getElementById('laboNotes').value);
 
-        const urlVal = document.getElementById('laboImageUrlInput').value;
-        if (urlVal && urlVal.trim().length > 0) {
-            formData.append('imageUrl', urlVal.trim());
+        const urlVal = (document.getElementById('laboImageUrlInput').value || '').trim();
+        if (urlVal.length > 0) {
+            formData.append('imageUrl', urlVal);
         }
 
         const fileInput = document.getElementById('laboImageFileInput');
-        if (fileInput && fileInput.files && fileInput.files[0]) {
-            formData.append('imageFile', fileInput.files[0]);
+        const selectedFile = (fileInput && fileInput.files && fileInput.files[0]) ? fileInput.files[0] : null;
+        if (selectedFile) {
+            formData.append('imageFile', selectedFile);
         }
 
         const submitBtn = document.getElementById('btnSaveLaboOrder');
@@ -732,28 +780,45 @@
 
         try {
             const url = isEdit ? `/api/doctor/labo-orders/${formId}` : '/api/doctor/labo-orders';
-            const method = isEdit ? 'PUT' : 'POST';
 
-            // If multipart on PUT, we can send as JSON or use specific upload
             let res;
             if (isEdit) {
+                let effectiveImageUrl = urlVal;
+                if (selectedFile) {
+                    const imgFormData = new FormData();
+                    imgFormData.append('file', selectedFile);
+                    const upRes = await fetch(`/api/doctor/labo-orders/${formId}/upload-image`, {
+                        method: 'POST',
+                        body: imgFormData
+                    });
+                    const upData = await upRes.json().catch(() => ({}));
+                    if (!upRes.ok || !upData.success) {
+                        alert('Không thể tải ảnh đính kèm: ' + (upData.message || 'Lỗi không xác định'));
+                        return;
+                    }
+                    if (upData.data && upData.data.imageUrl) {
+                        effectiveImageUrl = upData.data.imageUrl;
+                        document.getElementById('laboImageUrlInput').value = effectiveImageUrl;
+                    }
+                }
+
                 // Sửa bằng JSON
                 const payload = {
-                    supplierId: parseInt(supplierId),
+                    supplierId: parseInt(supplierId, 10),
                     materialType: materialType,
                     sentDate: document.getElementById('laboSentDate').value,
                     tryInDate: document.getElementById('laboTryInDate').value,
                     tryInTime: document.getElementById('laboTryInHour').value,
                     status: document.getElementById('laboStatusSelect').value,
                     orderType: document.getElementById('laboOrderType').value,
-                    quantity: parseInt(document.getElementById('laboQuantity').value || '1'),
+                    quantity: parseInt(document.getElementById('laboQuantity').value || '1', 10),
                     unitPrice: parseFloat(document.getElementById('laboUnitPrice').value || '0'),
                     shadeColor: document.getElementById('laboShadeColor').value,
                     bridgeInfo: document.getElementById('laboBridgeInfo').value,
                     crownInfo: document.getElementById('laboCrownInfo').value,
                     toothPositions: document.getElementById('laboToothPositions').value,
                     notes: document.getElementById('laboNotes').value,
-                    imageUrl: urlVal
+                    imageUrl: effectiveImageUrl
                 };
                 res = await fetch(url, {
                     method: 'PUT',
@@ -784,7 +849,7 @@
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Lưu phiếu';
+                submitBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Lưu';
             }
         }
     }
@@ -821,6 +886,10 @@
     }
 
     function openQuickUploadImageModal(laboId, laboCode) {
+        if (isLaboClinicalLocked()) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tải ảnh lên phiếu.');
+            return;
+        }
         document.getElementById('quickUploadImageForm')?.reset();
         document.getElementById('quickUploadLaboId').value = laboId;
         document.getElementById('quickUploadCodeBadge').innerText = laboCode || 'LAB-0021';
@@ -833,6 +902,10 @@
     }
 
     async function submitQuickUploadImage() {
+        if (isLaboClinicalLocked()) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tải ảnh lên phiếu.');
+            return;
+        }
         const laboId = document.getElementById('quickUploadLaboId').value;
         const fileInput = document.getElementById('quickFileSelect');
         const urlInput = document.getElementById('quickUrlSelect');
@@ -884,6 +957,10 @@
     }
 
     async function quickUpdateLaboStatus(laboId, currentStatus) {
+        if (isLaboClinicalLocked()) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể thay đổi trạng thái phiếu.');
+            return;
+        }
         const statuses = ['SENT', 'PROCESSING', 'DELIVERED', 'FITTED_SUCCESS'];
         const labels = ['Mới gửi', 'Đang chế tác / Chờ KQ', 'Đã nhận về phòng khám', 'Đã lắp hoàn tất'];
         let nextIndex = (statuses.indexOf(currentStatus) + 1);
@@ -916,6 +993,10 @@
     }
 
     async function deleteLaboOrder(laboId) {
+        if (isLaboClinicalLocked()) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể xóa phiếu đặt xưởng.');
+            return;
+        }
         if (!confirm('Bạn có chắc chắn muốn xóa phiếu đặt xưởng / gửi mẫu này khỏi cơ sở dữ liệu?')) return;
         try {
             const res = await fetch(`/api/doctor/labo-orders/${laboId}`, { method: 'DELETE' });
@@ -962,12 +1043,14 @@
             const tbody = document.getElementById('laboOrdersTableBody');
             if (!tbody) return;
 
+            const isLocked = isLaboClinicalLocked();
+
             if (list.length === 0) {
                 tbody.innerHTML = `
                     <tr id="emptyLaboRow">
                         <td colspan="9" class="text-center py-5 text-muted">
                             <i class="bi bi-box-seam fs-2 d-block mb-2 text-secondary opacity-50"></i>
-                            <span>Chưa có phiếu đặt xưởng hoặc mẫu gửi xét nghiệm nào cho ca khám này. Nhấn <strong>"+ Lập phiếu đặt xưởng / Gửi mẫu"</strong> để tạo phiếu mới.</span>
+                            <span>Chưa có phiếu đặt xưởng hoặc mẫu gửi xét nghiệm nào cho ca khám này.${isLocked ? '' : ' Nhấn <strong>"+ Lập phiếu đặt xưởng / Gửi mẫu"</strong> để tạo phiếu mới.'}</span>
                         </td>
                     </tr>
                 `;
@@ -977,6 +1060,17 @@
             const esc = (typeof escapeHtml === 'function') ? escapeHtml : (s => s || '');
             let html = '';
             list.forEach(ord => {
+                const changeImgBtn = isLocked ? '' : `
+                        <button type="button" class="btn btn-sm btn-link text-primary p-0 text-decoration-none" style="font-size: 11px;"
+                                onclick="openQuickUploadImageModal(${ord.laboId}, '${esc(ord.laboCode)}')">
+                            Đổi ảnh
+                        </button>`;
+                const noImgAction = isLocked ? `<span class="text-muted small">—</span>` : `
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style="font-size: 12px;"
+                            onclick="openQuickUploadImageModal(${ord.laboId}, '${esc(ord.laboCode)}')"
+                            title="Chụp ảnh giấy xét nghiệm hoặc phiếu gửi xưởng đính kèm">
+                        <i class="bi bi-camera-fill text-primary me-1"></i>+ Gắn ảnh KQ
+                    </button>`;
                 const imgHtml = (ord.imageUrl && ord.imageUrl.trim().length > 0) ? `
                     <div class="d-flex flex-column align-items-center gap-1">
                         <a href="javascript:void(0)"
@@ -989,21 +1083,32 @@
                                 <i class="bi bi-zoom-in"></i> Xem
                             </span>
                         </a>
-                        <button type="button" class="btn btn-sm btn-link text-primary p-0 text-decoration-none" style="font-size: 11px;"
-                                onclick="openQuickUploadImageModal(${ord.laboId}, '${esc(ord.laboCode)}')">
-                            Đổi ảnh
-                        </button>
+                        ${changeImgBtn}
                     </div>
-                ` : `
-                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style="font-size: 12px;"
-                            onclick="openQuickUploadImageModal(${ord.laboId}, '${esc(ord.laboCode)}')"
-                            title="Chụp ảnh giấy xét nghiệm hoặc phiếu gửi xưởng đính kèm">
-                        <i class="bi bi-camera-fill text-primary me-1"></i>+ Gắn ảnh KQ
-                    </button>
-                `;
+                ` : noImgAction;
 
                 const formattedCost = (typeof formatVnd === 'function') ? formatVnd(ord.costToClinic) : (ord.costToClinic ? ord.costToClinic.toLocaleString('vi-VN') + ' đ' : '0 đ');
                 const formattedPrice = (typeof formatVnd === 'function') ? formatVnd(ord.unitPrice) : (ord.unitPrice ? ord.unitPrice.toLocaleString('vi-VN') + ' đ' : '0 đ');
+                const quickStatusHtml = isLocked ? '' : `
+                            <div class="mt-1">
+                                <button type="button" class="btn btn-sm btn-link text-secondary p-0 text-decoration-none" style="font-size: 11.5px;"
+                                        onclick="quickUpdateLaboStatus(${ord.laboId}, '${esc(ord.status)}')">
+                                    <i class="bi bi-arrow-repeat"></i> Đổi TT
+                                </button>
+                            </div>`;
+                const editDeleteBtnsHtml = isLocked ? '' : `
+                                <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center p-0"
+                                        style="width: 32px; height: 32px; border-radius: 8px;"
+                                        title="Chỉnh sửa phiếu"
+                                        onclick="openEditLaboModal(${ord.laboId})">
+                                    <i class="bi bi-pencil-square" style="font-size: 14px;"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center p-0"
+                                        style="width: 32px; height: 32px; border-radius: 8px;"
+                                        title="Xóa phiếu"
+                                        onclick="deleteLaboOrder(${ord.laboId})">
+                                    <i class="bi bi-trash3-fill" style="font-size: 14px;"></i>
+                                </button>`;
 
                 html += `
                     <tr id="labo-row-${ord.laboId}">
@@ -1044,12 +1149,7 @@
                         </td>
                         <td class="text-center">
                             <span class="badge ${esc(ord.statusBadgeClass)}">${esc(ord.statusLabel)}</span>
-                            <div class="mt-1">
-                                <button type="button" class="btn btn-sm btn-link text-secondary p-0 text-decoration-none" style="font-size: 11.5px;"
-                                        onclick="quickUpdateLaboStatus(${ord.laboId}, '${esc(ord.status)}')">
-                                    <i class="bi bi-arrow-repeat"></i> Đổi TT
-                                </button>
-                            </div>
+                            ${quickStatusHtml}
                         </td>
                         <td class="text-center">
                             <div class="d-inline-flex align-items-center justify-content-center gap-1">
@@ -1059,18 +1159,7 @@
                                         onclick="printLaboOrderModal(${ord.laboId})">
                                     <i class="bi bi-printer-fill" style="font-size: 14px;"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center p-0"
-                                        style="width: 32px; height: 32px; border-radius: 8px;"
-                                        title="Chỉnh sửa phiếu"
-                                        onclick="openEditLaboModal(${ord.laboId})">
-                                    <i class="bi bi-pencil-square" style="font-size: 14px;"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center p-0"
-                                        style="width: 32px; height: 32px; border-radius: 8px;"
-                                        title="Xóa phiếu"
-                                        onclick="deleteLaboOrder(${ord.laboId})">
-                                    <i class="bi bi-trash3-fill" style="font-size: 14px;"></i>
-                                </button>
+                                ${editDeleteBtnsHtml}
                             </div>
                         </td>
                     </tr>

@@ -419,7 +419,7 @@
                                         <span>Chưa có dịch vụ nào được thực hiện trong ca khám này. Nhấn <strong>"+ Thêm điều trị"</strong> để ghi nhận.</span>
                                     </td>
                                 </tr>
-                                <tr th:each="ps : ${performedServices}" th:id="'ps-row-' + ${ps.performedId}" th:data-plan-item-id="${ps.planItemId}">
+                                <tr th:each="ps : ${performedServices}" th:id="'ps-row-' + ${ps.performedId}" th:data-plan-item-id="${ps.planItemId}" th:data-final-price="${ps.finalPrice != null ? ps.finalPrice : 0}">
                                     <td>
                                         <span class="small text-muted fw-semibold" th:text="${ps.completedAt}">21/10/2026</span>
                                     </td>
@@ -432,9 +432,9 @@
                                                 R16
                                             </span>
                                             <span class="df-service-category-tag" th:if="${ps.categoryName != null and !ps.categoryName.isEmpty()}" th:text="${ps.categoryName}">Phục hình</span>
-                                            <span class="badge bg-info-subtle text-info border border-info px-2 py-0.5 rounded-pill fw-semibold" style="font-size: 11px;"
-                                                  th:if="${ps.planName != null and !ps.planName.isEmpty()}">
-                                                <i class="bi bi-diagram-3-fill me-1"></i>Từ KHDT: <span th:text="${ps.planName}">Phác đồ Implant</span>
+                                            <span class="badge bg-info-subtle text-info border border-info px-2 py-1 rounded-pill fw-semibold" style="font-size: 11px;"
+                                                  th:if="${ps.planItemId != null or (ps.planName != null and !ps.planName.isEmpty())}">
+                                                <i class="bi bi-diagram-3-fill me-1"></i>Từ KHDT: <span th:text="${ps.planName != null and !ps.planName.isEmpty() ? ps.planName : ps.serviceName}">Phác đồ Implant</span>
                                             </span>
                                         </div>
                                         <div class="df-staff-badge">
@@ -478,7 +478,14 @@
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="text-muted small" title="Dịch vụ đã thực hiện không thể xóa">
+                                        <button th:if="${!(isClinicalLocked == true or isReadOnlyView == true) and ps.status != 'CANCELLED'}"
+                                                type="button"
+                                                class="df-btn-icon-muted"
+                                                title="Hủy dịch vụ thực hiện này"
+                                                th:onclick="'deletePerformedService(' + ${ps.performedId} + ')'">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                        <span th:if="${isClinicalLocked == true or isReadOnlyView == true}" class="text-muted small" title="Bệnh án đã khóa">
                                             <i class="bi bi-shield-check text-success"></i> Đã làm
                                         </span>
                                     </td>
@@ -720,17 +727,19 @@
                         <select class="form-select form-select-sm" id="treatPlanItemSelect" onchange="onPlanItemSelectChange(this)">
                             <option value="">-- Bấm để chọn bước thủ thuật trong KHDT của BN --</option>
                             <th:block th:each="plan : ${treatmentPlans}">
-                                <optgroup th:label="${plan.planCode + ' - ' + plan.planName}">
+                                <optgroup th:if="${plan.status != 'CANCELLED'}"
+                                          th:label="${plan.planCode + ' - ' + plan.planName + (plan.isInstallment ? ' (Trả theo đợt)' : '')}">
                                     <th:block th:each="stage : ${plan.stages}">
                                         <th:block th:each="item : ${stage.items}">
-                                            <option th:if="${item.status != 'COMPLETED'}"
+                                            <option th:if="${item.status != 'COMPLETED' and item.status != 'CANCELLED'}"
                                                     th:value="${item.planItemId}"
                                                     th:data-service-id="${item.serviceId}"
-                                                    th:data-price="${item.estimatedPrice}"
+                                                    th:data-price="${plan.isInstallment == true ? 0 : item.estimatedPrice}"
+                                                    th:data-installment="${plan.isInstallment == true}"
                                                     th:data-qty="${item.quantity}"
                                                     th:data-tooth="${item.toothNumbers}"
-                                                    th:data-notes="${'Thực hiện theo KHDT: ' + plan.planName + ' (' + stage.stageName + ')'}"
-                                                    th:text="${'[' + stage.stageName + '] ' + item.serviceName + (item.toothNumbers != null and !item.toothNumbers.isEmpty() ? ' (R' + item.toothNumbers + ')' : '')}">
+                                                    th:data-notes="${(plan.isInstallment == true ? 'Đã bao gồm trong KHĐT: ' : 'Thực hiện theo KHDT: ') + plan.planName + ' (' + stage.stageName + ')'}"
+                                                    th:text="${'[' + stage.stageName + '] ' + (item.stepName != null and !item.stepName.isEmpty() ? item.stepName : item.serviceName) + (item.toothNumbers != null and !item.toothNumbers.isEmpty() ? ' (R' + item.toothNumbers + ')' : '') + (plan.isInstallment == true ? ' — 0 đ (Trả góp)' : '')}">
                                             </option>
                                         </th:block>
                                     </th:block>
@@ -1161,7 +1170,7 @@
                     <div class="print-footer-grid">
                         <div></div>
                         <div class="print-signature-box">
-                            <div class="small fst-italic" id="printDatePlace">Ngày 21 tháng 10 năm 2026</div>
+                            <div class="small fst-italic" id="printDatePlace">Ngày ... tháng ... năm ...</div>
                             <div class="fw-bold mt-1">BÁC SĨ ĐIỀU TRỊ</div>
                             <div style="height: 60px;"></div>
                             <div class="fw-bold" id="printDoctorName">BS. CK1 Lê Hoàng Nam</div>
@@ -1287,9 +1296,99 @@
         updateOdontogramColorByType(curType);
     }
 
-    function updateToothInputFromSet() {
-        const inputEl = document.getElementById('toothNumbersInput');
+    const _safeEscapeHtml = (str) => {
+        if (typeof escapeHtml === 'function') return escapeHtml(str);
+        if (str == null) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    };
+
+    const VALID_FDI_TEETH = new Set([
+        '18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28',
+        '48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'
+    ]);
+
+    function expandToothTokens(rawStr) {
+        const result = [];
+        const seen = new Set();
+        const addTooth = (t) => {
+            if (VALID_FDI_TEETH.has(t) && !seen.has(t)) {
+                seen.add(t);
+                result.push(t);
+            }
+        };
+        const text = (rawStr || '').toUpperCase().replace(/R/g, '');
+        const rangeRegex = /\b([1-4][1-8])\s*[-–]\s*([1-4][1-8])\b/g;
+        let match;
+        while ((match = rangeRegex.exec(text)) !== null) {
+            const a = parseInt(match[1], 10);
+            const b = parseInt(match[2], 10);
+            if (Math.floor(a / 10) === Math.floor(b / 10)) {
+                const lo = Math.min(a, b);
+                const hi = Math.max(a, b);
+                for (let n = lo; n <= hi; n++) addTooth(String(n));
+            }
+        }
+        const singleMatches = text.match(/\b(1[1-8]|2[1-8]|3[1-8]|4[1-8])\b/g);
+        if (singleMatches) {
+            singleMatches.forEach(addTooth);
+        }
+        return result;
+    }
+
+    function formatTeethCompactForStorage(teethArr, surfaceStr = '') {
+        if (!teethArr || teethArr.length === 0) return '';
+        const sorted = Array.from(new Set(teethArr)).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+        if (sorted.length === 32) return 'Toàn hàm';
+
+        const maxLen = surfaceStr ? Math.max(20, 100 - surfaceStr.length - 1) : 100;
+        const spaced = sorted.join(', ');
+        if (spaced.length <= maxLen) return spaced;
+
+        const compactComma = sorted.join(',');
+        if (compactComma.length <= maxLen) return compactComma;
+
+        // Nén các dãy răng liên tiếp trong cùng cung hàm (VD: 11-18) để không vượt quá 100 ký tự DB
+        const compressed = [];
+        let i = 0;
+        while (i < sorted.length) {
+            const start = parseInt(sorted[i], 10);
+            let end = start;
+            let j = i + 1;
+            while (j < sorted.length) {
+                const next = parseInt(sorted[j], 10);
+                if (Math.floor(next / 10) === Math.floor(start / 10) && next === end + 1) {
+                    end = next;
+                    j++;
+                } else {
+                    break;
+                }
+            }
+            const len = j - i;
+            if (len >= 3) {
+                compressed.push(`${start}-${end}`);
+            } else {
+                for (let k = i; k < j; k++) compressed.push(sorted[k]);
+            }
+            i = j;
+        }
+        let result = compressed.join(', ');
+        if (result.length > maxLen) {
+            result = compressed.join(',');
+        }
+        if (result.length > maxLen) {
+            result = result.slice(0, maxLen).replace(/,+$/, '').trim();
+        }
+        return result;
+    }
+
+    function updateToothCountHintFromSet() {
         const hintEl = document.getElementById('toothCountHint');
+        if (!hintEl) return;
         const curType = document.querySelector('input[name="diagnosisType"]:checked')?.value || 'MAIN';
         const badgeColor = curType === 'MAIN' ? 'bg-danger text-white' : (curType === 'SECONDARY' ? 'bg-warning text-dark' : 'bg-info text-white');
         const typeText = curType === 'MAIN' ? 'Chính' : (curType === 'SECONDARY' ? 'Kèm theo' : 'Phân biệt');
@@ -1298,45 +1397,61 @@
         const isWisdom = curIcd.startsWith('K01');
 
         if (isWisdom) {
-            const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a) - parseInt(b));
+            const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a, 10) - parseInt(b, 10));
             if (sorted.length > 0) {
-                if (inputEl) inputEl.value = sorted.join(', ');
-                if (hintEl) hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Răng khôn (${typeText}): ${sorted.map(t => 'R' + t).join(', ')}</span>`;
+                hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Răng khôn (${typeText}): ${sorted.map(t => 'R' + t).join(', ')}</span>`;
             } else {
-                if (inputEl) inputEl.value = '';
-                if (hintEl) hintEl.innerText = 'Chưa chọn răng khôn (18, 28, 38, 48)';
+                hintEl.innerText = 'Chưa chọn răng khôn (18, 28, 38, 48)';
             }
         } else if (selectedTeeth.size === 32) {
-            if (inputEl) inputEl.value = 'Toàn hàm (32 răng)';
-            if (hintEl) hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Toàn hàm (32 răng - Bệnh ${typeText})</span>`;
+            hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Toàn hàm (32 răng - Bệnh ${typeText})</span>`;
         } else if (selectedTeeth.size > 0) {
-            const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a) - parseInt(b));
-            if (inputEl) inputEl.value = sorted.join(', ');
-            if (hintEl) hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Đang chọn ${typeText}: ${sorted.map(t => 'R' + t).join(', ')}</span>`;
+            const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a, 10) - parseInt(b, 10));
+            const preview = sorted.length > 10 ? `${sorted.length} răng đã chọn` : sorted.map(t => 'R' + t).join(', ');
+            hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Đang chọn ${typeText}: ${preview}</span>`;
         } else {
-            if (inputEl) inputEl.value = '';
-            if (hintEl) hintEl.innerText = 'Chưa chọn răng (Mặc định toàn hàm)';
+            hintEl.innerText = 'Chưa chọn răng (Mặc định toàn hàm)';
         }
     }
 
-    // Chiều 2: Nhập số răng bằng tay -> Tự động đánh dấu màu trên sơ đồ đồ họa
+    function updateToothInputFromSet() {
+        const inputEl = document.getElementById('toothNumbersInput');
+        const curIcd = (document.getElementById('selectedIcd10Code')?.value || '').trim();
+        const isWisdom = curIcd.startsWith('K01');
+
+        if (inputEl) {
+            if (!isWisdom && selectedTeeth.size === 32) {
+                inputEl.value = 'Toàn hàm (32 răng)';
+            } else if (selectedTeeth.size > 0) {
+                const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a, 10) - parseInt(b, 10));
+                inputEl.value = formatTeethCompactForStorage(sorted, '');
+            } else {
+                inputEl.value = '';
+            }
+        }
+        updateToothCountHintFromSet();
+    }
+
+    // Chiều 2: Nhập số răng bằng tay -> Tự động đánh dấu màu trên sơ đồ đồ họa mà không ghi đè khi đang gõ
     function handleToothManualInput(val) {
-        const trimmed = (val || '').trim().toLowerCase();
-        if (trimmed === 'toàn hàm' || trimmed === 'toàn hàm (32 răng)' || trimmed === 'all') {
-            selectQuickTeeth('ALL');
+        const raw = (val || '').trim().toLowerCase();
+        if (raw === 'toàn hàm' || raw === 'toàn hàm (32 răng)' || raw === 'all') {
+            selectedTeeth.clear();
+            const curIcd = (document.getElementById('selectedIcd10Code')?.value || '').trim();
+            if (curIcd.startsWith('K01')) {
+                ['18', '28', '38', '48'].forEach(t => selectedTeeth.add(t));
+            } else {
+                VALID_FDI_TEETH.forEach(t => selectedTeeth.add(t));
+            }
+            syncActiveTeethUI();
+            updateToothCountHintFromSet();
             return;
         }
-        const tokens = (val || '').toUpperCase().replace(/R/g, '').split(/[\s,]+/);
-        const parsed = new Set();
-        tokens.forEach(tok => {
-            const num = tok.trim();
-            if (num && !isNaN(num) && num.length === 2) {
-                parsed.add(num);
-            }
-        });
-        selectedTeeth = parsed;
+        const parsed = expandToothTokens(val);
+        selectedTeeth.clear();
+        parsed.forEach(t => selectedTeeth.add(t));
         syncActiveTeethUI();
-        updateToothInputFromSet();
+        updateToothCountHintFromSet();
     }
 
     // 2. Cụm 5 mặt răng MODBL
@@ -1384,14 +1499,12 @@
         rows.forEach(r => {
             const toothAttr = (r.getAttribute('data-teeth') || '').trim();
             const type = r.getAttribute('data-type') || 'SECONDARY';
-            const matches = toothAttr.match(/\b(1[1-8]|2[1-8]|3[1-8]|4[1-8])\b/g);
-            const isFull = !toothAttr || toothAttr === '' || toothAttr.toLowerCase().includes('toàn hàm') || toothAttr.toLowerCase().includes('all') || !matches || matches.length === 0;
+            const matches = expandToothTokens(toothAttr);
+            const isFull = !toothAttr || toothAttr === '' || toothAttr.toLowerCase().includes('toàn hàm') || toothAttr.toLowerCase().includes('all') || matches.length === 0;
             const icdCode = (r.getAttribute('data-icd') || '').trim();
 
-            if (icdCode.startsWith('K01')) {
-                // RĂNG KHÔN: Tối đa 4 răng số 8, tuyệt đối KHÔNG highlight cả 32 răng
-                const wisdoms = (matches && matches.length > 0) ? matches.filter(t => ['18','28','38','48'].includes(t)) : ['18', '28', '38', '48'];
-                (wisdoms.length > 0 ? wisdoms : ['18', '28', '38', '48']).forEach(m => {
+            if (icdCode.startsWith('K01') && isFull) {
+                ['18', '28', '38', '48'].forEach(m => {
                     if (!toothTypeMap.has(m) || type === 'MAIN') {
                         toothTypeMap.set(m, type);
                     }
@@ -1402,7 +1515,7 @@
                         toothTypeMap.set(m, type);
                     }
                 });
-            } else if (matches) {
+            } else {
                 matches.forEach(m => {
                     if (!toothTypeMap.has(m) || type === 'MAIN') {
                         toothTypeMap.set(m, type);
@@ -1580,13 +1693,11 @@
         selectedTeeth.clear();
         const all32 = ['18','17','16','15','14','13','12','11','21','22','23','24','25','26','27','28',
                        '48','47','46','45','44','43','42','41','31','32','33','34','35','36','37','38'];
-        const matches = teethStr.match(/\b(1[1-8]|2[1-8]|3[1-8]|4[1-8])\b/g) || [];
+        const matches = expandToothTokens(teethStr);
         const isFullMouth = !teethStr || teethStr === '' || teethStr.toLowerCase().includes('toàn hàm') || teethStr.toLowerCase().includes('all') || matches.length === 0;
 
-        if (icd.startsWith('K01')) {
-            // RĂNG KHÔN: Tối đa 4 răng số 8, tuyệt đối KHÔNG highlight cả 32 răng
-            const wisdoms = matches.filter(t => ['18','28','38','48'].includes(t));
-            (wisdoms.length > 0 ? wisdoms : ['18', '28', '38', '48']).forEach(t => selectedTeeth.add(t));
+        if (icd.startsWith('K01') && isFullMouth) {
+            ['18', '28', '38', '48'].forEach(t => selectedTeeth.add(t));
         } else if (isFullMouth) {
             all32.forEach(t => selectedTeeth.add(t));
         } else {
@@ -1597,27 +1708,12 @@
         updateOdontogramColorByType(type);
 
         const inputEl = document.getElementById('toothNumbersInput');
-        const hintEl = document.getElementById('toothCountHint');
-        const badgeColor = type === 'MAIN' ? 'bg-danger text-white' : (type === 'SECONDARY' ? 'bg-warning text-dark' : 'bg-info text-white');
-        const typeText = type === 'MAIN' ? 'Chính' : (type === 'SECONDARY' ? 'Kèm theo' : 'Phân biệt');
-
         if (inputEl) {
-            if (icd.startsWith('K01')) {
-                inputEl.value = Array.from(selectedTeeth).sort((a,b) => parseInt(a) - parseInt(b)).join(', ');
-            } else {
-                inputEl.value = isFullMouth ? 'Toàn hàm (32 răng)' : matches.join(', ');
-            }
+            inputEl.value = (isFullMouth && !icd.startsWith('K01'))
+                ? 'Toàn hàm (32 răng)'
+                : formatTeethCompactForStorage(Array.from(selectedTeeth), '');
         }
-        if (hintEl) {
-            if (icd.startsWith('K01')) {
-                const sorted = Array.from(selectedTeeth).sort((a,b) => parseInt(a) - parseInt(b));
-                hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Răng khôn (${typeText}): ${sorted.map(t => 'R' + t).join(', ')}</span>`;
-            } else if (isFullMouth) {
-                hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Toàn hàm (32 răng - Bệnh ${typeText})</span>`;
-            } else {
-                hintEl.innerHTML = `<span class="badge ${badgeColor} px-2 py-1">Đang xem ${typeText}: ${matches.map(t => 'R' + t).join(', ')}</span>`;
-            }
-        }
+        updateToothCountHintFromSet();
 
         // 4. Đổ dữ liệu chi tiết lên Form đầy đủ không bị thiếu
         selectIcd({
@@ -1709,23 +1805,29 @@
         const typeInput = document.querySelector('input[name="diagnosisType"]:checked');
         const diagnosisType = typeInput ? typeInput.value : 'MAIN';
 
-        // Chuẩn hóa vị trí răng & mặt răng MODBL
+        // Chuẩn hóa vị trí răng & mặt răng MODBL (đảm bảo không vượt quá 100 ký tự DB)
+        const surfaceStr = selectedSurfaces.size > 0
+            ? `(Mặt ${Array.from(selectedSurfaces).sort().join('')})`
+            : '';
         let rawTooth = document.getElementById('toothNumbersInput')?.value.trim() || '';
+        const parsedTokens = expandToothTokens(rawTooth);
         let toothNumbers = '';
         if (finalCode.startsWith('K01')) {
-            // RĂNG KHÔN: Tuyệt đối không lưu "Toàn hàm", nếu chọn cả hàm hoặc để trống thì gán 18, 28, 38, 48
-            if (rawTooth.toLowerCase().includes('toàn hàm') || !rawTooth || selectedTeeth.size === 32 || selectedTeeth.size === 4) {
+            if (rawTooth.toLowerCase().includes('toàn hàm') || !rawTooth || selectedTeeth.size === 32) {
                 toothNumbers = '18, 28, 38, 48';
+            } else if (parsedTokens.length > 0) {
+                toothNumbers = formatTeethCompactForStorage(parsedTokens, surfaceStr);
             } else {
-                toothNumbers = rawTooth;
+                toothNumbers = rawTooth.slice(0, surfaceStr ? Math.max(10, 100 - surfaceStr.length - 1) : 100);
             }
         } else if (rawTooth.toLowerCase().includes('toàn hàm') || selectedTeeth.size === 32) {
             toothNumbers = 'Toàn hàm';
+        } else if (parsedTokens.length > 0) {
+            toothNumbers = formatTeethCompactForStorage(parsedTokens, surfaceStr);
         } else {
-            toothNumbers = rawTooth;
+            toothNumbers = rawTooth.slice(0, surfaceStr ? Math.max(10, 100 - surfaceStr.length - 1) : 100);
         }
-        if (selectedSurfaces.size > 0) {
-            const surfaceStr = `(Mặt ${Array.from(selectedSurfaces).sort().join('')})`;
+        if (surfaceStr) {
             if (toothNumbers && !toothNumbers.includes('(Mặt')) {
                 toothNumbers = `${toothNumbers} ${surfaceStr}`;
             } else if (!toothNumbers) {
@@ -1990,6 +2092,23 @@
             }
         });
 
+        // Chuẩn hóa hiển thị vị trí răng khi rời khỏi ô nhập (không ghi đè khi đang gõ)
+        const toothInputEl = document.getElementById('toothNumbersInput');
+        if (toothInputEl) {
+            toothInputEl.addEventListener('blur', function() {
+                const raw = (this.value || '').trim();
+                if (!raw) {
+                    selectedTeeth.clear();
+                    syncActiveTeethUI();
+                    updateToothCountHintFromSet();
+                    return;
+                }
+                if (selectedTeeth.size > 0) {
+                    updateToothInputFromSet();
+                }
+            });
+        }
+
         // Khởi tạo công thức mặt răng ban đầu
         updateSurfaceFormula();
     });
@@ -2006,8 +2125,10 @@
         // Reset form
         document.getElementById('treatmentForm').reset();
         clearTreatTeeth();
+        document.getElementById('treatPlanItemId').value = '';
         document.getElementById('treatQuantity').value = "1";
         document.getElementById('treatUnitPrice').value = "0";
+        document.getElementById('treatUnitPrice').readOnly = false;
         document.getElementById('treatDiscount').value = "0";
         document.getElementById('treatFinalPriceDisplay').innerText = "0 đ";
         document.getElementById('treatUnitBadge').innerText = "Đơn vị";
@@ -2024,8 +2145,10 @@
 
     function onServiceSelectChange(selectEl) {
         const opt = selectEl.options[selectEl.selectedIndex];
+        const priceEl = document.getElementById('treatUnitPrice');
         if (!opt || !opt.value) {
-            document.getElementById('treatUnitPrice').value = "0";
+            priceEl.value = "0";
+            priceEl.readOnly = false;
             document.getElementById('treatUnitBadge').innerText = "Đơn vị";
             document.getElementById('toothReqBadge').className = "badge bg-light text-secondary border";
             document.getElementById('toothReqBadge').innerText = "Tùy chọn";
@@ -2037,7 +2160,14 @@
         const unit = opt.getAttribute('data-unit') || "Lần";
         const reqTooth = opt.getAttribute('data-tooth') === "true";
 
-        document.getElementById('treatUnitPrice').value = Math.round(parseFloat(price));
+        const pSelect = document.getElementById('treatPlanItemSelect');
+        const selectedPlanOpt = pSelect && pSelect.selectedIndex >= 0 ? pSelect.options[pSelect.selectedIndex] : null;
+        const isInstallmentPlanSelected = Boolean(
+            selectedPlanOpt && selectedPlanOpt.value && selectedPlanOpt.getAttribute('data-installment') === 'true'
+        );
+
+        priceEl.value = isInstallmentPlanSelected ? '0' : Math.round(parseFloat(price));
+        priceEl.readOnly = true;
         document.getElementById('treatUnitBadge').innerText = unit;
 
         const reqBadge = document.getElementById('toothReqBadge');
@@ -2168,9 +2298,15 @@
             if (treatmentModalInstance) {
                 treatmentModalInstance.hide();
             }
-            // Reset plan item select
+            // Reset plan item select & remove executed option
             const pSelect = document.getElementById('treatPlanItemSelect');
-            if (pSelect) pSelect.value = '';
+            if (pSelect) {
+                if (payload.planItemId) {
+                    const doneOpt = pSelect.querySelector(`option[value="${payload.planItemId}"]`);
+                    if (doneOpt) doneOpt.remove();
+                }
+                pSelect.value = '';
+            }
             const pInput = document.getElementById('treatPlanItemId');
             if (pInput) pInput.value = '';
 
@@ -2190,14 +2326,18 @@
 
     function onPlanItemSelectChange(selectEl) {
         const opt = selectEl.options[selectEl.selectedIndex];
+        const priceEl = document.getElementById('treatUnitPrice');
         if (!opt || !opt.value) {
             document.getElementById('treatPlanItemId').value = '';
+            const sSelect = document.getElementById('treatServiceSelect');
+            if (sSelect) onServiceSelectChange(sSelect);
             return;
         }
 
         const planItemId = opt.value;
         const serviceId = opt.getAttribute('data-service-id');
-        const price = opt.getAttribute('data-price') || 0;
+        const price = opt.getAttribute('data-price');
+        const isInstallment = opt.getAttribute('data-installment') === 'true';
         const qty = opt.getAttribute('data-qty') || 1;
         const tooth = opt.getAttribute('data-tooth') || '';
         const notes = opt.getAttribute('data-notes') || '';
@@ -2211,7 +2351,14 @@
         }
 
         if (qty) document.getElementById('treatQuantity').value = qty;
-        if (price) document.getElementById('treatUnitPrice').value = price;
+        if (isInstallment) {
+            priceEl.value = '0';
+            const discountEl = document.getElementById('treatDiscount');
+            if (discountEl) discountEl.value = '0';
+        } else if (price !== null && price !== '') {
+            priceEl.value = Math.round(parseFloat(price));
+        }
+        priceEl.readOnly = true;
         if (notes) document.getElementById('treatClinicalNotes').value = notes;
 
         if (tooth) {
@@ -2231,6 +2378,11 @@
     }
 
     function addPerformedRowToTable(ps) {
+        if (!ps || !ps.performedId) return;
+        if (document.getElementById(`ps-row-${ps.performedId}`)) {
+            recalcPerformedTableTotals();
+            return;
+        }
         const emptyRow = document.getElementById('emptyPerformedRow');
         if (emptyRow) {
             emptyRow.remove();
@@ -2244,32 +2396,62 @@
         if (ps.planItemId) {
             tr.setAttribute('data-plan-item-id', ps.planItemId);
         }
+        tr.setAttribute('data-final-price', ps.finalPrice != null ? ps.finalPrice : 0);
         tr.className = 'dv-data-row';
 
-        const toothDisplay = ps.toothNumbers ? (String(ps.toothNumbers).includes("Toàn hàm") ? ps.toothNumbers : ps.toothNumbers) : 'Toàn hàm';
-        const planText = ps.planName ? `Từ KHDT: ${ps.planName}${ps.stageName ? ` (${ps.stageName})` : ''}` : (ps.serviceName ? `Từ KHDT: ${ps.serviceName}` : '');
+        const toothDisplay = ps.toothNumbers ? String(ps.toothNumbers) : 'Toàn hàm';
+        const hasPlanLink = Boolean(ps.planItemId || (ps.planName && String(ps.planName).trim()));
+        const planText = hasPlanLink
+            ? `Từ KHDT: ${ps.planName || ps.serviceName || ''}${ps.stageName ? ` - ${ps.stageName}` : ''}`
+            : '';
+        const isInstallmentZero = Boolean(
+            ps.planItemId && Number(ps.finalPrice || 0) === 0
+            && ps.clinicalNotes && String(ps.clinicalNotes).includes('Đã bao gồm trong KHĐT')
+        );
+        const canDeleteRow = !(
+            (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal)
+            || (typeof isReadOnlyViewVal !== 'undefined' && isReadOnlyViewVal)
+        );
+        const isCancelledRow = String(ps.status || '').toUpperCase() === 'CANCELLED';
 
         tr.innerHTML = `
             <td style="white-space: nowrap;">
-                <span class="badge bg-light text-dark border fw-bold">${ps.serviceCode || 'DV1001'}</span>
+                <span class="badge bg-light text-dark border fw-bold df-num">${_safeEscapeHtml(ps.serviceCode || 'DV1001')}</span>
             </td>
             <td>
-                <div class="fw-bold text-dark">${ps.stepName || ps.serviceName || 'Dịch vụ'}</div>
-                ${planText ? `<div class="d-flex align-items-center gap-1 mt-1 flex-wrap"><span class="badge bg-light text-primary border" style="font-size: 11px; font-weight: 500;">${planText}</span></div>` : ''}
+                <div class="fw-bold text-dark">${_safeEscapeHtml(ps.stepName || ps.serviceName || 'Dịch vụ')}</div>
+                ${(planText || ps.categoryName || isInstallmentZero) ? `
+                    <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                        ${planText ? `<span class="badge bg-light text-primary border" style="font-size: 11px; font-weight: 500;">${_safeEscapeHtml(planText)}</span>` : ''}
+                        ${(!hasPlanLink && ps.categoryName) ? `<span class="badge bg-light text-secondary border" style="font-size: 11px; font-weight: 500;">${_safeEscapeHtml(ps.categoryName)}</span>` : ''}
+                        ${isInstallmentZero ? `<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" style="font-size: 11px; font-weight: 500;">Trả theo đợt (0 đ)</span>` : ''}
+                    </div>` : ''}
             </td>
             <td class="text-center" style="white-space: nowrap;">
-                <span class="badge bg-light text-dark border">${toothDisplay}</span>
+                <span class="chip-tooth df-num">${_safeEscapeHtml(toothDisplay)}</span>
             </td>
-            <td class="text-end text-muted small" style="white-space: nowrap;">${formatVnd(ps.unitPrice)}</td>
-            <td class="text-center fw-semibold" style="white-space: nowrap;">${ps.quantity || 1}</td>
-            <td class="text-end fw-bold text-dark" style="white-space: nowrap;">${formatVnd(ps.finalPrice)}</td>
+            <td class="text-end text-muted small df-num" style="white-space: nowrap;">${formatVnd(ps.unitPrice)}</td>
+            <td class="text-center fw-semibold df-num" style="white-space: nowrap;">${_safeEscapeHtml(ps.quantity != null ? ps.quantity : 1)}</td>
+            <td class="text-end fw-bold text-dark df-num" style="white-space: nowrap;">${formatVnd(ps.finalPrice)}</td>
             <td style="white-space: nowrap;">
-                <div class="small fw-semibold text-dark">${ps.doctorName || ''}</div>
-                ${ps.assistantName ? `<div class="small text-muted">PT: ${ps.assistantName}</div>` : ''}
+                <div class="small fw-semibold text-dark">${_safeEscapeHtml(ps.doctorName || '')}</div>
+                ${ps.assistantName ? `<div class="small text-muted">PT: ${_safeEscapeHtml(ps.assistantName)}</div>` : ''}
             </td>
             <td class="text-center" style="white-space: nowrap;">
                 <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Đã thực hiện</span>
             </td>
+            ${canDeleteRow ? `
+                <td class="text-center" style="white-space: nowrap;">
+                    ${!isCancelledRow ? `
+                        <button type="button"
+                                class="df-btn-icon-muted"
+                                title="Hủy dịch vụ thực hiện này"
+                                onclick="deletePerformedService(${Number(ps.performedId)})">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    ` : ''}
+                </td>
+            ` : ''}
         `;
 
         tbody.insertBefore(tr, tbody.firstChild);
@@ -2327,6 +2509,8 @@
         if (countBadge) countBadge.innerText = `${count} dịch vụ`;
         const totalCountText = document.getElementById('dvTotalCountText');
         if (totalCountText) totalCountText.innerText = `${count} dịch vụ`;
+        const tabBadge = document.getElementById('tabBadge-tab-performed-services');
+        if (tabBadge) tabBadge.innerText = String(count);
 
         if (count === 0) {
             const totalText = document.getElementById('totalPerformedText');
@@ -2338,9 +2522,14 @@
             const hc = document.getElementById('headerCongNo');
             if (hc) hc.innerText = "0";
 
+            const emptyColspan = !(
+                (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal)
+                || (typeof isReadOnlyViewVal !== 'undefined' && isReadOnlyViewVal)
+            ) ? 9 : 8;
+
             document.getElementById('performedServicesTableBody').innerHTML = `
                 <tr id="emptyPerformedRow">
-                    <td colspan="8" class="text-center py-4 px-3" style="background: #f8fafc;">
+                    <td colspan="${emptyColspan}" class="text-center py-4 px-3" style="background: #f8fafc;">
                         <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 120px;">
                             <h6 class="fw-bold text-dark mb-1">Chưa có dịch vụ nào được ghi nhận trong ca khám này</h6>
                             <p class="df-meta-tertiary mb-3" style="max-width: 480px;">
@@ -2357,27 +2546,21 @@
             return;
         }
 
-        // Fetch latest performed services to calculate exact sum
-        const visitId = document.getElementById('visitId').value;
-        fetch(`/api/doctor/performed-services?visitId=${visitId}`)
-            .then(res => res.json())
-            .then(list => {
-                let sum = 0;
-                list.forEach(item => {
-                    sum += (item.finalPrice || 0);
-                });
-                const totalText = document.getElementById('totalPerformedText');
-                if (totalText) totalText.innerText = formatVnd(sum);
-                const footerTotal = document.getElementById('footerTotalPerformedText');
-                if (footerTotal) footerTotal.innerText = formatVnd(sum);
-                const hp = document.getElementById('headerPhatSinh');
-                if (hp) hp.innerText = formatNumber(sum);
-                const hc = document.getElementById('headerCongNo');
-                if (hc) hc.innerText = formatNumber(sum);
-            })
-            .catch(err => {
-                console.error("Error recalcing sum:", err);
-            });
+        let sum = 0;
+        rows.forEach(row => {
+            const val = parseFloat(row.getAttribute('data-final-price'));
+            if (!isNaN(val)) {
+                sum += val;
+            }
+        });
+        const totalText = document.getElementById('totalPerformedText');
+        if (totalText) totalText.innerText = formatVnd(sum);
+        const footerTotal = document.getElementById('footerTotalPerformedText');
+        if (footerTotal) footerTotal.innerText = formatVnd(sum);
+        const hp = document.getElementById('headerPhatSinh');
+        if (hp) hp.innerText = formatNumber(sum);
+        const hc = document.getElementById('headerCongNo');
+        if (hc) hc.innerText = formatNumber(sum);
     }
 
     function formatNumber(amount) {
@@ -2481,21 +2664,25 @@
 
         let html = '';
         list.forEach(p => {
-            const firstLetter = p.fullName ? p.fullName.trim().charAt(0).toUpperCase() : 'B';
+            const safeName = _safeEscapeHtml(p.fullName || '');
+            const safeCode = _safeEscapeHtml(p.patientCode || '');
+            const firstLetter = p.fullName ? _safeEscapeHtml(p.fullName.trim().charAt(0).toUpperCase()) : 'B';
             const genderIcon = p.gender === 'Nữ' 
                 ? '<i class="bi bi-gender-female text-danger"></i> Nữ' 
                 : '<i class="bi bi-gender-male text-primary"></i> Nam';
-            const ageText = p.age ? ` • ${p.age} tuổi` : '';
-            const phoneText = p.phoneNumber ? p.phoneNumber : 'Chưa có SĐT';
+            const ageText = p.age ? ` • ${_safeEscapeHtml(p.age)} tuổi` : '';
+            const phoneText = p.phoneNumber ? _safeEscapeHtml(p.phoneNumber) : 'Chưa có SĐT';
+            const safeStatusDisplay = _safeEscapeHtml(p.latestVisitStatusDisplay || '');
+            const visitTokenArg = (p.latestVisitToken || '').replace(/[^a-zA-Z0-9_-]/g, '');
 
             let visitBadge = '';
             if (p.hasActiveVisit) {
                 visitBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size: 11px;">
-                    <i class="bi bi-play-circle-fill"></i> ${p.latestVisitStatusDisplay}
+                    <i class="bi bi-play-circle-fill"></i> ${safeStatusDisplay}
                 </span>`;
             } else if (p.latestVisitId) {
                 visitBadge = `<span class="badge bg-light text-secondary border px-2 py-1" style="font-size: 11px;">
-                    <i class="bi bi-clock-history"></i> ${p.latestVisitStatusDisplay}
+                    <i class="bi bi-clock-history"></i> ${safeStatusDisplay}
                 </span>`;
             } else {
                 visitBadge = `<span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1" style="font-size: 11px;">
@@ -2509,15 +2696,15 @@
                      onmouseover="this.style.backgroundColor='#f1f5f9'"
                      onmouseout="this.style.backgroundColor='transparent'">
                     
-                    <div class="d-flex align-items-center gap-2 flex-grow-1 me-2" onclick="onSelectPatientCard(${p.profileId}, ${p.latestVisitId || 'null'}, ${p.hasActiveVisit})">
+                    <div class="d-flex align-items-center gap-2 flex-grow-1 me-2" onclick="onSelectPatientCard(${p.profileId}, '${visitTokenArg}', ${Boolean(p.hasActiveVisit)})">
                         <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
                              style="width: 36px; height: 36px; min-width: 36px; font-size: 14px; background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);">
                             ${firstLetter}
                         </div>
                         <div style="line-height: 1.25;">
                             <div class="d-flex align-items-center gap-2">
-                                <span class="fw-bold text-dark" style="font-size: 13.5px;">${p.fullName}</span>
-                                <span class="badge bg-light text-primary border" style="font-size: 10px; font-family: monospace;">${p.patientCode || ''}</span>
+                                <span class="fw-bold text-dark" style="font-size: 13.5px;">${safeName}</span>
+                                <span class="badge bg-light text-primary border" style="font-size: 10px; font-family: monospace;">${safeCode}</span>
                             </div>
                             <div class="text-muted small mt-1" style="font-size: 11.5px;">
                                 <i class="bi bi-telephone text-secondary"></i> ${phoneText} • ${genderIcon}${ageText}
@@ -2532,7 +2719,7 @@
                         <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 fw-bold"
                                 style="font-size: 11px;"
                                 title="Mở khám ngay cho bệnh nhân này"
-                                onclick="onSelectPatientCard(${p.profileId}, '${p.latestVisitToken || ''}', ${p.hasActiveVisit})">
+                                onclick="onSelectPatientCard(${p.profileId}, '${visitTokenArg}', ${Boolean(p.hasActiveVisit)})">
                             <i class="bi bi-arrow-right-circle-fill"></i> Vào khám
                         </button>
                     </div>
@@ -2819,13 +3006,19 @@
         const printEl = document.getElementById('printPrescriptionModal');
         if (printEl) printModalInstance = new bootstrap.Modal(printEl);
 
-        // Fetch danh mục thuốc nha khoa
-        fetch('/api/doctor/medications/catalog')
-            .then(res => res.json())
-            .then(data => {
-                availableMedications = data;
-            })
-            .catch(err => console.error("Error loading medications catalog:", err));
+        // Fetch danh mục thuốc nha khoa (tránh gọi trùng lặp nếu script được nạp lại)
+        if (!window._medicationsCatalogLoaded) {
+            window._medicationsCatalogLoaded = true;
+            fetch('/api/doctor/medications/catalog')
+                .then(res => res.json())
+                .then(data => {
+                    availableMedications = Array.isArray(data) ? data : [];
+                })
+                .catch(err => {
+                    window._medicationsCatalogLoaded = false;
+                    console.error("Error loading medications catalog:", err);
+                });
+        }
     });
 
     const PRESCRIPTION_PRESETS = {
@@ -2980,13 +3173,19 @@
         }
 
         let medOptions = '<option value="">-- Chọn thuốc trong kho hoặc tự nhập --</option>';
+        let matchedCatalogPrice = null;
         if (Array.isArray(availableMedications)) {
             availableMedications.forEach(m => {
                 const isSel = (drugName && m.drugName && m.drugName.toLowerCase() === drugName.toLowerCase()) ? 'selected' : '';
-                medOptions += `<option value="${m.medicationId}" data-code="${m.drugCode}" data-name="${m.drugName}" data-unit="${m.unit}" data-usage="${m.usageInstruction || ''}" ${isSel}>${m.drugName} (${m.drugCode})</option>`;
+                const salePrice = m.salePrice != null ? m.salePrice : 0;
+                if (isSel) matchedCatalogPrice = salePrice;
+                medOptions += `<option value="${m.medicationId}" data-code="${_safeEscapeHtml(m.drugCode || '')}" data-name="${_safeEscapeHtml(m.drugName || '')}" data-unit="${_safeEscapeHtml(m.unit || 'Viên')}" data-price="${salePrice}" data-usage="${_safeEscapeHtml(m.usageInstruction || '')}" ${isSel}>${_safeEscapeHtml(m.drugName)} (${_safeEscapeHtml(m.drugCode)})</option>`;
             });
         }
 
+        if (matchedCatalogPrice !== null) {
+            price = Number(matchedCatalogPrice) || 0;
+        }
         const lineTotal = (quantity || 1) * price;
 
         tr.innerHTML = `
@@ -2995,13 +3194,13 @@
                 <select class="form-select form-select-sm mb-1 drug-select" onchange="onDrugSelectChange(this, ${drugRowIndex})">
                     ${medOptions}
                 </select>
-                <input type="text" class="form-control form-control-sm drug-custom-name" oninput="onDrugCustomNameInput(this, ${drugRowIndex})" placeholder="Hoặc gõ tên thuốc / hoạt chất khác..." value="${drugName || ''}">
+                <input type="text" class="form-control form-control-sm drug-custom-name" oninput="onDrugCustomNameInput(this, ${drugRowIndex})" placeholder="Hoặc gõ tên thuốc / hoạt chất khác..." value="${_safeEscapeHtml(drugName || '')}">
             </td>
             <td>
                 <input type="text" class="form-control form-control-sm bg-light drug-code" placeholder="Mã..." readonly>
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm text-center drug-unit" value="${unit || 'Viên'}">
+                <input type="text" class="form-control form-control-sm text-center drug-unit" value="${_safeEscapeHtml(unit || 'Viên')}">
             </td>
             <td>
                 <input type="number" class="form-control form-control-sm text-center fw-bold drug-qty" value="${quantity || 1}" min="0.5" step="0.5" oninput="calcPrescDrugRowTotal(${drugRowIndex})">
@@ -3013,7 +3212,7 @@
                 ${new Intl.NumberFormat('vi-VN').format(lineTotal)} đ
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm drug-usage" placeholder="Cách dùng (VD: Ngày uống 2 lần, mỗi lần 1 viên sau ăn)" value="${usage || ''}">
+                <input type="text" class="form-control form-control-sm drug-usage" placeholder="Cách dùng (VD: Ngày uống 2 lần, mỗi lần 1 viên sau ăn)" value="${_safeEscapeHtml(usage || '')}">
             </td>
             <td class="text-center">
                 <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeDrugRow(this)">
@@ -3063,11 +3262,24 @@
     function onDrugCustomNameInput(inputEl, rowIdx) {
         const tr = document.getElementById(`drug-row-${rowIdx}`);
         if (!tr) return;
+        const selectEl = tr.querySelector('.drug-select');
+        const codeInput = tr.querySelector('.drug-code');
         const priceInput = tr.querySelector('.drug-price');
-        if (priceInput && (parseFloat(priceInput.value) === 5000 || !priceInput.value || parseFloat(priceInput.value) === 0)) {
-            const est = estimateDrugPrice(inputEl.value.trim());
-            priceInput.value = est;
-            calcPrescDrugRowTotal(rowIdx);
+
+        if (selectEl && selectEl.value) {
+            selectEl.value = '';
+        }
+        if (codeInput) {
+            codeInput.value = '';
+        }
+        if (priceInput) {
+            priceInput.readOnly = false;
+            priceInput.classList.remove('bg-light');
+            if (parseFloat(priceInput.value) === 5000 || !priceInput.value || parseFloat(priceInput.value) === 0) {
+                const est = estimateDrugPrice(inputEl.value.trim());
+                priceInput.value = est;
+                calcPrescDrugRowTotal(rowIdx);
+            }
         }
     }
 
@@ -3090,8 +3302,15 @@
         const tr = document.getElementById(`drug-row-${rowIdx}`);
         if (!tr) return;
 
+        const codeInput = tr.querySelector('.drug-code');
+        const priceInput = tr.querySelector('.drug-price');
         const opt = selectEl.options[selectEl.selectedIndex];
         if (!opt || !opt.value) {
+            if (codeInput) codeInput.value = '';
+            if (priceInput) {
+                priceInput.readOnly = false;
+                priceInput.classList.remove('bg-light');
+            }
             return;
         }
 
@@ -3099,19 +3318,21 @@
         const code = opt.getAttribute('data-code');
         const unit = opt.getAttribute('data-unit');
         const usage = opt.getAttribute('data-usage');
+        const catalogPrice = opt.getAttribute('data-price');
 
         const customNameInput = tr.querySelector('.drug-custom-name');
-        const codeInput = tr.querySelector('.drug-code');
         const unitInput = tr.querySelector('.drug-unit');
         const usageInput = tr.querySelector('.drug-usage');
-        const priceInput = tr.querySelector('.drug-price');
 
         if (customNameInput) customNameInput.value = name || '';
         if (codeInput) codeInput.value = code || '';
         if (unitInput) unitInput.value = unit || 'Viên';
         if (usageInput && !usageInput.value) usageInput.value = usage || '';
-        if (priceInput && name) {
-            priceInput.value = estimateDrugPrice(name);
+        if (priceInput) {
+            const parsedCatalogPrice = (catalogPrice !== null && catalogPrice !== '') ? parseFloat(catalogPrice) : 0;
+            priceInput.value = !isNaN(parsedCatalogPrice) ? Math.round(parsedCatalogPrice) : 0;
+            priceInput.readOnly = true;
+            priceInput.classList.add('bg-light');
             calcPrescDrugRowTotal(rowIdx);
         }
     }
@@ -3158,7 +3379,7 @@
                     durationDays: 5,
                     quantity: qty,
                     unit: unit,
-                    unitPrice: price,
+                    unitPrice: medId ? null : price,
                     usageInstruction: usage
                 });
             }
@@ -3329,6 +3550,8 @@
         const count = rows.length;
         const countBadge = document.getElementById('prescCountBadge');
         if (countBadge) countBadge.innerText = `${count} đơn thuốc`;
+        const tabBadge = document.getElementById('tabBadge-tab-prescriptions');
+        if (tabBadge) tabBadge.innerText = String(count);
 
         let totalPrescAmt = 0;
         document.querySelectorAll('#prescriptionsTableBody .presc-row-amount').forEach(el => {
@@ -3383,7 +3606,9 @@
 
                 document.getElementById('printPatientName').innerText = pr.patientName || '---';
                 document.getElementById('printPatientCode').innerText = pr.patientCode || '---';
-                document.getElementById('printPatientAge').innerText = (pr.age ? (pr.age + ' tuổi') : '') + (pr.dob ? ` (${pr.dob})` : '');
+                const ageText = (pr.age !== null && pr.age !== undefined) ? (pr.age + ' tuổi') : '';
+                const dobText = pr.dob ? ` (${pr.dob})` : '';
+                document.getElementById('printPatientAge').innerText = (ageText + dobText) || '---';
                 document.getElementById('printPatientGender').innerText = pr.gender || '---';
                 document.getElementById('printPatientPhone').innerText = pr.phoneNumber || '---';
                 document.getElementById('printPatientAddress').innerText = pr.address || '---';
@@ -3396,12 +3621,21 @@
                     pr.items.forEach((it, idx) => {
                         const div = document.createElement('div');
                         div.className = 'print-drug-row';
+                        const dosageText = it.dosage ? _safeEscapeHtml(it.dosage) : '';
+                        const durationText = (it.durationDays !== null && it.durationDays !== undefined && Number(it.durationDays) > 0)
+                            ? `${Number(it.durationDays)} ngày`
+                            : '';
+                        const usageText = it.usageInstruction ? _safeEscapeHtml(it.usageInstruction) : '';
+                        const metaParts = [];
+                        if (dosageText) metaParts.push(`Liều dùng: ${dosageText}`);
+                        if (durationText) metaParts.push(`Thời gian: ${durationText}`);
+                        if (usageText) metaParts.push(`Cách dùng: ${usageText}`);
                         div.innerHTML = `
-                            <div>
-                                <span class="fw-bold">${idx + 1}. ${it.drugName}</span>
-                                <span class="float-end fw-bold">Số lượng: ${it.quantity} ${it.unit}</span>
+                            <div class="d-flex justify-content-between align-items-baseline gap-2">
+                                <span class="fw-bold">${idx + 1}. ${_safeEscapeHtml(it.drugName || '')}</span>
+                                <span class="fw-bold text-nowrap">Số lượng: ${_safeEscapeHtml(it.quantity)} ${_safeEscapeHtml(it.unit || '')}</span>
                             </div>
-                            <div class="print-drug-usage">- Cách dùng: ${it.usageInstruction}</div>
+                            ${metaParts.length > 0 ? `<div class="print-drug-usage">- ${metaParts.join(' · ')}</div>` : ''}
                         `;
                         container.appendChild(div);
                     });
@@ -3420,6 +3654,23 @@
                 }
 
                 document.getElementById('printDoctorName').innerText = pr.doctorName || 'Bác sĩ điều trị';
+
+                const printDatePlaceEl = document.getElementById('printDatePlace');
+                if (printDatePlaceEl) {
+                    let dd, mm, yyyy;
+                    const dateMatch = pr.createdAt ? String(pr.createdAt).match(/(\d{2})\/(\d{2})\/(\d{4})/) : null;
+                    if (dateMatch) {
+                        dd = dateMatch[1];
+                        mm = dateMatch[2];
+                        yyyy = dateMatch[3];
+                    } else {
+                        const nowDt = new Date();
+                        dd = String(nowDt.getDate()).padStart(2, '0');
+                        mm = String(nowDt.getMonth() + 1).padStart(2, '0');
+                        yyyy = String(nowDt.getFullYear());
+                    }
+                    printDatePlaceEl.innerText = `Ngày ${dd} tháng ${mm} năm ${yyyy}`;
+                }
 
                 const printEl = document.getElementById('printPrescriptionModal');
                 if (printEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {

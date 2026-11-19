@@ -101,10 +101,10 @@
                 </div>
                 <div class="col-xl-3 col-sm-6">
                     <a th:href="@{/admin/leave-requests(status='REJECTED',branchId=${selectedBranchId},staffId=${selectedStaffId})}" class="text-decoration-none">
-                        <div class="dv-kpi-card" style="--kpi-accent: #ef4444;" th:classappend="${selectedStatus != null and (selectedStatus.name() == 'REJECTED' or selectedStatus.name() == 'CANCELLED')} ? 'active-kpi' : ''">
+                        <div class="dv-kpi-card" style="--kpi-accent: #ef4444;" th:classappend="${selectedStatus != null and selectedStatus.name() == 'REJECTED'} ? 'active-kpi' : ''">
                             <div>
                                 <div class="dv-kpi-num text-danger" th:text="${summary.rejected ?: 0}">0</div>
-                                <div class="dv-kpi-label">Từ chối / Đã hủy</div>
+                                <div class="dv-kpi-label">Từ chối</div>
                                 <div class="dv-kpi-sub">Đơn không được chấp thuận</div>
                             </div>
                             <div class="dv-kpi-icon" style="background: #fee2e2; color: #dc2626;">
@@ -177,7 +177,7 @@
                             <span class="text-muted mx-1">•</span>
                             <span class="text-secondary fw-semibold">Tất cả các ngày</span>
                         </div>
-                        <span class="badge rounded-pill px-3 py-1.5"
+                        <span class="badge rounded-pill px-3 py-1"
                             style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700;">
                             <i class="bi bi-hand-index-thumb me-1"></i>Di chuột vào dòng để hiện nút Thao tác nhanh (Không cần cuộn ngang)
                         </span>
@@ -430,16 +430,16 @@
 
                             <!-- 9. Trạng thái -->
                             <td data-col="status" style="min-width: 160px;">
-                                <span th:if="${r.status.name() == 'PENDING'}" class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#fef3c7; color:#b45309; font-size:12.5px; border:1px solid #fde68a;">
+                                <span th:if="${r.status.name() == 'PENDING'}" class="badge rounded-pill px-3 py-1 fw-bold" style="background:#fef3c7; color:#b45309; font-size:12.5px; border:1px solid #fde68a;">
                                     <i class="bi bi-hourglass-split me-1"></i>Chờ duyệt
                                 </span>
-                                <span th:if="${r.status.name() == 'APPROVED'}" class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#ecfdf5; color:#059669; font-size:12.5px; border:1px solid #a7f3d0;">
+                                <span th:if="${r.status.name() == 'APPROVED'}" class="badge rounded-pill px-3 py-1 fw-bold" style="background:#ecfdf5; color:#059669; font-size:12.5px; border:1px solid #a7f3d0;">
                                     <i class="bi bi-check-circle-fill me-1"></i>Đã duyệt
                                 </span>
-                                <span th:if="${r.status.name() == 'REJECTED'}" class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#fef2f2; color:#dc2626; font-size:12.5px; border:1px solid #fecaca;">
+                                <span th:if="${r.status.name() == 'REJECTED'}" class="badge rounded-pill px-3 py-1 fw-bold" style="background:#fef2f2; color:#dc2626; font-size:12.5px; border:1px solid #fecaca;">
                                     <i class="bi bi-x-circle-fill me-1"></i>Từ chối
                                 </span>
-                                <span th:if="${r.status.name() == 'CANCELLED'}" class="badge rounded-pill px-3 py-1.5 fw-bold" style="background:#f1f5f9; color:#475569; font-size:12.5px; border:1px solid #cbd5e1;">
+                                <span th:if="${r.status.name() == 'CANCELLED'}" class="badge rounded-pill px-3 py-1 fw-bold" style="background:#f1f5f9; color:#475569; font-size:12.5px; border:1px solid #cbd5e1;">
                                     <i class="bi bi-dash-circle me-1"></i>Đã hủy
                                 </span>
                             </td>
@@ -1234,6 +1234,16 @@
         const btnApprove = document.getElementById('btnApprove');
         const btnReject = document.getElementById('btnReject');
 
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function openReviewModalForRow(row) {
             if (!row || !reviewModalInstance) return;
 
@@ -1313,13 +1323,14 @@
 
                         data.forEach(item => {
                             const tr = document.createElement('tr');
+                            const safePhone = escapeHtml(item.phoneNumber);
                             tr.innerHTML = `
-                                <td><span class="badge bg-light text-dark border">${item.appointmentCode}</span></td>
-                                <td><strong>${item.patientName}</strong> (${item.patientCode || ''})</td>
-                                <td><a href="tel:${item.phoneNumber}" class="text-decoration-none">${item.phoneNumber}</a></td>
-                                <td>${item.appointmentDate} <span class="badge bg-info-subtle text-info">${item.expectedTime}</span></td>
-                                <td>${item.serviceName}</td>
-                                <td><span class="badge bg-warning-subtle text-warning">${item.status}</span></td>
+                                <td><span class="badge bg-light text-dark border">${escapeHtml(item.appointmentCode)}</span></td>
+                                <td><strong>${escapeHtml(item.patientName)}</strong> (${escapeHtml(item.patientCode)})</td>
+                                <td><a href="tel:${safePhone}" class="text-decoration-none">${safePhone}</a></td>
+                                <td>${escapeHtml(item.appointmentDate)} <span class="badge bg-info-subtle text-info">${escapeHtml(item.expectedTime)}</span></td>
+                                <td>${escapeHtml(item.serviceName)}</td>
+                                <td><span class="badge bg-warning-subtle text-warning">${escapeHtml(item.status)}</span></td>
                             `;
                             mAffectedTableBody.appendChild(tr);
                         });

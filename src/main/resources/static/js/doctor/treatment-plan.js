@@ -716,7 +716,12 @@ function togglePlanInlineRoadmap(planId) {
             roadmapRow.dataset.rendered = "true";
         } else {
             fetch(`/api/doctor/treatment-plans/${planId}`)
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) {
+                        throw new Error('Không thể tải chi tiết lộ trình kế hoạch điều trị');
+                    }
+                    return r.json();
+                })
                 .then(dto => {
                     roadmapRow.innerHTML = renderPlanInlineRoadmapHtml(dto);
                     roadmapRow.dataset.rendered = "true";
@@ -730,7 +735,12 @@ function togglePlanInlineRoadmap(planId) {
                         window.scrollTo({ top: targetTop, behavior: 'smooth' });
                     }, 50);
                 })
-                .catch(e => console.error(e));
+                .catch(e => {
+                    console.error(e);
+                    if (typeof showToast === 'function') {
+                        showToast(e.message || 'Lỗi tải lộ trình điều trị', true);
+                    }
+                });
             return;
         }
     }
@@ -988,6 +998,12 @@ function deleteTreatmentPlan(planId) {
         if (row) row.remove();
         const roadmapRow = document.getElementById(`plan-roadmap-row-${planId}`);
         if (roadmapRow) roadmapRow.remove();
+        if (Array.isArray(window.INITIAL_TREATMENT_PLANS)) {
+            window.INITIAL_TREATMENT_PLANS = window.INITIAL_TREATMENT_PLANS.filter(p => String(p.planId) !== String(planId));
+        }
+        if (typeof renderDiagnosisProgressTables === 'function') {
+            renderDiagnosisProgressTables();
+        }
         updatePlanCountBadge();
         if (typeof window.refreshTpGrid === 'function') {
             window.refreshTpGrid();
@@ -1003,6 +1019,10 @@ function updatePlanCountBadge() {
     const badge = document.getElementById('planCountBadge');
     if (badge) {
         badge.innerText = `${rows.length} kế hoạch`;
+    }
+    const tabBadge = document.getElementById('tabBadge-tab-treatment-plan');
+    if (tabBadge) {
+        tabBadge.innerText = String(rows.length);
     }
 }
 

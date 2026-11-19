@@ -660,6 +660,14 @@
                     <button type="button" class="btn-close btn-sm" aria-label="Đóng" onclick="hideInlineBanner()"></button>
                 </div>
 
+                <!-- CẢNH BÁO KHÓA BỆNH ÁN LÂM SÀNG (BR-EMR-02) -->
+                <div th:if="${isClinicalLocked}" class="df-inline-banner is-error" role="alert" style="display: flex;">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-lock-fill"></i>
+                        <span>Ca khám đã hoàn tất lâm sàng hoặc đang chờ thanh toán (khóa bất biến BR-EMR-02). Chỉ được xem, không thể tạo mới hoặc chỉnh sửa kế hoạch điều trị.</span>
+                    </div>
+                </div>
+
                 <!-- ========================================================================= -->
                 <!-- BƯỚC 1: CHẨN ĐOÁN BỆNH LÝ / MÃ ICD-10 (TÙY CHỌN — THU GỌN KHI TRỐNG)       -->
                 <!-- ========================================================================= -->
@@ -926,6 +934,10 @@
                 </div>
 
                 <div class="df-foldable-content" id="contentSection5" style="display: none;">
+                    <div id="installmentLockedNotice" class="alert alert-info py-2 px-3 small mb-3 d-none">
+                        <i class="bi bi-lock-fill me-1"></i>
+                        <span id="installmentLockedNoticeText">Phác đồ đã phát sinh thanh toán, lộ trình chia đợt đã được khóa cứng.</span>
+                    </div>
                     <div class="df-soft-panel mb-3">
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
                             <span class="fw-semibold text-dark">Phân bổ đợt thanh toán dự kiến</span>
@@ -952,10 +964,10 @@
                                 </select>
                             </div>
                             <div class="col-md-4 d-flex gap-2">
-                                <button type="button" class="btn btn-sm df-btn-tonal-primary flex-grow-1" onclick="autoGenerateInstallments()">
+                                <button type="button" id="btnAutoGenInstallments" class="btn btn-sm df-btn-tonal-primary flex-grow-1" onclick="autoGenerateInstallments()">
                                     <i class="bi bi-calculator me-1"></i> Chia đều tự động
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold" onclick="generateInstallmentsFromStages()" title="Chia đợt theo các giai đoạn điều trị">
+                                <button type="button" id="btnStageGenInstallments" class="btn btn-sm btn-outline-secondary fw-semibold" onclick="generateInstallmentsFromStages()" title="Chia đợt theo các giai đoạn điều trị">
                                     Theo giai đoạn
                                 </button>
                             </div>
@@ -987,7 +999,7 @@
                         </table>
                     </div>
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addCustomInstallmentRow()">
+                        <button type="button" id="btnAddCustomInstallment" class="btn btn-sm btn-outline-secondary" onclick="addCustomInstallmentRow()">
                             <i class="bi bi-plus-circle me-1"></i> Thêm đợt thủ công
                         </button>
                         <div class="df-meta-tertiary">
@@ -1020,9 +1032,10 @@
                             Hủy
                         </a>
                         <button type="button" id="btnSaveTreatmentPlan" class="btn btn-primary px-4 py-2 fw-bold d-flex align-items-center gap-2"
+                                th:disabled="${isClinicalLocked}"
                                 onclick="submitTreatmentPlan()">
                             <i class="bi bi-check-lg"></i>
-                            <span>Lưu kế hoạch điều trị</span>
+                            <span th:text="${isClinicalLocked ? 'Bệnh án đã khóa' : 'Lưu kế hoạch điều trị'}">Lưu kế hoạch điều trị</span>
                         </button>
                     </div>
                 </div>
@@ -1069,6 +1082,7 @@
     const CURRENT_VISIT_TOKEN = /*[[${idCodec.encodeVisit(visit.visitId)}]]*/ '';
     const CURRENT_PATIENT_ID = /*[[${patient != null ? patient.profileId : 0}]]*/ 0;
     const CURRENT_BRANCH_ID = /*[[${visit.branch != null ? visit.branch.branchId : 0}]]*/ 0;
+    const IS_CLINICAL_LOCKED = /*[[${isClinicalLocked}]]*/ false;
     const PRESELECTED_DIAG_ID = /*[[${preselectedDiagId}]]*/ null;
     const SERVER_ACTIVE_SERVICES = /*[[${activeServices}]]*/ [];
     const SERVER_DIAGNOSES = /*[[${diagnoses}]]*/ [];
@@ -1328,6 +1342,9 @@
     const PLAN_SERVICES = [];
     const CUSTOM_ICDS = [];
     let EDIT_PLAN_ID = null;
+    let EDIT_PLAN_STATUS = null;
+    let EDIT_IS_INSTALLMENT = false;
+    let IS_INSTALLMENT_LOCKED = false;
     let userEditedPlanName = false;
     let planServiceSeq = 1;
     let icdSearchTimer = null;
@@ -1645,7 +1662,7 @@
                 (st.steps || []).forEach(sp => {
                     if (!sp.isLocked) {
                         sp.activeTeeth = [...activeNums];
-                        sp.qty = isPkg ? 1 : (activeNums.length || 1);
+                        sp.qty = isPkg ? (d.qty || 1) : (activeNums.length || 1);
                     }
                 });
             });
@@ -1987,10 +2004,11 @@
                 : d.teeth.map(t => `<span class="chip-tooth">${escapeHtml(t.disp)}</span>`).join(' ');
             const srv = SERVICES_DICT[d.serviceId] || { id: d.serviceId, name: d.serviceName || 'Dịch vụ điều trị', price: 0, unit: 'Lần' };
             const unitP = Number(srv.price || 0);
+            const hasSteps = (d.stages || []).some(st => st.steps && st.steps.length > 0);
             const stepsSum = (d.stages || []).reduce((acc, st) => {
                 return acc + (st.steps || []).reduce((sAcc, sp) => sAcc + (Number(sp.price || 0) * Number(sp.qty || 1)), 0);
             }, 0);
-            const total = stepsSum > 0 ? stepsSum : (unitP * Number(d.qty || 1));
+            const total = hasSteps ? stepsSum : (unitP * Number(d.qty || 1));
 
             let srvOpts = '';
             const allServices = Object.values(SERVICES_DICT);
@@ -2056,7 +2074,7 @@
                     <td>
                         <div class="small">
                             <div class="d-flex align-items-center gap-2 mb-1">
-                                <span class="text-muted">${formatMoney(unitP)} &times;</span>
+                                <span class="text-muted">${(hasSteps && stepsSum === 0) ? '0 đ' : formatMoney(unitP)} &times;</span>
                                 <input type="number" class="form-control form-control-sm text-center fw-semibold"
                                        style="width: 54px; height: 30px; font-size: 13px;"
                                        min="1" max="32" value="${d.qty}"
@@ -2083,17 +2101,27 @@
     function changeServiceQty(id, val) {
         const d = PLAN_SERVICES.find(x => x.id === id);
         if (!d) return;
+        const prevQty = Number(d.qty || 1);
         const q = parseInt(val, 10);
-        d.qty = (!isNaN(q) && q > 0) ? q : 1;
+        const newQty = (!isNaN(q) && q > 0) ? Math.min(32, q) : 1;
+        d.qty = newQty;
+        const isPkg = isPackageService(d.serviceId);
+        const isFullJaw = (d.teeth || []).some(t => t.num === 'Toàn hàm' || t.isFullJaw);
+        const serviceTeethCount = (d.teeth || []).length;
+
         if (d.stages) {
             d.stages.forEach(st => {
                 if (st.steps) {
                     st.steps.forEach(sp => {
                         if (sp.isLocked) return;
-                        if (isPackageService(d.serviceId)) {
-                            sp.qty = d.qty;
+                        const activeList = Array.isArray(sp.activeTeeth) ? sp.activeTeeth : [];
+                        const stepIsFullJaw = activeList.length === 0 || activeList.includes('Toàn hàm');
+                        if (isPkg || isFullJaw || stepIsFullJaw) {
+                            sp.qty = newQty;
+                        } else if (activeList.length === serviceTeethCount || serviceTeethCount <= 1 || Number(sp.qty || 1) === prevQty) {
+                            sp.qty = newQty;
                         } else {
-                            sp.qty = (sp.activeTeeth && sp.activeTeeth.length > 0) ? sp.activeTeeth.length : d.qty;
+                            sp.qty = activeList.length;
                         }
                     });
                 }
@@ -2419,7 +2447,7 @@
             const srv = SERVICES_DICT[d.serviceId];
             const srvLabel = srv ? srv.name : (d.serviceName || 'Dịch vụ điều trị');
             const isPkg = isPackageService(d.serviceId);
-            const maxT = isPkg ? 32 : Math.max(1, d.teeth.length);
+            const maxT = isPkg ? 32 : Math.max(1, d.teeth.length, d.qty || 1);
             const teethStr = d.teeth.map(t => t.disp).join(', ');
             const preset = PRESETS_DICT[d.presetKey];
 
@@ -2808,7 +2836,7 @@
         const d = PLAN_SERVICES.find(x => x.id === id);
         if (!d || !d.stages[sIdx] || !d.stages[sIdx].steps[spIdx] || d.stages[sIdx].steps[spIdx].isLocked) return;
         const isPackage = isPackageService(d.serviceId);
-        const maxT = isPackage ? 32 : Math.max(1, d.teeth.length);
+        const maxT = isPackage ? 32 : Math.max(1, d.teeth.length, d.qty || 1);
         const uLabel = getServiceUnitLabel(d.serviceId);
 
         if (String(val).includes('.') || String(val).includes(',')) {
@@ -3035,6 +3063,11 @@
                 if (resp.ok) {
                     const plan = await resp.json();
                     if (plan) {
+                        EDIT_PLAN_STATUS = plan.status || 'ACCEPTED';
+                        EDIT_IS_INSTALLMENT = Boolean(plan.isInstallment);
+                        IS_INSTALLMENT_LOCKED = Number(plan.totalPaidAmount || 0) > 0
+                            || (Number(plan.finalEstimatedCost || 0) > 0 && Number(plan.remainingCost || 0) <= 0);
+
                         const nameInp = document.getElementById('planNameInput');
                         if (nameInp && plan.planName) nameInp.value = plan.planName;
 
@@ -3150,21 +3183,59 @@
                                     notes: ''
                                 }];
 
-                                const daysVal = Number(st.estimatedDaysFromStart != null ? st.estimatedDaysFromStart : (sIdx * 3));
+                                let daysVal = Number(st.estimatedDaysFromStart != null ? st.estimatedDaysFromStart : (sIdx * 3));
+                                if (st.expectedEndDate && plan.startDate) {
+                                    const parseVn = (str) => {
+                                        const parts = String(str).split('/');
+                                        return parts.length === 3 ? new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`) : null;
+                                    };
+                                    const sd = parseVn(plan.startDate);
+                                    const ed = parseVn(st.expectedEndDate);
+                                    if (sd && ed && !isNaN(sd) && !isNaN(ed)) {
+                                        daysVal = Math.max(0, Math.round((ed - sd) / 86400000));
+                                    }
+                                }
                                 srvGroup.stages.push({
                                     stageId: st.stageId || null,
+                                    status: st.status || 'PENDING',
                                     name: cleanStageName || st.stageName,
                                     days: daysVal,
                                     steps: steps
                                 });
                             });
 
+                            groupMap.forEach(srvGroup => {
+                                const collectedTeeth = [];
+                                const seenTeeth = new Set();
+                                (srvGroup.stages || []).forEach(st => {
+                                    (st.steps || []).forEach(sp => {
+                                        (sp.activeTeeth || []).forEach(t => {
+                                            const cleanT = String(t || '').trim();
+                                            if (cleanT && cleanT.toLowerCase() !== 'toàn hàm' && !seenTeeth.has(cleanT)) {
+                                                seenTeeth.add(cleanT);
+                                                collectedTeeth.push(cleanT);
+                                            }
+                                        });
+                                    });
+                                });
+                                if (collectedTeeth.length > 0) {
+                                    srvGroup.teeth = parseTeethInput(collectedTeeth.join(', '), srvGroup.serviceId);
+                                    if (!isPackageService(srvGroup.serviceId) && !srvGroup.teeth.some(t => t.isFullJaw)) {
+                                        const stepQtys = (srvGroup.stages || []).flatMap(st => (st.steps || []).map(sp => Number(sp.qty || 1)));
+                                        const maxStepQty = stepQtys.length > 0 ? Math.max(...stepQtys) : 1;
+                                        srvGroup.qty = Math.max(srvGroup.teeth.length, maxStepQty);
+                                    }
+                                } else {
+                                    srvGroup.teeth = parseTeethInput('Toàn hàm', srvGroup.serviceId);
+                                }
+                            });
+
                             PLAN_SERVICES.push(...groupMap.values());
                         }
 
                         // Nạp lại danh sách đợt thanh toán (Chuẩn DentalSoft)
-                        if (plan.installments && plan.installments.length > 0) {
-                            window.CURRENT_INSTALLMENTS = plan.installments.map((inst, idx) => {
+                        if (plan.isInstallment || (plan.installments && plan.installments.length > 0)) {
+                            window.CURRENT_INSTALLMENTS = (plan.installments || []).map((inst, idx) => {
                                 let dt = inst.expectedDateRaw || inst.expectedDate || '';
                                 if (dt && /^\d{2}\/\d{2}\/\d{4}$/.test(dt)) {
                                     const parts = dt.split('/');
@@ -3188,8 +3259,12 @@
                             }
                         }
 
+                        if (IS_INSTALLMENT_LOCKED) {
+                            applyInstallmentLockUI(plan.totalPaidAmount || 0);
+                        }
+
                         const btnSave = document.getElementById('btnSaveTreatmentPlan');
-                        if (btnSave) {
+                        if (btnSave && !IS_CLINICAL_LOCKED) {
                             btnSave.innerHTML = `<i class="bi bi-save-fill me-1"></i> Lưu cập nhật Kế hoạch`;
                         }
                     }
@@ -3219,6 +3294,23 @@
     // =========================================================================
     window.CURRENT_INSTALLMENTS = [];
 
+    function applyInstallmentLockUI(paidAmount) {
+        const switchEl = document.getElementById('isInstallmentSwitch');
+        if (switchEl) switchEl.disabled = true;
+        ['instDownPayment', 'instRemainingCount', 'instInterval',
+         'btnAutoGenInstallments', 'btnStageGenInstallments', 'btnAddCustomInstallment'].forEach(elId => {
+            const el = document.getElementById(elId);
+            if (el) el.disabled = true;
+        });
+        const notice = document.getElementById('installmentLockedNotice');
+        const noticeText = document.getElementById('installmentLockedNoticeText');
+        if (notice) notice.classList.remove('d-none');
+        if (noticeText) {
+            noticeText.innerText = `Phác đồ đã phát sinh thanh toán (${formatMoney(paidAmount)}), hình thức trả và lộ trình chia đợt đã được khóa cứng.`;
+        }
+        renderInstallmentsTable();
+    }
+
     function toggleInstallmentSection() {
         const switchEl = document.getElementById('isInstallmentSwitch');
         const section = document.getElementById('contentSection5');
@@ -3233,7 +3325,7 @@
                 badge.innerText = 'Trả theo đợt';
                 badge.className = 'badge bg-primary-subtle text-primary border';
             }
-            if (!window.CURRENT_INSTALLMENTS || window.CURRENT_INSTALLMENTS.length === 0) {
+            if (!IS_INSTALLMENT_LOCKED && (!window.CURRENT_INSTALLMENTS || window.CURRENT_INSTALLMENTS.length === 0)) {
                 autoGenerateInstallments();
             } else {
                 renderInstallmentsTable();
@@ -3273,6 +3365,10 @@
     }
 
     function autoGenerateInstallments() {
+        if (IS_INSTALLMENT_LOCKED) {
+            showToast('Phác đồ đã phát sinh thanh toán, không thể tạo lại lộ trình chia đợt.', 'warning');
+            return;
+        }
         const switchEl = document.getElementById('isInstallmentSwitch');
         if (switchEl && !switchEl.checked) {
             switchEl.checked = true;
@@ -3291,8 +3387,8 @@
         const countInput = document.getElementById('instRemainingCount');
         const intervalInput = document.getElementById('instInterval');
 
-        let downPayment = downPaymentInput ? Number(downPaymentInput.value || 0) : 0;
-        let count = countInput ? Math.max(1, parseInt(countInput.value || 9)) : 9;
+        let downPayment = downPaymentInput ? Math.max(0, Number(downPaymentInput.value || 0)) : 0;
+        let count = countInput ? Math.max(1, parseInt(countInput.value || 9, 10)) : 9;
         let intervalMonths = intervalInput ? parseFloat(intervalInput.value || 1) : 1;
 
         if (grandTotal > 0 && downPayment > grandTotal) {
@@ -3306,7 +3402,6 @@
             remainingTotal = Math.max(0, grandTotal - downPayment);
             perInst = count > 0 ? Math.round(remainingTotal / count) : 0;
         } else {
-            // Khi chưa tính tổng chi phí (hoặc = 0 đ), để mỗi đợt gợi ý 1.000.000 đ để bác sĩ có thể tùy chỉnh
             perInst = 1000000;
             remainingTotal = perInst * count;
         }
@@ -3316,40 +3411,52 @@
 
         window.CURRENT_INSTALLMENTS = [];
 
-        // Đợt 1
-        window.CURRENT_INSTALLMENTS.push({
-            phaseName: 'Đợt 1: Đóng ban đầu (Gắn mắc cài / Bắt đầu)',
-            expectedDate: baseStartDate,
-            expectedAmount: downPayment > 0 ? downPayment : 5000000,
-            notes: 'Khởi đầu điều trị'
-        });
-
-        // Các đợt tiếp theo
-        let allocatedRemaining = 0;
-        for (let i = 1; i <= count; i++) {
-            const nextDate = new Date(startDateObj);
-            if (intervalMonths === 0.5) {
-                nextDate.setDate(nextDate.getDate() + (i * 14));
-            } else {
-                nextDate.setMonth(nextDate.getMonth() + Math.round(i * intervalMonths));
-            }
-            const dateStr = nextDate.toISOString().split('T')[0];
-
-            let amountForThis = (i === count) ? (remainingTotal - allocatedRemaining) : perInst;
-            allocatedRemaining += amountForThis;
-
+        // Đợt 1 chỉ tạo riêng khi có khoản đóng ban đầu > 0
+        if (downPayment > 0) {
             window.CURRENT_INSTALLMENTS.push({
-                phaseName: `Đợt ${i + 1}: Tái khám siết răng / theo dõi tháng ${i}`,
-                expectedDate: dateStr,
-                expectedAmount: amountForThis,
-                notes: 'Tái khám định kỳ theo kế hoạch'
+                phaseName: 'Đợt 1: Đóng ban đầu (Gắn mắc cài / Bắt đầu)',
+                expectedDate: baseStartDate,
+                expectedAmount: downPayment,
+                notes: 'Khởi đầu điều trị'
             });
+        }
+
+        // Các đợt tiếp theo (hoặc toàn bộ count đợt nếu downPayment == 0)
+        if (downPayment === 0 || remainingTotal > 0 || grandTotal <= 0) {
+            let allocatedRemaining = 0;
+            const startOffset = downPayment > 0 ? 1 : 0;
+            for (let i = 1; i <= count; i++) {
+                const nextDate = new Date(startDateObj);
+                const stepOffset = downPayment > 0 ? i : (i - 1);
+                if (intervalMonths === 0.5) {
+                    nextDate.setDate(nextDate.getDate() + (stepOffset * 14));
+                } else {
+                    nextDate.setMonth(nextDate.getMonth() + Math.round(stepOffset * intervalMonths));
+                }
+                const dateStr = nextDate.toISOString().split('T')[0];
+
+                let amountForThis = (i === count) ? (remainingTotal - allocatedRemaining) : perInst;
+                allocatedRemaining += amountForThis;
+
+                window.CURRENT_INSTALLMENTS.push({
+                    phaseName: downPayment > 0
+                        ? `Đợt ${i + startOffset}: Tái khám siết răng / theo dõi tháng ${i}`
+                        : `Đợt ${i}: Thanh toán định kỳ kỳ ${i}`,
+                    expectedDate: dateStr,
+                    expectedAmount: amountForThis,
+                    notes: 'Tái khám định kỳ theo kế hoạch'
+                });
+            }
         }
 
         renderInstallmentsTable();
     }
 
     function generateInstallmentsFromStages() {
+        if (IS_INSTALLMENT_LOCKED) {
+            showToast('Phác đồ đã phát sinh thanh toán, không thể tạo lại lộ trình chia đợt.', 'warning');
+            return;
+        }
         const switchEl = document.getElementById('isInstallmentSwitch');
         if (switchEl && !switchEl.checked) {
             switchEl.checked = true;
@@ -3377,9 +3484,12 @@
                             cost += Number(sp.price || 0) * Number(sp.qty || 1);
                         });
                     }
+                    const parsedDays = (st.days !== undefined && st.days !== null && st.days !== '')
+                        ? Math.max(0, Number(st.days))
+                        : 0;
                     stageList.push({
                         name: st.name,
-                        days: Number(st.days || 30),
+                        days: isNaN(parsedDays) ? 0 : parsedDays,
                         cost: cost
                     });
                 });
@@ -3391,16 +3501,18 @@
             return;
         }
 
+        const anyStageHasCost = stageList.some(s => s.cost > 0);
         window.CURRENT_INSTALLMENTS = [];
-        let cumDays = 0;
         stageList.forEach((st, idx) => {
-            cumDays += st.days;
             const targetDate = new Date(startDateObj);
-            targetDate.setDate(targetDate.getDate() + (idx === 0 ? 0 : cumDays));
+            targetDate.setDate(targetDate.getDate() + st.days);
+            const expectedAmt = anyStageHasCost
+                ? st.cost
+                : (grandTotal > 0 ? Math.round(grandTotal / stageList.length) : 0);
             window.CURRENT_INSTALLMENTS.push({
                 phaseName: `Đợt ${idx + 1}: ${st.name}`,
                 expectedDate: targetDate.toISOString().split('T')[0],
-                expectedAmount: st.cost > 0 ? st.cost : (grandTotal > 0 ? Math.round(grandTotal / stageList.length) : 1000000),
+                expectedAmount: expectedAmt,
                 notes: `Thanh toán theo giai đoạn: ${st.name}`
             });
         });
@@ -3419,29 +3531,30 @@
             return;
         }
 
+        const disabledAttr = IS_INSTALLMENT_LOCKED ? 'disabled' : '';
         window.CURRENT_INSTALLMENTS.forEach((inst, idx) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="text-center fw-bold text-muted">${idx + 1}</td>
                 <td>
                     <input type="text" class="form-control form-control-sm" value="${escapeHtml(inst.phaseName || '')}"
-                           onchange="onInstallmentFieldChange(${idx}, 'phaseName', this.value)">
+                           ${disabledAttr} onchange="onInstallmentFieldChange(${idx}, 'phaseName', this.value)">
                 </td>
                 <td>
                     <input type="date" class="form-control form-control-sm" value="${inst.expectedDate || ''}"
-                           onchange="onInstallmentFieldChange(${idx}, 'expectedDate', this.value)">
+                           ${disabledAttr} onchange="onInstallmentFieldChange(${idx}, 'expectedDate', this.value)">
                 </td>
                 <td class="text-end">
                     <input type="number" class="form-control form-control-sm text-end fw-bold text-primary"
                            value="${inst.expectedAmount || 0}" min="0" step="100000"
-                           onchange="onInstallmentFieldChange(${idx}, 'expectedAmount', Number(this.value)); updateInstallmentTotal();">
+                           ${disabledAttr} onchange="onInstallmentFieldChange(${idx}, 'expectedAmount', Number(this.value)); updateInstallmentTotal();">
                 </td>
                 <td>
                     <input type="text" class="form-control form-control-sm" value="${escapeHtml(inst.notes || '')}"
-                           placeholder="Ghi chú đợt..." onchange="onInstallmentFieldChange(${idx}, 'notes', this.value)">
+                           placeholder="Ghi chú đợt..." ${disabledAttr} onchange="onInstallmentFieldChange(${idx}, 'notes', this.value)">
                 </td>
                 <td class="text-center">
-                    <button type="button" class="df-btn-icon-muted" onclick="removeInstallmentRow(${idx})" title="Xóa đợt này">
+                    <button type="button" class="df-btn-icon-muted" ${disabledAttr} onclick="removeInstallmentRow(${idx})" title="Xóa đợt này">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>
@@ -3453,12 +3566,14 @@
     }
 
     function onInstallmentFieldChange(idx, field, value) {
+        if (IS_INSTALLMENT_LOCKED) return;
         if (window.CURRENT_INSTALLMENTS && window.CURRENT_INSTALLMENTS[idx]) {
             window.CURRENT_INSTALLMENTS[idx][field] = value;
         }
     }
 
     function addCustomInstallmentRow() {
+        if (IS_INSTALLMENT_LOCKED) return;
         const switchEl = document.getElementById('isInstallmentSwitch');
         if (switchEl && !switchEl.checked) {
             switchEl.checked = true;
@@ -3488,7 +3603,7 @@
     }
 
     function removeInstallmentRow(idx) {
-        if (!window.CURRENT_INSTALLMENTS) return;
+        if (IS_INSTALLMENT_LOCKED || !window.CURRENT_INSTALLMENTS) return;
         window.CURRENT_INSTALLMENTS.splice(idx, 1);
         renderInstallmentsTable();
     }
@@ -3525,6 +3640,10 @@
     // 6. LƯU KẾ HOẠCH ĐIỀU TRỊ VÀO CƠ SỞ DỮ LIỆU (POST / PUT /api/doctor/treatment-plans)
     // =========================================================================
     async function submitTreatmentPlan() {
+        if (IS_CLINICAL_LOCKED) {
+            showInlineBanner('Ca khám đã khóa bất biến (BR-EMR-02), không thể tạo mới hoặc cập nhật kế hoạch điều trị.', 'error');
+            return;
+        }
         const btnSave = document.getElementById('btnSaveTreatmentPlan');
         const planName = (document.getElementById('planNameInput').value || '').trim();
         const doctorId = document.getElementById('doctorSelect').value;
@@ -3601,28 +3720,34 @@
                     stageName: `[SV #${d.order}] ${st.name}`,
                     estimatedDaysFromStart: Number(st.days || 0),
                     description: `Dịch vụ: ${srvLabel}`,
-                    status: 'PENDING',
+                    status: st.status || 'PENDING',
                     items: itemDTOs
                 });
             });
         });
 
-        const isInstallment = document.getElementById('isInstallmentSwitch')?.checked || false;
-        const installmentDTOs = [];
-        if (isInstallment && window.CURRENT_INSTALLMENTS && window.CURRENT_INSTALLMENTS.length > 0) {
-            window.CURRENT_INSTALLMENTS.forEach((inst, idx) => {
-                installmentDTOs.push({
-                    installmentOrder: idx + 1,
-                    phaseName: inst.phaseName || `Đợt ${idx + 1}`,
-                    expectedDate: inst.expectedDate || null,
-                    expectedDateRaw: inst.expectedDate || null,
-                    expectedAmount: Number(inst.expectedAmount || 0),
-                    notes: inst.notes || ''
+        const isInstallment = IS_INSTALLMENT_LOCKED
+            ? EDIT_IS_INSTALLMENT
+            : (document.getElementById('isInstallmentSwitch')?.checked || false);
+        let installmentDTOs = null;
+        if (!IS_INSTALLMENT_LOCKED) {
+            installmentDTOs = [];
+            if (isInstallment && window.CURRENT_INSTALLMENTS && window.CURRENT_INSTALLMENTS.length > 0) {
+                window.CURRENT_INSTALLMENTS.forEach((inst, idx) => {
+                    installmentDTOs.push({
+                        installmentOrder: idx + 1,
+                        phaseName: inst.phaseName || `Đợt ${idx + 1}`,
+                        expectedDate: inst.expectedDate || null,
+                        expectedDateRaw: inst.expectedDate || null,
+                        expectedAmount: Number(inst.expectedAmount || 0),
+                        notes: inst.notes || ''
+                    });
                 });
-            });
+            }
         }
 
         const requestPayload = {
+            visitId: CURRENT_VISIT_ID ? Number(CURRENT_VISIT_ID) : null,
             patientId: Number(CURRENT_PATIENT_ID),
             branchId: Number(CURRENT_BRANCH_ID),
             doctorId: doctorId ? Number(doctorId) : null,
@@ -3630,14 +3755,16 @@
             diagnosisText: diagnosisText || null,
             totalEstimatedCost: totalCost,
             finalEstimatedCost: totalCost,
-            status: 'ACCEPTED',
+            status: EDIT_PLAN_ID ? (EDIT_PLAN_STATUS || 'ACCEPTED') : 'ACCEPTED',
             startDate: startDate || null,
             expectedEndDate: expectedEndDate || null,
             notes: planNotes || null,
             stages: stageDTOs,
-            isInstallment: isInstallment,
-            installments: installmentDTOs
+            isInstallment: isInstallment
         };
+        if (installmentDTOs !== null) {
+            requestPayload.installments = installmentDTOs;
+        }
 
         const endpoint = EDIT_PLAN_ID
             ? `/api/doctor/treatment-plans/${EDIT_PLAN_ID}`

@@ -10,12 +10,15 @@ import com.cvdcms.entity.enums.AssignmentStatus;
 import com.cvdcms.entity.enums.NanopixSyncStatus;
 import com.cvdcms.entity.enums.ParaclinicalFileType;
 import com.cvdcms.entity.enums.ParaclinicalOrderItemStatus;
+import com.cvdcms.entity.enums.ParaclinicalOrderStatus;
+import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.NanoPixIntegrationService;
 import com.cvdcms.service.NanopixXrayService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -76,12 +79,29 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
         if (!"ADMIN".equals(role)) {
             List<Long> allowedIds = resolveUserAccessibleBranchIds(userId);
             if (effectiveBranchId != null) {
-                if (!allowedIds.isEmpty() && !allowedIds.contains(effectiveBranchId)) {
+                if (!allowedIds.contains(effectiveBranchId)) {
                     throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                             "Bạn không có quyền xem dữ liệu X-quang của cơ sở khác.");
                 }
+            } else if (allowedIds.isEmpty()) {
+                return Page.empty(pageable);
             } else if (allowedIds.size() == 1) {
                 effectiveBranchId = allowedIds.get(0);
+            } else {
+                Page<NanopixXraySyncLog> allPage = nanopixRepository.findWithFilters(status, kw, fromTime, toTime, null, Pageable.unpaged());
+                List<NanopixXraySyncLog> filtered = (allPage != null ? allPage.getContent() : List.<NanopixXraySyncLog>of()).stream()
+                        .filter(n -> {
+                            Long bId = resolveSyncLogBranchId(n);
+                            return bId != null && allowedIds.contains(bId);
+                        })
+                        .toList();
+                int total = filtered.size();
+                int start = pageable != null && pageable.isPaged() ? (int) Math.min(pageable.getOffset(), total) : 0;
+                int end = pageable != null && pageable.isPaged() ? Math.min(start + pageable.getPageSize(), total) : total;
+                List<NanopixXrayResponseDTO> content = filtered.subList(start, end).stream()
+                        .map(this::toResponseDTO)
+                        .toList();
+                return new PageImpl<>(content, pageable != null ? pageable : Pageable.unpaged(), total);
             }
         }
 
@@ -94,23 +114,42 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
     public List<NanopixXrayResponseDTO> getUnmatchedXrays(String keyword, Long userId) {
         String role = requireAuthorizedRole(userId);
         String kw = StringUtils.hasText(keyword) ? keyword.trim() : null;
-        Long branchId = null;
         if (!"ADMIN".equals(role)) {
             List<Long> allowedIds = resolveUserAccessibleBranchIds(userId);
-            if (allowedIds.size() == 1) {
-                branchId = allowedIds.get(0);
+            if (allowedIds.isEmpty()) {
+                return List.of();
             }
+            if (allowedIds.size() == 1) {
+                List<NanopixXraySyncLog> list = nanopixRepository.findUnmatchedWithFilter(NanopixSyncStatus.UNMATCHED, kw, allowedIds.get(0));
+                return list.stream().map(this::toResponseDTO).collect(Collectors.toList());
+            }
+            List<NanopixXraySyncLog> list = nanopixRepository.findUnmatchedWithFilter(NanopixSyncStatus.UNMATCHED, kw, null);
+            return list.stream()
+                    .filter(n -> {
+                        Long bId = resolveSyncLogBranchId(n);
+                        return bId != null && allowedIds.contains(bId);
+                    })
+                    .map(this::toResponseDTO)
+                    .collect(Collectors.toList());
         }
-        List<NanopixXraySyncLog> list = nanopixRepository.findUnmatchedWithFilter(NanopixSyncStatus.UNMATCHED, kw, branchId);
+        List<NanopixXraySyncLog> list = nanopixRepository.findUnmatchedWithFilter(NanopixSyncStatus.UNMATCHED, kw, null);
         return list.stream().map(this::toResponseDTO).collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
     public NanopixXrayResponseDTO getXrayDetail(Long syncLogId, Long userId) {
-        requireAuthorizedRole(userId);
+        String role = requireAuthorizedRole(userId);
         NanopixXraySyncLog syncLog = nanopixRepository.findByIdWithDetails(syncLogId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy kết quả X-quang mã: " + syncLogId));
+        if (!"ADMIN".equals(role)) {
+            List<Long> allowedIds = resolveUserAccessibleBranchIds(userId);
+            Long logBranchId = resolveSyncLogBranchId(syncLog);
+            if (allowedIds.isEmpty() || (logBranchId != null && !allowedIds.contains(logBranchId))) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Bạn không có quyền xem phim X-quang thuộc cơ sở khác.");
+            }
+        }
         return toResponseDTO(syncLog);
     }
 
@@ -146,15 +185,26 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
                 emrRecordRepository,
                 "Lượt khám đã hoàn tất/chờ thanh toán/hủy hoặc EMR đã khóa. Không thể đối chiếu phim X-quang");
 
-        // Kiểm tra giới hạn cơ sở: Bác sĩ / Lễ tân chỉ được liên kết ca khám thuộc cơ sở mình đang làm việc
+        // Kiểm tra giới hạn cơ sở: Bác sĩ / Lễ tân chỉ được liên kết phim & ca khám thuộc cơ sở mình đang làm việc
         if (!"ADMIN".equals(role)) {
             List<Long> allowedIds = resolveUserAccessibleBranchIds(userId);
-            if (!allowedIds.isEmpty() && visit.getBranch() != null
+            if (allowedIds.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Tài khoản của bạn chưa được phân công cơ sở làm việc.");
+            }
+            Long existingLogBranchId = resolveSyncLogBranchId(syncLog);
+            if (existingLogBranchId != null && !allowedIds.contains(existingLogBranchId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Bạn không có quyền đối chiếu phim X-quang thuộc cơ sở khác.");
+            }
+            if (visit.getBranch() != null && visit.getBranch().getBranchId() != null
                     && !allowedIds.contains(visit.getBranch().getBranchId())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Bạn không có quyền thao tác trên ca khám thuộc cơ sở khác (" + visit.getBranch().getBranchName() + ").");
             }
         }
+
+        ParaclinicalOrderItem previousItem = syncLog.getMatchedItem();
 
         StaffProfile staff = null;
         if (userId != null) {
@@ -202,24 +252,76 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
             }
         }
 
+        // Nếu đang đổi liên kết từ chỉ định cũ sang chỉ định khác (hoặc gỡ liên kết), hoàn tác chỉ định cũ
+        if (previousItem != null && (orderItem == null || !Objects.equals(previousItem.getOrderItemId(), orderItem.getOrderItemId()))) {
+            unlinkPreviousOrderItem(previousItem, syncLog);
+        }
+
         if (orderItem != null) {
             syncLog.setMatchedItem(orderItem);
             orderItem.setStatus(ParaclinicalOrderItemStatus.COMPLETED);
             orderItem.setPerformedAt(LocalDateTime.now());
+            if (!StringUtils.hasText(orderItem.getExternalRefId()) && orderItem.getOrderItemId() != null) {
+                orderItem.setExternalRefId("XQ" + orderItem.getOrderItemId());
+            }
             if (!StringUtils.hasText(orderItem.getResultSummary())) {
                 orderItem.setResultSummary("Đã đối chiếu ảnh X-quang NanoPix (" + syncLog.getExternalStudyUid() + ")");
             }
             paraclinicalOrderItemRepository.save(orderItem);
 
-            // Gắn file đính kèm kết quả để bác sĩ xem được trong màn hình ca khám
-            ParaclinicalResultAttachment attachment = new ParaclinicalResultAttachment();
-            attachment.setOrderItem(orderItem);
-            attachment.setFileName("XRAY_" + syncLog.getExternalStudyUid() + ".jpg");
-            attachment.setFileUrl(syncLog.getImageUrl());
-            attachment.setFileType(ParaclinicalFileType.IMAGE);
-            attachment.setCaption("Ảnh X-quang NanoPix1 đối chiếu thủ công (Răng: " +
-                    (syncLog.getToothNumbers() != null ? syncLog.getToothNumbers() : "Không rõ") + ")");
-            attachmentRepository.save(attachment);
+            // Cập nhật trạng thái phiếu chỉ định cha & lượt khám đồng nhất với NanoPixIntegrationServiceImpl
+            ParaclinicalOrder parentOrder = orderItem.getOrder();
+            if (parentOrder != null) {
+                List<ParaclinicalOrderItem> allItems = paraclinicalOrderItemRepository.findByOrder_OrderId(parentOrder.getOrderId());
+                if (allItems != null && !allItems.isEmpty()) {
+                    List<ParaclinicalOrderItem> activeItems = allItems.stream()
+                            .filter(i -> i.getStatus() != ParaclinicalOrderItemStatus.CANCELLED)
+                            .toList();
+                    boolean allCompleted = !activeItems.isEmpty()
+                            && activeItems.stream().allMatch(i -> i.getStatus() == ParaclinicalOrderItemStatus.COMPLETED);
+                    if (allCompleted) {
+                        parentOrder.setStatus(ParaclinicalOrderStatus.COMPLETED);
+                        parentOrder.setCompletedAt(LocalDateTime.now());
+                        if (visit.getStatus() == VisitStatus.WAITING_PARACLINICAL) {
+                            visit.setStatus(VisitStatus.WAITING_RESULT);
+                            visitRepository.save(visit);
+                        }
+                    } else if (parentOrder.getStatus() == ParaclinicalOrderStatus.ORDERED) {
+                        parentOrder.setStatus(ParaclinicalOrderStatus.IN_PROGRESS);
+                    }
+                }
+            }
+
+            // Gắn file đính kèm kết quả để bác sĩ xem được trong màn hình ca khám (tránh tạo trùng khi đối chiếu lại cùng item)
+            String expectedFileName = "XRAY_" + syncLog.getExternalStudyUid() + ".jpg";
+            String captionText = "Ảnh X-quang NanoPix1 đối chiếu thủ công (Răng: " +
+                    (syncLog.getToothNumbers() != null ? syncLog.getToothNumbers() : "Không rõ") + ")";
+            List<ParaclinicalResultAttachment> existingAttachments = orderItem.getOrderItemId() != null
+                    ? attachmentRepository.findByOrderItem_OrderItemId(orderItem.getOrderItemId())
+                    : List.of();
+            ParaclinicalResultAttachment matchingAttachment = existingAttachments == null ? null : existingAttachments.stream()
+                    .filter(att -> (syncLog.getImageUrl() != null && syncLog.getImageUrl().equals(att.getFileUrl()))
+                            || expectedFileName.equals(att.getFileName()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (matchingAttachment != null) {
+                matchingAttachment.setCaption(captionText);
+                attachmentRepository.save(matchingAttachment);
+            } else {
+                ParaclinicalResultAttachment attachment = new ParaclinicalResultAttachment();
+                attachment.setOrderItem(orderItem);
+                attachment.setFileName(expectedFileName);
+                attachment.setFileUrl(syncLog.getImageUrl());
+                attachment.setFileType(ParaclinicalFileType.IMAGE);
+                attachment.setCaption(captionText);
+                attachmentRepository.save(attachment);
+                if (orderItem.getAttachments() != null && !orderItem.getAttachments().contains(attachment)) {
+                    orderItem.getAttachments().add(attachment);
+                }
+            }
+        } else {
+            syncLog.setMatchedItem(null);
         }
 
         NanopixXraySyncLog saved = nanopixRepository.save(syncLog);
@@ -240,7 +342,7 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
     @Transactional(readOnly = true)
     public Map<String, Object> getReconciliationLookups(Long profileId) {
         if (profileId == null) {
-            return Map.of("visits", Collections.emptyList(), "orders", Collections.emptyList());
+            return Map.of("visits", Collections.emptyList(), "orderItems", Collections.emptyList());
         }
 
         List<Visit> visits = visitRepository.findByPatientProfile_ProfileIdOrderByCheckInAtDesc(profileId);
@@ -250,6 +352,7 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
             m.put("visitCode", v.getVisitCode());
             m.put("checkInAt", v.getCheckInAt() != null ? v.getCheckInAt().format(DATE_TIME_FORMATTER) : "Chưa có ngày");
             m.put("status", v.getStatus() != null ? v.getStatus().name() : "");
+            m.put("branchId", v.getBranch() != null ? v.getBranch().getBranchId() : null);
             m.put("branchName", v.getBranch() != null ? v.getBranch().getBranchName() : "");
             return m;
         }).collect(Collectors.toList());
@@ -265,8 +368,10 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
 
         List<Map<String, Object>> itemList = items.stream().map(item -> {
             Map<String, Object> m = new HashMap<>();
+            Visit itemVisit = item.getOrder() != null ? item.getOrder().getVisit() : null;
             m.put("orderItemId", item.getOrderItemId());
-            m.put("visitId", item.getOrder() != null && item.getOrder().getVisit() != null ? item.getOrder().getVisit().getVisitId() : null);
+            m.put("visitId", itemVisit != null ? itemVisit.getVisitId() : null);
+            m.put("branchId", itemVisit != null && itemVisit.getBranch() != null ? itemVisit.getBranch().getBranchId() : null);
             m.put("externalRefId", item.getExternalRefId() != null ? item.getExternalRefId() : ("XQ" + item.getOrderItemId()));
             m.put("toothNumbers", item.getToothNumbers());
             m.put("serviceName", item.getService() != null ? item.getService().getServiceName() : "Chụp X-quang");
@@ -310,7 +415,7 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
         } else {
             List<Long> allowedIds = resolveUserAccessibleBranchIds(userId);
             options = allBranches.stream()
-                    .filter(b -> allowedIds.isEmpty() || allowedIds.contains(b.getBranchId()))
+                    .filter(b -> allowedIds.contains(b.getBranchId()))
                     .map(b -> new BranchOptionDTO(b.getBranchId(), b.getBranchCode(), b.getBranchName()))
                     .toList();
         }
@@ -320,6 +425,74 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
         res.put("isAdmin", "ADMIN".equals(role));
         res.put("branches", options);
         return res;
+    }
+
+    private Long resolveSyncLogBranchId(NanopixXraySyncLog syncLog) {
+        if (syncLog == null) return null;
+        if (syncLog.getBranch() != null && syncLog.getBranch().getBranchId() != null) {
+            return syncLog.getBranch().getBranchId();
+        }
+        if (syncLog.getMatchedVisit() != null && syncLog.getMatchedVisit().getBranch() != null) {
+            return syncLog.getMatchedVisit().getBranch().getBranchId();
+        }
+        return null;
+    }
+
+    private void unlinkPreviousOrderItem(ParaclinicalOrderItem previousItem, NanopixXraySyncLog syncLog) {
+        if (previousItem == null || syncLog == null) {
+            return;
+        }
+        String expectedFileName = "XRAY_" + syncLog.getExternalStudyUid() + ".jpg";
+        List<ParaclinicalResultAttachment> currentAttachments = previousItem.getOrderItemId() != null
+                ? attachmentRepository.findByOrderItem_OrderItemId(previousItem.getOrderItemId())
+                : List.of();
+        List<ParaclinicalResultAttachment> toRemove = new ArrayList<>();
+        if (currentAttachments != null) {
+            for (ParaclinicalResultAttachment att : currentAttachments) {
+                boolean matchesUrl = syncLog.getImageUrl() != null && syncLog.getImageUrl().equals(att.getFileUrl());
+                boolean matchesName = expectedFileName.equals(att.getFileName());
+                if (matchesUrl || matchesName) {
+                    toRemove.add(att);
+                }
+            }
+        }
+        if (!toRemove.isEmpty()) {
+            if (previousItem.getAttachments() != null) {
+                previousItem.getAttachments().removeAll(toRemove);
+            }
+            attachmentRepository.deleteAll(toRemove);
+        }
+
+        int remainingCount = currentAttachments != null ? currentAttachments.size() - toRemove.size() : 0;
+        if (remainingCount <= 0 && previousItem.getStatus() == ParaclinicalOrderItemStatus.COMPLETED) {
+            previousItem.setStatus(ParaclinicalOrderItemStatus.WAITING);
+            previousItem.setPerformedAt(null);
+            if (previousItem.getResultSummary() != null
+                    && syncLog.getExternalStudyUid() != null
+                    && previousItem.getResultSummary().contains(syncLog.getExternalStudyUid())) {
+                previousItem.setResultSummary(null);
+            }
+            paraclinicalOrderItemRepository.save(previousItem);
+
+            ParaclinicalOrder prevOrder = previousItem.getOrder();
+            if (prevOrder != null) {
+                List<ParaclinicalOrderItem> prevOrderItems = paraclinicalOrderItemRepository.findByOrder_OrderId(prevOrder.getOrderId());
+                if (prevOrderItems != null && !prevOrderItems.isEmpty()) {
+                    boolean anyCompletedOrInProgress = prevOrderItems.stream()
+                            .anyMatch(i -> i.getStatus() == ParaclinicalOrderItemStatus.COMPLETED
+                                    || i.getStatus() == ParaclinicalOrderItemStatus.IN_PROGRESS);
+                    if (prevOrder.getStatus() == ParaclinicalOrderStatus.COMPLETED) {
+                        prevOrder.setStatus(anyCompletedOrInProgress ? ParaclinicalOrderStatus.IN_PROGRESS : ParaclinicalOrderStatus.ORDERED);
+                        prevOrder.setCompletedAt(null);
+                    }
+                }
+                Visit prevVisit = prevOrder.getVisit();
+                if (prevVisit != null && prevVisit.getStatus() == VisitStatus.WAITING_RESULT) {
+                    prevVisit.setStatus(VisitStatus.WAITING_PARACLINICAL);
+                    visitRepository.save(prevVisit);
+                }
+            }
+        }
     }
 
     private List<Long> resolveUserAccessibleBranchIds(Long userId) {
@@ -334,11 +507,6 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
         User user = userRepository.findById(userId).orElse(null);
         if (user != null && user.getBranch() != null && user.getBranch().getBranchId() != null) {
             ids.add(user.getBranch().getBranchId());
-        }
-        if (ids.isEmpty()) {
-            return branchRepository.findByIsActiveTrueOrderByBranchNameAsc().stream()
-                    .map(Branch::getBranchId)
-                    .toList();
         }
         return new ArrayList<>(ids);
     }
@@ -426,6 +594,8 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
                 .linkedAt(entity.getLinkedAt() != null ? entity.getLinkedAt().format(DATE_TIME_FORMATTER) : null)
                 .capturedAt(entity.getCapturedAt())
                 .capturedAtFormatted(entity.getCapturedAt() != null ? entity.getCapturedAt().format(DATE_TIME_FORMATTER) : "")
+                .syncTime(entity.getSyncTime())
+                .syncTimeFormatted(entity.getSyncTime() != null ? entity.getSyncTime().format(DATE_TIME_FORMATTER) : "")
                 .deviceSerialNumber(entity.getDeviceSerialNumber())
                 .deviceModel(entity.getDeviceModel())
                 .errorMessage(entity.getErrorMessage())
