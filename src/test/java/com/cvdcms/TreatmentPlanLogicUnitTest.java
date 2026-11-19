@@ -42,6 +42,7 @@ class TreatmentPlanLogicUnitTest {
     @Mock private GeminiAiService geminiAiService;
     @Mock private PerformedServiceRepository performedServiceRepository;
     @Mock private InvoiceItemRepository invoiceItemRepository;
+    @Mock private TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository;
 
     @Mock private DiagnosisService diagnosisService;
     @Mock private ClinicalExaminationBootstrapService examinations;
@@ -82,7 +83,8 @@ class TreatmentPlanLogicUnitTest {
                 serviceRepository,
                 geminiAiService,
                 performedServiceRepository,
-                invoiceItemRepository
+                invoiceItemRepository,
+                treatmentPlanInstallmentRepository
         );
 
         diagnosisController = new DiagnosisController(
@@ -334,5 +336,161 @@ class TreatmentPlanLogicUnitTest {
         });
 
         assertNotNull(ex.getMessage());
+    }
+
+    @Test
+    @DisplayName("DentalSoft - Lập kế hoạch điều trị niềng răng 25 triệu với lộ trình chia đợt")
+    void testCreateTreatmentPlanWithInstallments() {
+        when(patientProfileRepository.findById(1L)).thenReturn(Optional.of(mockPatient));
+        when(branchRepository.findById(10L)).thenReturn(Optional.of(mockBranch));
+        when(staffProfileRepository.findById(5L)).thenReturn(Optional.of(mockDoctor));
+        when(planRepository.save(any(TreatmentPlan.class))).thenAnswer(invocation -> {
+            TreatmentPlan p = invocation.getArgument(0);
+            p.setPlanId(100L);
+            return p;
+        });
+
+        TreatmentPlanRequestDTO req = TreatmentPlanRequestDTO.builder()
+                .patientId(1L)
+                .branchId(10L)
+                .doctorId(5L)
+                .planName("Niềng răng mắc cài kim loại cao cấp")
+                .totalEstimatedCost(new BigDecimal("25000000"))
+                .finalEstimatedCost(new BigDecimal("25000000"))
+                .isInstallment(true)
+                .installments(List.of(
+                        com.cvdcms.DTO.TreatmentPlanInstallmentDTO.builder()
+                                .installmentOrder(1)
+                                .phaseName("Đợt 1: Gắn mắc cài 2 hàm")
+                                .expectedAmount(new BigDecimal("7000000"))
+                                .expectedDate("15/11/2026")
+                                .build(),
+                        com.cvdcms.DTO.TreatmentPlanInstallmentDTO.builder()
+                                .installmentOrder(2)
+                                .phaseName("Đợt 2: Tái khám siết răng tháng 1")
+                                .expectedAmount(new BigDecimal("2000000"))
+                                .expectedDate("15/12/2026")
+                                .build(),
+                        com.cvdcms.DTO.TreatmentPlanInstallmentDTO.builder()
+                                .installmentOrder(3)
+                                .phaseName("Đợt 3: Tái khám siết răng tháng 2")
+                                .expectedAmount(new BigDecimal("2000000"))
+                                .expectedDate("15/01/2027")
+                                .build()
+                ))
+                .build();
+
+        TreatmentPlanResponseDTO response = treatmentPlanServiceImpl.createPlan(req);
+
+        assertNotNull(response);
+        assertEquals(new BigDecimal("25000000"), response.getFinalEstimatedCost());
+        assertTrue(response.getIsInstallment());
+        assertEquals(3, response.getInstallments().size());
+        assertEquals(BigDecimal.ZERO, response.getTotalPaidAmount());
+        assertEquals(new BigDecimal("25000000"), response.getRemainingCost());
+        assertEquals("PENDING", response.getInstallments().get(0).getStatus());
+        assertEquals("Đợt 1: Gắn mắc cài 2 hàm", response.getNextInstallment().getPhaseName());
+    }
+
+    @Test
+    @DisplayName("DentalSoft - Thanh toán đợt linh hoạt (không fix cứng), tự động bù trừ lũy kế các đợt")
+    void testRecordInstallmentPaymentFlexibleCascade() {
+        TreatmentPlan plan = new TreatmentPlan();
+        plan.setPlanId(200L);
+        plan.setPlanCode("KHDT-NIENG-RANG");
+        plan.setPlanName("Niềng răng chỉnh nha 25 triệu");
+        plan.setTotalEstimatedCost(new BigDecimal("25000000"));
+        plan.setFinalEstimatedCost(new BigDecimal("25000000"));
+        plan.setIsInstallment(true);
+        plan.setTotalPaidAmount(BigDecimal.ZERO);
+
+        TreatmentPlanInstallment i1 = new TreatmentPlanInstallment();
+        i1.setInstallmentId(1L);
+        i1.setInstallmentOrder(1);
+        i1.setPhaseName("Đợt 1: Đóng ban đầu");
+        i1.setExpectedAmount(new BigDecimal("5000000"));
+        i1.setPaidAmount(BigDecimal.ZERO);
+        i1.setStatus(TreatmentPlanInstallmentStatus.PENDING);
+        i1.setPlan(plan);
+
+        TreatmentPlanInstallment i2 = new TreatmentPlanInstallment();
+        i2.setInstallmentId(2L);
+        i2.setInstallmentOrder(2);
+        i2.setPhaseName("Đợt 2: Siết răng tháng 1");
+        i2.setExpectedAmount(new BigDecimal("2000000"));
+        i2.setPaidAmount(BigDecimal.ZERO);
+        i2.setStatus(TreatmentPlanInstallmentStatus.PENDING);
+        i2.setPlan(plan);
+
+        TreatmentPlanInstallment i3 = new TreatmentPlanInstallment();
+        i3.setInstallmentId(3L);
+        i3.setInstallmentOrder(3);
+        i3.setPhaseName("Đợt 3: Siết răng tháng 2");
+        i3.setExpectedAmount(new BigDecimal("2000000"));
+        i3.setPaidAmount(BigDecimal.ZERO);
+        i3.setStatus(TreatmentPlanInstallmentStatus.PENDING);
+        i3.setPlan(plan);
+
+        plan.getInstallments().addAll(List.of(i1, i2, i3));
+
+        when(planRepository.findByIdWithDetails(200L)).thenReturn(Optional.of(plan));
+        when(planRepository.save(any(TreatmentPlan.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Lần 1: Bệnh nhân đến đóng 6.000.000 đ (nhiều hơn đợt 1 là 5tr, dư 1tr tràn sang đợt 2)
+        TreatmentPlanResponseDTO res1 = treatmentPlanServiceImpl.recordInstallmentPayment(
+                200L, new BigDecimal("6000000"), null);
+
+        assertEquals(new BigDecimal("6000000"), res1.getTotalPaidAmount());
+        assertEquals(new BigDecimal("19000000"), res1.getRemainingCost());
+
+        // Kiểm tra đợt 1: đủ 5tr -> PAID
+        assertEquals("PAID", res1.getInstallments().get(0).getStatus());
+        assertEquals(new BigDecimal("5000000"), res1.getInstallments().get(0).getPaidAmount());
+
+        // Kiểm tra đợt 2: nhận 1tr/2tr -> PARTIAL
+        assertEquals("PARTIAL", res1.getInstallments().get(1).getStatus());
+        assertEquals(new BigDecimal("1000000"), res1.getInstallments().get(1).getPaidAmount());
+        assertEquals(new BigDecimal("1000000"), res1.getInstallments().get(1).getRemainingAmount());
+
+        // Kiểm tra đợt 3: chưa nhận tiền -> PENDING
+        assertEquals("PENDING", res1.getInstallments().get(2).getStatus());
+        assertEquals(BigDecimal.ZERO, res1.getInstallments().get(2).getPaidAmount());
+
+        // Lần 2: Bệnh nhân đến đóng tiếp 3.000.000 đ (bù 1tr cho đợt 2 và 2tr cho đợt 3)
+        TreatmentPlanResponseDTO res2 = treatmentPlanServiceImpl.recordInstallmentPayment(
+                200L, new BigDecimal("3000000"), null);
+
+        assertEquals(new BigDecimal("9000000"), res2.getTotalPaidAmount());
+        assertEquals(new BigDecimal("16000000"), res2.getRemainingCost());
+
+        // Bây giờ cả đợt 1, 2, 3 đều đã PAID
+        assertEquals("PAID", res2.getInstallments().get(0).getStatus());
+        assertEquals("PAID", res2.getInstallments().get(1).getStatus());
+        assertEquals("PAID", res2.getInstallments().get(2).getStatus());
+    }
+
+    @Test
+    @DisplayName("DentalSoft - Lễ tân đánh dấu đã nhắc bệnh nhân trước lịch hẹn")
+    void testMarkReminderSent() {
+        TreatmentPlan plan = new TreatmentPlan();
+        plan.setPlanId(300L);
+
+        TreatmentPlanInstallment inst = new TreatmentPlanInstallment();
+        inst.setInstallmentId(77L);
+        inst.setInstallmentOrder(2);
+        inst.setPhaseName("Đợt 2");
+        inst.setExpectedAmount(new BigDecimal("2000000"));
+        inst.setReminded(false);
+        inst.setPlan(plan);
+
+        when(treatmentPlanInstallmentRepository.findById(77L)).thenReturn(Optional.of(inst));
+        when(treatmentPlanInstallmentRepository.save(any(TreatmentPlanInstallment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        com.cvdcms.DTO.TreatmentPlanInstallmentDTO result = treatmentPlanServiceImpl.markReminderSent(
+                77L, "Đã gọi điện lúc 9h sáng, bệnh nhân xác nhận sẽ đến");
+
+        assertTrue(result.getReminded());
+        assertNotNull(result.getRemindedAt());
+        assertTrue(inst.getNotes().contains("Đã gọi điện lúc 9h sáng"));
     }
 }

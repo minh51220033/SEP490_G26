@@ -161,13 +161,13 @@
         <form id="supplierForm" novalidate>
             <input id="supplierId" type="hidden" name="supplierId">
 
-            <label for="supplierCode">Mã nhà cung cấp * <small>(2-20 ký tự: chữ, số, -, _)</small></label>
+            <label for="supplierCode">Mã nhà cung cấp * <small>(2-30 ký tự: chữ, số, -, _)</small></label>
             <input
                     id="supplierCode"
                     name="supplierCode"
                     type="text"
-                    maxlength="20"
-                    pattern="^[A-Za-z0-9_-]{2,20}$"
+                    maxlength="30"
+                    pattern="^[A-Za-z0-9_-]{2,30}$"
                     placeholder="VD: NCC-3M-VN"
                     required
             >
