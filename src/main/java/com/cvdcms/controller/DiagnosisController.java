@@ -72,6 +72,8 @@ public class DiagnosisController {
     private NanopixXraySyncLogRepository nanopixXraySyncLogRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.security.UrlIdCodec urlIdCodec = new com.cvdcms.security.UrlIdCodec();
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public void setDoctorCoverGrantRepository(com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository) {
         this.doctorCoverGrantRepository = doctorCoverGrantRepository;
@@ -420,7 +422,9 @@ public class DiagnosisController {
 
         Visit newVisit = new Visit();
         newVisit.setPatientProfile(patient);
-        newVisit.setCheckInAt(LocalDateTime.now());
+        LocalDateTime nowStart = LocalDateTime.now();
+        newVisit.setCheckInAt(nowStart);
+        newVisit.setActualStartTime(nowStart);
         newVisit.setStatus(VisitStatus.IN_EXAM);
         newVisit.setVisitType(com.cvdcms.entity.enums.VisitType.WALK_IN);
         newVisit.setInitialSymptoms("Khám và điều trị tại ghế theo yêu cầu");
@@ -523,6 +527,9 @@ public class DiagnosisController {
             boolean statusChanged = false;
             if (visit.getStatus() == VisitStatus.WAITING || visit.getStatus() == VisitStatus.WAITING_RESULT) {
                 visit.setStatus(VisitStatus.IN_EXAM);
+                if (visit.getActualStartTime() == null) {
+                    visit.setActualStartTime(LocalDateTime.now(com.cvdcms.service.AppointmentPolicyService.CLINIC_ZONE));
+                }
                 statusChanged = true;
             }
             if (clinicalQueueTicketRepository != null) {
@@ -539,6 +546,17 @@ public class DiagnosisController {
             }
             if (statusChanged) {
                 visitRepository.save(visit);
+                if (eventPublisher != null) {
+                    eventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                            "VISIT_STARTED",
+                            visit.getBranch() != null ? visit.getBranch().getBranchId() : null,
+                            visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null,
+                            visit.getVisitId(),
+                            visit.getAppointmentId(),
+                            visit.getStatus().name(),
+                            "Bác sĩ bắt đầu khám ca " + visit.getVisitCode(),
+                            LocalDateTime.now(com.cvdcms.service.AppointmentPolicyService.CLINIC_ZONE)));
+                }
             }
         } else {
             doctorVisitAccess.requireVisitRead(session, visitId);

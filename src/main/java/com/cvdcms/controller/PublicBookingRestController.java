@@ -30,6 +30,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -167,7 +168,7 @@ public class PublicBookingRestController {
     public ResponseEntity<List<Map<String, Object>>> getAvailableSlots(
             @RequestParam Long branchId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam PreferredSession sessionPeriod,
+            @RequestParam(required = false) PreferredSession sessionPeriod,
             @RequestParam(required = false) Long doctorId,
             @RequestParam(required = false) Long serviceId
     ) {
@@ -179,14 +180,27 @@ public class PublicBookingRestController {
         Service service = serviceId != null ? serviceRepository.findById(serviceId).orElse(null) : null;
         int duration = AppointmentSlotService.duration(service);
 
+        List<Map<String, Object>> resp = new ArrayList<>();
+        if (sessionPeriod == null && doctorId != null) {
+            var availability = appointmentSlotService.getDoctorAvailability(branchId, doctorId, date, duration, null);
+            for (var s : availability.suggestedSlots()) {
+                Map<String, Object> item = new HashMap<>();
+                item.put("time", s.startTime().toString().substring(0, 5));
+                item.put("endTime", s.endTime().toString().substring(0, 5));
+                item.put("remaining", 1);
+                resp.add(item);
+            }
+            return ResponseEntity.ok(resp);
+        }
+
         List<AppointmentSlotService.Slot> slots = appointmentSlotService.available(
                 branch, date, sessionPeriod, doctorId, duration, null, AppointmentActorType.PATIENT
         );
 
-        List<Map<String, Object>> resp = new ArrayList<>();
         for (AppointmentSlotService.Slot s : slots) {
             Map<String, Object> item = new HashMap<>();
             item.put("time", s.time().toString().substring(0, 5));
+            item.put("endTime", s.time().plusMinutes(duration).toString().substring(0, 5));
             item.put("remaining", s.remaining());
             resp.add(item);
         }
@@ -229,7 +243,7 @@ public class PublicBookingRestController {
      * Áp dụng đầy đủ quy tắc kiểm tra bác sĩ trực, công suất ca khám và ràng buộc chính sách.
      */
     @PostMapping
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ResponseEntity<Map<String, Object>> submitBooking(
             HttpSession session,
             @RequestBody QuickBookingForm form
@@ -405,7 +419,18 @@ public class PublicBookingRestController {
             return ResponseEntity.status(ex.getStatusCode()).body(resp);
         }
 
-        // 10. Tạo và lưu Appointment
+        // 10. Tạo và lưu Appointment (nếu chưa chọn bác sĩ và có khung giờ cụ thể -> tự động phân bổ)
+        if (doctor == null && resolvedExpectedTime != null) {
+            try {
+                doctor = appointmentSlotService.autoAssignDoctorForSlot(
+                        branch, bookDate, sessionPeriod, resolvedExpectedTime, durationMinutes, null);
+            } catch (ResponseStatusException ex) {
+                resp.put("success", false);
+                resp.put("message", ex.getReason() != null ? ex.getReason() : "Không còn bác sĩ khả dụng cho khung giờ đã chọn.");
+                return ResponseEntity.status(ex.getStatusCode()).body(resp);
+            }
+        }
+
         String appointmentCode = "LH" + UUID.randomUUID().toString().replace("-", "").substring(0, 14).toUpperCase();
 
         Appointment appointment = new Appointment();
@@ -418,6 +443,7 @@ public class PublicBookingRestController {
         appointment.setPreferredSession(sessionPeriod);
         appointment.setExpectedTime(resolvedExpectedTime);
         appointment.setDurationMinutes(durationMinutes);
+        appointment.syncExpectedEndTime();
         appointment.setInitialSymptoms(form.getNote() != null && !form.getNote().isBlank() ? form.getNote().trim() : null);
         appointment.setSource(AppointmentSource.ONLINE);
         appointment.setStatus(AppointmentStatus.PENDING);

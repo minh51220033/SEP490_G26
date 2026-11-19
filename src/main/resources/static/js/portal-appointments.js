@@ -297,6 +297,16 @@
         const editing = Boolean(id);
         const preSelectedProfileId = form.dataset.selectedProfileId || new URLSearchParams(location.search).get('profileId') || '';
         const options = await request('/options');
+        const serviceDurations = new Map((options.services || []).map(s => [String(s.id), Number(s.durationMinutes || 30)]));
+
+        function addMinutesToTime(hhmm, mins) {
+            const parts = String(hhmm || '').slice(0, 5).split(':');
+            if (parts.length !== 2) return '';
+            const total = Number(parts[0]) * 60 + Number(parts[1]) + Number(mins || 30);
+            const h = Math.floor(total / 60) % 24;
+            const m = total % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
 
         setSelect($('branchId'), options.branches, 'Chọn chi nhánh khám', b => b.name);
         setSelect($('serviceId'), options.services, 'Chưa chọn dịch vụ cụ thể · Khám tổng quát (30 phút)', s => `${s.name} · ${s.durationMinutes} phút`);
@@ -395,6 +405,12 @@
         async function loadSlots(token) {
             const select = $('slotTime');
             const previous = select.value || (current?.expectedTime || '').slice(0, 5);
+            const duration = (!editing && $('serviceId')?.value)
+                ? (serviceDurations.get(String($('serviceId').value)) || 30)
+                : (current?.durationMinutes || 30);
+            if ($('slotDurationNote')) {
+                $('slotDurationNote').textContent = `Thời lượng dự kiến: ${duration} phút`;
+            }
             select.disabled = true;
             select.replaceChildren(option('', 'Đang kiểm tra giờ khám…'));
             const params = new URLSearchParams({
@@ -402,7 +418,8 @@
                 date: $('appointmentDate').value,
                 sessionPeriod: $('preferredSession').value
             });
-            if ($('doctorId').value) params.set('doctorId', $('doctorId').value);
+            const chosenDoctorId = $('doctorId').value;
+            if (chosenDoctorId) params.set('doctorId', chosenDoctorId);
             if (!editing && $('serviceId').value) params.set('serviceId', $('serviceId').value);
             if (editing) params.set('excludeAppointmentId', id);
 
@@ -417,7 +434,12 @@
 
             if (list && list.length > 0) {
                 select.appendChild(option('', 'Chọn giờ hẹn (hoặc linh hoạt theo buổi)'));
-                list.forEach(slot => select.appendChild(option(slot.time.slice(0, 5), `${slot.time.slice(0, 5)} · còn ${slot.remaining} chỗ`)));
+                list.forEach(slot => {
+                    const start = slot.time.slice(0, 5);
+                    const end = addMinutesToTime(start, duration);
+                    const suffix = chosenDoctorId ? 'BS trống lịch' : `còn ${slot.remaining} chỗ`;
+                    select.appendChild(option(start, `${start} – ${end} · ${suffix}`));
+                });
                 if (previous && list.some(slot => slot.time.slice(0, 5) === previous)) {
                     select.value = previous;
                 } else {
@@ -425,12 +447,23 @@
                 }
                 select.disabled = false;
                 $('submitAppointment').disabled = false;
+                if (chosenDoctorId) {
+                    const selectedDocName = $('doctorId').selectedOptions[0]?.textContent || 'bác sĩ đã chọn';
+                    $('availabilityMessage').innerHTML = `<i class="bi bi-person-check-fill fs-5 me-2 text-primary"></i><span>Đang hiển thị <strong>${list.length} khung giờ trống (${duration} phút)</strong> của ${escapeHtml(selectedDocName)}.</span>`;
+                    $('availabilityMessage').className = 'appointment-availability is-success d-flex align-items-center';
+                }
+            } else if (chosenDoctorId) {
+                select.appendChild(option('', `Bác sĩ không còn khe trống ${duration} phút trong buổi này`));
+                select.disabled = true;
+                $('submitAppointment').disabled = true;
+                $('availabilityMessage').innerHTML = `<i class="bi bi-calendar-x-fill fs-5 me-2 text-warning"></i><span>Bác sĩ đã chọn không còn khoảng trống <strong>${duration} phút</strong> trong buổi này. Vui lòng chọn giờ/bác sĩ khác hoặc chọn "Không yêu cầu đích danh".</span>`;
+                $('availabilityMessage').className = 'appointment-availability is-error d-flex align-items-center';
             } else if (available) {
-                select.appendChild(option('', 'Linh hoạt trong buổi khám (Lễ tân sắp xếp khi đến)'));
+                select.appendChild(option('', 'Linh hoạt trong buổi khám (Hệ thống điều phối khi đến)'));
                 select.value = '';
                 select.disabled = false;
                 $('submitAppointment').disabled = false;
-                $('availabilityMessage').innerHTML = '<i class="bi bi-check-circle-fill fs-5 me-2 text-success"></i><span>Buổi khám còn chỗ tiếp nhận. Giờ khám chính xác sẽ được lễ tân điều phối linh hoạt khi bạn đến phòng khám.</span>';
+                $('availabilityMessage').innerHTML = '<i class="bi bi-check-circle-fill fs-5 me-2 text-success"></i><span>Buổi khám còn chỗ tiếp nhận. Bác sĩ sẽ được hệ thống tự động phân bổ phù hợp nhất.</span>';
                 $('availabilityMessage').className = 'appointment-availability is-success d-flex align-items-center';
             } else {
                 select.appendChild(option('', 'Không còn giờ phù hợp'));
@@ -580,7 +613,13 @@
                     sessionStorage.removeItem('ft06-booking-key');
                 }
                 location.href = `/portal/appointments/${saved.id}?saved=${editing ? 'changed' : 'created'}`;
-            } catch (e) { error(e.message); button.disabled = !available; }
+            } catch (e) {
+                error(e.message);
+                button.disabled = !available;
+                if (available && /khung giờ|trùng|khe trống|đã được đặt|bác sĩ/i.test(e.message || '')) {
+                    availability().catch(() => {});
+                }
+            }
         });
     }
 

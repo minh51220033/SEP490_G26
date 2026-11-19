@@ -43,9 +43,22 @@ public class PortalAppointmentRestController {
     @GetMapping("/slots")
     public List<PortalAppointmentService.SlotOption> slots(HttpSession session, @RequestParam Long branchId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam PreferredSession sessionPeriod, @RequestParam(required = false) Long doctorId,
-            @RequestParam(required = false) Long serviceId, @RequestParam(required = false) Long excludeAppointmentId) {
+            @RequestParam(required = false) PreferredSession sessionPeriod,
+            @RequestParam(required = false) Long doctorId,
+            @RequestParam(required = false) Long serviceId,
+            @RequestParam(required = false) Long excludeAppointmentId) {
         return appointments.slots(session, branchId, date, sessionPeriod, doctorId, serviceId, excludeAppointmentId);
+    }
+
+    @GetMapping("/doctor-availability")
+    public com.cvdcms.service.AppointmentSlotService.DoctorAvailabilityResult doctorAvailability(
+            HttpSession session,
+            @RequestParam Long branchId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam Long doctorId,
+            @RequestParam(required = false) Long serviceId,
+            @RequestParam(required = false) Long excludeAppointmentId) {
+        return appointments.doctorAvailability(session, branchId, date, doctorId, serviceId, excludeAppointmentId);
     }
 
     @PostMapping

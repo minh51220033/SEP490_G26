@@ -17,7 +17,9 @@ import java.time.LocalDateTime;
                 @UniqueConstraint(name = "uk_visit_code", columnNames = "visit_code")
         },
         indexes = {
-                @Index(name = "idx_visit_branch_date", columnList = "branch_id, check_in_at")
+                @Index(name = "idx_visit_branch_date", columnList = "branch_id, check_in_at"),
+                @Index(name = "idx_visit_doctor_queue", columnList = "primary_doctor_id, status, check_in_at"),
+                @Index(name = "idx_visit_appointment", columnList = "appointment_id")
         }
 )
 @Getter
@@ -48,8 +50,17 @@ public class Visit {
     @Column(name = "visit_type", nullable = false, length = 20)
     private VisitType visitType = VisitType.WALK_IN;
 
+    @Column(name = "is_emergency", nullable = false)
+    private Boolean isEmergency = false;
+
+    @Column(name = "is_booked_and_on_time", nullable = false)
+    private Boolean isBookedAndOnTime = false;
+
     @Column(name = "check_in_at", nullable = false)
     private LocalDateTime checkInAt;
+
+    @Column(name = "actual_start_time")
+    private LocalDateTime actualStartTime;
 
     @Column(name = "initial_symptoms", length = 500)
     private String initialSymptoms;
@@ -71,6 +82,9 @@ public class Visit {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Column(name = "actual_end_time")
+    private LocalDateTime actualEndTime;
+
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
@@ -82,6 +96,14 @@ public class Visit {
     public void prePersist() {
         if (this.checkInAt == null) {
             this.checkInAt = LocalDateTime.now();
+        }
+        if (this.visitType == VisitType.EMERGENCY) {
+            this.isEmergency = true;
+        } else if (this.isEmergency == null) {
+            this.isEmergency = false;
+        }
+        if (this.isBookedAndOnTime == null) {
+            this.isBookedAndOnTime = false;
         }
         if (this.visitCode == null || this.visitCode.isEmpty()) {
             this.visitCode = "VIS" + System.currentTimeMillis();

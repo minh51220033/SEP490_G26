@@ -33,4 +33,8 @@ public interface ReceptionAppointmentRepository extends JpaRepository<Appointmen
     @Query("SELECT a.appointmentId FROM Appointment a WHERE a.appointmentDate BETWEEN :start AND :end AND a.status = :status ORDER BY a.appointmentId")
     List<Long> findNoShowCandidates(@Param("start") LocalDate start, @Param("end") LocalDate end,
             @Param("status") AppointmentStatus status);
+
+    @Query("SELECT a.appointmentId FROM Appointment a WHERE a.appointmentDate BETWEEN :start AND :end AND a.status IN :statuses ORDER BY a.appointmentId")
+    List<Long> findNoShowCandidatesByStatuses(@Param("start") LocalDate start, @Param("end") LocalDate end,
+            @Param("statuses") List<AppointmentStatus> statuses);
 }

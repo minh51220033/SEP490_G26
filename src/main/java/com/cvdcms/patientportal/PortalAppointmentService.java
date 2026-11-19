@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.constraints.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -120,11 +121,32 @@ public class PortalAppointmentService {
                 .orElseThrow(() -> bad("Chi nhánh không hoạt động."));
         com.cvdcms.entity.Service service = serviceId == null ? null : requestedService(serviceId);
         if (excludeId != null) service = owned(user, excludeId).getService();
-        return slots.available(branch, date, period, doctorId, AppointmentSlotService.duration(service), excludeId,
+        int duration = AppointmentSlotService.duration(service);
+        if (period == null && doctorId != null) {
+            return slots.getDoctorAvailability(branchId, doctorId, date, duration, excludeId)
+                    .suggestedSlots().stream()
+                    .map(s -> new SlotOption(s.startTime(), 1))
+                    .toList();
+        }
+        return slots.available(branch, date, period, doctorId, duration, excludeId,
                         AppointmentActorType.PATIENT)
                 .stream().map(s -> new SlotOption(s.time(), s.remaining())).toList();
     }
 
+    @Transactional(readOnly = true)
+    public AppointmentSlotService.DoctorAvailabilityResult doctorAvailability(
+            HttpSession httpSession, Long branchId, LocalDate date, Long doctorId, Long serviceId, Long excludeId) {
+        User user = access.requireUser(httpSession);
+        if (excludeId != null && !owned(user, excludeId).getBranch().getBranchId().equals(branchId))
+            throw bad("Không thể đổi chi nhánh từ biểu mẫu này.");
+        branches.findById(branchId).filter(b -> Boolean.TRUE.equals(b.getIsActive()))
+                .orElseThrow(() -> bad("Chi nhánh không hoạt động."));
+        com.cvdcms.entity.Service service = serviceId == null ? null : requestedService(serviceId);
+        if (excludeId != null) service = owned(user, excludeId).getService();
+        return slots.getDoctorAvailability(branchId, doctorId, date, AppointmentSlotService.duration(service), excludeId);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentView book(HttpSession httpSession, BookingRequest request) {
         User user = access.requireUser(httpSession);
         PatientProfile profile = access.requireProfile(user, request.profileId());
@@ -149,17 +171,28 @@ public class PortalAppointmentService {
         policy.ensureBookable(branch, profile, request.date(), request.session(), request.doctorId(),
                 null, AppointmentActorType.PATIENT);
         com.cvdcms.entity.Service service = requestedService(request.serviceId());
+        int durationMinutes = AppointmentSlotService.duration(service);
+        StaffProfile assignedDoctor = doctor(request.doctorId());
+        LocalTime resolvedTime = slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
+                durationMinutes, null, request.expectedTime(), AppointmentActorType.PATIENT);
+        if (assignedDoctor == null && resolvedTime != null) {
+            StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
+                    branch, request.date(), request.session(), resolvedTime, durationMinutes, null);
+            if (autoAssigned != null) {
+                assignedDoctor = autoAssigned;
+            }
+        }
         Appointment appointment = new Appointment();
         appointment.setAppointmentCode("LH" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase());
         appointment.setPatientProfile(profile);
         appointment.setBranch(branch);
-        appointment.setDoctor(doctor(request.doctorId()));
+        appointment.setDoctor(assignedDoctor);
         appointment.setService(service);
         appointment.setAppointmentDate(request.date());
         appointment.setPreferredSession(request.session());
-        appointment.setDurationMinutes(AppointmentSlotService.duration(service));
-        appointment.setExpectedTime(slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
-                appointment.getDurationMinutes(), null, request.expectedTime(), AppointmentActorType.PATIENT));
+        appointment.setDurationMinutes(durationMinutes);
+        appointment.setExpectedTime(resolvedTime);
+        appointment.syncExpectedEndTime();
         appointment.setInitialSymptoms(clean(request.symptoms()));
         appointment.setSource(AppointmentSource.ONLINE);
         appointment.setStatus(AppointmentStatus.PENDING);
@@ -171,6 +204,10 @@ public class PortalAppointmentService {
         history(appointment, user.getUserId(), "CREATE", null, snapshot(appointment), null);
         if (careEventPublisher != null && appointment.getAppointmentId() != null) {
             careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentUpsertedCareEvent(appointment.getAppointmentId()));
+            careEventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                    "APPOINTMENT_BOOKED", branch.getBranchId(), id(assignedDoctor),
+                    null, appointment.getAppointmentId(), appointment.getStatus().name(),
+                    "Đặt lịch hẹn mới #" + appointment.getAppointmentCode(), LocalDateTime.now(CLINIC_ZONE)));
         }
         return view(appointment);
     }
@@ -193,6 +230,7 @@ public class PortalAppointmentService {
         return new Detail(view(a), events);
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentView reschedule(HttpSession httpSession, Long appointmentId, RescheduleRequest request) {
         User user = access.requireUser(httpSession);
         Appointment beforeLock = owned(user, appointmentId);
@@ -216,10 +254,21 @@ public class PortalAppointmentService {
                     ? a.getExpectedTime() : null;
         a.setAppointmentDate(request.date());
         a.setPreferredSession(request.session());
-        a.setDoctor(doctor(request.doctorId()));
-        a.setDurationMinutes(AppointmentSlotService.duration(a.getService()));
-        a.setExpectedTime(slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
-                a.getDurationMinutes(), appointmentId, requestedTime, AppointmentActorType.PATIENT));
+        int durationMinutes = AppointmentSlotService.duration(a.getService());
+        StaffProfile assignedDoctor = doctor(request.doctorId());
+        LocalTime resolvedTime = slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
+                durationMinutes, appointmentId, requestedTime, AppointmentActorType.PATIENT);
+        if (assignedDoctor == null && resolvedTime != null) {
+            StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
+                    branch, request.date(), request.session(), resolvedTime, durationMinutes, appointmentId);
+            if (autoAssigned != null) {
+                assignedDoctor = autoAssigned;
+            }
+        }
+        a.setDoctor(assignedDoctor);
+        a.setDurationMinutes(durationMinutes);
+        a.setExpectedTime(resolvedTime);
+        a.syncExpectedEndTime();
         lifecycle.transition(a, AppointmentStatus.PENDING, AppointmentLifecycleAction.RESCHEDULE);
         a.setRescheduleCount(a.getRescheduleCount() + 1);
         appointments.saveAndFlush(a);

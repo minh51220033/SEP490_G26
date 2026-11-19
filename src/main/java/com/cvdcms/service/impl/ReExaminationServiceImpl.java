@@ -41,6 +41,8 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     private LeaveRequestRepository leaveRequestRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.AppointmentSlotService appointmentSlotService;
 
     @Override
     @Transactional
@@ -105,8 +107,24 @@ public class ReExaminationServiceImpl implements ReExaminationService {
         if (targetDate.isEqual(today) && resolvedTime != null && resolvedTime.isBefore(nowTime)) {
             throw new IllegalArgumentException("Giờ hẹn tái khám hôm nay không được nằm trong quá khứ!");
         }
+        int durationMinutes = com.cvdcms.service.AppointmentSlotService.duration(service);
         if (doctor != null) {
-            validateDoctorAvailabilityForReExam(doctor, branch, targetDate, resolvedTime, null);
+            if (appointmentSlotService != null && resolvedTime != null) {
+                try {
+                    var avail = appointmentSlotService.getDoctorAvailability(
+                            branch.getBranchId(), doctor.getStaffId(), targetDate, durationMinutes, null);
+                    if (!avail.availableIntervals().isEmpty()) {
+                        appointmentSlotService.lockAndValidateDoctorSlot(
+                                branch.getBranchId(), doctor.getStaffId(), targetDate, resolvedTime, durationMinutes, null);
+                    } else {
+                        validateDoctorAvailabilityForReExam(doctor, branch, targetDate, resolvedTime, null);
+                    }
+                } catch (com.cvdcms.service.SlotAlreadyTakenException ex) {
+                    throw new IllegalArgumentException(ex.getReason() != null ? ex.getReason() : "Khung giờ tái khám đã bị trùng.");
+                }
+            } else {
+                validateDoctorAvailabilityForReExam(doctor, branch, targetDate, resolvedTime, null);
+            }
         }
 
         Appointment appt = new Appointment();
@@ -121,6 +139,8 @@ public class ReExaminationServiceImpl implements ReExaminationService {
         appt.setAppointmentDate(targetDate);
         appt.setPreferredSession(resolvedSession);
         appt.setExpectedTime(resolvedTime);
+        appt.setDurationMinutes(durationMinutes);
+        appt.syncExpectedEndTime();
 
         appt.setInitialSymptoms(dto.getFollowupReason() != null ? dto.getFollowupReason() : "Tái khám kiểm tra sau điều trị");
         appt.setSource(AppointmentSource.RECEPTIONIST);
@@ -342,7 +362,25 @@ public class ReExaminationServiceImpl implements ReExaminationService {
             throw new IllegalArgumentException("Giờ hẹn tái khám hôm nay không được nằm trong quá khứ!");
         }
         if (appt.getDoctor() != null) {
-            validateDoctorAvailabilityForReExam(appt.getDoctor(), appt.getBranch(), targetDate, targetTime, appt.getAppointmentId());
+            int durationMinutes = appt.getDurationMinutes() != null && appt.getDurationMinutes() > 0
+                    ? appt.getDurationMinutes()
+                    : com.cvdcms.service.AppointmentSlotService.duration(appt.getService());
+            if (appointmentSlotService != null && appt.getBranch() != null && targetTime != null) {
+                try {
+                    var avail = appointmentSlotService.getDoctorAvailability(
+                            appt.getBranch().getBranchId(), appt.getDoctor().getStaffId(), targetDate, durationMinutes, appt.getAppointmentId());
+                    if (!avail.availableIntervals().isEmpty()) {
+                        appointmentSlotService.lockAndValidateDoctorSlot(
+                                appt.getBranch().getBranchId(), appt.getDoctor().getStaffId(), targetDate, targetTime, durationMinutes, appt.getAppointmentId());
+                    } else {
+                        validateDoctorAvailabilityForReExam(appt.getDoctor(), appt.getBranch(), targetDate, targetTime, appt.getAppointmentId());
+                    }
+                } catch (com.cvdcms.service.SlotAlreadyTakenException ex) {
+                    throw new IllegalArgumentException(ex.getReason() != null ? ex.getReason() : "Khung giờ tái khám đã bị trùng.");
+                }
+            } else {
+                validateDoctorAvailabilityForReExam(appt.getDoctor(), appt.getBranch(), targetDate, targetTime, appt.getAppointmentId());
+            }
         }
 
         appt.setAppointmentDate(targetDate);
@@ -350,6 +388,7 @@ public class ReExaminationServiceImpl implements ReExaminationService {
         if (targetTime != null) {
             appt.setExpectedTime(targetTime);
         }
+        appt.syncExpectedEndTime();
         appt.setRescheduleCount(appt.getRescheduleCount() + 1);
         Appointment saved = appointmentRepository.save(appt);
 

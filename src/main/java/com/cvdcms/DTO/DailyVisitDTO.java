@@ -41,6 +41,12 @@ public class DailyVisitDTO {
     private Boolean isEmergency;
     private String priorityReason;
     private String visitType;
+    private Long appointmentId;
+    private Boolean isBookedAndOnTime;
+    private Integer queuePriorityRank;
+    private String queuePriorityLabel;
+    private String actualStartTime;
+    private String actualEndTime;
     private boolean coveredByCurrentDoctor;
     private boolean accessibleByCurrentDoctor;
 }

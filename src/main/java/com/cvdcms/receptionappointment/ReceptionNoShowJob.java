@@ -19,7 +19,7 @@ public class ReceptionNoShowJob {
         this.appointments = appointments;
     }
 
-    @Scheduled(cron = "0 */15 * * * *", zone = "Asia/Bangkok")
+    @Scheduled(cron = "0 * * * * *", zone = "Asia/Bangkok")
     public void markEndedSessions() {
         LocalDateTime now = LocalDateTime.now(ReceptionAppointmentRules.ZONE);
         for (Long id : appointments.noShowCandidateIds(LocalDate.now(ReceptionAppointmentRules.ZONE))) {
