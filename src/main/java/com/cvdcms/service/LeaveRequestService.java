@@ -35,6 +35,9 @@ public class LeaveRequestService {
     @Autowired(required = false)
     private SystemAuditLogRepository systemAuditLogRepository;
 
+    @Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     public LeaveRequestService(LeaveRequestRepository leaveRequestRepository,
                                StaffScheduleRepository scheduleRepository,
                                AppointmentRepository appointmentRepository,
@@ -396,6 +399,16 @@ public class LeaveRequestService {
         // Lưu các thông báo bổ sung cho bệnh nhân và lễ tân
         for (SystemNotification extra : extraNotifications) {
             notificationRepository.save(extra);
+        }
+
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                    "DOCTOR_SCHEDULE_CHANGED",
+                    leave.getBranch() != null ? leave.getBranch().getBranchId() : null,
+                    leave.getStaff() != null ? leave.getStaff().getStaffId() : null,
+                    null, null, "LEAVE_APPROVED",
+                    "Bác sĩ " + doctorName + " nghỉ phép ngày " + leave.getStartDate() + " - " + leave.getEndDate(),
+                    LocalDateTime.now()));
         }
 
         return affectedAppointments.size();

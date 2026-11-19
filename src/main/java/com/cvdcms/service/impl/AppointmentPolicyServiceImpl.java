@@ -18,7 +18,7 @@ import java.util.*;
 public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
     private static final List<AppointmentStatus> OCCUPYING = List.of(
             AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED,
-            AppointmentStatus.CHECKED_IN, AppointmentStatus.COMPLETED);
+            AppointmentStatus.CHECKED_IN);
 
     private final AppointmentPolicyRepository appointments;
     private final AppointmentSessionWindowRepository windows;
@@ -80,9 +80,12 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         if (invalid != null) return new Availability(false, invalid, 0, List.of());
         List<Appointment> booked = booked(branch.getBranchId(), date, session, excludeAppointmentId);
         List<StaffProfile> doctors = eligibleDoctors(branch, date, session);
+        if (doctors.isEmpty()) {
+            return new Availability(false, "Không có bác sĩ trực khả dụng trong buổi đã chọn.", 0, List.of());
+        }
         AppointmentSessionPolicy policy = policy(branch.getBranchId(), date, session);
         int doctorCap = doctorCapacity(policy);
-        int capacity = Math.min(branchCapacity(policy), Math.max(1, doctors.size()) * doctorCap);
+        int capacity = Math.min(branchCapacity(policy), doctors.size() * doctorCap);
         int remaining = Math.max(0, capacity - booked.size());
         List<DoctorOption> options = doctors.stream().map(doctor -> {
             long doctorBooked = booked.stream().filter(a -> a.getDoctor() != null
@@ -159,9 +162,12 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         if (invalid != null) throw conflict(invalid);
         // Cho phép đặt nhiều lịch hẹn trong ngày cho cả Lễ tân và Bệnh nhân (khám nhiều dịch vụ, tái khám hoặc đi theo ca)
         List<StaffProfile> doctors = eligibleDoctors(branch, date, session);
+        if (doctors.isEmpty()) {
+            throw conflict("Không có bác sĩ trực khả dụng trong buổi đã chọn.");
+        }
         List<Appointment> booked = booked(branch.getBranchId(), date, session, excludeAppointmentId);
         AppointmentSessionPolicy policy = policy(branch.getBranchId(), date, session);
-        int maxCapacity = Math.min(branchCapacity(policy), Math.max(1, doctors.size()) * doctorCapacity(policy));
+        int maxCapacity = Math.min(branchCapacity(policy), doctors.size() * doctorCapacity(policy));
         if (booked.size() >= maxCapacity) {
             throw conflict("Buổi khám đã đủ định mức tiếp nhận (" + booked.size() + "/" + maxCapacity + " ca).");
         }
@@ -352,25 +358,8 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
             if (!absent) result.put(doctor.getStaffId(), doctor);
         }
 
-        // Nếu ngày đó cơ sở ĐÃ LẬP ca trực cụ thể (branchSchedules không rỗng) nhưng ca này không có bác sĩ nào trực:
-        // -> Trả về rỗng (không mượn bác sĩ ca khác)
-        // Nếu ngày đó cơ sở CHƯA LẬP bất kỳ ca trực nào (branchSchedules rỗng):
-        // -> Chỉ lấy các bác sĩ thuộc biên chế của CHÍNH CƠ SỞ ĐÓ (activeBranchDoctors), loại trừ nghỉ phép
-        if (result.isEmpty() && branchSchedules.isEmpty()) {
-            if (date.equals(today)) {
-                if (branch.getClosingTime() != null && !now.isBefore(branch.getClosingTime())) {
-                    return List.of();
-                }
-                if (!now.isBefore(range.end())) {
-                    return List.of();
-                }
-            }
-            activeBranchDoctors.values().forEach(doc -> {
-                boolean absent = approved.stream().anyMatch(leave -> leave.getStaff().getStaffId().equals(doc.getStaffId()));
-                if (!absent) result.put(doc.getStaffId(), doc);
-            });
-        }
-
+        // Không âm thầm fallback sang toàn bộ bác sĩ biên chế khi ngày đó chưa có lịch phân ca (StaffSchedule).
+        // Nếu branchSchedules rỗng hoặc không có bác sĩ nào có ca trực hợp lệ trong buổi, trả về danh sách rỗng.
         return result.values().stream().sorted(Comparator.comparing(StaffProfile::getFullName)).toList();
     }
 

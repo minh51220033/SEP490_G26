@@ -33,6 +33,9 @@ public class DispatchService {
     private final ClinicalExaminationBootstrapService examinations;
     private final ObjectMapper mapper;
 
+    @Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @Autowired
     public DispatchService(ReceptionAccess access, DispatchVisitRepository visits, DispatchDoctorRepository doctors,
             DispatchScheduleRepository schedules, DispatchRoomRepository rooms, DispatchChairRepository chairs,
@@ -170,14 +173,9 @@ public class DispatchService {
                 .filter(v -> includeAllStatuses ? (v != null && v.getStatus() != VisitStatus.CANCELLED) : Board.isWaitingDispatchVisit(v))
                 .sorted(Comparator.comparing((Visit v) -> Board.isWaitingDispatchVisit(v) ? 0 : 1)
                         .thenComparing((Visit v) -> v.getPrimaryDoctor() == null ? 1 : 0)
-                        .thenComparing((Visit v) -> v.getVisitType() == VisitType.EMERGENCY ? 0 : 1)
+                        .thenComparingInt((Visit v) -> DispatchService.visitQueueTierRank(v) == 1 ? 0 : 1)
                         .thenComparing((Visit v) -> v.getStatus() == VisitStatus.WAITING_RESULT ? 0 : 1)
-                        .thenComparing((Visit v) -> {
-                            String num = issued.get(v.getVisitId());
-                            boolean isPriority = (num != null && num.startsWith("P-"))
-                                    || (v.getNotes() != null && v.getNotes().contains("ƯU TIÊN"));
-                            return isPriority ? 0 : 1;
-                        })
+                        .thenComparingInt(DispatchService::visitQueueTierRank)
                         .thenComparing(Visit::getCheckInAt, Comparator.nullsLast(Comparator.naturalOrder()))
                         .thenComparing(Visit::getVisitId, Comparator.nullsLast(Comparator.naturalOrder())))
                 .toList();
@@ -430,17 +428,12 @@ public class DispatchService {
             }
         }
 
-        boolean emergency = visit.getVisitType() == VisitType.EMERGENCY;
+        boolean emergency = Boolean.TRUE.equals(visit.getIsEmergency()) || visit.getVisitType() == VisitType.EMERGENCY;
+        boolean bookedOnTime = Boolean.TRUE.equals(visit.getIsBookedAndOnTime())
+                && (visit.getAppointmentId() != null || visit.getVisitType() == VisitType.APPOINTMENT);
+        boolean isWalkIn = visit.getAppointmentId() == null && visit.getVisitType() != VisitType.APPOINTMENT;
         boolean returningParaclinical = visit.getStatus() == VisitStatus.WAITING_RESULT;
-        boolean notePriority = visit.getNotes() != null && visit.getNotes().contains("ƯU TIÊN");
-        boolean agePriority = false;
-        if (visit.getPatientProfile() != null && visit.getPatientProfile().getDob() != null) {
-            int age = Period.between(visit.getPatientProfile().getDob(), day).getYears();
-            if (age >= 65 || age <= 6) {
-                agePriority = true;
-            }
-        }
-        boolean autoPriority = emergency || returningParaclinical || notePriority || agePriority;
+        boolean autoPriority = emergency || returningParaclinical || bookedOnTime;
         if (autoPriority) {
             priority = true;
         }
@@ -448,8 +441,8 @@ public class DispatchService {
         if (returningParaclinical && priorityReason.isEmpty()) {
             priorityReason = "Bệnh nhân quay lại sau cận lâm sàng chờ đọc kết quả";
         }
-        if ((notePriority || agePriority) && priorityReason.isEmpty()) {
-            priorityReason = "Bệnh nhân thuộc diện ưu tiên khám theo chỉ định tiếp đón";
+        if (bookedOnTime && !emergency && priorityReason.isEmpty()) {
+            priorityReason = "Bệnh nhân đặt lịch hẹn check-in đúng giờ";
         }
         String emergencyReason = visit.getInitialSymptoms() == null ? "" : visit.getInitialSymptoms().trim();
         if (emergency && (emergencyReason.length() < 10 || emergencyReason.length() > 255)) {
@@ -458,7 +451,7 @@ public class DispatchService {
         if (emergency && (emergencyReason.length() < 10 || emergencyReason.length() > 255)) {
             throw fail(HttpStatus.BAD_REQUEST, "Ca cấp cứu cần mô tả triệu chứng hoặc lý do ưu tiên từ 10 đến 255 ký tự.");
         }
-        if (priority && !emergency && (priorityReason.length() < 10 || priorityReason.length() > 255)) {
+        if (priority && !emergency && !bookedOnTime && (priorityReason.length() < 10 || priorityReason.length() > 255)) {
             throw fail(HttpStatus.BAD_REQUEST, "Cấp số ưu tiên cần ghi lý do từ 10 đến 255 ký tự.");
         }
 
@@ -497,7 +490,7 @@ public class DispatchService {
         }
         ticket.setIsPriority(priority);
         ticket.setIsEmergency(emergency);
-        ticket.setPriorityScore(emergency ? 100 : priority ? 50 : 0);
+        ticket.setPriorityScore(emergency ? 100 : (bookedOnTime ? 75 : (isWalkIn ? 50 : 25)));
         ticket.setPriorityReason(emergency ? emergencyReason : priority ? priorityReason : null);
         ticket.setIssuedAt(LocalDateTime.now(ZONE));
         ticket.setPausedAt(null);
@@ -505,6 +498,17 @@ public class DispatchService {
         ticket.setCompletedAt(null);
         tickets.saveAndFlush(ticket);
         audit(session, visit, "ISSUE_EXAM_TICKET", null, ticket.getDisplayNumber());
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                    "TICKET_ISSUED",
+                    branchId,
+                    visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null,
+                    visit.getVisitId(),
+                    visit.getAppointmentId(),
+                    ticket.getStatus().name(),
+                    "Cấp số khám " + ticket.getDisplayNumber(),
+                    LocalDateTime.now(ZONE)));
+        }
         return ticket;
     }
 
@@ -601,6 +605,21 @@ public class DispatchService {
 
     public static boolean isWaitingDispatchVisit(Visit v) {
         return v != null && (v.getStatus() == VisitStatus.WAITING || v.getStatus() == VisitStatus.WAITING_RESULT);
+    }
+
+    public static int visitQueueTierRank(Visit v) {
+        if (v == null) return 4;
+        if (Boolean.TRUE.equals(v.getIsEmergency()) || v.getVisitType() == VisitType.EMERGENCY) {
+            return 1;
+        }
+        if (Boolean.TRUE.equals(v.getIsBookedAndOnTime())
+                && (v.getAppointmentId() != null || v.getVisitType() == VisitType.APPOINTMENT)) {
+            return 2;
+        }
+        if (v.getAppointmentId() == null && v.getVisitType() != VisitType.APPOINTMENT) {
+            return 3;
+        }
+        return 4;
     }
 
     private ResponseStatusException fail(HttpStatus s, String m) { return new ResponseStatusException(s, m); }

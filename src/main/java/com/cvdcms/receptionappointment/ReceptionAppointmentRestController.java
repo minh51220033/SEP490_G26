@@ -52,7 +52,7 @@ public class ReceptionAppointmentRestController {
     @GetMapping("/slots")
     public List<ReceptionAppointmentService.SlotOption> slots(HttpSession session, @RequestParam Long branchId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam PreferredSession sessionPeriod, @RequestParam(required = false) Long doctorId,
+            @RequestParam(required = false) PreferredSession sessionPeriod, @RequestParam(required = false) Long doctorId,
             @RequestParam(required = false) Long serviceId, @RequestParam(required = false) Long excludeAppointmentId) {
         return appointments.slots(session, branchId, date, sessionPeriod, doctorId, serviceId, excludeAppointmentId);
     }

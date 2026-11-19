@@ -481,13 +481,16 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 || hasBillableServices
                 || hasPayablePrescription;
 
+        LocalDateTime clinicalEndTime = LocalDateTime.now(com.cvdcms.service.AppointmentPolicyService.CLINIC_ZONE);
+        visit.setActualEndTime(clinicalEndTime);
+
         if (hasPayableItems) {
             visit.setStatus(VisitStatus.WAITING_PAYMENT);
         } else {
             // Không có dịch vụ/thuốc phát sinh chi phí -> Hoàn tất ca khám trực tiếp
             visit.setStatus(VisitStatus.COMPLETED);
             if (visit.getCompletedAt() == null) {
-                visit.setCompletedAt(LocalDateTime.now());
+                visit.setCompletedAt(clinicalEndTime);
             }
             if (careEventPublisher != null && visit.getVisitId() != null) {
                 careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.VisitCompletedCareEvent(visit.getVisitId()));
@@ -578,6 +581,17 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 visitId, doctorName, visit.getStatus().name(), svcCostStr, prescCostStr, doctorNotes);
 
         Visit saved = visitRepository.save(visit);
+        if (careEventPublisher != null) {
+            careEventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                    saved.getStatus() == VisitStatus.COMPLETED ? "VISIT_COMPLETED" : "VISIT_CLINICAL_COMPLETED",
+                    saved.getBranch() != null ? saved.getBranch().getBranchId() : null,
+                    saved.getPrimaryDoctor() != null ? saved.getPrimaryDoctor().getStaffId() : null,
+                    saved.getVisitId(),
+                    saved.getAppointmentId(),
+                    saved.getStatus().name(),
+                    "Hoàn tất khám lâm sàng ca " + saved.getVisitCode() + " (giải phóng slot còn lại)",
+                    LocalDateTime.now(com.cvdcms.service.AppointmentPolicyService.CLINIC_ZONE)));
+        }
         if (saved.getStatus() == VisitStatus.COMPLETED && appointmentLifecycleService != null) {
             Long actorUserId = resolveCurrentActorUserId(saved);
             if (actorUserId != null) {
@@ -679,6 +693,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         // Mở bệnh án để bổ sung tại bàn; số gọi cũ và ghế đã giải phóng không được tái kích hoạt.
         visit.setChairId(null);
         visit.setRoomId(null);
+        visit.setActualEndTime(null);
         if (auditLogs != null) {
             SystemAuditLog audit = new SystemAuditLog();
             audit.setBranch(visit.getBranch());
@@ -704,6 +719,17 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         log.info("Ca khám visitId={} đã được mở lại sang IN_EXAM từ WAITING_PAYMENT lúc {}. Lý do: {}", visitId, timestamp, reason);
 
         Visit saved = visitRepository.save(visit);
+        if (careEventPublisher != null) {
+            careEventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                    "VISIT_REOPENED",
+                    saved.getBranch() != null ? saved.getBranch().getBranchId() : null,
+                    saved.getPrimaryDoctor() != null ? saved.getPrimaryDoctor().getStaffId() : null,
+                    saved.getVisitId(),
+                    saved.getAppointmentId(),
+                    saved.getStatus().name(),
+                    "Mở lại ca khám lâm sàng",
+                    LocalDateTime.now()));
+        }
         log.info("Ca khám visitId={} đã được mở lại sang IN_EXAM", visitId);
         return saved;
     }

@@ -1,5 +1,7 @@
 package com.cvdcms.config;
 
+import com.cvdcms.entity.StaffProfile;
+import com.cvdcms.repository.StaffProfileRepository;
 import com.cvdcms.service.ChatService;
 import com.cvdcms.service.CustomerCareService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,10 +33,13 @@ public class ChatStompChannelInterceptor implements ChannelInterceptor {
     private static final String CC_BRANCH_TOPIC_PREFIX = "/topic/customer-care/branch/";
     private static final String CC_ADMIN_TOPIC = "/topic/customer-care/admin";
     private static final String CC_USER_QUEUE = "/user/queue/customer-care/notifications";
+    private static final String QUEUE_BRANCH_TOPIC_PREFIX = "/topic/queue/branch/";
+    private static final String QUEUE_DOCTOR_TOPIC_PREFIX = "/topic/queue/doctor/";
     private static final String SEND_DEST = "/app/chat.send";
 
     private final ChatService chatService;
     private CustomerCareService customerCareService;
+    private StaffProfileRepository staffProfileRepository;
 
     public ChatStompChannelInterceptor(ChatService chatService) {
         this.chatService = chatService;
@@ -43,6 +48,11 @@ public class ChatStompChannelInterceptor implements ChannelInterceptor {
     @Autowired
     public void setCustomerCareService(@Lazy CustomerCareService customerCareService) {
         this.customerCareService = customerCareService;
+    }
+
+    @Autowired(required = false)
+    public void setStaffProfileRepository(@Lazy StaffProfileRepository staffProfileRepository) {
+        this.staffProfileRepository = staffProfileRepository;
     }
 
     @Override
@@ -141,6 +151,38 @@ public class ChatStompChannelInterceptor implements ChannelInterceptor {
             }
             if (!chatService.canAccessBranchTopic(userId, branchId)) {
                 throw new AccessDeniedException("Bạn không có quyền theo dõi kênh CSKH của cơ sở #" + branchId + ".");
+            }
+            return;
+        }
+        if (destination.startsWith(QUEUE_BRANCH_TOPIC_PREFIX)) {
+            String branchPart = destination.substring(QUEUE_BRANCH_TOPIC_PREFIX.length()).trim();
+            Long branchId;
+            try {
+                branchId = Long.parseLong(branchPart);
+            } catch (NumberFormatException ex) {
+                throw new AccessDeniedException("Mã cơ sở trong kênh hàng đợi STOMP không hợp lệ.");
+            }
+            if (!chatService.canAccessBranchTopic(userId, branchId)) {
+                throw new AccessDeniedException("Bạn không có quyền theo dõi hàng đợi của cơ sở #" + branchId + ".");
+            }
+            return;
+        }
+        if (destination.startsWith(QUEUE_DOCTOR_TOPIC_PREFIX)) {
+            String doctorPart = destination.substring(QUEUE_DOCTOR_TOPIC_PREFIX.length()).trim();
+            Long doctorId;
+            try {
+                doctorId = Long.parseLong(doctorPart);
+            } catch (NumberFormatException ex) {
+                throw new AccessDeniedException("Mã bác sĩ trong kênh hàng đợi STOMP không hợp lệ.");
+            }
+            if (chatService.isAdminUser(userId)) {
+                return;
+            }
+            Long ownStaffId = staffProfileRepository != null
+                    ? staffProfileRepository.findByUser_UserId(userId).map(StaffProfile::getStaffId).orElse(null)
+                    : null;
+            if (!doctorId.equals(ownStaffId)) {
+                throw new AccessDeniedException("Bạn không có quyền theo dõi hàng đợi riêng của bác sĩ khác.");
             }
             return;
         }

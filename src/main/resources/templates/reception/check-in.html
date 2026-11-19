@@ -7,7 +7,7 @@
     <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
     <div class="app-main">
         <header th:replace="~{fragments/header :: appTopbar('Tiếp đón & Check-in')}"></header>
-        <main id="reception-content-area" class="app-content checkin-page-wrapper p-3" th:attr="data-selected-appointment-id=${selectedAppointmentId}">
+        <main id="reception-content-area" class="app-content checkin-page-wrapper p-3" th:attr="data-selected-appointment-id=${selectedAppointmentId},data-branch-id=${dashboard.branchId}">
             <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
             <link rel="stylesheet" th:href="@{/css/patients.css}">
                         <link rel="stylesheet" th:href="@{/css/check-in.css}">
@@ -529,7 +529,8 @@
                                     <!-- 3. Thời gian hẹn -->
                                     <td data-col="time" class="text-center">
                                         <span class="fw-semibold text-dark" th:text="${a.expectedTime != null ? a.expectedTime : '--:--'}">09:30</span>
-                                        <small th:if="${a.lateMinutes >= 15}" class="badge bg-warning text-dark d-block mt-1" style="font-size: 10px;" th:text="|Trễ ${a.lateMinutes}p|"></small>
+                                        <small th:if="${a.lateMinutes > 15}" class="badge bg-danger-subtle text-danger border border-danger-subtle d-block mt-1" style="font-size: 10px;" th:text="|Trễ ${a.lateMinutes}p · Ưu tiên 4|"></small>
+                                        <small th:if="${a.lateMinutes > 0 and a.lateMinutes <= 15}" class="badge bg-success-subtle text-success border border-success-subtle d-block mt-1" style="font-size: 10px;" th:text="|Trễ ${a.lateMinutes}p · Trong Grace 15p|"></small>
                                     </td>
 
                                     <!-- 4. Tên BN -->
@@ -670,9 +671,10 @@
 
                                     <!-- 7. Phân loại -->
                                     <td data-col="type" class="text-center">
-                                        <span th:if="${v.type.name() == 'EMERGENCY'}" class="badge rounded-pill bg-danger text-white" style="font-size: 11px;">Cấp cứu</span>
-                                        <span th:if="${v.type.name() == 'WALK_IN'}" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size: 11px;">Vãng lai</span>
-                                        <span th:if="${v.type.name() == 'APPOINTMENT'}" class="badge rounded-pill bg-light text-secondary border" style="font-size: 11px;">Hẹn trước</span>
+                                        <span th:if="${v.queueTierRank() == 1}" class="badge rounded-pill bg-danger text-white" style="font-size: 11px;">P1 · Cấp cứu</span>
+                                        <span th:if="${v.queueTierRank() == 2}" class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 11px;">P2 · Hẹn đúng giờ</span>
+                                        <span th:if="${v.queueTierRank() == 3}" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size: 11px;">P3 · Vãng lai</span>
+                                        <span th:if="${v.queueTierRank() == 4}" class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 11px;">P4 · Hẹn trễ &gt;15p</span>
                                     </td>
 
                                     <!-- 8. Triệu chứng -->
@@ -1481,6 +1483,54 @@
             document.addEventListener('DOMContentLoaded', initialiseCheckIn, {once: true});
         } else {
             initialiseCheckIn();
+        }
+
+        // Realtime queue updates over STOMP/SockJS without interrupting active modal forms
+        const branchId = document.getElementById('reception-content-area')?.dataset?.branchId;
+        if (branchId) {
+            const ensureRealtimeLibs = (cb) => {
+                if (window.SockJS && window.Stomp) {
+                    cb();
+                    return;
+                }
+                const loadScript = (src, readyFn) => new Promise((resolve, reject) => {
+                    if (readyFn()) { resolve(); return; }
+                    const existing = document.querySelector(`script[src="${src}"]`);
+                    if (existing) {
+                        const timer = setInterval(() => {
+                            if (readyFn()) { clearInterval(timer); resolve(); }
+                        }, 100);
+                        setTimeout(() => { clearInterval(timer); resolve(); }, 5000);
+                        return;
+                    }
+                    const s = document.createElement('script');
+                    s.src = src;
+                    s.async = true;
+                    s.onload = () => resolve();
+                    s.onerror = () => reject(new Error('Script load failed'));
+                    document.head.appendChild(s);
+                });
+                Promise.resolve()
+                    .then(() => loadScript('https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js', () => !!window.SockJS))
+                    .then(() => loadScript('https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js', () => !!window.Stomp))
+                    .then(() => { if (window.SockJS && window.Stomp) cb(); })
+                    .catch(() => {});
+            };
+            ensureRealtimeLibs(() => {
+                try {
+                    const sock = new window.SockJS('/ws-chat');
+                    const stomp = window.Stomp.over(sock);
+                    stomp.debug = null;
+                    let reloadTimer = null;
+                    stomp.connect({}, () => {
+                        stomp.subscribe(`/topic/queue/branch/${branchId}`, () => {
+                            if (document.querySelector('.modal.show')) return;
+                            clearTimeout(reloadTimer);
+                            reloadTimer = setTimeout(() => window.location.reload(), 1200);
+                        });
+                    }, () => {});
+                } catch (_) {}
+            });
         }
     })();
 </script>

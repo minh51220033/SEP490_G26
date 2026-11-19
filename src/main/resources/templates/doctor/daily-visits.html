@@ -2579,12 +2579,18 @@
 
         function renderTurnBadge(v) {
             const dispNum = v.ticketDisplayNumber || '01';
-            const isEmergency = Boolean(v.isEmergency);
-            const isPriority = Boolean(v.isPriority);
+            const rank = Number(v.queuePriorityRank || (v.isEmergency ? 1 : (v.visitType === 'WALK_IN' ? 3 : 4)));
+            const isEmergency = rank === 1 || Boolean(v.isEmergency);
+            const isOnTimeAppointment = rank === 2 || Boolean(v.isBookedAndOnTime);
+            const isWalkIn = rank === 3 || v.visitType === 'WALK_IN';
             const shortDate = v.checkInDate ? v.checkInDate.slice(0, 5) : '';
-            const reasonTitle = v.priorityReason
-                ? escapeHtml(v.priorityReason)
-                : (isEmergency ? 'Ca cấp cứu khẩn cấp' : (isPriority ? 'Ca khám ưu tiên' : `Số thứ tự lượt khám ngày ${escapeHtml(v.checkInDate || '')}`));
+            const priorityText = v.queuePriorityLabel
+                || (isEmergency ? 'P1 · Cấp cứu'
+                    : isOnTimeAppointment ? 'P2 · Đúng giờ'
+                    : isWalkIn ? 'P3 · Vãng lai'
+                    : 'P4 · Trễ >15p');
+            const returningResult = v.status === 'WAITING_RESULT';
+            const reasonTitle = v.priorityReason ? escapeHtml(v.priorityReason) : escapeHtml(priorityText);
 
             if (isEmergency) {
                 return `
@@ -2596,27 +2602,48 @@
                             </span>
                             <span class="badge rounded-pill px-2 py-1 fw-bold"
                                   style="background:#dc2626;color:#ffffff;font-size:11px;">
-                                <i class="bi bi-lightning-charge-fill me-1"></i>Cấp cứu
+                                <i class="bi bi-lightning-charge-fill me-1"></i>${escapeHtml(priorityText)}
                             </span>
                         </div>
+                        ${returningResult ? '<span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:10.5px;">Quay lại đọc KQ CLS</span>' : ''}
                         ${shortDate ? `<span class="text-muted fw-semibold" style="font-size:11.5px;">Lượt ngày ${escapeHtml(shortDate)}</span>` : ''}
                     </div>
                 `;
             }
 
-            if (isPriority) {
+            if (isOnTimeAppointment) {
                 return `
                     <div class="d-inline-flex flex-column align-items-start gap-1" title="${reasonTitle}">
                         <div class="d-inline-flex align-items-center gap-2">
                             <span class="badge rounded-3 font-monospace fw-bolder px-2 py-1"
-                                  style="background:#fef3c7;color:#92400e;border:1.5px solid #fbbf24;font-size:14.5px;letter-spacing:0.3px;">
+                                  style="background:#dbeafe;color:#1d4ed8;border:1.5px solid #60a5fa;font-size:14.5px;letter-spacing:0.3px;">
                                 #${escapeHtml(dispNum)}
                             </span>
                             <span class="badge rounded-pill px-2 py-1 fw-bold"
-                                  style="background:#fffbeb;color:#b45309;border:1px solid #fcd34d;font-size:11px;">
-                                <i class="bi bi-star-fill me-1"></i>Ưu tiên
+                                  style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;font-size:11px;">
+                                <i class="bi bi-calendar-check-fill me-1"></i>${escapeHtml(priorityText)}
                             </span>
                         </div>
+                        ${returningResult ? '<span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:10.5px;">Quay lại đọc KQ CLS</span>' : ''}
+                        ${shortDate ? `<span class="text-muted fw-semibold" style="font-size:11.5px;">Lượt ngày ${escapeHtml(shortDate)}</span>` : ''}
+                    </div>
+                `;
+            }
+
+            if (isWalkIn) {
+                return `
+                    <div class="d-inline-flex flex-column align-items-start gap-1" title="${reasonTitle}">
+                        <div class="d-inline-flex align-items-center gap-2">
+                            <span class="badge rounded-3 font-monospace fw-bolder px-2 py-1"
+                                  style="background:#ecfdf5;color:#047857;border:1.5px solid #6ee7b7;font-size:14.5px;letter-spacing:0.3px;">
+                                #${escapeHtml(dispNum)}
+                            </span>
+                            <span class="badge rounded-pill px-2 py-1 fw-semibold"
+                                  style="background:#f0fdf4;color:#047857;border:1px solid #86efac;font-size:11px;">
+                                <i class="bi bi-person-walking me-1"></i>${escapeHtml(priorityText)}
+                            </span>
+                        </div>
+                        ${returningResult ? '<span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:10.5px;">Quay lại đọc KQ CLS</span>' : ''}
                         ${shortDate ? `<span class="text-muted fw-semibold" style="font-size:11.5px;">Lượt ngày ${escapeHtml(shortDate)}</span>` : ''}
                     </div>
                 `;
@@ -2626,14 +2653,15 @@
                 <div class="d-inline-flex flex-column align-items-start gap-1" title="${reasonTitle}">
                     <div class="d-inline-flex align-items-center gap-2">
                         <span class="badge rounded-3 font-monospace fw-bolder px-2 py-1"
-                              style="background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc;font-size:14.5px;letter-spacing:0.3px;">
+                              style="background:#fef3c7;color:#92400e;border:1.5px solid #fbbf24;font-size:14.5px;letter-spacing:0.3px;">
                             #${escapeHtml(dispNum)}
                         </span>
                         <span class="badge rounded-pill px-2 py-1 fw-semibold"
-                              style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;font-size:11px;">
-                            Khám thường
+                              style="background:#fffbeb;color:#b45309;border:1px solid #fcd34d;font-size:11px;">
+                            <i class="bi bi-clock-history me-1"></i>${escapeHtml(priorityText)}
                         </span>
                     </div>
+                    ${returningResult ? '<span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:10.5px;">Quay lại đọc KQ CLS</span>' : ''}
                     ${shortDate ? `<span class="text-muted fw-semibold" style="font-size:11.5px;">Lượt ngày ${escapeHtml(shortDate)}</span>` : ''}
                 </div>
             `;
@@ -3000,6 +3028,57 @@
             updatePinnedBadgeCount();
             syncDateInputsVisibility();
             fetchDailyVisits();
+
+            const ensureRealtimeLibs = (cb) => {
+                if (window.SockJS && window.Stomp) {
+                    cb();
+                    return;
+                }
+                const loadScript = (src, readyFn) => new Promise((resolve, reject) => {
+                    if (readyFn()) { resolve(); return; }
+                    const existing = document.querySelector(`script[src="${src}"]`);
+                    if (existing) {
+                        const timer = setInterval(() => {
+                            if (readyFn()) { clearInterval(timer); resolve(); }
+                        }, 100);
+                        setTimeout(() => { clearInterval(timer); resolve(); }, 5000);
+                        return;
+                    }
+                    const s = document.createElement('script');
+                    s.src = src;
+                    s.async = true;
+                    s.onload = () => resolve();
+                    s.onerror = () => reject(new Error('Script load failed'));
+                    document.head.appendChild(s);
+                });
+                Promise.resolve()
+                    .then(() => loadScript('https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js', () => !!window.SockJS))
+                    .then(() => loadScript('https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js', () => !!window.Stomp))
+                    .then(() => { if (window.SockJS && window.Stomp) cb(); })
+                    .catch(() => {});
+            };
+
+            if (currentDoctorStaffId || effectiveBranch) {
+                ensureRealtimeLibs(() => {
+                    try {
+                        const sock = new window.SockJS('/ws-chat');
+                        const stomp = window.Stomp.over(sock);
+                        stomp.debug = null;
+                        let refreshTimer = null;
+                        const scheduleRefresh = () => {
+                            clearTimeout(refreshTimer);
+                            refreshTimer = setTimeout(() => fetchDailyVisits(), 600);
+                        };
+                        stomp.connect({}, () => {
+                            if (currentDoctorStaffId) {
+                                stomp.subscribe(`/topic/queue/doctor/${currentDoctorStaffId}`, scheduleRefresh);
+                            } else if (effectiveBranch) {
+                                stomp.subscribe(`/topic/queue/branch/${effectiveBranch}`, scheduleRefresh);
+                            }
+                        }, () => {});
+                    } catch (_) {}
+                });
+            }
         });
     </script>
 </body>
