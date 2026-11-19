@@ -143,15 +143,16 @@ public class ReportServiceImpl implements ReportService {
         BigDecimal validatedTaxRate = validateRequestedTaxRate(taxRate);
         LocalDateTime startDt = startDate.atStartOfDay();
         LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
+        LocalDateTime endExclusive = endDate.plusDays(1).atStartOfDay();
 
         ReportDashboardDTO dto = new ReportDashboardDTO();
         dto.setSelectedBranchName(branchName != null ? branchName : "Tất cả chi nhánh");
         dto.setFilterStartDate(startDate);
         dto.setFilterEndDate(endDate);
 
-        // 1. Thực thu theo dòng tiền thực tế (Cash/Bank/POS - Refunds)
-        BigDecimal grossRealRevenue = toBigDecimal(paymentRepository.sumRealRevenueByBranches(branchIds, startDt, endDt));
-        BigDecimal totalRefund = toBigDecimal(refundRepository.sumRefundAmountByBranches(branchIds, startDt, endDt));
+        // 1. Thực thu theo dòng tiền thực tế (Cash/Bank/POS - Refunds) theo nửa khoảng [startDt, endExclusive)
+        BigDecimal grossRealRevenue = toBigDecimal(paymentRepository.sumRealRevenueByBranches(branchIds, startDt, endExclusive));
+        BigDecimal totalRefund = toBigDecimal(refundRepository.sumRefundAmountByBranches(branchIds, startDt, endExclusive));
         BigDecimal netRealRevenue = grossRealRevenue.subtract(totalRefund);
         dto.setTotalRealRevenue(netRealRevenue);
         dto.setTotalRefundAmount(totalRefund);
@@ -171,7 +172,7 @@ public class ReportServiceImpl implements ReportService {
         BigDecimal totalExpense = toBigDecimal(operatingExpenseRepository.sumActiveExpenses(branchIds, startDate, endDate));
         if (payrollPeriodRepository != null) {
             BigDecimal employerInsurance = toBigDecimal(payrollPeriodRepository.sumPaidEmployerInsuranceByPaidAt(
-                    branchIds, startDt, endDt
+                    branchIds, startDt, endExclusive
             ));
             totalExpense = totalExpense.add(employerInsurance);
         }
@@ -179,8 +180,8 @@ public class ReportServiceImpl implements ReportService {
         dto.setOperatingMargin(netRealRevenue.subtract(dto.getTotalExpenseAmount()));
 
         // Thuế & Lợi nhuận sau thuế theo cấu hình pháp nhân / phân loại căn cứ
-        BigDecimal fallbackDepositWallet = toBigDecimal(paymentRepository.sumDepositWalletUsedByBranches(branchIds, startDt, endDt));
-        BigDecimal fallbackAdvanceDeposit = toBigDecimal(paymentRepository.sumAdvanceDepositByBranches(branchIds, startDt, endDt));
+        BigDecimal fallbackDepositWallet = toBigDecimal(paymentRepository.sumDepositWalletUsedByBranches(branchIds, startDt, endExclusive));
+        BigDecimal fallbackAdvanceDeposit = toBigDecimal(paymentRepository.sumAdvanceDepositByBranches(branchIds, startDt, endExclusive));
         TaxComputationSummary taxSummary = computeTaxComputationSummary(
                 branchIds, startDate, endDate, validatedTaxRate,
                 grossRealRevenue, fallbackAdvanceDeposit, fallbackDepositWallet,
@@ -191,7 +192,7 @@ public class ReportServiceImpl implements ReportService {
         // Thuế TNCN đã khấu trừ của nhân viên từ các bảng lương đã chi trả theo ngày chi
         if (payrollPeriodRepository != null) {
             BigDecimal paidPit = payrollPeriodRepository.sumPaidPitByPaidAt(
-                    branchIds, startDt, endDt
+                    branchIds, startDt, endExclusive
             );
             dto.setTotalPitWithheld(paidPit != null ? paidPit : BigDecimal.ZERO);
         }
@@ -257,6 +258,13 @@ public class ReportServiceImpl implements ReportService {
         return patientProfileRepository.countNewPatientsByBranchesAndPeriod(branchIds, startDt, endDt);
     }
 
+    private record DatedTaxDelta(
+            LocalDate txDate,
+            BigDecimal serviceDelta,
+            BigDecimal medicineDelta,
+            BigDecimal surchargeDelta
+    ) {}
+
     private static class BranchTaxAccum {
         BigDecimal directInvoiceCashIn = BigDecimal.ZERO;
         BigDecimal advanceDepositInflow = BigDecimal.ZERO;
@@ -268,6 +276,8 @@ public class ReportServiceImpl implements ReportService {
         BigDecimal medicineBase = BigDecimal.ZERO;
         BigDecimal surchargeBase = BigDecimal.ZERO;
         BigDecimal unclassifiedInvoiceBase = BigDecimal.ZERO;
+        BigDecimal unclassifiedRefundDeduction = BigDecimal.ZERO;
+        final List<DatedTaxDelta> datedDeltas = new ArrayList<>();
 
         BigDecimal netCash() {
             return directInvoiceCashIn
@@ -281,9 +291,11 @@ public class ReportServiceImpl implements ReportService {
         }
 
         BigDecimal netClassifiedRevenueBase() {
-            return serviceBase.max(BigDecimal.ZERO)
-                    .add(medicineBase.max(BigDecimal.ZERO))
-                    .add(surchargeBase.max(BigDecimal.ZERO));
+            return serviceBase.add(medicineBase).add(surchargeBase).subtract(unclassifiedRefundDeduction);
+        }
+
+        BigDecimal classifiedOperatingMargin() {
+            return netClassifiedRevenueBase().subtract(operatingExpense);
         }
 
         BigDecimal unsettledAdvanceDeposit() {
@@ -291,19 +303,6 @@ public class ReportServiceImpl implements ReportService {
                     .subtract(depositWalletUsed)
                     .subtract(walletRefundAmount)
                     .max(BigDecimal.ZERO);
-        }
-
-        boolean hasAnyFinancialActivity() {
-            return directInvoiceCashIn.compareTo(BigDecimal.ZERO) != 0
-                    || advanceDepositInflow.compareTo(BigDecimal.ZERO) != 0
-                    || depositWalletUsed.compareTo(BigDecimal.ZERO) != 0
-                    || invoiceRefundAmount.compareTo(BigDecimal.ZERO) != 0
-                    || walletRefundAmount.compareTo(BigDecimal.ZERO) != 0
-                    || operatingExpense.compareTo(BigDecimal.ZERO) != 0
-                    || serviceBase.compareTo(BigDecimal.ZERO) != 0
-                    || medicineBase.compareTo(BigDecimal.ZERO) != 0
-                    || surchargeBase.compareTo(BigDecimal.ZERO) != 0
-                    || unclassifiedInvoiceBase.compareTo(BigDecimal.ZERO) != 0;
         }
     }
 
@@ -335,8 +334,6 @@ public class ReportServiceImpl implements ReportService {
             BigDecimal unsettledAdvanceDeposit
     ) {}
 
-    private record BranchInvoiceKey(Long branchId, Long invoiceId) {}
-
     private BigDecimal validateRequestedTaxRate(BigDecimal requestedTaxRate) {
         if (requestedTaxRate == null) {
             return null;
@@ -360,10 +357,10 @@ public class ReportServiceImpl implements ReportService {
             BigDecimal aggregateOperatingMargin
     ) {
         LocalDateTime startDt = startDate.atStartOfDay();
-        LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
+        LocalDateTime endExclusive = endDate.plusDays(1).atStartOfDay();
 
         Map<Long, BranchTaxAccum> branchMap = new LinkedHashMap<>();
-        boolean hasDetailedRows = collectBranchFinancialActivity(branchIds, startDate, endDate, startDt, endDt, branchMap);
+        boolean hasDetailedRows = collectBranchFinancialActivity(branchIds, startDate, endDate, startDt, endExclusive, branchMap);
 
         Map<Long, String> branchNames = resolveBranchNamesMap();
         Set<Long> targetBranchIds = resolveTargetBranchIds(branchIds, branchMap, branchNames);
@@ -377,7 +374,7 @@ public class ReportServiceImpl implements ReportService {
             acc.invoiceRefundAmount = nz(fallbackTotalRefund);
             acc.operatingExpense = nz(fallbackTotalExpense);
             return evaluateSingleBranchFallback(
-                    fallbackBranchId, branchNames, acc, endDate, validatedRequestedRate, aggregateOperatingMargin
+                    fallbackBranchId, branchNames, acc, startDate, endDate, validatedRequestedRate, aggregateOperatingMargin
             );
         }
 
@@ -385,7 +382,7 @@ public class ReportServiceImpl implements ReportService {
         for (Long bid : targetBranchIds) {
             BranchTaxAccum acc = branchMap.getOrDefault(bid, new BranchTaxAccum());
             String bName = branchNames.getOrDefault(bid, "Chi nhánh #" + bid);
-            outcomes.add(computeSingleBranchTax(bid, bName, acc, endDate, validatedRequestedRate));
+            outcomes.add(computeSingleBranchTax(bid, bName, acc, startDate, endDate, validatedRequestedRate));
         }
 
         return summarizeBranchOutcomes(outcomes, branchMap.values(), aggregateOperatingMargin, validatedRequestedRate, targetBranchIds.size() <= 1);
@@ -396,12 +393,13 @@ public class ReportServiceImpl implements ReportService {
             LocalDate startDate,
             LocalDate endDate,
             LocalDateTime startDt,
-            LocalDateTime endDt,
+            LocalDateTime endExclusive,
             Map<Long, BranchTaxAccum> branchMap
     ) {
         boolean hasAny = false;
 
-        List<Object[]> paymentRows = safeList(paymentRepository.sumPaymentsByBranchTypeAndMethod(branchIds, startDt, endDt));
+        // 1. Dòng tiền thuần theo hình thức & loại phiếu trong nửa khoảng [startDt, endExclusive)
+        List<Object[]> paymentRows = safeList(paymentRepository.sumPaymentsByBranchTypeAndMethod(branchIds, startDt, endExclusive));
         for (Object[] row : paymentRows) {
             Long bid = toLong(row[0]);
             if (bid == null) continue;
@@ -423,78 +421,113 @@ public class ReportServiceImpl implements ReportService {
             }
         }
 
+        // 2. Phân bổ doanh thu theo thời điểm phát sinh Payment (bất biến theo p.amount, không bị hoàn tiền kỳ sau làm sai lịch sử)
+        Map<Long, Map<String, BigDecimal>> allocByPaymentId = new HashMap<>();
         if (paymentAllocationRepository != null) {
-            List<Object[]> allocRows = safeList(paymentAllocationRepository.sumAllocatedByBranchAndItemType(branchIds, startDt, endDt));
-            for (Object[] row : allocRows) {
-                Long bid = toLong(row[0]);
-                if (bid == null) continue;
-                hasAny = true;
-                BranchTaxAccum acc = branchMap.computeIfAbsent(bid, k -> new BranchTaxAccum());
+            for (Object[] row : safeList(paymentAllocationRepository.sumAllocatedByPaymentAndItemType(branchIds, startDt, endExclusive))) {
+                Long paymentId = toLong(row[0]);
+                if (paymentId == null) continue;
                 String itemType = row[1] != null ? row[1].toString().trim().toUpperCase() : "";
                 BigDecimal amt = toBigDecimal(row[2]);
-                addAllocationBucket(acc, itemType, amt);
+                allocByPaymentId.computeIfAbsent(paymentId, k -> new HashMap<>())
+                        .merge(itemType, amt, BigDecimal::add);
             }
         }
 
-        List<Payment> unallocatedPayments = safeList(paymentRepository.findUnallocatedPaymentsForPeriod(branchIds, startDt, endDt));
-        for (Payment p : unallocatedPayments) {
+        List<Payment> periodPayments = safeList(paymentRepository.findPaidPaymentsForPeriod(branchIds, startDt, endExclusive));
+        Set<Long> mixedZeroAllocInvoiceIds = new LinkedHashSet<>();
+        for (Payment p : periodPayments) {
+            Long pid = p.getPaymentId();
+            Map<String, BigDecimal> paMap = pid != null ? allocByPaymentId.get(pid) : null;
+            BigDecimal paTotal = sumAllocationValues(paMap);
+            if (paTotal.compareTo(BigDecimal.ZERO) == 0 && p.getInvoice() != null && !isSingleCategoryInvoice(p.getInvoice())) {
+                if (p.getInvoice().getInvoiceId() != null) {
+                    mixedZeroAllocInvoiceIds.add(p.getInvoice().getInvoiceId());
+                }
+            }
+        }
+
+        Set<Long> refundedMixedInvoiceIds = Collections.emptySet();
+        if (!mixedZeroAllocInvoiceIds.isEmpty()) {
+            refundedMixedInvoiceIds = new HashSet<>(safeList(refundRepository.findInvoiceIdsWithRefunds(mixedZeroAllocInvoiceIds)));
+        }
+
+        for (Payment p : periodPayments) {
             Long bid = p.getBranch() != null ? p.getBranch().getBranchId() : null;
             if (bid == null) continue;
             hasAny = true;
             BranchTaxAccum acc = branchMap.computeIfAbsent(bid, k -> new BranchTaxAccum());
-            allocateAmountByInvoice(acc, p.getInvoice(), nz(p.getAmount()), true);
+            BigDecimal pAmt = nz(p.getAmount());
+            if (pAmt.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            LocalDate txDate = p.getPaidAt() != null ? p.getPaidAt().toLocalDate() : endDate;
+            Map<String, BigDecimal> paMap = p.getPaymentId() != null ? allocByPaymentId.get(p.getPaymentId()) : null;
+            BigDecimal paTotal = sumAllocationValues(paMap);
+
+            if (paMap != null && paTotal.compareTo(pAmt) == 0) {
+                // Allocation còn nguyên vẹn tại thời điểm thu -> dùng chính xác 100%
+                BigDecimal s = paMap.getOrDefault("SERVICE", BigDecimal.ZERO);
+                BigDecimal m = paMap.getOrDefault("MEDICINE", BigDecimal.ZERO);
+                BigDecimal su = paMap.getOrDefault("SURCHARGE", BigDecimal.ZERO);
+                BigDecimal un = pAmt.subtract(s).subtract(m).subtract(su).max(BigDecimal.ZERO);
+                addCategorizedDelta(acc, txDate, s, m, su, un);
+            } else {
+                Invoice inv = p.getInvoice();
+                String singleCat = resolveSingleInvoiceCategory(inv);
+                if (singleCat != null) {
+                    // Hóa đơn đơn nhóm (chỉ DV / chỉ Thuốc / chỉ Phụ thu): xác định chắc chắn 100% kể cả khi allocation bị xóa/sửa sau đó
+                    switch (singleCat) {
+                        case "SERVICE" -> addCategorizedDelta(acc, txDate, pAmt, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+                        case "MEDICINE" -> addCategorizedDelta(acc, txDate, BigDecimal.ZERO, pAmt, BigDecimal.ZERO, BigDecimal.ZERO);
+                        case "SURCHARGE" -> addCategorizedDelta(acc, txDate, BigDecimal.ZERO, BigDecimal.ZERO, pAmt, BigDecimal.ZERO);
+                        default -> acc.unclassifiedInvoiceBase = acc.unclassifiedInvoiceBase.add(pAmt);
+                    }
+                } else if (paTotal.compareTo(BigDecimal.ZERO) > 0 && paTotal.compareTo(pAmt) < 0) {
+                    // Allocation của hóa đơn hỗn hợp bị hoàn tiền sửa/xóa một phần -> giữ phần còn lại, đánh dấu phần chênh lệch cần đối soát
+                    BigDecimal s = paMap.getOrDefault("SERVICE", BigDecimal.ZERO);
+                    BigDecimal m = paMap.getOrDefault("MEDICINE", BigDecimal.ZERO);
+                    BigDecimal su = paMap.getOrDefault("SURCHARGE", BigDecimal.ZERO);
+                    BigDecimal diff = pAmt.subtract(s).subtract(m).subtract(su).max(BigDecimal.ZERO);
+                    addCategorizedDelta(acc, txDate, s, m, su, diff);
+                } else if (inv != null && (inv.getInvoiceId() == null || !refundedMixedInvoiceIds.contains(inv.getInvoiceId()))) {
+                    // Phiếu thu legacy chưa từng có allocation trên hóa đơn chưa từng hoàn -> tách pro-rata theo hóa đơn gốc
+                    allocateAmountByInvoice(acc, inv, txDate, pAmt, true);
+                } else {
+                    // Allocation gốc trên hóa đơn hỗn hợp đã bị xóa hoàn toàn bởi hoàn tiền -> không giả định tỷ lệ
+                    acc.unclassifiedInvoiceBase = acc.unclassifiedInvoiceBase.add(pAmt);
+                }
+            }
         }
 
-        // Tránh trừ trùng các khoản hoàn tiền hóa đơn đã giảm trừ trực tiếp trên payment_allocations trong kỳ
-        Map<BranchInvoiceKey, BigDecimal> alreadyRolledBack = new HashMap<>();
-        if (paymentAllocationRepository != null) {
-            Map<BranchInvoiceKey, BigDecimal> allocPayMap = new HashMap<>();
-            for (Object[] row : safeList(paymentRepository.sumAllocatedPaymentTotalsByBranchAndInvoice(branchIds, startDt, endDt))) {
-                Long bid = toLong(row[0]);
-                Long invId = toLong(row[1]);
-                if (bid != null && invId != null) {
-                    allocPayMap.put(new BranchInvoiceKey(bid, invId), toBigDecimal(row[2]));
-                }
-            }
-            Map<BranchInvoiceKey, BigDecimal> remAllocMap = new HashMap<>();
-            for (Object[] row : safeList(paymentAllocationRepository.sumAllocatedByBranchAndInvoice(branchIds, startDt, endDt))) {
-                Long bid = toLong(row[0]);
-                Long invId = toLong(row[1]);
-                if (bid != null && invId != null) {
-                    remAllocMap.put(new BranchInvoiceKey(bid, invId), toBigDecimal(row[2]));
-                }
-            }
-            for (Map.Entry<BranchInvoiceKey, BigDecimal> entry : allocPayMap.entrySet()) {
-                BigDecimal paidWithAlloc = entry.getValue();
-                BigDecimal remainingAlloc = remAllocMap.getOrDefault(entry.getKey(), BigDecimal.ZERO);
-                BigDecimal rolled = paidWithAlloc.subtract(remainingAlloc).max(BigDecimal.ZERO);
-                if (rolled.compareTo(BigDecimal.ZERO) > 0) {
-                    alreadyRolledBack.put(entry.getKey(), rolled);
-                }
-            }
-        }
-
-        List<Refund> periodRefunds = safeList(refundRepository.findAllRefundsForReport(branchIds, startDt, endDt));
+        // 3. Ghi nhận hoàn tiền đúng kỳ phát sinh [startDt, endExclusive) và tách riêng hoàn ví vs hoàn hóa đơn
+        List<Refund> periodRefunds = safeList(refundRepository.findAllRefundsForReport(branchIds, startDt, endExclusive));
         for (Refund r : periodRefunds) {
             Long bid = r.getBranch() != null ? r.getBranch().getBranchId() : null;
             if (bid == null) continue;
             hasAny = true;
             BranchTaxAccum acc = branchMap.computeIfAbsent(bid, k -> new BranchTaxAccum());
             BigDecimal refAmt = nz(r.getAmount());
+            LocalDate txDate = r.getRefundedAt() != null ? r.getRefundedAt().toLocalDate() : endDate;
+
             if (r.getInvoice() == null) {
-                // Hoàn tiền từ số dư ví tạm ứng: không giảm trừ vào doanh thu dịch vụ/thuốc
+                // Hoàn từ số dư ví tạm ứng: giảm dòng tiền và số dư ứng trước, KHÔNG trừ vào doanh thu DV/Thuốc
                 acc.walletRefundAmount = acc.walletRefundAmount.add(refAmt);
             } else {
                 acc.invoiceRefundAmount = acc.invoiceRefundAmount.add(refAmt);
-                BranchInvoiceKey key = new BranchInvoiceKey(bid, r.getInvoice().getInvoiceId());
-                BigDecimal availableRolled = alreadyRolledBack.getOrDefault(key, BigDecimal.ZERO);
-                BigDecimal consumedRolled = refAmt.min(availableRolled);
-                if (consumedRolled.compareTo(BigDecimal.ZERO) > 0) {
-                    alreadyRolledBack.put(key, availableRolled.subtract(consumedRolled));
-                }
-                BigDecimal extraToDeduct = refAmt.subtract(consumedRolled);
-                if (extraToDeduct.compareTo(BigDecimal.ZERO) > 0) {
-                    allocateAmountByInvoice(acc, r.getInvoice(), extraToDeduct, false);
+                Invoice inv = r.getInvoice();
+                String singleCat = resolveSingleInvoiceCategory(inv);
+                if (singleCat != null) {
+                    switch (singleCat) {
+                        case "SERVICE" -> addCategorizedDelta(acc, txDate, refAmt.negate(), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+                        case "MEDICINE" -> addCategorizedDelta(acc, txDate, BigDecimal.ZERO, refAmt.negate(), BigDecimal.ZERO, BigDecimal.ZERO);
+                        case "SURCHARGE" -> addCategorizedDelta(acc, txDate, BigDecimal.ZERO, BigDecimal.ZERO, refAmt.negate(), BigDecimal.ZERO);
+                        default -> acc.unclassifiedRefundDeduction = acc.unclassifiedRefundDeduction.add(refAmt);
+                    }
+                } else if (!Boolean.TRUE.equals(r.getReduceInvoiceTotal())) {
+                    allocateAmountByInvoice(acc, inv, txDate, refAmt, false);
+                } else {
+                    // Hóa đơn hỗn hợp hoàn kèm giảm tổng hóa đơn làm thay đổi surcharge/discount gốc -> đưa vào điều chỉnh cần đối soát
+                    acc.unclassifiedRefundDeduction = acc.unclassifiedRefundDeduction.add(refAmt);
                 }
             }
         }
@@ -508,7 +541,7 @@ public class ReportServiceImpl implements ReportService {
         }
 
         if (payrollPeriodRepository != null) {
-            for (Object[] row : safeList(payrollPeriodRepository.sumPaidEmployerInsuranceByBranchAndPaidAt(branchIds, startDt, endDt))) {
+            for (Object[] row : safeList(payrollPeriodRepository.sumPaidEmployerInsuranceByBranchAndPaidAt(branchIds, startDt, endExclusive))) {
                 Long bid = toLong(row[0]);
                 if (bid == null) continue;
                 hasAny = true;
@@ -520,22 +553,60 @@ public class ReportServiceImpl implements ReportService {
         return hasAny;
     }
 
-    private void addAllocationBucket(BranchTaxAccum acc, String itemType, BigDecimal amt) {
-        switch (itemType) {
-            case "SERVICE" -> acc.serviceBase = acc.serviceBase.add(amt);
-            case "MEDICINE" -> acc.medicineBase = acc.medicineBase.add(amt);
-            case "SURCHARGE" -> acc.surchargeBase = acc.surchargeBase.add(amt);
-            default -> acc.unclassifiedInvoiceBase = acc.unclassifiedInvoiceBase.add(amt);
+    private BigDecimal sumAllocationValues(Map<String, BigDecimal> paMap) {
+        if (paMap == null || paMap.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return paMap.values().stream().filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private void addCategorizedDelta(
+            BranchTaxAccum acc,
+            LocalDate txDate,
+            BigDecimal svc,
+            BigDecimal med,
+            BigDecimal surch,
+            BigDecimal unclassified
+    ) {
+        acc.serviceBase = acc.serviceBase.add(svc);
+        acc.medicineBase = acc.medicineBase.add(med);
+        acc.surchargeBase = acc.surchargeBase.add(surch);
+        acc.unclassifiedInvoiceBase = acc.unclassifiedInvoiceBase.add(unclassified);
+        if (svc.compareTo(BigDecimal.ZERO) != 0 || med.compareTo(BigDecimal.ZERO) != 0 || surch.compareTo(BigDecimal.ZERO) != 0) {
+            acc.datedDeltas.add(new DatedTaxDelta(txDate, svc, med, surch));
         }
     }
 
-    private void allocateAmountByInvoice(BranchTaxAccum acc, Invoice inv, BigDecimal amount, boolean positive) {
+    private boolean isSingleCategoryInvoice(Invoice inv) {
+        return resolveSingleInvoiceCategory(inv) != null;
+    }
+
+    private String resolveSingleInvoiceCategory(Invoice inv) {
+        if (inv == null) {
+            return null;
+        }
+        boolean hasSvc = nz(inv.getTotalServiceAmount()).compareTo(BigDecimal.ZERO) > 0;
+        boolean hasMed = nz(inv.getTotalMedicineAmount()).compareTo(BigDecimal.ZERO) > 0;
+        boolean hasSurch = nz(inv.getSurchargeAmount()).compareTo(BigDecimal.ZERO) > 0;
+        int count = (hasSvc ? 1 : 0) + (hasMed ? 1 : 0) + (hasSurch ? 1 : 0);
+        if (count != 1) {
+            return null;
+        }
+        if (hasSvc) return "SERVICE";
+        if (hasMed) return "MEDICINE";
+        return "SURCHARGE";
+    }
+
+    private void allocateAmountByInvoice(BranchTaxAccum acc, Invoice inv, LocalDate txDate, BigDecimal amount, boolean positive) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
-        BigDecimal signed = positive ? amount : amount.negate();
         if (inv == null) {
-            acc.unclassifiedInvoiceBase = acc.unclassifiedInvoiceBase.add(signed);
+            if (positive) {
+                acc.unclassifiedInvoiceBase = acc.unclassifiedInvoiceBase.add(amount);
+            } else {
+                acc.unclassifiedRefundDeduction = acc.unclassifiedRefundDeduction.add(amount);
+            }
             return;
         }
         BigDecimal rawSvc = nz(inv.getTotalServiceAmount());
@@ -545,7 +616,11 @@ public class ReportServiceImpl implements ReportService {
         BigDecimal surch = nz(inv.getSurchargeAmount()).max(BigDecimal.ZERO);
         BigDecimal denom = netSvc.add(med).add(surch);
         if (denom.compareTo(BigDecimal.ZERO) <= 0) {
-            acc.unclassifiedInvoiceBase = acc.unclassifiedInvoiceBase.add(signed);
+            if (positive) {
+                acc.unclassifiedInvoiceBase = acc.unclassifiedInvoiceBase.add(amount);
+            } else {
+                acc.unclassifiedRefundDeduction = acc.unclassifiedRefundDeduction.add(amount);
+            }
             return;
         }
 
@@ -564,13 +639,9 @@ public class ReportServiceImpl implements ReportService {
         }
 
         if (positive) {
-            acc.serviceBase = acc.serviceBase.add(svcShare);
-            acc.medicineBase = acc.medicineBase.add(medShare);
-            acc.surchargeBase = acc.surchargeBase.add(surchShare);
+            addCategorizedDelta(acc, txDate, svcShare, medShare, surchShare, BigDecimal.ZERO);
         } else {
-            acc.serviceBase = acc.serviceBase.subtract(svcShare);
-            acc.medicineBase = acc.medicineBase.subtract(medShare);
-            acc.surchargeBase = acc.surchargeBase.subtract(surchShare);
+            addCategorizedDelta(acc, txDate, svcShare.negate(), medShare.negate(), surchShare.negate(), BigDecimal.ZERO);
         }
     }
 
@@ -603,13 +674,14 @@ public class ReportServiceImpl implements ReportService {
             Long branchId,
             Map<Long, String> branchNames,
             BranchTaxAccum acc,
-            LocalDate targetDate,
+            LocalDate startDate,
+            LocalDate endDate,
             BigDecimal validatedRequestedRate,
             BigDecimal aggregateOperatingMargin
     ) {
         String bName = branchId != null ? branchNames.getOrDefault(branchId, "Chi nhánh #" + branchId) : "Phạm vi báo cáo";
-        BranchTaxOutcome outcome = computeSingleBranchTaxWithMargin(
-                branchId, bName, acc, aggregateOperatingMargin, targetDate, validatedRequestedRate
+        BranchTaxOutcome outcome = computeSingleBranchTaxWithMode(
+                branchId, bName, acc, aggregateOperatingMargin, true, startDate, endDate, validatedRequestedRate
         );
         BigDecimal estTax = outcome.estimatedTax();
         return new TaxComputationSummary(
@@ -637,44 +709,60 @@ public class ReportServiceImpl implements ReportService {
             Long branchId,
             String branchName,
             BranchTaxAccum acc,
-            LocalDate targetDate,
+            LocalDate startDate,
+            LocalDate endDate,
             BigDecimal validatedRequestedRate
     ) {
-        return computeSingleBranchTaxWithMargin(branchId, branchName, acc, acc.operatingMargin(), targetDate, validatedRequestedRate);
+        return computeSingleBranchTaxWithMode(
+                branchId, branchName, acc, acc.classifiedOperatingMargin(), false, startDate, endDate, validatedRequestedRate
+        );
     }
 
-    private BranchTaxOutcome computeSingleBranchTaxWithMargin(
+    private BranchTaxOutcome computeSingleBranchTaxWithMode(
             Long branchId,
             String branchName,
             BranchTaxAccum acc,
-            BigDecimal branchOperatingMargin,
-            LocalDate targetDate,
+            BigDecimal effectiveEnterpriseMargin,
+            boolean legacyScalarFallback,
+            LocalDate startDate,
+            LocalDate endDate,
             BigDecimal validatedRequestedRate
     ) {
-        Optional<BranchTaxConfig> configOpt = (branchId != null && branchId > 0 && taxCalculationService != null)
-                ? taxCalculationService.getBranchTaxConfig(branchId, targetDate)
+        Optional<BranchTaxConfig> endConfigOpt = (branchId != null && branchId > 0 && taxCalculationService != null)
+                ? taxCalculationService.getBranchTaxConfig(branchId, endDate)
                 : Optional.empty();
+        Optional<BranchTaxConfig> startConfigOpt = (branchId != null && branchId > 0 && taxCalculationService != null && !startDate.equals(endDate))
+                ? taxCalculationService.getBranchTaxConfig(branchId, startDate)
+                : endConfigOpt;
+        boolean policyChangedMidPeriod = !isSameTaxPolicySnapshot(startConfigOpt.orElse(null), endConfigOpt.orElse(null));
 
-        BigDecimal svcAndSurchBase = acc.serviceBase.max(BigDecimal.ZERO).add(acc.surchargeBase.max(BigDecimal.ZERO));
+        BigDecimal svcAndSurchBase = acc.serviceBase.add(acc.surchargeBase).max(BigDecimal.ZERO);
         BigDecimal medBase = acc.medicineBase.max(BigDecimal.ZERO);
         BigDecimal unclassified = acc.unclassifiedInvoiceBase.max(BigDecimal.ZERO);
+        BigDecimal unclassifiedRef = acc.unclassifiedRefundDeduction.max(BigDecimal.ZERO);
         BigDecimal unsettledAdv = acc.unsettledAdvanceDeposit();
 
-        if (configOpt.isPresent()) {
-            BranchTaxConfig config = configOpt.get();
+        if (endConfigOpt.isPresent()) {
+            BranchTaxConfig config = endConfigOpt.get();
             boolean isHousehold = "HOUSEHOLD".equalsIgnoreCase(config.getEntityType())
                     || "REVENUE_PERCENT".equalsIgnoreCase(config.getTaxRegime());
 
             if (isHousehold) {
                 BigDecimal totalRevBase = svcAndSurchBase.add(medBase);
                 if (validatedRequestedRate != null) {
-                    boolean ok = unclassified.compareTo(BigDecimal.ZERO) == 0;
-                    BigDecimal tax = totalRevBase.multiply(validatedRequestedRate)
+                    boolean ok = unclassified.compareTo(BigDecimal.ZERO) == 0 && unclassifiedRef.compareTo(BigDecimal.ZERO) == 0;
+                    BigDecimal baseAfterUnclassRef = totalRevBase.subtract(unclassifiedRef).max(BigDecimal.ZERO);
+                    BigDecimal tax = baseAfterUnclassRef.multiply(validatedRequestedRate)
                             .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
                     String note = branchName + ": HKD mô phỏng " + fmtRate(validatedRequestedRate) + "% trên doanh thu phân bổ ("
-                            + fmtMoney(totalRevBase) + " đ -> thuế " + fmtMoney(tax) + " đ)"
-                            + (ok ? "" : "; có " + fmtMoney(unclassified) + " đ chưa phân loại DV/Thuốc");
+                            + fmtMoney(baseAfterUnclassRef) + " đ -> thuế " + fmtMoney(tax) + " đ)"
+                            + (ok ? "" : "; cần đối soát phần chưa phân loại");
                     return new BranchTaxOutcome(branchId, branchName, ok, true, validatedRequestedRate, tax, note);
+                }
+
+                // Nếu chính sách HKD thay đổi giữa khoảng [startDate, endDate], phân tách tính từng giao dịch theo ngày hiệu lực
+                if (policyChangedMidPeriod && !acc.datedDeltas.isEmpty()) {
+                    return computeHouseholdByTransactionDates(branchId, branchName, acc, totalRevBase, unclassified, unclassifiedRef, unsettledAdv);
                 }
 
                 BigDecimal svcRate = config.getServiceTaxRate();
@@ -682,8 +770,8 @@ public class ReportServiceImpl implements ReportService {
                 boolean missingSvc = svcAndSurchBase.compareTo(BigDecimal.ZERO) > 0 && svcRate == null;
                 boolean missingMed = medBase.compareTo(BigDecimal.ZERO) > 0 && medRate == null;
                 boolean bothMissing = svcRate == null && medRate == null;
-                boolean hasUnclassified = unclassified.compareTo(BigDecimal.ZERO) > 0;
-                boolean configured = !(missingSvc || missingMed || bothMissing || hasUnclassified);
+                boolean hasUnclassified = unclassified.compareTo(BigDecimal.ZERO) > 0 || unclassifiedRef.compareTo(BigDecimal.ZERO) > 0;
+                boolean configured = !(missingSvc || missingMed || bothMissing || hasUnclassified || policyChangedMidPeriod);
 
                 BigDecimal svcTax = (svcRate != null)
                         ? svcAndSurchBase.multiply(svcRate).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
@@ -716,50 +804,147 @@ public class ReportServiceImpl implements ReportService {
                     }
                 } else {
                     note.append("CHƯA ĐỦ CĂN CỨ: ");
+                    if (policyChangedMidPeriod) note.append("chính sách thuế thay đổi giữa kỳ; ");
                     if (missingSvc || bothMissing) note.append("thiếu serviceTaxRate; ");
                     if (missingMed) note.append("thiếu medicineTaxRate; ");
-                    if (hasUnclassified) note.append("có khoản thu HĐ chưa phân loại DV/Thuốc ").append(fmtMoney(unclassified)).append(" đ");
+                    if (unclassified.compareTo(BigDecimal.ZERO) > 0) note.append("có khoản thu HĐ chưa phân loại ").append(fmtMoney(unclassified)).append(" đ; ");
+                    if (unclassifiedRef.compareTo(BigDecimal.ZERO) > 0) note.append("có hoàn HĐ hỗn hợp cần đối soát ").append(fmtMoney(unclassifiedRef)).append(" đ");
                 }
                 note.append(")");
                 return new BranchTaxOutcome(branchId, branchName, configured, true, displayRate, tax, note.toString());
             }
 
+            // Nhánh Doanh nghiệp: chỉ tính thuế trên thu nhập từ doanh thu đã phân loại (không lấy tiền nạp ví làm doanh thu chịu thuế)
             BigDecimal citRate = (validatedRequestedRate != null) ? validatedRequestedRate : config.getCitRate();
             if (citRate == null) {
                 return new BranchTaxOutcome(
-                        branchId,
-                        branchName,
-                        false,
-                        false,
-                        BigDecimal.ZERO,
-                        BigDecimal.ZERO,
+                        branchId, branchName, false, false, BigDecimal.ZERO, BigDecimal.ZERO,
                         branchName + ": Doanh nghiệp CHƯA ĐỦ CĂN CỨ (thiếu citRate hiệu lực)"
                 );
             }
-            BigDecimal taxableMargin = branchOperatingMargin.max(BigDecimal.ZERO);
+
+            BigDecimal netClassifiedRev = acc.netClassifiedRevenueBase();
+            BigDecimal taxableMargin = effectiveEnterpriseMargin.max(BigDecimal.ZERO);
             BigDecimal tax = taxableMargin.multiply(citRate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+
+            boolean hasIncompleteBasis = !legacyScalarFallback
+                    && (unclassified.compareTo(BigDecimal.ZERO) > 0
+                    || unclassifiedRef.compareTo(BigDecimal.ZERO) > 0
+                    || unsettledAdv.compareTo(BigDecimal.ZERO) > 0
+                    || policyChangedMidPeriod);
+            boolean configured = !hasIncompleteBasis;
+
             StringBuilder note = new StringBuilder(branchName).append(": Doanh nghiệp TNDN ")
                     .append(fmtRate(citRate)).append("% trên thặng dư ")
+                    .append(legacyScalarFallback ? "quản trị " : "từ DT phân loại ")
                     .append(fmtMoney(taxableMargin)).append(" đ -> ").append(fmtMoney(tax)).append(" đ");
+            if (!legacyScalarFallback) {
+                note.append(" (DT phân loại ").append(fmtMoney(netClassifiedRev)).append(" đ, chi phí ").append(fmtMoney(acc.operatingExpense)).append(" đ)");
+            }
+            if (unsettledAdv.compareTo(BigDecimal.ZERO) > 0) {
+                note.append(" — CHƯA ĐỦ CĂN CỨ với khoản nạp ví ứng trước chưa đối trừ ").append(fmtMoney(unsettledAdv)).append(" đ (không gộp vào DT chịu thuế TNDN)");
+            }
+            if (unclassified.compareTo(BigDecimal.ZERO) > 0 || unclassifiedRef.compareTo(BigDecimal.ZERO) > 0) {
+                note.append(" — CHƯA ĐỦ CĂN CỨ phần thu/hoàn chưa phân loại (")
+                        .append(fmtMoney(unclassified.add(unclassifiedRef))).append(" đ)");
+            }
+            if (policyChangedMidPeriod) {
+                note.append(" — CHƯA ĐỦ CĂN CỨ: chính sách thay đổi giữa kỳ, đang áp cấu hình cuối kỳ ").append(endDate);
+            }
             if (acc.depositWalletUsed.compareTo(BigDecimal.ZERO) > 0 || acc.advanceDepositInflow.compareTo(BigDecimal.ZERO) > 0) {
-                note.append(" (nạp ví ").append(fmtMoney(acc.advanceDepositInflow))
-                        .append(" đ, cấn ví ").append(fmtMoney(acc.depositWalletUsed))
-                        .append(" đ không đếm trùng)");
+                note.append(" | nạp ví ").append(fmtMoney(acc.advanceDepositInflow))
+                        .append(" đ, cấn ví ").append(fmtMoney(acc.depositWalletUsed)).append(" đ");
             }
             if (config.getLegalReference() != null && !config.getLegalReference().isBlank()) {
                 note.append(" | ").append(config.getLegalReference());
             }
-            return new BranchTaxOutcome(branchId, branchName, true, false, citRate, tax, note.toString());
+            return new BranchTaxOutcome(branchId, branchName, configured, false, citRate, tax, note.toString());
         }
 
         // Thiếu BranchTaxConfig hiệu lực: luôn đánh dấu configured = false (chưa đủ căn cứ)
         BigDecimal provisionalRate = (validatedRequestedRate != null) ? validatedRequestedRate : BigDecimal.valueOf(20);
-        BigDecimal taxableMargin = branchOperatingMargin.max(BigDecimal.ZERO);
+        BigDecimal taxableMargin = (legacyScalarFallback ? acc.operatingMargin() : effectiveEnterpriseMargin).max(BigDecimal.ZERO);
+        if (legacyScalarFallback) {
+            taxableMargin = effectiveEnterpriseMargin.max(BigDecimal.ZERO);
+        }
         BigDecimal tax = taxableMargin.multiply(provisionalRate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
         String basis = branchName + ": CHƯA ĐỦ CĂN CỨ CẤU HÌNH THUẾ (chưa có BranchTaxConfig hiệu lực ngày "
-                + targetDate + "; tạm tính tham khảo " + fmtRate(provisionalRate) + "% trên thặng dư -> "
+                + endDate + "; mô phỏng quản trị " + fmtRate(provisionalRate) + "% -> "
                 + fmtMoney(tax) + " đ)";
         return new BranchTaxOutcome(branchId, branchName, false, false, provisionalRate, tax, basis);
+    }
+
+    private BranchTaxOutcome computeHouseholdByTransactionDates(
+            Long branchId,
+            String branchName,
+            BranchTaxAccum acc,
+            BigDecimal totalRevBase,
+            BigDecimal unclassified,
+            BigDecimal unclassifiedRef,
+            BigDecimal unsettledAdv
+    ) {
+        Map<LocalDate, BigDecimal[]> dailySums = new LinkedHashMap<>();
+        for (DatedTaxDelta d : acc.datedDeltas) {
+            BigDecimal[] bucket = dailySums.computeIfAbsent(d.txDate(), k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+            bucket[0] = bucket[0].add(d.serviceDelta()).add(d.surchargeDelta());
+            bucket[1] = bucket[1].add(d.medicineDelta());
+        }
+
+        BigDecimal totalTaxRaw = BigDecimal.ZERO;
+        boolean allOk = unclassified.compareTo(BigDecimal.ZERO) == 0 && unclassifiedRef.compareTo(BigDecimal.ZERO) == 0;
+        for (Map.Entry<LocalDate, BigDecimal[]> entry : dailySums.entrySet()) {
+            Optional<BranchTaxConfig> dayCfgOpt = taxCalculationService.getBranchTaxConfig(branchId, entry.getKey());
+            BigDecimal daySvc = entry.getValue()[0];
+            BigDecimal dayMed = entry.getValue()[1];
+            if (dayCfgOpt.isEmpty()) {
+                allOk = false;
+                continue;
+            }
+            BranchTaxConfig cfg = dayCfgOpt.get();
+            boolean dayHh = "HOUSEHOLD".equalsIgnoreCase(cfg.getEntityType())
+                    || "REVENUE_PERCENT".equalsIgnoreCase(cfg.getTaxRegime());
+            if (!dayHh) {
+                allOk = false;
+                continue;
+            }
+            if (daySvc.compareTo(BigDecimal.ZERO) != 0 && cfg.getServiceTaxRate() == null) {
+                allOk = false;
+            } else if (cfg.getServiceTaxRate() != null) {
+                totalTaxRaw = totalTaxRaw.add(daySvc.multiply(cfg.getServiceTaxRate()).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
+            }
+            if (dayMed.compareTo(BigDecimal.ZERO) != 0 && cfg.getMedicineTaxRate() == null) {
+                allOk = false;
+            } else if (cfg.getMedicineTaxRate() != null) {
+                totalTaxRaw = totalTaxRaw.add(dayMed.multiply(cfg.getMedicineTaxRate()).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
+            }
+        }
+        BigDecimal totalTax = totalTaxRaw.max(BigDecimal.ZERO).setScale(0, RoundingMode.HALF_UP);
+        BigDecimal displayRate = totalRevBase.compareTo(BigDecimal.ZERO) > 0
+                ? totalTax.multiply(BigDecimal.valueOf(100)).divide(totalRevBase, 2, RoundingMode.HALF_UP).stripTrailingZeros()
+                : BigDecimal.ZERO;
+        String note = branchName + ": HKD áp cấu hình theo từng ngày giao dịch do có thay đổi chính sách trong kỳ"
+                + (allOk ? "" : " (CHƯA ĐỦ CĂN CỨ tại một số mốc/nhóm doanh thu)")
+                + (unsettledAdv.compareTo(BigDecimal.ZERO) > 0 ? "; ứng trước chưa đối trừ " + fmtMoney(unsettledAdv) + " đ" : "");
+        return new BranchTaxOutcome(branchId, branchName, allOk, true, displayRate, totalTax, note);
+    }
+
+    private boolean isSameTaxPolicySnapshot(BranchTaxConfig a, BranchTaxConfig b) {
+        if (a == b) return true;
+        if (a == null || b == null) return false;
+        if (a.getConfigId() != null && b.getConfigId() != null) {
+            return Objects.equals(a.getConfigId(), b.getConfigId());
+        }
+        return Objects.equals(a.getEntityType(), b.getEntityType())
+                && Objects.equals(a.getTaxRegime(), b.getTaxRegime())
+                && cmpRate(a.getCitRate(), b.getCitRate())
+                && cmpRate(a.getServiceTaxRate(), b.getServiceTaxRate())
+                && cmpRate(a.getMedicineTaxRate(), b.getMedicineTaxRate());
+    }
+
+    private boolean cmpRate(BigDecimal a, BigDecimal b) {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
+        return a.compareTo(b) == 0;
     }
 
     private TaxComputationSummary summarizeBranchOutcomes(
@@ -935,6 +1120,7 @@ public class ReportServiceImpl implements ReportService {
         BigDecimal validatedTaxRate = validateRequestedTaxRate(taxRate);
         LocalDateTime startDt = startDate.atStartOfDay();
         LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
+        LocalDateTime endExclusive = endDate.plusDays(1).atStartOfDay();
 
         FinancialReportDTO dto = new FinancialReportDTO();
 
@@ -956,12 +1142,12 @@ public class ReportServiceImpl implements ReportService {
             dto.setTotalDiscount(dto.getDiscountAmount().add(dto.getPromotionDiscount()).add(dto.getPointDiscount()));
         }
 
-        // 2. Dòng tiền theo phương thức thanh toán (chỉ tính PaymentType.PAYMENT cho các phương thức thanh toán viện phí, không cộng trùng khoản nạp cọc ADVANCE_DEPOSIT)
-        dto.setCashAmount(toBigDecimal(paymentRepository.sumAmountByMethodAndBranches(branchIds, PaymentMethod.CASH, PaymentType.PAYMENT, startDt, endDt)));
-        dto.setBankTransferAmount(toBigDecimal(paymentRepository.sumAmountByMethodAndBranches(branchIds, PaymentMethod.BANK_TRANSFER, PaymentType.PAYMENT, startDt, endDt)));
-        dto.setPosCardAmount(toBigDecimal(paymentRepository.sumAmountByMethodAndBranches(branchIds, PaymentMethod.POS_CARD, PaymentType.PAYMENT, startDt, endDt)));
-        dto.setDepositWalletAmount(toBigDecimal(paymentRepository.sumDepositWalletUsedByBranches(branchIds, startDt, endDt)));
-        dto.setNewDepositAmount(toBigDecimal(paymentRepository.sumAdvanceDepositByBranches(branchIds, startDt, endDt)));
+        // 2. Dòng tiền theo phương thức thanh toán theo nửa khoảng [startDt, endExclusive)
+        dto.setCashAmount(toBigDecimal(paymentRepository.sumAmountByMethodAndBranches(branchIds, PaymentMethod.CASH, PaymentType.PAYMENT, startDt, endExclusive)));
+        dto.setBankTransferAmount(toBigDecimal(paymentRepository.sumAmountByMethodAndBranches(branchIds, PaymentMethod.BANK_TRANSFER, PaymentType.PAYMENT, startDt, endExclusive)));
+        dto.setPosCardAmount(toBigDecimal(paymentRepository.sumAmountByMethodAndBranches(branchIds, PaymentMethod.POS_CARD, PaymentType.PAYMENT, startDt, endExclusive)));
+        dto.setDepositWalletAmount(toBigDecimal(paymentRepository.sumDepositWalletUsedByBranches(branchIds, startDt, endExclusive)));
+        dto.setNewDepositAmount(toBigDecimal(paymentRepository.sumAdvanceDepositByBranches(branchIds, startDt, endExclusive)));
 
         // Thực thu theo dòng tiền thực tế = Cash + Bank + POS + NewDeposit (không tính thanh toán từ ví cọc)
         BigDecimal grossCollected = dto.getCashAmount().add(dto.getBankTransferAmount())
@@ -969,13 +1155,13 @@ public class ReportServiceImpl implements ReportService {
         dto.setTotalCollected(grossCollected);
 
         // 3. Hoàn tiền & Chi phí (gồm chi phí vận hành + BHXH 21.5% phần DN chịu từ các kỳ lương đã chi trả)
-        dto.setTotalRefundAmount(toBigDecimal(refundRepository.sumRefundAmountByBranches(branchIds, startDt, endDt)));
+        dto.setTotalRefundAmount(toBigDecimal(refundRepository.sumRefundAmountByBranches(branchIds, startDt, endExclusive)));
         dto.setNetRevenue(grossCollected.subtract(dto.getTotalRefundAmount()));
 
         BigDecimal activeExpenses = toBigDecimal(operatingExpenseRepository.sumActiveExpenses(branchIds, startDate, endDate));
         if (payrollPeriodRepository != null) {
             BigDecimal employerInsurance = toBigDecimal(payrollPeriodRepository.sumPaidEmployerInsuranceByPaidAt(
-                    branchIds, startDt, endDt
+                    branchIds, startDt, endExclusive
             ));
             activeExpenses = activeExpenses.add(employerInsurance);
         }
@@ -993,7 +1179,7 @@ public class ReportServiceImpl implements ReportService {
         // Thuế TNCN đã khấu trừ của nhân viên từ các bảng lương đã chi trả theo ngày chi
         if (payrollPeriodRepository != null) {
             BigDecimal paidPit = payrollPeriodRepository.sumPaidPitByPaidAt(
-                    branchIds, startDt, endDt
+                    branchIds, startDt, endExclusive
             );
             dto.setTotalPitWithheld(paidPit != null ? paidPit : BigDecimal.ZERO);
         }
@@ -1115,8 +1301,9 @@ public class ReportServiceImpl implements ReportService {
             }
         }
 
-        // 2. Phân bổ thực thu thanh toán theo ngày (đã trừ hoàn tiền trong ngày để khớp KPI thực thu ròng)
-        List<Object[]> pmtAmounts = paymentRepository.findDailyRealPaymentsForPeriod(branchIds, startDt, endDt);
+        // 2. Phân bổ thực thu thanh toán theo ngày (đã trừ hoàn tiền trong ngày để khớp KPI thực thu ròng) theo [startDt, endExclusive)
+        LocalDateTime endExclusive = endDate.plusDays(1).atStartOfDay();
+        List<Object[]> pmtAmounts = paymentRepository.findDailyRealPaymentsForPeriod(branchIds, startDt, endExclusive);
         for (Object[] r : pmtAmounts) {
             if (r[0] != null) {
                 LocalDate d = ((LocalDateTime) r[0]).toLocalDate();
@@ -1127,7 +1314,7 @@ public class ReportServiceImpl implements ReportService {
                 }
             }
         }
-        List<Object[]> refundAmounts = refundRepository.findDailyRefundsForPeriod(branchIds, startDt, endDt);
+        List<Object[]> refundAmounts = refundRepository.findDailyRefundsForPeriod(branchIds, startDt, endExclusive);
         if (refundAmounts != null) {
             for (Object[] r : refundAmounts) {
                 if (r[0] != null) {

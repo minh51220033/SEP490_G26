@@ -8,6 +8,7 @@ import com.cvdcms.entity.enums.PayrollStatus;
 import com.cvdcms.entity.enums.PerformedServiceStatus;
 import com.cvdcms.repository.CommissionPolicyRepository;
 import com.cvdcms.repository.InvoiceItemRepository;
+import com.cvdcms.repository.PayrollItemRepository;
 import com.cvdcms.repository.PayrollPeriodRepository;
 import com.cvdcms.repository.ServiceCommissionRepository;
 import com.cvdcms.service.PayrollService;
@@ -35,12 +36,19 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
     @Autowired(required = false)
     private PayrollPeriodRepository payrollPeriodRepository;
 
+    @Autowired(required = false)
+    private PayrollItemRepository payrollItemRepository;
+
     @Lazy
     @Autowired(required = false)
     private PayrollService payrollService;
 
     public void setPayrollPeriodRepository(PayrollPeriodRepository payrollPeriodRepository) {
         this.payrollPeriodRepository = payrollPeriodRepository;
+    }
+
+    public void setPayrollItemRepository(PayrollItemRepository payrollItemRepository) {
+        this.payrollItemRepository = payrollItemRepository;
     }
 
     public void setPayrollService(PayrollService payrollService) {
@@ -60,35 +68,60 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
 
     @Override
     public void calculateCommissionsForPerformedService(PerformedService ps) {
+        calculateAndReturnCommissions(ps);
+    }
+
+    private List<ServiceCommission> calculateAndReturnCommissions(PerformedService ps) {
         if (ps == null || ps.getPerformedId() == null || ps.getService() == null) {
-            return;
+            return List.of();
         }
         if (ps.getStatus() != PerformedServiceStatus.COMPLETED) {
-            return;
+            return List.of();
         }
 
         BigDecimal revenueBase = resolveRevenueBase(ps);
+        List<ServiceCommission> created = new ArrayList<>();
 
         StaffProfile doctor = ps.getDoctor();
         if (doctor != null && doctor.getStaffId() != null) {
-            createCommissionIfApplicable(ps, doctor, CommissionRoleType.MAIN_DOCTOR, revenueBase);
+            ServiceCommission docSc = createCommissionIfApplicable(ps, doctor, CommissionRoleType.MAIN_DOCTOR, revenueBase);
+            if (docSc != null) {
+                created.add(docSc);
+            }
         }
 
         StaffProfile assistant = ps.getAssistant();
         if (assistant != null && assistant.getStaffId() != null
                 && (doctor == null || !assistant.getStaffId().equals(doctor.getStaffId()))) {
-            createCommissionIfApplicable(ps, assistant, CommissionRoleType.ASSISTANT, revenueBase);
+            ServiceCommission astSc = createCommissionIfApplicable(ps, assistant, CommissionRoleType.ASSISTANT, revenueBase);
+            if (astSc != null) {
+                created.add(astSc);
+            }
         }
+        return created;
     }
+
+    private record DraftBindingContext(
+            Set<Long> affectedDraftItemIds,
+            Map<Long, PayrollItem> preservedItemsByStaffId,
+            Map<Long, PayrollPeriod> lockedDraftPeriodsById
+    ) {}
 
     @Override
     public void cancelPendingCommissionsForPerformedService(Long performedId) {
+        DraftBindingContext ctx = cancelAndCaptureDraftBindings(performedId);
+        for (Long itemId : ctx.affectedDraftItemIds()) {
+            payrollService.recalculateDraftItemAfterCommissionChange(itemId);
+        }
+    }
+
+    private DraftBindingContext cancelAndCaptureDraftBindings(Long performedId) {
         if (performedId == null || serviceCommissionRepository == null) {
-            return;
+            return new DraftBindingContext(Set.of(), Map.of(), Map.of());
         }
         List<ServiceCommission> initial = serviceCommissionRepository.findByPerformedService_PerformedId(performedId);
         if (initial == null || initial.isEmpty()) {
-            return;
+            return new DraftBindingContext(Set.of(), Map.of(), Map.of());
         }
 
         // Tuân thủ thứ tự lock toàn cục: PayrollPeriod -> ServiceCommission
@@ -112,10 +145,12 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
                 ? locked
                 : serviceCommissionRepository.findByPerformedService_PerformedId(performedId);
         if (existing == null || existing.isEmpty()) {
-            return;
+            return new DraftBindingContext(Set.of(), Map.of(), Map.of());
         }
 
         Set<Long> draftItemIdsToRecalc = new LinkedHashSet<>();
+        Map<Long, PayrollItem> preservedItemsByStaffId = new LinkedHashMap<>();
+        Map<Long, PayrollPeriod> lockedDraftPeriods = new LinkedHashMap<>();
         boolean deletedAny = false;
 
         for (ServiceCommission sc : existing) {
@@ -145,6 +180,12 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
                 }
                 if (pItem.getItemId() != null) {
                     draftItemIdsToRecalc.add(pItem.getItemId());
+                    if (sc.getStaff() != null && sc.getStaff().getStaffId() != null) {
+                        preservedItemsByStaffId.putIfAbsent(sc.getStaff().getStaffId(), pItem);
+                    }
+                    if (period.getPeriodId() != null) {
+                        lockedDraftPeriods.putIfAbsent(period.getPeriodId(), period);
+                    }
                 }
                 sc.setPayrollItem(null);
                 serviceCommissionRepository.delete(sc);
@@ -162,9 +203,7 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         if (deletedAny) {
             serviceCommissionRepository.flush();
         }
-        for (Long itemId : draftItemIdsToRecalc) {
-            payrollService.recalculateDraftItemAfterCommissionChange(itemId);
-        }
+        return new DraftBindingContext(draftItemIdsToRecalc, preservedItemsByStaffId, lockedDraftPeriods);
     }
 
     @Override
@@ -172,8 +211,68 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         if (performedService == null || performedService.getPerformedId() == null) {
             return;
         }
-        cancelPendingCommissionsForPerformedService(performedService.getPerformedId());
-        calculateCommissionsForPerformedService(performedService);
+        DraftBindingContext ctx = cancelAndCaptureDraftBindings(performedService.getPerformedId());
+        List<ServiceCommission> newlyCreated = calculateAndReturnCommissions(performedService);
+
+        Set<Long> itemsToRecalc = new LinkedHashSet<>(ctx.affectedDraftItemIds());
+        boolean reboundAny = false;
+
+        for (ServiceCommission sc : newlyCreated) {
+            Long staffId = sc.getStaff() != null ? sc.getStaff().getStaffId() : null;
+            if (staffId == null) {
+                continue;
+            }
+            PayrollItem targetItem = resolveRebindTargetItem(performedService, sc, staffId, ctx);
+            if (targetItem != null) {
+                sc.setPayrollItem(targetItem);
+                serviceCommissionRepository.save(sc);
+                if (targetItem.getItemId() != null) {
+                    itemsToRecalc.add(targetItem.getItemId());
+                }
+                reboundAny = true;
+            }
+        }
+
+        if (reboundAny) {
+            serviceCommissionRepository.flush();
+        }
+        for (Long itemId : itemsToRecalc) {
+            payrollService.recalculateDraftItemAfterCommissionChange(itemId);
+        }
+    }
+
+    private PayrollItem resolveRebindTargetItem(
+            PerformedService ps,
+            ServiceCommission sc,
+            Long staffId,
+            DraftBindingContext ctx
+    ) {
+        PayrollItem preserved = ctx.preservedItemsByStaffId().get(staffId);
+        if (preserved != null) {
+            return preserved;
+        }
+        if (payrollItemRepository == null || ctx.lockedDraftPeriodsById().isEmpty()
+                || sc.getCalculatedAt() == null || ps.getBranch() == null || ps.getBranch().getBranchId() == null) {
+            return null;
+        }
+        Long psBranchId = ps.getBranch().getBranchId();
+        int calcMonth = sc.getCalculatedAt().getMonthValue();
+        int calcYear = sc.getCalculatedAt().getYear();
+        for (PayrollPeriod period : ctx.lockedDraftPeriodsById().values()) {
+            if (period.getStatus() == PayrollStatus.DRAFT
+                    && period.getBranch() != null
+                    && psBranchId.equals(period.getBranch().getBranchId())
+                    && Objects.equals(period.getMonth(), calcMonth)
+                    && Objects.equals(period.getYear(), calcYear)) {
+                PayrollItem found = payrollItemRepository
+                        .findByPayrollPeriod_PeriodIdAndStaff_StaffId(period.getPeriodId(), staffId)
+                        .orElse(null);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     @Override
@@ -192,7 +291,7 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         }
     }
 
-    private void createCommissionIfApplicable(
+    private ServiceCommission createCommissionIfApplicable(
             PerformedService ps,
             StaffProfile staff,
             CommissionRoleType roleType,
@@ -200,17 +299,17 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
     ) {
         if (serviceCommissionRepository.existsByPerformedService_PerformedIdAndStaff_StaffIdAndRoleType(
                 ps.getPerformedId(), staff.getStaffId(), roleType)) {
-            return;
+            return null;
         }
 
         CommissionPolicy policy = findBestPolicy(staff, ps.getService().getServiceId());
         if (policy == null || policy.getCommissionValue() == null) {
-            return;
+            return null;
         }
 
         BigDecimal commissionAmount = calculateAmount(policy, revenueBase);
         if (commissionAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            return;
+            return null;
         }
 
         ServiceCommission sc = new ServiceCommission();
@@ -220,7 +319,7 @@ public class ServiceCommissionServiceImpl implements ServiceCommissionService {
         sc.setCommissionAmount(commissionAmount);
         sc.setStatus(CommissionStatus.PENDING);
         sc.setCalculatedAt(ps.getCompletedAt() != null ? ps.getCompletedAt() : LocalDateTime.now());
-        serviceCommissionRepository.save(sc);
+        return serviceCommissionRepository.save(sc);
     }
 
     private CommissionPolicy findBestPolicy(StaffProfile staff, Long serviceId) {

@@ -436,6 +436,13 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
             }
         }
 
+        boolean hasAnyInvoiceHistory = invoiceItemRepository != null
+                && invoiceItemRepository.existsByPerformedService_PerformedId(performedId);
+        boolean hasParaclinicalLink = paraclinicalOrderItemRepository != null
+                && paraclinicalOrderItemRepository.existsByPerformedService_PerformedId(performedId);
+        boolean hasAnyCommissionHistory = serviceCommissionRepository != null
+                && !serviceCommissionRepository.findByPerformedService_PerformedId(performedId).isEmpty();
+
         if (serviceCommissionService != null) {
             serviceCommissionService.cancelPendingCommissionsForPerformedService(ps.getPerformedId());
         }
@@ -461,14 +468,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
             }
         }
 
-        boolean hasAnyInvoiceHistory = invoiceItemRepository != null
-                && invoiceItemRepository.existsByPerformedService_PerformedId(performedId);
-        boolean hasParaclinicalLink = paraclinicalOrderItemRepository != null
-                && paraclinicalOrderItemRepository.existsByPerformedService_PerformedId(performedId);
         boolean hasRemainingCommission = serviceCommissionRepository != null
                 && !serviceCommissionRepository.findByPerformedService_PerformedId(performedId).isEmpty();
 
-        if (hasAnyInvoiceHistory || hasParaclinicalLink || hasRemainingCommission) {
+        if (hasAnyInvoiceHistory || hasParaclinicalLink || hasAnyCommissionHistory || hasRemainingCommission) {
             ps.setStatus(PerformedServiceStatus.CANCELLED);
             performedServiceRepository.save(ps);
         } else {
