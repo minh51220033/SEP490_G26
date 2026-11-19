@@ -75,6 +75,12 @@ public class SupplierServiceImpl implements SupplierService {
                     "Mã nhà cung cấp đã tồn tại.");
         }
 
+        String taxCode = normalizeOptional(dto.getTaxCode());
+        if (taxCode != null && supplierRepository.existsByTaxCodeIgnoreCase(taxCode)) {
+            throw new IllegalArgumentException(
+                    "Mã số thuế đã được sử dụng bởi nhà cung cấp khác.");
+        }
+
         Supplier supplier = new Supplier();
         supplier.setSupplierCode(code);
         supplier.setSupplierName(
@@ -83,7 +89,7 @@ public class SupplierServiceImpl implements SupplierService {
                         "Tên nhà cung cấp"
                 )
         );
-        supplier.setTaxCode(normalizeOptional(dto.getTaxCode()));
+        supplier.setTaxCode(taxCode);
         supplier.setPhoneNumber(
                 normalizeOptional(dto.getPhoneNumber()));
         supplier.setAddress(normalizeOptional(dto.getAddress()));
@@ -111,6 +117,13 @@ public class SupplierServiceImpl implements SupplierService {
                     "Mã nhà cung cấp đã được sử dụng.");
         }
 
+        String taxCode = normalizeOptional(dto.getTaxCode());
+        if (taxCode != null && supplierRepository
+                .existsByTaxCodeIgnoreCaseAndSupplierIdNot(taxCode, id)) {
+            throw new IllegalArgumentException(
+                    "Mã số thuế đã được sử dụng bởi nhà cung cấp khác.");
+        }
+
         supplier.setSupplierCode(code);
         supplier.setSupplierName(
                 normalizeRequired(
@@ -118,7 +131,7 @@ public class SupplierServiceImpl implements SupplierService {
                         "Tên nhà cung cấp"
                 )
         );
-        supplier.setTaxCode(normalizeOptional(dto.getTaxCode()));
+        supplier.setTaxCode(taxCode);
         supplier.setPhoneNumber(
                 normalizeOptional(dto.getPhoneNumber()));
         supplier.setAddress(normalizeOptional(dto.getAddress()));
