@@ -445,7 +445,7 @@ public class QueueWorkflowService {
                 if (visit.getChairId() != null) {
                     chairs.findById(visit.getChairId()).ifPresent(chair -> {
                         if (chair.getStatus() == ChairStatus.IN_USE) {
-                            chair.setStatus(ChairStatus.CLEANING);
+                            chair.setStatus(ChairStatus.AVAILABLE);
                             chairs.save(chair);
                         }
                     });

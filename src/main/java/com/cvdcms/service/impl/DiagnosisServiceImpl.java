@@ -497,7 +497,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         if (dentalChairs != null && visit.getChairId() != null) {
             dentalChairs.findById(visit.getChairId()).ifPresent(chair -> {
                 if (chair.getStatus() == com.cvdcms.entity.enums.ChairStatus.IN_USE) {
-                    chair.setStatus(com.cvdcms.entity.enums.ChairStatus.CLEANING);
+                    chair.setStatus(com.cvdcms.entity.enums.ChairStatus.AVAILABLE);
                     dentalChairs.save(chair);
                 }
             });

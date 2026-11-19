@@ -37,7 +37,30 @@ public class DentalChair {
     @Column(name = "chair_name", nullable = false, length = 50)
     private String chairName;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = ChairStatusConverter.class)
     @Column(name = "status", nullable = false, length = 20)
     private ChairStatus status = ChairStatus.AVAILABLE;
+
+    /**
+     * Converts chair status safely, mapping legacy CLEANING rows in DB to AVAILABLE.
+     */
+    @Converter
+    public static class ChairStatusConverter implements AttributeConverter<ChairStatus, String> {
+        @Override
+        public String convertToDatabaseColumn(ChairStatus attribute) {
+            return (attribute != null ? attribute : ChairStatus.AVAILABLE).name();
+        }
+
+        @Override
+        public ChairStatus convertToEntityAttribute(String dbData) {
+            if (dbData == null || dbData.isBlank() || "CLEANING".equalsIgnoreCase(dbData.trim())) {
+                return ChairStatus.AVAILABLE;
+            }
+            try {
+                return ChairStatus.valueOf(dbData.trim().toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                return ChairStatus.AVAILABLE;
+            }
+        }
+    }
 }

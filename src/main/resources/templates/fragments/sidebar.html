@@ -75,8 +75,8 @@
 
             <!-- QUẢN TRỊ HỆ THỐNG -->
             <div class="side-group" data-accordion
-                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'ACCOUNT_MANAGE') or #lists.contains(permissionCodes, 'ROLE_MANAGE') or #lists.contains(permissionCodes, 'BRANCH_MANAGE') or #lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE') or #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW') or #lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_SERVICE_CATEGORIES') or #lists.contains(permissionCodes, 'CATALOG_MEDICATIONS') or #lists.contains(permissionCodes, 'CATALOG_ICD10') or #lists.contains(permissionCodes, 'CATALOG_NEWS') or #lists.contains(permissionCodes, 'NEWS_COMMENTS_MODERATE') or #lists.contains(permissionCodes, 'SYSTEM_BANS') or #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS') or #lists.contains(permissionCodes, 'CATALOG_PROMOTIONS') or #lists.contains(permissionCodes, 'FINANCE_REPORTS') or #lists.contains(permissionCodes, 'REPORT_FINANCIAL') or #lists.contains(permissionCodes, 'REPORT_DEBTS') or #lists.contains(permissionCodes, 'REPORT_OPERATIONAL') or #lists.contains(permissionCodes, 'SYSTEM_AUDIT') or #lists.contains(permissionCodes, 'CATALOG_MANAGE') or #lists.contains(permissionCodes, 'STAFF_MANAGE') or #lists.contains(permissionCodes, 'SCHEDULE_MANAGE') or #lists.contains(permissionCodes, 'HR_BRANCH_ATTENDANCE') or #lists.contains(permissionCodes, 'HR_LEAVE_APPROVE') or #lists.contains(permissionCodes, 'INVOICE_VIEW')))}"
-                th:classappend="${#strings.contains(',admin-patients,accounts,roles,staffs,catalogs,service-catalog,medications,icd10,admin-news,admin-comments,bans,branches,schedules,work-shifts,attendance,admin-leaves,membership-tiers,admin-promotions,reports,audit,', ',' + activeMenu + ',') or (membershipAdminEntry and activeMenu == 'reception-memberships')} ? 'is-open' : ''">
+                th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'ACCOUNT_MANAGE') or #lists.contains(permissionCodes, 'ROLE_MANAGE') or #lists.contains(permissionCodes, 'BRANCH_MANAGE') or #lists.contains(permissionCodes, 'PATIENT_PROFILE_MANAGE') or #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW') or #lists.contains(permissionCodes, 'CLINICAL_DAILY_VISITS') or #lists.contains(permissionCodes, 'CLINICAL_WORKFLOWS') or #lists.contains(permissionCodes, 'CLINICAL_XRAY') or #lists.contains(permissionCodes, 'CLINICAL_DISPATCH') or #lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_SERVICE_CATEGORIES') or #lists.contains(permissionCodes, 'CATALOG_MEDICATIONS') or #lists.contains(permissionCodes, 'CATALOG_ICD10') or #lists.contains(permissionCodes, 'CATALOG_NEWS') or #lists.contains(permissionCodes, 'NEWS_COMMENTS_MODERATE') or #lists.contains(permissionCodes, 'SYSTEM_BANS') or #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS') or #lists.contains(permissionCodes, 'CATALOG_PROMOTIONS') or #lists.contains(permissionCodes, 'FINANCE_REPORTS') or #lists.contains(permissionCodes, 'REPORT_FINANCIAL') or #lists.contains(permissionCodes, 'REPORT_DEBTS') or #lists.contains(permissionCodes, 'REPORT_OPERATIONAL') or #lists.contains(permissionCodes, 'SYSTEM_AUDIT') or #lists.contains(permissionCodes, 'CATALOG_MANAGE') or #lists.contains(permissionCodes, 'STAFF_MANAGE') or #lists.contains(permissionCodes, 'SCHEDULE_MANAGE') or #lists.contains(permissionCodes, 'HR_BRANCH_ATTENDANCE') or #lists.contains(permissionCodes, 'HR_LEAVE_APPROVE') or #lists.contains(permissionCodes, 'INVOICE_VIEW')))}"
+                th:classappend="${#strings.contains(',admin-patients,accounts,roles,staffs,catalogs,service-catalog,medications,icd10,admin-news,admin-comments,bans,branches,daily-visits,examination,doctor-dashboard,workflows,schedules,work-shifts,attendance,admin-leaves,membership-tiers,admin-promotions,reports,audit,', ',' + activeMenu + ',') or (membershipAdminEntry and activeMenu == 'reception-memberships')} ? 'is-open' : ''">
                 <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
                     aria-controls="sgAdmin">
                     <i class="bi bi-shield-lock" aria-hidden="true"></i>
@@ -135,6 +135,21 @@
                             th:classappend="${activeMenu == 'branches'} ? 'is-active' : ''">
                             <i class="bi bi-buildings" aria-hidden="true"></i><span class="side-link__label">Quản lý cơ
                                 sở</span>
+                        </a>
+                        <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CLINICAL_DAILY_VISITS') or #lists.contains(permissionCodes, 'CLINICAL_XRAY') or #lists.contains(permissionCodes, 'CLINICAL_DISPATCH')))}"
+                            th:href="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_DAILY_VISITS'))} ? @{/doctor/daily-visits} : (${permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_XRAY')} ? @{/xray} : @{/reception/dispatch})"
+                            class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'daily-visits' or activeMenu == 'examination' or activeMenu == 'doctor-dashboard'} ? 'is-active' : ''"
+                            title="Danh sách ca khám trong ngày, lọc theo ngày / tuần">
+                            <i class="bi bi-calendar2-week" aria-hidden="true"></i><span class="side-link__label">Khám
+                                trong ngày</span>
+                        </a>
+                        <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_WORKFLOWS'))}"
+                            th:href="@{/doctor/workflows}" class="side-link side-sublink"
+                            th:classappend="${activeMenu == 'workflows'} ? 'is-active' : ''"
+                            title="Quy trình kỹ thuật lâm sàng chuẩn Bộ Y tế (QĐ 3207/QĐ-BYT)">
+                            <i class="bi bi-journal-medical" aria-hidden="true"></i><span class="side-link__label">Quy
+                                trình kỹ thuật</span>
                         </a>
 
 
@@ -243,38 +258,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- BÁC SĨ & ĐIỀU PHỐI -->
-            <div class="side-group" data-accordion
-                th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CLINICAL_DAILY_VISITS') or #lists.contains(permissionCodes, 'CLINICAL_WORKFLOWS') or #lists.contains(permissionCodes, 'CLINICAL_DISPATCH') or #lists.contains(permissionCodes, 'PRESCRIPTION_WRITE') or #lists.contains(permissionCodes, 'TREATMENT_PLAN_MANAGE') or #lists.contains(permissionCodes, 'CLINICAL_PHOTOS') or #lists.contains(permissionCodes, 'CLINICAL_XRAY') or #lists.contains(permissionCodes, 'CLINICAL_EXAM_WRITE') or #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW')))}"
-                th:classappend="${#strings.contains(',daily-visits,examination,doctor-dashboard,workflows,doctor-dispatch,prescriptions,treatment-plans,clinical-photos,', ',' + activeMenu + ',')} ? 'is-open' : ''">
-                <button type="button" class="side-group__toggle" data-accordion-toggle aria-expanded="false"
-                    aria-controls="sgDoctor">
-                    <i class="bi bi-heart-pulse" aria-hidden="true"></i>
-                    <span class="side-group__label">Bác sĩ &amp; Điều phối</span>
-                    <i class="bi bi-chevron-down side-group__chevron" aria-hidden="true"></i>
-                </button>
-                <div class="side-group__panel" id="sgDoctor">
-                    <div class="side-group__inner">
-                        <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CLINICAL_DAILY_VISITS') or #lists.contains(permissionCodes, 'CLINICAL_XRAY') or #lists.contains(permissionCodes, 'CLINICAL_DISPATCH')))}"
-                            th:href="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_DAILY_VISITS'))} ? @{/doctor/daily-visits} : (${permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_XRAY')} ? @{/xray} : @{/reception/dispatch})"
-                            class="side-link side-sublink"
-                            th:classappend="${activeMenu == 'daily-visits' or activeMenu == 'examination' or activeMenu == 'doctor-dashboard'} ? 'is-active' : ''"
-                            title="Danh sách ca khám trong ngày, lọc theo ngày / tuần">
-                            <i class="bi bi-calendar2-week" aria-hidden="true"></i><span class="side-link__label">Khám
-                                trong ngày</span>
-                        </a>
-                        <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_WORKFLOWS'))}"
-                            th:href="@{/doctor/workflows}" class="side-link side-sublink"
-                            th:classappend="${activeMenu == 'workflows'} ? 'is-active' : ''"
-                            title="Quy trình kỹ thuật lâm sàng chuẩn Bộ Y tế (QĐ 3207/QĐ-BYT)">
-                            <i class="bi bi-journal-medical" aria-hidden="true"></i><span class="side-link__label">Quy
-                                trình kỹ thuật</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
 
             <!-- QUẢN LÝ LABO -->
             <a th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CLINICAL_LABO') or #lists.contains(permissionCodes, 'LABO_SUPPLIERS') or #lists.contains(permissionCodes, 'LABO_PRICING')))}"

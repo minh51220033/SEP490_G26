@@ -191,7 +191,6 @@ public class BranchController {
         model.addAttribute("totalChairs", chairs.size());
         model.addAttribute("availableChairs", chairService.countByStatus(id, ChairStatus.AVAILABLE));
         model.addAttribute("inUseChairs", chairService.countByStatus(id, ChairStatus.IN_USE));
-        model.addAttribute("cleaningChairs", chairService.countByStatus(id, ChairStatus.CLEANING));
         model.addAttribute("maintenanceChairs", chairService.countByStatus(id, ChairStatus.MAINTENANCE));
         model.addAttribute("config", config);
         model.addAttribute("roomTypes", RoomType.values());
@@ -353,7 +352,7 @@ public class BranchController {
                 () -> chairService.updateChair(id, chairId, chair), "pane-map");
     }
 
-    // Đổi nhanh trạng thái ghế: AVAILABLE / IN_USE / CLEANING / MAINTENANCE.
+    // Đổi nhanh trạng thái ghế: AVAILABLE / IN_USE / MAINTENANCE.
     @PostMapping("/{id}/chairs/{chairId}/status")
     public String updateChairStatus(
             @PathVariable Long id,

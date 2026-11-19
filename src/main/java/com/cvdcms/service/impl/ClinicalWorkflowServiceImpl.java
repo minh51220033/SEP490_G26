@@ -117,13 +117,14 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
 
         // Chặn thay đổi dịch vụ liên kết nếu quy trình đã phát sinh lượt thực hiện (executions)
         if (template.getTemplateId() != null) {
+            final Long targetTemplateId = template.getTemplateId();
             Long currentServiceId = template.getService() != null ? template.getService().getServiceId() : null;
             Long requestedServiceId = dto.getServiceId();
             if (!Objects.equals(currentServiceId, requestedServiceId)) {
                 boolean hasTemplateExecutions = executionRepo.findAll().stream()
                         .anyMatch(ex -> ex.getVersion() != null
                                 && ex.getVersion().getTemplate() != null
-                                && template.getTemplateId().equals(ex.getVersion().getTemplate().getTemplateId()));
+                                && targetTemplateId.equals(ex.getVersion().getTemplate().getTemplateId()));
                 if (hasTemplateExecutions) {
                     throw new IllegalStateException(
                             "Không thể thay đổi dịch vụ liên kết vì quy trình đã có lượt khám thực hiện.");

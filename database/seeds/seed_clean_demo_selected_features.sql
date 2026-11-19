@@ -78,7 +78,7 @@ WHERE NOT EXISTS (SELECT 1 FROM rooms WHERE branch_id = 1 AND room_code = 'EMR-R
 UPDATE dental_chairs SET chair_name = 'Ghế điều trị 01', status = 'AVAILABLE' WHERE chair_code = 'FT08_C1';
 UPDATE dental_chairs SET chair_name = 'Ghế điều trị 02 (Bảo trì định kỳ)', status = 'MAINTENANCE' WHERE chair_code = 'FT08_C2';
 UPDATE dental_chairs SET chair_name = 'Ghế điều trị 03', status = 'IN_USE' WHERE chair_code = 'FT10_C1';
-UPDATE dental_chairs SET chair_name = 'Ghế khám chuyên sâu 04', status = 'CLEANING' WHERE chair_code = 'EMR-C01';
+UPDATE dental_chairs SET chair_name = 'Ghế khám chuyên sâu 04', status = 'AVAILABLE' WHERE chair_code = 'EMR-C01';
 
 INSERT INTO dental_chairs (branch_id, room_id, chair_code, chair_name, status)
 SELECT 1, (SELECT room_id FROM rooms WHERE branch_id = 1 AND room_code = 'FT08_R1' LIMIT 1), 'FT08_C1', 'Ghế điều trị 01', 'AVAILABLE'
@@ -93,7 +93,7 @@ SELECT 1, (SELECT room_id FROM rooms WHERE branch_id = 1 AND room_code = 'FT08_R
 WHERE NOT EXISTS (SELECT 1 FROM dental_chairs WHERE branch_id = 1 AND chair_code = 'FT10_C1');
 
 INSERT INTO dental_chairs (branch_id, room_id, chair_code, chair_name, status)
-SELECT 1, (SELECT room_id FROM rooms WHERE branch_id = 1 AND room_code = 'EMR-R01' LIMIT 1), 'EMR-C01', 'Ghế khám chuyên sâu 04', 'CLEANING'
+SELECT 1, (SELECT room_id FROM rooms WHERE branch_id = 1 AND room_code = 'EMR-R01' LIMIT 1), 'EMR-C01', 'Ghế khám chuyên sâu 04', 'AVAILABLE'
 WHERE NOT EXISTS (SELECT 1 FROM dental_chairs WHERE branch_id = 1 AND chair_code = 'EMR-C01');
 
 -- -----------------------------------------------------------------------------
