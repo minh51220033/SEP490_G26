@@ -299,9 +299,8 @@ public class InvoicePageController {
                 model.addAttribute("referenceTreatmentPlans", treatmentPlanRepository.findByProfileIdWithDetails(profileId));
             });
         } else {
-            // Hiển thị các đơn thuốc chờ xử lý tại chi nhánh
-            List<PrescriptionResponseDTO> handedOverPrescriptions = invoiceService.getHandedOverPrescriptions(effectiveBranchId, null, null);
-            model.addAttribute("handedOverPrescriptions", handedOverPrescriptions);
+            // Chưa chọn lượt khám hoặc bệnh nhân -> không hiển thị tràn danh sách đơn thuốc toàn chi nhánh
+            model.addAttribute("handedOverPrescriptions", List.of());
         }
 
         return "finance/invoices/create";

@@ -31,31 +31,11 @@
 
                 <!-- Vùng nội dung tab hiển thị ngay bên dưới -->
                 <div class="expense-income-tab-content" id="expenseIncomeTabContent">
-                    <!-- Subhead & Thao tác chính -->
-                    <div class="expense-income-subhead">
-                        <div>
-                            <h2 class="expense-income-subhead__title">Bảng Lương &amp; Hoa Hồng</h2>
-                            <p class="expense-income-subhead__desc">Tính toán bảng lương hàng tháng theo cơ chế lương cố
-                                định + phụ cấp, khấu trừ tạm ứng, tính hoa hồng và chi trả.</p>
-                        </div>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <button type="button" class="fin-btn fin-btn-primary" data-bs-toggle="modal"
-                                data-bs-target="#createPeriodModal">
-                                <i class="bi bi-plus-circle"></i> Khởi tạo kỳ lương mới
-                            </button>
-                            <a th:href="@{/admin/staffs}" class="fin-btn fin-btn-outline"
-                                title="Thiết lập mức lương cơ bản &amp; phụ cấp cho từng nhân sự">
-                                <i class="bi bi-person-gear"></i> Thiết lập lương nhân sự
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Bộ lọc gọn gàng -->
-                    <div class="fin-card fin-filter-container mb-3">
+                    <!-- Bộ lọc đồng bộ Form Khách hàng -->
+                    <div class="fin-card fin-filter-container">
                         <form th:action="@{/payroll}" method="get" class="fin-filter-bar">
                             <div class="fin-form-group">
-                                <label for="branchSelect">Cơ sở chi nhánh</label>
-                                <select id="branchSelect" name="branchId" class="fin-select">
+                                <select id="branchSelect" name="branchId" class="fin-select" title="Cơ sở chi nhánh">
                                     <option value="">-- Tất cả chi nhánh --</option>
                                     <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
                                         th:selected="${b.branchId == selectedBranchId}"></option>
@@ -63,23 +43,25 @@
                             </div>
 
                             <div class="fin-form-group">
-                                <label for="monthSelect">Tháng</label>
-                                <select id="monthSelect" name="month" class="fin-select">
+                                <select id="monthSelect" name="month" class="fin-select" title="Tháng">
                                     <option value="">-- Tất cả tháng --</option>
                                     <option th:each="m : ${#numbers.sequence(1, 12)}" th:value="${m}"
                                         th:text="'Tháng ' + ${m}" th:selected="${m == selectedMonth}"></option>
                                 </select>
                             </div>
 
-                            <div class="fin-form-group">
-                                <label for="yearInput">Năm</label>
-                                <input type="number" id="yearInput" name="year" class="fin-input" style="width: 110px;"
-                                    th:value="${selectedYear}" placeholder="Năm">
+                            <div class="fin-form-group" th:with="currYear=${#temporals.year(#temporals.createNow())}">
+                                <select id="yearInput" name="year" class="fin-select" title="Năm">
+                                    <option value="">-- Tất cả năm --</option>
+                                    <option th:each="y : ${#numbers.sequence(currYear - 3, currYear + 1)}"
+                                        th:value="${y}"
+                                        th:text="'Năm ' + ${y}"
+                                        th:selected="${y == selectedYear}"></option>
+                                </select>
                             </div>
 
                             <div class="fin-form-group">
-                                <label for="statusSelect">Trạng thái kỳ lương</label>
-                                <select id="statusSelect" name="status" class="fin-select">
+                                <select id="statusSelect" name="status" class="fin-select" title="Trạng thái kỳ lương">
                                     <option value="">-- Tất cả trạng thái --</option>
                                     <option th:each="st : ${statuses}" th:value="${st}"
                                         th:text="${st.name() == 'DRAFT' ? 'Nháp (DRAFT)' : (st.name() == 'SUBMITTED' ? 'Chờ duyệt (SUBMITTED)' : (st.name() == 'APPROVED' ? 'Đã duyệt (APPROVED)' : 'Đã thanh toán (PAID)'))}"
@@ -87,42 +69,43 @@
                                 </select>
                             </div>
 
-                            <div class="d-flex gap-2 align-items-end">
-                                <button type="submit" class="fin-btn fin-btn-primary"><i class="bi bi-search"></i>
-                                    Lọc</button>
-                                <a th:href="@{/payroll}" class="fin-btn fin-btn-outline"><i
-                                        class="bi bi-arrow-counterclockwise"></i> Đặt lại</a>
+                            <div class="d-flex gap-2 align-items-center ms-auto">
+                                <button type="submit" class="fin-btn fin-btn-primary"><i class="bi bi-search"></i> Lọc dữ liệu</button>
+                                <a th:href="@{/payroll}" class="fin-btn fin-btn-outline" title="Đặt lại bộ lọc"><i class="bi bi-arrow-clockwise"></i> Đặt lại</a>
                             </div>
                         </form>
                     </div>
 
                     <!-- Bảng danh sách kỳ lương -->
                     <div class="fin-card fin-table-card p-0 mb-4">
-                        <div class="fin-grid-topbar d-flex justify-content-between align-items-center">
-                            <div class="fin-grid-info">
-                                Hiển thị <span class="fw-bold" th:text="${periods.numberOfElements}">0</span> / <span
-                                    th:text="${periods.totalElements}">0</span> kỳ lương
+                        <div class="fin-grid-topbar">
+                            <div class="fin-topbar-left">
+                                Hiển thị <span class="text-primary fw-bolder" th:text="${periods.numberOfElements}">0</span> / <span th:text="${periods.totalElements}">0</span> kỳ lương
                             </div>
-                            <div></div>
+                            <div class="fin-topbar-right">
+                                <a th:href="@{/admin/staffs}" class="fin-btn fin-btn-outline fin-btn-sm"
+                                   title="Thiết lập mức lương cơ bản &amp; phụ cấp cho từng nhân sự">
+                                    <i class="bi bi-person-gear"></i> Thiết lập lương nhân sự
+                                </a>
+                                <button type="button" class="fin-btn fin-btn-primary fin-btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#createPeriodModal">
+                                    <i class="bi bi-plus-lg"></i> Khởi tạo kỳ lương mới
+                                </button>
+                            </div>
                         </div>
-                        <div class="table-responsive">
+                        <div class="fin-table-wrapper">
                             <table class="fin-table" data-enhanced-table="ft32-payroll-periods">
                                 <thead>
                                     <tr>
-                                        <th data-column-key="period" data-pinned="true" style="min-width: 100px;">Kỳ
-                                            lương</th>
+                                        <th data-column-key="period" data-pinned="true" style="min-width: 100px;">Kỳ lương</th>
                                         <th data-column-key="name" style="min-width: 180px;">Tên bảng lương</th>
                                         <th data-column-key="branch" style="min-width: 130px;">Chi nhánh</th>
-                                        <th data-column-key="totalSalary" class="text-end" style="min-width: 130px;">
-                                            Tổng lương Net</th>
-                                        <th data-column-key="advance" class="text-end" style="min-width: 140px;">Đã khấu
-                                            trừ tạm ứng</th>
-                                        <th data-column-key="remaining" class="text-end" style="min-width: 130px;">Tổng
-                                            thực trả</th>
-                                        <th data-column-key="status" style="min-width: 130px;">Trạng thái</th>
-                                        <th data-column-key="approver" style="min-width: 140px;">Người tạo/duyệt</th>
-                                        <th data-column-key="actions" class="text-center" style="min-width: 120px;">Thao
-                                            tác</th>
+                                        <th data-column-key="totalSalary" class="text-end" style="min-width: 130px;">Tổng lương Net</th>
+                                        <th data-column-key="advance" class="text-end" style="min-width: 140px;">Đã khấu trừ tạm ứng</th>
+                                        <th data-column-key="remaining" class="text-end" style="min-width: 130px;">Tổng thực trả</th>
+                                        <th data-column-key="status" class="text-center" style="min-width: 140px;">Trạng thái</th>
+                                        <th data-column-key="approver" style="min-width: 140px;">Người tạo / duyệt</th>
+                                        <th data-column-key="actions" data-column-action="true" class="text-center" style="min-width: 150px;">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -131,60 +114,49 @@
                                             <div class="empty-state-box">
                                                 <i class="bi bi-calculator empty-icon"></i>
                                                 <h6>Chưa có kỳ lương nào</h6>
-                                                <p>Khởi tạo kỳ lương hàng tháng để tính lương cơ bản, hoa hồng và khấu
-                                                    trừ tạm ứng.</p>
+                                                <p>Khởi tạo kỳ lương hàng tháng để tính lương cơ bản, hoa hồng và khấu trừ tạm ứng.</p>
                                                 <button type="button" class="btn btn-sm btn-primary"
                                                     data-bs-toggle="modal" data-bs-target="#createPeriodModal">
-                                                    <i class="bi bi-plus-circle me-1"></i>Khởi tạo kỳ lương mới
+                                                    <i class="bi bi-plus-lg me-1"></i>Khởi tạo kỳ lương mới
                                                 </button>
                                             </div>
                                         </td>
                                     </tr>
                                     <tr th:each="p : ${periods.content}">
-                                        <td data-column-key="period" class="fw-bold"
-                                            th:text="${p.month} + '/' + ${p.year}"></td>
+                                        <td data-column-key="period" class="fw-bold text-dark" th:text="${p.month} + '/' + ${p.year}"></td>
                                         <td data-column-key="name">
                                             <a th:href="@{/payroll/{id}(id=${p.periodId})}"
-                                                class="fw-semibold text-primary text-decoration-none"
+                                                class="fw-bold text-primary text-decoration-none"
                                                 th:text="${p.periodName}"></a>
                                         </td>
                                         <td data-column-key="branch" th:text="${p.branch.branchName}"></td>
                                         <td data-column-key="totalSalary" class="text-end fw-semibold"
-                                            th:text="${#numbers.formatDecimal(p.totalSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'">
-                                        </td>
+                                            th:text="${#numbers.formatDecimal(p.totalSalary, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
                                         <td data-column-key="advance" class="text-end text-warning fw-semibold"
-                                            th:text="${#numbers.formatDecimal(p.totalAdvanceAllocated, 0, 'COMMA', 0, 'POINT')} + ' đ'">
-                                        </td>
+                                            th:text="${#numbers.formatDecimal(p.totalAdvanceAllocated, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
                                         <td data-column-key="remaining" class="text-end fw-bold text-success"
-                                            th:text="${#numbers.formatDecimal(p.totalRemainingPayable, 0, 'COMMA', 0, 'POINT')} + ' đ'">
-                                        </td>
-                                        <td data-column-key="status">
-                                            <span th:if="${p.status.name() == 'DRAFT'}"
-                                                class="badge bg-secondary">Nháp</span>
-                                            <span th:if="${p.status.name() == 'SUBMITTED'}"
-                                                class="badge bg-warning text-dark">Chờ Admin duyệt</span>
-                                            <span th:if="${p.status.name() == 'APPROVED'}"
-                                                class="badge bg-info text-dark">Đã duyệt - Chờ chi</span>
-                                            <span th:if="${p.status.name() == 'PAID'}" class="badge bg-success">Đã chi
-                                                trả</span>
+                                            th:text="${#numbers.formatDecimal(p.totalRemainingPayable, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
+                                        <td data-column-key="status" class="text-center">
+                                            <span th:if="${p.status.name() == 'DRAFT'}" class="fin-badge fin-badge-cancelled"><i class="bi bi-file-earmark"></i> Nháp</span>
+                                            <span th:if="${p.status.name() == 'SUBMITTED'}" class="fin-badge fin-badge-partial"><i class="bi bi-clock-history"></i> Chờ Admin duyệt</span>
+                                            <span th:if="${p.status.name() == 'APPROVED'}" class="fin-badge bg-info-subtle text-info-emphasis border border-info-subtle"><i class="bi bi-check-circle"></i> Đã duyệt - Chờ chi</span>
+                                            <span th:if="${p.status.name() == 'PAID'}" class="fin-badge fin-badge-paid"><i class="bi bi-check2-circle"></i> Đã chi trả</span>
                                         </td>
                                         <td data-column-key="approver" class="small text-muted">
-                                            <span th:if="${p.approvedBy != null}"
-                                                th:text="'Duyệt: ' + ${p.approvedBy.fullName}"></span>
-                                            <span th:if="${p.approvedBy == null and p.submittedBy != null}"
-                                                th:text="'Trình: ' + ${p.submittedBy.fullName}"></span>
+                                            <span th:if="${p.approvedBy != null}" th:text="'Duyệt: ' + ${p.approvedBy.fullName}"></span>
+                                            <span th:if="${p.approvedBy == null and p.submittedBy != null}" th:text="'Trình: ' + ${p.submittedBy.fullName}"></span>
                                             <span th:if="${p.approvedBy == null and p.submittedBy == null}">-</span>
                                         </td>
-                                        <td data-column-key="actions" class="text-center">
-                                            <div class="d-inline-flex gap-1">
+                                        <td data-column-key="actions" data-column-action="true" class="text-center">
+                                            <div class="fin-table-actions">
                                                 <a th:href="@{/payroll/{id}(id=${p.periodId})}"
-                                                    class="btn btn-sm btn-outline-primary"
+                                                    class="fin-table-btn fin-table-btn-view fin-table-btn-icon"
                                                     title="Xem chi tiết bảng lương">
-                                                    <i class="bi bi-file-earmark-text"></i> Chi tiết
+                                                    <i class="bi bi-eye"></i>
                                                 </a>
                                                 <a th:href="@{/payroll/{id}/export(id=${p.periodId})}"
-                                                    class="btn btn-sm btn-outline-success" title="Xuất file Excel">
-                                                    <i class="bi bi-file-earmark-excel"></i> Xuất Excel
+                                                    class="fin-table-btn fin-table-btn-pay" title="Xuất file Excel">
+                                                    <i class="bi bi-file-earmark-excel"></i> <span>Xuất Excel</span>
                                                 </a>
                                             </div>
                                         </td>
@@ -193,34 +165,37 @@
                             </table>
                         </div>
 
-                        <!-- Phân trang MISA -->
+                        <!-- Phân trang MISA đồng bộ form Khách hàng -->
                         <div class="misa-pagination-footer" th:if="${periods.totalElements > 0}">
-                            <div class="misa-total-count">
-                                Tổng số: <strong th:text="${periods.totalElements}">0</strong> bản ghi
+                            <div class="misa-pagination-left">
+                                Tổng số: <strong th:text="${periods.totalElements}">0</strong>
                             </div>
-                            <div class="misa-pagination-controls" th:if="${periods.totalPages > 1}">
-                                <div class="misa-page-size-selector">
-                                    <span>Số dòng/trang:</span>
+                            <div class="misa-pagination-right">
+                                <div class="misa-page-size-wrapper">
+                                    <span>Số dòng/trang</span>
                                     <span class="fw-semibold text-dark" th:text="${periods.size}">10</span>
                                 </div>
-                                <div class="misa-page-index-info">
+                                <div class="misa-page-range">
                                     <span th:text="${(periods.number * periods.size) + 1}">1</span> -
-                                    <span
-                                        th:text="${(periods.number + 1) * periods.size > periods.totalElements ? periods.totalElements : (periods.number + 1) * periods.size}">10</span>
+                                    <span th:text="${(periods.number + 1) * periods.size > periods.totalElements ? periods.totalElements : (periods.number + 1) * periods.size}">10</span>
                                 </div>
-                                <div class="misa-nav-buttons">
+                                <div class="d-flex align-items-center gap-1" th:if="${periods.totalPages > 1}">
                                     <a th:href="@{/payroll(branchId=${selectedBranchId}, month=${selectedMonth}, year=${selectedYear}, status=${selectedStatus}, page=0)}"
-                                        class="misa-nav-btn" th:classappend="${periods.first} ? 'disabled'"
-                                        title="Trang đầu">&laquo;</a>
+                                        class="misa-nav-btn" th:classappend="${periods.first} ? 'disabled'" title="Trang đầu">
+                                        <i class="bi bi-chevron-bar-left"></i>
+                                    </a>
                                     <a th:href="@{/payroll(branchId=${selectedBranchId}, month=${selectedMonth}, year=${selectedYear}, status=${selectedStatus}, page=${periods.number - 1})}"
-                                        class="misa-nav-btn" th:classappend="${periods.first} ? 'disabled'"
-                                        title="Trang trước">&lsaquo;</a>
+                                        class="misa-nav-btn" th:classappend="${periods.first} ? 'disabled'" title="Trang trước">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </a>
                                     <a th:href="@{/payroll(branchId=${selectedBranchId}, month=${selectedMonth}, year=${selectedYear}, status=${selectedStatus}, page=${periods.number + 1})}"
-                                        class="misa-nav-btn" th:classappend="${periods.last} ? 'disabled'"
-                                        title="Trang sau">&rsaquo;</a>
+                                        class="misa-nav-btn" th:classappend="${periods.last} ? 'disabled'" title="Trang sau">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </a>
                                     <a th:href="@{/payroll(branchId=${selectedBranchId}, month=${selectedMonth}, year=${selectedYear}, status=${selectedStatus}, page=${periods.totalPages - 1})}"
-                                        class="misa-nav-btn" th:classappend="${periods.last} ? 'disabled'"
-                                        title="Trang cuối">&raquo;</a>
+                                        class="misa-nav-btn" th:classappend="${periods.last} ? 'disabled'" title="Trang cuối">
+                                        <i class="bi bi-chevron-bar-right"></i>
+                                    </a>
                                 </div>
                             </div>
                         </div>

@@ -108,7 +108,7 @@
             </div>
 
             <!-- 4. Nút Lọc và Bỏ lọc -->
-            <div class="col-auto d-flex gap-2">
+            <div class="col-auto ms-auto d-flex gap-2">
               <button type="submit" class="btn btn-primary">
                 <i class="bi bi-funnel" aria-hidden="true"></i>
                 Lọc
@@ -118,17 +118,6 @@
                  class="btn btn-outline-secondary">
                 Bỏ lọc
               </a>
-            </div>
-
-            <!-- 5. Nút Thêm mới dịch vụ -->
-            <div class="col-12 col-md-auto ms-md-auto d-flex align-items-center justify-content-end gap-2">
-              <button type="button"
-                      class="btn btn-primary"
-                      data-bs-toggle="modal"
-                      data-bs-target="#createServiceModal">
-                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
-                Thêm mới dịch vụ
-              </button>
             </div>
 
           </div>
@@ -142,8 +131,14 @@
             <span class="fw-bold text-dark fs-6">Danh sách dịch vụ</span>
             <span class="badge bg-primary-subtle text-primary rounded-pill fw-bold" th:text="|Tổng ${totalItems ?: #lists.size(services)}|">Tổng 0</span>
           </div>
-          <div class="small text-muted">
-            <i class="bi bi-info-circle me-1 text-primary"></i> Cuộn ngang để xem đầy đủ cột · Cột Thao tác được ghim cố định
+          <div class="fin-topbar-right">
+            <button type="button"
+                    class="btn btn-primary btn-sm fw-semibold d-inline-flex align-items-center gap-1"
+                    data-bs-toggle="modal"
+                    data-bs-target="#createServiceModal">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+              Thêm mới dịch vụ
+            </button>
           </div>
         </div>
 
@@ -170,8 +165,8 @@
               <th scope="col" data-column-key="status">
                 <div class="dv-th-inner"><span>Trạng thái</span></div>
               </th>
-              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true" style="min-width: 150px;">
-                <div class="dv-th-inner justify-content-end"><span>Thao tác</span></div>
+              <th scope="col" class="text-center" data-column-key="actions" data-column-action="true" style="min-width: 150px;">
+                <div class="dv-th-inner justify-content-center"><span>Thao tác</span></div>
               </th>
             </tr>
             </thead>
@@ -250,8 +245,8 @@
                                 </span>
               </td>
 
-              <td data-column-key="actions" data-column-action="true" class="text-end text-nowrap">
-                <div class="d-inline-flex align-items-center justify-content-end gap-1 flex-nowrap">
+              <td data-column-key="actions" data-column-action="true" class="text-center text-nowrap">
+                <div class="d-inline-flex align-items-center justify-content-center gap-1 flex-nowrap">
 
                   <!-- Sửa: icon bút chì, viền xanh -->
                   <a th:href="@{/admin/services/{id}/edit(id=${service.serviceId})}"

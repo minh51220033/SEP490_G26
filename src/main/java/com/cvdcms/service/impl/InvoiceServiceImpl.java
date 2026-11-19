@@ -1849,7 +1849,8 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
 
         return list.stream()
-                .filter(p -> p.getStatus() != PrescriptionStatus.CANCELLED)
+                .filter(p -> p.getStatus() != PrescriptionStatus.CANCELLED
+                        && p.getStatus() != PrescriptionStatus.CLINIC_PURCHASE_COMPLETED)
                 .filter(p -> {
                     Visit v = p.getVisit();
                     if (v == null) return true;

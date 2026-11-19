@@ -29,12 +29,6 @@
 
             <!-- Vùng nội dung tab Hoàn tiền -->
             <div id="cashierTabContent" class="cashier-tab-content">
-                <div class="d-flex justify-content-end mb-3">
-                    <button type="button" class="fin-btn fin-btn-danger fin-btn-sm" onclick="toggleRefundModal()">
-                        <i class="bi bi-plus-lg"></i> Lập phiếu hoàn tiền
-                    </button>
-                </div>
-
             <!-- Filter Bar Chuẩn MISA / Daily-Visits -->
             <div class="fin-card fin-filter-container">
                 <form th:action="@{/payments/refunds}" method="get" class="fin-filter-bar">
@@ -92,6 +86,11 @@
                         <span class="text-secondary fw-semibold" th:if="${startDate != null or endDate != null}"
                               th:text="'Từ ' + (${startDate != null} ? ${#temporals.format(startDate, 'dd/MM/yyyy')} : 'đầu') + ' đến ' + (${endDate != null} ? ${#temporals.format(endDate, 'dd/MM/yyyy')} : 'nay')"></span>
                     </div>
+                    <div class="fin-topbar-right">
+                        <button type="button" class="fin-btn fin-btn-primary fin-btn-sm" onclick="toggleRefundModal()">
+                            <i class="bi bi-plus-lg"></i> Lập phiếu hoàn tiền
+                        </button>
+                    </div>
                 </div>
 
                 <div class="fin-table-wrapper">
@@ -117,7 +116,7 @@
                                     <i class="bi bi-arrow-counterclockwise empty-icon"></i>
                                     <h6>Ch&#432;a c&#243; giao d&#7883;ch ho&#224;n ti&#7873;n n&#224;o</h6>
                                     <p>L&#7853;p phi&#7871;u ho&#224;n tr&#7843; ti&#7873;n cho b&#7879;nh nh&#226;n khi h&#7911;y d&#7883;ch v&#7903; ho&#7863;c thay &#273;&#7893;i k&#7871; ho&#7841;ch &#273;i&#7873;u tr&#7883;.</p>
-                                    <button type="button" class="btn btn-sm btn-danger" onclick="toggleRefundModal()">
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="toggleRefundModal()">
                                         <i class="bi bi-plus-lg me-1"></i>L&#7853;p phi&#7871;u ho&#224;n ti&#7873;n
                                     </button>
                                 </div>
