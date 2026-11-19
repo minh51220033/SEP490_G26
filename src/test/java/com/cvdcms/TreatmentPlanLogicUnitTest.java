@@ -42,6 +42,7 @@ class TreatmentPlanLogicUnitTest {
     @Mock private GeminiAiService geminiAiService;
     @Mock private PerformedServiceRepository performedServiceRepository;
     @Mock private InvoiceItemRepository invoiceItemRepository;
+    @Mock private TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository;
 
     @Mock private DiagnosisService diagnosisService;
     @Mock private ClinicalExaminationBootstrapService examinations;

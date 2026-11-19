@@ -20,6 +20,7 @@ import java.util.Map;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -82,12 +83,12 @@ class DispatchControllerTest {
                 Map.of()         // queueInfo
         );
 
-        when(service.board(session, 1L)).thenReturn(board);
+        when(service.board(eq(session), eq(1L), any(), any(), eq(true))).thenReturn(board);
 
         Model model = new ConcurrentModel();
 
         // Query page 1 (size = 10, total = 15 -> page 1 should contain items 11..15)
-        String view = controller.board(1L, null, null, null, "ALL", 1, 10, session, model);
+        String view = controller.board(1L, null, null, null, null, null, null, "ALL", 1, 10, session, model);
 
         assertEquals("reception/dispatch", view);
         assertEquals(15L, model.getAttribute("totalItems"));
