@@ -73,19 +73,29 @@ public class WorkShiftService {
     public WorkShift create(Long branchId, String shiftCode, String shiftName, LocalTime startTime, LocalTime endTime) {
         Branch branch = findBranch(branchId);
         String finalCode = shiftCode == null ? "" : shiftCode.trim().toUpperCase(Locale.ROOT);
-        if (finalCode.isEmpty() || shiftName == null || shiftName.trim().isEmpty()) {
+        String finalName = shiftName == null ? "" : shiftName.trim();
+        if (finalCode.isEmpty() || finalName.isEmpty()) {
             throw new IllegalArgumentException("Mã ca và tên ca không được để trống.");
         }
-        boolean exists = findBranchShifts(branchId).stream()
-                .anyMatch(s -> finalCode.equalsIgnoreCase(s.getShiftCode()));
-        if (exists) {
+        boolean codeExists = workShiftRepository.findAll().stream()
+                .anyMatch(s -> s.getBranch() != null && branchId.equals(s.getBranch().getBranchId())
+                        && finalCode.equalsIgnoreCase(s.getShiftCode()));
+        if (codeExists) {
             throw new IllegalArgumentException("Mã ca '" + finalCode + "' đã tồn tại trong chi nhánh này.");
         }
+
+        boolean nameExists = workShiftRepository.findAll().stream()
+                .anyMatch(s -> s.getBranch() != null && branchId.equals(s.getBranch().getBranchId())
+                        && finalName.equalsIgnoreCase(s.getShiftName()));
+        if (nameExists) {
+            throw new IllegalArgumentException("Tên ca '" + finalName + "' đã tồn tại trong chi nhánh này.");
+        }
+
         validateTime(startTime, endTime);
         WorkShift shift = new WorkShift();
         shift.setBranch(branch);
         shift.setShiftCode(finalCode);
-        shift.setShiftName(shiftName.trim());
+        shift.setShiftName(finalName);
         shift.setStartTime(startTime);
         shift.setEndTime(endTime);
         shift.setIsActive(true);
@@ -100,19 +110,29 @@ public class WorkShiftService {
         WorkShift shift = findShift(shiftId);
         Long branchId = shift.getBranch() != null ? shift.getBranch().getBranchId() : null;
         String finalCode = shiftCode == null ? "" : shiftCode.trim().toUpperCase(Locale.ROOT);
-        if (finalCode.isEmpty() || shiftName == null || shiftName.trim().isEmpty()) {
+        String finalName = shiftName == null ? "" : shiftName.trim();
+        if (finalCode.isEmpty() || finalName.isEmpty()) {
             throw new IllegalArgumentException("Mã ca và tên ca không được để trống.");
         }
-        boolean exists = workShiftRepository.findAll().stream()
+        boolean codeExists = workShiftRepository.findAll().stream()
                 .anyMatch(s -> s.getBranch() != null && Objects.equals(s.getBranch().getBranchId(), branchId)
                         && !s.getShiftId().equals(shiftId)
                         && finalCode.equalsIgnoreCase(s.getShiftCode()));
-        if (exists) {
+        if (codeExists) {
             throw new IllegalArgumentException("Mã ca '" + finalCode + "' đã được dùng bởi ca khác trong chi nhánh này.");
         }
+
+        boolean nameExists = workShiftRepository.findAll().stream()
+                .anyMatch(s -> s.getBranch() != null && Objects.equals(s.getBranch().getBranchId(), branchId)
+                        && !s.getShiftId().equals(shiftId)
+                        && finalName.equalsIgnoreCase(s.getShiftName()));
+        if (nameExists) {
+            throw new IllegalArgumentException("Tên ca '" + finalName + "' đã được dùng bởi ca khác trong chi nhánh này.");
+        }
+
         validateTime(startTime, endTime);
         shift.setShiftCode(finalCode);
-        shift.setShiftName(shiftName.trim());
+        shift.setShiftName(finalName);
         shift.setStartTime(startTime);
         shift.setEndTime(endTime);
         WorkShift saved = workShiftRepository.save(shift);

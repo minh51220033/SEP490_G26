@@ -136,6 +136,10 @@ public class DoctorVisitAccess {
         var visit = visits.findById(visitId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy ca khám."));
         if (users.hasActiveAdminRole(user.getUserId())) return;
+        Long visitBranchId = visit.getBranch() != null ? visit.getBranch().getBranchId() : null;
+        if (visitBranchId != null && !isBranchAllowed(user, visitBranchId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Không có quyền truy cập ca khám của chi nhánh khác.");
+        }
         var doctor = staff.findByUserUserId(user.getUserId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản không có hồ sơ bác sĩ."));
         boolean primary = visit.getPrimaryDoctor() != null &&

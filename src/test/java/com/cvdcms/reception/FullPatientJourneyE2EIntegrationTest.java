@@ -420,15 +420,15 @@ class FullPatientJourneyE2EIntegrationTest {
         examVisit.setStatus(VisitStatus.WAITING_PAYMENT);
         visitRepository.saveAndFlush(examVisit);
 
-        // [FT10] Complete ticket (DONE) -> Chair automatically transitions to CLEANING
+        // [FT10] Complete ticket (DONE) -> Chair automatically returns to AVAILABLE
         queueWorkflowService.transition(session, ticket.getTicketId(), QueueWorkflowService.Action.DONE, null, null);
 
         QueueTicket doneTicket = ticketRepository.findById(ticket.getTicketId()).orElseThrow();
         assertEquals(QueueStatus.DONE, doneTicket.getStatus());
         assertNotNull(doneTicket.getCompletedAt());
 
-        DentalChair cleanedChair = chairRepository.findById(chair1.getChairId()).orElseThrow();
-        assertEquals(ChairStatus.CLEANING, cleanedChair.getStatus());
+        DentalChair releasedChair = chairRepository.findById(chair1.getChairId()).orElseThrow();
+        assertEquals(ChairStatus.AVAILABLE, releasedChair.getStatus());
 
         // Payment completes the visit before the appointment can be closed.
         examVisit.setStatus(VisitStatus.COMPLETED);
@@ -525,7 +525,7 @@ class FullPatientJourneyE2EIntegrationTest {
 
         queueWorkflowService.transition(session, walkInTicket.getTicketId(), QueueWorkflowService.Action.DONE, null, null);
         chair = chairRepository.findById(chair3.getChairId()).orElseThrow();
-        assertEquals(ChairStatus.CLEANING, chair.getStatus());
+        assertEquals(ChairStatus.AVAILABLE, chair.getStatus());
     }
 
     @Test
@@ -604,7 +604,7 @@ class FullPatientJourneyE2EIntegrationTest {
                 QueueWorkflowService.Action.DONE, null, null);
 
         switchedChair = chairRepository.findById(chair2.getChairId()).orElseThrow();
-        assertEquals(ChairStatus.CLEANING, switchedChair.getStatus());
+        assertEquals(ChairStatus.AVAILABLE, switchedChair.getStatus());
     }
 
     @Test

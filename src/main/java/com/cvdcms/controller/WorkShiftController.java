@@ -81,6 +81,8 @@ public class WorkShiftController {
 
         model.addAttribute("branches", branches);
         model.addAttribute("selectedBranchId", selectedBranchId);
+        model.addAttribute("currentBranchId", selectedBranchId);
+        model.addAttribute("activeMenu", "work-shifts");
         model.addAttribute("roleNames", session.getAttribute("roleNames"));
         model.addAttribute("permissionCodes", session.getAttribute("permissionCodes"));
         model.addAttribute("isAdmin", isAdmin(session));

@@ -41,4 +41,6 @@ public class DailyVisitDTO {
     private Boolean isEmergency;
     private String priorityReason;
     private String visitType;
+    private boolean coveredByCurrentDoctor;
+    private boolean accessibleByCurrentDoctor;
 }

@@ -25,6 +25,7 @@
                     <span>In phiếu dặn dò</span>
                 </button>
                 <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold text-white"
+                        th:unless="${isClinicalLocked}"
                         onclick="openDoctorInstructionModal()"
                         title="Soạn lời dặn dò riêng cho bệnh nhân sau ca khám này">
                     <i class="bi bi-pencil-square"></i>
@@ -81,6 +82,7 @@
                                     <span>Ghi chú dặn dò riêng của bác sĩ cho ca này</span>
                                 </h6>
                                 <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 text-primary small fw-semibold"
+                                        th:unless="${isClinicalLocked}"
                                         onclick="openDoctorInstructionModal()">
                                     <i class="bi bi-pencil-square me-1"></i>Chỉnh sửa
                                 </button>
@@ -90,7 +92,7 @@
                             <div class="df-soft-panel p-3 text-dark small mb-3" style="line-height: 1.6;">
                                 <i class="bi bi-quote fs-4 text-primary opacity-50 d-block mb-1"></i>
                                 <span id="displayDoctorAdviceText" class="fw-medium"
-                                      th:text="${(visit != null and visit.notes != null and !visit.notes.isEmpty() and !visit.notes.contains('BR-EMR-02') and !visit.notes.contains('hoàn tất khám lâm sàng')) ? visit.notes : ((prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null and !prescriptions[0].adviceNotes.isEmpty()) ? prescriptions[0].adviceNotes : 'Bác sĩ chưa nhập dặn dò riêng cho ca khám này. Nhấn nút Tạo / Soạn lời dặn ở trên để bổ sung hướng dẫn chi tiết cho bệnh nhân.')}">
+                                      th:text="${(visit != null and visit.notes != null and !visit.notes.isEmpty() and !visit.notes.contains('BR-EMR-02') and !visit.notes.contains('hoàn tất khám lâm sàng')) ? visit.notes : ((prescriptions != null and !prescriptions.isEmpty() and prescriptions[0].adviceNotes != null and !prescriptions[0].adviceNotes.isEmpty()) ? prescriptions[0].adviceNotes : (isClinicalLocked == true ? 'Bác sĩ chưa nhập dặn dò riêng cho ca khám này.' : 'Bác sĩ chưa nhập dặn dò riêng cho ca khám này. Nhấn nút Tạo / Soạn lời dặn ở trên để bổ sung hướng dẫn chi tiết cho bệnh nhân.'))}">
                                     Bác sĩ chưa nhập dặn dò riêng cho ca khám này. Nhấn nút "Tạo / Soạn lời dặn" ở trên để bổ sung hướng dẫn chi tiết cho bệnh nhân.
                                 </span>
                             </div>
@@ -174,26 +176,32 @@
                         </label>
                         <div class="d-flex flex-wrap gap-2">
                             <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2 small"
+                                    th:disabled="${isClinicalLocked}"
                                     onclick="applyInstructionPreset('NHO_RANG')">
                                 <i class="bi bi-plus me-1"></i>Nhổ răng / Cắt chỉ
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2 small"
+                                    th:disabled="${isClinicalLocked}"
                                     onclick="applyInstructionPreset('IMPLANT')">
                                 <i class="bi bi-plus me-1"></i>Cấy ghép Implant
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2 small"
+                                    th:disabled="${isClinicalLocked}"
                                     onclick="applyInstructionPreset('CHUA_TUY')">
                                 <i class="bi bi-plus me-1"></i>Điều trị tủy
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2 small"
+                                    th:disabled="${isClinicalLocked}"
                                     onclick="applyInstructionPreset('BOC_SU')">
                                 <i class="bi bi-plus me-1"></i>Bọc răng sứ
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2 small"
+                                    th:disabled="${isClinicalLocked}"
                                     onclick="applyInstructionPreset('CHINH_NHA')">
                                 <i class="bi bi-plus me-1"></i>Niềng răng / Chỉnh nha
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2 small"
+                                    th:disabled="${isClinicalLocked}"
                                     onclick="applyInstructionPreset('TAY_TRANG')">
                                 <i class="bi bi-plus me-1"></i>Tẩy trắng răng
                             </button>
@@ -206,6 +214,7 @@
                             Nội dung lời dặn chi tiết của bác sĩ: <span class="text-danger">*</span>
                         </label>
                         <textarea class="form-control rounded-3" id="doctorInstructionTextarea" rows="6"
+                                  th:disabled="${isClinicalLocked}"
                                   placeholder="Nhập nội dung dặn dò, chế độ dùng thuốc, kiêng cữ thức ăn và theo dõi vết thương..."
                                   style="font-size: 13.5px; padding: 10px 14px; border-color: #cbd5e1; line-height: 1.6; background: #ffffff !important;"></textarea>
                         <div class="form-text df-meta-tertiary mt-1">
@@ -216,7 +225,10 @@
 
                 <div class="modal-footer py-2 px-4 bg-white border-top d-flex justify-content-end gap-2">
                     <button type="button" class="btn btn-outline-secondary btn-sm px-3 rounded-pill fw-semibold" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" class="btn btn-primary btn-sm px-4 fw-semibold rounded-pill" id="btnSaveDoctorInstruction" onclick="submitDoctorInstructions()">
+                    <button type="button" class="btn btn-primary btn-sm px-4 fw-semibold rounded-pill" id="btnSaveDoctorInstruction"
+                            th:unless="${isClinicalLocked}"
+                            th:disabled="${isClinicalLocked}"
+                            onclick="submitDoctorInstructions()">
                         <i class="bi bi-check-circle-fill me-1"></i>Lưu lời dặn bác sĩ
                     </button>
                 </div>
@@ -300,6 +312,12 @@
         };
 
         function openDoctorInstructionModal() {
+            if (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal) {
+                if (typeof showToast === 'function') {
+                    showToast('Ca khám đã khóa lâm sàng, không thể chỉnh sửa lời dặn.', true);
+                }
+                return;
+            }
             const currentTextEl = document.getElementById('displayDoctorAdviceText');
             let currentText = currentTextEl ? currentTextEl.innerText.trim() : '';
             if (currentText.includes('Bác sĩ chưa nhập dặn dò riêng') ||
@@ -352,6 +370,12 @@
         }
 
         async function submitDoctorInstructions() {
+            if (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal) {
+                if (typeof showToast === 'function') {
+                    showToast('Ca khám đã khóa lâm sàng, không thể lưu lời dặn.', true);
+                }
+                return;
+            }
             const textarea = document.getElementById('doctorInstructionTextarea');
             const adviceNotes = textarea ? textarea.value.trim() : '';
 

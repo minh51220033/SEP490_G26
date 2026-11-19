@@ -6034,7 +6034,8 @@
             let optionsHtml = '<option value="">-- Chọn thuốc hoặc nhập tên --</option>';
             meds.forEach(m => {
                 const label = m.drugName + (m.activeIngredient ? ' (' + m.activeIngredient + ')' : '');
-                optionsHtml += `<option value="${m.medicationId || ''}" data-name="${(m.drugName || '').replace(/"/g, '&quot;')}" data-unit="${(m.unit || 'Viên').replace(/"/g, '&quot;')}" data-dosage="${(m.defaultDosage || 'Ngày 2 lần, mỗi lần 1 viên').replace(/"/g, '&quot;')}" data-usage="${(m.usageInstruction || 'Uống sau ăn').replace(/"/g, '&quot;')}" data-price="${m.unitPrice || 0}">${label}</option>`;
+                const salePrice = m.salePrice != null ? m.salePrice : 0;
+                optionsHtml += `<option value="${m.medicationId || ''}" data-name="${(m.drugName || '').replace(/"/g, '&quot;')}" data-unit="${(m.unit || 'Viên').replace(/"/g, '&quot;')}" data-dosage="Ngày 2 lần, mỗi lần 1 viên" data-usage="${(m.usageInstruction || 'Uống sau ăn').replace(/"/g, '&quot;')}" data-price="${salePrice}">${label}</option>`;
             });
 
             const tr = document.createElement('tr');
@@ -6109,28 +6110,43 @@
 
             const btn = document.getElementById('btnSubmitPrescription');
             const origHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
 
-            try {
-                const headers = Object.assign({ 'Content-Type': 'application/json' }, getCsrfHeaders());
-                const res = await fetch('/api/doctor/prescriptions', {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok || data.success === false) {
-                    throw new Error(data.message || 'Không thể lưu đơn thuốc.');
+            const sendPrescriptionRequest = async (isRetry) => {
+                if (isRetry) {
+                    payload.confirmAllergyWarning = true;
                 }
-                bootstrap.Modal.getInstance(document.getElementById('createPrescriptionModal'))?.hide();
-                window.location.hash = '#prescriptions';
-                window.location.reload();
-            } catch (err) {
-                alert('Lỗi: ' + err.message);
-                btn.disabled = false;
-                btn.innerHTML = origHtml;
-            }
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+
+                try {
+                    const headers = Object.assign({ 'Content-Type': 'application/json' }, getCsrfHeaders());
+                    const res = await fetch('/api/doctor/prescriptions', {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok || data.success === false) {
+                        const msg = data.message || 'Không thể lưu đơn thuốc.';
+                        if (!isRetry && msg.startsWith('Cảnh báo dị ứng:')) {
+                            if (confirm(msg + '\n\nBác sĩ có xác nhận tiếp tục kê đơn thuốc này không?')) {
+                                await sendPrescriptionRequest(true);
+                                return;
+                            }
+                        }
+                        throw new Error(msg);
+                    }
+                    bootstrap.Modal.getInstance(document.getElementById('createPrescriptionModal'))?.hide();
+                    window.location.hash = '#prescriptions';
+                    window.location.reload();
+                } catch (err) {
+                    alert('Lỗi: ' + err.message);
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
+                }
+            };
+
+            await sendPrescriptionRequest(false);
         }
 
         // =========================================================================

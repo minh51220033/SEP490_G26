@@ -144,8 +144,15 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
                 || uri.startsWith("/api/customer-care")
                 || uri.startsWith("/doctor/recalls")
                 || uri.startsWith("/doctor/re-examinations")
-                || uri.startsWith("/api/doctor/recalls")) {
+                || uri.startsWith("/api/doctor/recalls")
+                || uri.startsWith("/api/doctor/care-tasks")) {
             return List.of("CUSTOMER_CARE_MANAGE");
+        }
+        if (uri.startsWith("/api/doctor/re-examinations")) {
+            if (!isWriteMethod) {
+                return List.of("CUSTOMER_CARE_MANAGE", "CLINICAL_DAILY_VISITS", "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
+            }
+            return List.of("CUSTOMER_CARE_MANAGE", "CLINICAL_DAILY_VISITS");
         }
 
         // =====================================================================
@@ -223,7 +230,8 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
                 || uri.startsWith("/api/doctor/diagnoses")
                 || uri.startsWith("/api/v1/diagnoses")
                 || uri.startsWith("/api/doctor/performed-services")
-                || uri.startsWith("/api/doctor/paraclinical")) {
+                || uri.startsWith("/api/doctor/paraclinical")
+                || uri.startsWith("/api/doctor/visits")) {
             if (!isWriteMethod) {
                 return List.of("CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS", "MEDICAL_RECORD_VIEW", "PATIENT_PROFILE_MANAGE");
             }

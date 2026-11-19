@@ -381,7 +381,7 @@
         try {
             const data = await apiRequest(`/api/xray/lookups/patient-visits/${profileId}`);
             const visits = data.visits || [];
-            const orders = data.orders || [];
+            const orders = data.orderItems || data.orders || [];
 
             if (!visits.length) {
                 visitSelect.innerHTML = '<option value="">Bệnh nhân này chưa có lượt khám nào</option>';

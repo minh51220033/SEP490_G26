@@ -55,6 +55,8 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     private org.springframework.context.ApplicationEventPublisher careEventPublisher;
     @Autowired(required = false)
     private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+    @Autowired(required = false)
+    private com.cvdcms.service.AppointmentLifecycleService appointmentLifecycleService;
 
     @Autowired
     public DiagnosisServiceImpl(
@@ -224,19 +226,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public ClinicalCompletionCheckDTO checkClinicalCompletionReadiness(Long visitId) {
         Visit visit = getVisitOrThrow(visitId);
         PatientProfile patient = visit.getPatientProfile();
-
-        // 1. Tự động đồng bộ các chỉ định cận lâm sàng đã có kết quả sang dịch vụ thực hiện (để tính viện phí & Kế toán lập hóa đơn)
-        if (paraclinicalOrderService != null) {
-            try {
-                paraclinicalOrderService.syncParaclinicalOrdersToPerformedServices(visitId);
-            } catch (Exception ex) {
-                log.warn("Lỗi đồng bộ chỉ định cận lâm sàng trong kiểm tra hoàn tất ca khám: {}", ex.getMessage());
-            }
-        }
 
         List<ExaminationDiagnosis> diagnoses = diagnosisRepository.findByVisitIdWithDetails(visitId);
         int diagnosisCount = diagnoses.size();
@@ -444,21 +437,49 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 emrRecordRepository,
                 "Lượt khám hiện tại không thể hoàn tất khám do đã khóa hoặc đã hủy");
 
+        // Đồng bộ các chỉ định cận lâm sàng đã có kết quả sang dịch vụ thực hiện ngay khi hoàn tất ca khám
+        if (paraclinicalOrderService != null) {
+            try {
+                paraclinicalOrderService.syncParaclinicalOrdersToPerformedServices(visitId);
+            } catch (Exception ex) {
+                log.warn("Lỗi đồng bộ chỉ định cận lâm sàng khi hoàn tất ca khám {}: {}", visitId, ex.getMessage());
+            }
+        }
+
         // Kiểm tra xem ca khám có phát sinh chi phí cần Kế toán lập hóa đơn lẻ hay không
         // (Dịch vụ thuộc KHDT trả theo đợt đã thu qua lộ trình phân kỳ nên không đẩy sang hóa đơn lẻ)
         List<PerformedService> completedServices = performedServiceRepository.findByVisitIdWithDetails(visitId).stream()
                 .filter(ps -> ps.getStatus() == PerformedServiceStatus.COMPLETED)
                 .toList();
         boolean hasBillableServices = completedServices.stream().anyMatch(ps -> !isInstallmentPlanService(ps));
+        BigDecimal totalCompletedServiceAmount = completedServices.stream()
+                .map(ps -> ps.getFinalPrice() != null ? ps.getFinalPrice() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal billableServiceAmount = completedServices.stream()
                 .filter(ps -> !isInstallmentPlanService(ps))
                 .map(ps -> ps.getFinalPrice() != null ? ps.getFinalPrice() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal totalPresc = check.getTotalPrescriptionAmount() != null ? check.getTotalPrescriptionAmount() : BigDecimal.ZERO;
+
+        List<Prescription> payablePrescriptions = prescriptionRepository.findByVisit_VisitIdOrderByCreatedAtDesc(visitId).stream()
+                .filter(p -> p.getStatus() != com.cvdcms.entity.enums.PrescriptionStatus.CANCELLED
+                        && p.getStatus() != com.cvdcms.entity.enums.PrescriptionStatus.EXTERNAL_PURCHASE)
+                .toList();
+        boolean hasPayablePrescription = !payablePrescriptions.isEmpty();
+        BigDecimal totalPresc = BigDecimal.ZERO;
+        for (Prescription p : payablePrescriptions) {
+            if (p.getItems() != null) {
+                for (PrescriptionItem it : p.getItems()) {
+                    BigDecimal qty = it.getQuantity() != null ? it.getQuantity() : BigDecimal.ONE;
+                    BigDecimal price = it.getUnitPrice() != null ? it.getUnitPrice() : BigDecimal.ZERO;
+                    totalPresc = totalPresc.add(price.multiply(qty));
+                }
+            }
+        }
+
         boolean hasPayableItems = billableServiceAmount.compareTo(BigDecimal.ZERO) > 0
                 || totalPresc.compareTo(BigDecimal.ZERO) > 0
                 || hasBillableServices
-                || check.isHasPrescription();
+                || hasPayablePrescription;
 
         if (hasPayableItems) {
             visit.setStatus(VisitStatus.WAITING_PAYMENT);
@@ -476,7 +497,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         if (dentalChairs != null && visit.getChairId() != null) {
             dentalChairs.findById(visit.getChairId()).ifPresent(chair -> {
                 if (chair.getStatus() == com.cvdcms.entity.enums.ChairStatus.IN_USE) {
-                    chair.setStatus(com.cvdcms.entity.enums.ChairStatus.CLEANING);
+                    chair.setStatus(com.cvdcms.entity.enums.ChairStatus.AVAILABLE);
                     dentalChairs.save(chair);
                 }
             });
@@ -547,11 +568,8 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         }
 
         NumberFormat vndFmt = NumberFormat.getInstance(Locale.forLanguageTag("vi-VN"));
-        String svcCostStr = vndFmt
-                .format(check.getTotalServiceAmount() != null ? check.getTotalServiceAmount() : BigDecimal.ZERO) + "đ";
-        String prescCostStr = vndFmt.format(
-                check.getTotalPrescriptionAmount() != null ? check.getTotalPrescriptionAmount() : BigDecimal.ZERO)
-                + "đ";
+        String svcCostStr = vndFmt.format(totalCompletedServiceAmount) + "đ";
+        String prescCostStr = vndFmt.format(totalPresc) + "đ";
 
         String timestamp = LocalDateTime.now().format(AUDIT_DATE_TIME);
         String doctorName = visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getFullName()
@@ -560,7 +578,33 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 visitId, doctorName, visit.getStatus().name(), svcCostStr, prescCostStr, doctorNotes);
 
         Visit saved = visitRepository.save(visit);
+        if (saved.getStatus() == VisitStatus.COMPLETED && appointmentLifecycleService != null) {
+            Long actorUserId = resolveCurrentActorUserId(saved);
+            if (actorUserId != null) {
+                try {
+                    appointmentLifecycleService.completeByVisit(saved.getVisitId(), actorUserId);
+                } catch (Exception ex) {
+                    log.warn("Không thể hoàn tất lịch hẹn gắn với ca khám {}: {}", saved.getVisitId(), ex.getMessage());
+                }
+            }
+        }
         return saved;
+    }
+
+    private Long resolveCurrentActorUserId(Visit visit) {
+        try {
+            var attributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+            if (attributes instanceof org.springframework.web.context.request.ServletRequestAttributes web) {
+                var session = web.getRequest().getSession(false);
+                if (session != null && session.getAttribute("loggedInUser") instanceof User user && user.getUserId() != null) {
+                    return user.getUserId();
+                }
+            }
+        } catch (Exception ignored) {}
+        if (visit != null && visit.getPrimaryDoctor() != null && visit.getPrimaryDoctor().getUser() != null) {
+            return visit.getPrimaryDoctor().getUser().getUserId();
+        }
+        return null;
     }
 
     private String buildDefaultSummaryAssessment(Visit visit, ClinicalExamination exam, List<PerformedService> completedServices) {
@@ -609,6 +653,16 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             throw new IllegalStateException(
                     "Chỉ có thể mở lại ca khám đang ở trạng thái Chờ thanh toán (WAITING_PAYMENT). Trạng thái hiện tại: "
                             + visit.getStatus().name());
+        }
+
+        if (emrRecordRepository != null) {
+            emrRecordRepository.findByVisit_VisitId(visitId).ifPresent(record -> {
+                if (com.cvdcms.emr.EmrStatePolicy.isEmrLockedStatus(record.getStatus())) {
+                    throw new IllegalStateException(
+                            "Hồ sơ bệnh án điện tử (" + record.getRecordCode()
+                                    + ") đã khóa/ký xác thực. Không thể mở lại ca khám (BR-EMR-02).");
+                }
+            });
         }
 
         if (invoiceRepository.existsByVisit_VisitIdAndStatusNot(visitId,
@@ -706,13 +760,15 @@ public class DiagnosisServiceImpl implements DiagnosisService {
 
         boolean hasCardio = patient != null && Boolean.TRUE.equals(patient.getHasCardiovascularDisease());
         boolean hasAllergies = patient != null && Boolean.TRUE.equals(patient.getHasAllergies());
-        String allergyDetails = patient != null ? patient.getAllergyDetails() : null;
+        String allergyDetails = hasAllergies && patient != null ? patient.getAllergyDetails() : null;
 
-        String underlyingDetails = patient != null ? patient.getUnderlyingDiseaseDetails() : null;
-        boolean hasDiabetes = underlyingDetails != null && underlyingDetails.contains("Đái tháo đường");
-        boolean hasBleeding = underlyingDetails != null && underlyingDetails.contains("Rối loạn đông máu");
-        boolean isPregnant = underlyingDetails != null
-                && (underlyingDetails.contains("Mang thai") || underlyingDetails.contains("Cho con bú"));
+        String rawUnderlyingDetails = patient != null ? patient.getUnderlyingDiseaseDetails() : null;
+        boolean hasDiabetes = containsConditionToken(rawUnderlyingDetails, "Đái tháo đường");
+        boolean hasBleeding = containsConditionToken(rawUnderlyingDetails, "Rối loạn đông máu");
+        boolean isPregnant = containsConditionToken(rawUnderlyingDetails, "Mang thai / Cho con bú")
+                || containsConditionToken(rawUnderlyingDetails, "Mang thai")
+                || containsConditionToken(rawUnderlyingDetails, "Cho con bú");
+        String extraUnderlyingDetails = extractExtraUnderlyingDetails(rawUnderlyingDetails);
 
         return GeneralExaminationRequestDTO.builder()
                 .visitId(visitId)
@@ -724,7 +780,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 .hasDiabetes(hasDiabetes)
                 .hasBleedingDisorder(hasBleeding)
                 .isPregnant(isPregnant)
-                .underlyingDiseaseDetails(underlyingDetails)
+                .underlyingDiseaseDetails(extraUnderlyingDetails)
                 .tmjStatus(exam != null && exam.getExtraoralExam() != null ? exam.getExtraoralExam() : "NORMAL")
                 .hygieneStatus(exam != null && exam.getIntraoralExam() != null ? exam.getIntraoralExam() : "MEDIUM")
                 .gingivaStatus(
@@ -756,11 +812,13 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         // 2. Cập nhật tiền sử y khoa & cảnh báo dị ứng trên PatientProfile
         PatientProfile patient = visit.getPatientProfile();
         if (patient != null) {
-            patient.setHasAllergies(Boolean.TRUE.equals(request.getHasAllergies()));
-            patient.setAllergyDetails(request.getAllergyDetails() != null ? request.getAllergyDetails().trim() : null);
+            boolean hasAllergies = Boolean.TRUE.equals(request.getHasAllergies());
+            patient.setHasAllergies(hasAllergies);
+            String trimmedAllergy = request.getAllergyDetails() != null ? request.getAllergyDetails().trim() : "";
+            patient.setAllergyDetails(hasAllergies && !trimmedAllergy.isEmpty() ? trimmedAllergy : null);
             patient.setHasCardiovascularDisease(Boolean.TRUE.equals(request.getHasCardiovascularDisease()));
 
-            List<String> conditions = new ArrayList<>();
+            Set<String> conditions = new LinkedHashSet<>();
             if (Boolean.TRUE.equals(request.getHasDiabetes())) {
                 conditions.add("Đái tháo đường");
             }
@@ -770,11 +828,13 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             if (Boolean.TRUE.equals(request.getIsPregnant())) {
                 conditions.add("Mang thai / Cho con bú");
             }
-            if (request.getUnderlyingDiseaseDetails() != null
-                    && !request.getUnderlyingDiseaseDetails().trim().isEmpty()) {
-                String extra = request.getUnderlyingDiseaseDetails().trim();
-                if (!conditions.contains(extra)) {
-                    conditions.add(extra);
+            String extraDetails = extractExtraUnderlyingDetails(request.getUnderlyingDiseaseDetails());
+            if (extraDetails != null && !extraDetails.isEmpty()) {
+                for (String token : extraDetails.split(";")) {
+                    String trimmed = token.trim();
+                    if (!trimmed.isEmpty()) {
+                        conditions.add(trimmed);
+                    }
                 }
             }
 
@@ -811,6 +871,48 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         }
         clinicalExamRepository.save(exam);
         log.info("Đã lưu kết quả khám tổng quát cho ca khám visitId={}", visit.getVisitId());
+    }
+
+    private static boolean containsConditionToken(String rawDetails, String keyword) {
+        if (rawDetails == null || rawDetails.isBlank() || keyword == null) {
+            return false;
+        }
+        String normalizedKeyword = keyword.trim().toLowerCase(Locale.ROOT);
+        for (String part : rawDetails.split(";")) {
+            if (part != null && part.trim().toLowerCase(Locale.ROOT).contains(normalizedKeyword)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isPresetUnderlyingCondition(String token) {
+        if (token == null) {
+            return false;
+        }
+        String normalized = token.trim().toLowerCase(Locale.ROOT);
+        return normalized.equals("đái tháo đường")
+                || normalized.equals("rối loạn đông máu")
+                || normalized.equals("mang thai / cho con bú")
+                || normalized.equals("mang thai")
+                || normalized.equals("cho con bú");
+    }
+
+    private static String extractExtraUnderlyingDetails(String rawDetails) {
+        if (rawDetails == null || rawDetails.isBlank()) {
+            return null;
+        }
+        Set<String> extras = new LinkedHashSet<>();
+        for (String part : rawDetails.split(";")) {
+            if (part == null) {
+                continue;
+            }
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty() && !isPresetUnderlyingCondition(trimmed)) {
+                extras.add(trimmed);
+            }
+        }
+        return extras.isEmpty() ? null : String.join("; ", extras);
     }
 
     @Override

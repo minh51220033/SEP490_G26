@@ -215,17 +215,12 @@ public class AttendanceController {
 
         List<Branch> branches = branchService.getActiveBranches();
         model.addAttribute("branches", branches);
-        if (branchId == null && !branches.isEmpty()) {
-            branchId = branches.get(0).getBranchId();
-        }
         model.addAttribute("selectedBranchId", branchId);
 
-        if (branchId != null) {
-            List<AttendanceRecord> records = attendanceService.getBranchHistory(branchId, selected);
-            model.addAttribute("records", records);
-            model.addAttribute("summary", attendanceService.summarize(records));
-            model.addAttribute("staffSummary", attendanceService.summarizeByStaff(branchId, selected, records));
-        }
+        List<AttendanceRecord> records = attendanceService.getBranchHistory(branchId, selected);
+        model.addAttribute("records", records);
+        model.addAttribute("summary", attendanceService.summarize(records));
+        model.addAttribute("staffSummary", attendanceService.summarizeByStaff(branchId, selected, records));
         return "attendance/branch";
     }
 }

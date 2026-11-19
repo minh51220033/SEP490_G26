@@ -20,6 +20,7 @@ public class WorkflowTemplateRequestDTO {
     private Long serviceId;
     private Long clinicId;
     private String status; // DRAFT, ACTIVE, INACTIVE
+    private String flowMode; // CONTINUOUS, INTERRUPTIBLE
 
     @Builder.Default
     private List<WorkflowStepDTO> steps = new ArrayList<>();

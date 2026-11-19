@@ -268,7 +268,9 @@ body.staff-page-body .app-content {
 .staff-table-wrapper {
     position: relative;
     overflow-x: auto !important;
-    overflow-y: hidden !important;
+    overflow-y: auto !important;
+    max-height: calc(100vh - 330px) !important;
+    min-height: 380px !important;
     flex: 1 1 auto;
     /* Tự động giãn đầy khoảng trống còn lại */
     min-height: 0;
@@ -276,14 +278,9 @@ body.staff-page-body .app-content {
     background-color: #ffffff;
 }
 
-/* Thanh scrollbar rõ nét, luôn hiển thị theo chuẩn desktop table (chỉ cuộn ngang, ẩn cuộn dọc) */
-.staff-table-wrapper::-webkit-scrollbar:vertical {
-    width: 0 !important;
-    display: none !important;
-}
-
+/* Thanh scrollbar rõ nét, hỗ trợ cuộn cả dọc và ngang mượt mà */
 .staff-table-wrapper::-webkit-scrollbar {
-    width: 0;
+    width: 6px;
     height: 10px;
 }
 
@@ -1124,16 +1121,17 @@ body.staff-page-body .app-content {
 .staff-table-wrapper {
     width: 100%;
     overflow-x: auto;
-    overflow-y: hidden !important;
+    overflow-y: auto !important;
+    max-height: calc(100vh - 330px);
     position: relative;
     scroll-behavior: smooth;
     background: #ffffff;
 }
 
-.dv-table-scroll-container::-webkit-scrollbar:vertical,
-.staff-table-wrapper::-webkit-scrollbar:vertical {
-    width: 0 !important;
-    display: none !important;
+.dv-table-scroll-container::-webkit-scrollbar,
+.staff-table-wrapper::-webkit-scrollbar {
+    width: 6px;
+    height: 8px;
 }
 
 /* 4. Cấu trúc Bảng hiện đại AMIS (Chuẩn .dv-amis-table) */

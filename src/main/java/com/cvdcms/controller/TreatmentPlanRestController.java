@@ -36,6 +36,9 @@ public class TreatmentPlanRestController {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+
     private jakarta.servlet.http.HttpSession currentHttpSession() {
         var attrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
         return attrs instanceof org.springframework.web.context.request.ServletRequestAttributes sra
@@ -94,7 +97,7 @@ public class TreatmentPlanRestController {
             response.put("message", "Đã tạo kế hoạch điều trị thành công!");
             response.put("data", created);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             log.warn("Validation error createPlan: {}", e.getMessage());
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
@@ -260,6 +263,18 @@ public class TreatmentPlanRestController {
             com.cvdcms.entity.TreatmentPlanItem item = treatmentPlanItemRepository.findById(itemId)
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bước thủ thuật phù hợp."));
 
+            if (item.getStatus() == com.cvdcms.entity.enums.TreatmentPlanItemStatus.CANCELLED) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Bước thủ thuật này đã bị hủy, không thể thực hiện."
+                ));
+            }
+            if (item.getPlan() != null && item.getPlan().getStatus() == com.cvdcms.entity.enums.TreatmentPlanStatus.CANCELLED) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Kế hoạch điều trị đã bị hủy, không thể thực hiện bước thủ thuật."
+                ));
+            }
             if (item.getStatus() == com.cvdcms.entity.enums.TreatmentPlanItemStatus.COMPLETED) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
@@ -280,12 +295,17 @@ public class TreatmentPlanRestController {
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám phù hợp."));
 
             if (visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.WAITING_PAYMENT ||
-                visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.COMPLETED) {
+                visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.COMPLETED ||
+                visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.CANCELLED) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
-                        "message", "Ca khám đã hoàn tất lâm sàng và khóa bất biến (BR-EMR-02). Không thể thêm dịch vụ thực hiện."
+                        "message", "Ca khám đã hoàn tất lâm sàng hoặc đã khóa/hủy (BR-EMR-02). Không thể thêm dịch vụ thực hiện."
                 ));
             }
+            com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                    visit,
+                    emrRecordRepository,
+                    "Bệnh án lâm sàng đã hoàn tất và khóa bất biến. Không thể thêm dịch vụ thực hiện");
 
             if (item.getPlan() != null && item.getPlan().getPatientProfile() != null &&
                 !item.getPlan().getPatientProfile().getProfileId().equals(visit.getPatientProfile().getProfileId())) {
@@ -297,7 +317,23 @@ public class TreatmentPlanRestController {
 
             Long docId;
             if (doctorVisitAccess != null) {
-                docId = doctorVisitAccess.resolveActingDoctor(currentHttpSession(), visit, doctorId).getStaffId();
+                if (isHttpRequestActive()) {
+                    jakarta.servlet.http.HttpSession session = currentHttpSession();
+                    com.cvdcms.entity.User currentUser = doctorVisitAccess.requireAuthenticatedUser(session);
+                    if (!doctorVisitAccess.isAdmin(currentUser)) {
+                        docId = doctorVisitAccess.resolveActingDoctor(session, visit, null).getStaffId();
+                        if (doctorId != null && !doctorId.equals(docId)) {
+                            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                                    "success", false,
+                                    "message", "Chỉ quản trị viên mới được chỉ định bác sĩ thực hiện khác."
+                            ));
+                        }
+                    } else {
+                        docId = doctorVisitAccess.resolveActingDoctor(session, visit, doctorId).getStaffId();
+                    }
+                } else {
+                    docId = doctorVisitAccess.resolveActingDoctor(currentHttpSession(), visit, doctorId).getStaffId();
+                }
             } else if (doctorId != null) {
                 docId = doctorId;
             } else if (visit.getPrimaryDoctor() != null) {
@@ -306,10 +342,10 @@ public class TreatmentPlanRestController {
                 throw new IllegalStateException("Ca khám chưa được phân công bác sĩ chính. Vui lòng phân công bác sĩ tại màn Điều phối trước khi thực hiện thủ thuật.");
             }
 
-            boolean isInstallmentPlan = Boolean.TRUE.equals(item.getPlan().getIsInstallment());
+            boolean isInstallmentPlan = item.getPlan() != null && Boolean.TRUE.equals(item.getPlan().getIsInstallment());
             BigDecimal unitPrice = isInstallmentPlan
                     ? BigDecimal.ZERO
-                    : ((item.getEstimatedPrice() != null && item.getEstimatedPrice().compareTo(BigDecimal.ZERO) > 0)
+                    : (item.getEstimatedPrice() != null
                         ? item.getEstimatedPrice()
                         : (item.getService() != null && item.getService().getBasePrice() != null
                             ? item.getService().getBasePrice()
