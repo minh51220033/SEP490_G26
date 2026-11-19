@@ -104,34 +104,20 @@ public class ReportAndExcelExportUnitTest {
     // =========================================================================
 
     @Test
-    @DisplayName("Admin có quyền xem toàn hệ thống (tất cả chi nhánh)")
+    @DisplayName("Admin vào /admin/reports được điều hướng sang /home và giữ nguyên lựa chọn taxRate")
     void testAdminAccessAllBranches_Allowed() {
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("loggedInUser", adminUser);
         session.setAttribute("isAdmin", true);
 
         when(userRepository.hasActiveAdminRole(100L)).thenReturn(true);
-        when(branchRepository.findAll()).thenReturn(List.of(branch1, branch2));
-
-        List<Object[]> emptyBreakdown = Collections.singletonList(new Object[]{
-                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
-                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO
-        });
-        when(invoiceRepository.sumInvoiceBreakdownByBranches(any(), any(), any())).thenReturn(emptyBreakdown);
-        when(paymentRepository.sumRealRevenueByBranches(any(), any(), any())).thenReturn(BigDecimal.ZERO);
-        when(paymentRepository.sumAdvanceDepositByBranches(any(), any(), any())).thenReturn(BigDecimal.ZERO);
-        when(paymentRepository.sumDepositWalletUsedByBranches(any(), any(), any())).thenReturn(BigDecimal.ZERO);
-        when(paymentRepository.findDailyRealPaymentsForPeriod(any(), any(), any())).thenReturn(new ArrayList<>());
-        when(refundRepository.sumRefundAmountByBranches(any(), any(), any())).thenReturn(BigDecimal.ZERO);
-        when(operatingExpenseRepository.sumActiveExpenses(any(), any(), any())).thenReturn(BigDecimal.ZERO);
-        when(visitRepository.countVisitsByStatusAndBranches(any(), any(), any())).thenReturn(new ArrayList<>());
 
         Model model = new ConcurrentModel();
-        String view = reportController.viewReports(null, null, null, new BigDecimal("20"), "overview", model, session);
+        String viewWithRate = reportController.viewReports(null, null, null, new BigDecimal("20"), "overview", model, session);
+        assertEquals("redirect:/home?taxRate=20&tab=overview", viewWithRate);
 
-        assertEquals("admin/reports/index", view);
-        assertTrue((Boolean) model.getAttribute("isAdmin"));
-        assertNull(model.getAttribute("selectedBranchId"));
+        String viewAuto = reportController.viewReports(null, null, null, null, "overview", model, session);
+        assertEquals("redirect:/home?tab=overview", viewAuto);
     }
 
     @Test

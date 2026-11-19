@@ -370,7 +370,6 @@ public class FinancialReportTest {
         entConfig.setCitRate(new BigDecimal("15.0"));
         when(mockTaxService.getBranchTaxConfig(eq(2L), any(LocalDate.class))).thenReturn(Optional.of(entConfig));
 
-        when(paymentRepository.sumRealRevenueByBranches(any(), any(), any())).thenReturn(new BigDecimal("14000000"));
         when(operatingExpenseRepository.sumActiveExpenses(any(), any(), any())).thenReturn(BigDecimal.ZERO);
 
         when(paymentRepository.sumPaymentsByBranchTypeAndMethod(any(), any(), any())).thenReturn(List.of(
@@ -555,7 +554,8 @@ public class FinancialReportTest {
         FinancialReportDTO twoMonthReport = service.getFinancialReport(List.of(1L), octStart, novEnd);
         assertEquals(0, new BigDecimal("800000").compareTo(twoMonthReport.getServiceTaxBase()));
         assertEquals(0, new BigDecimal("16000").compareTo(twoMonthReport.getEstimatedTaxAmount()));
-        verify(paymentRepository).sumRealRevenueByBranches(any(), eq(octStartDt), eq(novEndExcl));
+        verify(paymentRepository).sumAdvanceDepositByBranches(any(), eq(octStartDt), eq(novEndExcl));
+        verify(paymentRepository).findPaidPaymentsForPeriod(any(), eq(octStartDt), eq(novEndExcl));
     }
 
     @Test
@@ -578,7 +578,6 @@ public class FinancialReportTest {
         when(mockTaxService.getBranchTaxConfig(eq(1L), any(LocalDate.class))).thenReturn(Optional.of(entConfig));
 
         // Chỉ có nạp ví 10,000,000 đ, chưa phát sinh thanh toán hóa đơn / doanh thu phân loại
-        when(paymentRepository.sumRealRevenueByBranches(any(), any(), any())).thenReturn(new BigDecimal("10000000"));
         when(paymentRepository.sumAdvanceDepositByBranches(any(), any(), any())).thenReturn(new BigDecimal("10000000"));
         when(operatingExpenseRepository.sumActiveExpenses(any(), any(), any())).thenReturn(BigDecimal.ZERO);
         when(paymentRepository.sumPaymentsByBranchTypeAndMethod(any(), any(), any())).thenReturn(Collections.singletonList(

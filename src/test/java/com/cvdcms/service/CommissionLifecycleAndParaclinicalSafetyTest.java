@@ -14,6 +14,7 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -224,6 +225,12 @@ class CommissionLifecycleAndParaclinicalSafetyTest {
     @Test
     @DisplayName("DB10-03: Hủy dịch vụ từng có commission PENDING phải kiểm tra dấu vết trước khi hủy để không hard-delete mất lịch sử")
     void cancelPerformedService_SoftCancelsWhenHadPendingCommissionBeforeCancel() {
+        ServiceCommissionService mockCommissionSvc = mock(ServiceCommissionService.class);
+        ReflectionTestUtils.setField(performedServiceService, "serviceCommissionRepository", serviceCommissionRepository);
+        ReflectionTestUtils.setField(performedServiceService, "serviceCommissionService", mockCommissionSvc);
+        ReflectionTestUtils.setField(performedServiceService, "invoiceItemRepository", invoiceItemRepository);
+        ReflectionTestUtils.setField(performedServiceService, "paraclinicalOrderItemRepository", paraclinicalOrderItemRepository);
+
         Visit visit = new Visit();
         visit.setStatus(VisitStatus.IN_EXAM);
 
@@ -238,6 +245,11 @@ class CommissionLifecycleAndParaclinicalSafetyTest {
 
         when(performedServiceRepository.findByIdForUpdate(88L)).thenReturn(Optional.of(ps));
         when(serviceCommissionRepository.findByPerformedService_PerformedId(88L)).thenReturn(List.of(pendingSc));
+        doAnswer(inv -> {
+            // Giả lập cancelPendingCommissionsForPerformedService xóa xong hoa hồng PENDING
+            when(serviceCommissionRepository.findByPerformedService_PerformedId(88L)).thenReturn(List.of());
+            return null;
+        }).when(mockCommissionSvc).cancelPendingCommissionsForPerformedService(88L);
 
         performedServiceService.cancelPerformedService(88L);
 
