@@ -277,13 +277,17 @@
 }
 
 .fin-btn-primary {
-    background: var(--fin-brand);
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+    border-color: transparent;
     color: #ffffff;
+    box-shadow: 0 3px 10px rgba(2, 132, 199, 0.22);
 }
 
 .fin-btn-primary:hover {
-    background: var(--fin-brand-light);
+    background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+    border-color: transparent;
     color: #ffffff;
+    box-shadow: 0 5px 14px rgba(2, 132, 199, 0.34);
 }
 
 .fin-btn-success {
@@ -320,8 +324,13 @@
 /* Invoice Creation Layout */
 .fin-grid-2col {
     display: grid;
-    grid-template-columns: 2fr 1fr;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
     gap: 24px;
+    align-items: start;
+}
+
+.fin-grid-2col > * {
+    min-width: 0;
 }
 
 @media (max-width: 1024px) {
@@ -777,13 +786,13 @@
 .patient-finance-dashboard .finance-payment-pagination .page-link {
     padding: 6px 10px;
     border-color: #d9e2f5;
-    color: #263f91;
+    color: #0284c7;
     font-size: 12px;
 }
 
 .patient-finance-dashboard .finance-payment-pagination .active .page-link {
-    border-color: #263f91;
-    background: #263f91;
+    border-color: #0284c7;
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
     color: #fff;
 }
 
@@ -874,182 +883,474 @@
         justify-content: flex-end;
         width: 100%;
     }
+}
 
-    /* Chỉ áp dụng cho trang lập hóa đơn */
-    .invoice-create-page {
-        gap: 16px;
+/* ==========================================================================
+   Invoice Workspace UI (SCR-21.1 Detail & Create Invoice)
+   ========================================================================== */
+.inv-workspace {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.inv-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.inv-page-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+}
+
+.inv-page-subtitle {
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: 13px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+}
+
+.inv-header-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.inv-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    white-space: nowrap;
+}
+
+.inv-btn-sm {
+    height: 32px;
+    padding: 0 11px;
+    font-size: 12.5px;
+    border-radius: 7px;
+}
+
+.inv-btn-primary {
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: 0 3px 10px rgba(2, 132, 199, 0.22);
+}
+
+.inv-btn-primary:hover {
+    background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: 0 5px 14px rgba(2, 132, 199, 0.34);
+}
+
+.inv-btn-success {
+    background: #059669;
+    border-color: #059669;
+    color: #ffffff;
+}
+
+.inv-btn-success:hover {
+    background: #047857;
+    border-color: #047857;
+    color: #ffffff;
+}
+
+.inv-btn-tonal {
+    background: #eff6ff;
+    border-color: #dbeafe;
+    color: #1d4ed8;
+}
+
+.inv-btn-tonal:hover {
+    background: #dbeafe;
+    border-color: #bfdbfe;
+    color: #1e40af;
+}
+
+.inv-btn-outline {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #334155;
+}
+
+.inv-btn-outline:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.inv-btn-outline-danger {
+    background: #ffffff;
+    border-color: #fecaca;
+    color: #b91c1c;
+}
+
+.inv-btn-outline-danger:hover {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #991b1b;
+}
+
+.inv-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.inv-pill-neutral {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.inv-pill-blue {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #dbeafe;
+}
+
+.inv-pill-purple {
+    background: #f5f3ff;
+    color: #6d28d9;
+    border: 1px solid #e9d5ff;
+}
+
+.inv-pill-cyan {
+    background: #ecfeff;
+    color: #0e7490;
+    border: 1px solid #cffafe;
+}
+
+.inv-pill-success {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+.inv-pill-warning {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.inv-pill-danger {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.inv-layout-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 376px;
+    gap: 20px;
+    align-items: start;
+}
+
+.inv-layout-grid > * {
+    min-width: 0;
+}
+
+.inv-main-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.inv-rail-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+    position: sticky;
+    top: 80px;
+}
+
+@media (max-width: 1120px) {
+    .inv-layout-grid {
+        grid-template-columns: minmax(0, 1fr);
     }
 
-    .invoice-create-page #invoiceForm {
-        margin: 0;
-        min-width: 0;
+    .inv-rail-col {
+        position: static;
     }
+}
 
-    .invoice-create-page .fin-grid-2col {
-        align-items: start;
-        gap: 18px;
-    }
+.inv-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
 
-    .invoice-create-page .fin-grid-2col>div {
-        min-width: 0;
-    }
+.inv-card-flush {
+    padding: 0;
+    overflow: hidden;
+}
 
-    .invoice-create-page .fin-card {
-        padding: 18px;
-        border: 1px solid #dce4f3;
-        border-radius: 10px;
-        box-shadow: 0 3px 12px rgb(30 58 138 / 5%);
-    }
+.inv-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
 
-    .invoice-create-page h4 {
-        font-size: 16px;
-        line-height: 1.5;
-    }
+.inv-card-flush .inv-card-head {
+    padding: 15px 20px 12px;
+    margin-bottom: 0;
+    border-bottom: 1px solid #f1f5f9;
+}
 
-    .invoice-create-page .fin-calculation-box {
-        margin-bottom: 0 !important;
-        padding: 18px;
-        border-color: #dce4f3;
-        background: #fff;
-    }
+.inv-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: none;
+}
 
-    /* Ô số lượng và đơn giá không bị cắt chữ */
-    .invoice-create-page #invoiceForm .fin-table input[type="number"] {
-        width: 100%;
-        min-width: 90px;
-        min-height: 34px;
-        padding: 6px 9px;
-        text-align: right;
-        font-size: 13px;
-    }
+.inv-card-title i {
+    color: #1d4ed8;
+    font-size: 1rem;
+}
 
-    /* Khu vực đơn thuốc */
-    .invoice-create-page .medicine-handover {
-        margin-top: 0 !important;
-        border: 1px solid #dce4f3 !important;
-        border-top: 3px solid #294594 !important;
-    }
+.inv-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
 
-    .invoice-create-page .medicine-handover>.d-flex {
-        gap: 12px;
-        flex-wrap: wrap;
-        margin-bottom: 12px !important;
-    }
+.inv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    color: #1e293b;
+}
 
-    .invoice-create-page .medicine-handover h4 {
-        color: #294594 !important;
-    }
+.inv-table thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: none;
+    padding: 10px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
 
-    .invoice-create-page .medicine-handover>.alert {
-        padding: 10px 12px !important;
-        border: 1px solid #dce7fc;
-        border-radius: 7px;
-        background: #f2f6ff;
-        color: #526581;
-        font-size: 12px;
-        line-height: 1.6;
-    }
+.inv-table tbody td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
 
-    /* Từng đơn thuốc */
-    .invoice-create-page .prescription-card {
-        margin-top: 14px;
-        padding: 14px;
-        border: 1px solid #dce4f3;
-        border-radius: 8px;
-        background: #fff;
-    }
+.inv-table tbody tr:last-child td {
+    border-bottom: 0;
+}
 
-    .invoice-create-page .prescription-card>.d-flex {
-        align-items: flex-start !important;
-        gap: 12px !important;
-        padding-bottom: 12px !important;
-        margin-bottom: 12px !important;
-        border-color: #e7edf7 !important;
-    }
+.inv-table tbody tr:hover td {
+    background: #f8fafc;
+}
 
-    .invoice-create-page .prescription-card>.d-flex>div {
-        min-width: 0;
-        line-height: 1.8;
-    }
+.inv-table tfoot td {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    padding: 11px 14px;
+    font-size: 13.5px;
+    font-weight: 600;
+}
 
-    .invoice-create-page .prescription-card>.d-flex>.d-flex {
-        flex-wrap: wrap;
-    }
+.inv-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1.45;
+}
 
-    .invoice-create-page .prescription-card .fin-btn {
-        min-height: 34px;
-        padding: 7px 11px;
-        border-radius: 6px;
-        font-size: 12px;
-    }
+.inv-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px 18px;
+}
 
-    .invoice-create-page .prescription-card .badge {
-        font-size: 11px !important;
+@media (max-width: 767.98px) {
+    .inv-meta-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+}
 
-    /* Bảng thuốc đồng bộ với bảng dịch vụ */
-    .invoice-create-page .prescription-card .table-responsive {
-        border: 1px solid #dce4f3;
-        border-radius: 7px;
-        overflow-x: auto;
-    }
+.inv-meta-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b;
+    margin-bottom: 3px;
+}
 
-    .invoice-create-page .prescription-card table {
-        width: 100%;
-        min-width: 820px;
-        margin: 0;
-        border-collapse: collapse;
-        font-size: 13px !important;
-    }
+.inv-meta-val {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #0f172a;
+    word-break: break-word;
+}
 
-    .invoice-create-page .prescription-card table th,
-    .invoice-create-page .prescription-card table td {
-        padding: 11px 12px;
-        border: 0;
-        border-bottom: 1px solid #edf1f7;
-        vertical-align: middle;
-        box-shadow: none;
-    }
+.inv-micro-state {
+    min-height: 48px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 13px;
+    color: #64748b;
+}
 
-    .invoice-create-page .prescription-card table thead th {
-        background: #f5f7fc;
-        color: #52617d;
-        font-size: 12px;
-        font-weight: 600;
-        white-space: nowrap;
-    }
+.inv-summary-card {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
 
-    .invoice-create-page .prescription-card table th:first-child,
-    .invoice-create-page .prescription-card table td:first-child {
-        width: 34%;
-        text-align: left;
-    }
+.inv-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 0;
+    font-size: 13.5px;
+    color: #475569;
+}
 
-    .invoice-create-page .prescription-card table tbody tr:last-child td {
-        border-bottom: 0;
-    }
+.inv-summary-row + .inv-summary-row {
+    border-top: 1px solid #f1f5f9;
+}
 
-    .invoice-create-page .prescription-card table tbody tr:hover td {
-        background: #f7faff;
-    }
+.inv-summary-total-box {
+    margin-top: 10px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
 
-    .invoice-create-page .prescription-card table td small {
-        margin-top: 4px;
-        color: #7a879c !important;
-        font-size: 11px;
-    }
+.inv-deposit-box {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
 
-    @media (min-width: 1100px) {
-        .invoice-create-page .fin-grid-2col {
-            grid-template-columns: minmax(0, 1fr) 380px;
-        }
-    }
+.inv-presc-block {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #ffffff;
+}
 
-    @media (max-width: 1099.98px) {
-        .invoice-create-page .fin-grid-2col {
-            grid-template-columns: minmax(0, 1fr);
-        }
-    }
+.inv-presc-block + .inv-presc-block {
+    margin-top: 14px;
+}
+
+.inv-presc-head {
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.inv-presc-toggle {
+    padding: 10px 16px;
+    background: #eff6ff;
+    border-bottom: 1px solid #dbeafe;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.inv-field-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 5px;
+    display: block;
+    text-transform: none;
+}
+
+.invoice-create-page #invoiceForm {
+    margin: 0;
+    min-width: 0;
+}
+
+.invoice-create-page .inv-table input[type="number"] {
+    width: 100%;
+    min-width: 78px;
+    height: 32px;
+    padding: 4px 8px;
+    font-size: 13px;
+}
+
+.inv-timeline-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.inv-timeline-item:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
 }
 
 
@@ -1182,15 +1483,15 @@
 
 /* 1. Nút Xem chi tiết */
 .fin-table-btn-view {
-    color: var(--fin-brand, #1a2f6e);
-    background: #f0f4ff;
-    border-color: #d0dbf5;
+    color: #0284c7;
+    background: #f0f9ff;
+    border-color: #bae6fd;
 }
 
 .fin-table-btn-view:hover {
     color: #ffffff;
-    background: var(--fin-brand, #1a2f6e);
-    border-color: var(--fin-brand, #1a2f6e);
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+    border-color: transparent;
 }
 
 /* 2. Nút In hóa đơn / phiếu thu */
@@ -1218,6 +1519,34 @@
     color: #ffffff;
     background: #059669;
     border-color: #059669;
+}
+
+/* 4. Nút Hủy / Xóa (Tinh tế, đồng bộ form Khách hàng) */
+.fin-table-btn-danger {
+    color: #b91c1c;
+    background: #fef2f2;
+    border-color: #fecaca;
+    font-weight: 600;
+}
+
+.fin-table-btn-danger:hover {
+    color: #ffffff;
+    background: #dc2626;
+    border-color: #dc2626;
+}
+
+/* 5. Nút Cảnh báo / Bật-Tắt */
+.fin-table-btn-warning {
+    color: #b45309;
+    background: #fffbeb;
+    border-color: #fde68a;
+    font-weight: 600;
+}
+
+.fin-table-btn-warning:hover {
+    color: #ffffff;
+    background: #d97706;
+    border-color: #d97706;
 }
 
 /* ============================================================================
@@ -1252,9 +1581,10 @@
 #payDistModal .btn-primary,
 [id^="visitSelectModal_"] .btn-primary,
 [id^="invoiceSelectModal_"] .btn-primary {
-    background-color: var(--fin-brand, #1a2f6e) !important;
-    border-color: var(--fin-brand, #1a2f6e) !important;
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    border-color: transparent !important;
     color: #ffffff !important;
+    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.22) !important;
 }
 
 .fin-brand-theme .btn-primary:hover,
@@ -1285,9 +1615,10 @@
 #payDistModal .btn-primary:hover,
 [id^="visitSelectModal_"] .btn-primary:hover,
 [id^="invoiceSelectModal_"] .btn-primary:hover {
-    background-color: var(--fin-brand-light, #2b4fb3) !important;
-    border-color: var(--fin-brand-light, #2b4fb3) !important;
+    background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%) !important;
+    border-color: transparent !important;
     color: #ffffff !important;
+    box-shadow: 0 6px 14px rgba(2, 132, 199, 0.34) !important;
 }
 
 .fin-brand-theme .btn-primary:focus,
@@ -1342,10 +1673,10 @@
 [id^="visitSelectModal_"] .btn-primary:active,
 [id^="invoiceSelectModal_"] .btn-primary:focus,
 [id^="invoiceSelectModal_"] .btn-primary:active {
-    background-color: #15265b !important;
-    border-color: #15265b !important;
+    background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%) !important;
+    border-color: transparent !important;
     color: #ffffff !important;
-    box-shadow: 0 0 0 0.25rem rgba(26, 47, 110, 0.25) !important;
+    box-shadow: 0 0 0 0.25rem rgba(2, 132, 199, 0.28) !important;
 }
 
 .fin-brand-theme .btn-primary:disabled,
@@ -1400,8 +1731,8 @@
 [id^="visitSelectModal_"] .btn-primary.disabled,
 [id^="invoiceSelectModal_"] .btn-primary:disabled,
 [id^="invoiceSelectModal_"] .btn-primary.disabled {
-    background-color: var(--fin-brand, #1a2f6e) !important;
-    border-color: var(--fin-brand, #1a2f6e) !important;
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    border-color: transparent !important;
     color: #ffffff !important;
     opacity: 0.65 !important;
 }
@@ -1433,8 +1764,8 @@
 #payDistModal .btn-outline-primary,
 [id^="visitSelectModal_"] .btn-outline-primary,
 [id^="invoiceSelectModal_"] .btn-outline-primary {
-    color: var(--fin-brand, #1a2f6e) !important;
-    border-color: var(--fin-brand, #1a2f6e) !important;
+    color: #0284c7 !important;
+    border-color: #0284c7 !important;
     background-color: transparent !important;
 }
 
@@ -1465,8 +1796,8 @@
 [id^="visitSelectModal_"] .btn-outline-primary:hover,
 [id^="invoiceSelectModal_"] .btn-outline-primary:hover {
     color: #ffffff !important;
-    background-color: var(--fin-brand, #1a2f6e) !important;
-    border-color: var(--fin-brand, #1a2f6e) !important;
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    border-color: transparent !important;
 }
 
 .fin-brand-theme .btn-outline-primary:focus,
@@ -1522,9 +1853,9 @@
 [id^="invoiceSelectModal_"] .btn-outline-primary:focus,
 [id^="invoiceSelectModal_"] .btn-outline-primary:active {
     color: #ffffff !important;
-    background-color: #15265b !important;
-    border-color: #15265b !important;
-    box-shadow: 0 0 0 0.25rem rgba(26, 47, 110, 0.25) !important;
+    background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%) !important;
+    border-color: transparent !important;
+    box-shadow: 0 0 0 0.25rem rgba(2, 132, 199, 0.25) !important;
 }
 
 .fin-brand-theme .btn-outline-primary:disabled,
@@ -1579,8 +1910,8 @@
 [id^="visitSelectModal_"] .btn-outline-primary.disabled,
 [id^="invoiceSelectModal_"] .btn-outline-primary:disabled,
 [id^="invoiceSelectModal_"] .btn-outline-primary.disabled {
-    color: var(--fin-brand, #1a2f6e) !important;
-    border-color: var(--fin-brand, #1a2f6e) !important;
+    color: #0284c7 !important;
+    border-color: #0284c7 !important;
     background-color: transparent !important;
     opacity: 0.65 !important;
 }
@@ -1841,10 +2172,10 @@
     margin-right: 4px !important;
 }
 
-/* Đảm bảo khoảng cách tách biệt rõ ràng giữa các bảng (tránh dính vào nhau) */
-.finance-page .fin-card+.fin-card,
-.cashier-page .fin-card+.fin-card,
-.fin-brand-theme .fin-card+.fin-card,
+/* Đảm bảo khoảng cách tách biệt rõ ràng giữa các bảng (tránh dính vào nhau, bỏ qua thẻ đang ẩn) */
+.finance-page .fin-card:not([style*="display: none"]):not([style*="display:none"])+.fin-card,
+.cashier-page .fin-card:not([style*="display: none"]):not([style*="display:none"])+.fin-card,
+.fin-brand-theme .fin-card:not([style*="display: none"]):not([style*="display:none"])+.fin-card,
 .finance-page .fin-card.mt-4,
 .cashier-page .fin-card.mt-4,
 .fin-brand-theme .fin-card.mt-4 {
@@ -1883,6 +2214,23 @@
 .fin-brand-theme .enhanced-custom-toggle-btn {
     margin-left: auto !important;
     white-space: nowrap !important;
+}
+
+.finance-page .fin-topbar-right,
+.cashier-page .fin-topbar-right,
+.fin-brand-theme .fin-topbar-right {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-left: auto !important;
+}
+
+.finance-page .fin-topbar-right .enhanced-custom-toggle-btn,
+.cashier-page .fin-topbar-right .enhanced-custom-toggle-btn,
+.fin-brand-theme .fin-topbar-right .enhanced-custom-toggle-btn {
+    order: -1;
+    margin-left: 0 !important;
 }
 
 .finance-page .fin-topbar-left,
@@ -1984,6 +2332,37 @@ table[data-enhanced-table] thead th .enhanced-th-content {
 .cashier-page table tbody td .d-inline-flex,
 .fin-brand-theme table tbody td .d-inline-flex {
     justify-content: flex-start !important;
+}
+
+/* Cột Thao tác luôn căn giữa đồng bộ với tiêu đề cột THAO TÁC */
+.finance-page table tbody td[data-column-key="actions"],
+.cashier-page table tbody td[data-column-key="actions"],
+.fin-brand-theme table tbody td[data-column-key="actions"],
+.finance-page table tbody td[data-column-action="true"],
+.cashier-page table tbody td[data-column-action="true"],
+.fin-brand-theme table tbody td[data-column-action="true"] {
+    text-align: center !important;
+}
+
+.finance-page table tbody td[data-column-key="actions"] .fin-table-actions,
+.cashier-page table tbody td[data-column-key="actions"] .fin-table-actions,
+.fin-brand-theme table tbody td[data-column-key="actions"] .fin-table-actions,
+.finance-page table tbody td[data-column-action="true"] .fin-table-actions,
+.cashier-page table tbody td[data-column-action="true"] .fin-table-actions,
+.fin-brand-theme table tbody td[data-column-action="true"] .fin-table-actions,
+.finance-page table tbody td[data-column-key="actions"] .d-flex,
+.cashier-page table tbody td[data-column-key="actions"] .d-flex,
+.fin-brand-theme table tbody td[data-column-key="actions"] .d-flex,
+.finance-page table tbody td[data-column-action="true"] .d-flex,
+.cashier-page table tbody td[data-column-action="true"] .d-flex,
+.fin-brand-theme table tbody td[data-column-action="true"] .d-flex,
+.finance-page table tbody td[data-column-key="actions"] .d-inline-flex,
+.cashier-page table tbody td[data-column-key="actions"] .d-inline-flex,
+.fin-brand-theme table tbody td[data-column-key="actions"] .d-inline-flex,
+.finance-page table tbody td[data-column-action="true"] .d-inline-flex,
+.cashier-page table tbody td[data-column-action="true"] .d-inline-flex,
+.fin-brand-theme table tbody td[data-column-action="true"] .d-inline-flex {
+    justify-content: center !important;
 }
 
 /* Riêng hàng thông báo rỗng hoặc colspan thì căn giữa */

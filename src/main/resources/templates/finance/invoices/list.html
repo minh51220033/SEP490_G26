@@ -30,12 +30,6 @@
 
             <!-- Vùng nội dung tab Hóa đơn -->
             <div id="cashierTabContent" class="cashier-tab-content">
-                <div class="d-flex justify-content-end mb-3">
-                    <a th:href="@{/invoices/create}" class="fin-btn fin-btn-primary fin-btn-sm">
-                        <i class="bi bi-plus-lg"></i> Lập hóa đơn mới
-                    </a>
-                </div>
-
             <!-- 4 KPI Summary Cards -->
             <div class="fin-kpi-grid">
                 <div class="fin-kpi-card fin-kpi-blue">
@@ -136,6 +130,11 @@
                         <span class="text-secondary fw-semibold" th:if="${startDate == null and endDate == null}">Tất cả các ngày</span>
                         <span class="text-secondary fw-semibold" th:if="${startDate != null or endDate != null}"
                               th:text="'Từ ' + (${startDate != null} ? ${#temporals.format(startDate, 'dd/MM/yyyy')} : 'đầu') + ' đến ' + (${endDate != null} ? ${#temporals.format(endDate, 'dd/MM/yyyy')} : 'nay')"></span>
+                    </div>
+                    <div class="fin-topbar-right">
+                        <a th:href="@{/invoices/create}" class="fin-btn fin-btn-primary fin-btn-sm">
+                            <i class="bi bi-plus-lg"></i> Lập hóa đơn mới
+                        </a>
                     </div>
                 </div>
 

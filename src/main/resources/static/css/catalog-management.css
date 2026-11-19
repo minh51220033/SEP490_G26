@@ -88,109 +88,210 @@
 }
 
 /* ============================================================================
-   Synchronized Brand Dark Navy Button Theme for FT02 Service Catalog
-   Matches "Lọc dữ liệu" dark navy brand color (#1a2f6e)
+   Synchronized Brand Blue Button & Topbar Theme for Catalog Management
+   Matches app-wide sky-to-royal blue gradient (#0284c7 -> #2563eb)
    ============================================================================ */
+.catalog-filter-panel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.catalog-filter-panel .form-control,
+.catalog-filter-panel .form-select,
+.catalog-filter-panel .input-group-text,
+.catalog-filter-panel .btn {
+    min-height: 38px;
+}
+
+.dv-grid-topbar .fin-topbar-right {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.dv-grid-topbar .fin-topbar-right .enhanced-custom-toggle-btn {
+    order: -1;
+    margin-left: 0 !important;
+}
+
 .service-catalog-page .btn-primary,
 .service-category-page .btn-primary,
+.medication-catalog-page .btn-primary,
+.icd10-catalog-page .btn-primary,
 .fin-brand-theme .btn-primary,
 #serviceModal .btn-primary,
-#categoryModal .btn-primary {
-    background-color: #1a2f6e !important;
-    border-color: #1a2f6e !important;
+#categoryModal .btn-primary,
+#createServiceModal .btn-primary,
+#createCategoryModal .btn-primary,
+#modalCreate .btn-primary,
+#modalEdit .btn-primary {
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    border-color: transparent !important;
     color: #ffffff !important;
+    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.22) !important;
 }
 
 .service-catalog-page .btn-primary:hover,
 .service-category-page .btn-primary:hover,
+.medication-catalog-page .btn-primary:hover,
+.icd10-catalog-page .btn-primary:hover,
 .fin-brand-theme .btn-primary:hover,
 #serviceModal .btn-primary:hover,
-#categoryModal .btn-primary:hover {
-    background-color: #2b4fb3 !important;
-    border-color: #2b4fb3 !important;
+#categoryModal .btn-primary:hover,
+#createServiceModal .btn-primary:hover,
+#createCategoryModal .btn-primary:hover,
+#modalCreate .btn-primary:hover,
+#modalEdit .btn-primary:hover {
+    background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%) !important;
+    border-color: transparent !important;
     color: #ffffff !important;
+    box-shadow: 0 5px 14px rgba(2, 132, 199, 0.34) !important;
 }
 
 .service-catalog-page .btn-primary:focus,
 .service-catalog-page .btn-primary:active,
 .service-category-page .btn-primary:focus,
 .service-category-page .btn-primary:active,
+.medication-catalog-page .btn-primary:focus,
+.medication-catalog-page .btn-primary:active,
+.icd10-catalog-page .btn-primary:focus,
+.icd10-catalog-page .btn-primary:active,
 .fin-brand-theme .btn-primary:focus,
 .fin-brand-theme .btn-primary:active,
 #serviceModal .btn-primary:focus,
 #serviceModal .btn-primary:active,
 #categoryModal .btn-primary:focus,
-#categoryModal .btn-primary:active {
-    background-color: #15265b !important;
-    border-color: #15265b !important;
+#categoryModal .btn-primary:active,
+#createServiceModal .btn-primary:focus,
+#createServiceModal .btn-primary:active,
+#createCategoryModal .btn-primary:focus,
+#createCategoryModal .btn-primary:active,
+#modalCreate .btn-primary:focus,
+#modalCreate .btn-primary:active,
+#modalEdit .btn-primary:focus,
+#modalEdit .btn-primary:active {
+    background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%) !important;
+    border-color: transparent !important;
     color: #ffffff !important;
-    box-shadow: 0 0 0 0.25rem rgba(26, 47, 110, 0.25) !important;
+    box-shadow: 0 0 0 0.25rem rgba(2, 132, 199, 0.25) !important;
 }
 
 .service-catalog-page .btn-primary:disabled,
 .service-catalog-page .btn-primary.disabled,
 .service-category-page .btn-primary:disabled,
 .service-category-page .btn-primary.disabled,
+.medication-catalog-page .btn-primary:disabled,
+.medication-catalog-page .btn-primary.disabled,
+.icd10-catalog-page .btn-primary:disabled,
+.icd10-catalog-page .btn-primary.disabled,
 .fin-brand-theme .btn-primary:disabled,
 .fin-brand-theme .btn-primary.disabled,
 #serviceModal .btn-primary:disabled,
 #serviceModal .btn-primary.disabled,
 #categoryModal .btn-primary:disabled,
-#categoryModal .btn-primary.disabled {
-    background-color: #1a2f6e !important;
-    border-color: #1a2f6e !important;
+#categoryModal .btn-primary.disabled,
+#createServiceModal .btn-primary:disabled,
+#createServiceModal .btn-primary.disabled,
+#createCategoryModal .btn-primary:disabled,
+#createCategoryModal .btn-primary.disabled,
+#modalCreate .btn-primary:disabled,
+#modalCreate .btn-primary.disabled,
+#modalEdit .btn-primary:disabled,
+#modalEdit .btn-primary.disabled {
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    border-color: transparent !important;
     color: #ffffff !important;
     opacity: 0.65 !important;
 }
 
 .service-catalog-page .btn-outline-primary,
 .service-category-page .btn-outline-primary,
+.medication-catalog-page .btn-outline-primary,
+.icd10-catalog-page .btn-outline-primary,
 .fin-brand-theme .btn-outline-primary,
 #serviceModal .btn-outline-primary,
-#categoryModal .btn-outline-primary {
-    color: #1a2f6e !important;
-    border-color: #1a2f6e !important;
+#categoryModal .btn-outline-primary,
+#createServiceModal .btn-outline-primary,
+#createCategoryModal .btn-outline-primary,
+#modalCreate .btn-outline-primary,
+#modalEdit .btn-outline-primary {
+    color: #0284c7 !important;
+    border-color: #0284c7 !important;
     background-color: transparent !important;
 }
 
 .service-catalog-page .btn-outline-primary:hover,
 .service-category-page .btn-outline-primary:hover,
+.medication-catalog-page .btn-outline-primary:hover,
+.icd10-catalog-page .btn-outline-primary:hover,
 .fin-brand-theme .btn-outline-primary:hover,
 #serviceModal .btn-outline-primary:hover,
-#categoryModal .btn-outline-primary:hover {
+#categoryModal .btn-outline-primary:hover,
+#createServiceModal .btn-outline-primary:hover,
+#createCategoryModal .btn-outline-primary:hover,
+#modalCreate .btn-outline-primary:hover,
+#modalEdit .btn-outline-primary:hover {
     color: #ffffff !important;
-    background-color: #1a2f6e !important;
-    border-color: #1a2f6e !important;
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    border-color: transparent !important;
 }
 
 .service-catalog-page .btn-outline-primary:focus,
 .service-catalog-page .btn-outline-primary:active,
 .service-category-page .btn-outline-primary:focus,
 .service-category-page .btn-outline-primary:active,
+.medication-catalog-page .btn-outline-primary:focus,
+.medication-catalog-page .btn-outline-primary:active,
+.icd10-catalog-page .btn-outline-primary:focus,
+.icd10-catalog-page .btn-outline-primary:active,
 .fin-brand-theme .btn-outline-primary:focus,
 .fin-brand-theme .btn-outline-primary:active,
 #serviceModal .btn-outline-primary:focus,
 #serviceModal .btn-outline-primary:active,
 #categoryModal .btn-outline-primary:focus,
-#categoryModal .btn-outline-primary:active {
+#categoryModal .btn-outline-primary:active,
+#createServiceModal .btn-outline-primary:focus,
+#createServiceModal .btn-outline-primary:active,
+#createCategoryModal .btn-outline-primary:focus,
+#createCategoryModal .btn-outline-primary:active,
+#modalCreate .btn-outline-primary:focus,
+#modalCreate .btn-outline-primary:active,
+#modalEdit .btn-outline-primary:focus,
+#modalEdit .btn-outline-primary:active {
     color: #ffffff !important;
-    background-color: #15265b !important;
-    border-color: #15265b !important;
-    box-shadow: 0 0 0 0.25rem rgba(26, 47, 110, 0.25) !important;
+    background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%) !important;
+    border-color: transparent !important;
+    box-shadow: 0 0 0 0.25rem rgba(2, 132, 199, 0.25) !important;
 }
 
 .service-catalog-page .btn-outline-primary:disabled,
 .service-catalog-page .btn-outline-primary.disabled,
 .service-category-page .btn-outline-primary:disabled,
 .service-category-page .btn-outline-primary.disabled,
+.medication-catalog-page .btn-outline-primary:disabled,
+.medication-catalog-page .btn-outline-primary.disabled,
+.icd10-catalog-page .btn-outline-primary:disabled,
+.icd10-catalog-page .btn-outline-primary.disabled,
 .fin-brand-theme .btn-outline-primary:disabled,
 .fin-brand-theme .btn-outline-primary.disabled,
 #serviceModal .btn-outline-primary:disabled,
 #serviceModal .btn-outline-primary.disabled,
 #categoryModal .btn-outline-primary:disabled,
-#categoryModal .btn-outline-primary.disabled {
-    color: #1a2f6e !important;
-    border-color: #1a2f6e !important;
+#categoryModal .btn-outline-primary.disabled,
+#createServiceModal .btn-outline-primary:disabled,
+#createServiceModal .btn-outline-primary.disabled,
+#createCategoryModal .btn-outline-primary:disabled,
+#createCategoryModal .btn-outline-primary.disabled,
+#modalCreate .btn-outline-primary:disabled,
+#modalCreate .btn-outline-primary.disabled,
+#modalEdit .btn-outline-primary:disabled,
+#modalEdit .btn-outline-primary.disabled {
+    color: #0284c7 !important;
+    border-color: #0284c7 !important;
     background-color: transparent !important;
     opacity: 0.65 !important;
 }
