@@ -188,16 +188,6 @@
                                          th:text="${#numbers.formatDecimal(staff.allowanceAmount, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</div>
                                 </div>
                                 <div class="staff-info-tile">
-                                    <div class="staff-info-tile__label"><i class="bi bi-shield-check text-secondary"></i> Lương đóng BHXH</div>
-                                    <div class="staff-info-tile__value"
-                                         th:text="${#numbers.formatDecimal(staff.insuranceSalary, 0, 'COMMA', 0, 'POINT')} + ' ₫'">0 ₫</div>
-                                </div>
-                                <div class="staff-info-tile">
-                                    <div class="staff-info-tile__label"><i class="bi bi-shield-exclamation text-primary"></i> Diện tham gia BH</div>
-                                    <div class="staff-info-tile__value"
-                                         th:text="${staff.insuranceParticipationStatus != null ? staff.insuranceParticipationStatus.description : 'Chưa xác minh'}">Chưa xác minh</div>
-                                </div>
-                                <div class="staff-info-tile">
                                     <div class="staff-info-tile__label"><i class="bi bi-credit-card-2-front"></i> Số tài khoản ngân hàng</div>
                                     <div class="staff-info-tile__value font-monospace" th:if="${staff.bankAccountNumber != null}" th:text="${staff.bankAccountNumber}">000</div>
                                     <div class="staff-info-tile__value staff-info-tile__value--empty" th:unless="${staff.bankAccountNumber != null}">Chưa cập nhật</div>

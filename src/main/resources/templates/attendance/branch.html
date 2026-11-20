@@ -116,7 +116,7 @@
                             <!-- Ô tìm kiếm chuẩn gọn -->
                             <div class="dv-search-box" style="width: 280px; flex: 0 1 280px;">
                                 <i class="bi bi-search search-lead-icon" style="font-size: 13.5px; left: 12px;"></i>
-                                <input type="text" id="attStaffKeyword" placeholder="Tìm theo tên, mã NV..." style="height: 36px; font-size: 13px; padding-left: 36px; border-radius: 8px;">
+                                <input type="text" id="attStaffKeyword" th:value="${keyword}" placeholder="Tìm theo tên, mã NV..." style="height: 36px; font-size: 13px; padding-left: 36px; border-radius: 8px;">
                             </div>
 
                             <!-- Nút bấm Tìm kiếm -->
@@ -752,6 +752,10 @@
                     if (advDirection) advDirection.value = 'asc';
                     applyClientFiltersAndSort();
                 });
+            }
+
+            if (searchInput && searchInput.value.trim()) {
+                applyClientFiltersAndSort();
             }
 
             // Kéo dãn kích thước cột (Column Resizer) & Tùy biến cột chuẩn Quản lý tài khoản

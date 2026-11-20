@@ -104,7 +104,7 @@ public class ReportAndExcelExportUnitTest {
     // =========================================================================
 
     @Test
-    @DisplayName("Admin vào /admin/reports được điều hướng sang /home và giữ nguyên lựa chọn taxRate")
+    @DisplayName("Admin vào /admin/reports được điều hướng sang /home")
     void testAdminAccessAllBranches_Allowed() {
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("loggedInUser", adminUser);
@@ -113,10 +113,7 @@ public class ReportAndExcelExportUnitTest {
         when(userRepository.hasActiveAdminRole(100L)).thenReturn(true);
 
         Model model = new ConcurrentModel();
-        String viewWithRate = reportController.viewReports(null, null, null, new BigDecimal("20"), "overview", model, session);
-        assertEquals("redirect:/home?taxRate=20&tab=overview", viewWithRate);
-
-        String viewAuto = reportController.viewReports(null, null, null, null, "overview", model, session);
+        String viewAuto = reportController.viewReports(null, null, null, "overview", model, session);
         assertEquals("redirect:/home?tab=overview", viewAuto);
     }
 
@@ -146,7 +143,7 @@ public class ReportAndExcelExportUnitTest {
         when(visitRepository.countVisitsByStatusAndBranches(any(), any(), any())).thenReturn(new ArrayList<>());
 
         Model model = new ConcurrentModel();
-        String view = reportController.viewReports(1L, null, null, new BigDecimal("20"), "overview", model, session);
+        String view = reportController.viewReports(1L, null, null, "overview", model, session);
 
         assertEquals("admin/reports/index", view);
         assertFalse((Boolean) model.getAttribute("isAdmin"));
@@ -168,7 +165,7 @@ public class ReportAndExcelExportUnitTest {
         Model model = new ConcurrentModel();
         // Cố tình truyền branchId = 2L (không được phân công cho kế toán này)
         assertThrows(AccessDeniedException.class, () -> {
-            reportController.viewReports(2L, null, null, new BigDecimal("20"), "overview", model, session);
+            reportController.viewReports(2L, null, null, "overview", model, session);
         });
     }
 
@@ -187,7 +184,7 @@ public class ReportAndExcelExportUnitTest {
 
         Model model = new ConcurrentModel();
         assertThrows(AccessDeniedException.class, () -> {
-            reportController.viewReports(null, null, null, new BigDecimal("20"), "overview", model, session);
+            reportController.viewReports(null, null, null, "overview", model, session);
         });
     }
 
@@ -264,11 +261,6 @@ public class ReportAndExcelExportUnitTest {
         // Chi phí vận hành = 2,500,000 -> Thặng dư vận hành = 7,500,000 - 2,500,000 = 5,000,000
         assertEquals(new BigDecimal("2500000"), report.getOperatingExpenses());
         assertEquals(new BigDecimal("5000000"), report.getOperatingMargin());
-
-        // Thuế TNDN 20% trên thặng dư 5,000,000 = 1,000,000
-        assertEquals(new BigDecimal("1000000"), report.getEstimatedTaxAmount());
-        // Lợi nhuận ròng sau thuế = 5,000,000 - 1,000,000 = 4,000,000
-        assertEquals(new BigDecimal("4000000"), report.getNetProfitAfterTax());
 
         // Công nợ lũy kế hiện tại
         assertEquals(new BigDecimal("3000000"), report.getCurrentTotalOutstandingDebt());

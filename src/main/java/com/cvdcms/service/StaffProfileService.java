@@ -891,27 +891,6 @@ public class StaffProfileService {
 
         checkNotNegative(dto.getBaseSalary(), "Lương cơ bản");
         checkNotNegative(dto.getAllowanceAmount(), "Phụ cấp");
-        checkNotNegative(dto.getInsuranceSalary(), "Lương đóng BHXH");
-
-        if (dto.getInsuranceEffectiveFrom() != null && dto.getInsuranceEffectiveTo() != null
-                && dto.getInsuranceEffectiveTo().isBefore(dto.getInsuranceEffectiveFrom())) {
-            throw new IllegalArgumentException("Ngày kết thúc hiệu lực bảo hiểm không được trước ngày bắt đầu.");
-        }
-        checkRateRange(dto.getInsuranceEmployeeRateOverride(), "Tỷ lệ đóng BHXH NLĐ");
-        checkRateRange(dto.getInsuranceEmployerRateOverride(), "Tỷ lệ đóng BHXH đơn vị");
-        if (dto.getInsuranceParticipationStatus() == com.cvdcms.entity.enums.InsuranceParticipationStatus.PARTICIPATING
-                && (dto.getInsuranceSalary() == null || dto.getInsuranceSalary().compareTo(BigDecimal.ZERO) <= 0)) {
-            throw new IllegalArgumentException("Khi chọn Tham gia bảo hiểm bắt buộc, Lương đóng BHXH phải lớn hơn 0.");
-        }
-        if (dto.getDependentCount() != null && dto.getDependentCount() < 0) {
-            throw new IllegalArgumentException("Số người phụ thuộc không được âm.");
-        }
-    }
-
-    private void checkRateRange(BigDecimal rate, String label) {
-        if (rate != null && (rate.compareTo(BigDecimal.ZERO) < 0 || rate.compareTo(new BigDecimal("100")) > 0)) {
-            throw new IllegalArgumentException(label + " phải nằm trong khoảng 0% đến 100%.");
-        }
     }
 
     private void checkNotNegative(BigDecimal value, String label) {
@@ -936,31 +915,6 @@ public class StaffProfileService {
         staff.setMohDoctorCode(isDoctor ? trimToNull(dto.getMohDoctorCode()) : null);
         staff.setBaseSalary(dto.getBaseSalary() != null ? dto.getBaseSalary() : BigDecimal.ZERO);
         staff.setAllowanceAmount(dto.getAllowanceAmount() != null ? dto.getAllowanceAmount() : BigDecimal.ZERO);
-        staff.setInsuranceSalary(dto.getInsuranceSalary() != null ? dto.getInsuranceSalary() : BigDecimal.ZERO);
-        staff.setInsuranceParticipationStatus(dto.getInsuranceParticipationStatus() != null
-                ? dto.getInsuranceParticipationStatus()
-                : com.cvdcms.entity.enums.InsuranceParticipationStatus.UNVERIFIED);
-        staff.setInsuranceEffectiveFrom(dto.getInsuranceEffectiveFrom());
-        staff.setInsuranceEffectiveTo(dto.getInsuranceEffectiveTo());
-        staff.setInsuranceEmployeeRateOverride(dto.getInsuranceEmployeeRateOverride());
-        staff.setInsuranceEmployerRateOverride(dto.getInsuranceEmployerRateOverride());
-        staff.setInsuranceExemptionReason(trimToNull(dto.getInsuranceExemptionReason()));
-        if (dto.getContractType() != null) {
-            staff.setContractType(dto.getContractType());
-        }
-        if (dto.getIsTaxResident() != null) {
-            staff.setIsTaxResident(dto.getIsTaxResident());
-        }
-        staff.setTaxCode(trimToNull(dto.getTaxCode()));
-        if (dto.getHasPersonalDeduction() != null) {
-            staff.setHasPersonalDeduction(dto.getHasPersonalDeduction());
-        }
-        if (dto.getDependentCount() != null) {
-            staff.setDependentCount(dto.getDependentCount());
-        }
-        if (dto.getHasTaxCommitment() != null) {
-            staff.setHasTaxCommitment(dto.getHasTaxCommitment());
-        }
         staff.setBankAccountNumber(trimToNull(dto.getBankAccountNumber()));
         staff.setBankName(trimToNull(dto.getBankName()));
         staff.setHireDate(dto.getHireDate());
