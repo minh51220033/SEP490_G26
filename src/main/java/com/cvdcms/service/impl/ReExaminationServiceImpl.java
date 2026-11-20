@@ -43,6 +43,10 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     private com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.AppointmentSlotService appointmentSlotService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.AppointmentPolicyService appointmentPolicyService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.AppointmentBookingLockRepository appointmentBookingLockRepository;
 
     @Override
     @Transactional
@@ -59,7 +63,8 @@ public class ReExaminationServiceImpl implements ReExaminationService {
             throw new IllegalArgumentException("Ngày hẹn tái khám không được nằm trong quá khứ!");
         }
 
-        PatientProfile patient = patientProfileRepository.findById(dto.getPatientProfileId())
+        PatientProfile patient = patientProfileRepository.findByIdForUpdate(dto.getPatientProfileId())
+                .or(() -> patientProfileRepository.findById(dto.getPatientProfileId()))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hồ sơ bệnh nhân."));
 
         Branch branch;
@@ -70,6 +75,9 @@ public class ReExaminationServiceImpl implements ReExaminationService {
             branch = patient.getPreferredBranch();
         } else {
             throw new IllegalArgumentException("Vui lòng chọn chi nhánh thực hiện tái khám!");
+        }
+        if (appointmentBookingLockRepository != null && branch.getBranchId() != null) {
+            branch = appointmentBookingLockRepository.findByIdForBooking(branch.getBranchId()).orElse(branch);
         }
 
         StaffProfile doctor = null;
@@ -103,6 +111,13 @@ public class ReExaminationServiceImpl implements ReExaminationService {
         }
 
         PreferredSession resolvedSession = dto.getPreferredSession() != null ? dto.getPreferredSession() : PreferredSession.MORNING;
+        if (appointmentPolicyService != null && patient.getProfileId() != null) {
+            var dupConflict = appointmentPolicyService.findSameSessionConflict(
+                    patient.getProfileId(), targetDate, resolvedSession, null);
+            if (dupConflict.hasConflict()) {
+                throw new IllegalArgumentException(dupConflict.message());
+            }
+        }
         LocalTime resolvedTime = parseExpectedTimeStrictOrDefault(dto.getExpectedTime(), defaultTimeForSession(resolvedSession));
         if (targetDate.isEqual(today) && resolvedTime != null && resolvedTime.isBefore(nowTime)) {
             throw new IllegalArgumentException("Giờ hẹn tái khám hôm nay không được nằm trong quá khứ!");
@@ -353,6 +368,19 @@ public class ReExaminationServiceImpl implements ReExaminationService {
         }
 
         PreferredSession targetSession = session != null ? session : (appt.getPreferredSession() != null ? appt.getPreferredSession() : PreferredSession.MORNING);
+        if (appt.getPatientProfile() != null && appt.getPatientProfile().getProfileId() != null) {
+            patientProfileRepository.findByIdForUpdate(appt.getPatientProfile().getProfileId());
+        }
+        if (appointmentBookingLockRepository != null && appt.getBranch() != null) {
+            appointmentBookingLockRepository.findByIdForBooking(appt.getBranch().getBranchId());
+        }
+        if (appointmentPolicyService != null && appt.getPatientProfile() != null) {
+            var dupConflict = appointmentPolicyService.findSameSessionConflict(
+                    appt.getPatientProfile().getProfileId(), targetDate, targetSession, appt.getAppointmentId());
+            if (dupConflict.hasConflict()) {
+                throw new IllegalArgumentException(dupConflict.message());
+            }
+        }
         LocalTime fallbackTime = appt.getExpectedTime() != null ? appt.getExpectedTime() : defaultTimeForSession(targetSession);
         LocalTime targetTime = (newTime != null && !newTime.isBlank())
                 ? parseExpectedTimeStrictOrDefault(newTime, fallbackTime)

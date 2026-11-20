@@ -1247,7 +1247,7 @@
 .cv-drawer-overlay {
     position: fixed;
     inset: 0;
-    z-index: 1150;
+    z-index: 10040;
     background: rgba(15, 23, 42, 0.5);
     backdrop-filter: blur(4px);
     opacity: 0;
@@ -1265,7 +1265,7 @@
     top: 0;
     right: 0;
     bottom: 0;
-    z-index: 1160;
+    z-index: 10050;
     width: 100%;
     max-width: 495px;
     background: #ffffff;

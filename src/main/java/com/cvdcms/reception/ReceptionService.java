@@ -117,9 +117,9 @@ public class ReceptionService {
                 .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy lịch hẹn."));
         Branch branch = allowedBranch(session, reference.getBranch().getBranchId());
 
-        // Consistent lock hierarchy: 1. Branch, 2. PatientProfile, 3. Appointment
-        lockBranchForBooking(branch.getBranchId());
+        // Consistent global lock hierarchy: 1. PatientProfile -> 2. Branch -> 3. Appointment
         PatientProfile patient = lockedActiveProfile(reference.getPatientProfile().getProfileId());
+        lockBranchForBooking(branch.getBranchId());
         Appointment appointment = appointments.lockById(appointmentId)
                 .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy lịch hẹn."));
 
@@ -191,8 +191,15 @@ public class ReceptionService {
         if (queueCoordinator != null && visit.getPrimaryDoctor() != null) {
             queueCoordinator.issueTicketForVisitIfEligible(visit.getVisitId(), actorId);
         }
-        recordHistory(appointment, actorId, "CHECK_IN", oldSnapshot, snapshot(appointment),
-                bookedAndOnTime ? "Check-in đúng giờ tại quầy tiếp đón" : "Check-in tại quầy tiếp đón (trễ grace period / không giờ hẹn cố định)");
+        boolean arrivedEarly = appointment.getExpectedTime() != null
+                && nowDateTime.isBefore(LocalDateTime.of(appointment.getAppointmentDate(), appointment.getExpectedTime())
+                        .minusMinutes(com.cvdcms.service.AppointmentSlotService.GRACE_PERIOD_MINUTES));
+        String checkInReason = bookedAndOnTime
+                ? "Check-in đúng giờ tại quầy tiếp đón"
+                : arrivedEarly
+                    ? "Check-in sớm hơn 15 phút trước giờ hẹn (chưa thuộc nhóm ưu tiên đúng giờ)"
+                    : "Check-in tại quầy tiếp đón (trễ grace period / không giờ hẹn cố định)";
+        recordHistory(appointment, actorId, "CHECK_IN", oldSnapshot, snapshot(appointment), checkInReason);
 
         audit(session, branch, emergency ? "CHECK_IN_EMERGENCY_APPOINTMENT" : "CHECK_IN_APPOINTMENT", visit,
                 Map.of("appointmentId", appointmentId, "profileId", patient.getProfileId(),
@@ -216,9 +223,9 @@ public class ReceptionService {
                 .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy lịch hẹn."));
         Branch branch = allowedBranch(session, reference.getBranch().getBranchId());
 
-        // Consistent lock hierarchy: 1. Branch, 2. PatientProfile, 3. Appointment
-        lockBranchForBooking(branch.getBranchId());
+        // Consistent global lock hierarchy: 1. PatientProfile -> 2. Branch -> 3. Appointment
         PatientProfile patient = lockedActiveProfile(reference.getPatientProfile().getProfileId());
+        lockBranchForBooking(branch.getBranchId());
         Appointment appointment = appointments.lockById(appointmentId)
                 .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy lịch hẹn."));
 
@@ -325,8 +332,8 @@ public class ReceptionService {
                 .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy lịch hẹn."));
         Branch branch = allowedBranch(session, reference.getBranch().getBranchId());
 
-        lockBranchForBooking(branch.getBranchId());
         PatientProfile patient = lockedActiveProfile(reference.getPatientProfile().getProfileId());
+        lockBranchForBooking(branch.getBranchId());
         Appointment appointment = appointments.lockById(appointmentId)
                 .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy lịch hẹn."));
 
@@ -412,8 +419,8 @@ public class ReceptionService {
                                     String symptoms, boolean emergency, boolean priority, String requestKey) {
         requireKey(requestKey);
         Branch branch = allowedBranch(session, branchId);
-        lockBranchForBooking(branchId);
         PatientProfile patient = lockedActiveProfile(profileId);
+        lockBranchForBooking(branchId);
 
         var prior = keys.findByRequestKey(requestKey);
         if (prior.isPresent()) {
@@ -642,10 +649,11 @@ public class ReceptionService {
     }
 
     /**
-     * Đối chiếu thời gian check-in của server với expected_time + 15 phút Grace Period.
-     * - <= expected_time + 15 phút -> đúng giờ (Priority 2).
-     * - 16..30 phút -> trễ giờ (Priority 4, is_booked_and_on_time = false).
-     * - > 30 phút -> quá hạn NO_SHOW, không cho check-in bằng lịch hẹn cũ.
+     * Đối chiếu thời gian check-in của server với expected_time trong cửa sổ đúng giờ [-15p, +15p]:
+     * - [expected_time - 15 phút, expected_time + 15 phút] (tính cả 2 biên) -> đúng giờ (Priority 2).
+     * - Đến sớm hơn 15 phút (< expected_time - 15 phút) -> không thuộc nhóm đúng giờ (Priority 4).
+     * - 16..30 phút sau expected_time -> trễ giờ (Priority 4, is_booked_and_on_time = false).
+     * - > 30 phút sau expected_time -> quá hạn NO_SHOW, không cho check-in bằng lịch hẹn cũ.
      */
     private boolean evaluateGracePeriodAndRejectExpired(Appointment appointment, LocalDateTime checkInTime) {
         if (appointment.getExpectedTime() == null || appointment.getAppointmentDate() == null) {
@@ -656,7 +664,9 @@ public class ReceptionService {
             throw error(HttpStatus.CONFLICT,
                     "Lịch hẹn đã quá 30 phút so với giờ hẹn dự kiến (đủ điều kiện NO_SHOW). Vui lòng tiếp nhận theo luồng Walk-in mới nếu bệnh nhân vẫn muốn khám.");
         }
-        return !checkInTime.isAfter(expectedDateTime.plusMinutes(com.cvdcms.service.AppointmentSlotService.GRACE_PERIOD_MINUTES));
+        LocalDateTime earliestOnTime = expectedDateTime.minusMinutes(com.cvdcms.service.AppointmentSlotService.GRACE_PERIOD_MINUTES);
+        LocalDateTime latestOnTime = expectedDateTime.plusMinutes(com.cvdcms.service.AppointmentSlotService.GRACE_PERIOD_MINUTES);
+        return !checkInTime.isBefore(earliestOnTime) && !checkInTime.isAfter(latestOnTime);
     }
 
     private void autoAssignDoctorOnCheckIn(Branch branch, Visit visit, LocalDateTime nowDateTime) {

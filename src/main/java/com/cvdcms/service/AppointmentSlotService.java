@@ -41,6 +41,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeSet;
 
 /**
  * Quản lý khung giờ khám động (Dynamic Available Slots), kiểm tra xung đột Half-Open [start, end),
@@ -51,6 +52,7 @@ public class AppointmentSlotService {
     public static final int GRACE_PERIOD_MINUTES = 15;
     public static final int NO_SHOW_CUTOFF_MINUTES = 30;
     public static final int SUGGESTED_STEP_MINUTES = 5;
+    public static final int DEFAULT_CONCURRENT_ARRIVALS_PER_DOCTOR = 3;
     private static final int MAX_LOCK_RETRIES = 2;
 
     /**
@@ -70,6 +72,7 @@ public class AppointmentSlotService {
     private final LeaveRequestRepository leaveRequests;
     private final VisitRepository visits;
     private final StaffProfileRepository staffProfiles;
+    private int maxConcurrentPerDoctorSlot = DEFAULT_CONCURRENT_ARRIVALS_PER_DOCTOR;
     private Clock clock = Clock.system(AppointmentPolicyService.CLINIC_ZONE);
 
     public AppointmentSlotService(
@@ -103,6 +106,15 @@ public class AppointmentSlotService {
         if (clock != null) {
             this.clock = clock;
         }
+    }
+
+    public int getMaxConcurrentPerDoctorSlot() {
+        return maxConcurrentPerDoctorSlot;
+    }
+
+    @org.springframework.beans.factory.annotation.Value("${appointments.doctor-concurrent-per-slot:3}")
+    public void setMaxConcurrentPerDoctorSlot(int maxConcurrentPerDoctorSlot) {
+        this.maxConcurrentPerDoctorSlot = Math.max(1, maxConcurrentPerDoctorSlot);
     }
 
     public record Slot(LocalTime time, int remaining) { }
@@ -258,77 +270,43 @@ public class AppointmentSlotService {
             return new DoctorAvailabilityResult(doctorId, date, duration, List.of(), List.of());
         }
 
-        List<TimeInterval> blockedIntervals = new ArrayList<>();
-
-        // Trừ các khoảng nghỉ phép theo ca
+        List<TimeInterval> leaveBlocks = new ArrayList<>();
         for (LeaveRequest leave : approvedLeaves) {
             if (leave.getShift() != null && leave.getShift().getStartTime() != null && leave.getShift().getEndTime() != null) {
                 if (leave.getShift().getStartTime().isBefore(leave.getShift().getEndTime())) {
-                    blockedIntervals.add(new TimeInterval(leave.getShift().getStartTime(), leave.getShift().getEndTime()));
+                    leaveBlocks.add(new TimeInterval(leave.getShift().getStartTime(), leave.getShift().getEndTime()));
                 }
             }
         }
 
-        // Trừ các khoảng chiếm dụng của Appointment theo quy tắc [start, end)
-        for (Appointment appt : occupyingAppointments) {
-            if (excludeAppointmentId != null && Objects.equals(appt.getAppointmentId(), excludeAppointmentId)) {
-                continue;
-            }
-            if (appt.getExpectedTime() == null) {
-                continue;
-            }
-            LocalTime apptStart = appt.getExpectedTime();
-            int apptDuration = appt.getDurationMinutes() != null && appt.getDurationMinutes() > 0
-                    ? appt.getDurationMinutes()
-                    : duration(appt.getService());
-            LocalTime apptEnd = appt.getExpectedEndTime() != null
-                    ? appt.getExpectedEndTime()
-                    : apptStart.plusMinutes(apptDuration);
-
-            // Quy tắc Grace Period 15 phút: quá 15 phút mà chưa Check-in -> giải phóng quyền giữ slot kể từ hiện tại
-            if (date.equals(today)
-                    && (appt.getStatus() == AppointmentStatus.PENDING || appt.getStatus() == AppointmentStatus.CONFIRMED)
-                    && nowTime.isAfter(apptStart.plusMinutes(GRACE_PERIOD_MINUTES))) {
-                continue;
-            }
-
-            // Quy tắc giải phóng sớm khi bác sĩ hoàn tất khám lâm sàng (actual_end_time)
-            if (appt.getStatus() == AppointmentStatus.CHECKED_IN) {
-                Visit linkedVisit = visitByApptId.get(appt.getAppointmentId());
-                if (linkedVisit != null && linkedVisit.getActualEndTime() != null) {
-                    LocalDate actualEndDate = linkedVisit.getActualEndTime().toLocalDate();
-                    if (actualEndDate.isBefore(date)) {
-                        continue;
-                    }
-                    if (actualEndDate.equals(date)) {
-                        LocalTime actualEnd = linkedVisit.getActualEndTime().toLocalTime();
-                        if (!actualEnd.isAfter(apptStart)) {
-                            continue;
-                        }
-                        if (actualEnd.isBefore(apptEnd)) {
-                            apptEnd = actualEnd;
-                        }
-                    }
-                }
-            }
-
-            if (apptStart.isBefore(apptEnd)) {
-                blockedIntervals.add(new TimeInterval(apptStart, apptEnd));
-            }
+        List<TimeInterval> netWorking = subtractIntervals(mergeIntervals(workingIntervals), leaveBlocks);
+        if (netWorking.isEmpty()) {
+            return new DoctorAvailabilityResult(doctorId, date, duration, List.of(), List.of());
         }
 
-        List<TimeInterval> mergedWorking = mergeIntervals(workingIntervals);
-        List<TimeInterval> freeIntervals = subtractIntervals(mergedWorking, blockedIntervals).stream()
+        List<TimeInterval> activeDoctorIntervals = buildEffectiveIntervals(
+                occupyingAppointments, excludeAppointmentId, date, nowDt, visitByApptId);
+
+        long totalWorkingMinutes = sumIntervalMinutes(netWorking);
+        long occupiedMinutes = overlapMinutes(activeDoctorIntervals, netWorking);
+        long remainingWorkloadMinutes = Math.max(0L, totalWorkingMinutes - occupiedMinutes);
+        if (remainingWorkloadMinutes < duration) {
+            return new DoctorAvailabilityResult(doctorId, date, duration, List.of(), List.of());
+        }
+
+        List<TimeInterval> freeIntervals = subtractFullConcurrencyIntervals(
+                        netWorking, activeDoctorIntervals, maxConcurrentPerDoctorSlot).stream()
                 .filter(iv -> Duration.between(iv.start(), iv.end()).toMinutes() >= duration)
                 .toList();
 
+        int step = (duration % 15 != 0) ? SUGGESTED_STEP_MINUTES : 15;
         List<SuggestedSlot> suggestedSlots = new ArrayList<>();
         for (TimeInterval iv : freeIntervals) {
             LocalTime cursor = alignUpToStep(iv.start(), SUGGESTED_STEP_MINUTES);
             while (!cursor.plusMinutes(duration).isAfter(iv.end())) {
                 Long matchedBranch = resolveBranchForInterval(schedules, cursor, cursor.plusMinutes(duration), branchId);
                 suggestedSlots.add(new SuggestedSlot(cursor, cursor.plusMinutes(duration), matchedBranch));
-                cursor = cursor.plusMinutes(SUGGESTED_STEP_MINUTES);
+                cursor = cursor.plusMinutes(step);
             }
         }
 
@@ -426,17 +404,27 @@ public class AppointmentSlotService {
         }
 
         // Batch load lịch hẹn của buổi để đếm tải cân bằng, tránh N+1 query
+        LocalDateTime nowDt = LocalDateTime.now(clock);
+        LocalTime requestedEnd = requestedStart.plusMinutes(requiredDuration);
         List<Appointment> sessionAppointments = appointments.findOccupyingForSession(
                 branch.getBranchId(), date, session, OCCUPYING);
-        Map<Long, Long> loadByDoctor = new HashMap<>();
+        Map<Long, Visit> visitByApptId = loadVisitsForCheckedInAppointments(sessionAppointments);
+        Map<Long, Long> sessionLoadByDoctor = new HashMap<>();
+        Map<Long, Long> overlapLoadByDoctor = new HashMap<>();
         for (Appointment a : sessionAppointments) {
             if (a.getDoctor() != null && !Objects.equals(a.getAppointmentId(), excludeAppointmentId)) {
-                loadByDoctor.merge(a.getDoctor().getStaffId(), 1L, Long::sum);
+                Long docId = a.getDoctor().getStaffId();
+                sessionLoadByDoctor.merge(docId, 1L, Long::sum);
+                if (overlapsWithRelease(a, requestedStart, requestedEnd, date, nowDt, visitByApptId)) {
+                    overlapLoadByDoctor.merge(docId, 1L, Long::sum);
+                }
             }
         }
 
         List<AppointmentPolicyService.DoctorOption> candidates = branchAvailability.doctors().stream()
-                .sorted(Comparator.comparingLong((AppointmentPolicyService.DoctorOption d) -> loadByDoctor.getOrDefault(d.id(), 0L))
+                .sorted(Comparator
+                        .comparingLong((AppointmentPolicyService.DoctorOption d) -> overlapLoadByDoctor.getOrDefault(d.id(), 0L))
+                        .thenComparingLong((AppointmentPolicyService.DoctorOption d) -> sessionLoadByDoctor.getOrDefault(d.id(), 0L))
                         .thenComparingLong(AppointmentPolicyService.DoctorOption::id))
                 .toList();
 
@@ -471,44 +459,43 @@ public class AppointmentSlotService {
             }
         }
 
-        // Nếu có doctorId cụ thể và đã kết nối đầy đủ repository lịch làm việc -> dùng thuật toán khoảng động chính xác
-        if (doctorId != null && staffSchedules != null) {
-            DoctorAvailabilityResult doctorAvail = getDoctorAvailability(
-                    branch.getBranchId(), doctorId, date, durationMinutes, excludeId, nowDt);
-            return doctorAvail.suggestedSlots().stream()
-                    .filter(s -> !s.startTime().isBefore(range.start) && !s.endTime().isAfter(range.end))
-                    .map(s -> new Slot(s.startTime(), 1))
-                    .toList();
-        }
-
         AppointmentPolicyService.Availability availability = policy.availability(branch, date, session,
                 excludeId, actorType);
-        if (availability == null || !availability.available()
-                || doctorId != null && availability.doctors().stream().noneMatch(d -> doctorId.equals(d.id())))
+        if (availability == null || !availability.available() || availability.remainingBranch() <= 0) {
             return List.of();
+        }
+        if (doctorId != null && availability.doctors().stream().noneMatch(d -> doctorId.equals(d.id()) && d.remaining() > 0)) {
+            return List.of();
+        }
 
         List<Appointment> booked = appointments.findOccupyingForSession(branch.getBranchId(), date, session, OCCUPYING)
                 .stream().filter(a -> excludeId == null || !Objects.equals(a.getAppointmentId(), excludeId)).toList();
         Map<Long, Visit> visitByApptId = loadVisitsForCheckedInAppointments(booked);
-        int capacity = Math.min(Math.max(1, availability.doctors().size()), availability.remainingBranch() + booked.size());
-        if (capacity == 0) return List.of();
+
+        List<AppointmentPolicyService.DoctorOption> targetDoctors = doctorId != null
+                ? availability.doctors().stream().filter(d -> doctorId.equals(d.id())).toList()
+                : availability.doctors();
+        if (targetDoctors.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, DoctorSlotSnapshot> snapshots = buildDoctorSnapshots(
+                branch.getBranchId(), date, range, durationMinutes, excludeId, nowDt, targetDoctors, booked, visitByApptId);
 
         int step = (durationMinutes % 15 != 0) ? SUGGESTED_STEP_MINUTES : 15;
         List<Slot> result = new ArrayList<>();
         for (LocalTime time = range.start; !time.plusMinutes(durationMinutes).isAfter(range.end);
                 time = time.plusMinutes(step)) {
-            if (date.equals(nowDt.toLocalDate())
-                    && !time.isAfter(nowDt.toLocalTime())) continue;
+            if (date.equals(nowDt.toLocalDate()) && !time.isAfter(nowDt.toLocalTime())) {
+                continue;
+            }
             LocalTime end = time.plusMinutes(durationMinutes);
-            final LocalTime start = time;
-            long overlapping = booked.stream()
-                    .filter(a -> overlapsWithRelease(a, start, end, date, nowDt, visitByApptId))
-                    .count();
-            boolean doctorBusy = doctorId != null && booked.stream()
-                    .anyMatch(a -> overlapsWithRelease(a, start, end, date, nowDt, visitByApptId)
-                            && a.getDoctor() != null && doctorId.equals(a.getDoctor().getStaffId()));
-            int remaining = Math.max(0, capacity - (int) overlapping);
-            if (!doctorBusy && remaining > 0) result.add(new Slot(time, remaining));
+            int remaining = computeRemainingAtWindow(
+                    time, end, durationMinutes, date, nowDt, doctorId, availability.remainingBranch(),
+                    targetDoctors, snapshots, booked, visitByApptId);
+            if (remaining > 0) {
+                result.add(new Slot(time, remaining));
+            }
         }
         return result;
     }
@@ -579,28 +566,41 @@ public class AppointmentSlotService {
                 lockAndValidateDoctorSlot(branch.getBranchId(), doctorId, date, requested, durationMinutes, excludeId);
                 return requested;
             }
+            AppointmentPolicyService.Availability availability = policy.availability(branch, date, session, excludeId, actorType);
+            if (availability != null && !availability.available()) {
+                throw new SlotAlreadyTakenException(
+                        availability.reason() != null ? availability.reason() : "Buổi khám không còn khả dụng."
+                );
+            }
             List<Appointment> booked = appointments.findOccupyingForSession(branch.getBranchId(), date, session, OCCUPYING)
                     .stream().filter(a -> excludeId == null || !Objects.equals(a.getAppointmentId(), excludeId)).toList();
             Map<Long, Visit> visitByApptId = loadVisitsForCheckedInAppointments(booked);
             LocalTime end = requested.plusMinutes(durationMinutes);
-            if (doctorId != null) {
-                boolean doctorBusy = booked.stream()
-                        .anyMatch(a -> overlapsWithRelease(a, requested, end, date, nowDt, visitByApptId)
-                                && a.getDoctor() != null && doctorId.equals(a.getDoctor().getStaffId()));
-                if (doctorBusy) {
-                    throw new SlotAlreadyTakenException(
-                            "Bác sĩ đã có lịch hẹn khác trong khung giờ " + requested + " - " + end + ". Vui lòng chọn giờ hoặc bác sĩ khác.");
-                }
-            }
-            AppointmentPolicyService.Availability availability = policy.availability(branch, date, session, excludeId, actorType);
             if (availability != null && availability.available()) {
-                int capacity = Math.min(Math.max(1, availability.doctors().size()), availability.remainingBranch() + booked.size());
-                long overlapping = booked.stream()
-                        .filter(a -> overlapsWithRelease(a, requested, end, date, nowDt, visitByApptId))
+                List<AppointmentPolicyService.DoctorOption> targetDoctors = doctorId != null
+                        ? availability.doctors().stream().filter(d -> doctorId.equals(d.id())).toList()
+                        : availability.doctors();
+                if (targetDoctors.isEmpty()) {
+                    throw new SlotAlreadyTakenException("Không còn bác sĩ khả dụng trong ca khám.");
+                }
+                Map<Long, DoctorSlotSnapshot> snapshots = buildDoctorSnapshots(
+                        branch.getBranchId(), date, range, durationMinutes, excludeId, nowDt, targetDoctors, booked, visitByApptId);
+                int remainingAtSlot = computeRemainingAtWindow(
+                        requested, end, durationMinutes, date, nowDt, doctorId, availability.remainingBranch(),
+                        targetDoctors, snapshots, booked, visitByApptId);
+                if (remainingAtSlot <= 0) {
+                    throw new SlotAlreadyTakenException(doctorId != null
+                            ? "Khung giờ " + requested + " - " + end + " của bác sĩ đã đạt giới hạn tiếp nhận."
+                            : "Khung giờ " + requested + " - " + end + " đã đạt tối đa công suất tiếp nhận của ca trực.");
+                }
+            } else if (doctorId != null) {
+                long doctorOverlap = booked.stream()
+                        .filter(a -> overlapsWithRelease(a, requested, end, date, nowDt, visitByApptId)
+                                && a.getDoctor() != null && doctorId.equals(a.getDoctor().getStaffId()))
                         .count();
-                if (capacity > 0 && overlapping >= capacity) {
+                if (doctorOverlap >= maxConcurrentPerDoctorSlot) {
                     throw new SlotAlreadyTakenException(
-                            "Khung giờ " + requested + " - " + end + " đã đạt tối đa công suất tiếp nhận của ca trực.");
+                            "Khung giờ " + requested + " - " + end + " của bác sĩ đã đạt giới hạn tiếp nhận.");
                 }
             }
         }
@@ -612,6 +612,254 @@ public class AppointmentSlotService {
                 ? 30 : service.getEstimatedDurationMinutes();
     }
 
+    private record DoctorSlotSnapshot(
+            int docSessionRemaining,
+            List<TimeInterval> netWorking,
+            List<TimeInterval> activeIntervals,
+            long remainingWorkloadMinutes
+    ) { }
+
+    private Map<Long, DoctorSlotSnapshot> buildDoctorSnapshots(
+            Long branchId,
+            LocalDate date,
+            Range range,
+            int durationMinutes,
+            Long excludeId,
+            LocalDateTime nowDt,
+            List<AppointmentPolicyService.DoctorOption> doctors,
+            List<Appointment> sessionBooked,
+            Map<Long, Visit> visitByApptId
+    ) {
+        Map<Long, DoctorSlotSnapshot> map = new HashMap<>();
+        List<TimeInterval> defaultRangeInterval = List.of(new TimeInterval(range.start, range.end));
+
+        for (AppointmentPolicyService.DoctorOption doc : doctors) {
+            if (staffSchedules == null) {
+                List<Appointment> docBooked = sessionBooked.stream()
+                        .filter(a -> a.getDoctor() != null && doc.id().equals(a.getDoctor().getStaffId()))
+                        .toList();
+                List<TimeInterval> active = buildEffectiveIntervals(docBooked, excludeId, date, nowDt, visitByApptId);
+                map.put(doc.id(), new DoctorSlotSnapshot(doc.remaining(), defaultRangeInterval, active, 240L * 10));
+                continue;
+            }
+
+            List<StaffSchedule> rawSchedules = staffSchedules.findDoctorSchedulesForDate(doc.id(), date, ScheduleStatus.SCHEDULED).stream()
+                    .filter(s -> branchId == null || (s.getBranch() != null && branchId.equals(s.getBranch().getBranchId())))
+                    .filter(s -> s.getBranch() != null && Boolean.TRUE.equals(s.getBranch().getIsActive()))
+                    .filter(s -> s.getShift() != null && Boolean.TRUE.equals(s.getShift().getIsActive()))
+                    .filter(s -> s.getStaff() == null || s.getStaff().getStatus() == null || s.getStaff().getStatus() == StaffStatus.ACTIVE)
+                    .toList();
+            List<LeaveRequest> approvedLeaves = leaveRequests != null
+                    ? leaveRequests.findApprovedForStaffOnDate(doc.id(), date, LeaveStatus.APPROVED)
+                    : List.of();
+            List<TimeInterval> working = new ArrayList<>();
+            for (StaffSchedule schedule : rawSchedules) {
+                WorkShift shift = schedule.getShift();
+                Branch br = schedule.getBranch();
+                if (shift == null || shift.getStartTime() == null || shift.getEndTime() == null) continue;
+                Long schBranch = br != null ? br.getBranchId() : branchId;
+                boolean fullLeave = approvedLeaves.stream().anyMatch(l ->
+                        l.getShift() == null && (l.getBranch() == null || schBranch == null || schBranch.equals(l.getBranch().getBranchId())));
+                if (fullLeave) continue;
+                LocalTime sStart = shift.getStartTime().isBefore(range.start) ? range.start : shift.getStartTime();
+                LocalTime sEnd = shift.getEndTime().isAfter(range.end) ? range.end : shift.getEndTime();
+                if (br != null && br.getOpeningTime() != null && br.getOpeningTime().isAfter(sStart)) sStart = br.getOpeningTime();
+                if (br != null && br.getClosingTime() != null && br.getClosingTime().isBefore(sEnd)) sEnd = br.getClosingTime();
+                if (date.equals(nowDt.toLocalDate()) && nowDt.toLocalTime().isAfter(sStart)) sStart = nowDt.toLocalTime();
+                if (sStart.isBefore(sEnd)) working.add(new TimeInterval(sStart, sEnd));
+            }
+            List<TimeInterval> leaveBlocks = new ArrayList<>();
+            for (LeaveRequest leave : approvedLeaves) {
+                if (leave.getShift() != null && leave.getShift().getStartTime() != null && leave.getShift().getEndTime() != null
+                        && leave.getShift().getStartTime().isBefore(leave.getShift().getEndTime())) {
+                    leaveBlocks.add(new TimeInterval(leave.getShift().getStartTime(), leave.getShift().getEndTime()));
+                }
+            }
+            List<TimeInterval> netWorking = subtractIntervals(mergeIntervals(working), leaveBlocks);
+            if (netWorking.isEmpty()) {
+                map.put(doc.id(), new DoctorSlotSnapshot(0, List.of(), List.of(), 0L));
+                continue;
+            }
+            List<Appointment> docAppointments = appointments.findDoctorAppointmentsForDate(doc.id(), date, OCCUPYING);
+            Map<Long, Visit> docVisits = loadVisitsForCheckedInAppointments(docAppointments);
+            List<TimeInterval> active = buildEffectiveIntervals(docAppointments, excludeId, date, nowDt, docVisits);
+            long totalWorkingMinutes = sumIntervalMinutes(netWorking);
+            long occupiedMinutes = overlapMinutes(active, netWorking);
+            long remWorkload = Math.max(0L, totalWorkingMinutes - occupiedMinutes);
+            map.put(doc.id(), new DoctorSlotSnapshot(doc.remaining(), netWorking, active, remWorkload));
+        }
+        return map;
+    }
+
+    private int computeRemainingAtWindow(
+            LocalTime start,
+            LocalTime end,
+            int durationMinutes,
+            LocalDate date,
+            LocalDateTime nowDt,
+            Long requestedDoctorId,
+            int remainingBranch,
+            List<AppointmentPolicyService.DoctorOption> targetDoctors,
+            Map<Long, DoctorSlotSnapshot> snapshots,
+            List<Appointment> sessionBooked,
+            Map<Long, Visit> visitByApptId
+    ) {
+        if (remainingBranch <= 0) {
+            return 0;
+        }
+        int totalDoctorAtWindow = 0;
+        for (AppointmentPolicyService.DoctorOption doc : targetDoctors) {
+            DoctorSlotSnapshot snap = snapshots.get(doc.id());
+            if (snap == null || snap.docSessionRemaining() <= 0 || snap.remainingWorkloadMinutes() < durationMinutes) {
+                continue;
+            }
+            boolean fitsWorking = snap.netWorking().stream()
+                    .anyMatch(iv -> !start.isBefore(iv.start()) && !end.isAfter(iv.end()));
+            if (!fitsWorking) {
+                continue;
+            }
+            long overlapCount = snap.activeIntervals().stream()
+                    .filter(iv -> intervalsOverlap(iv.start(), iv.end(), start, end))
+                    .count();
+            int waveRem = Math.max(0, maxConcurrentPerDoctorSlot - (int) overlapCount);
+            int workloadCap = Math.max(0, (int) (snap.remainingWorkloadMinutes() / durationMinutes));
+            totalDoctorAtWindow += Math.min(snap.docSessionRemaining(), Math.min(waveRem, workloadCap));
+        }
+        if (requestedDoctorId != null) {
+            return Math.min(remainingBranch, totalDoctorAtWindow);
+        }
+        long unassignedOverlap = sessionBooked.stream()
+                .filter(a -> a.getDoctor() == null)
+                .filter(a -> overlapsWithRelease(a, start, end, date, nowDt, visitByApptId))
+                .count();
+        return Math.min(remainingBranch, Math.max(0, totalDoctorAtWindow - (int) unassignedOverlap));
+    }
+
+    private static TimeInterval resolveEffectiveInterval(
+            Appointment appointment,
+            LocalDate date,
+            LocalDateTime nowDt,
+            Map<Long, Visit> visitByApptId
+    ) {
+        if (appointment == null || appointment.getExpectedTime() == null) return null;
+        LocalTime apptStart = appointment.getExpectedTime();
+        int length = appointment.getDurationMinutes() != null && appointment.getDurationMinutes() > 0
+                ? appointment.getDurationMinutes()
+                : duration(appointment.getService());
+        LocalTime apptEnd = appointment.getExpectedEndTime() != null
+                ? appointment.getExpectedEndTime()
+                : apptStart.plusMinutes(length);
+
+        if (date != null && date.equals(nowDt.toLocalDate())
+                && (appointment.getStatus() == AppointmentStatus.PENDING || appointment.getStatus() == AppointmentStatus.CONFIRMED)
+                && nowDt.toLocalTime().isAfter(apptStart.plusMinutes(GRACE_PERIOD_MINUTES))) {
+            return null;
+        }
+        if (appointment.getStatus() == AppointmentStatus.CHECKED_IN && visitByApptId != null) {
+            Visit v = visitByApptId.get(appointment.getAppointmentId());
+            if (v != null && v.getActualEndTime() != null && date != null) {
+                LocalDate actualEndDate = v.getActualEndTime().toLocalDate();
+                if (actualEndDate.isBefore(date)) {
+                    return null;
+                }
+                if (actualEndDate.equals(date)) {
+                    LocalTime actualEnd = v.getActualEndTime().toLocalTime();
+                    if (!actualEnd.isAfter(apptStart)) {
+                        return null;
+                    }
+                    if (actualEnd.isBefore(apptEnd)) {
+                        apptEnd = actualEnd;
+                    }
+                }
+            }
+        }
+        return apptStart.isBefore(apptEnd) ? new TimeInterval(apptStart, apptEnd) : null;
+    }
+
+    private static List<TimeInterval> buildEffectiveIntervals(
+            List<Appointment> appointments,
+            Long excludeAppointmentId,
+            LocalDate date,
+            LocalDateTime nowDt,
+            Map<Long, Visit> visitByApptId
+    ) {
+        if (appointments == null || appointments.isEmpty()) return List.of();
+        List<TimeInterval> list = new ArrayList<>();
+        for (Appointment appt : appointments) {
+            if (excludeAppointmentId != null && Objects.equals(appt.getAppointmentId(), excludeAppointmentId)) {
+                continue;
+            }
+            TimeInterval effective = resolveEffectiveInterval(appt, date, nowDt, visitByApptId);
+            if (effective != null) {
+                list.add(effective);
+            }
+        }
+        return list;
+    }
+
+    private static long sumIntervalMinutes(List<TimeInterval> intervals) {
+        long total = 0L;
+        for (TimeInterval iv : intervals) {
+            if (iv.start() != null && iv.end() != null && iv.start().isBefore(iv.end())) {
+                total += Duration.between(iv.start(), iv.end()).toMinutes();
+            }
+        }
+        return total;
+    }
+
+    private static long overlapMinutes(List<TimeInterval> busyIntervals, List<TimeInterval> workingIntervals) {
+        if (busyIntervals.isEmpty() || workingIntervals.isEmpty()) return 0L;
+        long total = 0L;
+        for (TimeInterval busy : busyIntervals) {
+            for (TimeInterval work : workingIntervals) {
+                LocalTime s = busy.start().isAfter(work.start()) ? busy.start() : work.start();
+                LocalTime e = busy.end().isBefore(work.end()) ? busy.end() : work.end();
+                if (s.isBefore(e)) {
+                    total += Duration.between(s, e).toMinutes();
+                }
+            }
+        }
+        return total;
+    }
+
+    private static List<TimeInterval> subtractFullConcurrencyIntervals(
+            List<TimeInterval> working,
+            List<TimeInterval> active,
+            int maxConcurrent
+    ) {
+        if (working.isEmpty()) return List.of();
+        if (active.isEmpty() || maxConcurrent <= 0) {
+            return maxConcurrent <= 0 ? List.of() : working;
+        }
+        List<TimeInterval> openSegments = new ArrayList<>();
+        for (TimeInterval work : working) {
+            TreeSet<LocalTime> points = new TreeSet<>();
+            points.add(work.start());
+            points.add(work.end());
+            for (TimeInterval act : active) {
+                if (act.start().isAfter(work.start()) && act.start().isBefore(work.end())) {
+                    points.add(act.start());
+                }
+                if (act.end().isAfter(work.start()) && act.end().isBefore(work.end())) {
+                    points.add(act.end());
+                }
+            }
+            List<LocalTime> sorted = new ArrayList<>(points);
+            for (int i = 0; i < sorted.size() - 1; i++) {
+                LocalTime segStart = sorted.get(i);
+                LocalTime segEnd = sorted.get(i + 1);
+                if (!segStart.isBefore(segEnd)) continue;
+                long concurrent = active.stream()
+                        .filter(act -> intervalsOverlap(act.start(), act.end(), segStart, segEnd))
+                        .count();
+                if (concurrent < maxConcurrent) {
+                    openSegments.add(new TimeInterval(segStart, segEnd));
+                }
+            }
+        }
+        return mergeIntervals(openSegments);
+    }
+
     private static boolean overlapsWithRelease(
             Appointment appointment,
             LocalTime start,
@@ -620,32 +868,8 @@ public class AppointmentSlotService {
             LocalDateTime nowDt,
             Map<Long, Visit> visitByApptId
     ) {
-        if (appointment.getExpectedTime() == null) return false;
-        LocalTime apptStart = appointment.getExpectedTime();
-        int length = appointment.getDurationMinutes() == null ? duration(appointment.getService())
-                : appointment.getDurationMinutes();
-        LocalTime apptEnd = appointment.getExpectedEndTime() != null
-                ? appointment.getExpectedEndTime()
-                : apptStart.plusMinutes(length);
-
-        if (date != null && date.equals(nowDt.toLocalDate())
-                && (appointment.getStatus() == AppointmentStatus.PENDING || appointment.getStatus() == AppointmentStatus.CONFIRMED)
-                && nowDt.toLocalTime().isAfter(apptStart.plusMinutes(GRACE_PERIOD_MINUTES))) {
-            return false;
-        }
-        if (appointment.getStatus() == AppointmentStatus.CHECKED_IN && visitByApptId != null) {
-            Visit v = visitByApptId.get(appointment.getAppointmentId());
-            if (v != null && v.getActualEndTime() != null && date != null && v.getActualEndTime().toLocalDate().equals(date)) {
-                LocalTime actualEnd = v.getActualEndTime().toLocalTime();
-                if (!actualEnd.isAfter(apptStart)) {
-                    return false;
-                }
-                if (actualEnd.isBefore(apptEnd)) {
-                    apptEnd = actualEnd;
-                }
-            }
-        }
-        return intervalsOverlap(apptStart, apptEnd, start, end);
+        TimeInterval effective = resolveEffectiveInterval(appointment, date, nowDt, visitByApptId);
+        return effective != null && intervalsOverlap(effective.start(), effective.end(), start, end);
     }
 
     private Map<Long, Visit> loadVisitsForCheckedInAppointments(List<Appointment> appts) {

@@ -34,6 +34,11 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
     private final int defaultBranchCapacity;
     private final int defaultDoctorCapacity;
 
+    @Autowired(required = false)
+    private VisitRepository visitRepository;
+
+    private Clock clock = Clock.system(CLINIC_ZONE);
+
     @Autowired
     public AppointmentPolicyServiceImpl(AppointmentPolicyRepository appointments,
             AppointmentSessionWindowRepository windows, AppointmentSessionPolicyRepository policies,
@@ -163,7 +168,18 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
             AppointmentActorType actorType) {
         String invalid = invalidSession(branch, date, session, actorType);
         if (invalid != null) throw conflict(invalid);
-        // Cho phép đặt nhiều lịch hẹn trong ngày cho cả Lễ tân và Bệnh nhân (khám nhiều dịch vụ, tái khám hoặc đi theo ca)
+        if (profile != null && profile.getProfileId() != null) {
+            PatientSessionConflict dup = findSameSessionConflict(
+                    profile.getProfileId(),
+                    branch != null ? branch.getBranchId() : null,
+                    date,
+                    session,
+                    excludeAppointmentId
+            );
+            if (dup.hasConflict()) {
+                throw conflict(dup.message());
+            }
+        }
         List<StaffProfile> doctors = eligibleDoctors(branch, date, session);
         if (doctors.isEmpty()) {
             throw conflict("Không có bác sĩ trực khả dụng trong buổi đã chọn.");
@@ -184,6 +200,104 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
                 throw conflict("Bác sĩ đã hết khả năng nhận lịch trong buổi (" + doctorBooked + "/" + doctorCapacity(policy) + " ca).");
             }
         }
+    }
+
+    public void setClock(Clock clock) {
+        if (clock != null) {
+            this.clock = clock;
+        }
+    }
+
+    @Override
+    public PatientSessionConflict findSameSessionConflict(Long profileId, LocalDate date,
+                                                          PreferredSession session, Long excludeAppointmentId) {
+        return findSameSessionConflict(profileId, null, date, session, excludeAppointmentId);
+    }
+
+    private PatientSessionConflict findSameSessionConflict(Long profileId, Long branchId, LocalDate date,
+                                                           PreferredSession session, Long excludeAppointmentId) {
+        if (profileId == null || date == null || session == null) {
+            return new PatientSessionConflict(false, null, null, null, null);
+        }
+        Map<Long, Appointment> uniqueCandidates = new LinkedHashMap<>();
+        List<Appointment> across = appointments.findOccupyingForPatientDayAcrossBranches(profileId, date, OCCUPYING);
+        if (across != null) {
+            for (Appointment a : across) {
+                if (a != null) uniqueCandidates.put(a.getAppointmentId(), a);
+            }
+        }
+        if (uniqueCandidates.isEmpty() && branchId != null) {
+            List<Appointment> branchScoped = appointments.findOccupyingForPatientDay(profileId, branchId, date, OCCUPYING);
+            if (branchScoped != null) {
+                for (Appointment a : branchScoped) {
+                    if (a != null) uniqueCandidates.put(a.getAppointmentId(), a);
+                }
+            }
+        }
+
+        List<Appointment> sessionMatches = uniqueCandidates.values().stream()
+                .filter(a -> excludeAppointmentId == null || !Objects.equals(a.getAppointmentId(), excludeAppointmentId))
+                .filter(a -> session == PreferredSession.ANY
+                        || a.getPreferredSession() == session
+                        || a.getPreferredSession() == PreferredSession.ANY)
+                .toList();
+        if (sessionMatches.isEmpty()) {
+            return new PatientSessionConflict(false, null, null, null, null);
+        }
+
+        Map<Long, Visit> visitByAppt = Collections.emptyMap();
+        List<Long> checkedInIds = sessionMatches.stream()
+                .filter(a -> a.getStatus() == AppointmentStatus.CHECKED_IN && a.getAppointmentId() != null)
+                .map(Appointment::getAppointmentId)
+                .toList();
+        if (!checkedInIds.isEmpty() && visitRepository != null) {
+            List<Visit> linked = visitRepository.findByAppointmentIdIn(checkedInIds);
+            if (linked != null && !linked.isEmpty()) {
+                visitByAppt = new HashMap<>();
+                for (Visit v : linked) {
+                    if (v != null && v.getAppointmentId() != null) {
+                        visitByAppt.putIfAbsent(v.getAppointmentId(), v);
+                    }
+                }
+            }
+        }
+
+        for (Appointment existing : sessionMatches) {
+            if (existing.getStatus() == AppointmentStatus.CHECKED_IN && visitRepository != null) {
+                Visit linkedVisit = visitByAppt.get(existing.getAppointmentId());
+                if (linkedVisit != null && isClinicalExamFinished(linkedVisit)) {
+                    // Bệnh nhân đã hoàn thành khám lâm sàng (WAITING_PAYMENT với actual_end_time / COMPLETED / CANCELLED)
+                    // -> Được phép đặt thêm lịch khám tiếp trong cùng buổi nếu còn sức chứa.
+                    continue;
+                }
+            }
+            String existingBranchName = existing.getBranch() != null ? existing.getBranch().getBranchName() : "cơ sở khác";
+            String sessionText = switch (session) {
+                case MORNING -> "buổi sáng";
+                case AFTERNOON -> "buổi chiều";
+                case EVENING -> "buổi tối";
+                default -> "buổi khám này";
+            };
+            String dateText = date.equals(LocalDate.now(clock))
+                    ? "hôm nay (" + date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + ")"
+                    : "ngày " + date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            String codeSuffix = existing.getAppointmentCode() != null ? " (Mã " + existing.getAppointmentCode() + ")" : "";
+            String msg = "Người khám này đã có lịch hẹn trong " + sessionText + " " + dateText
+                    + " tại " + existingBranchName + codeSuffix
+                    + ". Vui lòng kiểm tra lịch hẹn hiện tại trước khi đặt lịch mới.";
+            return new PatientSessionConflict(true, existing.getAppointmentId(), existing.getAppointmentCode(), existingBranchName, msg);
+        }
+        return new PatientSessionConflict(false, null, null, null, null);
+    }
+
+    private static boolean isClinicalExamFinished(Visit visit) {
+        if (visit == null || visit.getStatus() == null) {
+            return false;
+        }
+        return switch (visit.getStatus()) {
+            case COMPLETED, CANCELLED, WAITING_PAYMENT -> true;
+            case WAITING, IN_EXAM, WAITING_PARACLINICAL, WAITING_RESULT, IN_TREATMENT -> false;
+        };
     }
 
     @Override

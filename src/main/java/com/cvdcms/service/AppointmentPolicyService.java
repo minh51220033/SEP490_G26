@@ -23,6 +23,13 @@ public interface AppointmentPolicyService {
     record SessionRange(LocalTime start, LocalTime end, boolean active) { }
     record SessionWindowInfo(PreferredSession session, String sessionName, LocalTime startTime,
                              LocalTime endTime, String label, boolean active) { }
+    record PatientSessionConflict(boolean hasConflict, Long appointmentId, String appointmentCode,
+                                  String branchName, String message) { }
+
+    default PatientSessionConflict findSameSessionConflict(Long profileId, LocalDate date,
+                                                           PreferredSession session, Long excludeAppointmentId) {
+        return new PatientSessionConflict(false, null, null, null, null);
+    }
 
     Availability availability(Branch branch, LocalDate date, PreferredSession session,
                               Long excludeAppointmentId, AppointmentActorType actorType);

@@ -33,6 +33,13 @@ public interface AppointmentPolicyRepository extends JpaRepository<Appointment, 
             @Param("branchId") Long branchId, @Param("date") LocalDate date,
             @Param("statuses") List<AppointmentStatus> statuses);
 
+    @Query("SELECT a FROM Appointment a LEFT JOIN FETCH a.branch b "
+            + "WHERE a.patientProfile.profileId = :profileId "
+            + "AND a.appointmentDate = :date AND a.status IN :statuses")
+    List<Appointment> findOccupyingForPatientDayAcrossBranches(@Param("profileId") Long profileId,
+            @Param("date") LocalDate date,
+            @Param("statuses") List<AppointmentStatus> statuses);
+
     @Query("SELECT a FROM Appointment a LEFT JOIN FETCH a.service s LEFT JOIN FETCH a.branch b "
             + "WHERE a.doctor.staffId = :doctorId AND a.appointmentDate = :date AND a.status IN :statuses "
             + "ORDER BY a.expectedTime ASC, a.appointmentId ASC")

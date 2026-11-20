@@ -93,6 +93,12 @@
                              th:text="${currentBranch.address}">Địa chỉ</div>
                     </div>
 
+                    <div th:if="${requestedBranch != null and (currentBranch == null or requestedBranch.branchId != currentBranch.branchId)}"
+                         class="alert alert-info d-flex align-items-center gap-2 mb-3 py-2 px-3" style="border-radius:10px; font-size: 13.5px;">
+                        <i class="bi bi-arrow-left-right fs-5 text-primary"></i>
+                        <span>Bạn đang chọn chuyển sang <strong th:text="${requestedBranch.branchName}">Cơ sở mới</strong>. Nhấn <strong>Lưu cơ sở khám mới</strong> bên dưới để xác nhận cập nhật cho tài khoản và toàn bộ hồ sơ.</span>
+                    </div>
+
                     <form th:action="@{/profile/change-branch}" method="post">
                         <div class="mb-3">
                             <label for="branchSelect" class="form-label fw-semibold text-dark">
@@ -102,7 +108,7 @@
                                 <option value="">-- Chọn cơ sở khám chữa bệnh --</option>
                                 <option th:each="b : ${branches}"
                                         th:value="${b.branchId}"
-                                        th:selected="${currentBranch != null and b.branchId == currentBranch.branchId}"
+                                        th:selected="${(preselectedBranchId != null and b.branchId == preselectedBranchId) or (preselectedBranchId == null and currentBranch != null and b.branchId == currentBranch.branchId)}"
                                         th:text="${b.branchName + (b.address != null ? ' — ' + b.address : '')}">
                                 </option>
                             </select>

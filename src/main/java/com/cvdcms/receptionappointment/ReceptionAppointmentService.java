@@ -59,6 +59,9 @@ public class ReceptionAppointmentService {
     @Autowired(required = false)
     private ClinicalQueueTicketRepository clinicalQueueTickets;
 
+    @Autowired(required = false)
+    private PatientProfileRepository patientProfiles;
+
     @Autowired
     public ReceptionAppointmentService(PatientAccess access, ReceptionAppointmentRepository appointments,
             ReceptionAppointmentPatientRepository patients, ReceptionPatientRepository receptionPatients,
@@ -326,7 +329,7 @@ public class ReceptionAppointmentService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Lễ tân không được tự ý gán bác sĩ thủ công. Hệ thống sẽ tự động phân bổ bác sĩ.");
         }
-        Branch branch = lockBranch(scope, request.branchId());
+        Branch branch = requireBranch(scope, request.branchId());
         PatientProfile profile;
         if (request.profileId() != null) {
             profile = patients.findBookable(request.profileId())
@@ -376,6 +379,12 @@ public class ReceptionAppointmentService {
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng chọn hồ sơ bệnh nhân hoặc nhập đầy đủ thông tin bệnh nhân mới hợp lệ.");
         }
+
+        // Global lock hierarchy: 1. PatientProfile -> 2. Branch -> 3. StaffProfile
+        if (patientProfiles != null && profile.getProfileId() != null) {
+            patientProfiles.findByIdForUpdate(profile.getProfileId());
+        }
+        branch = lockBranch(scope, request.branchId());
 
         PreferredSession targetSession = request.session();
         if (targetSession == null || targetSession == PreferredSession.ANY) {
@@ -694,6 +703,9 @@ public class ReceptionAppointmentService {
 
     private Appointment lockAppointment(PatientAccess.Scope scope, Long id) {
         Appointment before = owned(scope, id);
+        if (patientProfiles != null && before.getPatientProfile() != null) {
+            patientProfiles.findByIdForUpdate(before.getPatientProfile().getProfileId());
+        }
         lockBranch(scope, before.getBranch().getBranchId());
         Appointment a = appointments.lockById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (!scope.permits(a.getBranch().getBranchId())) throw new ResponseStatusException(HttpStatus.NOT_FOUND);

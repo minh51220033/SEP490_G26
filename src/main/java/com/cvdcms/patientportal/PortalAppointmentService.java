@@ -35,6 +35,8 @@ public class PortalAppointmentService {
     private final AppointmentLifecycleService lifecycle;
     private final AppointmentSlotService slots;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private PatientProfileRepository patientProfiles;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
     private org.springframework.context.ApplicationEventPublisher careEventPublisher;
 
     public PortalAppointmentService(PortalAccess access, PortalAppointmentRepository appointments,
@@ -68,7 +70,14 @@ public class PortalAppointmentService {
     public record CancelRequest(@NotBlank @Size(max = 255) String reason) {}
     public record DoctorOption(Long id, String name, String specialty, int remaining) {}
     public record Availability(boolean available, String reason, int remainingBranch,
-                               List<DoctorOption> doctors) {}
+                               List<DoctorOption> doctors,
+                               boolean patientHasSameSessionConflict, String conflictMessage,
+                               Long conflictAppointmentId, String conflictAppointmentCode,
+                               String conflictBranchName) {
+        public Availability(boolean available, String reason, int remainingBranch, List<DoctorOption> doctors) {
+            this(available, reason, remainingBranch, doctors, false, null, null, null, null);
+        }
+    }
     public record AppointmentView(Long id, String code, Long profileId, String patientName,
             Long branchId, String branchName, Long requestedDoctorId, String requestedDoctorName,
             String serviceName, LocalDate date, PreferredSession session, String symptoms,
@@ -95,6 +104,12 @@ public class PortalAppointmentService {
     @Transactional(readOnly = true)
     public Availability availability(HttpSession httpSession, Long branchId, LocalDate date,
                                      PreferredSession session, Long excludeAppointmentId) {
+        return availability(httpSession, branchId, date, session, excludeAppointmentId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Availability availability(HttpSession httpSession, Long branchId, LocalDate date,
+                                     PreferredSession session, Long excludeAppointmentId, Long profileId) {
         User user = access.requireUser(httpSession);
         if (excludeAppointmentId != null) {
             Appointment existing = owned(user, excludeAppointmentId);
@@ -104,11 +119,23 @@ public class PortalAppointmentService {
         Branch branch = branches.findById(branchId).orElse(null);
         if (branch == null || !Boolean.TRUE.equals(branch.getIsActive()))
             return new Availability(false, "Chi nhánh không hoạt động.", 0, List.of());
+        AppointmentPolicyService.PatientSessionConflict patientConflict = null;
+        if (profileId != null) {
+            access.requireProfile(user, profileId);
+            patientConflict = policy.findSameSessionConflict(profileId, date, session, excludeAppointmentId);
+        }
         AppointmentPolicyService.Availability result = policy.availability(branch, date, session,
                 excludeAppointmentId, AppointmentActorType.PATIENT);
+        List<DoctorOption> docOptions = result.doctors().stream().map(d ->
+                new DoctorOption(d.id(), d.name(), d.specialty(), d.remaining())).toList();
+        boolean hasConflict = patientConflict != null && patientConflict.hasConflict();
         return new Availability(result.available(), result.reason(), result.remainingBranch(),
-                result.doctors().stream().map(d ->
-                        new DoctorOption(d.id(), d.name(), d.specialty(), d.remaining())).toList());
+                docOptions,
+                hasConflict,
+                hasConflict ? patientConflict.message() : null,
+                hasConflict ? patientConflict.appointmentId() : null,
+                hasConflict ? patientConflict.appointmentCode() : null,
+                hasConflict ? patientConflict.branchName() : null);
     }
 
     @Transactional(readOnly = true)
@@ -149,10 +176,15 @@ public class PortalAppointmentService {
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentView book(HttpSession httpSession, BookingRequest request) {
         User user = access.requireUser(httpSession);
-        PatientProfile profile = access.requireProfile(user, request.profileId());
-        requireActiveProfile(profile);
+        PatientProfile verifiedProfile = access.requireProfile(user, request.profileId());
+        requireActiveProfile(verifiedProfile);
         if (request.requestKey() == null || !validKey(request.requestKey()))
             throw bad("Mã yêu cầu không hợp lệ.");
+        // Global lock hierarchy: 1. PatientProfile -> 2. Branch -> 3. StaffProfile -> 4. Appointment
+        PatientProfile profile = patientProfiles != null
+                ? patientProfiles.findByIdForUpdate(verifiedProfile.getProfileId()).orElse(verifiedProfile)
+                : verifiedProfile;
+        requireActiveProfile(profile);
         Branch branch = lockedBranches.findByIdForBooking(request.branchId()).orElseThrow(() -> bad("Chi nhánh không tồn tại."));
         Optional<Appointment> existing = bookingRequests.findById(request.requestKey()).map(PortalBookingRequest::getAppointment);
         if (existing.isPresent()) {
@@ -234,6 +266,10 @@ public class PortalAppointmentService {
     public AppointmentView reschedule(HttpSession httpSession, Long appointmentId, RescheduleRequest request) {
         User user = access.requireUser(httpSession);
         Appointment beforeLock = owned(user, appointmentId);
+        // Global lock hierarchy: 1. PatientProfile -> 2. Branch -> 3. Appointment
+        if (patientProfiles != null && beforeLock.getPatientProfile() != null) {
+            patientProfiles.findByIdForUpdate(beforeLock.getPatientProfile().getProfileId());
+        }
         Branch branch = lockedBranches.findByIdForBooking(beforeLock.getBranch().getBranchId())
                 .orElseThrow(() -> bad("Chi nhánh không tồn tại."));
         Appointment a = appointments.findByIdForUpdate(appointmentId)
@@ -287,6 +323,9 @@ public class PortalAppointmentService {
     public AppointmentView cancel(HttpSession httpSession, Long appointmentId, CancelRequest request) {
         User user = access.requireUser(httpSession);
         Appointment beforeLock = owned(user, appointmentId);
+        if (patientProfiles != null && beforeLock.getPatientProfile() != null) {
+            patientProfiles.findByIdForUpdate(beforeLock.getPatientProfile().getProfileId());
+        }
         lockedBranches.findByIdForBooking(beforeLock.getBranch().getBranchId())
                 .orElseThrow(() -> bad("Chi nhánh không tồn tại."));
         Appointment a = appointments.findByIdForUpdate(appointmentId)

@@ -154,15 +154,28 @@ public class AppointmentConflictDetectionServiceImpl implements AppointmentConfl
             }
         }
 
-        // 5. Patient duplicate booking check: Chỉ cảnh báo khi trùng hoàn toàn ca và giờ hẹn với cùng bác sĩ
-        if (profile != null && session != null && session != PreferredSession.ANY && appointment.getExpectedTime() != null) {
-            Long apptDoctorId = appointment.getDoctor() != null ? appointment.getDoctor().getStaffId() : null;
-            boolean duplicate = appointments.findOccupyingForPatientDay(profile.getProfileId(), branch.getBranchId(), date, OCCUPYING).stream()
+        // 5. Patient duplicate booking check across all branches within the same session
+        if (profile != null && session != null && session != PreferredSession.ANY) {
+            List<Appointment> candidateList = new ArrayList<>();
+            List<Appointment> across = appointments.findOccupyingForPatientDayAcrossBranches(
+                    profile.getProfileId(), date, OCCUPYING);
+            if (across != null) {
+                candidateList.addAll(across);
+            }
+            if (candidateList.isEmpty()) {
+                List<Appointment> sameBranch = appointments.findOccupyingForPatientDay(
+                        profile.getProfileId(), branch.getBranchId(), date, OCCUPYING);
+                if (sameBranch != null) {
+                    candidateList.addAll(sameBranch);
+                }
+            }
+            boolean duplicate = candidateList.stream()
                     .filter(a -> !Objects.equals(a.getAppointmentId(), appointment.getAppointmentId()))
-                    .anyMatch(a -> a.getPreferredSession() == session && Objects.equals(a.getExpectedTime(), appointment.getExpectedTime())
-                            && Objects.equals(a.getDoctor() != null ? a.getDoctor().getStaffId() : null, apptDoctorId));
+                    .anyMatch(a -> a.getPreferredSession() == session
+                            || a.getPreferredSession() == PreferredSession.ANY);
             if (duplicate) {
-                conflicts.add(new Conflict("DUPLICATE_PATIENT_APPOINTMENT", "Bệnh nhân đã có lịch hẹn trùng ca, giờ và bác sĩ tại chi nhánh.", false));
+                conflicts.add(new Conflict("DUPLICATE_PATIENT_APPOINTMENT",
+                        "Bệnh nhân đã có lịch hẹn đang hoạt động trong cùng buổi khám này trên hệ thống.", false));
             }
         }
 
