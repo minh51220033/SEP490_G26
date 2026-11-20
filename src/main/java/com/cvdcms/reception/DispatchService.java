@@ -36,6 +36,9 @@ public class DispatchService {
     @Autowired(required = false)
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
+    @Autowired(required = false)
+    private com.cvdcms.service.ClinicQueueCoordinatorService queueCoordinator;
+
     @Autowired
     public DispatchService(ReceptionAccess access, DispatchVisitRepository visits, DispatchDoctorRepository doctors,
             DispatchScheduleRepository schedules, DispatchRoomRepository rooms, DispatchChairRepository chairs,
@@ -244,7 +247,8 @@ public class DispatchService {
 
         try {
             assign(session, branchId, visitId, doctorId, roomId, chairId, reason, note);
-            QueueTicket ticket = issue(session, branchId, visitId, priority, reason);
+            // Điều phối bàn/ghế không được tự nâng mức ưu tiên thủ công
+            QueueTicket ticket = issue(session, branchId, visitId, false, reason);
             Visit target = ticket != null && ticket.getVisit() != null ? ticket.getVisit() : visits.findById(visitId).orElse(existing);
             if (target != null && target.getStatus() != VisitStatus.WAITING && target.getStatus() != VisitStatus.WAITING_RESULT) {
                 target.setStatus(VisitStatus.WAITING);
@@ -373,6 +377,10 @@ public class DispatchService {
         audit(session, visit, transfersQueue ? "TRANSFER_DOCTOR_QUEUE" : "ASSIGN_VISIT", old,
                 "doctor=" + doctorId + ",room=" + effectiveRoom + ",chair=" + chairId
                         + (normalizedReason.isEmpty() ? "" : ",reason=" + normalizedReason));
+        if (queueCoordinator != null && visit.getPrimaryDoctor() != null) {
+            Long actorId = access.require(session).user().getUserId();
+            queueCoordinator.issueTicketForVisitIfEligible(visit.getVisitId(), actorId);
+        }
     }
 
     @Transactional
@@ -420,22 +428,29 @@ public class DispatchService {
         LocalDate day = LocalDate.now(ZONE);
         if (!visit.getCheckInAt().toLocalDate().equals(day)) throw fail(HttpStatus.CONFLICT, "Chỉ cấp số trong ngày check-in.");
 
+        boolean emergency = Boolean.TRUE.equals(visit.getIsEmergency()) || visit.getVisitType() == VisitType.EMERGENCY;
+        boolean returningParaclinical = visit.getStatus() == VisitStatus.WAITING_RESULT;
+        boolean bookedOnTime = Boolean.TRUE.equals(visit.getIsBookedAndOnTime())
+                && (visit.getAppointmentId() != null || visit.getVisitType() == VisitType.APPOINTMENT);
+        boolean isWalkIn = visit.getAppointmentId() == null && visit.getVisitType() != VisitType.APPOINTMENT;
+        if (emergency && !priority) {
+            throw fail(HttpStatus.BAD_REQUEST, "Ca cấp cứu cần bật chế độ ưu tiên và mô tả triệu chứng hoặc lý do từ 10 đến 255 ký tự.");
+        }
+        boolean autoPriority = emergency || returningParaclinical || bookedOnTime;
+        if (autoPriority) {
+            priority = true;
+        }
+
         var existing = tickets.findByVisitVisitIdAndQueueType(visitId, QueueType.EXAM);
         if (existing.isPresent()) {
             QueueTicket old = existing.get();
             if (old.getStatus() != QueueStatus.DONE && old.getStatus() != QueueStatus.CANCELLED) {
+                if (queueCoordinator != null && visit.getPrimaryDoctor() != null) {
+                    queueCoordinator.autoCallNextForDoctorIfIdle(branchId, visit.getPrimaryDoctor().getStaffId(),
+                            access.require(session).user().getUserId());
+                }
                 return old;
             }
-        }
-
-        boolean emergency = Boolean.TRUE.equals(visit.getIsEmergency()) || visit.getVisitType() == VisitType.EMERGENCY;
-        boolean bookedOnTime = Boolean.TRUE.equals(visit.getIsBookedAndOnTime())
-                && (visit.getAppointmentId() != null || visit.getVisitType() == VisitType.APPOINTMENT);
-        boolean isWalkIn = visit.getAppointmentId() == null && visit.getVisitType() != VisitType.APPOINTMENT;
-        boolean returningParaclinical = visit.getStatus() == VisitStatus.WAITING_RESULT;
-        boolean autoPriority = emergency || returningParaclinical || bookedOnTime;
-        if (autoPriority) {
-            priority = true;
         }
         String priorityReason = reason == null ? "" : reason.trim();
         if (returningParaclinical && priorityReason.isEmpty()) {
@@ -480,14 +495,8 @@ public class DispatchService {
         ticket.setQueueType(QueueType.EXAM);
         ticket.setTicketNumber(next);
         ticket.setDisplayNumber((priority ? "P-" : "") + String.format("%02d", next));
-        // Ca cấp cứu chuyển thẳng sang CALLED (Đang gọi/bàn giao) thay vì phải ngồi chờ
-        if (emergency) {
-            ticket.setStatus(QueueStatus.CALLED);
-            ticket.setCalledAt(LocalDateTime.now(ZONE));
-        } else {
-            ticket.setStatus(QueueStatus.WAITING);
-            ticket.setCalledAt(null);
-        }
+        ticket.setStatus(QueueStatus.WAITING);
+        ticket.setCalledAt(null);
         ticket.setIsPriority(priority);
         ticket.setIsEmergency(emergency);
         ticket.setPriorityScore(emergency ? 100 : (bookedOnTime ? 75 : (isWalkIn ? 50 : 25)));
@@ -508,6 +517,10 @@ public class DispatchService {
                     ticket.getStatus().name(),
                     "Cấp số khám " + ticket.getDisplayNumber(),
                     LocalDateTime.now(ZONE)));
+        }
+        if (queueCoordinator != null && visit.getPrimaryDoctor() != null) {
+            queueCoordinator.autoCallNextForDoctorIfIdle(branchId, visit.getPrimaryDoctor().getStaffId(),
+                    access.require(session).user().getUserId());
         }
         return ticket;
     }

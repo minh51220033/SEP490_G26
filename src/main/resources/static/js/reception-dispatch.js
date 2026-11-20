@@ -124,7 +124,7 @@
         if (modalNoteInput) modalNoteInput.value = '';
         if (modalRoomSelect) modalRoomSelect.value = currentRoom || '';
         if (modalChairSelect) modalChairSelect.value = currentChair || '';
-        if (modalPriorityCheckbox) modalPriorityCheckbox.checked = isEmergency;
+        if (modalPriorityCheckbox) modalPriorityCheckbox.checked = false;
         if (modalIssueTicketCheckbox) modalIssueTicketCheckbox.checked = true;
 
         if (modalDoctorSelect) {

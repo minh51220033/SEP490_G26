@@ -264,4 +264,30 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
         ORDER BY v.checkInAt ASC, v.visitId ASC
     """)
     List<Visit> findWaitingResultQueueByDoctorId(@Param("doctorId") Long doctorId);
+
+    @Query("""
+        SELECT v FROM Visit v
+        LEFT JOIN FETCH v.patientProfile pp
+        LEFT JOIN FETCH v.branch b
+        LEFT JOIN FETCH v.primaryDoctor d
+        WHERE b.branchId = :branchId
+          AND d.staffId = :doctorId
+          AND v.status IN :statuses
+        ORDER BY v.actualStartTime DESC, v.visitId DESC
+    """)
+    List<Visit> findActiveExamsForDoctorAtBranch(
+            @Param("branchId") Long branchId,
+            @Param("doctorId") Long doctorId,
+            @Param("statuses") Collection<VisitStatus> statuses
+    );
+
+    @Query("""
+        SELECT COUNT(v) FROM Visit v
+        WHERE v.chairId = :chairId
+          AND v.visitId <> :excludeVisitId
+          AND v.status IN :statuses
+    """)
+    long countOccupiedChair(@Param("chairId") Long chairId,
+                            @Param("excludeVisitId") Long excludeVisitId,
+                            @Param("statuses") java.util.Collection<VisitStatus> statuses);
 }

@@ -49,6 +49,10 @@ public final class EmrStatePolicy {
         if (visit == null) {
             return;
         }
+        if (visit.getStatus() == VisitStatus.WAITING) {
+            throw new IllegalStateException(
+                    "Bệnh nhân đang ở trạng thái Đang chờ. Vui lòng đợi hệ thống gọi số và bấm nút 'Vào khám' trước khi thao tác.");
+        }
         if (visit.getStatus() == VisitStatus.WAITING_PAYMENT
                 || visit.getStatus() == VisitStatus.COMPLETED
                 || visit.getStatus() == VisitStatus.CANCELLED) {

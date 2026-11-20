@@ -2749,8 +2749,8 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
-            if (!res.ok) throw new Error("Không thể mở ca khám cho bệnh nhân này");
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.message || "Không thể mở ca khám cho bệnh nhân này");
             if (data.redirectUrl) {
                 window.location.href = data.redirectUrl;
             }

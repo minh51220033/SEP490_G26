@@ -49,6 +49,9 @@ public class DoctorPatientRestController {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.security.UrlIdCodec urlIdCodec = new com.cvdcms.security.UrlIdCodec();
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ClinicQueueCoordinatorService queueCoordinator;
+
     private String encodeVisit(Long visitId) {
         return urlIdCodec != null && visitId != null ? urlIdCodec.encodeVisit(visitId) : "";
     }
@@ -163,6 +166,17 @@ public class DoctorPatientRestController {
             branchId = assignedBranch.getBranchId();
         }
 
+        // 0. Chặn mở/tạo ca bỏ qua hàng chờ nếu bệnh nhân đang ở trạng thái Chờ khám / Chờ kết quả
+        Optional<Visit> waitingVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(
+                profileId, List.of(VisitStatus.WAITING, VisitStatus.WAITING_RESULT));
+        if (waitingVisitOpt.isPresent()) {
+            Visit wv = waitingVisitOpt.get();
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                    "message", "Bệnh nhân đang nằm trong hàng chờ khám (" + wv.getVisitCode()
+                            + "). Không thể mở khám trực tiếp bỏ qua hàng chờ; vui lòng đợi hệ thống gọi số và bấm nút 'Vào khám'."
+            ));
+        }
+
         // 1. Kiểm tra xem bệnh nhân có ca khám nào đang hoạt động tại cơ sở hợp lệ chưa
         Optional<Visit> activeVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(profileId, ACTIVE_STATUSES);
         if (activeVisitOpt.isPresent()) {
@@ -183,6 +197,12 @@ public class DoctorPatientRestController {
                             : "bác sĩ khác";
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
                             "message", "Bệnh nhân đang có ca khám hoạt động (" + activeVisit.getVisitCode() + ") do " + ownerName + " phụ trách và bạn chưa được ủy quyền khám thay."
+                    ));
+                }
+                if (activeVisit.getStatus() == VisitStatus.WAITING || activeVisit.getStatus() == VisitStatus.WAITING_RESULT) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                            "message", "Bệnh nhân đang nằm trong hàng chờ khám (" + activeVisit.getVisitCode()
+                                    + "). Vui lòng chờ hệ thống gọi số và bấm nút 'Vào khám'."
                     ));
                 }
                 String visitToken = encodeVisit(activeVisit.getVisitId());
@@ -451,9 +471,11 @@ public class DoctorPatientRestController {
         Map<Long, ResolvedTurnInfo> turnMap = resolveDailyTurnNumbers(visits, branchId);
 
         final Long currentDocStaffId = currentDoctor != null ? currentDoctor.getStaffId() : null;
+        Map<Long, Visit> visitMap = new HashMap<>();
         Map<Long, LocalDateTime> checkInMap = new HashMap<>();
         for (Visit v : visits) {
             if (v.getVisitId() != null) {
+                visitMap.put(v.getVisitId(), v);
                 checkInMap.put(v.getVisitId(), v.getCheckInAt());
             }
         }
@@ -468,47 +490,56 @@ public class DoctorPatientRestController {
                     boolean isAccessible = isAdmin || currentDocStaffId == null || isPrimary || isCovered;
                     return mapToDailyVisitDTO(v, currentVisitId, turnMap.get(v.getVisitId()), isCovered, isAccessible);
                 })
-                .sorted(Comparator
-                        .comparingInt((com.cvdcms.DTO.DailyVisitDTO d) -> {
-                            int rank = getVisitStatusSortRank(d);
-                            if (rank == 0) return 0; // Đang khám / Điều trị tại ghế
-                            if (rank == 1 || rank == 2) return 1; // Hàng đợi bác sĩ (WAITING_RESULT & WAITING)
-                            if (rank == 3) return 2; // Chờ thu ngân / Hoàn thành
-                            return 3; // Đã hủy
-                        })
-                        .thenComparingInt((com.cvdcms.DTO.DailyVisitDTO d) -> {
-                            int rank = getVisitStatusSortRank(d);
-                            if (rank != 1 && rank != 2) return 0;
-                            boolean isEmer = Boolean.TRUE.equals(d.getIsEmergency()) || Objects.equals(d.getQueuePriorityRank(), 1);
-                            return isEmer ? 0 : 1; // Priority 1: Cấp cứu luôn đứng đầu
-                        })
-                        .thenComparingInt((com.cvdcms.DTO.DailyVisitDTO d) -> {
-                            int rank = getVisitStatusSortRank(d);
-                            if (rank != 1 && rank != 2) return 0;
-                            return rank == 1 ? 0 : 1; // Nhóm WAITING_RESULT ưu tiên trước nhóm WAITING mới
-                        })
-                        .thenComparingInt(d -> d.getQueuePriorityRank() != null ? d.getQueuePriorityRank() : 4)
-                        .thenComparing((com.cvdcms.DTO.DailyVisitDTO d) -> {
-                            int rank = getVisitStatusSortRank(d);
-                            LocalDateTime ci = checkInMap.get(d.getVisitId());
-                            if (rank <= 2) {
-                                // Hàng đợi (IN_EXAM / WAITING_RESULT / WAITING): check_in_at ASC (đến trước khám trước)
-                                return ci != null ? ci : LocalDateTime.MAX;
-                            }
-                            return LocalDateTime.MIN;
-                        })
-                        .thenComparing((com.cvdcms.DTO.DailyVisitDTO d) -> {
-                            int rank = getVisitStatusSortRank(d);
-                            LocalDateTime ci = checkInMap.get(d.getVisitId());
-                            if (rank > 2 && ci != null) {
-                                return ci;
-                            }
-                            return LocalDateTime.MIN;
-                        }, Comparator.reverseOrder())
-                        .thenComparing(d -> d.getVisitId() != null ? d.getVisitId() : Long.MAX_VALUE))
+                .sorted((d1, d2) -> {
+                    int g1 = getDailyVisitDeskGroup(d1);
+                    int g2 = getDailyVisitDeskGroup(d2);
+                    if (g1 != g2) return Integer.compare(g1, g2);
+
+                    if (g1 == 1) {
+                        // Đang gọi: so sánh calledAt tăng dần rồi visitId
+                        LocalDateTime c1 = turnMap.get(d1.getVisitId()) != null ? turnMap.get(d1.getVisitId()).calledAt() : null;
+                        LocalDateTime c2 = turnMap.get(d2.getVisitId()) != null ? turnMap.get(d2.getVisitId()).calledAt() : null;
+                        if (c1 != null && c2 != null) {
+                            int cmp = c1.compareTo(c2);
+                            if (cmp != 0) return cmp;
+                        }
+                    }
+
+                    if (g1 <= 3) {
+                        Visit v1 = visitMap.get(d1.getVisitId());
+                        Visit v2 = visitMap.get(d2.getVisitId());
+                        QueueTicket t1 = turnMap.get(d1.getVisitId()) != null ? turnMap.get(d1.getVisitId()).ticket() : null;
+                        QueueTicket t2 = turnMap.get(d2.getVisitId()) != null ? turnMap.get(d2.getVisitId()).ticket() : null;
+                        if (queueCoordinator != null) {
+                            return queueCoordinator.compareVisitsForWaitingOrder(v1, t1, v2, t2);
+                        }
+                    }
+
+                    LocalDateTime ci1 = checkInMap.get(d1.getVisitId());
+                    LocalDateTime ci2 = checkInMap.get(d2.getVisitId());
+                    if (ci1 != null && ci2 != null) {
+                        int cmp = g1 >= 4 ? ci2.compareTo(ci1) : ci1.compareTo(ci2);
+                        if (cmp != 0) return cmp;
+                    }
+                    Long id1 = d1.getVisitId() != null ? d1.getVisitId() : Long.MAX_VALUE;
+                    Long id2 = d2.getVisitId() != null ? d2.getVisitId() : Long.MAX_VALUE;
+                    return Long.compare(id1, id2);
+                })
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(result);
+    }
+
+    private int getDailyVisitDeskGroup(com.cvdcms.DTO.DailyVisitDTO d) {
+        String st = d.getStatus();
+        String qs = d.getQueueStatus();
+        if ("IN_EXAM".equals(st) || "IN_TREATMENT".equals(st)) return 0;
+        if ("CALLED".equals(qs) && ("WAITING".equals(st) || "WAITING_RESULT".equals(st))) return 1;
+        if (("WAITING".equals(st) || "WAITING_RESULT".equals(st)) && !"PAUSED".equals(qs)) return 2;
+        if ("PAUSED".equals(qs) || "WAITING_PARACLINICAL".equals(st)) return 3;
+        if ("WAITING_PAYMENT".equals(st)) return 4;
+        if ("COMPLETED".equals(st)) return 5;
+        return 6;
     }
 
     /**
@@ -596,7 +627,10 @@ public class DoctorPatientRestController {
             String displayNumber,
             boolean isPriority,
             boolean isEmergency,
-            String priorityReason
+            String priorityReason,
+            String queueStatus,
+            LocalDateTime calledAt,
+            QueueTicket ticket
     ) {}
 
     private Map<Long, ResolvedTurnInfo> resolveDailyTurnNumbers(List<Visit> visits, Long filterBranchId) {
@@ -701,7 +735,10 @@ public class DoctorPatientRestController {
                             t.getDisplayNumber(),
                             isPriority,
                             isEmergency,
-                            t.getPriorityReason()
+                            t.getPriorityReason(),
+                            t.getStatus() != null ? t.getStatus().name() : null,
+                            t.getCalledAt(),
+                            t
                     ));
                 }
             }
@@ -740,7 +777,7 @@ public class DoctorPatientRestController {
                     usedPriority.add(nextPriority);
                     String disp = "P-" + String.format("%02d", nextPriority);
                     resolvedMap.put(v.getVisitId(), new ResolvedTurnInfo(
-                            null, nextPriority, disp, true, isEmergency, reason
+                            null, nextPriority, disp, true, isEmergency, reason, null, null, null
                     ));
                 } else {
                     while (usedNormal.contains(nextNormal)) {
@@ -749,7 +786,7 @@ public class DoctorPatientRestController {
                     usedNormal.add(nextNormal);
                     String disp = String.format("%02d", nextNormal);
                     resolvedMap.put(v.getVisitId(), new ResolvedTurnInfo(
-                            null, nextNormal, disp, false, false, null
+                            null, nextNormal, disp, false, false, null, null, null, null
                     ));
                 }
             }
@@ -949,6 +986,8 @@ public class DoctorPatientRestController {
                 .ticketId(ticketId)
                 .ticketNumber(ticketNumber)
                 .ticketDisplayNumber(ticketDisplayNumber)
+                .queueStatus(turnInfo != null ? turnInfo.queueStatus() : null)
+                .calledAt(turnInfo != null && turnInfo.calledAt() != null ? turnInfo.calledAt().format(DateTimeFormatter.ofPattern("HH:mm")) : null)
                 .isPriority(isPriority)
                 .isEmergency(isEmergency)
                 .priorityReason(priorityReason)
