@@ -1559,8 +1559,13 @@
                 `;
             }
 
+            const isQueueLocked = v.status === 'WAITING' || v.status === 'WAITING_RESULT';
+            const cardClickAttr = isQueueLocked
+                ? `onclick="alert('Bệnh nhân còn đang chờ khám. Vui lòng tiếp nhận theo thứ tự tại Khám trong ngày bằng nút Vào khám.')"`
+                : `onclick="onSelectDailyVisitCard(${v.visitId}, '${v.visitToken || ''}', ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}')"`;
+
             html += `
-                <div class="dvd-card ${isCurrent ? 'is-current' : ''}" onclick="onSelectDailyVisitCard(${v.visitId}, '${v.visitToken || ''}', ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}')">
+                <div class="dvd-card ${isCurrent ? 'is-current' : ''}" ${cardClickAttr}>
                     <div class="dvd-card-header">
                         <div class="d-flex align-items-center flex-grow-1 me-2">
                             <div class="dvd-avatar">
@@ -1602,7 +1607,9 @@
                         <div>
                             ${isCurrent
                                 ? '<span class="text-primary fw-bold small"><i class="bi bi-check2-circle"></i> Đang mở</span>'
-                                : '<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 fw-bold" style="font-size: 11px;">Vào khám <i class="bi bi-chevron-right"></i></button>'
+                                : (isQueueLocked
+                                    ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:11px;">Chờ nút Vào khám</span>'
+                                    : '<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 fw-bold" style="font-size: 11px;">Mở ca <i class="bi bi-chevron-right"></i></button>')
                             }
                         </div>
                     </div>
@@ -1932,6 +1939,107 @@
             </div>
         </div>
     </div>
+
+    <!-- BANNER / TOAST CẢNH BÁO CẤP CỨU TỨC THÌ KHI ĐANG KHÁM -->
+    <div id="clinicalEmergencyFloatAlert" class="position-fixed top-0 end-0 p-3 d-none" style="z-index: 2060; max-width: 440px;">
+        <div class="alert alert-danger border-0 shadow-lg rounded-4 mb-0 p-3" style="background: #fef2f2; border-left: 5px solid #dc2626 !important;">
+            <div class="d-flex align-items-start gap-2">
+                <i class="bi bi-lightning-charge-fill text-danger fs-4 flex-shrink-0"></i>
+                <div class="flex-grow-1 small text-dark">
+                    <div class="fw-bold text-danger mb-1">CẢNH BÁO CẤP CỨU TỪ LỄ TÂN</div>
+                    <div id="clinicalEmergencyFloatBody"></div>
+                </div>
+                <button type="button" class="btn-close" aria-label="Close" onclick="document.getElementById('clinicalEmergencyFloatAlert').classList.add('d-none')"></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function initClinicalDeskEmergencyListener() {
+        const bannerEl = document.getElementById('clinicalEmergencyFloatAlert');
+        const bodyEl = document.getElementById('clinicalEmergencyFloatBody');
+        let lastSeenSig = '';
+
+        function renderAlerts(alerts, fallbackMsg) {
+            if (!bannerEl || !bodyEl) return;
+            if (Array.isArray(alerts) && alerts.length > 0) {
+                const sig = alerts.map(a => `${a.ticketId}:${a.reportedAt}:${a.reason}`).join('|');
+                bodyEl.innerHTML = alerts.map(a =>
+                    `<div class="mb-1"><strong>${escapeHtml(a.displayNumber || '')} – ${escapeHtml(a.patientName || '')}</strong>: ${escapeHtml(a.reason || '')}<br><span class="text-muted">Người báo: ${escapeHtml(a.reportedBy || '')} • Lúc ${escapeHtml(a.reportedAt || '')}</span></div>`
+                ).join('');
+                if (sig !== lastSeenSig) {
+                    lastSeenSig = sig;
+                    bannerEl.classList.remove('d-none');
+                }
+            } else if (fallbackMsg) {
+                bodyEl.textContent = fallbackMsg;
+                bannerEl.classList.remove('d-none');
+            } else {
+                bannerEl.classList.add('d-none');
+                bodyEl.innerHTML = '';
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        async function pollStatus() {
+            try {
+                const res = await fetch('/api/doctor/visits/queue-status', { cache: 'no-store' });
+                if (!res.ok) return null;
+                const data = await res.json();
+                renderAlerts(data.emergencyAlerts || []);
+                return data;
+            } catch (_) {
+                return null;
+            }
+        }
+
+        function loadScript(src, readyFn) {
+            return new Promise((resolve) => {
+                if (readyFn()) { resolve(); return; }
+                const s = document.createElement('script');
+                s.src = src;
+                s.async = true;
+                s.onload = () => resolve();
+                s.onerror = () => resolve();
+                document.head.appendChild(s);
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            const st = await pollStatus();
+            if (!st || (!st.doctorId && !st.branchId)) return;
+            await loadScript('https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js', () => !!window.SockJS);
+            await loadScript('https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js', () => !!window.Stomp);
+            if (!window.SockJS || !window.Stomp) return;
+            try {
+                const sock = new window.SockJS('/ws-chat');
+                const stomp = window.Stomp.over(sock);
+                stomp.debug = null;
+                stomp.connect({}, () => {
+                    const onMsg = (frame) => {
+                        let msgFallback = null;
+                        try {
+                            const ev = JSON.parse(frame.body || '{}');
+                            if (ev && ev.eventType === 'EMERGENCY_REPORTED') {
+                                msgFallback = ev.message;
+                            }
+                        } catch (_) {}
+                        pollStatus().then((data) => {
+                            if (msgFallback && (!data || !Array.isArray(data.emergencyAlerts) || data.emergencyAlerts.length === 0)) {
+                                renderAlerts([], msgFallback);
+                            }
+                        });
+                    };
+                    if (st.doctorId) stomp.subscribe(`/topic/queue/doctor/${st.doctorId}`, onMsg);
+                    if (st.branchId) stomp.subscribe(`/topic/queue/branch/${st.branchId}`, onMsg);
+                }, () => {});
+            } catch (_) {}
+        });
+    })();
+    </script>
 
 </body>
 </html>

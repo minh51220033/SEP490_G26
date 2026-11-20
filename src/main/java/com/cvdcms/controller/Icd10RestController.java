@@ -48,7 +48,7 @@ public class Icd10RestController {
 
     @PostMapping("/diagnoses")
     public ResponseEntity<?> addDiagnosis(@Valid @RequestBody DiagnosisRequestDTO request, jakarta.servlet.http.HttpSession session) {
-        doctorVisitAccess.require(session, request.getVisitId());
+        doctorVisitAccess.requireActiveClinicalExam(session, request.getVisitId());
         try {
             DiagnosisResponseDTO response = diagnosisService.addDiagnosis(request);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);

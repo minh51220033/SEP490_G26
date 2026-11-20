@@ -41,7 +41,7 @@ public class PerformedServiceRestController {
     public ResponseEntity<Map<String, Object>> createPerformedService(
             @Valid @RequestBody PerformedServiceRequestDTO requestDTO, jakarta.servlet.http.HttpSession session
     ) {
-        doctorVisitAccess.require(session, requestDTO.getVisitId());
+        doctorVisitAccess.requireActiveClinicalExam(session, requestDTO.getVisitId());
         log.info("API createPerformedService called with: visitId={}, serviceId={}",
                 requestDTO.getVisitId(), requestDTO.getServiceId());
 

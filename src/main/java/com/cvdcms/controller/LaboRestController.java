@@ -47,7 +47,7 @@ public class LaboRestController {
         }
         jakarta.servlet.http.HttpSession session = currentHttpSession();
         if (request != null && request.getVisitId() != null) {
-            doctorVisitAccess.require(session, request.getVisitId());
+            doctorVisitAccess.requireActiveClinicalExam(session, request.getVisitId());
         } else if (request != null && request.getProfileId() != null) {
             doctorVisitAccess.requirePatientWrite(session, request.getProfileId());
         } else {

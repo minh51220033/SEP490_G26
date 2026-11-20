@@ -81,7 +81,9 @@ public class TreatmentPlanRestController {
     public ResponseEntity<?> createPlan(@RequestBody TreatmentPlanRequestDTO request) {
         if (doctorVisitAccess != null && isHttpRequestActive()) {
             jakarta.servlet.http.HttpSession session = currentHttpSession();
-            if (request != null && request.getPatientId() != null) {
+            if (request != null && request.getVisitId() != null) {
+                doctorVisitAccess.requireActiveClinicalExam(session, request.getVisitId());
+            } else if (request != null && request.getPatientId() != null) {
                 doctorVisitAccess.requirePatientWrite(session, request.getPatientId());
             } else {
                 doctorVisitAccess.requireAuthenticatedUser(session);
@@ -257,7 +259,7 @@ public class TreatmentPlanRestController {
         if (doctorVisitAccess != null && isHttpRequestActive()) {
             jakarta.servlet.http.HttpSession session = currentHttpSession();
             doctorVisitAccess.requireTreatmentPlanItem(session, itemId);
-            doctorVisitAccess.require(session, visitId);
+            doctorVisitAccess.requireActiveClinicalExam(session, visitId);
         }
         try {
             com.cvdcms.entity.TreatmentPlanItem item = treatmentPlanItemRepository.findById(itemId)

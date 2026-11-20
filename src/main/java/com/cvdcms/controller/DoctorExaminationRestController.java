@@ -21,6 +21,98 @@ public class DoctorExaminationRestController {
     private final DiagnosisService diagnosisService;
     private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ClinicQueueCoordinatorService queueCoordinator;
+
+    /**
+     * Lấy trạng thái bàn khám hiện tại của bác sĩ (lượt đang gọi, đang khám, số lượng chờ, cảnh báo cấp cứu).
+     * Chỉ đọc, không tự chuyển trạng thái hàng đợi.
+     */
+    @GetMapping("/queue-status")
+    public ResponseEntity<com.cvdcms.service.ClinicQueueCoordinatorService.DoctorDeskStatusDTO> getDoctorDeskQueueStatus(
+            @RequestParam(value = "branchId", required = false) Long branchId,
+            jakarta.servlet.http.HttpSession session) {
+        com.cvdcms.entity.User user = doctorVisitAccess.requireAuthenticatedUser(session);
+        return ResponseEntity.ok(queueCoordinator.getDoctorDeskStatus(user, branchId));
+    }
+
+    /**
+     * Nút "Vào khám" chung của bác sĩ: xác định đúng lượt Đang gọi (hoặc mở lại ca Đang khám hiện tại).
+     */
+    @PostMapping("/enter-exam")
+    public ResponseEntity<Map<String, Object>> enterExamination(
+            @RequestParam(value = "branchId", required = false) Long branchId,
+            jakarta.servlet.http.HttpSession session) {
+        com.cvdcms.entity.User user = doctorVisitAccess.requireAuthenticatedUser(session);
+        try {
+            var res = queueCoordinator.enterExaminationForDoctor(user, branchId);
+            Map<String, Object> body = new HashMap<>();
+            body.put("success", true);
+            body.put("visitId", res.visit().getVisitId());
+            body.put("visitToken", res.visitToken());
+            body.put("visitCode", res.visit().getVisitCode());
+            body.put("displayNumber", res.ticket().getDisplayNumber());
+            body.put("patientName", res.visit().getPatientProfile() != null ? res.visit().getPatientProfile().getFullName() : "");
+            body.put("reopenedActiveSession", res.reopenedActiveSession());
+            body.put("redirectUrl", "/doctor/examination/" + res.visitToken() + "/diagnoses");
+            return ResponseEntity.ok(body);
+        } catch (org.springframework.web.server.ResponseStatusException ex) {
+            return ResponseEntity.status(ex.getStatusCode()).body(Map.of(
+                    "success", false,
+                    "message", ex.getReason() != null ? ex.getReason() : "Không thể vào khám."));
+        }
+    }
+
+    /**
+     * Bác sĩ ghi nhận "Vắng mặt" đối với đúng lượt đang ở trạng thái Đang gọi, lưu dấu vết và tự gọi lượt kế tiếp.
+     */
+    @PostMapping("/call-absent")
+    public ResponseEntity<Map<String, Object>> markCalledPatientAbsent(
+            @RequestParam(value = "branchId", required = false) Long branchId,
+            @RequestBody(required = false) Map<String, Object> body,
+            jakarta.servlet.http.HttpSession session) {
+        com.cvdcms.entity.User user = doctorVisitAccess.requireAuthenticatedUser(session);
+        Long ticketId = null;
+        String reason = null;
+        if (body != null) {
+            Object rawTicketId = body.get("ticketId");
+            if (rawTicketId instanceof Number num) {
+                ticketId = num.longValue();
+            } else if (rawTicketId != null && !rawTicketId.toString().isBlank()) {
+                try {
+                    ticketId = Long.parseLong(rawTicketId.toString().trim());
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            Object rawReason = body.get("reason");
+            if (rawReason != null) {
+                reason = rawReason.toString();
+            }
+        }
+        if (ticketId == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT).body(Map.of(
+                    "success", false,
+                    "message", "Thiếu mã phiếu đang gọi (ticketId) để xác nhận vắng mặt."));
+        }
+        try {
+            var result = queueCoordinator.markCalledPatientAbsent(user, branchId, ticketId, reason);
+            var deskStatus = queueCoordinator.getDoctorDeskStatus(user, branchId);
+            Map<String, Object> resp = new HashMap<>();
+            resp.put("success", true);
+            resp.put("absentDisplayNumber", result.absentTicket().getDisplayNumber());
+            resp.put("nextCalledDisplayNumber", result.nextCalledTicket() != null ? result.nextCalledTicket().getDisplayNumber() : null);
+            resp.put("message", result.nextCalledTicket() != null
+                    ? "Đã ghi nhận vắng mặt lượt " + result.absentTicket().getDisplayNumber() + ". Hệ thống tự động gọi lượt tiếp theo: " + result.nextCalledTicket().getDisplayNumber() + "."
+                    : "Đã ghi nhận vắng mặt lượt " + result.absentTicket().getDisplayNumber() + ". Hiện không có bệnh nhân đang chờ.");
+            resp.put("deskStatus", deskStatus);
+            return ResponseEntity.ok(resp);
+        } catch (org.springframework.web.server.ResponseStatusException ex) {
+            return ResponseEntity.status(ex.getStatusCode()).body(Map.of(
+                    "success", false,
+                    "message", ex.getReason() != null ? ex.getReason() : "Không thể ghi nhận vắng mặt."));
+        }
+    }
+
     /**
      * Kiểm tra điều kiện hoàn tất ca khám lâm sàng (ICD-10, dịch vụ COMPLETED, etc.)
      */
@@ -41,7 +133,7 @@ public class DoctorExaminationRestController {
             @RequestBody(required = false) ClinicalCompletionRequestDTO request,
             jakarta.servlet.http.HttpSession session
     ) {
-        doctorVisitAccess.require(session, visitId);
+        doctorVisitAccess.requireActiveClinicalExam(session, visitId);
         String doctorNotes = (request != null) ? request.getDoctorNotes() : null;
         try {
             Visit updatedVisit = diagnosisService.completeClinicalExamination(visitId, doctorNotes);
@@ -125,7 +217,7 @@ public class DoctorExaminationRestController {
             @RequestBody com.cvdcms.DTO.GeneralExaminationRequestDTO request,
             jakarta.servlet.http.HttpSession session
     ) {
-        doctorVisitAccess.require(session, visitId);
+        doctorVisitAccess.requireActiveClinicalExam(session, visitId);
         Map<String, Object> response = new HashMap<>();
         try {
             if (request == null) {
@@ -158,7 +250,7 @@ public class DoctorExaminationRestController {
             @RequestBody Map<String, String> body,
             jakarta.servlet.http.HttpSession session
     ) {
-        doctorVisitAccess.require(session, visitId);
+        doctorVisitAccess.requireActiveClinicalExam(session, visitId);
         Map<String, Object> response = new HashMap<>();
         try {
             String adviceNotes = (body != null) ? body.get("adviceNotes") : "";

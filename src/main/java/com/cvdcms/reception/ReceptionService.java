@@ -57,6 +57,9 @@ public class ReceptionService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.StaffBranchAssignmentRepository branchAssignments;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ClinicQueueCoordinatorService queueCoordinator;
+
     private Clock clock = Clock.system(CLINIC_ZONE);
 
     public void setClock(Clock clock) {
@@ -185,6 +188,9 @@ public class ReceptionService {
         appointments.save(appointment);
 
         Long actorId = access.require(session).user().getUserId();
+        if (queueCoordinator != null && visit.getPrimaryDoctor() != null) {
+            queueCoordinator.issueTicketForVisitIfEligible(visit.getVisitId(), actorId);
+        }
         recordHistory(appointment, actorId, "CHECK_IN", oldSnapshot, snapshot(appointment),
                 bookedAndOnTime ? "Check-in đúng giờ tại quầy tiếp đón" : "Check-in tại quầy tiếp đón (trễ grace period / không giờ hẹn cố định)");
 
@@ -297,6 +303,11 @@ public class ReceptionService {
 
         appointments.save(appointment);
 
+        Long confirmActorId = access.require(session).user().getUserId();
+        if (queueCoordinator != null && visit.getPrimaryDoctor() != null) {
+            queueCoordinator.issueTicketForVisitIfEligible(visit.getVisitId(), confirmActorId);
+        }
+
         audit(session, branch, emergency ? "CONFIRM_AND_CHECK_IN_EMERGENCY" : "CONFIRM_AND_CHECK_IN", visit,
                 Map.of("appointmentId", appointmentId, "profileId", patient.getProfileId(),
                         "appointmentStatusBefore", initialStatus, "visitStatus", "WAITING",
@@ -336,9 +347,13 @@ public class ReceptionService {
             }
 
             // Hủy toàn bộ QueueTicket liên quan để tránh ghost ticket trên hàng chờ và màn hình TV
+            boolean hadCalledTicket = false;
             if (tickets != null) {
                 List<QueueTicket> visitTickets = tickets.findAllByVisitAndType(visit.getVisitId(), QueueType.EXAM);
                 for (QueueTicket t : visitTickets) {
+                    if (t.getStatus() == QueueStatus.CALLED) {
+                        hadCalledTicket = true;
+                    }
                     t.setStatus(QueueStatus.CANCELLED);
                 }
                 if (!visitTickets.isEmpty()) {
@@ -346,6 +361,10 @@ public class ReceptionService {
                 }
             }
             keys.findByVisit_VisitId(visit.getVisitId()).ifPresent(keys::delete);
+            if (hadCalledTicket && queueCoordinator != null && visit.getPrimaryDoctor() != null) {
+                Long actorUserId = access.require(session).user().getUserId();
+                queueCoordinator.autoCallNextForDoctorIfIdle(branch.getBranchId(), visit.getPrimaryDoctor().getStaffId(), actorUserId);
+            }
         }
 
         String oldSnapshot = snapshot(appointment);
@@ -422,6 +441,11 @@ public class ReceptionService {
         visits.saveAndFlush(visit);
         autoAssignDoctorOnCheckIn(branch, visit, nowDateTime);
         storeKey(requestKey, visit);
+
+        Long walkInActorId = access.require(session).user().getUserId();
+        if (queueCoordinator != null && visit.getPrimaryDoctor() != null) {
+            queueCoordinator.issueTicketForVisitIfEligible(visit.getVisitId(), walkInActorId);
+        }
 
         audit(session, branch, emergency ? "CHECK_IN_EMERGENCY" : "CHECK_IN_WALK_IN", visit,
                 Map.of("profileId", profileId, "visitStatus", "WAITING", "visitType", visit.getVisitType().name(),

@@ -58,6 +58,11 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     @Autowired(required = false)
     private com.cvdcms.service.AppointmentLifecycleService appointmentLifecycleService;
 
+    @Autowired(required = false)
+    private com.cvdcms.service.ClinicQueueCoordinatorService queueCoordinator;
+    @Autowired(required = false)
+    private BranchRepository branchRepository;
+
     @Autowired
     public DiagnosisServiceImpl(
             ExaminationDiagnosisRepository diagnosisRepository,
@@ -113,6 +118,17 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     }
 
     private static final DateTimeFormatter AUDIT_DATE_TIME = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+    private com.cvdcms.entity.User resolveCurrentSessionUser() {
+        var attrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        if (attrs instanceof org.springframework.web.context.request.ServletRequestAttributes web) {
+            var session = web.getRequest().getSession(false);
+            if (session != null && session.getAttribute("loggedInUser") instanceof com.cvdcms.entity.User u) {
+                return u;
+            }
+        }
+        return null;
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -505,7 +521,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 }
             });
         }
-        if (queueTickets != null) {
+        if (queueCoordinator != null) {
+            User actor = resolveCurrentSessionUser();
+            queueCoordinator.completeVisitAndAutoCallNext(visit, actor);
+        } else if (queueTickets != null) {
             queueTickets.findByVisitVisitIdAndQueueType(visitId, com.cvdcms.entity.enums.QueueType.EXAM)
                     .stream().filter(t -> t.getStatus() == com.cvdcms.entity.enums.QueueStatus.IN_SERVICE
                             || t.getStatus() == com.cvdcms.entity.enums.QueueStatus.CALLED)
@@ -515,36 +534,45 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                         queueTickets.save(t);
                     });
 
-            // Tự động gọi ca tiếp theo của Bác sĩ này (Event-driven queue progression)
+            // Fallback cho môi trường unit test không inject ClinicQueueCoordinatorService
             if (visit.getPrimaryDoctor() != null && visit.getBranch() != null) {
                 Long docId = visit.getPrimaryDoctor().getStaffId();
                 Long bId = visit.getBranch().getBranchId();
                 LocalDate today = LocalDate.now();
-                var nextWaitingOpt = queueTickets.findAll().stream()
-                        .filter(t -> t.getBranch() != null && bId.equals(t.getBranch().getBranchId())
+                List<com.cvdcms.entity.QueueTicket> allBranchTickets = queueTickets.findAll();
+                boolean alreadyCalledOrBusy = allBranchTickets.stream()
+                        .anyMatch(t -> t.getBranch() != null && bId.equals(t.getBranch().getBranchId())
                                 && today.equals(t.getQueueDate())
                                 && t.getQueueType() == com.cvdcms.entity.enums.QueueType.EXAM
-                                && t.getStatus() == com.cvdcms.entity.enums.QueueStatus.WAITING
+                                && (t.getStatus() == com.cvdcms.entity.enums.QueueStatus.CALLED
+                                        || t.getStatus() == com.cvdcms.entity.enums.QueueStatus.IN_SERVICE)
                                 && t.getVisit() != null && t.getVisit().getPrimaryDoctor() != null
-                                && docId.equals(t.getVisit().getPrimaryDoctor().getStaffId()))
-                        .min((a, b) -> {
-                            boolean aEmer = Boolean.TRUE.equals(a.getIsEmergency());
-                            boolean bEmer = Boolean.TRUE.equals(b.getIsEmergency());
-                            if (aEmer != bEmer) return aEmer ? -1 : 1;
-                            int aScore = a.getPriorityScore() != null ? a.getPriorityScore() : 0;
-                            int bScore = b.getPriorityScore() != null ? b.getPriorityScore() : 0;
-                            if (aScore != bScore) return Integer.compare(bScore, aScore);
-                            int aNum = a.getTicketNumber() != null ? a.getTicketNumber() : 999999;
-                            int bNum = b.getTicketNumber() != null ? b.getTicketNumber() : 999999;
-                            return Integer.compare(aNum, bNum);
-                        });
-                nextWaitingOpt.ifPresent(nextTicket -> {
-                    nextTicket.setStatus(com.cvdcms.entity.enums.QueueStatus.CALLED);
-                    nextTicket.setCalledAt(LocalDateTime.now());
-                    queueTickets.save(nextTicket);
-                    log.info("Event-driven: Tự động chuyển ca tiếp theo #{} sang ĐANG GỌI cho Bác sĩ {}", 
-                            nextTicket.getDisplayNumber(), visit.getPrimaryDoctor().getFullName());
-                });
+                                && docId.equals(t.getVisit().getPrimaryDoctor().getStaffId()));
+                if (!alreadyCalledOrBusy) {
+                    var nextWaitingOpt = allBranchTickets.stream()
+                            .filter(t -> t.getBranch() != null && bId.equals(t.getBranch().getBranchId())
+                                    && today.equals(t.getQueueDate())
+                                    && t.getQueueType() == com.cvdcms.entity.enums.QueueType.EXAM
+                                    && t.getStatus() == com.cvdcms.entity.enums.QueueStatus.WAITING
+                                    && t.getVisit() != null && t.getVisit().getPrimaryDoctor() != null
+                                    && docId.equals(t.getVisit().getPrimaryDoctor().getStaffId()))
+                            .min((a, b) -> {
+                                boolean aEmer = Boolean.TRUE.equals(a.getIsEmergency());
+                                boolean bEmer = Boolean.TRUE.equals(b.getIsEmergency());
+                                if (aEmer != bEmer) return aEmer ? -1 : 1;
+                                int aScore = a.getPriorityScore() != null ? a.getPriorityScore() : 0;
+                                int bScore = b.getPriorityScore() != null ? b.getPriorityScore() : 0;
+                                if (aScore != bScore) return Integer.compare(bScore, aScore);
+                                int aNum = a.getTicketNumber() != null ? a.getTicketNumber() : 999999;
+                                int bNum = b.getTicketNumber() != null ? b.getTicketNumber() : 999999;
+                                return Integer.compare(aNum, bNum);
+                            });
+                    nextWaitingOpt.ifPresent(nextTicket -> {
+                        nextTicket.setStatus(com.cvdcms.entity.enums.QueueStatus.CALLED);
+                        nextTicket.setCalledAt(LocalDateTime.now());
+                        queueTickets.save(nextTicket);
+                    });
+                }
             }
         }
 
@@ -660,6 +688,11 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     @Override
     @org.springframework.transaction.annotation.Transactional
     public Visit reopenClinicalExamination(Long visitId, String reason) {
+        Visit preCheck = visitRepository.findById(visitId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lượt khám ID: " + visitId));
+        if (branchRepository != null && preCheck.getBranch() != null && preCheck.getBranch().getBranchId() != null) {
+            branchRepository.findByIdForUpdate(preCheck.getBranch().getBranchId());
+        }
         Visit visit = visitRepository.lockById(visitId)
                 .or(() -> visitRepository.findById(visitId))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lượt khám ID: " + visitId));
@@ -667,6 +700,19 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             throw new IllegalStateException(
                     "Chỉ có thể mở lại ca khám đang ở trạng thái Chờ thanh toán (WAITING_PAYMENT). Trạng thái hiện tại: "
                             + visit.getStatus().name());
+        }
+        if (visit.getBranch() != null && visit.getPrimaryDoctor() != null) {
+            List<Visit> activeSameDesk = visitRepository.findActiveExamsForDoctorAtBranch(
+                    visit.getBranch().getBranchId(),
+                    visit.getPrimaryDoctor().getStaffId(),
+                    List.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT));
+            for (Visit other : activeSameDesk) {
+                if (!Objects.equals(other.getVisitId(), visitId)) {
+                    throw new IllegalStateException(
+                            "Bàn khám đang có ca khám khác đang thực hiện (" + other.getVisitCode()
+                                    + "). Vui lòng hoàn tất ca đang khám trước khi mở lại ca cũ.");
+                }
+            }
         }
 
         if (emrRecordRepository != null) {

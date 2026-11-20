@@ -784,7 +784,7 @@
                                 <span>BAĐT</span>
                             </a>
 
-                            <a th:if="${canPerformClinical}"
+                            <a th:if="${canPerformClinical and visit.status != 'WAITING' and visit.status != 'WAITING_RESULT'}"
                                th:href="@{/doctor/examination/{id}/diagnoses(id=${idCodec.encodeVisit(visit.id)})}"
                                class="vc-btn-sm vc-btn-primary">
                                 <i class="bi bi-clipboard2-pulse"></i>
@@ -922,7 +922,7 @@
                                         </div>
                                         <div class="d-flex align-items-center gap-3">
                                             <span class="vc-card-micro-status">Chưa ghi nhận chẩn đoán hoặc thủ thuật</span>
-                                            <a th:if="${canPerformClinical}"
+                                            <a th:if="${canPerformClinical and visit.status != 'WAITING' and visit.status != 'WAITING_RESULT'}"
                                                th:href="@{/doctor/examination/{id}/diagnoses(id=${idCodec.encodeVisit(visit.id)})}"
                                                class="vc-btn-sm vc-btn-tonal py-1 px-2" style="font-size: 12px;">
                                                 Ghi nhận

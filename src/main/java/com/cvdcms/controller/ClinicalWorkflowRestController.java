@@ -99,7 +99,7 @@ public class ClinicalWorkflowRestController {
             @PathVariable Long visitId,
             @PathVariable Long serviceId,
             HttpSession session) {
-        doctorVisitAccess.require(session, visitId);
+        doctorVisitAccess.requireActiveClinicalExam(session, visitId);
         WorkflowExecutionDTO dto = workflowService.getOrCreateExecution(visitId, serviceId, requireUserId(session));
         if (dto == null) {
             return ResponseEntity.notFound().build();
@@ -114,7 +114,7 @@ public class ClinicalWorkflowRestController {
             HttpSession session) {
         Long visitId = longOf(body, "visitId");
         Long serviceId = longOf(body, "serviceId");
-        doctorVisitAccess.require(session, visitId);
+        doctorVisitAccess.requireActiveClinicalExam(session, visitId);
         return ResponseEntity.ok(workflowService.startExecution(visitId, serviceId, requireUserId(session)));
     }
 
