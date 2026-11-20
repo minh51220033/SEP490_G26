@@ -795,10 +795,10 @@ public class CustomerCareServiceImpl implements CustomerCareService {
                     continue;
                 }
             }
-            if (fromDate != null && task.getDueDate() != null && task.getDueDate().isBefore(fromDate)) {
+            if (fromDate != null && (task.getDueDate() == null || task.getDueDate().isBefore(fromDate))) {
                 continue;
             }
-            if (toDate != null && task.getDueDate() != null && task.getDueDate().isAfter(toDate)) {
+            if (toDate != null && (task.getDueDate() == null || task.getDueDate().isAfter(toDate))) {
                 continue;
             }
             if (normKeyword != null && !matchesKeyword(task, normKeyword)) {

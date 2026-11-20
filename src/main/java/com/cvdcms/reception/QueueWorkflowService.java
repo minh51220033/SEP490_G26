@@ -28,6 +28,9 @@ public class QueueWorkflowService {
     private final ReceptionAuditRepository audits;
     private final ClinicalExaminationBootstrapService examinations;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     public QueueWorkflowService(ReceptionAccess access, DispatchBranchRepository branches,
             QueueWorkflowRepository tickets, DispatchVisitRepository visits, DispatchRoomRepository rooms,
             DispatchChairRepository chairs, DispatchDoctorRepository doctors, ReceptionAuditRepository audits,
@@ -429,7 +432,11 @@ public class QueueWorkflowService {
                             Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0, "Ghế đang có ca khám khác.");
                     chair.setStatus(ChairStatus.IN_USE); chairs.save(chair); visit.setChairId(effectiveChairId);
                 }
-                visit.setStatus(VisitStatus.IN_EXAM); visits.save(visit);
+                visit.setStatus(VisitStatus.IN_EXAM);
+                if (visit.getActualStartTime() == null) {
+                    visit.setActualStartTime(LocalDateTime.now(ZONE));
+                }
+                visits.save(visit);
                 ticket.setStatus(QueueStatus.IN_SERVICE);
             }
             case DONE -> {
@@ -438,6 +445,10 @@ public class QueueWorkflowService {
                                 VisitStatus.WAITING_PAYMENT, VisitStatus.COMPLETED)
                                 .contains(visit.getStatus()),
                         "Chỉ hoàn tất số sau khi bệnh nhân rời ghế khám hoặc hoàn thành lượt khám.");
+                LocalDateTime doneNow = LocalDateTime.now(ZONE);
+                if (visit.getActualEndTime() == null) {
+                    visit.setActualEndTime(doneNow);
+                }
                 if (visit.getStatus() == VisitStatus.IN_EXAM) {
                     visit.setStatus(VisitStatus.WAITING_PAYMENT);
                     visits.save(visit);
@@ -450,11 +461,22 @@ public class QueueWorkflowService {
                         }
                     });
                 }
-                ticket.setStatus(QueueStatus.DONE); ticket.setCompletedAt(LocalDateTime.now(ZONE));
+                ticket.setStatus(QueueStatus.DONE); ticket.setCompletedAt(doneNow);
             }
         }
         tickets.save(ticket);
         audit(session, ticket, action.name(), before, reason);
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                    "QUEUE_" + action.name(),
+                    branchId,
+                    visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null,
+                    visit.getVisitId(),
+                    visit.getAppointmentId(),
+                    ticket.getStatus().name(),
+                    "Cập nhật hàng đợi phiếu " + ticket.getDisplayNumber() + " -> " + ticket.getStatus().name(),
+                    LocalDateTime.now(ZONE)));
+        }
     }
 
     private void audit(HttpSession session, QueueTicket ticket, String action, QueueStatus before, String reason) {
@@ -489,12 +511,42 @@ public class QueueWorkflowService {
     }
 
     private Comparator<QueueTicket> waitingOrder() {
-        return Comparator.comparingInt((QueueTicket t) -> t.getPriorityScore() == null ? 0 : t.getPriorityScore())
-                .reversed()
+        return Comparator.comparingInt((QueueTicket t) -> queueTierRank(t) == 1 ? 0 : 1)
                 .thenComparingInt((QueueTicket t) -> t.getVisit() != null && t.getVisit().getStatus() == VisitStatus.WAITING_RESULT ? 0 : 1)
-                .thenComparing((QueueTicket t) -> t.getResumedAt() == null ? t.getIssuedAt() : t.getResumedAt(),
+                .thenComparingInt(this::queueTierRank)
+                .thenComparing((QueueTicket t) -> t.getVisit() != null && t.getVisit().getCheckInAt() != null
+                                ? t.getVisit().getCheckInAt()
+                                : (t.getResumedAt() == null ? t.getIssuedAt() : t.getResumedAt()),
                         Comparator.nullsLast(Comparator.naturalOrder()))
-                .thenComparing(QueueTicket::getTicketNumber).thenComparing(QueueTicket::getTicketId);
+                .thenComparing(QueueTicket::getTicketNumber, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(QueueTicket::getTicketId, Comparator.nullsLast(Comparator.naturalOrder()));
+    }
+
+    /**
+     * 4 cấp ưu tiên hàng đợi chuẩn:
+     * 1. Cấp cứu (isEmergency = true)
+     * 2. Appointment check-in đúng giờ trong Grace Period 15 phút (isBookedAndOnTime = true)
+     * 3. Walk-in
+     * 4. Appointment check-in trễ > 15 phút
+     */
+    private int queueTierRank(QueueTicket t) {
+        if (t == null) return 4;
+        Visit v = t.getVisit();
+        if (Boolean.TRUE.equals(t.getIsEmergency())
+                || (v != null && (Boolean.TRUE.equals(v.getIsEmergency()) || v.getVisitType() == VisitType.EMERGENCY))) {
+            return 1;
+        }
+        if (v != null) {
+            if (Boolean.TRUE.equals(v.getIsBookedAndOnTime())
+                    && (v.getAppointmentId() != null || v.getVisitType() == VisitType.APPOINTMENT)) {
+                return 2;
+            }
+            if (v.getAppointmentId() == null && v.getVisitType() != VisitType.APPOINTMENT) {
+                return 3;
+            }
+            return 4;
+        }
+        return (t.getPriorityScore() != null && t.getPriorityScore() >= 75) ? 2 : 3;
     }
 
     private String doctorName(QueueTicket ticket) {

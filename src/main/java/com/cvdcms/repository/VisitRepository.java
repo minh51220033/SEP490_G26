@@ -222,4 +222,46 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
             @Param("status") VisitStatus status,
             @Param("branchIds") Collection<Long> branchIds
     );
+
+    List<Visit> findByAppointmentIdIn(Collection<Long> appointmentIds);
+
+    Optional<Visit> findByAppointmentId(Long appointmentId);
+
+    /**
+     * Hàng đợi 4 cấp ưu tiên của từng bác sĩ (chỉ lấy trạng thái WAITING - bệnh nhân chờ khám mới,
+     * tách biệt rõ với WAITING_RESULT quay lại đọc kết quả cận lâm sàng):
+     * 1. Cấp cứu (is_emergency = true hoặc visit_type = EMERGENCY)
+     * 2. Lịch hẹn check-in đúng giờ trong Grace Period 15 phút (is_booked_and_on_time = true)
+     * 3. Walk-in (appointment_id IS NULL và visit_type != APPOINTMENT) -> check_in_at ASC
+     * 4. Lịch hẹn check-in trễ hơn 15 phút -> check_in_at ASC
+     */
+    @Query("""
+        SELECT v FROM Visit v
+        JOIN FETCH v.patientProfile pp
+        JOIN FETCH v.branch b
+        LEFT JOIN FETCH v.primaryDoctor d
+        WHERE d.staffId = :doctorId
+          AND v.status = com.cvdcms.entity.enums.VisitStatus.WAITING
+        ORDER BY
+            CASE
+                WHEN v.isEmergency = true OR v.visitType = com.cvdcms.entity.enums.VisitType.EMERGENCY THEN 1
+                WHEN v.isBookedAndOnTime = true AND (v.appointmentId IS NOT NULL OR v.visitType = com.cvdcms.entity.enums.VisitType.APPOINTMENT) THEN 2
+                WHEN v.appointmentId IS NULL AND v.visitType <> com.cvdcms.entity.enums.VisitType.APPOINTMENT THEN 3
+                ELSE 4
+            END ASC,
+            v.checkInAt ASC,
+            v.visitId ASC
+    """)
+    List<Visit> findWaitingQueueByDoctorId(@Param("doctorId") Long doctorId);
+
+    @Query("""
+        SELECT v FROM Visit v
+        JOIN FETCH v.patientProfile pp
+        JOIN FETCH v.branch b
+        LEFT JOIN FETCH v.primaryDoctor d
+        WHERE d.staffId = :doctorId
+          AND v.status = com.cvdcms.entity.enums.VisitStatus.WAITING_RESULT
+        ORDER BY v.checkInAt ASC, v.visitId ASC
+    """)
+    List<Visit> findWaitingResultQueueByDoctorId(@Param("doctorId") Long doctorId);
 }

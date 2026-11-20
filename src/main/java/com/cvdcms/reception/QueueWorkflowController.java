@@ -50,7 +50,8 @@ public class QueueWorkflowController {
         var nextByDoctor = new LinkedHashMap<Long, Long>();
         board.tickets().stream()
                 .filter(ticket -> ticket.getStatus() == QueueStatus.WAITING
-                        && ticket.getVisit().getStatus() == VisitStatus.WAITING
+                        && ticket.getVisit() != null
+                        && (ticket.getVisit().getStatus() == VisitStatus.WAITING || ticket.getVisit().getStatus() == VisitStatus.WAITING_RESULT)
                         && ticket.getVisit().getPrimaryDoctor() != null)
                 .forEach(ticket -> nextByDoctor.putIfAbsent(
                         ticket.getVisit().getPrimaryDoctor().getStaffId(), ticket.getTicketId()));

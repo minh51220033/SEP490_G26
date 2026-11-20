@@ -18,6 +18,11 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long> {
     boolean existsBySupplierCodeIgnoreCaseAndSupplierIdNot(
             String supplierCode, Long supplierId);
 
+    boolean existsByTaxCodeIgnoreCase(String taxCode);
+
+    boolean existsByTaxCodeIgnoreCaseAndSupplierIdNot(
+            String taxCode, Long supplierId);
+
     Optional<Supplier> findBySupplierCodeIgnoreCase(String supplierCode);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

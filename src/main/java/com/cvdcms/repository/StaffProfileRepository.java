@@ -2,8 +2,13 @@ package com.cvdcms.repository;
 
 import com.cvdcms.entity.StaffProfile;
 import com.cvdcms.entity.enums.StaffStatus;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.QueryHint;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -43,4 +48,13 @@ public interface StaffProfileRepository extends JpaRepository<StaffProfile, Long
     // Danh sách vị trí công việc đang có để đổ vào bộ lọc nâng cao
     @Query("SELECT DISTINCT s.positionTitle FROM StaffProfile s WHERE s.positionTitle IS NOT NULL AND s.positionTitle != '' ORDER BY s.positionTitle")
     List<String> findDistinctPositionTitles();
+
+    /**
+     * Khóa bi quan dòng hồ sơ bác sĩ làm chốt tài nguyên chung cho mọi giao dịch đặt lịch
+     * của cùng bác sĩ đó (bất kể bác sĩ trực nhiều ca hay chưa có lịch phân ca trong ngày).
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "5000")})
+    @Query("SELECT s FROM StaffProfile s WHERE s.staffId = :staffId")
+    Optional<StaffProfile> lockById(@Param("staffId") Long staffId);
 }
