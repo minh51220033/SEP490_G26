@@ -203,6 +203,7 @@ public class AttendanceController {
     @GetMapping("/admin/attendance")
     public String branchAttendance(@RequestParam(required = false) Long branchId,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
+            @RequestParam(required = false) String keyword,
             Model model, HttpSession session) {
         if (!(session.getAttribute("loggedInUser") instanceof User)) {
             return "redirect:/login";
@@ -216,6 +217,7 @@ public class AttendanceController {
         List<Branch> branches = branchService.getActiveBranches();
         model.addAttribute("branches", branches);
         model.addAttribute("selectedBranchId", branchId);
+        model.addAttribute("keyword", keyword != null ? keyword.trim() : "");
 
         List<AttendanceRecord> records = attendanceService.getBranchHistory(branchId, selected);
         model.addAttribute("records", records);

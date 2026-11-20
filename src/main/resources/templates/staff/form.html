@@ -265,68 +265,15 @@
                             <h4 class="form-section__title"><i class="bi bi-cash-coin" aria-hidden="true"></i> Lương
                                 &amp; ngân hàng</h4>
                             <div class="row g-3">
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <label for="baseSalary" class="form-label">Lương cơ bản (VNĐ)</label>
                                     <input type="number" id="baseSalary" th:field="*{baseSalary}" class="form-control"
                                         min="0" step="1" placeholder="0">
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <label for="allowanceAmount" class="form-label">Phụ cấp (VNĐ)</label>
                                     <input type="number" id="allowanceAmount" th:field="*{allowanceAmount}"
                                         class="form-control" min="0" step="1" placeholder="0">
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="insuranceSalary" class="form-label">Lương đóng BHXH (VNĐ)</label>
-                                    <input type="number" id="insuranceSalary" th:field="*{insuranceSalary}"
-                                        class="form-control" min="0" step="1" placeholder="0">
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="insuranceParticipationStatus" class="form-label">Diện tham gia bảo hiểm</label>
-                                    <select id="insuranceParticipationStatus" th:field="*{insuranceParticipationStatus}" class="form-select">
-                                        <option th:each="st : ${insuranceStatuses}" th:value="${st}"
-                                            th:text="${st.description}"></option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="insuranceEffectiveFrom" class="form-label">Hiệu lực BH từ ngày</label>
-                                    <input type="date" id="insuranceEffectiveFrom" th:field="*{insuranceEffectiveFrom}" class="form-control">
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="insuranceEffectiveTo" class="form-label">Hiệu lực BH đến ngày</label>
-                                    <input type="date" id="insuranceEffectiveTo" th:field="*{insuranceEffectiveTo}" class="form-control">
-                                </div>
-                                <div class="col-md-3">
-                                    <label for="insuranceEmployeeRateOverride" class="form-label">Tỷ lệ BH NLĐ riêng (%)</label>
-                                    <input type="number" id="insuranceEmployeeRateOverride" th:field="*{insuranceEmployeeRateOverride}"
-                                        class="form-control" min="0" max="100" step="0.01" placeholder="Mặc định theo chính sách">
-                                </div>
-                                <div class="col-md-3">
-                                    <label for="insuranceEmployerRateOverride" class="form-label">Tỷ lệ BH đơn vị riêng (%)</label>
-                                    <input type="number" id="insuranceEmployerRateOverride" th:field="*{insuranceEmployerRateOverride}"
-                                        class="form-control" min="0" max="100" step="0.01" placeholder="Mặc định theo chính sách">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="insuranceExemptionReason" class="form-label">Ghi chú / Căn cứ miễn BH</label>
-                                    <input type="text" id="insuranceExemptionReason" th:field="*{insuranceExemptionReason}"
-                                        class="form-control" maxlength="255" placeholder="VD: Đang đóng tại đơn vị khác, hưu trí...">
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="contractType" class="form-label">Loại hợp đồng (tính PIT)</label>
-                                    <select id="contractType" th:field="*{contractType}" class="form-select">
-                                        <option th:each="ct : ${contractTypes}" th:value="${ct}"
-                                            th:text="${ct.description}"></option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="isTaxResident" class="form-label">Cư trú thuế TNCN</label>
-                                    <select id="isTaxResident" th:field="*{isTaxResident}" class="form-select">
-                                        <option th:value="true">Cá nhân cư trú</option>
-                                        <option th:value="false">Cá nhân không cư trú</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="taxCode" class="form-label">Mã số thuế (MST)</label>
-                                    <input type="text" id="taxCode" th:field="*{taxCode}" class="form-control" maxlength="30">
                                 </div>
                                 <div class="col-md-6">
                                     <label for="bankAccountNumber" class="form-label">Số tài khoản ngân hàng</label>

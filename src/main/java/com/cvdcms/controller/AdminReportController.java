@@ -25,7 +25,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Collections;
@@ -125,12 +124,10 @@ public class AdminReportController {
             @RequestParam(required = false) Long branchId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) BigDecimal taxRate,
             @RequestParam(required = false, defaultValue = "overview") String tab,
             Model model,
             HttpSession session
     ) {
-        BigDecimal safeTaxRate = validateTaxRate(taxRate);
         Long currentUserId = getCurrentUserId(session);
         boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
         if (isAdmin) {
@@ -138,7 +135,6 @@ public class AdminReportController {
             if (branchId != null) builder.queryParam("branchId", branchId);
             if (startDate != null) builder.queryParam("startDate", startDate);
             if (endDate != null) builder.queryParam("endDate", endDate);
-            if (safeTaxRate != null) builder.queryParam("taxRate", safeTaxRate);
             if (tab != null && !tab.isBlank()) builder.queryParam("tab", tab);
             return "redirect:" + builder.toUriString();
         }
@@ -158,15 +154,14 @@ public class AdminReportController {
         String branchDisplayName = resolveBranchDisplayName(branchId, resolvedBranchIds, allowedBranches, isPrivileged);
 
         // Lấy dữ liệu cho từng tab
-        ReportDashboardDTO dashboard = reportService.getDashboardReport(resolvedBranchIds, safeStart, safeEnd, branchDisplayName, safeTaxRate);
-        FinancialReportDTO financial = reportService.getFinancialReport(resolvedBranchIds, safeStart, safeEnd, safeTaxRate);
+        ReportDashboardDTO dashboard = reportService.getDashboardReport(resolvedBranchIds, safeStart, safeEnd, branchDisplayName);
+        FinancialReportDTO financial = reportService.getFinancialReport(resolvedBranchIds, safeStart, safeEnd);
         OperationalReportDTO operational = reportService.getOperationalReport(resolvedBranchIds, safeStart, safeEnd);
 
         ReportFilterDTO filter = new ReportFilterDTO();
         filter.setBranchId(branchId);
         filter.setStartDate(safeStart);
         filter.setEndDate(safeEnd);
-        filter.setTaxRate(safeTaxRate);
         filter.setTab(tab);
 
         model.addAttribute("filter", filter);
@@ -188,10 +183,8 @@ public class AdminReportController {
             @RequestParam(required = false) Long branchId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) BigDecimal taxRate,
             HttpSession session
     ) {
-        BigDecimal safeTaxRate = validateTaxRate(taxRate);
         Long currentUserId = getCurrentUserId(session);
 
         boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
@@ -207,7 +200,7 @@ public class AdminReportController {
         boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId);
         String branchDisplayName = resolveBranchDisplayName(branchId, resolvedBranchIds, allowedBranches, isPrivileged);
 
-        byte[] excelBytes = reportService.exportReportToExcel(reportType, resolvedBranchIds, safeStart, safeEnd, branchDisplayName, safeTaxRate);
+        byte[] excelBytes = reportService.exportReportToExcel(reportType, resolvedBranchIds, safeStart, safeEnd, branchDisplayName);
 
         String typePrefix = switch (reportType.toUpperCase()) {
             case "FINANCIAL" -> "Tai_Chinh";
@@ -224,18 +217,5 @@ public class AdminReportController {
                 .header(HttpHeaders.EXPIRES, "0")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(excelBytes);
-    }
-
-    private BigDecimal validateTaxRate(BigDecimal taxRate) {
-        if (taxRate == null) {
-            return null;
-        }
-        if (taxRate.compareTo(BigDecimal.ZERO) < 0 || taxRate.compareTo(BigDecimal.valueOf(100)) > 0) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.BAD_REQUEST,
-                    "Thuế suất phải nằm trong khoảng 0% đến 100%"
-            );
-        }
-        return taxRate;
     }
 }

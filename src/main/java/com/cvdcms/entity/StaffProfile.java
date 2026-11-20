@@ -1,7 +1,6 @@
 package com.cvdcms.entity;
 
 import com.cvdcms.entity.enums.InsuranceParticipationStatus;
-import com.cvdcms.entity.enums.StaffContractType;
 import com.cvdcms.entity.enums.StaffGender;
 import com.cvdcms.entity.enums.StaffStatus;
 import jakarta.persistence.*;
@@ -77,9 +76,8 @@ public class StaffProfile {
     @Column(name = "is_tax_resident", nullable = false)
     private Boolean isTaxResident = true;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "contract_type", nullable = false, length = 30)
-    private StaffContractType contractType = StaffContractType.FULL_CONTRACT;
+    private String contractType = "FULL_CONTRACT";
 
     @Column(name = "has_personal_deduction", nullable = false)
     private Boolean hasPersonalDeduction = true;

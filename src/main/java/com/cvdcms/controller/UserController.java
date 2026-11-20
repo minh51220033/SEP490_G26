@@ -297,7 +297,6 @@ public class UserController {
             @RequestParam(value = "branchId", required = false) Long branchId,
             @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(value = "taxRate", required = false) BigDecimal taxRate,
             @RequestParam(value = "tab", required = false, defaultValue = "overview") String tab,
             HttpSession session,
             Model model
@@ -419,7 +418,7 @@ public class UserController {
         }
 
         if (isAdmin) {
-            populateAdminDashboard(model, session, branchId, startDate, endDate, taxRate, tab);
+            populateAdminDashboard(model, session, branchId, startDate, endDate, tab);
         }
 
         return "user/home";
@@ -431,7 +430,6 @@ public class UserController {
             Long branchId,
             LocalDate startDate,
             LocalDate endDate,
-            BigDecimal taxRate,
             String tab
     ) {
         model.addAttribute("activeMenu", "home");
@@ -462,11 +460,10 @@ public class UserController {
             model.addAttribute("warningMessage", "Ngày bắt đầu không được lớn hơn ngày kết thúc. Hệ thống đã tự động điều chỉnh về đầu tháng.");
         }
 
-        BigDecimal safeTaxRate = validateTaxRate(taxRate);
         String branchDisplayName = resolveBranchDisplayName(effectiveBranchId, allowedBranches);
 
-        ReportDashboardDTO dashboard = reportService.getDashboardReport(resolvedBranchIds, safeStart, safeEnd, branchDisplayName, safeTaxRate);
-        FinancialReportDTO financial = reportService.getFinancialReport(resolvedBranchIds, safeStart, safeEnd, safeTaxRate);
+        ReportDashboardDTO dashboard = reportService.getDashboardReport(resolvedBranchIds, safeStart, safeEnd, branchDisplayName);
+        FinancialReportDTO financial = reportService.getFinancialReport(resolvedBranchIds, safeStart, safeEnd);
         OperationalReportDTO operational = reportService.getOperationalReport(resolvedBranchIds, safeStart, safeEnd);
 
         long todayAppointments = reportService.countTodayAppointments(resolvedBranchIds, LocalDate.now());
@@ -476,7 +473,6 @@ public class UserController {
         filter.setBranchId(effectiveBranchId);
         filter.setStartDate(safeStart);
         filter.setEndDate(safeEnd);
-        filter.setTaxRate(safeTaxRate);
         filter.setTab(tab != null && !tab.isBlank() ? tab : "overview");
 
         model.addAttribute("filter", filter);
@@ -489,19 +485,6 @@ public class UserController {
         model.addAttribute("activeTab", filter.getTab());
         model.addAttribute("todayAppointments", todayAppointments);
         model.addAttribute("waitingPatients", waitingPatients);
-    }
-
-    private BigDecimal validateTaxRate(BigDecimal taxRate) {
-        if (taxRate == null) {
-            return null;
-        }
-        if (taxRate.compareTo(BigDecimal.ZERO) < 0 || taxRate.compareTo(BigDecimal.valueOf(100)) > 0) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.BAD_REQUEST,
-                    "Thuế suất phải nằm trong khoảng 0% đến 100%"
-            );
-        }
-        return taxRate;
     }
 
     private String resolveBranchDisplayName(Long branchId, List<Branch> allowedBranches) {

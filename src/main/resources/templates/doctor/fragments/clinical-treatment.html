@@ -404,7 +404,6 @@
                                     <th style="width: 105px;" class="text-end">Đơn giá</th>
                                     <th style="width: 50px;" class="text-center">SL</th>
                                     <th style="width: 90px;" class="text-end">K.Mại</th>
-                                    <th style="width: 60px;" class="text-end">VAT</th>
                                     <th style="width: 115px;" class="text-end">Thành tiền</th>
                                     <th style="width: 95px;" class="text-end text-success">Đã thu</th>
                                     <th style="width: 115px;" class="text-end text-danger">Còn nợ</th>
@@ -414,7 +413,7 @@
                                 </thead>
                                 <tbody id="performedServicesTableBody">
                                 <tr th:if="${performedServices == null or performedServices.isEmpty()}" id="emptyPerformedRow">
-                                    <td colspan="12" class="text-center py-4 text-muted">
+                                    <td colspan="11" class="text-center py-4 text-muted">
                                         <i class="bi bi-inbox fs-3 d-block mb-1 text-secondary"></i>
                                         <span>Chưa có dịch vụ nào được thực hiện trong ca khám này. Nhấn <strong>"+ Thêm điều trị"</strong> để ghi nhận.</span>
                                     </td>
@@ -468,7 +467,6 @@
                                     <td class="text-end df-price-text" th:text="${#numbers.formatDecimal(ps.unitPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">2.500.000 đ</td>
                                     <td class="text-center fw-bold" th:text="${ps.quantity}">2</td>
                                     <td class="text-end text-muted small" th:text="${ps.discountAmount != null and ps.discountAmount > 0 ? (#numbers.formatDecimal(ps.discountAmount, 0, 'COMMA', 0, 'POINT') + ' đ') : '0 đ'}">0 đ</td>
-                                    <td class="text-end text-muted small">0 đ</td>
                                     <td class="text-end df-final-price-text" th:text="${#numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">5.000.000 đ</td>
                                     <td class="text-end fw-bold text-success small">0 đ</td>
                                     <td class="text-end fw-bold text-danger small" th:text="${#numbers.formatDecimal(ps.finalPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">5.000.000 đ</td>

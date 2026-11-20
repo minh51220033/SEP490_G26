@@ -33,30 +33,7 @@ public class ReportDashboardDTO {
 
     private BigDecimal totalExpenseAmount = BigDecimal.ZERO;
     private BigDecimal totalRefundAmount = BigDecimal.ZERO;
-    private BigDecimal operatingMargin = BigDecimal.ZERO; // Thặng dư vận hành trước thuế
-
-    // Thuế & Lợi nhuận ròng sau thuế
-    private BigDecimal taxRate = BigDecimal.valueOf(20); // Thuế suất TNDN (%)
-    private BigDecimal estimatedTaxAmount = BigDecimal.ZERO; // Thuế TNDN tạm tính
-    private BigDecimal netProfitAfterTax = BigDecimal.ZERO; // Lợi nhuận sau thuế
-
-    // Thông tin chế độ thuế & Căn cứ pháp lý
-    private String taxRegimeName = "Doanh nghiệp (TNDN tạm tính quản trị)";
-    private boolean isTaxConfigured = true;
-    private String taxCalculationBasis = "Căn cứ Luật Thuế TNDN 14/2008/QH12 (Tạm tính phục vụ quản trị nội bộ)";
-    private BigDecimal totalPitWithheld = BigDecimal.ZERO;
-    private BigDecimal totalVatAmount = BigDecimal.ZERO;
-
-    // Căn cứ phân loại doanh thu / dòng tiền ví & hoàn trả (không đếm trùng nạp/cấn ví)
-    private BigDecimal serviceTaxBase = BigDecimal.ZERO;
-    private BigDecimal medicineTaxBase = BigDecimal.ZERO;
-    private BigDecimal surchargeTaxBase = BigDecimal.ZERO;
-    private BigDecimal unclassifiedInvoiceBase = BigDecimal.ZERO;
-    private BigDecimal advanceDepositInflow = BigDecimal.ZERO;
-    private BigDecimal depositWalletUsed = BigDecimal.ZERO;
-    private BigDecimal invoiceRefundAmount = BigDecimal.ZERO;
-    private BigDecimal walletRefundAmount = BigDecimal.ZERO;
-    private BigDecimal unsettledAdvanceDeposit = BigDecimal.ZERO;
+    private BigDecimal operatingMargin = BigDecimal.ZERO; // Chênh lệch Thu - Chi vận hành
 
     // Dữ liệu xu hướng theo ngày phục vụ vẽ biểu đồ
     private List<DailyRevenueStat> dailyStats = new ArrayList<>();

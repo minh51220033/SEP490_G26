@@ -2,8 +2,6 @@ package com.cvdcms.service.impl;
 
 import com.cvdcms.DTO.PatientDebtSummaryDTO;
 import com.cvdcms.DTO.report.*;
-import com.cvdcms.entity.Branch;
-import com.cvdcms.entity.BranchTaxConfig;
 import com.cvdcms.entity.Invoice;
 import com.cvdcms.entity.OperatingExpense;
 import com.cvdcms.entity.Payment;
@@ -16,7 +14,6 @@ import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.entity.enums.VisitType;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.ReportService;
-import com.cvdcms.service.TaxCalculationService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
@@ -48,11 +45,8 @@ public class ReportServiceImpl implements ReportService {
     private final OperatingExpenseRepository operatingExpenseRepository;
     private final VisitRepository visitRepository;
     private final AppointmentRepository appointmentRepository;
-    private final TaxCalculationService taxCalculationService;
     private final PayrollPeriodRepository payrollPeriodRepository;
     private final PatientProfileRepository patientProfileRepository;
-    private final PaymentAllocationRepository paymentAllocationRepository;
-    private final BranchRepository branchRepository;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -72,35 +66,6 @@ public class ReportServiceImpl implements ReportService {
                 operatingExpenseRepository,
                 visitRepository,
                 appointmentRepository,
-                new TaxCalculationServiceImpl(null, null),
-                null,
-                null,
-                null,
-                null
-        );
-    }
-
-    public ReportServiceImpl(
-            InvoiceRepository invoiceRepository,
-            PaymentRepository paymentRepository,
-            RefundRepository refundRepository,
-            OperatingExpenseRepository operatingExpenseRepository,
-            VisitRepository visitRepository,
-            AppointmentRepository appointmentRepository,
-            TaxCalculationService taxCalculationService,
-            PayrollPeriodRepository payrollPeriodRepository,
-            PatientProfileRepository patientProfileRepository
-    ) {
-        this(
-                invoiceRepository,
-                paymentRepository,
-                refundRepository,
-                operatingExpenseRepository,
-                visitRepository,
-                appointmentRepository,
-                taxCalculationService,
-                payrollPeriodRepository,
-                patientProfileRepository,
                 null,
                 null
         );
@@ -114,11 +79,8 @@ public class ReportServiceImpl implements ReportService {
             OperatingExpenseRepository operatingExpenseRepository,
             VisitRepository visitRepository,
             AppointmentRepository appointmentRepository,
-            TaxCalculationService taxCalculationService,
             PayrollPeriodRepository payrollPeriodRepository,
-            PatientProfileRepository patientProfileRepository,
-            PaymentAllocationRepository paymentAllocationRepository,
-            BranchRepository branchRepository
+            PatientProfileRepository patientProfileRepository
     ) {
         this.invoiceRepository = invoiceRepository;
         this.paymentRepository = paymentRepository;
@@ -126,21 +88,12 @@ public class ReportServiceImpl implements ReportService {
         this.operatingExpenseRepository = operatingExpenseRepository;
         this.visitRepository = visitRepository;
         this.appointmentRepository = appointmentRepository;
-        this.taxCalculationService = taxCalculationService;
         this.payrollPeriodRepository = payrollPeriodRepository;
         this.patientProfileRepository = patientProfileRepository;
-        this.paymentAllocationRepository = paymentAllocationRepository;
-        this.branchRepository = branchRepository;
     }
 
     @Override
     public ReportDashboardDTO getDashboardReport(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate, String branchName) {
-        return getDashboardReport(branchIds, startDate, endDate, branchName, null);
-    }
-
-    @Override
-    public ReportDashboardDTO getDashboardReport(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate, String branchName, BigDecimal taxRate) {
-        BigDecimal validatedTaxRate = validateRequestedTaxRate(taxRate);
         LocalDateTime startDt = startDate.atStartOfDay();
         LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
         LocalDateTime endExclusive = endDate.plusDays(1).atStartOfDay();
@@ -163,39 +116,12 @@ public class ReportServiceImpl implements ReportService {
             Object[] row = invBreakdown.get(0);
             dto.setTotalInvoiceAmount(toBigDecimal(row[6]));
             dto.setTotalDebtAmount(toBigDecimal(row[7]));
-            if (row.length > 8) {
-                dto.setTotalVatAmount(toBigDecimal(row[8]));
-            }
         }
 
-        // 3. Chi phí vận hành & Chênh lệch thu chi vận hành (gồm chi phí vận hành + BHXH 21.5% phần DN chịu từ các kỳ lương đã chi trả theo ngày chi)
+        // 3. Chi phí vận hành & Chênh lệch thu chi vận hành
         BigDecimal totalExpense = toBigDecimal(operatingExpenseRepository.sumActiveExpenses(branchIds, startDate, endDate));
-        if (payrollPeriodRepository != null) {
-            BigDecimal employerInsurance = toBigDecimal(payrollPeriodRepository.sumPaidEmployerInsuranceByPaidAt(
-                    branchIds, startDt, endExclusive
-            ));
-            totalExpense = totalExpense.add(employerInsurance);
-        }
         dto.setTotalExpenseAmount(totalExpense);
         dto.setOperatingMargin(netRealRevenue.subtract(dto.getTotalExpenseAmount()));
-
-        // Thuế & Lợi nhuận sau thuế theo cấu hình pháp nhân / phân loại căn cứ
-        BigDecimal fallbackDepositWallet = toBigDecimal(paymentRepository.sumDepositWalletUsedByBranches(branchIds, startDt, endExclusive));
-        BigDecimal fallbackAdvanceDeposit = toBigDecimal(paymentRepository.sumAdvanceDepositByBranches(branchIds, startDt, endExclusive));
-        TaxComputationSummary taxSummary = computeTaxComputationSummary(
-                branchIds, startDate, endDate, validatedTaxRate,
-                grossRealRevenue, fallbackAdvanceDeposit, fallbackDepositWallet,
-                totalRefund, totalExpense, dto.getOperatingMargin()
-        );
-        applyTaxSummaryToDashboard(dto, taxSummary);
-
-        // Thuế TNCN đã khấu trừ của nhân viên từ các bảng lương đã chi trả theo ngày chi
-        if (payrollPeriodRepository != null) {
-            BigDecimal paidPit = payrollPeriodRepository.sumPaidPitByPaidAt(
-                    branchIds, startDt, endExclusive
-            );
-            dto.setTotalPitWithheld(paidPit != null ? paidPit : BigDecimal.ZERO);
-        }
 
         // 4. Lượt khám & Tỷ lệ hoàn tất
         List<Object[]> visitStatuses = visitRepository.countVisitsByStatusAndBranches(branchIds, startDt, endDt);
@@ -258,835 +184,6 @@ public class ReportServiceImpl implements ReportService {
         return patientProfileRepository.countNewPatientsByBranchesAndPeriod(branchIds, startDt, endDt);
     }
 
-    private record DatedTaxDelta(
-            LocalDate txDate,
-            BigDecimal serviceDelta,
-            BigDecimal medicineDelta,
-            BigDecimal surchargeDelta
-    ) {}
-
-    private static class BranchTaxAccum {
-        BigDecimal directInvoiceCashIn = BigDecimal.ZERO;
-        BigDecimal advanceDepositInflow = BigDecimal.ZERO;
-        BigDecimal depositWalletUsed = BigDecimal.ZERO;
-        BigDecimal invoiceRefundAmount = BigDecimal.ZERO;
-        BigDecimal walletRefundAmount = BigDecimal.ZERO;
-        BigDecimal operatingExpense = BigDecimal.ZERO;
-        BigDecimal serviceBase = BigDecimal.ZERO;
-        BigDecimal medicineBase = BigDecimal.ZERO;
-        BigDecimal surchargeBase = BigDecimal.ZERO;
-        BigDecimal unclassifiedInvoiceBase = BigDecimal.ZERO;
-        BigDecimal unclassifiedRefundDeduction = BigDecimal.ZERO;
-        final List<DatedTaxDelta> datedDeltas = new ArrayList<>();
-
-        BigDecimal netCash() {
-            return directInvoiceCashIn
-                    .add(advanceDepositInflow)
-                    .subtract(invoiceRefundAmount)
-                    .subtract(walletRefundAmount);
-        }
-
-        BigDecimal operatingMargin() {
-            return netCash().subtract(operatingExpense);
-        }
-
-        BigDecimal netClassifiedRevenueBase() {
-            return serviceBase.add(medicineBase).add(surchargeBase).subtract(unclassifiedRefundDeduction);
-        }
-
-        BigDecimal classifiedOperatingMargin() {
-            return netClassifiedRevenueBase().subtract(operatingExpense);
-        }
-
-        BigDecimal unsettledAdvanceDeposit() {
-            return advanceDepositInflow
-                    .subtract(depositWalletUsed)
-                    .subtract(walletRefundAmount)
-                    .max(BigDecimal.ZERO);
-        }
-    }
-
-    private record BranchTaxOutcome(
-            Long branchId,
-            String branchName,
-            boolean configured,
-            boolean householdRegime,
-            BigDecimal displayRate,
-            BigDecimal estimatedTax,
-            String basisNote
-    ) {}
-
-    private record TaxComputationSummary(
-            boolean configured,
-            BigDecimal displayTaxRate,
-            BigDecimal estimatedTaxAmount,
-            BigDecimal netProfitAfterTax,
-            String regimeName,
-            String calculationBasis,
-            BigDecimal serviceTaxBase,
-            BigDecimal medicineTaxBase,
-            BigDecimal surchargeTaxBase,
-            BigDecimal unclassifiedInvoiceBase,
-            BigDecimal advanceDepositInflow,
-            BigDecimal depositWalletUsed,
-            BigDecimal invoiceRefundAmount,
-            BigDecimal walletRefundAmount,
-            BigDecimal unsettledAdvanceDeposit
-    ) {}
-
-    private BigDecimal validateRequestedTaxRate(BigDecimal requestedTaxRate) {
-        if (requestedTaxRate == null) {
-            return null;
-        }
-        if (requestedTaxRate.compareTo(BigDecimal.ZERO) < 0 || requestedTaxRate.compareTo(BigDecimal.valueOf(100)) > 0) {
-            throw new IllegalArgumentException("Thuế suất phải nằm trong khoảng 0% đến 100%");
-        }
-        return requestedTaxRate;
-    }
-
-    private TaxComputationSummary computeTaxComputationSummary(
-            Collection<Long> branchIds,
-            LocalDate startDate,
-            LocalDate endDate,
-            BigDecimal validatedRequestedRate,
-            BigDecimal fallbackGrossCash,
-            BigDecimal fallbackAdvanceDeposit,
-            BigDecimal fallbackDepositWallet,
-            BigDecimal fallbackTotalRefund,
-            BigDecimal fallbackTotalExpense,
-            BigDecimal aggregateOperatingMargin
-    ) {
-        LocalDateTime startDt = startDate.atStartOfDay();
-        LocalDateTime endExclusive = endDate.plusDays(1).atStartOfDay();
-
-        Map<Long, BranchTaxAccum> branchMap = new LinkedHashMap<>();
-        boolean hasDetailedRows = collectBranchFinancialActivity(branchIds, startDate, endDate, startDt, endExclusive, branchMap);
-
-        Map<Long, String> branchNames = resolveBranchNamesMap();
-        Set<Long> targetBranchIds = resolveTargetBranchIds(branchIds, branchMap, branchNames);
-
-        if (!hasDetailedRows && targetBranchIds.size() <= 1) {
-            Long fallbackBranchId = targetBranchIds.isEmpty() ? null : targetBranchIds.iterator().next();
-            BranchTaxAccum acc = new BranchTaxAccum();
-            acc.advanceDepositInflow = nz(fallbackAdvanceDeposit);
-            acc.depositWalletUsed = nz(fallbackDepositWallet);
-            acc.directInvoiceCashIn = nz(fallbackGrossCash).subtract(acc.advanceDepositInflow);
-            acc.invoiceRefundAmount = nz(fallbackTotalRefund);
-            acc.operatingExpense = nz(fallbackTotalExpense);
-            return evaluateSingleBranchFallback(
-                    fallbackBranchId, branchNames, acc, startDate, endDate, validatedRequestedRate, aggregateOperatingMargin
-            );
-        }
-
-        List<BranchTaxOutcome> outcomes = new ArrayList<>();
-        for (Long bid : targetBranchIds) {
-            BranchTaxAccum acc = branchMap.getOrDefault(bid, new BranchTaxAccum());
-            String bName = branchNames.getOrDefault(bid, "Chi nhánh #" + bid);
-            outcomes.add(computeSingleBranchTax(bid, bName, acc, startDate, endDate, validatedRequestedRate));
-        }
-
-        return summarizeBranchOutcomes(outcomes, branchMap.values(), aggregateOperatingMargin, validatedRequestedRate, targetBranchIds.size() <= 1);
-    }
-
-    private boolean collectBranchFinancialActivity(
-            Collection<Long> branchIds,
-            LocalDate startDate,
-            LocalDate endDate,
-            LocalDateTime startDt,
-            LocalDateTime endExclusive,
-            Map<Long, BranchTaxAccum> branchMap
-    ) {
-        boolean hasAny = false;
-
-        // 1. Dòng tiền thuần theo hình thức & loại phiếu trong nửa khoảng [startDt, endExclusive)
-        List<Object[]> paymentRows = safeList(paymentRepository.sumPaymentsByBranchTypeAndMethod(branchIds, startDt, endExclusive));
-        for (Object[] row : paymentRows) {
-            Long bid = toLong(row[0]);
-            if (bid == null) continue;
-            hasAny = true;
-            BranchTaxAccum acc = branchMap.computeIfAbsent(bid, k -> new BranchTaxAccum());
-            PaymentType pType = (PaymentType) row[1];
-            PaymentMethod pMethod = (PaymentMethod) row[2];
-            BigDecimal amt = toBigDecimal(row[3]);
-            if (pType == PaymentType.ADVANCE_DEPOSIT) {
-                if (pMethod != PaymentMethod.DEPOSIT_WALLET) {
-                    acc.advanceDepositInflow = acc.advanceDepositInflow.add(amt);
-                }
-            } else if (pType == PaymentType.PAYMENT) {
-                if (pMethod == PaymentMethod.DEPOSIT_WALLET) {
-                    acc.depositWalletUsed = acc.depositWalletUsed.add(amt);
-                } else {
-                    acc.directInvoiceCashIn = acc.directInvoiceCashIn.add(amt);
-                }
-            }
-        }
-
-        // 2. Phân bổ doanh thu theo thời điểm phát sinh Payment (bất biến theo p.amount, không bị hoàn tiền kỳ sau làm sai lịch sử)
-        Map<Long, Map<String, BigDecimal>> allocByPaymentId = new HashMap<>();
-        if (paymentAllocationRepository != null) {
-            for (Object[] row : safeList(paymentAllocationRepository.sumAllocatedByPaymentAndItemType(branchIds, startDt, endExclusive))) {
-                Long paymentId = toLong(row[0]);
-                if (paymentId == null) continue;
-                String itemType = row[1] != null ? row[1].toString().trim().toUpperCase() : "";
-                BigDecimal amt = toBigDecimal(row[2]);
-                allocByPaymentId.computeIfAbsent(paymentId, k -> new HashMap<>())
-                        .merge(itemType, amt, BigDecimal::add);
-            }
-        }
-
-        List<Payment> periodPayments = safeList(paymentRepository.findPaidPaymentsForPeriod(branchIds, startDt, endExclusive));
-        Set<Long> mixedZeroAllocInvoiceIds = new LinkedHashSet<>();
-        for (Payment p : periodPayments) {
-            Long pid = p.getPaymentId();
-            Map<String, BigDecimal> paMap = pid != null ? allocByPaymentId.get(pid) : null;
-            BigDecimal paTotal = sumAllocationValues(paMap);
-            if (paTotal.compareTo(BigDecimal.ZERO) == 0 && p.getInvoice() != null && !isSingleCategoryInvoice(p.getInvoice())) {
-                if (p.getInvoice().getInvoiceId() != null) {
-                    mixedZeroAllocInvoiceIds.add(p.getInvoice().getInvoiceId());
-                }
-            }
-        }
-
-        Set<Long> refundedMixedInvoiceIds = Collections.emptySet();
-        if (!mixedZeroAllocInvoiceIds.isEmpty()) {
-            refundedMixedInvoiceIds = new HashSet<>(safeList(refundRepository.findInvoiceIdsWithRefunds(mixedZeroAllocInvoiceIds)));
-        }
-
-        for (Payment p : periodPayments) {
-            Long bid = p.getBranch() != null ? p.getBranch().getBranchId() : null;
-            if (bid == null) continue;
-            hasAny = true;
-            BranchTaxAccum acc = branchMap.computeIfAbsent(bid, k -> new BranchTaxAccum());
-            BigDecimal pAmt = nz(p.getAmount());
-            if (pAmt.compareTo(BigDecimal.ZERO) <= 0) continue;
-
-            LocalDate txDate = p.getPaidAt() != null ? p.getPaidAt().toLocalDate() : endDate;
-            Map<String, BigDecimal> paMap = p.getPaymentId() != null ? allocByPaymentId.get(p.getPaymentId()) : null;
-            BigDecimal paTotal = sumAllocationValues(paMap);
-
-            if (paMap != null && paTotal.compareTo(pAmt) == 0) {
-                // Allocation còn nguyên vẹn tại thời điểm thu -> dùng chính xác 100%
-                BigDecimal s = paMap.getOrDefault("SERVICE", BigDecimal.ZERO);
-                BigDecimal m = paMap.getOrDefault("MEDICINE", BigDecimal.ZERO);
-                BigDecimal su = paMap.getOrDefault("SURCHARGE", BigDecimal.ZERO);
-                BigDecimal un = pAmt.subtract(s).subtract(m).subtract(su).max(BigDecimal.ZERO);
-                addCategorizedDelta(acc, txDate, s, m, su, un);
-            } else {
-                Invoice inv = p.getInvoice();
-                String singleCat = resolveSingleInvoiceCategory(inv);
-                if (singleCat != null) {
-                    // Hóa đơn đơn nhóm (chỉ DV / chỉ Thuốc / chỉ Phụ thu): xác định chắc chắn 100% kể cả khi allocation bị xóa/sửa sau đó
-                    switch (singleCat) {
-                        case "SERVICE" -> addCategorizedDelta(acc, txDate, pAmt, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
-                        case "MEDICINE" -> addCategorizedDelta(acc, txDate, BigDecimal.ZERO, pAmt, BigDecimal.ZERO, BigDecimal.ZERO);
-                        case "SURCHARGE" -> addCategorizedDelta(acc, txDate, BigDecimal.ZERO, BigDecimal.ZERO, pAmt, BigDecimal.ZERO);
-                        default -> acc.unclassifiedInvoiceBase = acc.unclassifiedInvoiceBase.add(pAmt);
-                    }
-                } else if (paTotal.compareTo(BigDecimal.ZERO) > 0 && paTotal.compareTo(pAmt) < 0) {
-                    // Allocation của hóa đơn hỗn hợp bị hoàn tiền sửa/xóa một phần -> giữ phần còn lại, đánh dấu phần chênh lệch cần đối soát
-                    BigDecimal s = paMap.getOrDefault("SERVICE", BigDecimal.ZERO);
-                    BigDecimal m = paMap.getOrDefault("MEDICINE", BigDecimal.ZERO);
-                    BigDecimal su = paMap.getOrDefault("SURCHARGE", BigDecimal.ZERO);
-                    BigDecimal diff = pAmt.subtract(s).subtract(m).subtract(su).max(BigDecimal.ZERO);
-                    addCategorizedDelta(acc, txDate, s, m, su, diff);
-                } else if (inv != null && (inv.getInvoiceId() == null || !refundedMixedInvoiceIds.contains(inv.getInvoiceId()))) {
-                    // Phiếu thu legacy chưa từng có allocation trên hóa đơn chưa từng hoàn -> tách pro-rata theo hóa đơn gốc
-                    allocateAmountByInvoice(acc, inv, txDate, pAmt, true);
-                } else {
-                    // Allocation gốc trên hóa đơn hỗn hợp đã bị xóa hoàn toàn bởi hoàn tiền -> không giả định tỷ lệ
-                    acc.unclassifiedInvoiceBase = acc.unclassifiedInvoiceBase.add(pAmt);
-                }
-            }
-        }
-
-        // 3. Ghi nhận hoàn tiền đúng kỳ phát sinh [startDt, endExclusive) và tách riêng hoàn ví vs hoàn hóa đơn
-        List<Refund> periodRefunds = safeList(refundRepository.findAllRefundsForReport(branchIds, startDt, endExclusive));
-        for (Refund r : periodRefunds) {
-            Long bid = r.getBranch() != null ? r.getBranch().getBranchId() : null;
-            if (bid == null) continue;
-            hasAny = true;
-            BranchTaxAccum acc = branchMap.computeIfAbsent(bid, k -> new BranchTaxAccum());
-            BigDecimal refAmt = nz(r.getAmount());
-            LocalDate txDate = r.getRefundedAt() != null ? r.getRefundedAt().toLocalDate() : endDate;
-
-            if (r.getInvoice() == null) {
-                // Hoàn từ số dư ví tạm ứng: giảm dòng tiền và số dư ứng trước, KHÔNG trừ vào doanh thu DV/Thuốc
-                acc.walletRefundAmount = acc.walletRefundAmount.add(refAmt);
-            } else {
-                acc.invoiceRefundAmount = acc.invoiceRefundAmount.add(refAmt);
-                Invoice inv = r.getInvoice();
-                String singleCat = resolveSingleInvoiceCategory(inv);
-                if (singleCat != null) {
-                    switch (singleCat) {
-                        case "SERVICE" -> addCategorizedDelta(acc, txDate, refAmt.negate(), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
-                        case "MEDICINE" -> addCategorizedDelta(acc, txDate, BigDecimal.ZERO, refAmt.negate(), BigDecimal.ZERO, BigDecimal.ZERO);
-                        case "SURCHARGE" -> addCategorizedDelta(acc, txDate, BigDecimal.ZERO, BigDecimal.ZERO, refAmt.negate(), BigDecimal.ZERO);
-                        default -> acc.unclassifiedRefundDeduction = acc.unclassifiedRefundDeduction.add(refAmt);
-                    }
-                } else if (!Boolean.TRUE.equals(r.getReduceInvoiceTotal())) {
-                    allocateAmountByInvoice(acc, inv, txDate, refAmt, false);
-                } else {
-                    // Hóa đơn hỗn hợp hoàn kèm giảm tổng hóa đơn làm thay đổi surcharge/discount gốc -> đưa vào điều chỉnh cần đối soát
-                    acc.unclassifiedRefundDeduction = acc.unclassifiedRefundDeduction.add(refAmt);
-                }
-            }
-        }
-
-        for (Object[] row : safeList(operatingExpenseRepository.sumActiveExpensesByBranch(branchIds, startDate, endDate))) {
-            Long bid = toLong(row[0]);
-            if (bid == null) continue;
-            hasAny = true;
-            BranchTaxAccum acc = branchMap.computeIfAbsent(bid, k -> new BranchTaxAccum());
-            acc.operatingExpense = acc.operatingExpense.add(toBigDecimal(row[1]));
-        }
-
-        if (payrollPeriodRepository != null) {
-            for (Object[] row : safeList(payrollPeriodRepository.sumPaidEmployerInsuranceByBranchAndPaidAt(branchIds, startDt, endExclusive))) {
-                Long bid = toLong(row[0]);
-                if (bid == null) continue;
-                hasAny = true;
-                BranchTaxAccum acc = branchMap.computeIfAbsent(bid, k -> new BranchTaxAccum());
-                acc.operatingExpense = acc.operatingExpense.add(toBigDecimal(row[1]));
-            }
-        }
-
-        return hasAny;
-    }
-
-    private BigDecimal sumAllocationValues(Map<String, BigDecimal> paMap) {
-        if (paMap == null || paMap.isEmpty()) {
-            return BigDecimal.ZERO;
-        }
-        return paMap.values().stream().filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    private void addCategorizedDelta(
-            BranchTaxAccum acc,
-            LocalDate txDate,
-            BigDecimal svc,
-            BigDecimal med,
-            BigDecimal surch,
-            BigDecimal unclassified
-    ) {
-        acc.serviceBase = acc.serviceBase.add(svc);
-        acc.medicineBase = acc.medicineBase.add(med);
-        acc.surchargeBase = acc.surchargeBase.add(surch);
-        acc.unclassifiedInvoiceBase = acc.unclassifiedInvoiceBase.add(unclassified);
-        if (svc.compareTo(BigDecimal.ZERO) != 0 || med.compareTo(BigDecimal.ZERO) != 0 || surch.compareTo(BigDecimal.ZERO) != 0) {
-            acc.datedDeltas.add(new DatedTaxDelta(txDate, svc, med, surch));
-        }
-    }
-
-    private boolean isSingleCategoryInvoice(Invoice inv) {
-        return resolveSingleInvoiceCategory(inv) != null;
-    }
-
-    private String resolveSingleInvoiceCategory(Invoice inv) {
-        if (inv == null) {
-            return null;
-        }
-        boolean hasSvc = nz(inv.getTotalServiceAmount()).compareTo(BigDecimal.ZERO) > 0;
-        boolean hasMed = nz(inv.getTotalMedicineAmount()).compareTo(BigDecimal.ZERO) > 0;
-        boolean hasSurch = nz(inv.getSurchargeAmount()).compareTo(BigDecimal.ZERO) > 0;
-        int count = (hasSvc ? 1 : 0) + (hasMed ? 1 : 0) + (hasSurch ? 1 : 0);
-        if (count != 1) {
-            return null;
-        }
-        if (hasSvc) return "SERVICE";
-        if (hasMed) return "MEDICINE";
-        return "SURCHARGE";
-    }
-
-    private void allocateAmountByInvoice(BranchTaxAccum acc, Invoice inv, LocalDate txDate, BigDecimal amount, boolean positive) {
-        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            return;
-        }
-        if (inv == null) {
-            if (positive) {
-                acc.unclassifiedInvoiceBase = acc.unclassifiedInvoiceBase.add(amount);
-            } else {
-                acc.unclassifiedRefundDeduction = acc.unclassifiedRefundDeduction.add(amount);
-            }
-            return;
-        }
-        BigDecimal rawSvc = nz(inv.getTotalServiceAmount());
-        BigDecimal discount = nz(inv.getTotalDiscount());
-        BigDecimal netSvc = rawSvc.subtract(discount).max(BigDecimal.ZERO);
-        BigDecimal med = nz(inv.getTotalMedicineAmount()).max(BigDecimal.ZERO);
-        BigDecimal surch = nz(inv.getSurchargeAmount()).max(BigDecimal.ZERO);
-        BigDecimal denom = netSvc.add(med).add(surch);
-        if (denom.compareTo(BigDecimal.ZERO) <= 0) {
-            if (positive) {
-                acc.unclassifiedInvoiceBase = acc.unclassifiedInvoiceBase.add(amount);
-            } else {
-                acc.unclassifiedRefundDeduction = acc.unclassifiedRefundDeduction.add(amount);
-            }
-            return;
-        }
-
-        BigDecimal svcShare = BigDecimal.ZERO;
-        BigDecimal medShare = BigDecimal.ZERO;
-        BigDecimal surchShare = BigDecimal.ZERO;
-        if (surch.compareTo(BigDecimal.ZERO) > 0) {
-            svcShare = amount.multiply(netSvc).divide(denom, 2, RoundingMode.HALF_UP);
-            medShare = amount.multiply(med).divide(denom, 2, RoundingMode.HALF_UP);
-            surchShare = amount.subtract(svcShare).subtract(medShare);
-        } else if (med.compareTo(BigDecimal.ZERO) > 0) {
-            svcShare = amount.multiply(netSvc).divide(denom, 2, RoundingMode.HALF_UP);
-            medShare = amount.subtract(svcShare);
-        } else {
-            svcShare = amount;
-        }
-
-        if (positive) {
-            addCategorizedDelta(acc, txDate, svcShare, medShare, surchShare, BigDecimal.ZERO);
-        } else {
-            addCategorizedDelta(acc, txDate, svcShare.negate(), medShare.negate(), surchShare.negate(), BigDecimal.ZERO);
-        }
-    }
-
-    private Map<Long, String> resolveBranchNamesMap() {
-        Map<Long, String> names = new LinkedHashMap<>();
-        if (branchRepository != null) {
-            for (Branch b : safeList(branchRepository.findByIsActiveTrueOrderByBranchNameAsc())) {
-                if (b != null && b.getBranchId() != null) {
-                    names.put(b.getBranchId(), b.getBranchName());
-                }
-            }
-        }
-        return names;
-    }
-
-    private Set<Long> resolveTargetBranchIds(Collection<Long> branchIds, Map<Long, BranchTaxAccum> branchMap, Map<Long, String> branchNames) {
-        Set<Long> target = new LinkedHashSet<>();
-        if (branchIds != null && !branchIds.isEmpty()) {
-            for (Long bid : branchIds) {
-                if (bid != null) target.add(bid);
-            }
-        } else {
-            target.addAll(branchNames.keySet());
-        }
-        target.addAll(branchMap.keySet());
-        return target;
-    }
-
-    private TaxComputationSummary evaluateSingleBranchFallback(
-            Long branchId,
-            Map<Long, String> branchNames,
-            BranchTaxAccum acc,
-            LocalDate startDate,
-            LocalDate endDate,
-            BigDecimal validatedRequestedRate,
-            BigDecimal aggregateOperatingMargin
-    ) {
-        String bName = branchId != null ? branchNames.getOrDefault(branchId, "Chi nhánh #" + branchId) : "Phạm vi báo cáo";
-        BranchTaxOutcome outcome = computeSingleBranchTaxWithMode(
-                branchId, bName, acc, aggregateOperatingMargin, true, startDate, endDate, validatedRequestedRate
-        );
-        BigDecimal estTax = outcome.estimatedTax();
-        return new TaxComputationSummary(
-                outcome.configured(),
-                outcome.displayRate(),
-                estTax,
-                aggregateOperatingMargin.subtract(estTax),
-                outcome.householdRegime()
-                        ? "Hộ kinh doanh cá thể (Thuế khoán phân nhóm DV/Thuốc)"
-                        : (outcome.configured() ? "Doanh nghiệp (TNDN tạm tính quản trị)" : "Doanh nghiệp (Chưa đủ cấu hình - Tạm tính quản trị)"),
-                outcome.basisNote(),
-                acc.serviceBase.max(BigDecimal.ZERO),
-                acc.medicineBase.max(BigDecimal.ZERO),
-                acc.surchargeBase.max(BigDecimal.ZERO),
-                acc.unclassifiedInvoiceBase.max(BigDecimal.ZERO),
-                acc.advanceDepositInflow,
-                acc.depositWalletUsed,
-                acc.invoiceRefundAmount,
-                acc.walletRefundAmount,
-                acc.unsettledAdvanceDeposit()
-        );
-    }
-
-    private BranchTaxOutcome computeSingleBranchTax(
-            Long branchId,
-            String branchName,
-            BranchTaxAccum acc,
-            LocalDate startDate,
-            LocalDate endDate,
-            BigDecimal validatedRequestedRate
-    ) {
-        return computeSingleBranchTaxWithMode(
-                branchId, branchName, acc, acc.classifiedOperatingMargin(), false, startDate, endDate, validatedRequestedRate
-        );
-    }
-
-    private BranchTaxOutcome computeSingleBranchTaxWithMode(
-            Long branchId,
-            String branchName,
-            BranchTaxAccum acc,
-            BigDecimal effectiveEnterpriseMargin,
-            boolean legacyScalarFallback,
-            LocalDate startDate,
-            LocalDate endDate,
-            BigDecimal validatedRequestedRate
-    ) {
-        Optional<BranchTaxConfig> endConfigOpt = (branchId != null && branchId > 0 && taxCalculationService != null)
-                ? taxCalculationService.getBranchTaxConfig(branchId, endDate)
-                : Optional.empty();
-        Optional<BranchTaxConfig> startConfigOpt = (branchId != null && branchId > 0 && taxCalculationService != null && !startDate.equals(endDate))
-                ? taxCalculationService.getBranchTaxConfig(branchId, startDate)
-                : endConfigOpt;
-        boolean policyChangedMidPeriod = !isSameTaxPolicySnapshot(startConfigOpt.orElse(null), endConfigOpt.orElse(null));
-
-        BigDecimal svcAndSurchBase = acc.serviceBase.add(acc.surchargeBase).max(BigDecimal.ZERO);
-        BigDecimal medBase = acc.medicineBase.max(BigDecimal.ZERO);
-        BigDecimal unclassified = acc.unclassifiedInvoiceBase.max(BigDecimal.ZERO);
-        BigDecimal unclassifiedRef = acc.unclassifiedRefundDeduction.max(BigDecimal.ZERO);
-        BigDecimal unsettledAdv = acc.unsettledAdvanceDeposit();
-
-        if (endConfigOpt.isPresent()) {
-            BranchTaxConfig config = endConfigOpt.get();
-            boolean isHousehold = "HOUSEHOLD".equalsIgnoreCase(config.getEntityType())
-                    || "REVENUE_PERCENT".equalsIgnoreCase(config.getTaxRegime());
-
-            if (isHousehold) {
-                BigDecimal totalRevBase = svcAndSurchBase.add(medBase);
-                if (validatedRequestedRate != null) {
-                    boolean ok = unclassified.compareTo(BigDecimal.ZERO) == 0 && unclassifiedRef.compareTo(BigDecimal.ZERO) == 0;
-                    BigDecimal baseAfterUnclassRef = totalRevBase.subtract(unclassifiedRef).max(BigDecimal.ZERO);
-                    BigDecimal tax = baseAfterUnclassRef.multiply(validatedRequestedRate)
-                            .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-                    String note = branchName + ": HKD mô phỏng " + fmtRate(validatedRequestedRate) + "% trên doanh thu phân bổ ("
-                            + fmtMoney(baseAfterUnclassRef) + " đ -> thuế " + fmtMoney(tax) + " đ)"
-                            + (ok ? "" : "; cần đối soát phần chưa phân loại");
-                    return new BranchTaxOutcome(branchId, branchName, ok, true, validatedRequestedRate, tax, note);
-                }
-
-                // Nếu chính sách HKD thay đổi giữa khoảng [startDate, endDate], phân tách tính từng giao dịch theo ngày hiệu lực
-                if (policyChangedMidPeriod && !acc.datedDeltas.isEmpty()) {
-                    return computeHouseholdByTransactionDates(branchId, branchName, acc, totalRevBase, unclassified, unclassifiedRef, unsettledAdv);
-                }
-
-                BigDecimal svcRate = config.getServiceTaxRate();
-                BigDecimal medRate = config.getMedicineTaxRate();
-                boolean missingSvc = svcAndSurchBase.compareTo(BigDecimal.ZERO) > 0 && svcRate == null;
-                boolean missingMed = medBase.compareTo(BigDecimal.ZERO) > 0 && medRate == null;
-                boolean bothMissing = svcRate == null && medRate == null;
-                boolean hasUnclassified = unclassified.compareTo(BigDecimal.ZERO) > 0 || unclassifiedRef.compareTo(BigDecimal.ZERO) > 0;
-                boolean configured = !(missingSvc || missingMed || bothMissing || hasUnclassified || policyChangedMidPeriod);
-
-                BigDecimal svcTax = (svcRate != null)
-                        ? svcAndSurchBase.multiply(svcRate).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
-                        : BigDecimal.ZERO;
-                BigDecimal medTax = (medRate != null)
-                        ? medBase.multiply(medRate).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
-                        : BigDecimal.ZERO;
-                BigDecimal tax = svcTax.add(medTax).setScale(0, RoundingMode.HALF_UP);
-
-                BigDecimal displayRate;
-                if (totalRevBase.compareTo(BigDecimal.ZERO) > 0) {
-                    displayRate = tax.multiply(BigDecimal.valueOf(100))
-                            .divide(totalRevBase, 2, RoundingMode.HALF_UP)
-                            .stripTrailingZeros();
-                } else {
-                    displayRate = svcRate != null ? svcRate : (medRate != null ? medRate : BigDecimal.ZERO);
-                }
-
-                StringBuilder note = new StringBuilder(branchName).append(": HKD (");
-                if (configured) {
-                    note.append("DV ").append(fmtRate(svcRate != null ? svcRate : BigDecimal.ZERO))
-                            .append("% x ").append(fmtMoney(svcAndSurchBase)).append(" đ; Thuốc ")
-                            .append(fmtRate(medRate != null ? medRate : BigDecimal.ZERO))
-                            .append("% x ").append(fmtMoney(medBase)).append(" đ");
-                    if (unsettledAdv.compareTo(BigDecimal.ZERO) > 0) {
-                        note.append("; tiền ứng trước chưa đối trừ ").append(fmtMoney(unsettledAdv)).append(" đ chưa tính vào DT khoán để tránh trùng khi cấn ví");
-                    }
-                    if (config.getLegalReference() != null && !config.getLegalReference().isBlank()) {
-                        note.append(" | ").append(config.getLegalReference());
-                    }
-                } else {
-                    note.append("CHƯA ĐỦ CĂN CỨ: ");
-                    if (policyChangedMidPeriod) note.append("chính sách thuế thay đổi giữa kỳ; ");
-                    if (missingSvc || bothMissing) note.append("thiếu serviceTaxRate; ");
-                    if (missingMed) note.append("thiếu medicineTaxRate; ");
-                    if (unclassified.compareTo(BigDecimal.ZERO) > 0) note.append("có khoản thu HĐ chưa phân loại ").append(fmtMoney(unclassified)).append(" đ; ");
-                    if (unclassifiedRef.compareTo(BigDecimal.ZERO) > 0) note.append("có hoàn HĐ hỗn hợp cần đối soát ").append(fmtMoney(unclassifiedRef)).append(" đ");
-                }
-                note.append(")");
-                return new BranchTaxOutcome(branchId, branchName, configured, true, displayRate, tax, note.toString());
-            }
-
-            // Nhánh Doanh nghiệp: chỉ tính thuế trên thu nhập từ doanh thu đã phân loại (không lấy tiền nạp ví làm doanh thu chịu thuế)
-            BigDecimal citRate = (validatedRequestedRate != null) ? validatedRequestedRate : config.getCitRate();
-            if (citRate == null) {
-                return new BranchTaxOutcome(
-                        branchId, branchName, false, false, BigDecimal.ZERO, BigDecimal.ZERO,
-                        branchName + ": Doanh nghiệp CHƯA ĐỦ CĂN CỨ (thiếu citRate hiệu lực)"
-                );
-            }
-
-            BigDecimal netClassifiedRev = acc.netClassifiedRevenueBase();
-            BigDecimal taxableMargin = effectiveEnterpriseMargin.max(BigDecimal.ZERO);
-            BigDecimal tax = taxableMargin.multiply(citRate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-
-            boolean hasIncompleteBasis = !legacyScalarFallback
-                    && (unclassified.compareTo(BigDecimal.ZERO) > 0
-                    || unclassifiedRef.compareTo(BigDecimal.ZERO) > 0
-                    || unsettledAdv.compareTo(BigDecimal.ZERO) > 0
-                    || policyChangedMidPeriod);
-            boolean configured = !hasIncompleteBasis;
-
-            StringBuilder note = new StringBuilder(branchName).append(": Doanh nghiệp TNDN ")
-                    .append(fmtRate(citRate)).append("% trên thặng dư ")
-                    .append(legacyScalarFallback ? "quản trị " : "từ DT phân loại ")
-                    .append(fmtMoney(taxableMargin)).append(" đ -> ").append(fmtMoney(tax)).append(" đ");
-            if (!legacyScalarFallback) {
-                note.append(" (DT phân loại ").append(fmtMoney(netClassifiedRev)).append(" đ, chi phí ").append(fmtMoney(acc.operatingExpense)).append(" đ)");
-            }
-            if (unsettledAdv.compareTo(BigDecimal.ZERO) > 0) {
-                note.append(" — CHƯA ĐỦ CĂN CỨ với khoản nạp ví ứng trước chưa đối trừ ").append(fmtMoney(unsettledAdv)).append(" đ (không gộp vào DT chịu thuế TNDN)");
-            }
-            if (unclassified.compareTo(BigDecimal.ZERO) > 0 || unclassifiedRef.compareTo(BigDecimal.ZERO) > 0) {
-                note.append(" — CHƯA ĐỦ CĂN CỨ phần thu/hoàn chưa phân loại (")
-                        .append(fmtMoney(unclassified.add(unclassifiedRef))).append(" đ)");
-            }
-            if (policyChangedMidPeriod) {
-                note.append(" — CHƯA ĐỦ CĂN CỨ: chính sách thay đổi giữa kỳ, đang áp cấu hình cuối kỳ ").append(endDate);
-            }
-            if (acc.depositWalletUsed.compareTo(BigDecimal.ZERO) > 0 || acc.advanceDepositInflow.compareTo(BigDecimal.ZERO) > 0) {
-                note.append(" | nạp ví ").append(fmtMoney(acc.advanceDepositInflow))
-                        .append(" đ, cấn ví ").append(fmtMoney(acc.depositWalletUsed)).append(" đ");
-            }
-            if (config.getLegalReference() != null && !config.getLegalReference().isBlank()) {
-                note.append(" | ").append(config.getLegalReference());
-            }
-            return new BranchTaxOutcome(branchId, branchName, configured, false, citRate, tax, note.toString());
-        }
-
-        // Thiếu BranchTaxConfig hiệu lực: luôn đánh dấu configured = false (chưa đủ căn cứ)
-        BigDecimal provisionalRate = (validatedRequestedRate != null) ? validatedRequestedRate : BigDecimal.valueOf(20);
-        BigDecimal taxableMargin = (legacyScalarFallback ? acc.operatingMargin() : effectiveEnterpriseMargin).max(BigDecimal.ZERO);
-        if (legacyScalarFallback) {
-            taxableMargin = effectiveEnterpriseMargin.max(BigDecimal.ZERO);
-        }
-        BigDecimal tax = taxableMargin.multiply(provisionalRate).divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-        String basis = branchName + ": CHƯA ĐỦ CĂN CỨ CẤU HÌNH THUẾ (chưa có BranchTaxConfig hiệu lực ngày "
-                + endDate + "; mô phỏng quản trị " + fmtRate(provisionalRate) + "% -> "
-                + fmtMoney(tax) + " đ)";
-        return new BranchTaxOutcome(branchId, branchName, false, false, provisionalRate, tax, basis);
-    }
-
-    private BranchTaxOutcome computeHouseholdByTransactionDates(
-            Long branchId,
-            String branchName,
-            BranchTaxAccum acc,
-            BigDecimal totalRevBase,
-            BigDecimal unclassified,
-            BigDecimal unclassifiedRef,
-            BigDecimal unsettledAdv
-    ) {
-        Map<LocalDate, BigDecimal[]> dailySums = new LinkedHashMap<>();
-        for (DatedTaxDelta d : acc.datedDeltas) {
-            BigDecimal[] bucket = dailySums.computeIfAbsent(d.txDate(), k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
-            bucket[0] = bucket[0].add(d.serviceDelta()).add(d.surchargeDelta());
-            bucket[1] = bucket[1].add(d.medicineDelta());
-        }
-
-        BigDecimal totalTaxRaw = BigDecimal.ZERO;
-        boolean allOk = unclassified.compareTo(BigDecimal.ZERO) == 0 && unclassifiedRef.compareTo(BigDecimal.ZERO) == 0;
-        for (Map.Entry<LocalDate, BigDecimal[]> entry : dailySums.entrySet()) {
-            Optional<BranchTaxConfig> dayCfgOpt = taxCalculationService.getBranchTaxConfig(branchId, entry.getKey());
-            BigDecimal daySvc = entry.getValue()[0];
-            BigDecimal dayMed = entry.getValue()[1];
-            if (dayCfgOpt.isEmpty()) {
-                allOk = false;
-                continue;
-            }
-            BranchTaxConfig cfg = dayCfgOpt.get();
-            boolean dayHh = "HOUSEHOLD".equalsIgnoreCase(cfg.getEntityType())
-                    || "REVENUE_PERCENT".equalsIgnoreCase(cfg.getTaxRegime());
-            if (!dayHh) {
-                allOk = false;
-                continue;
-            }
-            if (daySvc.compareTo(BigDecimal.ZERO) != 0 && cfg.getServiceTaxRate() == null) {
-                allOk = false;
-            } else if (cfg.getServiceTaxRate() != null) {
-                totalTaxRaw = totalTaxRaw.add(daySvc.multiply(cfg.getServiceTaxRate()).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
-            }
-            if (dayMed.compareTo(BigDecimal.ZERO) != 0 && cfg.getMedicineTaxRate() == null) {
-                allOk = false;
-            } else if (cfg.getMedicineTaxRate() != null) {
-                totalTaxRaw = totalTaxRaw.add(dayMed.multiply(cfg.getMedicineTaxRate()).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
-            }
-        }
-        BigDecimal totalTax = totalTaxRaw.max(BigDecimal.ZERO).setScale(0, RoundingMode.HALF_UP);
-        BigDecimal displayRate = totalRevBase.compareTo(BigDecimal.ZERO) > 0
-                ? totalTax.multiply(BigDecimal.valueOf(100)).divide(totalRevBase, 2, RoundingMode.HALF_UP).stripTrailingZeros()
-                : BigDecimal.ZERO;
-        String note = branchName + ": HKD áp cấu hình theo từng ngày giao dịch do có thay đổi chính sách trong kỳ"
-                + (allOk ? "" : " (CHƯA ĐỦ CĂN CỨ tại một số mốc/nhóm doanh thu)")
-                + (unsettledAdv.compareTo(BigDecimal.ZERO) > 0 ? "; ứng trước chưa đối trừ " + fmtMoney(unsettledAdv) + " đ" : "");
-        return new BranchTaxOutcome(branchId, branchName, allOk, true, displayRate, totalTax, note);
-    }
-
-    private boolean isSameTaxPolicySnapshot(BranchTaxConfig a, BranchTaxConfig b) {
-        if (a == b) return true;
-        if (a == null || b == null) return false;
-        if (a.getConfigId() != null && b.getConfigId() != null) {
-            return Objects.equals(a.getConfigId(), b.getConfigId());
-        }
-        return Objects.equals(a.getEntityType(), b.getEntityType())
-                && Objects.equals(a.getTaxRegime(), b.getTaxRegime())
-                && cmpRate(a.getCitRate(), b.getCitRate())
-                && cmpRate(a.getServiceTaxRate(), b.getServiceTaxRate())
-                && cmpRate(a.getMedicineTaxRate(), b.getMedicineTaxRate());
-    }
-
-    private boolean cmpRate(BigDecimal a, BigDecimal b) {
-        if (a == null && b == null) return true;
-        if (a == null || b == null) return false;
-        return a.compareTo(b) == 0;
-    }
-
-    private TaxComputationSummary summarizeBranchOutcomes(
-            List<BranchTaxOutcome> outcomes,
-            Collection<BranchTaxAccum> accums,
-            BigDecimal totalOperatingMargin,
-            BigDecimal validatedRequestedRate,
-            boolean singleBranchScope
-    ) {
-        BigDecimal totalTax = BigDecimal.ZERO;
-        boolean allConfigured = !outcomes.isEmpty();
-        boolean anyHousehold = false;
-        boolean anyEnterprise = false;
-        Set<BigDecimal> distinctRates = new LinkedHashSet<>();
-        List<String> notes = new ArrayList<>();
-
-        for (BranchTaxOutcome o : outcomes) {
-            totalTax = totalTax.add(o.estimatedTax());
-            if (!o.configured()) {
-                allConfigured = false;
-            }
-            if (o.householdRegime()) {
-                anyHousehold = true;
-            } else {
-                anyEnterprise = true;
-            }
-            if (o.displayRate() != null) {
-                distinctRates.add(o.displayRate().stripTrailingZeros());
-            }
-            notes.add(o.basisNote());
-        }
-
-        BigDecimal svcBase = BigDecimal.ZERO;
-        BigDecimal medBase = BigDecimal.ZERO;
-        BigDecimal surchBase = BigDecimal.ZERO;
-        BigDecimal unclassifiedBase = BigDecimal.ZERO;
-        BigDecimal advInflow = BigDecimal.ZERO;
-        BigDecimal walletUsed = BigDecimal.ZERO;
-        BigDecimal invRefund = BigDecimal.ZERO;
-        BigDecimal walletRefund = BigDecimal.ZERO;
-        BigDecimal unsettledAdv = BigDecimal.ZERO;
-
-        for (BranchTaxAccum a : accums) {
-            svcBase = svcBase.add(a.serviceBase.max(BigDecimal.ZERO));
-            medBase = medBase.add(a.medicineBase.max(BigDecimal.ZERO));
-            surchBase = surchBase.add(a.surchargeBase.max(BigDecimal.ZERO));
-            unclassifiedBase = unclassifiedBase.add(a.unclassifiedInvoiceBase.max(BigDecimal.ZERO));
-            advInflow = advInflow.add(a.advanceDepositInflow);
-            walletUsed = walletUsed.add(a.depositWalletUsed);
-            invRefund = invRefund.add(a.invoiceRefundAmount);
-            walletRefund = walletRefund.add(a.walletRefundAmount);
-            unsettledAdv = unsettledAdv.add(a.unsettledAdvanceDeposit());
-        }
-
-        BigDecimal displayRate;
-        if (validatedRequestedRate != null) {
-            displayRate = validatedRequestedRate;
-        } else if (distinctRates.size() == 1) {
-            displayRate = distinctRates.iterator().next();
-        } else if (anyHousehold && !anyEnterprise) {
-            BigDecimal totalRevBase = svcBase.add(medBase).add(surchBase);
-            displayRate = totalRevBase.compareTo(BigDecimal.ZERO) > 0
-                    ? totalTax.multiply(BigDecimal.valueOf(100)).divide(totalRevBase, 2, RoundingMode.HALF_UP).stripTrailingZeros()
-                    : BigDecimal.ZERO;
-        } else if (totalOperatingMargin.compareTo(BigDecimal.ZERO) > 0 && totalTax.compareTo(BigDecimal.ZERO) > 0) {
-            displayRate = totalTax.multiply(BigDecimal.valueOf(100))
-                    .divide(totalOperatingMargin, 2, RoundingMode.HALF_UP)
-                    .stripTrailingZeros();
-        } else {
-            displayRate = distinctRates.isEmpty() ? BigDecimal.ZERO : distinctRates.iterator().next();
-        }
-
-        String regimeName;
-        if (!allConfigured && anyHousehold && anyEnterprise) {
-            regimeName = "Tổng hợp đa chế độ (Có chi nhánh thiếu cấu hình thuế)";
-        } else if (!allConfigured && singleBranchScope) {
-            regimeName = anyHousehold ? "Hộ kinh doanh (Thiếu căn cứ cấu hình)" : "Doanh nghiệp (Chưa đủ cấu hình thuế)";
-        } else if (!allConfigured) {
-            regimeName = "Tổng hợp đa chi nhánh (Chưa đủ cấu hình thuế)";
-        } else if (anyHousehold && anyEnterprise) {
-            regimeName = "Tổng hợp đa chế độ (Hộ KD & Doanh nghiệp)";
-        } else if (anyHousehold) {
-            regimeName = "Hộ kinh doanh cá thể (Thuế khoán phân nhóm DV/Thuốc)";
-        } else {
-            regimeName = singleBranchScope
-                    ? "Doanh nghiệp (TNDN tạm tính quản trị)"
-                    : "Tổng hợp nhiều chi nhánh (TNDN theo cấu hình)";
-        }
-
-        return new TaxComputationSummary(
-                allConfigured,
-                displayRate,
-                totalTax,
-                totalOperatingMargin.subtract(totalTax),
-                regimeName,
-                String.join(" | ", notes),
-                svcBase,
-                medBase,
-                surchBase,
-                unclassifiedBase,
-                advInflow,
-                walletUsed,
-                invRefund,
-                walletRefund,
-                unsettledAdv
-        );
-    }
-
-    private void applyTaxSummaryToDashboard(ReportDashboardDTO dto, TaxComputationSummary s) {
-        dto.setTaxConfigured(s.configured());
-        dto.setTaxRate(s.displayTaxRate());
-        dto.setEstimatedTaxAmount(s.estimatedTaxAmount());
-        dto.setNetProfitAfterTax(s.netProfitAfterTax());
-        dto.setTaxRegimeName(s.regimeName());
-        dto.setTaxCalculationBasis(s.calculationBasis());
-        dto.setServiceTaxBase(s.serviceTaxBase());
-        dto.setMedicineTaxBase(s.medicineTaxBase());
-        dto.setSurchargeTaxBase(s.surchargeTaxBase());
-        dto.setUnclassifiedInvoiceBase(s.unclassifiedInvoiceBase());
-        dto.setAdvanceDepositInflow(s.advanceDepositInflow());
-        dto.setDepositWalletUsed(s.depositWalletUsed());
-        dto.setInvoiceRefundAmount(s.invoiceRefundAmount());
-        dto.setWalletRefundAmount(s.walletRefundAmount());
-        dto.setUnsettledAdvanceDeposit(s.unsettledAdvanceDeposit());
-    }
-
-    private void applyTaxSummaryToFinancial(FinancialReportDTO dto, TaxComputationSummary s) {
-        dto.setTaxConfigured(s.configured());
-        dto.setTaxRate(s.displayTaxRate());
-        dto.setEstimatedTaxAmount(s.estimatedTaxAmount());
-        dto.setNetProfitAfterTax(s.netProfitAfterTax());
-        dto.setTaxRegimeName(s.regimeName());
-        dto.setTaxCalculationBasis(s.calculationBasis());
-        dto.setServiceTaxBase(s.serviceTaxBase());
-        dto.setMedicineTaxBase(s.medicineTaxBase());
-        dto.setSurchargeTaxBase(s.surchargeTaxBase());
-        dto.setUnclassifiedInvoiceBase(s.unclassifiedInvoiceBase());
-        dto.setInvoiceRefundAmount(s.invoiceRefundAmount());
-        dto.setWalletRefundAmount(s.walletRefundAmount());
-        dto.setUnsettledAdvanceDeposit(s.unsettledAdvanceDeposit());
-    }
-
     private <T> List<T> safeList(List<T> list) {
         return list != null ? list : List.of();
     }
@@ -1112,12 +209,6 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public FinancialReportDTO getFinancialReport(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate) {
-        return getFinancialReport(branchIds, startDate, endDate, null);
-    }
-
-    @Override
-    public FinancialReportDTO getFinancialReport(Collection<Long> branchIds, LocalDate startDate, LocalDate endDate, BigDecimal taxRate) {
-        BigDecimal validatedTaxRate = validateRequestedTaxRate(taxRate);
         LocalDateTime startDt = startDate.atStartOfDay();
         LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
         LocalDateTime endExclusive = endDate.plusDays(1).atStartOfDay();
@@ -1136,9 +227,6 @@ public class ReportServiceImpl implements ReportService {
             dto.setPointDiscount(toBigDecimal(row[5]));
             dto.setTotalInvoiceAmount(toBigDecimal(row[6]));
             dto.setPeriodDebt(toBigDecimal(row[7]));
-            if (row.length > 8) {
-                dto.setTotalVatAmount(toBigDecimal(row[8]));
-            }
             dto.setTotalDiscount(dto.getDiscountAmount().add(dto.getPromotionDiscount()).add(dto.getPointDiscount()));
         }
 
@@ -1154,35 +242,32 @@ public class ReportServiceImpl implements ReportService {
                 .add(dto.getPosCardAmount()).add(dto.getNewDepositAmount());
         dto.setTotalCollected(grossCollected);
 
-        // 3. Hoàn tiền & Chi phí (gồm chi phí vận hành + BHXH 21.5% phần DN chịu từ các kỳ lương đã chi trả)
-        dto.setTotalRefundAmount(toBigDecimal(refundRepository.sumRefundAmountByBranches(branchIds, startDt, endExclusive)));
-        dto.setNetRevenue(grossCollected.subtract(dto.getTotalRefundAmount()));
+        // 3. Hoàn tiền & Chi phí
+        BigDecimal totalRefund = toBigDecimal(refundRepository.sumRefundAmountByBranches(branchIds, startDt, endExclusive));
+        dto.setTotalRefundAmount(totalRefund);
+        List<Refund> periodRefunds = safeList(refundRepository.findAllRefundsForReport(branchIds, startDt, endExclusive));
+        if (!periodRefunds.isEmpty()) {
+            BigDecimal invRefund = BigDecimal.ZERO;
+            BigDecimal walletRefund = BigDecimal.ZERO;
+            for (Refund ref : periodRefunds) {
+                BigDecimal refAmt = nz(ref.getAmount());
+                if (ref.getInvoice() == null) {
+                    walletRefund = walletRefund.add(refAmt);
+                } else {
+                    invRefund = invRefund.add(refAmt);
+                }
+            }
+            dto.setInvoiceRefundAmount(invRefund);
+            dto.setWalletRefundAmount(walletRefund);
+        } else {
+            dto.setInvoiceRefundAmount(totalRefund);
+            dto.setWalletRefundAmount(BigDecimal.ZERO);
+        }
+        dto.setNetRevenue(grossCollected.subtract(totalRefund));
 
         BigDecimal activeExpenses = toBigDecimal(operatingExpenseRepository.sumActiveExpenses(branchIds, startDate, endDate));
-        if (payrollPeriodRepository != null) {
-            BigDecimal employerInsurance = toBigDecimal(payrollPeriodRepository.sumPaidEmployerInsuranceByPaidAt(
-                    branchIds, startDt, endExclusive
-            ));
-            activeExpenses = activeExpenses.add(employerInsurance);
-        }
         dto.setOperatingExpenses(activeExpenses);
         dto.setOperatingMargin(dto.getNetRevenue().subtract(dto.getOperatingExpenses()));
-
-        // Thuế & Lợi nhuận sau thuế theo cấu hình pháp nhân / phân loại căn cứ
-        TaxComputationSummary taxSummary = computeTaxComputationSummary(
-                branchIds, startDate, endDate, validatedTaxRate,
-                grossCollected, dto.getNewDepositAmount(), dto.getDepositWalletAmount(),
-                dto.getTotalRefundAmount(), activeExpenses, dto.getOperatingMargin()
-        );
-        applyTaxSummaryToFinancial(dto, taxSummary);
-
-        // Thuế TNCN đã khấu trừ của nhân viên từ các bảng lương đã chi trả theo ngày chi
-        if (payrollPeriodRepository != null) {
-            BigDecimal paidPit = payrollPeriodRepository.sumPaidPitByPaidAt(
-                    branchIds, startDt, endExclusive
-            );
-            dto.setTotalPitWithheld(paidPit != null ? paidPit : BigDecimal.ZERO);
-        }
 
         // 4. Danh sách công nợ chi tiết hiện tại của bệnh nhân
         List<PatientDebtSummaryDTO> patientDebts = invoiceRepository.findAllPatientDebtsByBranches(branchIds);
@@ -1348,12 +433,6 @@ public class ReportServiceImpl implements ReportService {
     // =========================================================================
     @Override
     public byte[] exportReportToExcel(String reportType, Collection<Long> branchIds, LocalDate startDate, LocalDate endDate, String branchName) {
-        return exportReportToExcel(reportType, branchIds, startDate, endDate, branchName, null);
-    }
-
-    @Override
-    public byte[] exportReportToExcel(String reportType, Collection<Long> branchIds, LocalDate startDate, LocalDate endDate, String branchName, BigDecimal taxRate) {
-        BigDecimal validatedTaxRate = validateRequestedTaxRate(taxRate);
         LocalDateTime startDt = startDate.atStartOfDay();
         LocalDateTime endDt = endDate.atTime(LocalTime.MAX);
 
@@ -1366,7 +445,7 @@ public class ReportServiceImpl implements ReportService {
 
             switch (safeType) {
                 case "FINANCIAL" -> {
-                    FinancialReportDTO financialDTO = getFinancialReport(branchIds, startDate, endDate, validatedTaxRate);
+                    FinancialReportDTO financialDTO = getFinancialReport(branchIds, startDate, endDate);
                     buildFinancialSummarySheet(workbook, styles, financialDTO, branchName, startDate, endDate);
                     buildInvoicesDetailSheet(workbook, styles, branchIds, startDt, endDt);
                     buildDebtsDetailSheet(workbook, styles, financialDTO.getPatientDebts(), branchName);
@@ -1381,9 +460,9 @@ public class ReportServiceImpl implements ReportService {
                     buildDebtsDetailSheet(workbook, styles, debts, branchName);
                 }
                 default -> { // "OVERVIEW" or "ALL"
-                    ReportDashboardDTO dashboardDTO = getDashboardReport(branchIds, startDate, endDate, branchName, validatedTaxRate);
+                    ReportDashboardDTO dashboardDTO = getDashboardReport(branchIds, startDate, endDate, branchName);
                     buildDashboardSummarySheet(workbook, styles, dashboardDTO, branchName, startDate, endDate);
-                    FinancialReportDTO financialDTO = getFinancialReport(branchIds, startDate, endDate, validatedTaxRate);
+                    FinancialReportDTO financialDTO = getFinancialReport(branchIds, startDate, endDate);
                     buildFinancialSummarySheet(workbook, styles, financialDTO, branchName, startDate, endDate);
                     OperationalReportDTO operationalDTO = getOperationalReport(branchIds, startDate, endDate);
                     buildOperationalSummarySheet(workbook, styles, operationalDTO, branchName, startDate, endDate);
@@ -1415,21 +494,12 @@ public class ReportServiceImpl implements ReportService {
 
         r = writeMetricRow(sheet, s, r, "Thực thu dòng tiền (Net Revenue)", dto.getTotalRealRevenue(), "VNĐ", "Tiền mặt + Chuyển khoản + POS - Hoàn tiền (không tính ví cọc)");
         r = writeMetricRow(sheet, s, r, "Tổng giá trị hóa đơn phát sinh", dto.getTotalInvoiceAmount(), "VNĐ", "Tổng viện phí đã xuất (trừ hóa đơn hủy)");
-        r = writeMetricRow(sheet, s, r, "Tổng thuế VAT đầu ra phát sinh", dto.getTotalVatAmount(), "VNĐ", "Thuế GTGT phát sinh từ bán lẻ thuốc (Dịch vụ nha khoa không chịu thuế GTGT)");
         r = writeMetricRow(sheet, s, r, "Công nợ phát sinh trong kỳ", dto.getTotalDebtAmount(), "VNĐ", "Số tiền chưa thanh toán của các hóa đơn lập trong kỳ");
         r = writeMetricRow(sheet, s, r, "Tổng số lượt khám tiếp nhận", dto.getTotalVisits(), "Lượt", "Đếm theo lượt khám thực tế (tránh trùng)");
         r = writeMetricRow(sheet, s, r, "Lượt khám hoàn tất", dto.getCompletedVisits(), "Lượt", "Trạng thái COMPLETED");
         r = writeMetricRow(sheet, s, r, "Tỷ lệ hoàn tất lượt khám", dto.getCompletionRate(), "%", "(Hoàn tất / Tổng lượt khám) * 100%");
         r = writeMetricRow(sheet, s, r, "Tổng chi phí vận hành hợp lệ", dto.getTotalExpenseAmount(), "VNĐ", "Chi phí hợp lệ phát sinh (đã trừ phiếu chi hủy)");
-        r = writeMetricRow(sheet, s, r, "Chênh lệch Thu - Chi vận hành (Lợi nhuận trước thuế)", dto.getOperatingMargin(), "VNĐ", "Thực thu - Chi phí vận hành");
-        String taxStatusNote = (dto.isTaxConfigured() ? "" : "[CHƯA ĐỦ CĂN CỨ] ") + dto.getTaxRegimeName() + " | " + dto.getTaxCalculationBasis();
-        r = writeMetricRow(sheet, s, r, "Nghĩa vụ Thuế đơn vị tạm tính (" + dto.getTaxRate() + "%)", dto.getEstimatedTaxAmount(), "VNĐ", taxStatusNote);
-        r = writeMetricRow(sheet, s, r, "   - Căn cứ Doanh thu Dịch vụ (đã phân bổ)", dto.getServiceTaxBase(), "VNĐ", "Dịch vụ đã thanh toán/cấn ví sau trừ hoàn HĐ");
-        r = writeMetricRow(sheet, s, r, "   - Căn cứ Doanh thu Thuốc (đã phân bổ)", dto.getMedicineTaxBase(), "VNĐ", "Thuốc đã thanh toán/cấn ví sau trừ hoàn HĐ");
-        r = writeMetricRow(sheet, s, r, "   - Căn cứ Phụ thu & Tiền cấn ví (DEPOSIT_WALLET)", dto.getSurchargeTaxBase().add(dto.getDepositWalletUsed()), "VNĐ", "Phụ thu (" + fmtMoney(dto.getSurchargeTaxBase()) + " đ) | Cấn ví (" + fmtMoney(dto.getDepositWalletUsed()) + " đ - không đếm trùng nạp ví)");
-        r = writeMetricRow(sheet, s, r, "   - Nạp ví mới / Hoàn HĐ / Hoàn ví", dto.getAdvanceDepositInflow(), "VNĐ", "Hoàn HĐ: " + fmtMoney(dto.getInvoiceRefundAmount()) + " đ | Hoàn ví: " + fmtMoney(dto.getWalletRefundAmount()) + " đ | Chưa đối trừ: " + fmtMoney(dto.getUnsettledAdvanceDeposit()) + " đ");
-        r = writeMetricRow(sheet, s, r, "Lợi nhuận ròng sau thuế (Ước tính quản trị)", dto.getNetProfitAfterTax(), "VNĐ", "= Lợi nhuận trước thuế - Thuế tạm tính");
-        r = writeMetricRow(sheet, s, r, "Thuế TNCN đã khấu trừ của nhân viên", dto.getTotalPitWithheld(), "VNĐ", "Thuế TNCN khấu trừ từ lương các kỳ đã chi trả trong kỳ lọc (Khoản giữ hộ nhà nước)");
+        r = writeMetricRow(sheet, s, r, "Chênh lệch Thu - Chi vận hành", dto.getOperatingMargin(), "VNĐ", "Thực thu - Chi phí vận hành");
 
         r += 2;
         // Bảng 2: Diễn biến theo ngày
@@ -1478,9 +548,8 @@ public class ReportServiceImpl implements ReportService {
 
         // 1. Phân tích doanh số
         r = writeMetricRow(sheet, s, r, "1. Tổng giá trị hóa đơn (Viện phí)", dto.getTotalInvoiceAmount(), "VNĐ", "Tổng giá trị sau khi đã trừ giảm giá, voucher, điểm");
-        r = writeMetricRow(sheet, s, r, "   - Doanh thu dịch vụ khám & điều trị", dto.getTotalServiceAmount(), "VNĐ", "Dịch vụ nha khoa, thủ thuật (KCT thuế GTGT - K9 Đ5 Luật Thuế GTGT)");
+        r = writeMetricRow(sheet, s, r, "   - Doanh thu dịch vụ khám & điều trị", dto.getTotalServiceAmount(), "VNĐ", "Dịch vụ nha khoa, thủ thuật");
         r = writeMetricRow(sheet, s, r, "   - Doanh thu đơn thuốc", dto.getTotalMedicineAmount(), "VNĐ", "Tiền thuốc phát theo đơn");
-        r = writeMetricRow(sheet, s, r, "   - Tổng thuế VAT đầu ra phát sinh", dto.getTotalVatAmount(), "VNĐ", "Thuế GTGT phát sinh từ bán lẻ thuốc");
         r = writeMetricRow(sheet, s, r, "   - Phụ thu khác", dto.getSurchargeAmount(), "VNĐ", "Phí phụ thu phát sinh");
         r = writeMetricRow(sheet, s, r, "   - Tổng giảm trừ (Ưu đãi, Voucher, Điểm)", dto.getTotalDiscount(), "VNĐ", "Chiết khấu thành viên + Mã KM + Đổi điểm");
 
@@ -1496,18 +565,11 @@ public class ReportServiceImpl implements ReportService {
         r = writeMetricRow(sheet, s, r, "3. Tiền hoàn trả cho bệnh nhân", dto.getTotalRefundAmount(), "VNĐ", "Hoàn hóa đơn (" + fmtMoney(dto.getInvoiceRefundAmount()) + " đ) + Hoàn số dư ví (" + fmtMoney(dto.getWalletRefundAmount()) + " đ)");
         r = writeMetricRow(sheet, s, r, "4. Thực thu thuần sau hoàn trả", dto.getNetRevenue(), "VNĐ", "= Tổng thực thu (2) - Tiền hoàn trả (3)");
         r = writeMetricRow(sheet, s, r, "5. Chi phí vận hành hợp lệ", dto.getOperatingExpenses(), "VNĐ", "Chi phí mặt bằng, điện nước, lương nhân sự...");
-        r = writeMetricRow(sheet, s, r, "6. Chênh lệch Thu - Chi vận hành (Lợi nhuận trước thuế)", dto.getOperatingMargin(), "VNĐ", "= Thực thu thuần (4) - Chi phí vận hành (5)");
-        String finTaxStatus = (dto.isTaxConfigured() ? "" : "[CHƯA ĐỦ CĂN CỨ] ") + dto.getTaxRegimeName() + " | " + dto.getTaxCalculationBasis();
-        r = writeMetricRow(sheet, s, r, "7. Nghĩa vụ Thuế đơn vị tạm tính (" + dto.getTaxRate() + "%)", dto.getEstimatedTaxAmount(), "VNĐ", finTaxStatus);
-        r = writeMetricRow(sheet, s, r, "   - Căn cứ phân bổ: Dịch vụ", dto.getServiceTaxBase(), "VNĐ", "Thanh toán DV trực tiếp + cấn ví sau trừ hoàn HĐ");
-        r = writeMetricRow(sheet, s, r, "   - Căn cứ phân bổ: Thuốc", dto.getMedicineTaxBase(), "VNĐ", "Thanh toán thuốc trực tiếp + cấn ví sau trừ hoàn HĐ");
-        r = writeMetricRow(sheet, s, r, "   - Căn cứ phân bổ: Phụ thu", dto.getSurchargeTaxBase(), "VNĐ", "Phụ thu hóa đơn đã phân bổ (khoản ứng trước chưa đối trừ: " + fmtMoney(dto.getUnsettledAdvanceDeposit()) + " đ)");
-        r = writeMetricRow(sheet, s, r, "8. Lợi nhuận ròng sau thuế (Ước tính quản trị)", dto.getNetProfitAfterTax(), "VNĐ", "= Lợi nhuận trước thuế (6) - Thuế tạm tính (7)");
-        r = writeMetricRow(sheet, s, r, "9. Thuế TNCN đã khấu trừ của nhân viên", dto.getTotalPitWithheld(), "VNĐ", "Khoản thuế TNCN giữ lại từ lương để nộp thay vào ngân sách nhà nước");
+        r = writeMetricRow(sheet, s, r, "6. Chênh lệch Thu - Chi vận hành (Thặng dư hoạt động)", dto.getOperatingMargin(), "VNĐ", "= Thực thu thuần (4) - Chi phí vận hành (5)");
 
         // 4. Công nợ
-        r = writeMetricRow(sheet, s, r, "10. Công nợ hóa đơn phát sinh trong kỳ", dto.getPeriodDebt(), "VNĐ", "Số nợ chưa thu của các hóa đơn lập trong kỳ lọc");
-        r = writeMetricRow(sheet, s, r, "11. Tổng công nợ lũy kế hiện tại", dto.getCurrentTotalOutstandingDebt(), "VNĐ", "Toàn bộ công nợ còn tồn đọng của tất cả bệnh nhân");
+        r = writeMetricRow(sheet, s, r, "7. Công nợ hóa đơn phát sinh trong kỳ", dto.getPeriodDebt(), "VNĐ", "Số nợ chưa thu của các hóa đơn lập trong kỳ lọc");
+        r = writeMetricRow(sheet, s, r, "8. Tổng công nợ lũy kế hiện tại", dto.getCurrentTotalOutstandingDebt(), "VNĐ", "Toàn bộ công nợ còn tồn đọng của tất cả bệnh nhân");
 
         autoSizeColumns(sheet, 4);
     }
