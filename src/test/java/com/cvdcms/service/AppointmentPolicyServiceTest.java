@@ -156,6 +156,38 @@ class AppointmentPolicyServiceTest {
                 AppointmentActorType.PATIENT).doctors().isEmpty());
     }
 
+    @Test
+    void doctorWithSpecialtyOrTitleContainingKhoaRemainsEligibleInAfternoon() {
+        doctor.setPositionTitle("Bác sĩ chuyên khoa");
+        doctor.setSpecialty("Nội nha & Nha khoa tổng quát");
+
+        WorkShift afternoonShift = new WorkShift();
+        afternoonShift.setShiftId(31L);
+        afternoonShift.setIsActive(true);
+        afternoonShift.setShiftCode("CA_CHIEU");
+        afternoonShift.setShiftName("Ca chiều");
+        afternoonShift.setStartTime(LocalTime.of(13, 30));
+        afternoonShift.setEndTime(LocalTime.of(17, 30));
+
+        StaffSchedule afternoonSchedule = new StaffSchedule();
+        afternoonSchedule.setStaff(doctor);
+        afternoonSchedule.setBranch(branch);
+        afternoonSchedule.setShift(afternoonShift);
+        afternoonSchedule.setWorkDate(date);
+        afternoonSchedule.setStatus(ScheduleStatus.SCHEDULED);
+
+        when(schedules.findForBooking(1L, date, ScheduleStatus.SCHEDULED)).thenReturn(List.of(afternoonSchedule));
+        when(appointments.findOccupyingForSession(eq(1L), eq(date), eq(PreferredSession.AFTERNOON), anyList()))
+                .thenReturn(List.of());
+
+        var result = policy.availability(branch, date, PreferredSession.AFTERNOON, null,
+                AppointmentActorType.RECEPTIONIST);
+
+        assertTrue(result.available());
+        assertEquals(1, result.doctors().size());
+        assertEquals(20L, result.doctors().get(0).id());
+    }
+
     private Appointment appointment(Long id, StaffProfile assignedDoctor) {
         Appointment appointment = new Appointment();
         appointment.setAppointmentId(id); appointment.setPatientProfile(patient); appointment.setBranch(branch);

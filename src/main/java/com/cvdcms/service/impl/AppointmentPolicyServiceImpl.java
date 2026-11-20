@@ -13,9 +13,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.*;
 import java.util.*;
+import java.util.regex.Pattern;
 
 @Service
 public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
+    private static final Pattern WAREHOUSE_WORD_PATTERN =
+            Pattern.compile("(?<![\\p{L}\\p{N}])kho(?![\\p{L}\\p{N}])");
     private static final List<AppointmentStatus> OCCUPYING = List.of(
             AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED,
             AppointmentStatus.CHECKED_IN);
@@ -285,46 +288,7 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
             StaffProfile staff = assignment.getStaff();
             if (staff == null || staff.getStatus() != StaffStatus.ACTIVE) continue;
 
-            boolean isDoctor = false;
-            if (assignment.getRole() != null && Boolean.TRUE.equals(assignment.getRole().getIsActive())) {
-                String role = assignment.getRole().getRoleName();
-                if (role != null) {
-                    String rUpper = role.trim().toUpperCase(Locale.ROOT);
-                    if (rUpper.contains("BAC_SI") || rUpper.contains("DOCTOR") || rUpper.contains("BÁC SĨ")) {
-                        isDoctor = true;
-                    }
-                }
-            }
-            if (!isDoctor && staff.getUser() != null && staff.getUser().getRoles() != null) {
-                for (Role r : staff.getUser().getRoles()) {
-                    if (Boolean.TRUE.equals(r.getIsActive()) && r.getRoleName() != null) {
-                        String rUpper = r.getRoleName().trim().toUpperCase(Locale.ROOT);
-                        if (rUpper.contains("BAC_SI") || rUpper.contains("DOCTOR") || rUpper.contains("BÁC SĨ")) {
-                            isDoctor = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (!isDoctor && staff.getPositionTitle() != null) {
-                String pos = staff.getPositionTitle().toLowerCase(Locale.ROOT);
-                if (pos.contains("bác sĩ") || pos.contains("doctor") || pos.contains("nha sĩ")) {
-                    isDoctor = true;
-                }
-            }
-            if (!isDoctor && staff.getFullName() != null) {
-                String nameUpper = staff.getFullName().toUpperCase(Locale.ROOT);
-                if (nameUpper.startsWith("BS") || nameUpper.startsWith("THS. BS") || nameUpper.startsWith("TS. BS") || nameUpper.startsWith("BÁC SĨ")) {
-                    isDoctor = true;
-                }
-            }
-            // Loại trừ các vị trí phi lâm sàng
-            String titleLower = (staff.getPositionTitle() != null ? staff.getPositionTitle() : "") + " " + (staff.getSpecialty() != null ? staff.getSpecialty() : "");
-            titleLower = titleLower.toLowerCase(Locale.ROOT);
-            if (titleLower.contains("lễ tân") || titleLower.contains("phụ tá") || titleLower.contains("kế toán") || titleLower.contains("bảo vệ") || titleLower.contains("kho")) {
-                isDoctor = false;
-            }
-            if (isDoctor) {
+            if (isDoctorAssignment(assignment, staff)) {
                 assigned.add(staff.getStaffId());
                 activeBranchDoctors.put(staff.getStaffId(), staff);
             }
@@ -361,6 +325,64 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         // Không âm thầm fallback sang toàn bộ bác sĩ biên chế khi ngày đó chưa có lịch phân ca (StaffSchedule).
         // Nếu branchSchedules rỗng hoặc không có bác sĩ nào có ca trực hợp lệ trong buổi, trả về danh sách rỗng.
         return result.values().stream().sorted(Comparator.comparing(StaffProfile::getFullName)).toList();
+    }
+
+    /** Xác định nhân sự được phân công tại chi nhánh có phải là bác sĩ lâm sàng hay không. */
+    private boolean isDoctorAssignment(StaffBranchAssignment assignment, StaffProfile staff) {
+        String assignmentRole = null;
+        if (assignment.getRole() != null && Boolean.TRUE.equals(assignment.getRole().getIsActive())
+                && assignment.getRole().getRoleName() != null) {
+            assignmentRole = assignment.getRole().getRoleName().trim().toUpperCase(Locale.ROOT);
+        }
+        if (assignmentRole != null) {
+            if (assignmentRole.contains("LE_TAN") || assignmentRole.contains("KE_TOAN")
+                    || assignmentRole.contains("QUAN_LY_KHO") || assignmentRole.contains("THU_KHO")
+                    || "KHO".equals(assignmentRole) || assignmentRole.contains("ADMIN")
+                    || assignmentRole.contains("PHU_TA") || assignmentRole.contains("BAO_VE")
+                    || assignmentRole.contains("THU_NGAN")) {
+                return false;
+            }
+            if (assignmentRole.contains("BAC_SI") || assignmentRole.contains("DOCTOR")
+                    || assignmentRole.contains("BÁC SĨ")) {
+                return true;
+            }
+        }
+
+        boolean isDoctor = false;
+        if (staff.getUser() != null && staff.getUser().getRoles() != null) {
+            for (Role r : staff.getUser().getRoles()) {
+                if (Boolean.TRUE.equals(r.getIsActive()) && r.getRoleName() != null) {
+                    String rUpper = r.getRoleName().trim().toUpperCase(Locale.ROOT);
+                    if (rUpper.contains("BAC_SI") || rUpper.contains("DOCTOR") || rUpper.contains("BÁC SĨ")) {
+                        isDoctor = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!isDoctor && staff.getPositionTitle() != null) {
+            String pos = staff.getPositionTitle().toLowerCase(Locale.ROOT);
+            if (pos.contains("bác sĩ") || pos.contains("doctor") || pos.contains("nha sĩ")) {
+                isDoctor = true;
+            }
+        }
+        if (!isDoctor && staff.getFullName() != null) {
+            String nameUpper = staff.getFullName().toUpperCase(Locale.ROOT);
+            if (nameUpper.startsWith("BS") || nameUpper.startsWith("THS. BS") || nameUpper.startsWith("THS.BS")
+                    || nameUpper.startsWith("TS. BS") || nameUpper.startsWith("TS.BS")
+                    || nameUpper.startsWith("BÁC SĨ")) {
+                isDoctor = true;
+            }
+        }
+        // Chỉ loại trừ từ "kho" đứng riêng (thủ kho, quản lý kho), không loại nhầm "nha khoa" / "chuyên khoa" / "trưởng khoa".
+        String titleLower = ((staff.getPositionTitle() != null ? staff.getPositionTitle() : "")
+                + " " + (staff.getSpecialty() != null ? staff.getSpecialty() : "")).toLowerCase(Locale.ROOT);
+        if (titleLower.contains("lễ tân") || titleLower.contains("phụ tá")
+                || titleLower.contains("kế toán") || titleLower.contains("bảo vệ")
+                || WAREHOUSE_WORD_PATTERN.matcher(titleLower).find()) {
+            isDoctor = false;
+        }
+        return isDoctor;
     }
 
     @Override

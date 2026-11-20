@@ -16,6 +16,8 @@ import com.cvdcms.repository.AttendanceRecordRepository;
 import com.cvdcms.repository.LeaveRequestRepository;
 import com.cvdcms.entity.enums.LeaveStatus;
 import com.cvdcms.entity.AttendanceRecord;
+import com.cvdcms.entity.LeaveRequest;
+import java.util.Locale;
 import java.util.Optional;
 import com.cvdcms.repository.WorkShiftRepository;
 import org.springframework.stereotype.Service;
@@ -293,13 +295,30 @@ public class StaffScheduleService {
     public List<Map<String, Object>> getAvailableDoctors(Long branchId, LocalDate date) {
         Set<Long> doctorIds = new LinkedHashSet<>();
         for (StaffBranchAssignment a : assignmentRepository.findByBranchAndStatus(branchId, AssignmentStatus.ACTIVE)) {
-            if ("BAC_SI".equalsIgnoreCase(a.getRole().getRoleName())) {
-                doctorIds.add(a.getStaff().getStaffId());
+            if (a.getStartDate() != null && a.getStartDate().isAfter(date)) continue;
+            if (a.getEndDate() != null && a.getEndDate().isBefore(date)) continue;
+            if (a.getStaff() == null || a.getStaff().getStatus() != StaffStatus.ACTIVE) continue;
+            if (a.getRole() != null && Boolean.TRUE.equals(a.getRole().getIsActive()) && a.getRole().getRoleName() != null) {
+                String rUpper = a.getRole().getRoleName().trim().toUpperCase(Locale.ROOT);
+                if (rUpper.contains("BAC_SI") || rUpper.contains("DOCTOR") || rUpper.contains("BÁC SĨ")) {
+                    doctorIds.add(a.getStaff().getStaffId());
+                }
             }
         }
+        List<LeaveRequest> approvedLeaves = leaveRequestRepository.findApprovedOn(branchId, date, LeaveStatus.APPROVED);
         List<Map<String, Object>> result = new ArrayList<>();
         for (StaffSchedule s : scheduleRepository.findByBranchAndDateAndStatus(branchId, date, ScheduleStatus.SCHEDULED)) {
-            if (!doctorIds.contains(s.getStaff().getStaffId())) {
+            if (s.getStaff() == null || !doctorIds.contains(s.getStaff().getStaffId())) {
+                continue;
+            }
+            WorkShift shift = s.getShift();
+            if (shift == null || !Boolean.TRUE.equals(shift.getIsActive())) {
+                continue;
+            }
+            boolean onLeave = approvedLeaves.stream().anyMatch(l ->
+                    l.getStaff() != null && s.getStaff().getStaffId().equals(l.getStaff().getStaffId())
+                            && (l.getShift() == null || l.getShift().getShiftId().equals(shift.getShiftId())));
+            if (onLeave) {
                 continue;
             }
             Map<String, Object> m = new LinkedHashMap<>();
@@ -307,10 +326,10 @@ public class StaffScheduleService {
             m.put("staffCode", s.getStaff().getStaffCode());
             m.put("fullName", s.getStaff().getFullName());
             m.put("specialty", s.getStaff().getSpecialty());
-            m.put("shiftId", s.getShift().getShiftId());
-            m.put("shiftName", s.getShift().getShiftName());
-            m.put("startTime", s.getShift().getStartTime().toString());
-            m.put("endTime", s.getShift().getEndTime().toString());
+            m.put("shiftId", shift.getShiftId());
+            m.put("shiftName", shift.getShiftName());
+            m.put("startTime", shift.getStartTime().toString());
+            m.put("endTime", shift.getEndTime().toString());
             result.add(m);
         }
         return result;

@@ -133,9 +133,10 @@ public class AppointmentConflictDetectionServiceImpl implements AppointmentConfl
             if (session != null && session != PreferredSession.ANY) {
                 SessionRange range = sessionRange(branch, session);
                 List<StaffSchedule> scheduledShifts = schedules.findForBooking(branch.getBranchId(), date, ScheduleStatus.SCHEDULED).stream()
-                        .filter(s -> s.getStaff().getStaffId().equals(doctorId))
-                        .filter(s -> Boolean.TRUE.equals(s.getShift().getIsActive()))
-                        .filter(s -> !s.getShift().getStartTime().isAfter(range.start()) && !s.getShift().getEndTime().isBefore(range.end()))
+                        .filter(s -> s.getStaff() != null && s.getStaff().getStaffId().equals(doctorId))
+                        .filter(s -> s.getShift() != null && Boolean.TRUE.equals(s.getShift().getIsActive()))
+                        .filter(s -> s.getShift().getStartTime() != null && s.getShift().getEndTime() != null)
+                        .filter(s -> s.getShift().getStartTime().isBefore(range.end()) && s.getShift().getEndTime().isAfter(range.start()))
                         .toList();
 
                 if (scheduledShifts.isEmpty()) {
@@ -227,10 +228,13 @@ public class AppointmentConflictDetectionServiceImpl implements AppointmentConfl
                 .filter(a -> a.getStaff().getStaffId().equals(doctorId))
                 .filter(a -> !a.getStartDate().isAfter(date) && (a.getEndDate() == null || !a.getEndDate().isBefore(date)))
                 .anyMatch(a -> {
-                    String role = a.getRole().getRoleName();
-                    return Boolean.TRUE.equals(a.getRole().getIsActive()) && role != null
-                            && ("BAC_SI".equalsIgnoreCase(role) || "ROLE_BAC_SI".equalsIgnoreCase(role))
-                            && a.getStaff().getStatus() == StaffStatus.ACTIVE;
+                    if (a.getRole() == null || !Boolean.TRUE.equals(a.getRole().getIsActive())
+                            || a.getRole().getRoleName() == null || a.getStaff() == null
+                            || a.getStaff().getStatus() != StaffStatus.ACTIVE) {
+                        return false;
+                    }
+                    String rUpper = a.getRole().getRoleName().trim().toUpperCase(Locale.ROOT);
+                    return rUpper.contains("BAC_SI") || rUpper.contains("DOCTOR") || rUpper.contains("BÁC SĨ");
                 });
     }
 

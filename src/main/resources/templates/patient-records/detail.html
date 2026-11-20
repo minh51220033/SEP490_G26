@@ -5567,9 +5567,17 @@
                 return;
             }
             try {
-                const list = await apptApiRequest(`/doctors?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`);
-                select.innerHTML = '<option value="">-- Chọn bác sĩ phụ trách --</option>';
-                (list || []).forEach(d => {
+                const res = await apptApiRequest(`/availability?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}&sessionPeriod=${encodeURIComponent(session)}`);
+                if (!res || !res.available) {
+                    select.innerHTML = '<option value="">-- Ca khám không khả dụng --</option>';
+                    if (help) help.textContent = res?.reason || 'Không có bác sĩ trực khả dụng trong buổi đã chọn.';
+                    return;
+                }
+                const list = Array.isArray(res.doctors) ? res.doctors : [];
+                select.innerHTML = list.length
+                    ? '<option value="">-- Chọn bác sĩ phụ trách --</option>'
+                    : '<option value="">-- Không có bác sĩ trực ca này --</option>';
+                list.forEach(d => {
                     const opt = document.createElement('option');
                     opt.value = d.id;
                     opt.textContent = `BS. ${d.name}${d.specialty ? ' · ' + d.specialty : ''}`;
@@ -5579,7 +5587,7 @@
                 const sessNames = { MORNING: 'Ca Sáng', AFTERNOON: 'Ca Chiều', EVENING: 'Ca Tối' };
                 if (help) help.textContent = list.length
                     ? `Có ${list.length} bác sĩ trực (${sessNames[session] || 'Ca Sáng'}) ngày ${date.split('-').reverse().join('/')}.`
-                    : `Chưa có bác sĩ phân ca trực ngày ${date.split('-').reverse().join('/')}.`;
+                    : `Chưa có bác sĩ phân ca trực (${sessNames[session] || 'Ca Sáng'}) ngày ${date.split('-').reverse().join('/')}.`;
             } catch (e) {
                 select.innerHTML = '<option value="">Không tải được danh sách bác sĩ</option>';
                 if (help) help.textContent = e.message;
