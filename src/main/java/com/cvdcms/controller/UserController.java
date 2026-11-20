@@ -78,6 +78,10 @@ public class UserController {
             return null;
         }
         if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
+            User dbUser = userRepository.findById(sessionUser.getUserId()).orElse(sessionUser);
+            if (dbUser != null && dbUser.getBranch() != null && Boolean.TRUE.equals(dbUser.getBranch().getIsActive())) {
+                return dbUser.getBranch();
+            }
             PatientProfile defaultProfile = patientProfileRepository
                     .findFirstByUser_UserIdAndIsDefaultTrue(sessionUser.getUserId())
                     .orElse(null);
@@ -85,10 +89,6 @@ public class UserController {
                     && defaultProfile.getPreferredBranch() != null
                     && Boolean.TRUE.equals(defaultProfile.getPreferredBranch().getIsActive())) {
                 return defaultProfile.getPreferredBranch();
-            }
-            User dbUser = userRepository.findById(sessionUser.getUserId()).orElse(sessionUser);
-            if (dbUser != null && dbUser.getBranch() != null && Boolean.TRUE.equals(dbUser.getBranch().getIsActive())) {
-                return dbUser.getBranch();
             }
         }
         Object selectedBranchIdObj = session.getAttribute("selectedPortalBranchId");
@@ -414,7 +414,7 @@ public class UserController {
         session.setAttribute("currentBranchAddress", currentBranchAddress);
 
         if (!hasStaffRole(roleNames) || "portal".equalsIgnoreCase(view)) {
-            return populateCustomerPortalHome(model);
+            return populateCustomerPortalHome(model, session);
         }
 
         if (isAdmin) {
@@ -656,8 +656,19 @@ public class UserController {
         user.setLastLoginAt(LocalDateTime.now());
         user = userRepository.save(user);
 
+        // Xóa trạng thái cơ sở tạm từ phiên trước (nếu có) để luôn đồng bộ mới theo DB của tài khoản
+        session.removeAttribute("selectedPortalBranchId");
+        session.removeAttribute("currentBranchName");
+        session.removeAttribute("currentBranchAddress");
+        session.removeAttribute("currentBranchId");
+        session.removeAttribute("defaultPatientProfile");
+
         session.setAttribute("loggedInUser", user);
         session.setAttribute("username", user.getUsername());
+        if (user.getBranch() != null && Boolean.TRUE.equals(user.getBranch().getIsActive())) {
+            session.setAttribute("selectedPortalBranchId", user.getBranch().getBranchId());
+            session.setAttribute("currentBranchName", user.getBranch().getBranchName());
+        }
 
         // Cấp phát Refresh Token mới cho phiên đăng nhập
         issueNewRefreshToken(user, session);

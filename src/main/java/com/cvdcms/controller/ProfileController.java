@@ -1338,6 +1338,7 @@ public class ProfileController {
     @GetMapping("/profile/change-branch")
     @Transactional
     public String showChangeBranch(
+            @RequestParam(value = "branchId", required = false) Long requestedBranchId,
             HttpSession session,
             Model model) {
 
@@ -1355,16 +1356,30 @@ public class ProfileController {
             currentBranch = profiles.get(0).getPreferredBranch();
         }
 
-        model.addAttribute(
-                "branches",
-                branchRepository.findByIsActiveTrueOrderByBranchNameAsc());
+        List<Branch> activeBranches = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
+        Branch requestedBranch = null;
+        if (requestedBranchId != null) {
+            requestedBranch = activeBranches.stream()
+                    .filter(b -> requestedBranchId.equals(b.getBranchId()))
+                    .findFirst()
+                    .orElse(null);
+            if (requestedBranch == null) {
+                model.addAttribute("error", "Cơ sở được chọn không tồn tại hoặc hiện đã tạm ngừng hoạt động.");
+            }
+        }
+        Long preselectedBranchId = requestedBranch != null
+                ? requestedBranch.getBranchId()
+                : (currentBranch != null ? currentBranch.getBranchId() : null);
+
+        model.addAttribute("branches", activeBranches);
         model.addAttribute("currentBranch", currentBranch);
+        model.addAttribute("requestedBranch", requestedBranch);
+        model.addAttribute("preselectedBranchId", preselectedBranchId);
 
         return "profile/change-branch";
     }
 
     @PostMapping("/profile/change-branch")
-    @Transactional
     public String changeBranch(
             @RequestParam("branchId") Long branchId,
             HttpSession session,
@@ -1377,41 +1392,27 @@ public class ProfileController {
             return "redirect:/login";
         }
 
-        var branch = branchRepository
-                .findByIsActiveTrueOrderByBranchNameAsc()
-                .stream()
-                .filter(item -> item.getBranchId().equals(branchId))
-                .findFirst()
-                .orElse(null);
+        try {
+            var result = patientProfileService.switchUserPreferredBranch(user.getUserId(), branchId);
+            var branch = result.branch();
 
-        if (branch == null) {
-            redirectAttributes.addFlashAttribute(
-                    "error",
-                    "Cơ sở không tồn tại hoặc hiện không hoạt động.");
+            session.setAttribute("loggedInUser", result.user());
+            session.setAttribute("selectedPortalBranchId", branch.getBranchId());
+            session.setAttribute("currentBranchName", branch.getBranchName());
+            if (result.defaultProfile() != null) {
+                session.setAttribute("defaultPatientProfile", result.defaultProfile());
+            }
+
+            session.setAttribute(
+                    "profileSuccess",
+                    "Đã chuyển cơ sở khám sang \"" + branch.getBranchName()
+                            + "\" cho tài khoản và toàn bộ hồ sơ bệnh nhân.");
+
+            return "redirect:/profile";
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("error", ex.getMessage());
             return "redirect:/profile/change-branch";
         }
-
-        // 1. Cập nhật cơ sở ở cấp tài khoản.
-        user.setBranch(branch);
-        userRepository.save(user);
-
-        // 2. Đồng bộ cơ sở cho toàn bộ hồ sơ của tài khoản.
-        List<PatientProfile> profiles = getAndSyncPatientProfiles(user);
-        for (PatientProfile profile : profiles) {
-            profile.setPreferredBranch(branch);
-        }
-        patientProfileRepository.saveAll(profiles);
-
-        // 3. Cập nhật User & tên cơ sở trong session.
-        session.setAttribute("loggedInUser", user);
-        session.setAttribute("currentBranchName", branch.getBranchName());
-
-        session.setAttribute(
-                "profileSuccess",
-                "Đã chuyển cơ sở khám sang \"" + branch.getBranchName()
-                        + "\" cho tài khoản và toàn bộ hồ sơ bệnh nhân.");
-
-        return "redirect:/profile";
     }
 
 }

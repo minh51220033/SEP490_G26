@@ -67,6 +67,15 @@ public class PublicBookingRestController {
     private final AppointmentPolicyService appointmentPolicyService;
     private final AppointmentSlotService appointmentSlotService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.patientportal.PortalAccess portalAccess;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.patientportal.PortalPatientService portalPatientService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.AppointmentBookingLockRepository appointmentBookingLockRepository;
+
     public PublicBookingRestController(
             BranchRepository branchRepository,
             ServiceRepository serviceRepository,
@@ -98,6 +107,7 @@ public class PublicBookingRestController {
     public static class QuickBookingForm {
         private Long branchId;
         private Long serviceId;
+        private Long profileId;
         private Long doctorId;
         private String appointmentDate;
         private String preferredSession;
@@ -108,6 +118,82 @@ public class PublicBookingRestController {
     }
 
     /**
+     * Trả ngữ cảnh đặt lịch cho tài khoản đang đăng nhập (danh sách hồ sơ bệnh nhân gia đình thuộc tài khoản).
+     * Nếu chưa đăng nhập hoặc là tài khoản nhân sự -> không trả danh sách hồ sơ bệnh nhân.
+     */
+    @GetMapping("/context")
+    @Transactional(readOnly = true)
+    public ResponseEntity<Map<String, Object>> bookingContext(HttpSession session) {
+        Map<String, Object> resp = new HashMap<>();
+        Object sessionUserObj = session != null ? session.getAttribute("loggedInUser") : null;
+        if (!(sessionUserObj instanceof User loggedIn) || loggedIn.getUserId() == null) {
+            resp.put("authenticated", false);
+            resp.put("isPatientUser", false);
+            resp.put("profiles", Collections.emptyList());
+            return ResponseEntity.ok(resp);
+        }
+        User dbUser = userRepository.findById(loggedIn.getUserId()).orElse(loggedIn);
+        boolean patientAccount = isPatientAccount(dbUser);
+        resp.put("authenticated", true);
+        resp.put("isPatientUser", patientAccount);
+        resp.put("preferredBranchId", dbUser.getBranch() != null ? dbUser.getBranch().getBranchId() : null);
+
+        if (!patientAccount) {
+            resp.put("profiles", Collections.emptyList());
+            return ResponseEntity.ok(resp);
+        }
+
+        List<Map<String, Object>> profileList = new ArrayList<>();
+        if (portalPatientService != null) {
+            for (var p : portalPatientService.list(session)) {
+                if (!"ACTIVE".equalsIgnoreCase(p.status())) continue;
+                Map<String, Object> item = new HashMap<>();
+                item.put("id", p.id());
+                item.put("code", p.code());
+                item.put("fullName", p.fullName());
+                item.put("phoneNumber", p.phoneNumber());
+                item.put("self", p.self());
+                item.put("defaultProfile", p.defaultProfile());
+                item.put("relation", p.self() ? "Bản thân"
+                        : (p.guardianRelationship() != null && !p.guardianRelationship().isBlank()
+                            ? p.guardianRelationship() : "Người phụ thuộc"));
+                item.put("branchId", p.branchId());
+                item.put("branchName", p.branchName());
+                profileList.add(item);
+            }
+        } else {
+            for (PatientProfile p : patientProfileRepository.findByUser_UserIdOrderByIsDefaultDescProfileIdDesc(dbUser.getUserId())) {
+                if (!"ACTIVE".equalsIgnoreCase(p.getStatus())) continue;
+                Map<String, Object> item = new HashMap<>();
+                item.put("id", p.getProfileId());
+                item.put("code", p.getPatientCode());
+                item.put("fullName", p.getFullName());
+                item.put("phoneNumber", p.getPhoneNumber());
+                item.put("self", Boolean.TRUE.equals(p.getIsDefault()));
+                item.put("defaultProfile", Boolean.TRUE.equals(p.getIsDefault()));
+                item.put("relation", Boolean.TRUE.equals(p.getIsDefault()) ? "Bản thân" : "Người phụ thuộc");
+                item.put("branchId", p.getPreferredBranch() != null ? p.getPreferredBranch().getBranchId() : null);
+                item.put("branchName", p.getPreferredBranch() != null ? p.getPreferredBranch().getBranchName() : null);
+                profileList.add(item);
+            }
+        }
+        resp.put("profiles", profileList);
+        return ResponseEntity.ok(resp);
+    }
+
+    private boolean isPatientAccount(User user) {
+        if (user == null) return false;
+        if (user.getUserType() == UserType.PATIENT) return true;
+        if (user.getUserType() == UserType.STAFF) return false;
+        return user.getRoles() != null && user.getRoles().stream()
+                .anyMatch(r -> r != null && !Boolean.FALSE.equals(r.getIsActive()) && r.getRoleName() != null
+                        && ("BENH_NHAN".equalsIgnoreCase(r.getRoleName())
+                            || "ROLE_BENH_NHAN".equalsIgnoreCase(r.getRoleName())
+                            || "PATIENT".equalsIgnoreCase(r.getRoleName())
+                            || "ROLE_PATIENT".equalsIgnoreCase(r.getRoleName())));
+    }
+
+    /**
      * Endpoint kiểm tra khả năng tiếp nhận và danh sách bác sĩ ĐANG TRỰC của cơ sở
      * theo đúng chính sách và lịch làm việc (StaffSchedule, StaffBranchAssignment, LeaveRequest).
      */
@@ -115,7 +201,9 @@ public class PublicBookingRestController {
     public ResponseEntity<Map<String, Object>> checkAvailability(
             @RequestParam Long branchId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam PreferredSession sessionPeriod
+            @RequestParam PreferredSession sessionPeriod,
+            @RequestParam(required = false) Long profileId,
+            HttpSession session
     ) {
         Map<String, Object> resp = new HashMap<>();
 
@@ -126,6 +214,25 @@ public class PublicBookingRestController {
             resp.put("remainingBranch", 0);
             resp.put("doctors", Collections.emptyList());
             return ResponseEntity.ok(resp);
+        }
+
+        if (profileId != null && session != null && session.getAttribute("loggedInUser") instanceof User loggedIn && loggedIn.getUserId() != null) {
+            try {
+                PatientProfile verified = resolveVerifiedProfileForUser(loggedIn, profileId);
+                if (verified != null) {
+                    AppointmentPolicyService.PatientSessionConflict conflict = appointmentPolicyService.findSameSessionConflict(
+                            verified.getProfileId(), date, sessionPeriod, null);
+                    resp.put("sameSessionConflict", conflict.hasConflict());
+                    if (conflict.hasConflict()) {
+                        resp.put("conflictMessage", conflict.message());
+                        resp.put("conflictAppointmentId", conflict.appointmentId());
+                        resp.put("conflictAppointmentCode", conflict.appointmentCode());
+                        resp.put("conflictBranchName", conflict.branchName());
+                    }
+                }
+            } catch (ResponseStatusException ignored) {
+                // Không tiết lộ thông tin hồ sơ không thuộc quyền tài khoản
+            }
         }
 
         AppointmentPolicyService.Availability result;
@@ -256,24 +363,7 @@ public class PublicBookingRestController {
             return ResponseEntity.badRequest().body(resp);
         }
 
-        // 1. Kiểm tra họ tên và số điện thoại
-        String fullName = form.getFullName() != null ? form.getFullName().trim() : "";
-        String rawPhone = form.getPhoneNumber() != null ? form.getPhoneNumber().trim() : "";
-        String cleanPhone = rawPhone.replaceAll("[^0-9]", "");
-
-        if (fullName.isEmpty()) {
-            resp.put("success", false);
-            resp.put("message", "Vui lòng nhập họ và tên của Quý khách.");
-            return ResponseEntity.badRequest().body(resp);
-        }
-
-        if (cleanPhone.length() < 9 || cleanPhone.length() > 11) {
-            resp.put("success", false);
-            resp.put("message", "Số điện thoại không hợp lệ (yêu cầu từ 9 đến 11 chữ số).");
-            return ResponseEntity.badRequest().body(resp);
-        }
-
-        // 2. Kiểm tra chi nhánh
+        // 1. Kiểm tra chi nhánh
         if (form.getBranchId() == null) {
             resp.put("success", false);
             resp.put("message", "Vui lòng chọn cơ sở phòng khám tiếp nhận.");
@@ -337,21 +427,60 @@ public class PublicBookingRestController {
         }
 
         // 7. Xác định hoặc khởi tạo User & PatientProfile
-        PatientProfile profile;
-        User user = null;
+        // - Bệnh nhân đã đăng nhập: BẮT BUỘC gắn đúng profileId thuộc tài khoản, không dùng dữ liệu nhập tay
+        // - Khách chưa đăng nhập: dùng họ tên & SĐT để tìm hoặc tạo hồ sơ vãng lai
+        User sessionAccount = null;
         Object sessionUserObj = session != null ? session.getAttribute("loggedInUser") : null;
         if (sessionUserObj instanceof User loggedIn && loggedIn.getUserId() != null) {
-            user = userRepository.findById(loggedIn.getUserId()).orElse(null);
+            sessionAccount = userRepository.findById(loggedIn.getUserId()).orElse(null);
         }
 
-        if (user != null && user.getUserType() == UserType.PATIENT) {
-            List<PatientProfile> userProfiles = patientProfileRepository.findAllByUser_UserId(user.getUserId());
-            if (!userProfiles.isEmpty()) {
-                profile = userProfiles.get(0);
-            } else {
-                profile = createPatientProfileForUser(user, fullName, cleanPhone);
+        boolean loggedInPatient = sessionAccount != null && isPatientAccount(sessionAccount);
+        PatientProfile profile;
+        User user = sessionAccount;
+
+        if (loggedInPatient) {
+            if (form.getProfileId() == null) {
+                resp.put("success", false);
+                resp.put("message", "Vui lòng chọn hồ sơ người đi khám.");
+                return ResponseEntity.badRequest().body(resp);
+            }
+            try {
+                profile = resolveVerifiedProfileForUser(sessionAccount, form.getProfileId());
+            } catch (ResponseStatusException ex) {
+                resp.put("success", false);
+                resp.put("message", ex.getStatusCode() == HttpStatus.NOT_FOUND
+                        ? "Không tìm thấy hồ sơ người đi khám thuộc tài khoản của bạn."
+                        : (ex.getReason() != null ? ex.getReason() : "Không có quyền đặt lịch cho hồ sơ này."));
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(resp);
+            }
+            if (profile == null) {
+                resp.put("success", false);
+                resp.put("message", "Không tìm thấy hồ sơ người đi khám thuộc tài khoản của bạn.");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(resp);
+            }
+            if (!"ACTIVE".equalsIgnoreCase(profile.getStatus())) {
+                resp.put("success", false);
+                resp.put("message", "Hồ sơ bệnh nhân đã ngừng hoạt động.");
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(resp);
             }
         } else {
+            String fullName = form.getFullName() != null ? form.getFullName().trim() : "";
+            String rawPhone = form.getPhoneNumber() != null ? form.getPhoneNumber().trim() : "";
+            String cleanPhone = rawPhone.replaceAll("[^0-9]", "");
+
+            if (fullName.isEmpty()) {
+                resp.put("success", false);
+                resp.put("message", "Vui lòng nhập họ và tên của Quý khách.");
+                return ResponseEntity.badRequest().body(resp);
+            }
+
+            if (cleanPhone.length() < 9 || cleanPhone.length() > 11) {
+                resp.put("success", false);
+                resp.put("message", "Số điện thoại không hợp lệ (yêu cầu từ 9 đến 11 chữ số).");
+                return ResponseEntity.badRequest().body(resp);
+            }
+
             Optional<User> existingUserOpt = userRepository.findByPhoneNumber(cleanPhone);
             if (existingUserOpt.isPresent()) {
                 user = existingUserOpt.get();
@@ -365,6 +494,14 @@ public class PublicBookingRestController {
                 user = createGuestPatientUser(fullName, cleanPhone);
                 profile = createPatientProfileForUser(user, fullName, cleanPhone);
             }
+        }
+
+        // Global lock hierarchy: 1. PatientProfile -> 2. Branch -> 3. StaffProfile -> 4. Appointment
+        if (profile.getProfileId() != null) {
+            profile = patientProfileRepository.findByIdForUpdate(profile.getProfileId()).orElse(profile);
+        }
+        if (appointmentBookingLockRepository != null && branch.getBranchId() != null) {
+            branch = appointmentBookingLockRepository.findByIdForBooking(branch.getBranchId()).orElse(branch);
         }
 
         // 8. KIỂM TRA CHÍNH SÁCH ĐẶT LỊCH CHUẨN XÁC QUA AppointmentPolicyService
@@ -522,5 +659,17 @@ public class PublicBookingRestController {
         p.setPatientCode("BN" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase());
         p.setStatus("ACTIVE");
         return patientProfileRepository.save(p);
+    }
+
+    private PatientProfile resolveVerifiedProfileForUser(User user, Long profileId) {
+        if (user == null || user.getUserId() == null || profileId == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Không có quyền sử dụng hồ sơ bệnh nhân này.");
+        }
+        if (portalAccess != null) {
+            return portalAccess.requireProfile(user, profileId);
+        }
+        return patientProfileRepository.findByProfileIdAndUser_UserId(profileId, user.getUserId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Không tìm thấy hồ sơ bệnh nhân thuộc tài khoản này."));
     }
 }

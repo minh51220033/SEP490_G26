@@ -37,8 +37,9 @@ public class PortalAppointmentRestController {
     public PortalAppointmentService.Availability availability(HttpSession session, @RequestParam Long branchId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam PreferredSession sessionPeriod,
-            @RequestParam(required = false) Long excludeAppointmentId) {
-        return appointments.availability(session, branchId, date, sessionPeriod, excludeAppointmentId);
+            @RequestParam(required = false) Long excludeAppointmentId,
+            @RequestParam(required = false) Long profileId) {
+        return appointments.availability(session, branchId, date, sessionPeriod, excludeAppointmentId, profileId);
     }
     @GetMapping("/slots")
     public List<PortalAppointmentService.SlotOption> slots(HttpSession session, @RequestParam Long branchId,
