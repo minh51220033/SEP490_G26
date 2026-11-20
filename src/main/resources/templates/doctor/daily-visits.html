@@ -1112,27 +1112,53 @@
                     </div>
                 </div>
 
-                <!-- Thanh chuyển chế độ hiển thị & nút Vào bàn khám bên trái -->
-                <div class="d-flex align-items-center gap-2 flex-wrap mb-4">
-                    <div class="dv-quick-segment">
-                        <button type="button" class="dv-seg-btn active" id="btnViewTable"
-                            onclick="switchViewMode('TABLE')">
-                            <i class="bi bi-table"></i> Bảng dữ liệu
+                <!-- Thanh chuyển chế độ hiển thị, nút Vào khám chung & trạng thái lượt Đang gọi -->
+                <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap mb-3">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="dv-quick-segment">
+                            <button type="button" class="dv-seg-btn active" id="btnViewTable"
+                                onclick="switchViewMode('TABLE')">
+                                <i class="bi bi-table"></i> Bảng dữ liệu
+                            </button>
+                            <button type="button" class="dv-seg-btn" id="btnViewCard"
+                                onclick="switchViewMode('CARD')">
+                                <i class="bi bi-grid-3x3-gap-fill"></i> Thẻ (Card)
+                            </button>
+                        </div>
+
+                        <button type="button"
+                            id="btnEnterExamination"
+                            onclick="return handleEnterExamClick(event)"
+                            class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                            style="font-size: 14px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
+                            <i class="bi bi-person-workspace"></i>
+                            <span>Vào khám</span>
                         </button>
-                        <button type="button" class="dv-seg-btn" id="btnViewCard"
-                            onclick="switchViewMode('CARD')">
-                            <i class="bi bi-grid-3x3-gap-fill"></i> Thẻ (Card)
+
+                        <div id="dvCalledDeskStatus"
+                            class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 border bg-white shadow-sm"
+                            style="font-size: 13.5px; font-weight: 700; color: #334155;">
+                            <i class="bi bi-megaphone-fill text-primary"></i>
+                            <span id="dvCalledDeskStatusText">Đang tải hàng chờ...</span>
+                        </div>
+
+                        <button type="button"
+                            id="btnMarkAbsent"
+                            onclick="openAbsentModal()"
+                            class="btn btn-outline-warning fw-bold px-3 py-2 rounded-3 shadow-sm d-none d-inline-flex align-items-center gap-2 text-dark"
+                            style="font-size: 13.5px;">
+                            <i class="bi bi-person-x-fill text-warning"></i>
+                            <span>Vắng mặt</span>
                         </button>
                     </div>
+                </div>
 
-                    <a href="/doctor/examination"
-                        id="btnEnterExamination"
-                        onclick="return handleEnterExamClick(event)"
-                        class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
-                        style="font-size: 14px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
-                        <i class="bi bi-person-workspace"></i>
-                        <span>Vào bàn khám ngay</span>
-                    </a>
+                <!-- BANNER CẢNH BÁO CẤP CỨU TỨC THÌ TỪ LỄ TÂN -->
+                <div id="dvEmergencyAlertBanner"
+                    class="w-100 alert alert-danger border-0 shadow-sm rounded-3 d-none d-flex align-items-start gap-2 mb-3 px-3 py-2"
+                    style="background: #fef2f2; border-left: 4px solid #dc2626 !important;">
+                    <i class="bi bi-lightning-charge-fill text-danger fs-5 flex-shrink-0 mt-1"></i>
+                    <div class="small text-dark flex-grow-1" id="dvEmergencyAlertBody"></div>
                 </div>
 
                 <!-- THONG BAO CANH BAO TU FLASH ATTRIBUTES HOAC CHUYEN TRANG -->
@@ -1141,6 +1167,12 @@
                     style="background: #fffbeb; border-left: 4px solid #f59e0b !important;">
                     <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0"></i>
                     <div class="fw-semibold text-dark small" th:text="${errorMessage}">Cảnh báo quyền truy cập</div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div th:if="${infoMessage != null}"
+                    class="w-100 alert alert-info border-0 shadow-sm rounded-3 d-flex align-items-center gap-2 mb-3 px-3 py-2">
+                    <i class="bi bi-info-circle-fill text-primary fs-5 flex-shrink-0"></i>
+                    <div class="fw-semibold text-dark small" th:text="${infoMessage}">Thông báo</div>
                     <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
 
@@ -1350,9 +1382,11 @@
                                     onchange="onAdvSubStatusChange(this.value)">
                                     <option value="ALL">-- Tất cả trạng thái --</option>
                                     <option value="WAITING">Chờ khám (WAITING)</option>
-                                    <option value="EXAMINING">Đang khám (EXAMINING)</option>
+                                    <option value="EXAMINING">Đang khám / Điều trị</option>
+                                    <option value="IN_EXAM">Đang khám tại ghế (IN_EXAM)</option>
                                     <option value="IN_TREATMENT">Đang điều trị (IN_TREATMENT)</option>
-                                    <option value="ORDERED">Chờ Cận lâm sàng (ORDERED)</option>
+                                    <option value="WAITING_PARACLINICAL">Chờ Cận lâm sàng (WAITING_PARACLINICAL)</option>
+                                    <option value="WAITING_RESULT">Chờ đọc kết quả CLS (WAITING_RESULT)</option>
                                     <option value="WAITING_PAYMENT">Chờ Thanh toán (WAITING_PAYMENT)</option>
                                     <option value="COMPLETED">Đã hoàn thành (COMPLETED)</option>
                                     <option value="CANCELLED">Đã hủy (CANCELLED)</option>
@@ -1454,7 +1488,7 @@
                                     <div id="colCustomizerList" style="max-height: 340px; overflow-y: auto;">
                                         <!-- Render động bằng JS -->
                                     </div>
-                                    <div class="p-2.5 bg-light border-top text-end">
+                                    <div class="p-2 bg-light border-top text-end">
                                         <button type="button" class="btn btn-primary btn-sm px-3 fw-bold rounded-pill"
                                             onclick="closeColumnCustomizer()">
                                             Hoàn tất
@@ -1548,14 +1582,14 @@
                             <strong>"Tất cả ngày"</strong> hoặc xóa bộ lọc để xem toàn bộ danh sách bệnh nhân.
                         </p>
                         <div class="d-flex align-items-center justify-content-center gap-3 flex-wrap">
-                            <button type="button" class="btn btn-primary rounded-pill px-4 py-2.5 fw-bold shadow-sm"
+                            <button type="button" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm"
                                 style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none; font-size: 14.5px;"
                                 onclick="applyQuickDatePreset('ALL')">
-                                <i class="bi bi-calendar2-range me-1.5"></i>Xem tất cả các ngày
+                                <i class="bi bi-calendar2-range me-2"></i>Xem tất cả các ngày
                             </button>
-                            <button type="button" class="btn btn-outline-secondary rounded-pill px-4 py-2.5 fw-bold"
+                            <button type="button" class="btn btn-outline-secondary rounded-pill px-4 py-2 fw-bold"
                                 style="font-size: 14.5px;" onclick="resetAllFilters()">
-                                <i class="bi bi-arrow-counterclockwise me-1.5"></i>Đặt lại toàn bộ bộ lọc
+                                <i class="bi bi-arrow-counterclockwise me-2"></i>Đặt lại toàn bộ bộ lọc
                             </button>
                         </div>
                     </div>
@@ -1575,12 +1609,12 @@
                     <p class="text-secondary small mb-3">
                         Bác sĩ chỉ có quyền tác nghiệp và xử lý ca khám tại cơ sở đang phân công làm việc:
                     </p>
-                    <div class="p-2.5 rounded-3 mb-3 fw-bold text-primary border border-primary-subtle" style="background: #e0f2fe; font-size: 15px;">
-                        <i class="bi bi-geo-alt-fill me-1.5 text-primary"></i>
+                    <div class="p-2 rounded-3 mb-3 fw-bold text-primary border border-primary-subtle" style="background: #e0f2fe; font-size: 15px;">
+                        <i class="bi bi-geo-alt-fill me-2 text-primary"></i>
                         <span id="warningAssignedBranchDisplay" th:text="${doctorAssignedBranchFullName != null and !doctorAssignedBranchFullName.isEmpty() ? doctorAssignedBranchFullName : 'Cơ sở hiện tại'}">CN02 - Cơ sở Đống Đa</span>
                     </div>
-                    <div class="alert alert-warning py-2.5 px-3 small text-start mb-0 rounded-3 border-0 d-flex align-items-start gap-2" style="background: #fffbeb; color: #92400e;">
-                        <i class="bi bi-exclamation-triangle-fill fs-5 mt-0.5 text-warning flex-shrink-0"></i>
+                    <div class="alert alert-warning py-2 px-3 small text-start mb-0 rounded-3 border-0 d-flex align-items-start gap-2" style="background: #fffbeb; color: #92400e;">
+                        <i class="bi bi-exclamation-triangle-fill fs-5 mt-1 text-warning flex-shrink-0"></i>
                         <span id="warningTargetBranchText" style="line-height: 1.45;">Bạn không được phép tác động hoặc vào khám các ca bệnh tại cơ sở khác!</span>
                     </div>
                 </div>
@@ -1610,6 +1644,26 @@
         const currentDoctorStaffId = /*[[${currentDoctorStaffId}]]*/ null;
         const currentDoctorName = /*[[${currentDoctorName}]]*/ '';
         const isDoctorAccount = /*[[${isDoctorAccount}]]*/ false;
+        const currentBranchIdFromServer = /*[[${currentBranchId != null ? currentBranchId : selectedBranchId}]]*/ null;
+
+        function getEffectiveBranchId() {
+            if (isDoctorRestricted && doctorAssignedBranchId) {
+                return doctorAssignedBranchId;
+            }
+            return currentBranchIdFromServer || null;
+        }
+
+        function isVisitAccessibleByCurrentDoctor(v) {
+            if (!isDoctorAccount) return true;
+            if (!v) return false;
+            if (typeof v.accessibleByCurrentDoctor === 'boolean') {
+                return v.accessibleByCurrentDoctor;
+            }
+            if (v.coveredByCurrentDoctor === true) {
+                return true;
+            }
+            return !(currentDoctorStaffId && v.doctorId && v.doctorId != currentDoctorStaffId);
+        }
 
         function showBranchWarningModal(targetBranchName) {
             const modalEl = document.getElementById('branchWarningModal');
@@ -1630,42 +1684,185 @@
         function handleDvBranchChange(branchId) {
             if (isDoctorRestricted && doctorAssignedBranchId) {
                 if (!branchId || branchId != doctorAssignedBranchId) {
-                    const sel = document.getElementById('dvBranchSelect');
-                    const selectedText = sel ? sel.options[sel.selectedIndex]?.text : 'cơ sở khác';
-                    showBranchWarningModal(selectedText);
-                    if (sel) sel.value = doctorAssignedBranchId;
-                    localStorage.setItem('doctorSelectedBranchId', doctorAssignedBranchId);
+                    showBranchWarningModal('cơ sở khác');
                     return;
                 }
             }
-            if (branchId) {
-                localStorage.setItem('doctorSelectedBranchId', branchId);
-            } else {
-                localStorage.removeItem('doctorSelectedBranchId');
+            if (typeof window.switchAppBranchContext === 'function') {
+                window.switchAppBranchContext(branchId || '');
+                return;
             }
             fetchDailyVisits();
         }
 
-        function handleEnterExamClick(event) {
-            if (isDoctorRestricted && doctorAssignedBranchId) {
-                const sel = document.getElementById('dvBranchSelect');
-                if (sel && sel.value && sel.value != doctorAssignedBranchId) {
-                    event.preventDefault();
-                    showBranchWarningModal('cơ sở khác');
-                    sel.value = doctorAssignedBranchId;
-                    return false;
+        let currentDeskStatus = null;
+
+        async function fetchDoctorDeskStatus() {
+            try {
+                const branchId = getEffectiveBranchId();
+                const q = branchId ? `?branchId=${encodeURIComponent(branchId)}` : '';
+                const res = await fetch(`/api/doctor/visits/queue-status${q}`, { cache: 'no-store' });
+                if (!res.ok) {
+                    let msg = 'Tài khoản hiện tại không gắn bàn khám bác sĩ';
+                    try {
+                        const errData = await res.json();
+                        if (errData && errData.message) msg = errData.message;
+                    } catch (_) {}
+                    renderDoctorDeskStatus({
+                        canEnterExam: false,
+                        canMarkAbsent: false,
+                        calledVisit: null,
+                        inServiceVisit: null,
+                        bannerText: msg,
+                        emergencyAlerts: []
+                    });
+                    return;
                 }
-                event.currentTarget.href = '/doctor/examination?branchId=' + doctorAssignedBranchId;
-                return true;
+                currentDeskStatus = await res.json();
+                renderDoctorDeskStatus(currentDeskStatus);
+            } catch (_) {}
+        }
+
+        function renderDoctorDeskStatus(status) {
+            const box = document.getElementById('dvCalledDeskStatus');
+            const textEl = document.getElementById('dvCalledDeskStatusText');
+            const enterBtn = document.getElementById('btnEnterExamination');
+            const absentBtn = document.getElementById('btnMarkAbsent');
+            const alertBanner = document.getElementById('dvEmergencyAlertBanner');
+            const alertBody = document.getElementById('dvEmergencyAlertBody');
+
+            if (textEl && status) {
+                textEl.textContent = status.bannerText || 'Không có bệnh nhân đang chờ';
             }
-            const b = document.getElementById('dvBranchSelect')?.value;
-            if (b) {
-                event.currentTarget.href = '/doctor/examination?branchId=' + b;
-                return true;
+            if (box && status) {
+                if (status.calledVisit) {
+                    box.style.background = '#eff6ff';
+                    box.style.borderColor = '#93c5fd';
+                    box.style.color = '#1d4ed8';
+                } else if (status.inServiceVisit) {
+                    box.style.background = '#ecfdf5';
+                    box.style.borderColor = '#6ee7b7';
+                    box.style.color = '#047857';
+                } else {
+                    box.style.background = '#ffffff';
+                    box.style.borderColor = '#cbd5e1';
+                    box.style.color = '#475569';
+                }
+            }
+            if (enterBtn && status) {
+                enterBtn.disabled = !status.canEnterExam;
+                enterBtn.classList.toggle('opacity-50', !status.canEnterExam);
+            }
+            if (absentBtn && status) {
+                if (status.canMarkAbsent && status.calledVisit && status.calledVisit.ticketId) {
+                    absentBtn.dataset.ticketId = String(status.calledVisit.ticketId);
+                    absentBtn.dataset.displayNumber = status.calledVisit.displayNumber || '';
+                    absentBtn.dataset.patientName = status.calledVisit.patientName || '';
+                    absentBtn.classList.remove('d-none');
+                } else {
+                    delete absentBtn.dataset.ticketId;
+                    delete absentBtn.dataset.displayNumber;
+                    delete absentBtn.dataset.patientName;
+                    absentBtn.classList.add('d-none');
+                }
+            }
+            if (alertBanner && alertBody && status) {
+                const alerts = Array.isArray(status.emergencyAlerts) ? status.emergencyAlerts : [];
+                if (alerts.length > 0) {
+                    alertBanner.classList.remove('d-none');
+                    alertBody.innerHTML = alerts.map(a =>
+                        `<div class="mb-1"><strong>CẤP CỨU [${escapeHtml(a.displayNumber || '')} – ${escapeHtml(a.patientName || '')}]:</strong> ${escapeHtml(a.reason || '')} <span class="text-muted">(Báo bởi: ${escapeHtml(a.reportedBy || '')} lúc ${escapeHtml(a.reportedAt || '')})</span></div>`
+                    ).join('');
+                } else {
+                    alertBanner.classList.add('d-none');
+                    alertBody.innerHTML = '';
+                }
             }
         }
 
-        function handleVisitActionClick(event, visitBranchId, visitBranchName, visitDoctorId) {
+        async function handleEnterExamClick(event) {
+            if (event) event.preventDefault();
+            const btn = document.getElementById('btnEnterExamination');
+            if (btn && btn.dataset.loading === '1') return false;
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.dataset.loading = '1';
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Đang mở ca...</span>';
+            }
+            try {
+                const branchId = getEffectiveBranchId();
+                const q = branchId ? `?branchId=${encodeURIComponent(branchId)}` : '';
+                const headers = { 'X-Requested-With': 'XMLHttpRequest' };
+                const csrfMeta = document.querySelector('meta[name="_csrf"]');
+                const csrfHeaderMeta = document.querySelector('meta[name="_csrf_header"]');
+                if (csrfMeta && csrfHeaderMeta && csrfMeta.content && csrfHeaderMeta.content) {
+                    headers[csrfHeaderMeta.content] = csrfMeta.content;
+                }
+                const res = await fetch(`/api/doctor/visits/enter-exam${q}`, { method: 'POST', headers });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.redirectUrl) {
+                    window.location.href = data.redirectUrl;
+                    return true;
+                }
+                alert(data.message || 'Hiện chưa có lượt đang gọi hợp lệ để vào khám.');
+                await fetchDailyVisits();
+            } catch (err) {
+                alert('Lỗi kết nối khi vào khám: ' + err.message);
+            } finally {
+                if (btn) {
+                    delete btn.dataset.loading;
+                    btn.innerHTML = origHtml;
+                }
+                renderDoctorDeskStatus(currentDeskStatus);
+            }
+            return false;
+        }
+
+        async function openAbsentModal() {
+            const absentBtn = document.getElementById('btnMarkAbsent');
+            const boundTicketId = absentBtn && absentBtn.dataset.ticketId ? Number(absentBtn.dataset.ticketId) : null;
+            const called = currentDeskStatus && currentDeskStatus.calledVisit ? currentDeskStatus.calledVisit : null;
+            const targetTicketId = called && called.ticketId ? called.ticketId : boundTicketId;
+            if (!targetTicketId) {
+                alert('Hiện không có bệnh nhân đang gọi.');
+                return;
+            }
+            const displayNumber = (called && called.displayNumber) || (absentBtn && absentBtn.dataset.displayNumber) || '';
+            const patientName = (called && called.patientName) || (absentBtn && absentBtn.dataset.patientName) || '';
+            const reason = prompt(
+                `Xác nhận bệnh nhân vắng mặt cho lượt ${displayNumber} – ${patientName}.\nNhập ghi chú (tùy chọn):`,
+                'Bệnh nhân vắng mặt khi gọi số'
+            );
+            if (reason === null) return;
+            if (absentBtn) absentBtn.disabled = true;
+            try {
+                const branchId = getEffectiveBranchId();
+                const q = branchId ? `?branchId=${encodeURIComponent(branchId)}` : '';
+                const headers = { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+                const csrfMeta = document.querySelector('meta[name="_csrf"]');
+                const csrfHeaderMeta = document.querySelector('meta[name="_csrf_header"]');
+                if (csrfMeta && csrfHeaderMeta && csrfMeta.content && csrfHeaderMeta.content) {
+                    headers[csrfHeaderMeta.content] = csrfMeta.content;
+                }
+                const res = await fetch(`/api/doctor/visits/call-absent${q}`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ ticketId: targetTicketId, reason: reason })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.success) {
+                    alert(data.message || 'Không thể ghi nhận vắng mặt.');
+                }
+                await fetchDailyVisits();
+            } catch (err) {
+                alert('Lỗi kết nối: ' + err.message);
+            } finally {
+                if (absentBtn) absentBtn.disabled = false;
+            }
+        }
+
+        function handleVisitActionClick(event, visitBranchId, visitBranchName, visitDoctorId, isAccessible) {
             if (isDoctorRestricted && doctorAssignedBranchId && visitBranchId && visitBranchId != doctorAssignedBranchId) {
                 if (event) {
                     event.preventDefault();
@@ -1674,7 +1871,10 @@
                 showBranchWarningModal(visitBranchName || 'cơ sở khác');
                 return false;
             }
-            if (isDoctorAccount && currentDoctorStaffId && visitDoctorId && visitDoctorId != currentDoctorStaffId) {
+            const canAccess = (typeof isAccessible === 'boolean')
+                ? isAccessible
+                : !(isDoctorAccount && currentDoctorStaffId && visitDoctorId && visitDoctorId != currentDoctorStaffId);
+            if (!canAccess) {
                 if (event) {
                     event.preventDefault();
                     event.stopPropagation();
@@ -1685,7 +1885,7 @@
             return true;
         }
 
-        function handleVisitRowDblClick(event, visitRef, visitBranchId, visitBranchName, visitDoctorId) {
+        function handleVisitRowDblClick(event, visitRef, visitBranchId, visitBranchName, visitDoctorId, isAccessible) {
             if (isDoctorRestricted && doctorAssignedBranchId && visitBranchId && visitBranchId != doctorAssignedBranchId) {
                 if (event) {
                     event.preventDefault();
@@ -1694,7 +1894,10 @@
                 showBranchWarningModal(visitBranchName || 'cơ sở khác');
                 return false;
             }
-            if (isDoctorAccount && currentDoctorStaffId && visitDoctorId && visitDoctorId != currentDoctorStaffId) {
+            const canAccess = (typeof isAccessible === 'boolean')
+                ? isAccessible
+                : !(isDoctorAccount && currentDoctorStaffId && visitDoctorId && visitDoctorId != currentDoctorStaffId);
+            if (!canAccess) {
                 if (event) {
                     event.preventDefault();
                     event.stopPropagation();
@@ -1706,7 +1909,7 @@
             window.location.href = `/doctor/examination/${visitRef}/diagnoses`;
         }
 
-        const COLUMNS_STORAGE_KEY = 'cvdcms_daily_visits_columns_v11';
+        const COLUMNS_STORAGE_KEY = 'cvdcms_daily_visits_columns_v12';
 
         // Cấu hình cột mặc định: Ghim cột STT Lượt khám & Họ tên bên trái VÀ Cột 'Nút ấn nhanh' ở cuối bảng
         const DEFAULT_COLUMNS = [
@@ -1718,7 +1921,7 @@
             { id: 'chair',      label: 'Ghế khám',                  visible: true, pinned: false,  minWidth: 155 },
             { id: 'doctor',     label: 'Bác sĩ phụ trách',          visible: true, pinned: false,  minWidth: 210 },
             { id: 'status',     label: 'Trạng thái ca khám',        visible: true, pinned: false,  minWidth: 200 },
-            { id: 'actions',    label: 'Nút ấn nhanh',              visible: true, pinned: false,  minWidth: 390, nonHidable: true }
+            { id: 'actions',    label: 'Hồ sơ',                     visible: true, pinned: false,  minWidth: 165, nonHidable: true }
         ];
 
         let columnConfig = loadColumnConfig();
@@ -1998,15 +2201,6 @@
             fetchDailyVisits();
         }
 
-        function handleDvBranchChange(branchId) {
-            if (branchId) {
-                localStorage.setItem('doctorSelectedBranchId', branchId);
-            } else {
-                localStorage.removeItem('doctorSelectedBranchId');
-            }
-            fetchDailyVisits();
-        }
-
         // Tải toàn bộ danh sách từ API để hỗ trợ lọc tức thì với mọi toán tử
         async function fetchDailyVisits() {
             const loading = document.getElementById('dvLoadingState');
@@ -2018,10 +2212,12 @@
             if (emptyState) emptyState.style.display = 'none';
 
             try {
-                const branchSel = document.getElementById('dvBranchSelect');
-                const branchId = branchSel ? branchSel.value : (localStorage.getItem('doctorSelectedBranchId') || '');
-                const branchParam = branchId ? `&branchId=${branchId}` : '';
-                const res = await fetch(`/api/doctor/patients/daily-visits?date=ALL&status=ALL${branchParam}`);
+                const branchId = getEffectiveBranchId();
+                const branchParam = branchId ? `&branchId=${encodeURIComponent(branchId)}` : '';
+                const [res] = await Promise.all([
+                    fetch(`/api/doctor/patients/daily-visits?date=ALL&status=ALL${branchParam}`),
+                    fetchDoctorDeskStatus()
+                ]);
                 if (!res.ok) throw new Error('Không thể tải dữ liệu ca khám');
                 rawServerVisits = await res.json();
                 populateDynamicFilterOptions(rawServerVisits);
@@ -2047,16 +2243,24 @@
             const doctors = Array.from(new Set(visits.map(v => v.doctorName).filter(Boolean))).sort();
             const chairs = Array.from(new Set(visits.map(v => v.chairName).filter(Boolean))).sort();
 
-            if (isDoctorAccount && currentDoctorName) {
-                docSelect.innerHTML = `<option value="${escapeHtml(currentDoctorName)}" selected>${escapeHtml(currentDoctorName)} (Cá nhân tôi)</option>`;
-                docSelect.disabled = true;
+            docSelect.disabled = false;
+            if (isDoctorAccount) {
+                docSelect.innerHTML = '<option value="ALL">-- Tất cả (Của tôi &amp; Khám thay) --</option>' +
+                    doctors.map(d => {
+                        const label = (currentDoctorName && d === currentDoctorName) ? `${d} (Cá nhân tôi)` : d;
+                        return `<option value="${escapeHtml(d)}">${escapeHtml(label)}</option>`;
+                    }).join('');
             } else {
-                docSelect.disabled = false;
                 docSelect.innerHTML = '<option value="ALL">-- Tất cả Bác sĩ --</option>' +
                     doctors.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
-                if (doctors.includes(currentDoc)) docSelect.value = currentDoc;
             }
-            if (chairs.includes(currentChair)) chairSelect.value = currentChair;
+            docSelect.value = (currentDoc !== 'ALL' && doctors.includes(currentDoc)) ? currentDoc : 'ALL';
+            filterState.advDoctor = docSelect.value;
+
+            chairSelect.innerHTML = '<option value="ALL">-- Tất cả Ghế khám --</option>' +
+                chairs.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+            chairSelect.value = (currentChair !== 'ALL' && chairs.includes(currentChair)) ? currentChair : 'ALL';
+            filterState.advChair = chairSelect.value;
         }
 
         // Chuyển đổi chuỗi dd/MM/yyyy từ DTO sang YYYY-MM-DD để so sánh toán tử
@@ -2173,7 +2377,14 @@
             filteredVisits = dateAndAdvMatched.filter(v => {
                 if (!stFilter || stFilter === 'ALL') return true;
                 if (stFilter === 'EXAMINING') {
-                    return v.status === 'EXAMINING' || v.status === 'IN_EXAM' || v.status === 'IN_TREATMENT' || v.status === 'ORDERED';
+                    return v.status === 'EXAMINING'
+                        || v.status === 'IN_EXAM'
+                        || v.status === 'IN_TREATMENT'
+                        || v.status === 'WAITING_PARACLINICAL'
+                        || v.status === 'WAITING_RESULT';
+                }
+                if (stFilter === 'COMPLETED') {
+                    return v.status === 'COMPLETED' || v.status === 'WAITING_PAYMENT';
                 }
                 return v.status === stFilter;
             });
@@ -2195,7 +2406,11 @@
 
             baseList.forEach(v => {
                 if (v.status === 'WAITING') waiting++;
-                else if (v.status === 'EXAMINING' || v.status === 'IN_EXAM' || v.status === 'IN_TREATMENT' || v.status === 'ORDERED') examining++;
+                else if (v.status === 'EXAMINING'
+                    || v.status === 'IN_EXAM'
+                    || v.status === 'IN_TREATMENT'
+                    || v.status === 'WAITING_PARACLINICAL'
+                    || v.status === 'WAITING_RESULT') examining++;
                 else if (v.status === 'COMPLETED' || v.status === 'WAITING_PAYMENT') completed++;
             });
 
@@ -2485,11 +2700,12 @@
             let tbodyHtml = '';
             visits.forEach((v, rowIdx) => {
                 const targetBranchName = escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác');
-                const isOtherDoctor = Boolean(isDoctorAccount && currentDoctorStaffId && v.doctorId && v.doctorId != currentDoctorStaffId);
+                const canAccessVisit = isVisitAccessibleByCurrentDoctor(v);
+                const isOtherDoctor = !canAccessVisit;
                 const patientProfileUrl = v.profileId
                     ? ((isDoctorAccount ? `/doctor/patient-records/${v.patientToken || v.profileId}` : `/reception/patients/${v.patientToken || v.profileId}`) + '?from=daily-visits')
                     : '#';
-                tbodyHtml += `<tr class="dv-data-row" ondblclick="handleVisitRowDblClick(event, '${v.visitToken || ''}', ${v.branchId || 'null'}, '${targetBranchName}', ${v.doctorId || 'null'})">`;
+                tbodyHtml += `<tr class="dv-data-row">`;
 
                 orderedCols.forEach(col => {
                     const meta = colStickyMeta[col.id] || { type: 'normal' };
@@ -2508,7 +2724,7 @@
                     tbodyHtml += `<td class="${classes.join(' ')}" style="${style}">${cellContent}</td>`;
                 });
 
-                // Cụm nút nổi bám mép phải viewport khi hover dòng (chuẩn demo-table.html)
+                // Cụm nút nổi bám mép phải viewport: chỉ giữ Xem hồ sơ (không mở khám / lập phác đồ trực tiếp trên từng dòng)
                 let floatingActionsHtml = '';
                 if (isOtherDoctor) {
                     floatingActionsHtml = `
@@ -2525,16 +2741,6 @@
                 } else {
                     floatingActionsHtml = `
                         <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
-                            <a href="/doctor/examination/${v.visitToken}/diagnoses" class="dv-equal-btn-primary" title="Mở bệnh án vào khám ngay"
-                               onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${targetBranchName}', ${v.doctorId || 'null'})">
-                                <i class="bi bi-heart-pulse-fill"></i>
-                                <span>Vào khám ngay</span>
-                            </a>
-                            <a href="/doctor/examination/${v.visitToken}/diagnoses#tab-treatment-plan" class="dv-equal-btn-secondary" title="Lập Kế hoạch & Lộ trình điều trị"
-                               onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${targetBranchName}', ${v.doctorId || 'null'})">
-                                <i class="bi bi-diagram-3-fill text-primary"></i>
-                                <span>Lập phác đồ</span>
-                            </a>
                             <a href="${patientProfileUrl}" class="dv-equal-btn-secondary" title="Xem hồ sơ bệnh nhân toàn diện & bệnh sử">
                                 <i class="bi bi-person-vcard text-secondary"></i>
                                 <span>Xem hồ sơ</span>
@@ -2555,44 +2761,71 @@
 
         function renderTurnBadge(v) {
             const dispNum = v.ticketDisplayNumber || '01';
-            const isEmergency = Boolean(v.isEmergency);
-            const isPriority = Boolean(v.isPriority);
+            const rank = Number(v.queuePriorityRank || (v.isEmergency ? 1 : (v.visitType === 'WALK_IN' ? 3 : 4)));
+            const isEmergency = rank === 1 || Boolean(v.isEmergency);
+            const isOnTimeAppointment = rank === 2 || Boolean(v.isBookedAndOnTime);
+            const isWalkIn = rank === 3 || v.visitType === 'WALK_IN';
             const shortDate = v.checkInDate ? v.checkInDate.slice(0, 5) : '';
-            const reasonTitle = v.priorityReason
-                ? escapeHtml(v.priorityReason)
-                : (isEmergency ? 'Ca cấp cứu khẩn cấp' : (isPriority ? 'Ca khám ưu tiên' : `Số thứ tự lượt khám ngày ${escapeHtml(v.checkInDate || '')}`));
+            const priorityText = v.queuePriorityLabel
+                || (isEmergency ? 'P1 · Cấp cứu'
+                    : isOnTimeAppointment ? 'P2 · Đúng giờ'
+                    : isWalkIn ? 'P3 · Vãng lai'
+                    : 'P4 · Trễ >15p');
+            const returningResult = v.status === 'WAITING_RESULT';
+            const reasonTitle = v.priorityReason ? escapeHtml(v.priorityReason) : escapeHtml(priorityText);
 
             if (isEmergency) {
                 return `
                     <div class="d-inline-flex flex-column align-items-start gap-1" title="${reasonTitle}">
-                        <div class="d-inline-flex align-items-center gap-1.5">
-                            <span class="badge rounded-3 font-monospace fw-bolder px-2.5 py-1.5"
+                        <div class="d-inline-flex align-items-center gap-2">
+                            <span class="badge rounded-3 font-monospace fw-bolder px-2 py-1"
                                   style="background:#fee2e2;color:#b91c1c;border:1.5px solid #f87171;font-size:14.5px;letter-spacing:0.3px;">
                                 #${escapeHtml(dispNum)}
                             </span>
                             <span class="badge rounded-pill px-2 py-1 fw-bold"
                                   style="background:#dc2626;color:#ffffff;font-size:11px;">
-                                <i class="bi bi-lightning-charge-fill me-0.5"></i>Cấp cứu
+                                <i class="bi bi-lightning-charge-fill me-1"></i>${escapeHtml(priorityText)}
                             </span>
                         </div>
+                        ${returningResult ? '<span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:10.5px;">Quay lại đọc KQ CLS</span>' : ''}
                         ${shortDate ? `<span class="text-muted fw-semibold" style="font-size:11.5px;">Lượt ngày ${escapeHtml(shortDate)}</span>` : ''}
                     </div>
                 `;
             }
 
-            if (isPriority) {
+            if (isOnTimeAppointment) {
                 return `
                     <div class="d-inline-flex flex-column align-items-start gap-1" title="${reasonTitle}">
-                        <div class="d-inline-flex align-items-center gap-1.5">
-                            <span class="badge rounded-3 font-monospace fw-bolder px-2.5 py-1.5"
-                                  style="background:#fef3c7;color:#92400e;border:1.5px solid #fbbf24;font-size:14.5px;letter-spacing:0.3px;">
+                        <div class="d-inline-flex align-items-center gap-2">
+                            <span class="badge rounded-3 font-monospace fw-bolder px-2 py-1"
+                                  style="background:#dbeafe;color:#1d4ed8;border:1.5px solid #60a5fa;font-size:14.5px;letter-spacing:0.3px;">
                                 #${escapeHtml(dispNum)}
                             </span>
                             <span class="badge rounded-pill px-2 py-1 fw-bold"
-                                  style="background:#fffbeb;color:#b45309;border:1px solid #fcd34d;font-size:11px;">
-                                <i class="bi bi-star-fill me-0.5"></i>Ưu tiên
+                                  style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;font-size:11px;">
+                                <i class="bi bi-calendar-check-fill me-1"></i>${escapeHtml(priorityText)}
                             </span>
                         </div>
+                        ${returningResult ? '<span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:10.5px;">Quay lại đọc KQ CLS</span>' : ''}
+                        ${shortDate ? `<span class="text-muted fw-semibold" style="font-size:11.5px;">Lượt ngày ${escapeHtml(shortDate)}</span>` : ''}
+                    </div>
+                `;
+            }
+
+            if (isWalkIn) {
+                return `
+                    <div class="d-inline-flex flex-column align-items-start gap-1" title="${reasonTitle}">
+                        <div class="d-inline-flex align-items-center gap-2">
+                            <span class="badge rounded-3 font-monospace fw-bolder px-2 py-1"
+                                  style="background:#ecfdf5;color:#047857;border:1.5px solid #6ee7b7;font-size:14.5px;letter-spacing:0.3px;">
+                                #${escapeHtml(dispNum)}
+                            </span>
+                            <span class="badge rounded-pill px-2 py-1 fw-semibold"
+                                  style="background:#f0fdf4;color:#047857;border:1px solid #86efac;font-size:11px;">
+                                <i class="bi bi-person-walking me-1"></i>${escapeHtml(priorityText)}
+                            </span>
+                        </div>
+                        ${returningResult ? '<span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:10.5px;">Quay lại đọc KQ CLS</span>' : ''}
                         ${shortDate ? `<span class="text-muted fw-semibold" style="font-size:11.5px;">Lượt ngày ${escapeHtml(shortDate)}</span>` : ''}
                     </div>
                 `;
@@ -2600,16 +2833,17 @@
 
             return `
                 <div class="d-inline-flex flex-column align-items-start gap-1" title="${reasonTitle}">
-                    <div class="d-inline-flex align-items-center gap-1.5">
-                        <span class="badge rounded-3 font-monospace fw-bolder px-2.5 py-1.5"
-                              style="background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc;font-size:14.5px;letter-spacing:0.3px;">
+                    <div class="d-inline-flex align-items-center gap-2">
+                        <span class="badge rounded-3 font-monospace fw-bolder px-2 py-1"
+                              style="background:#fef3c7;color:#92400e;border:1.5px solid #fbbf24;font-size:14.5px;letter-spacing:0.3px;">
                             #${escapeHtml(dispNum)}
                         </span>
                         <span class="badge rounded-pill px-2 py-1 fw-semibold"
-                              style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;font-size:11px;">
-                            Khám thường
+                              style="background:#fffbeb;color:#b45309;border:1px solid #fcd34d;font-size:11px;">
+                            <i class="bi bi-clock-history me-1"></i>${escapeHtml(priorityText)}
                         </span>
                     </div>
+                    ${returningResult ? '<span class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:10.5px;">Quay lại đọc KQ CLS</span>' : ''}
                     ${shortDate ? `<span class="text-muted fw-semibold" style="font-size:11.5px;">Lượt ngày ${escapeHtml(shortDate)}</span>` : ''}
                 </div>
             `;
@@ -2629,8 +2863,7 @@
                     return `
                     <div class="d-flex align-items-center gap-3" style="white-space: nowrap; padding-right: 12px;">
                         <div class="dv-patient-avatar" style="width: 40px; height: 40px; min-width: 40px; font-size: 16px; border-radius: 11px;">${escapeHtml(firstLetter)}</div>
-                        <a href="/doctor/examination/${v.visitToken}/diagnoses" class="dv-patient-name" style="font-size: 15.5px; font-weight: 800; white-space: nowrap;"
-                           onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">${escapeHtml(v.fullName)}</a>
+                        <span class="dv-patient-name" style="font-size: 15.5px; font-weight: 800; white-space: nowrap; cursor: default;">${escapeHtml(v.fullName)}</span>
                         <span class="dv-code-pill" style="font-size: 12.5px; padding: 4px 10px;">${escapeHtml(v.patientCode)}</span>
                         ${genderHtml}
                         ${ageHtml ? `<span class="text-secondary fw-bold" style="font-size: 13.5px;"><span class="text-muted mx-1">•</span>${ageHtml}</span>` : ''}
@@ -2638,13 +2871,14 @@
                     </div>
                 `;
                 case 'actions':
-                    const isOther = Boolean(isDoctorAccount && currentDoctorStaffId && v.doctorId && v.doctorId != currentDoctorStaffId);
+                    const canAccessCellVisit = isVisitAccessibleByCurrentDoctor(v);
+                    const isOther = !canAccessCellVisit;
                     const cellProfileUrl = v.profileId
                         ? ((isDoctorAccount ? `/doctor/patient-records/${v.patientToken || v.profileId}` : `/reception/patients/${v.patientToken || v.profileId}`) + '?from=daily-visits')
                         : '#';
                     if (isOther) {
                         return `
-                        <div class="dv-actions-cell-always d-flex align-items-center gap-1.5" onclick="event.stopPropagation()">
+                        <div class="dv-actions-cell-always d-flex align-items-center gap-2" onclick="event.stopPropagation()">
                             <span class="badge bg-secondary-subtle text-secondary py-2 px-3 fw-bold border" style="font-size: 12.5px;">
                                 <i class="bi bi-lock-fill me-1"></i>BS khác phụ trách
                             </span>
@@ -2656,16 +2890,6 @@
                     }
                     return `
                     <div class="dv-actions-cell-always" onclick="event.stopPropagation()">
-                        <a href="/doctor/examination/${v.visitToken}/diagnoses" class="dv-equal-btn-primary" title="Mở bệnh án vào khám ngay"
-                           onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">
-                            <i class="bi bi-heart-pulse-fill"></i>
-                            <span>Vào khám ngay</span>
-                        </a>
-                        <a href="/doctor/examination/${v.visitToken}/diagnoses#tab-treatment-plan" class="dv-equal-btn-secondary" title="Lập Kế hoạch & Lộ trình điều trị"
-                           onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">
-                            <i class="bi bi-diagram-3-fill text-primary"></i>
-                            <span>Lập phác đồ</span>
-                        </a>
                         <a href="${cellProfileUrl}" class="dv-equal-btn-secondary" title="Xem hồ sơ bệnh nhân toàn diện & bệnh sử">
                             <i class="bi bi-person-vcard text-secondary"></i>
                             <span>Xem hồ sơ</span>
@@ -2674,7 +2898,7 @@
                 `;
                 case 'visitCode':
                     return `
-                    <span class="badge rounded-3 px-2.5 py-1.5 font-monospace fw-bold"
+                    <span class="badge rounded-3 px-2 py-1 font-monospace fw-bold"
                           style="background:#f8fafc;color:#0f172a;border:1.5px solid #cbd5e1;font-size:13.5px;">
                         ${escapeHtml(v.visitCode)}
                     </span>
@@ -2709,6 +2933,7 @@
                             <i class="bi bi-person-badge-fill"></i>
                         </span>
                         <span class="fw-bold text-dark" style="font-size: 14px;">${escapeHtml(v.doctorName || 'Chưa phân công')}</span>
+                        ${v.coveredByCurrentDoctor ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2 py-1" style="font-size: 11px;">Khám thay</span>' : ''}
                     </div>
                 `;
                 case 'status':
@@ -2719,6 +2944,24 @@
         }
 
         function renderStatusBadge(v) {
+            if (v.queueStatus === 'CALLED' && (v.status === 'WAITING' || v.status === 'WAITING_RESULT')) {
+                return `
+                <span class="badge rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center gap-2"
+                      style="background:#dbeafe;color:#1d4ed8;border:1.5px solid #93c5fd;font-size:13px;">
+                    <i class="bi bi-megaphone-fill"></i>
+                    <span>Đang gọi</span>
+                </span>
+            `;
+            }
+            if (v.queueStatus === 'PAUSED' && (v.status === 'WAITING' || v.status === 'WAITING_RESULT')) {
+                return `
+                <span class="badge rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center gap-2"
+                      style="background:#ffedd5;color:#9a3412;border:1.5px solid #fdba74;font-size:13px;">
+                    <i class="bi bi-person-x-fill"></i>
+                    <span>Vắng mặt / Tạm dừng</span>
+                </span>
+            `;
+            }
             const map = {
                 'WAITING': { bg: '#fef3c7', color: '#b45309', border: '#fcd34d', icon: 'bi-hourglass-split' },
                 'EXAMINING': { bg: '#dbeafe', color: '#1d4ed8', border: '#93c5fd', icon: 'bi-heart-pulse-fill' },
@@ -2733,7 +2976,7 @@
             };
             const st = map[v.status] || { bg: '#f1f5f9', color: '#475569', border: '#cbd5e1', icon: 'bi-circle-fill' };
             return `
-            <span class="badge rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center gap-1.5"
+            <span class="badge rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center gap-2"
                   style="background:${st.bg};color:${st.color};border:1.5px solid ${st.border};font-size:13px;">
                 <i class="bi ${st.icon}"></i>
                 <span>${escapeHtml(v.statusDisplayName || v.status)}</span>
@@ -2746,16 +2989,14 @@
             let html = '';
             visits.forEach(v => {
                 const firstLetter = v.fullName ? v.fullName.trim().charAt(0).toUpperCase() : 'B';
-                const isOtherCard = Boolean(isDoctorAccount && currentDoctorStaffId && v.doctorId && v.doctorId != currentDoctorStaffId);
+                const canAccessCard = isVisitAccessibleByCurrentDoctor(v);
+                const isOtherCard = !canAccessCard;
                 const cardProfileUrl = v.profileId
                     ? ((isDoctorAccount ? `/doctor/patient-records/${v.patientToken || v.profileId}` : `/reception/patients/${v.patientToken || v.profileId}`) + '?from=daily-visits')
                     : '#';
                 const actionBtnHtml = isOtherCard
                     ? `<span class="badge bg-secondary-subtle text-secondary py-2 px-3 fw-bold border" style="font-size: 12px;"><i class="bi bi-lock-fill me-1"></i>BS khác phụ trách</span>`
-                    : `<a href="/doctor/examination/${v.visitToken}/diagnoses" class="dv-hover-btn-primary"
-                          onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">
-                           <i class="bi bi-heart-pulse-fill"></i> Vào khám ngay
-                       </a>`;
+                    : '';
                 html += `
                 <div class="dv-visit-card-item">
                     <div>
@@ -2763,8 +3004,7 @@
                             <div class="d-flex align-items-center gap-3">
                                 <div class="dv-patient-avatar">${escapeHtml(firstLetter)}</div>
                                 <div>
-                                    <a href="/doctor/examination/${v.visitToken}/diagnoses" class="dv-patient-name d-block"
-                                       onclick="return handleVisitActionClick(event, ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}', ${v.doctorId || 'null'})">${escapeHtml(v.fullName)}</a>
+                                    <span class="dv-patient-name d-block" style="cursor: default;">${escapeHtml(v.fullName)}</span>
                                     <div class="mt-1 d-flex align-items-center gap-2">
                                         <span class="dv-code-pill">${escapeHtml(v.patientCode)}</span>
                                         <span class="text-secondary small fw-semibold">${v.age ? v.age + ' tuổi' : ''}</span>
@@ -2774,21 +3014,24 @@
                             ${renderStatusBadge(v)}
                         </div>
                         <div class="p-3 rounded-3 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0;font-size:13.5px;">
-                            <div class="d-flex justify-content-between align-items-center mb-1.5">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="text-secondary">STT Lượt khám:</span>
                                 <span>${renderTurnBadge(v)}</span>
                             </div>
-                            <div class="d-flex justify-content-between mb-1.5">
+                            <div class="d-flex justify-content-between mb-2">
                                 <span class="text-secondary">Mã ca khám:</span>
                                 <strong class="font-monospace text-dark">${escapeHtml(v.visitCode)}</strong>
                             </div>
-                            <div class="d-flex justify-content-between mb-1.5">
+                            <div class="d-flex justify-content-between mb-2">
                                 <span class="text-secondary">Tiếp đón:</span>
                                 <strong class="text-dark">${escapeHtml(v.checkInTime)} • ${escapeHtml(v.checkInDate)}</strong>
                             </div>
-                            <div class="d-flex justify-content-between">
+                            <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-secondary">Bác sĩ:</span>
-                                <strong class="text-primary">${escapeHtml(v.doctorName)}</strong>
+                                <span class="d-inline-flex align-items-center gap-1">
+                                    <strong class="text-primary">${escapeHtml(v.doctorName)}</strong>
+                                    ${v.coveredByCurrentDoctor ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2" style="font-size:10.5px;">Khám thay</span>' : ''}
+                                </span>
                             </div>
                         </div>
                         <div class="mb-3" style="font-size:14px;">
@@ -2797,11 +3040,11 @@
                         </div>
                     </div>
                     <div class="pt-3 border-top d-flex align-items-center justify-content-between gap-2">
-                        <span class="badge bg-light text-dark border px-2.5 py-1.5" style="font-size:12.5px;">
+                        <span class="badge bg-light text-dark border px-2 py-1" style="font-size:12.5px;">
                             <i class="bi bi-geo-alt-fill text-primary me-1"></i>${escapeHtml(v.chairName)}
                         </span>
-                        <div class="d-flex align-items-center gap-1.5">
-                            <a href="${cardProfileUrl}" class="btn btn-sm btn-outline-secondary fw-semibold py-1 px-2.5 rounded-3 d-inline-flex align-items-center gap-1" style="font-size:12.5px;" title="Xem hồ sơ bệnh nhân toàn diện & bệnh sử">
+                        <div class="d-flex align-items-center gap-2">
+                            <a href="${cardProfileUrl}" class="btn btn-sm btn-outline-secondary fw-semibold py-1 px-2 rounded-3 d-inline-flex align-items-center gap-1" style="font-size:12.5px;" title="Xem hồ sơ bệnh nhân toàn diện & bệnh sử">
                                 <i class="bi bi-person-vcard text-secondary"></i> Hồ sơ
                             </a>
                             ${actionBtnHtml}
@@ -2892,7 +3135,7 @@
                 html += `
                 <div class="dv-col-item"
                      ${!isActions ? `draggable="true" ondragstart="onColDragStart(event, ${idx})" ondragover="onColDragOver(event)" ondrop="onColDrop(event, ${idx})"` : ''}>
-                    <div class="d-flex align-items-center gap-2.5">
+                    <div class="d-flex align-items-center gap-2">
                         <i class="bi ${!isActions ? 'bi-grip-vertical text-muted' : 'bi-lock-fill text-primary'}" style="${!isActions ? 'cursor: grab;' : ''}"></i>
                         <input type="checkbox" class="form-check-input mt-0"
                                style="width: 17px; height: 17px; cursor: pointer;"
@@ -2959,20 +3202,74 @@
         });
 
         window.addEventListener('DOMContentLoaded', () => {
-            const branchSel = document.getElementById('dvBranchSelect');
-            if (isDoctorRestricted && doctorAssignedBranchId) {
-                if (branchSel) branchSel.value = doctorAssignedBranchId;
-                localStorage.setItem('doctorSelectedBranchId', doctorAssignedBranchId);
+            const effectiveBranch = getEffectiveBranchId();
+            if (effectiveBranch) {
+                localStorage.setItem('doctorSelectedBranchId', effectiveBranch);
             } else {
-                const savedBranch = localStorage.getItem('doctorSelectedBranchId');
-                if (savedBranch && branchSel && (!branchSel.value || branchSel.value === '')) {
-                    branchSel.value = savedBranch;
-                }
+                localStorage.removeItem('doctorSelectedBranchId');
             }
 
             updatePinnedBadgeCount();
             syncDateInputsVisibility();
             fetchDailyVisits();
+
+            const ensureRealtimeLibs = (cb) => {
+                if (window.SockJS && window.Stomp) {
+                    cb();
+                    return;
+                }
+                const loadScript = (src, readyFn) => new Promise((resolve, reject) => {
+                    if (readyFn()) { resolve(); return; }
+                    const existing = document.querySelector(`script[src="${src}"]`);
+                    if (existing) {
+                        const timer = setInterval(() => {
+                            if (readyFn()) { clearInterval(timer); resolve(); }
+                        }, 100);
+                        setTimeout(() => { clearInterval(timer); resolve(); }, 5000);
+                        return;
+                    }
+                    const s = document.createElement('script');
+                    s.src = src;
+                    s.async = true;
+                    s.onload = () => resolve();
+                    s.onerror = () => reject(new Error('Script load failed'));
+                    document.head.appendChild(s);
+                });
+                Promise.resolve()
+                    .then(() => loadScript('https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js', () => !!window.SockJS))
+                    .then(() => loadScript('https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js', () => !!window.Stomp))
+                    .then(() => { if (window.SockJS && window.Stomp) cb(); })
+                    .catch(() => {});
+            };
+
+            if (currentDoctorStaffId || effectiveBranch) {
+                ensureRealtimeLibs(() => {
+                    try {
+                        const sock = new window.SockJS('/ws-chat');
+                        const stomp = window.Stomp.over(sock);
+                        stomp.debug = null;
+                        let refreshTimer = null;
+                        const scheduleRefresh = (frame) => {
+                            try {
+                                const payload = frame && frame.body ? JSON.parse(frame.body) : null;
+                                if (payload && payload.eventType === 'EMERGENCY_REPORTED') {
+                                    fetchDoctorDeskStatus();
+                                }
+                            } catch (_) {}
+                            clearTimeout(refreshTimer);
+                            refreshTimer = setTimeout(() => fetchDailyVisits(), 300);
+                        };
+                        stomp.connect({}, () => {
+                            if (currentDoctorStaffId) {
+                                stomp.subscribe(`/topic/queue/doctor/${currentDoctorStaffId}`, scheduleRefresh);
+                            }
+                            if (effectiveBranch) {
+                                stomp.subscribe(`/topic/queue/branch/${effectiveBranch}`, scheduleRefresh);
+                            }
+                        }, () => {});
+                    } catch (_) {}
+                });
+            }
         });
     </script>
 </body>

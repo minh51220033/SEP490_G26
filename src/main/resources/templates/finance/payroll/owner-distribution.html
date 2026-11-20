@@ -28,34 +28,25 @@
 
             <!-- Vùng nội dung tab hiển thị ngay bên dưới -->
             <div class="expense-income-tab-content" id="expenseIncomeTabContent">
-                <!-- Subhead & Thao tác chính -->
-                <div class="expense-income-subhead">
-                    <div>
-                        <h2 class="expense-income-subhead__title">Phân Chia Lợi Nhuận Chủ Phòng Khám</h2>
-                        <p class="expense-income-subhead__desc">Theo dõi đề xuất và chi trả cổ tức/lợi nhuận cho các chủ sở hữu, cổ đông phòng khám. <strong>Tách biệt hoàn toàn khỏi chi phí vận hành và bảng lương nhân viên.</strong></p>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="fin-btn fin-btn-primary" data-bs-toggle="modal" data-bs-target="#createDistributionModal">
-                            <i class="bi bi-plus-circle"></i> Lập đề xuất phân chia
-                        </button>
-                    </div>
-                </div>
-
                 <!-- Notice Alert -->
-                <div class="alert alert-warning py-2 mb-4">
+                <div class="alert alert-warning py-2 px-3 mb-3 small border-warning">
                     <i class="bi bi-shield-lock me-1"></i>
-                    <strong>Quy trình kiểm soát:</strong> Kế toán lập đề xuất &rarr; Quản trị viên (Admin) phê duyệt &rarr; Quản trị viên xác nhận chi trả thực tế. Không tự động áp đặt công thức 50/50 cố định; phân bổ theo thỏa thuận thực tế của hội đồng chủ sở hữu.
+                    <strong>Quy trình kiểm soát:</strong> Kế toán lập đề xuất &rarr; Quản trị viên (Admin) phê duyệt &rarr; Quản trị viên xác nhận chi trả thực tế (tách biệt khỏi chi phí vận hành và bảng lương).
                 </div>
 
                 <!-- Distributions Table -->
                 <div class="fin-card fin-table-card p-0 mb-4">
-                    <div class="fin-grid-topbar d-flex justify-content-between align-items-center">
-                        <div class="fin-grid-info">
-                            Hiển thị <span class="fw-bold" th:text="${distributions.numberOfElements}">0</span> / <span th:text="${distributions.totalElements}">0</span> đợt phân chia
+                    <div class="fin-grid-topbar">
+                        <div class="fin-topbar-left">
+                            Hiển thị <span class="text-primary fw-bolder" th:text="${distributions.numberOfElements}">0</span> / <span th:text="${distributions.totalElements}">0</span> đợt phân chia
                         </div>
-                        <div></div>
+                        <div class="fin-topbar-right">
+                            <button type="button" class="fin-btn fin-btn-primary fin-btn-sm" data-bs-toggle="modal" data-bs-target="#createDistributionModal">
+                                <i class="bi bi-plus-lg"></i> Lập đề xuất phân chia
+                            </button>
+                        </div>
                     </div>
-                    <div class="table-responsive">
+                    <div class="fin-table-wrapper">
                         <table class="fin-table" data-enhanced-table="ft32-owner-distributions">
                             <thead>
                             <tr>
@@ -65,9 +56,9 @@
                                 <th data-column-key="distributable" class="text-end" style="min-width: 130px;">Lợi nhuận chia</th>
                                 <th data-column-key="retained" class="text-end" style="min-width: 140px;">Giữ lại tái đầu tư</th>
                                 <th data-column-key="distributed" class="text-end" style="min-width: 140px;">Tổng tiền phân bổ</th>
-                                <th data-column-key="status" style="min-width: 130px;">Trạng thái</th>
+                                <th data-column-key="status" class="text-center" style="min-width: 140px;">Trạng thái</th>
                                 <th data-column-key="approver" style="min-width: 150px;">Người đề xuất / duyệt</th>
-                                <th data-column-key="actions" class="text-center" style="min-width: 140px;">Thao tác</th>
+                                <th data-column-key="actions" data-column-action="true" class="text-center" style="min-width: 140px;">Thao tác</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -78,86 +69,96 @@
                                         <h6>Chưa có đợt phân chia lợi nhuận</h6>
                                         <p>Lập đề xuất phân chia lợi nhuận/cổ tức cho các chủ sở hữu phòng khám theo kỳ.</p>
                                         <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createDistributionModal">
-                                            <i class="bi bi-plus-circle me-1"></i>Lập đề xuất phân chia
+                                            <i class="bi bi-plus-lg me-1"></i>Lập đề xuất phân chia
                                         </button>
                                     </div>
                                 </td>
                             </tr>
                             <tr th:each="d : ${distributions.content}">
-                                <td data-column-key="code" class="fw-semibold text-primary" th:text="${d.distributionCode}"></td>
-                                <td data-column-key="period" class="fw-bold" th:text="'Tháng ' + ${d.month} + '/' + ${d.year}"></td>
+                                <td data-column-key="code" class="fw-bold text-primary" th:text="${d.distributionCode}"></td>
+                                <td data-column-key="period" class="fw-bold text-dark" th:text="'Tháng ' + ${d.month} + '/' + ${d.year}"></td>
                                 <td data-column-key="branch" th:text="${d.branch != null ? d.branch.branchName : 'Toàn hệ thống'}"></td>
                                 <td data-column-key="distributable" class="text-end" th:text="${#numbers.formatDecimal(d.distributableAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
                                 <td data-column-key="retained" class="text-end text-muted" th:text="${#numbers.formatDecimal(d.retainedAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
                                 <td data-column-key="distributed" class="text-end fw-bold text-success" th:text="${#numbers.formatDecimal(d.totalDistributedAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"></td>
-                                <td data-column-key="status">
-                                    <span th:if="${d.status.name() == 'SUBMITTED'}" class="badge bg-warning text-dark">Chờ Admin duyệt</span>
-                                    <span th:if="${d.status.name() == 'APPROVED'}" class="badge bg-info text-dark">Đã duyệt - Chờ chi</span>
-                                    <span th:if="${d.status.name() == 'PAID'}" class="badge bg-success">Đã hoàn tất chi trả</span>
-                                    <span th:if="${d.status.name() == 'REJECTED'}" class="badge bg-danger">Bị từ chối</span>
+                                <td data-column-key="status" class="text-center">
+                                    <span th:if="${d.status.name() == 'SUBMITTED'}" class="fin-badge fin-badge-partial"><i class="bi bi-clock-history"></i> Chờ Admin duyệt</span>
+                                    <span th:if="${d.status.name() == 'APPROVED'}" class="fin-badge bg-info-subtle text-info-emphasis border border-info-subtle"><i class="bi bi-check-circle"></i> Đã duyệt - Chờ chi</span>
+                                    <span th:if="${d.status.name() == 'PAID'}" class="fin-badge fin-badge-paid"><i class="bi bi-check2-circle"></i> Đã chi trả</span>
+                                    <span th:if="${d.status.name() == 'REJECTED'}" class="fin-badge fin-badge-unpaid"><i class="bi bi-x-circle"></i> Bị từ chối</span>
                                 </td>
                                 <td data-column-key="approver" class="small text-muted">
                                     <span th:if="${d.approvedBy != null}" th:text="'Duyệt: ' + ${d.approvedBy.fullName}"></span>
                                     <span th:if="${d.approvedBy == null and d.submittedBy != null}" th:text="'Đề xuất: ' + ${d.submittedBy.fullName}"></span>
                                 </td>
-                                <td data-column-key="actions" class="text-center">
-                                    <!-- Approve / Reject if SUBMITTED and Admin -->
-                                    <th:block th:if="${d.status.name() == 'SUBMITTED' and isAdmin}">
-                                        <form th:action="@{/payroll/owner-distributions/{id}/approve(id=${d.distributionId})}" method="post" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Duyệt đề xuất">
-                                                <i class="bi bi-check-lg"></i> Duyệt
-                                            </button>
-                                        </form>
-                                        <form th:action="@{/payroll/owner-distributions/{id}/reject(id=${d.distributionId})}" method="post" class="d-inline ms-1">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Từ chối" onclick="return confirm('Từ chối đề xuất này?')">
-                                                <i class="bi bi-x-lg"></i>
-                                            </button>
-                                        </form>
-                                    </th:block>
+                                <td data-column-key="actions" data-column-action="true" class="text-center">
+                                    <div class="fin-table-actions">
+                                        <!-- Approve / Reject if SUBMITTED and Admin -->
+                                        <th:block th:if="${d.status.name() == 'SUBMITTED' and isAdmin}">
+                                            <form th:action="@{/payroll/owner-distributions/{id}/approve(id=${d.distributionId})}" method="post" class="d-inline">
+                                                <button type="submit" class="fin-table-btn fin-table-btn-pay" title="Duyệt đề xuất">
+                                                    <i class="bi bi-check-lg"></i> <span>Duyệt</span>
+                                                </button>
+                                            </form>
+                                            <form th:action="@{/payroll/owner-distributions/{id}/reject(id=${d.distributionId})}" method="post" class="d-inline">
+                                                <button type="submit" class="fin-table-btn fin-table-btn-danger fin-table-btn-icon" title="Từ chối" onclick="return confirm('Từ chối đề xuất này?')">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            </form>
+                                        </th:block>
 
-                                    <!-- Pay if APPROVED and Admin -->
-                                    <th:block th:if="${d.status.name() == 'APPROVED' and isAdmin}">
-                                        <button type="button" class="btn btn-sm btn-success"
-                                                th:data-dist-id="${d.distributionId}"
-                                                th:data-dist-code="${d.distributionCode}"
-                                                th:data-amount="${#numbers.formatDecimal(d.totalDistributedAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"
-                                                onclick="openPayDistModalFromButton(this)">
-                                            <i class="bi bi-cash-stack"></i> Chi trả
-                                        </button>
-                                    </th:block>
+                                        <!-- Pay if APPROVED and Admin -->
+                                        <th:block th:if="${d.status.name() == 'APPROVED' and isAdmin}">
+                                            <button type="button" class="fin-table-btn fin-table-btn-pay"
+                                                    th:data-dist-id="${d.distributionId}"
+                                                    th:data-dist-code="${d.distributionCode}"
+                                                    th:data-amount="${#numbers.formatDecimal(d.totalDistributedAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'"
+                                                    onclick="openPayDistModalFromButton(this)">
+                                                <i class="bi bi-cash-stack"></i> <span>Chi trả</span>
+                                            </button>
+                                        </th:block>
 
-                                    <span th:if="${d.status.name() == 'PAID'}" class="badge bg-success-subtle text-success">
-                                        <i class="bi bi-check-circle me-1"></i> Đã chuyển tiền
-                                    </span>
+                                        <span th:if="${d.status.name() == 'PAID'}" class="fin-badge fin-badge-paid">
+                                            <i class="bi bi-check2-circle"></i> Đã chuyển tiền
+                                        </span>
+                                    </div>
                                 </td>
                             </tr>
                             </tbody>
                         </table>
                     </div>
 
-                    <!-- Phân trang MISA -->
+                    <!-- Phân trang MISA đồng bộ form Khách hàng -->
                     <div class="misa-pagination-footer" th:if="${distributions.totalElements > 0}">
-                        <div class="misa-total-count">
-                            Tổng số: <strong th:text="${distributions.totalElements}">0</strong> bản ghi
+                        <div class="misa-pagination-left">
+                            Tổng số: <strong th:text="${distributions.totalElements}">0</strong>
                         </div>
-                        <div class="misa-pagination-controls" th:if="${distributions.totalPages > 1}">
-                            <div class="misa-page-size-selector">
-                                <span>Số dòng/trang:</span>
+                        <div class="misa-pagination-right">
+                            <div class="misa-page-size-wrapper">
+                                <span>Số dòng/trang</span>
                                 <span class="fw-semibold text-dark" th:text="${distributions.size}">10</span>
                             </div>
-                            <div class="misa-page-index-info">
-                                <span th:text="${(distributions.number * distributions.size) + 1}">1</span> - 
+                            <div class="misa-page-range">
+                                <span th:text="${(distributions.number * distributions.size) + 1}">1</span> -
                                 <span th:text="${(distributions.number + 1) * distributions.size > distributions.totalElements ? distributions.totalElements : (distributions.number + 1) * distributions.size}">10</span>
                             </div>
-                            <div class="misa-nav-buttons">
+                            <div class="d-flex align-items-center gap-1" th:if="${distributions.totalPages > 1}">
                                 <a th:href="@{/payroll/owner-distributions(month=${selectedMonth}, year=${selectedYear}, status=${selectedStatus}, page=0)}"
-                                   class="misa-nav-btn" th:classappend="${distributions.first} ? 'disabled'" title="Trang đầu">&laquo;</a>
+                                   class="misa-nav-btn" th:classappend="${distributions.first} ? 'disabled'" title="Trang đầu">
+                                    <i class="bi bi-chevron-bar-left"></i>
+                                </a>
                                 <a th:href="@{/payroll/owner-distributions(month=${selectedMonth}, year=${selectedYear}, status=${selectedStatus}, page=${distributions.number - 1})}"
-                                   class="misa-nav-btn" th:classappend="${distributions.first} ? 'disabled'" title="Trang trước">&lsaquo;</a>
+                                   class="misa-nav-btn" th:classappend="${distributions.first} ? 'disabled'" title="Trang trước">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
                                 <a th:href="@{/payroll/owner-distributions(month=${selectedMonth}, year=${selectedYear}, status=${selectedStatus}, page=${distributions.number + 1})}"
-                                   class="misa-nav-btn" th:classappend="${distributions.last} ? 'disabled'" title="Trang sau">&rsaquo;</a>
+                                   class="misa-nav-btn" th:classappend="${distributions.last} ? 'disabled'" title="Trang sau">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
                                 <a th:href="@{/payroll/owner-distributions(month=${selectedMonth}, year=${selectedYear}, status=${selectedStatus}, page=${distributions.totalPages - 1})}"
-                                   class="misa-nav-btn" th:classappend="${distributions.last} ? 'disabled'" title="Trang cuối">&raquo;</a>
+                                   class="misa-nav-btn" th:classappend="${distributions.last} ? 'disabled'" title="Trang cuối">
+                                    <i class="bi bi-chevron-bar-right"></i>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -256,6 +257,7 @@
                 <div class="modal fade" id="payDistModal" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered">
                         <form id="payDistForm" method="post">
+                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                             <div class="modal-content">
                                 <div class="modal-header bg-success text-white">
                                     <h5 class="modal-title"><i class="bi bi-cash-coin me-2"></i>Xác nhận chi trả lợi nhuận</h5>

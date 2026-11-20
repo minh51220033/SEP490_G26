@@ -204,7 +204,7 @@ public class DispatchController {
                          HttpSession session, RedirectAttributes flash) {
         try {
             if (issueTicket) {
-                var ticket = service.completeDispatchAndIssueTicket(session, branchId, visitId, doctorId, roomId, chairId, priority, reason, note);
+                var ticket = service.completeDispatchAndIssueTicket(session, branchId, visitId, doctorId, roomId, chairId, false, reason, note);
                 populateTicketFlash(flash, session, ticket, "Đã phân công bác sĩ và cấp số ");
             } else {
                 if (note != null && !note.isBlank()) {
@@ -225,7 +225,8 @@ public class DispatchController {
             @RequestParam(defaultValue = "false") boolean priority, @RequestParam(required = false) String reason,
             HttpSession session, RedirectAttributes flash) {
         try {
-            var ticket = service.issue(session, branchId, visitId, priority, reason);
+            // Không cho phép lễ tân dùng màn điều phối để tự nâng mức ưu tiên thủ công
+            var ticket = service.issue(session, branchId, visitId, false, reason);
             populateTicketFlash(flash, session, ticket, "Đã cấp số ");
         } catch (ResponseStatusException ex) {
             flash.addFlashAttribute("error", ex.getReason());

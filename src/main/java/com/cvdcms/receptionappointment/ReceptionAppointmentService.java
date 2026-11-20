@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -57,6 +58,9 @@ public class ReceptionAppointmentService {
 
     @Autowired(required = false)
     private ClinicalQueueTicketRepository clinicalQueueTickets;
+
+    @Autowired(required = false)
+    private PatientProfileRepository patientProfiles;
 
     @Autowired
     public ReceptionAppointmentService(PatientAccess access, ReceptionAppointmentRepository appointments,
@@ -246,9 +250,15 @@ public class ReceptionAppointmentService {
         Branch branch = requireBranch(scope, branchId);
         if (excludeId != null && !owned(scope, excludeId).getBranch().getBranchId().equals(branchId))
             throw bad("Không thể đổi chi nhánh của lịch này.");
+        int duration = AppointmentSlotService.duration(service(serviceId));
+        if (period == null && doctorId != null) {
+            return slots.getDoctorAvailability(branchId, doctorId, date, duration, excludeId)
+                    .suggestedSlots().stream()
+                    .map(s -> new SlotOption(s.startTime(), 1))
+                    .toList();
+        }
         return slots.available(branch, date, period, doctorId,
-                AppointmentSlotService.duration(service(serviceId)), excludeId,
-                AppointmentActorType.RECEPTIONIST).stream()
+                duration, excludeId, AppointmentActorType.RECEPTIONIST).stream()
                 .map(s -> new SlotOption(s.time(), s.remaining())).toList();
     }
 
@@ -312,9 +322,14 @@ public class ReceptionAppointmentService {
         return new Detail(view(a), events);
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentView create(HttpSession session, CreateRequest request) {
         PatientAccess.Scope scope = access.require(session);
-        Branch branch = lockBranch(scope, request.branchId());
+        if (request.doctorId() != null && !access.canAssignDoctor(scope)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Lễ tân không được tự ý gán bác sĩ thủ công. Hệ thống sẽ tự động phân bổ bác sĩ.");
+        }
+        Branch branch = requireBranch(scope, request.branchId());
         PatientProfile profile;
         if (request.profileId() != null) {
             profile = patients.findBookable(request.profileId())
@@ -365,6 +380,12 @@ public class ReceptionAppointmentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng chọn hồ sơ bệnh nhân hoặc nhập đầy đủ thông tin bệnh nhân mới hợp lệ.");
         }
 
+        // Global lock hierarchy: 1. PatientProfile -> 2. Branch -> 3. StaffProfile
+        if (patientProfiles != null && profile.getProfileId() != null) {
+            patientProfiles.findByIdForUpdate(profile.getProfileId());
+        }
+        branch = lockBranch(scope, request.branchId());
+
         PreferredSession targetSession = request.session();
         if (targetSession == null || targetSession == PreferredSession.ANY) {
             if (request.expectedTime() != null && request.expectedTime().isAfter(LocalTime.of(12, 0))) {
@@ -398,13 +419,26 @@ public class ReceptionAppointmentService {
             expectedTime = slots.resolveFlexibly(branch, request.date(), targetSession, request.doctorId(),
                     a.getDurationMinutes(), null, request.expectedTime(), AppointmentActorType.RECEPTIONIST);
         }
+        if (a.getDoctor() == null && expectedTime != null) {
+            StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
+                    branch, request.date(), targetSession, expectedTime, a.getDurationMinutes(), null);
+            if (autoAssigned != null) {
+                a.setDoctor(autoAssigned);
+            }
+        }
         a.setExpectedTime(expectedTime);
+        a.syncExpectedEndTime();
         a.setSource(AppointmentSource.RECEPTIONIST);
         a.setStatus(Boolean.TRUE.equals(request.isTentative()) ? AppointmentStatus.PENDING : AppointmentStatus.CONFIRMED);
         appointments.saveAndFlush(a);
         history(a, scope.user().getUserId(), "CREATE", null, snapshot(a), null);
         if (careEventPublisher != null && a.getAppointmentId() != null) {
             careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentUpsertedCareEvent(a.getAppointmentId()));
+            careEventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                    "APPOINTMENT_BOOKED", branch.getBranchId(),
+                    a.getDoctor() != null ? a.getDoctor().getStaffId() : null,
+                    null, a.getAppointmentId(), a.getStatus().name(),
+                    "Lịch hẹn mới #" + a.getAppointmentCode(), LocalDateTime.now(ReceptionAppointmentRules.ZONE)));
         }
         return view(a);
     }
@@ -453,8 +487,8 @@ public class ReceptionAppointmentService {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Chỉ đánh dấu không đến với lịch hẹn đã xác nhận.");
             }
             LocalDateTime now = LocalDateTime.now(ReceptionAppointmentRules.ZONE);
-            if (!rules.sessionEnded(a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(), now))
-                throw conflict("Chỉ đánh dấu không đến sau khi buổi khám kết thúc.");
+            if (!isNoShowCutoffPassed(a, now))
+                throw conflict("Chỉ đánh dấu không đến sau khi quá 30 phút kể từ giờ hẹn hoặc buổi khám đã kết thúc.");
             applyNoShow(a, now, scope.user().getUserId(), !note.isEmpty() ? note : "Đánh dấu khách không đến");
             return view(a);
         }
@@ -473,13 +507,20 @@ public class ReceptionAppointmentService {
                 "Không hỗ trợ thao tác chuyển trạng thái này qua đổi trạng thái nhanh.");
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentView update(HttpSession session, Long id, UpdateRequest request) {
         PatientAccess.Scope scope = access.require(session);
         Appointment a = lockAppointment(scope, id);
         mutable(a);
         activeProfile(a.getPatientProfile());
+        Long currentDoctorId = a.getDoctor() != null ? a.getDoctor().getStaffId() : null;
+        if (request.doctorId() != null && !Objects.equals(currentDoctorId, request.doctorId()) && !access.canAssignDoctor(scope)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Lễ tân không được tự ý gán hoặc thay đổi bác sĩ thủ công.");
+        }
+        Long targetDoctorId = request.doctorId() != null ? request.doctorId() : currentDoctorId;
         rules.ensureBookable(a.getBranch(), a.getPatientProfile(), request.date(), request.session(),
-                request.doctorId(), id);
+                targetDoctorId, id);
         String old = snapshot(a);
         boolean moved = !Objects.equals(a.getAppointmentDate(), request.date())
                 || a.getPreferredSession() != request.session()
@@ -488,15 +529,23 @@ public class ReceptionAppointmentService {
                 : Objects.equals(a.getAppointmentDate(), request.date()) && a.getPreferredSession() == request.session()
                     ? a.getExpectedTime() : null;
         a.setAppointmentDate(request.date()); a.setPreferredSession(request.session());
-        a.setDoctor(doctor(request.doctorId())); a.setService(service(request.serviceId()));
+        a.setDoctor(doctor(targetDoctorId)); a.setService(service(request.serviceId()));
         a.setInitialSymptoms(clean(request.symptoms()));
         a.setDurationMinutes(AppointmentSlotService.duration(a.getService()));
         LocalTime expectedTime = null;
         if (requestedTime != null) {
-            expectedTime = slots.resolveFlexibly(a.getBranch(), request.date(), request.session(), request.doctorId(),
+            expectedTime = slots.resolveFlexibly(a.getBranch(), request.date(), request.session(), targetDoctorId,
                     a.getDurationMinutes(), id, requestedTime, AppointmentActorType.RECEPTIONIST);
         }
+        if (a.getDoctor() == null && expectedTime != null) {
+            StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
+                    a.getBranch(), request.date(), request.session(), expectedTime, a.getDurationMinutes(), id);
+            if (autoAssigned != null) {
+                a.setDoctor(autoAssigned);
+            }
+        }
         a.setExpectedTime(expectedTime);
+        a.syncExpectedEndTime();
         if (moved) a.setRescheduleCount(a.getRescheduleCount() + 1);
         lifecycle.transition(a, a.getStatus(), AppointmentLifecycleAction.RESCHEDULE);
         appointments.saveAndFlush(a);
@@ -506,6 +555,7 @@ public class ReceptionAppointmentService {
         return view(a);
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentView confirm(HttpSession session, Long id, ConfirmRequest request) {
         PatientAccess.Scope scope = access.require(session);
         Appointment a = lockAppointment(scope, id);
@@ -516,15 +566,30 @@ public class ReceptionAppointmentService {
         Long id = a.getAppointmentId();
         if (a.getStatus() != AppointmentStatus.PENDING)
             throw conflict("Chỉ có thể xác nhận lịch đang chờ lễ tân.");
+        Long currentDoctorId = a.getDoctor() != null ? a.getDoctor().getStaffId() : null;
+        if (doctorId != null && !Objects.equals(currentDoctorId, doctorId) && !access.canAssignDoctor(scope)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Lễ tân không được tự ý gán bác sĩ thủ công khi xác nhận lịch.");
+        }
+        Long effectiveDoctorId = doctorId != null ? doctorId : currentDoctorId;
         activeProfile(a.getPatientProfile());
         rules.ensureBookable(a.getBranch(), a.getPatientProfile(), a.getAppointmentDate(),
-                a.getPreferredSession(), doctorId, id);
+                a.getPreferredSession(), effectiveDoctorId, id);
         String old = snapshot(a);
-        a.setDoctor(doctor(doctorId));
+        a.setDoctor(doctor(effectiveDoctorId));
         if (a.getExpectedTime() != null) {
-            slots.resolveFlexibly(a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(), doctorId,
+            slots.resolveFlexibly(a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(), effectiveDoctorId,
                     a.getDurationMinutes(), id, a.getExpectedTime(), AppointmentActorType.RECEPTIONIST);
+            if (a.getDoctor() == null) {
+                StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
+                        a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(),
+                        a.getExpectedTime(), a.getDurationMinutes(), id);
+                if (autoAssigned != null) {
+                    a.setDoctor(autoAssigned);
+                }
+            }
         }
+        a.syncExpectedEndTime();
         lifecycle.transition(a, AppointmentStatus.CONFIRMED, AppointmentLifecycleAction.CONFIRM);
         appointments.saveAndFlush(a);
         history(a, scope.user().getUserId(), "CONFIRM", old, snapshot(a), null);
@@ -574,14 +639,32 @@ public class ReceptionAppointmentService {
         return view(a);
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void markNoShow(Long id, LocalDateTime now) {
         Appointment before = appointments.findById(id).orElse(null);
-        if (before == null) return;
+        if (before == null || !isNoShowCutoffPassed(before, now)) return;
+        if (before.getStatus() != AppointmentStatus.CONFIRMED && before.getStatus() != AppointmentStatus.PENDING) return;
         if (lockedBranches.findByIdForBooking(before.getBranch().getBranchId()).isEmpty()) return;
         Appointment a = appointments.lockById(id).orElse(null);
-        if (a == null || a.getStatus() != AppointmentStatus.CONFIRMED
-                || !rules.sessionEnded(a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(), now)) return;
-        applyNoShow(a, now, null, "Tự động đánh dấu không đến sau khi buổi khám kết thúc");
+        if (a == null || (a.getStatus() != AppointmentStatus.CONFIRMED && a.getStatus() != AppointmentStatus.PENDING)
+                || !isNoShowCutoffPassed(a, now)) return;
+        if (a.getStatus() == AppointmentStatus.PENDING) {
+            String pendingSnap = snapshot(a);
+            lifecycle.transition(a, AppointmentStatus.CONFIRMED, AppointmentLifecycleAction.CONFIRM);
+            history(a, null, "CONFIRM", pendingSnap, snapshot(a), "Hệ thống tự động xác nhận trước khi chuyển NO_SHOW do quá 30 phút");
+        }
+        applyNoShow(a, now, null, "Tự động đánh dấu không đến sau quá 30 phút kể từ giờ hẹn");
+    }
+
+    private boolean isNoShowCutoffPassed(Appointment a, LocalDateTime now) {
+        if (a == null || a.getAppointmentDate() == null || now == null) return false;
+        if (a.getAppointmentDate().isBefore(now.toLocalDate())) return true;
+        if (a.getExpectedTime() != null) {
+            LocalDateTime cutoff = LocalDateTime.of(a.getAppointmentDate(), a.getExpectedTime())
+                    .plusMinutes(AppointmentSlotService.NO_SHOW_CUTOFF_MINUTES);
+            return now.isAfter(cutoff);
+        }
+        return rules.sessionEnded(a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(), now);
     }
 
     private void applyNoShow(Appointment a, LocalDateTime now, Long actorId, String reason) {
@@ -595,6 +678,12 @@ public class ReceptionAppointmentService {
                 reminder.setStatus(CustomerCareTaskStatus.CANCELLED);
         if (careEventPublisher != null && id != null) {
             careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentNoShowCareEvent(id));
+            careEventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                    "APPOINTMENT_NO_SHOW",
+                    a.getBranch() != null ? a.getBranch().getBranchId() : null,
+                    a.getDoctor() != null ? a.getDoctor().getStaffId() : null,
+                    null, id, AppointmentStatus.NO_SHOW.name(),
+                    "Lịch hẹn #" + a.getAppointmentCode() + " chuyển NO_SHOW (quá 30 phút)", now));
         } else if (!careTasks.existsByAppointment_AppointmentIdAndTaskType(id, CustomerCareTaskType.NO_SHOW_RECALL)) {
             CustomerCareTask task = new CustomerCareTask();
             task.setTaskCode("NS" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase());
@@ -608,11 +697,15 @@ public class ReceptionAppointmentService {
 
     @Transactional(readOnly = true)
     public List<Long> noShowCandidateIds(LocalDate today) {
-        return appointments.findNoShowCandidates(today.minusDays(7), today, AppointmentStatus.CONFIRMED);
+        return appointments.findNoShowCandidatesByStatuses(today.minusDays(7), today,
+                List.of(AppointmentStatus.CONFIRMED, AppointmentStatus.PENDING));
     }
 
     private Appointment lockAppointment(PatientAccess.Scope scope, Long id) {
         Appointment before = owned(scope, id);
+        if (patientProfiles != null && before.getPatientProfile() != null) {
+            patientProfiles.findByIdForUpdate(before.getPatientProfile().getProfileId());
+        }
         lockBranch(scope, before.getBranch().getBranchId());
         Appointment a = appointments.lockById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (!scope.permits(a.getBranch().getBranchId())) throw new ResponseStatusException(HttpStatus.NOT_FOUND);

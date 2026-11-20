@@ -94,6 +94,7 @@
                                 <div class="col-md-6" id="boxMaxDiscount">
                                     <label for="maxDiscountAmount" class="form-label small fw-bold text-muted">MỨC GIẢM TỐI ĐA (VNĐ)</label>
                                     <input type="number" id="maxDiscountAmount" th:field="*{maxDiscountAmount}" class="form-control" min="0" step="10000" placeholder="Để trống nếu không giới hạn">
+                                    <div class="text-danger small" th:if="${#fields.hasErrors('maxDiscountAmount')}" th:errors="*{maxDiscountAmount}"></div>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="minBillAmount" class="form-label small fw-bold text-muted">HÓA ĐƠN TỐI THIỂU ĐẠT ĐIỀU KIỆN (VNĐ)</label>

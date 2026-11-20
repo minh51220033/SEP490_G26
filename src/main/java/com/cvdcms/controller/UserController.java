@@ -78,6 +78,10 @@ public class UserController {
             return null;
         }
         if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
+            User dbUser = userRepository.findById(sessionUser.getUserId()).orElse(sessionUser);
+            if (dbUser != null && dbUser.getBranch() != null && Boolean.TRUE.equals(dbUser.getBranch().getIsActive())) {
+                return dbUser.getBranch();
+            }
             PatientProfile defaultProfile = patientProfileRepository
                     .findFirstByUser_UserIdAndIsDefaultTrue(sessionUser.getUserId())
                     .orElse(null);
@@ -85,10 +89,6 @@ public class UserController {
                     && defaultProfile.getPreferredBranch() != null
                     && Boolean.TRUE.equals(defaultProfile.getPreferredBranch().getIsActive())) {
                 return defaultProfile.getPreferredBranch();
-            }
-            User dbUser = userRepository.findById(sessionUser.getUserId()).orElse(sessionUser);
-            if (dbUser != null && dbUser.getBranch() != null && Boolean.TRUE.equals(dbUser.getBranch().getIsActive())) {
-                return dbUser.getBranch();
             }
         }
         Object selectedBranchIdObj = session.getAttribute("selectedPortalBranchId");
@@ -297,7 +297,6 @@ public class UserController {
             @RequestParam(value = "branchId", required = false) Long branchId,
             @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(value = "taxRate", required = false, defaultValue = "20") BigDecimal taxRate,
             @RequestParam(value = "tab", required = false, defaultValue = "overview") String tab,
             HttpSession session,
             Model model
@@ -415,11 +414,11 @@ public class UserController {
         session.setAttribute("currentBranchAddress", currentBranchAddress);
 
         if (!hasStaffRole(roleNames) || "portal".equalsIgnoreCase(view)) {
-            return populateCustomerPortalHome(model);
+            return populateCustomerPortalHome(model, session);
         }
 
         if (isAdmin) {
-            populateAdminDashboard(model, session, branchId, startDate, endDate, taxRate, tab);
+            populateAdminDashboard(model, session, branchId, startDate, endDate, tab);
         }
 
         return "user/home";
@@ -431,7 +430,6 @@ public class UserController {
             Long branchId,
             LocalDate startDate,
             LocalDate endDate,
-            BigDecimal taxRate,
             String tab
     ) {
         model.addAttribute("activeMenu", "home");
@@ -462,11 +460,10 @@ public class UserController {
             model.addAttribute("warningMessage", "Ngày bắt đầu không được lớn hơn ngày kết thúc. Hệ thống đã tự động điều chỉnh về đầu tháng.");
         }
 
-        BigDecimal safeTaxRate = (taxRate != null && taxRate.compareTo(BigDecimal.ZERO) >= 0) ? taxRate : BigDecimal.valueOf(20);
         String branchDisplayName = resolveBranchDisplayName(effectiveBranchId, allowedBranches);
 
-        ReportDashboardDTO dashboard = reportService.getDashboardReport(resolvedBranchIds, safeStart, safeEnd, branchDisplayName, safeTaxRate);
-        FinancialReportDTO financial = reportService.getFinancialReport(resolvedBranchIds, safeStart, safeEnd, safeTaxRate);
+        ReportDashboardDTO dashboard = reportService.getDashboardReport(resolvedBranchIds, safeStart, safeEnd, branchDisplayName);
+        FinancialReportDTO financial = reportService.getFinancialReport(resolvedBranchIds, safeStart, safeEnd);
         OperationalReportDTO operational = reportService.getOperationalReport(resolvedBranchIds, safeStart, safeEnd);
 
         long todayAppointments = reportService.countTodayAppointments(resolvedBranchIds, LocalDate.now());
@@ -476,7 +473,6 @@ public class UserController {
         filter.setBranchId(effectiveBranchId);
         filter.setStartDate(safeStart);
         filter.setEndDate(safeEnd);
-        filter.setTaxRate(safeTaxRate);
         filter.setTab(tab != null && !tab.isBlank() ? tab : "overview");
 
         model.addAttribute("filter", filter);
@@ -660,8 +656,19 @@ public class UserController {
         user.setLastLoginAt(LocalDateTime.now());
         user = userRepository.save(user);
 
+        // Xóa trạng thái cơ sở tạm từ phiên trước (nếu có) để luôn đồng bộ mới theo DB của tài khoản
+        session.removeAttribute("selectedPortalBranchId");
+        session.removeAttribute("currentBranchName");
+        session.removeAttribute("currentBranchAddress");
+        session.removeAttribute("currentBranchId");
+        session.removeAttribute("defaultPatientProfile");
+
         session.setAttribute("loggedInUser", user);
         session.setAttribute("username", user.getUsername());
+        if (user.getBranch() != null && Boolean.TRUE.equals(user.getBranch().getIsActive())) {
+            session.setAttribute("selectedPortalBranchId", user.getBranch().getBranchId());
+            session.setAttribute("currentBranchName", user.getBranch().getBranchName());
+        }
 
         // Cấp phát Refresh Token mới cho phiên đăng nhập
         issueNewRefreshToken(user, session);

@@ -1028,10 +1028,10 @@
                         <div>
                             <h4 class="fw-bold m-0 text-dark d-flex align-items-center gap-2">
                                 <i class="bi bi-calendar2-check-fill text-primary"></i>
-                                <span>Kế hoạch điều trị &amp; Thanh toán theo đợt (Chuẩn DentalSoft)</span>
+                                <span>Kế hoạch điều trị &amp; Thanh toán theo đợt</span>
                             </h4>
                             <div class="text-muted small mt-1">
-                                Theo dõi lộ trình chia đợt, nhắc hẹn chuẩn bị tiền cho bệnh nhân &amp; thu tiền linh hoạt (không fix cứng số tiền).
+                                Theo dõi lộ trình chia đợt, nhắc hẹn chuẩn bị tiền cho bệnh nhân &amp; thu tiền linh hoạt.
                             </div>
                         </div>
                         <span class="badge bg-primary px-3 py-2 rounded-pill font-monospace" th:text="${treatmentPlans.size()} + ' kế hoạch'">0 kế hoạch</span>
@@ -1236,7 +1236,7 @@
                                     th:data-plan-code="${tp.planCode}"
                                     th:data-estimated="${tp.getEstimatedCost()}"
                                     onclick="openSplitModal(this.getAttribute('data-plan-id'), this.getAttribute('data-plan-code'), this.getAttribute('data-estimated'))">
-                                <i class="bi bi-magic me-1"></i> Thiết lập chia đợt ngay (DentalSoft Auto-Split)
+                                <i class="bi bi-magic me-1"></i> Thiết lập chia đợt ngay
                             </button>
                         </div>
                     </div>
@@ -1350,14 +1350,9 @@
                                    placeholder="Mã giao dịch ngân hàng / hóa đơn đối soát...">
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-0">
                             <label class="form-label fw-semibold text-muted small mb-1">Ghi chú phiếu thu:</label>
                             <input type="text" class="form-control form-control-sm" id="instPayNotesInput" placeholder="VD: Thu tiền đợt siết răng tháng 1...">
-                        </div>
-
-                        <div class="alert alert-info py-2 px-3 small m-0 d-flex align-items-center gap-2">
-                            <i class="bi bi-info-circle text-primary fs-5"></i>
-                            <span><strong>Quy tắc DentalSoft:</strong> Không fix cứng số tiền. Hệ thống sẽ tự động trừ lũy kế vào các đợt theo thứ tự.</span>
                         </div>
                     </div>
 
@@ -1429,7 +1424,7 @@
         <div class="modal-content shadow border-0 rounded-3">
             <div class="modal-header bg-dark text-white py-3 px-4 rounded-top-3">
                 <h5 class="modal-title fw-bold" id="installmentSplitModalLabel">
-                    <i class="bi bi-sliders me-2"></i>Thiết lập Lộ trình Chia đợt (DentalSoft Auto-Split)
+                    <i class="bi bi-sliders me-2"></i>Thiết lập Lộ trình Chia đợt
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>

@@ -1163,7 +1163,7 @@ public class RoleManagementController {
                                 new SubTabSpec(
                                         "TAB_REP_FINANCIAL",
                                         "Báo cáo Tài chính & Dòng tiền (29.2)",
-                                        "Báo cáo chi tiết doanh thu, chi phí vận hành, lợi nhuận trước/sau thuế và dòng tiền.",
+                                        "Báo cáo chi tiết doanh thu, chi phí vận hành, chênh lệch thu - chi và dòng tiền.",
                                         "Tab ngang",
                                         "bi-cash-stack",
                                         List.of(new ActionSpec("REPORT_FINANCIAL", "Toàn quyền", "Xem báo cáo Tài chính & Dòng tiền", ""))

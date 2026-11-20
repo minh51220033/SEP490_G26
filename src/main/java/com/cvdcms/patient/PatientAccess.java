@@ -128,4 +128,15 @@ public class PatientAccess {
             return branchIds != null && branchIds.contains(targetBranchId);
         }
     }
+
+    /**
+     * Chỉ Admin hoặc nhân sự được cấp quyền điều phối lâm sàng (CLINICAL_DISPATCH)
+     * mới được phép chỉ định/thay đổi bác sĩ thủ công thay cho cơ chế tự động.
+     */
+    public boolean canAssignDoctor(Scope scope) {
+        if (scope == null || scope.user() == null) return false;
+        if (scope.admin()) return true;
+        Long uid = scope.user().getUserId();
+        return uid != null && users != null && users.hasActivePermission(uid, "CLINICAL_DISPATCH");
+    }
 }

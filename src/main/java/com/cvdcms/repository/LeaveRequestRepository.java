@@ -80,4 +80,17 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
         WHERE l.leaveId = :leaveId
     """)
     Optional<LeaveRequest> findByIdWithDetails(@Param("leaveId") Long leaveId);
+
+    @Query("""
+        SELECT l FROM LeaveRequest l
+        LEFT JOIN FETCH l.shift sh
+        LEFT JOIN FETCH l.branch b
+        WHERE l.staff.staffId = :staffId
+          AND l.startDate <= :date
+          AND l.endDate >= :date
+          AND l.status = :status
+    """)
+    List<LeaveRequest> findApprovedForStaffOnDate(@Param("staffId") Long staffId,
+                                                  @Param("date") LocalDate date,
+                                                  @Param("status") LeaveStatus status);
 }

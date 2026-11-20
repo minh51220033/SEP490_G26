@@ -14,7 +14,7 @@
             <div class="patient-page-heading portal-heading mb-4">
                 <div>
                     <a class="text-decoration-none fw-semibold text-primary mb-2 d-inline-flex align-items-center" th:href="@{/portal/appointments}">
-                        <i class="bi bi-arrow-left me-1.5"></i> Quay lại danh sách lịch hẹn
+                        <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách lịch hẹn
                     </a>
                     <h1 class="mb-1" th:text="${appointmentId == null ? 'Đăng ký lịch khám nha khoa' : 'Thay đổi ngày / buổi hẹn'}">Đăng ký lịch khám nha khoa</h1>
                     <p class="mb-0 text-muted">Đặt lịch trực tuyến nhanh chóng cho bản thân hoặc người phụ thuộc. Lịch khám sẽ được chuyển về lễ tân tiếp đón.</p>
@@ -23,15 +23,38 @@
 
             <div id="pageError" class="alert alert-danger py-3 px-4 rounded-3 mb-4 shadow-sm" hidden role="alert"></div>
 
-            <form id="appointmentForm" class="panel patient-form appointment-panel" th:attr="data-appointment-id=${appointmentId},data-selected-profile-id=${selectedProfileId}">
-                
-                <!-- BƯỚC 1: CHỌN NGƯỜI ĐI KHÁM (FT35) -->
-                <div id="step1Container">
+            <form id="appointmentForm" class="panel patient-form appointment-panel" th:attr="data-appointment-id=${appointmentId},data-selected-profile-id=${selectedProfileId},data-default-branch-id=${defaultBranchId}">
+
+                <!-- BƯỚC 1: CƠ SỞ, DỊCH VỤ & NGƯỜI ĐI KHÁM -->
+                <div class="booking-step-header">
+                    <div class="booking-step-badge">1</div>
+                    <div>
+                        <h2>Cơ sở khám &amp; Dịch vụ quan tâm</h2>
+                        <small>Chọn chi nhánh phòng khám và dịch vụ dự kiến để tính thời lượng phù hợp.</small>
+                    </div>
+                </div>
+
+                <div class="patient-form-grid mb-3">
+                    <div>
+                        <label for="branchId" class="form-label fw-bold mb-1">Cơ sở / Chi nhánh khám *</label>
+                        <select id="branchId" class="form-select py-2" required></select>
+                        <small class="text-muted mt-1 d-block"><i class="bi bi-geo-alt me-1"></i>Chọn chi nhánh phòng khám gần bạn nhất.</small>
+                    </div>
+
+                    <div id="serviceField">
+                        <label for="serviceId" class="form-label fw-bold mb-1">Dịch vụ dự kiến quan tâm</label>
+                        <select id="serviceId" class="form-select py-2"></select>
+                        <small id="slotDurationNote" class="text-primary fw-semibold mt-1 d-block"></small>
+                        <small class="text-muted mt-1 d-block"><i class="bi bi-tag me-1"></i>Chưa phát sinh chi phí; bác sĩ sẽ chẩn đoán cụ thể khi thăm khám.</small>
+                    </div>
+                </div>
+
+                <div id="step1Container" class="mt-4">
                     <div class="booking-step-header">
-                        <div class="booking-step-badge">1</div>
+                        <div class="booking-step-badge">2</div>
                         <div>
                             <h2>Người đi khám trong gia đình *</h2>
-                            <small>Chọn hồ sơ của bạn hoặc người phụ thuộc cần được khám và điều trị.</small>
+                            <small>Thông tin họ tên &amp; số điện thoại lấy trực tiếp từ hồ sơ bệnh nhân bạn chọn.</small>
                         </div>
                     </div>
 
@@ -43,22 +66,16 @@
                     <select id="profileId" class="d-none" required></select>
                 </div>
 
-                <!-- BƯỚC 2: CƠ SỞ VÀ THỜI GIAN MONG MUỐN -->
+                <!-- BƯỚC 3: NGÀY, BUỔI, BÁC SĨ & GIỜ HẸN DỰ KIẾN -->
                 <div class="booking-step-header mt-4">
-                    <div class="booking-step-badge">2</div>
+                    <div class="booking-step-badge">3</div>
                     <div>
-                        <h2>Cơ sở &amp; Thời gian khám mong muốn</h2>
-                        <small>Chọn chi nhánh phòng khám, ngày hẹn và buổi khám thuận tiện nhất.</small>
+                        <h2>Thời gian &amp; Bác sĩ phụ trách</h2>
+                        <small>Chọn ngày mong muốn, buổi khám, bác sĩ (tùy chọn) và giờ dự kiến đến phòng khám.</small>
                     </div>
                 </div>
 
                 <div class="patient-form-grid mb-3">
-                    <div>
-                        <label for="branchId" class="form-label fw-bold mb-1">Cơ sở / Chi nhánh khám *</label>
-                        <select id="branchId" class="form-select py-2" required></select>
-                        <small class="text-muted mt-1 d-block"><i class="bi bi-geo-alt me-1"></i>Chọn chi nhánh phòng khám gần bạn nhất.</small>
-                    </div>
-
                     <div>
                         <label for="appointmentDate" class="form-label fw-bold mb-1">Ngày khám mong muốn *</label>
                         <input type="date" id="appointmentDate" class="form-control py-2" required>
@@ -66,36 +83,30 @@
                     </div>
 
                     <div>
-                        <label for="preferredSession" class="form-label fw-bold mb-1">Ca khám *</label>
+                        <label for="preferredSession" class="form-label fw-bold mb-1">Buổi khám *</label>
                         <select id="preferredSession" class="form-select py-2" required>
-                            <option value="">Chọn ca khám</option>
+                            <option value="">Chọn buổi khám</option>
                             <option value="MORNING">Ca sáng</option>
                             <option value="AFTERNOON">Ca chiều</option>
                             <option value="EVENING">Ca tối</option>
                         </select>
-                        <small class="text-muted mt-1 d-block"><i class="bi bi-clock me-1"></i>Lịch được giữ theo ngày và ca khám.</small>
+                        <small class="text-muted mt-1 d-block"><i class="bi bi-clock me-1"></i>Mỗi hồ sơ được đặt tối đa 1 lịch hẹn đang hoạt động trong mỗi buổi.</small>
                     </div>
 
                     <div>
-                        <label for="slotTime" class="form-label fw-bold mb-1">Khung giờ hẹn dự kiến</label>
+                        <label for="doctorId" class="form-label fw-bold mb-1">Bác sĩ chỉ định (Không bắt buộc)</label>
+                        <select id="doctorId" class="form-select py-2" disabled>
+                            <option value="">Không yêu cầu bác sĩ cụ thể · Hệ thống phân bổ phù hợp</option>
+                        </select>
+                        <small class="text-muted mt-1 d-block"><i class="bi bi-person-badge me-1"></i>Chọn bác sĩ cụ thể hoặc bỏ trống để hệ thống tự cân bằng tải.</small>
+                    </div>
+
+                    <div>
+                        <label for="slotTime" class="form-label fw-bold mb-1">Giờ hẹn dự kiến *</label>
                         <select id="slotTime" class="form-select py-2" disabled>
                             <option value="">Chọn ngày và buổi trước</option>
                         </select>
-                        <small class="text-muted mt-1 d-block"><i class="bi bi-info-circle me-1"></i>Giờ dự kiến giúp lễ tân chủ động chuẩn bị ghế khám.</small>
-                    </div>
-
-                    <div>
-                        <label for="doctorId" class="form-label fw-bold mb-1">Bác sĩ mong muốn (Không bắt buộc)</label>
-                        <select id="doctorId" class="form-select py-2" disabled>
-                            <option value="">Không yêu cầu đích danh · Lễ tân điều phối</option>
-                        </select>
-                        <small class="text-muted mt-1 d-block"><i class="bi bi-person-badge me-1"></i>Nếu chọn đích danh, bạn sẽ chờ đúng bác sĩ này tại phòng khám.</small>
-                    </div>
-
-                    <div id="serviceField">
-                        <label for="serviceId" class="form-label fw-bold mb-1">Dịch vụ dự kiến quan tâm</label>
-                        <select id="serviceId" class="form-select py-2"></select>
-                        <small class="text-muted mt-1 d-block"><i class="bi bi-tag me-1"></i>Chưa phát sinh chi phí; bác sĩ sẽ chẩn đoán cụ thể khi thăm khám.</small>
+                        <small class="text-muted mt-1 d-block"><i class="bi bi-info-circle me-1"></i>Đúng giờ trong khoảng ±15 phút quanh giờ hẹn dự kiến.</small>
                     </div>
                 </div>
 
@@ -105,12 +116,12 @@
                     <span>Vui lòng chọn cơ sở, ngày và buổi khám để kiểm tra khả năng tiếp nhận.</span>
                 </div>
 
-                <!-- BƯỚC 3: MÔ TẢ TRIỆU CHỨNG BAN ĐẦU (FT06 - SCR-06.2) -->
+                <!-- BƯỚC 4: MÔ TẢ TRIỆU CHỨNG BAN ĐẦU -->
                 <section id="symptomsSection">
                     <div class="booking-step-header mt-4">
-                        <div class="booking-step-badge">3</div>
+                        <div class="booking-step-badge">4</div>
                         <div>
-                            <h2>Tình trạng ban đầu &amp; Lý do khám</h2>
+                            <h2>Lý do đến khám &amp; Triệu chứng ban đầu</h2>
                             <small>Mô tả ngắn gọn giúp phòng khám chuẩn bị tốt nhất trước khi bạn đến.</small>
                         </div>
                     </div>
@@ -126,7 +137,7 @@
                 <!-- NÚT THAO TÁC SUBMIT -->
                 <div class="patient-form-actions d-flex align-items-center justify-content-end gap-3 mt-4 pt-3">
                     <a class="btn btn-outline-secondary px-4 py-2 fw-semibold" th:href="@{/portal/appointments}">
-                        <i class="bi bi-x-circle me-1.5"></i> Quay lại
+                        <i class="bi bi-x-circle me-1"></i> Quay lại
                     </a>
                     <button id="submitAppointment" type="submit" class="btn btn-primary px-4 py-2 fw-semibold shadow-sm"
                             style="background-color: #1e40af; border-color: #1e40af;" disabled>

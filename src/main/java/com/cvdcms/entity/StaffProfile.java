@@ -1,6 +1,6 @@
 package com.cvdcms.entity;
 
-import com.cvdcms.entity.enums.StaffContractType;
+import com.cvdcms.entity.enums.InsuranceParticipationStatus;
 import com.cvdcms.entity.enums.StaffGender;
 import com.cvdcms.entity.enums.StaffStatus;
 import jakarta.persistence.*;
@@ -76,9 +76,8 @@ public class StaffProfile {
     @Column(name = "is_tax_resident", nullable = false)
     private Boolean isTaxResident = true;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "contract_type", nullable = false, length = 30)
-    private StaffContractType contractType = StaffContractType.FULL_CONTRACT;
+    private String contractType = "FULL_CONTRACT";
 
     @Column(name = "has_personal_deduction", nullable = false)
     private Boolean hasPersonalDeduction = true;
@@ -100,6 +99,25 @@ public class StaffProfile {
 
     @Column(name = "insurance_salary", nullable = false, precision = 15, scale = 2)
     private BigDecimal insuranceSalary = BigDecimal.ZERO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "insurance_participation_status", nullable = false, length = 30)
+    private InsuranceParticipationStatus insuranceParticipationStatus = InsuranceParticipationStatus.UNVERIFIED;
+
+    @Column(name = "insurance_effective_from")
+    private LocalDate insuranceEffectiveFrom;
+
+    @Column(name = "insurance_effective_to")
+    private LocalDate insuranceEffectiveTo;
+
+    @Column(name = "insurance_employee_rate_override", precision = 5, scale = 2)
+    private BigDecimal insuranceEmployeeRateOverride;
+
+    @Column(name = "insurance_employer_rate_override", precision = 5, scale = 2)
+    private BigDecimal insuranceEmployerRateOverride;
+
+    @Column(name = "insurance_exemption_reason", length = 255)
+    private String insuranceExemptionReason;
 
     @Column(name = "bank_account_number", length = 30)
     private String bankAccountNumber;

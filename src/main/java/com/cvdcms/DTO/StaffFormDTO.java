@@ -45,8 +45,6 @@ public class StaffFormDTO {
 
     private BigDecimal allowanceAmount;
 
-    private BigDecimal insuranceSalary;
-
     private String bankAccountNumber;
 
     private String bankName;

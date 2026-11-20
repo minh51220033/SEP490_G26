@@ -41,7 +41,7 @@
                                 </div>
 
                                 <!-- Triệu chứng gợi ý nhanh + Nút Thêm triệu chứng -->
-                                <div class="mb-2" th:unless="${isReadOnlyView == true}">
+                                <div class="mb-2" th:unless="${isClinicalLocked}">
                                     <div class="d-flex align-items-center justify-content-between mb-1">
                                         <small class="text-muted fw-semibold">Gợi ý nhanh:</small>
                                         <button type="button"
@@ -89,6 +89,7 @@
 
                                 <!-- Ô nhập triệu chứng chính -->
                                 <textarea class="form-control form-control-sm" id="examSymptomsInput" rows="3"
+                                    th:disabled="${isClinicalLocked}"
                                     placeholder="Mô tả chi tiết triệu chứng, vị trí răng đau, thời gian khởi phát..."
                                     th:text="${generalExam != null and generalExam.initialSymptoms != null ? generalExam.initialSymptoms : (visit != null and visit.initialSymptoms != null ? visit.initialSymptoms : '')}"></textarea>
                         </div>
@@ -116,6 +117,7 @@
                                 <div class="p-2 mb-2 rounded border bg-white" id="allergyBox">
                                     <div class="form-check mb-1 cursor-pointer">
                                         <input class="form-check-input" type="checkbox" id="allergyCheck"
+                                            th:disabled="${isClinicalLocked}"
                                             onchange="handleAllergyCheckChange()"
                                             th:checked="${generalExam != null and generalExam.hasAllergies != null ? generalExam.hasAllergies : (patient != null and patient.hasAllergies != null ? patient.hasAllergies : false)}">
                                         <label class="form-check-label fw-bold text-danger small cursor-pointer"
@@ -126,8 +128,9 @@
                                     </div>
                                     <input type="text" class="form-control form-control-sm mt-1"
                                         id="allergyDetailsInput"
+                                        th:disabled="${isClinicalLocked}"
                                         placeholder="Ghi rõ tên thuốc dị ứng và biểu hiện (mày đay, khó thở...)"
-                                        th:value="${generalExam != null ? generalExam.allergyDetails : (patient != null ? patient.allergyDetails : '')}">
+                                        th:value="${generalExam != null ? generalExam.allergyDetails : (patient != null and patient.hasAllergies == true ? patient.allergyDetails : '')}">
                                 </div>
 
                                 <!-- Bệnh nền toàn thân -->
@@ -136,6 +139,7 @@
                                         <div class="p-2 rounded border bg-white">
                                             <div class="form-check mb-0 cursor-pointer">
                                                 <input class="form-check-input" type="checkbox" id="cardioCheck"
+                                                    th:disabled="${isClinicalLocked}"
                                                     th:checked="${generalExam != null and generalExam.hasCardiovascularDisease != null ? generalExam.hasCardiovascularDisease : (patient != null and patient.hasCardiovascularDisease != null ? patient.hasCardiovascularDisease : false)}">
                                                 <label class="form-check-label text-dark fw-semibold cursor-pointer"
                                                     for="cardioCheck">
@@ -149,6 +153,7 @@
                                         <div class="p-2 rounded border bg-white">
                                             <div class="form-check mb-0 cursor-pointer">
                                                 <input class="form-check-input" type="checkbox" id="diabetesCheck"
+                                                    th:disabled="${isClinicalLocked}"
                                                     th:checked="${generalExam != null and generalExam.hasDiabetes != null ? generalExam.hasDiabetes : false}">
                                                 <label class="form-check-label text-dark fw-semibold cursor-pointer"
                                                     for="diabetesCheck">
@@ -161,6 +166,7 @@
                                         <div class="p-2 rounded border bg-white">
                                             <div class="form-check mb-0 cursor-pointer">
                                                 <input class="form-check-input" type="checkbox" id="bleedingCheck"
+                                                    th:disabled="${isClinicalLocked}"
                                                     th:checked="${generalExam != null and generalExam.hasBleedingDisorder != null ? generalExam.hasBleedingDisorder : false}">
                                                 <label class="form-check-label text-dark fw-semibold cursor-pointer"
                                                     for="bleedingCheck">
@@ -173,6 +179,7 @@
                                         <div class="p-2 rounded border bg-white">
                                             <div class="form-check mb-0 cursor-pointer">
                                                 <input class="form-check-input" type="checkbox" id="pregnantCheck"
+                                                    th:disabled="${isClinicalLocked}"
                                                     th:checked="${generalExam != null and generalExam.isPregnant != null ? generalExam.isPregnant : false}">
                                                 <label class="form-check-label text-dark fw-semibold cursor-pointer"
                                                     for="pregnantCheck">
@@ -184,6 +191,7 @@
                                     <div class="col-12">
                                         <input type="text" class="form-control form-control-sm"
                                             id="underlyingDetailsInput"
+                                            th:disabled="${isClinicalLocked}"
                                             placeholder="Bệnh nền khác (Dạ dày, Hen suyễn, Viêm gan, Động kinh...)"
                                             th:value="${generalExam != null ? generalExam.underlyingDiseaseDetails : (patient != null ? patient.underlyingDiseaseDetails : '')}">
                                     </div>
@@ -208,7 +216,7 @@
                                             <i class="bi bi-record-circle text-primary me-1"></i>Khớp thái dương hàm
                                             (TMJ):
                                         </label>
-                                        <select class="form-select form-select-sm" id="tmjSelect">
+                                        <select class="form-select form-select-sm" id="tmjSelect" th:disabled="${isClinicalLocked}">
                                             <option value="NORMAL"
                                                 th:selected="${generalExam == null or generalExam.tmjStatus == 'NORMAL'}">
                                                 Bình thường (Há ngậm êm)</option>
@@ -228,7 +236,7 @@
                                             <i class="bi bi-stars text-warning me-1"></i>Vệ sinh răng miệng &amp; Cao
                                             răng:
                                         </label>
-                                        <select class="form-select form-select-sm" id="hygieneSelect">
+                                        <select class="form-select form-select-sm" id="hygieneSelect" th:disabled="${isClinicalLocked}">
                                             <option value="GOOD"
                                                 th:selected="${generalExam != null and generalExam.hygieneStatus == 'GOOD'}">
                                                 Tốt (Ít mảng bám)</option>
@@ -245,7 +253,7 @@
                                             <i class="bi bi-shield-check text-success me-1"></i>Tình trạng nướu / Mô
                                             mềm:
                                         </label>
-                                        <select class="form-select form-select-sm" id="gingivaSelect">
+                                        <select class="form-select form-select-sm" id="gingivaSelect" th:disabled="${isClinicalLocked}">
                                             <option value="HEALTHY"
                                                 th:selected="${generalExam == null or generalExam.gingivaStatus == 'HEALTHY'}">
                                                 Hồng hào, săn chắc</option>
@@ -262,7 +270,7 @@
                                             <i class="bi bi-journal-medical text-primary me-1"></i>Nhận định / Kết luận khám lâm sàng tổng quát:
                                         </label>
                                         <textarea class="form-control form-control-sm" id="examSummaryAssessmentInput" rows="2"
-                                            th:disabled="${isReadOnlyView == true}"
+                                            th:disabled="${isClinicalLocked}"
                                             th:text="${generalExam != null ? generalExam.summaryAssessment : ''}"
                                             placeholder="Tóm tắt tình trạng răng miệng, hướng xử trí chính (dùng đồng bộ sang Bệnh án điện tử EMR)..."></textarea>
                                     </div>
@@ -284,7 +292,9 @@
                             <div class="d-flex align-items-center gap-2 ms-auto">
                                 <button type="button"
                                     class="btn df-btn-tonal-primary px-4 py-2 rounded-3 fw-semibold d-inline-flex align-items-center gap-2"
-                                    id="btnSaveGeneralExamBottom" onclick="saveGeneralExamination()">
+                                    id="btnSaveGeneralExamBottom"
+                                    th:disabled="${isClinicalLocked}"
+                                    onclick="saveGeneralExamination()">
                                     <i class="bi bi-floppy" id="btnSaveGeneralExamIcon"></i>
                                     <span id="btnSaveGeneralExamText">Lưu kết quả khám tổng quát</span>
                                 </button>
@@ -399,6 +409,9 @@
          * Lưu thông tin khám tổng quát vào database
          */
         async function saveGeneralExamination(silent = false) {
+            if (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal) {
+                return;
+            }
             const visitId = (typeof getCurrentVisitId === 'function')
                 ? getCurrentVisitId()
                 : (document.getElementById('visitId')?.value || 1);
@@ -433,15 +446,13 @@
             };
 
             // Cập nhật trạng thái loading cho nút Lưu
-            const btnHeader = document.getElementById('btnSaveGeneralExamHeader');
             const btnBottom = document.getElementById('btnSaveGeneralExamBottom');
             const btnText = document.getElementById('btnSaveGeneralExamText');
             const btnIcon = document.getElementById('btnSaveGeneralExamIcon');
 
-            if (btnHeader) btnHeader.disabled = true;
             if (btnBottom) btnBottom.disabled = true;
             if (btnText) btnText.textContent = 'Đang lưu...';
-            if (btnIcon) btnIcon.className = 'spinner-border spinner-border-sm me-1';
+            if (btnIcon) btnIcon.className = 'spinner-border spinner-border-sm';
 
             try {
                 const resp = await fetch(`/api/doctor/visits/${visitId}/general-examination`, {
@@ -476,19 +487,21 @@
                     alert('Lỗi: ' + err.message);
                 }
             } finally {
-                if (btnHeader) btnHeader.disabled = false;
                 if (btnBottom) btnBottom.disabled = false;
                 if (btnText) btnText.textContent = 'Lưu kết quả khám tổng quát';
-                if (btnIcon) btnIcon.className = 'bi bi-floppy-fill';
+                if (btnIcon) btnIcon.className = 'bi bi-floppy';
             }
         }
 
         // Khởi tạo trạng thái ban đầu khi tải trang
         document.addEventListener('DOMContentLoaded', function () {
             handleAllergyCheckChange();
+            if (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal) {
+                return;
+            }
             const fields = ['examSymptomsInput', 'allergyCheck', 'allergyDetailsInput', 'cardioCheck',
                 'diabetesCheck', 'bleedingCheck', 'pregnantCheck', 'underlyingDetailsInput',
-                'tmjSelect', 'hygieneSelect', 'gingivaSelect'];
+                'tmjSelect', 'hygieneSelect', 'gingivaSelect', 'examSummaryAssessmentInput'];
             let timer;
             fields.forEach(id => {
                 const field = document.getElementById(id);

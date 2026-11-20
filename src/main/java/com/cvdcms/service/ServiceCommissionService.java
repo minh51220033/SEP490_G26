@@ -12,9 +12,19 @@ public interface ServiceCommissionService {
     void calculateCommissionsForPerformedService(PerformedService performedService);
 
     /**
-     * Xóa các khoản hoa hồng đang chờ (chưa gắn vào bảng lương) nếu dịch vụ thực hiện bị hủy.
+     * Xóa hoặc bảo vệ các khoản hoa hồng theo trạng thái kỳ lương khi dịch vụ thực hiện bị hủy/sửa.
      */
     void cancelPendingCommissionsForPerformedService(Long performedId);
+
+    /**
+     * Tính lại hoa hồng khi dịch vụ thực hiện thay đổi dịch vụ hoặc giá trước khi lập hóa đơn.
+     */
+    default void recalculateCommissionsForPerformedService(PerformedService performedService) {
+        if (performedService != null && performedService.getPerformedId() != null) {
+            cancelPendingCommissionsForPerformedService(performedService.getPerformedId());
+            calculateCommissionsForPerformedService(performedService);
+        }
+    }
 
     /**
      * Đảm bảo các dịch vụ thực hiện trên hóa đơn đã được ghi nhận hoa hồng (idempotent).

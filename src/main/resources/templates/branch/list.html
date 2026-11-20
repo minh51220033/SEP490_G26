@@ -3,7 +3,7 @@
 
 <head th:replace="~{fragments/head :: head('Quản lý cơ sở')}"></head>
 
-<body class="app-body staff-page-body">
+<body class="app-body">
 
 <div class="app-shell">
 
@@ -18,6 +18,17 @@
             <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
             <link rel="stylesheet" th:href="@{/css/staff.css}">
             <link rel="stylesheet" th:href="@{/css/account.css}">
+            <style>
+                .staff-table-card {
+                    flex: 0 0 auto;
+                }
+                .dv-table-scroll-container {
+                    min-height: 0 !important;
+                    max-height: none !important;
+                    overflow-x: auto !important;
+                    overflow-y: visible !important;
+                }
+            </style>
 
             <!-- THÔNG BÁO ALERT DISMISSIBLE -->
             <div class="alert alert-success alert-dismissible fade show" th:if="${successMessage}">

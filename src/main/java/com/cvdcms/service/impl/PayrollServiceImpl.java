@@ -2,13 +2,11 @@ package com.cvdcms.service.impl;
 
 import com.cvdcms.DTO.PayrollItemUpdateDTO;
 import com.cvdcms.DTO.PayrollPeriodCreateDTO;
-import com.cvdcms.DTO.PitCalculationResult;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
 import com.cvdcms.repository.ServiceCommissionRepository;
 import com.cvdcms.service.PayrollService;
-import com.cvdcms.service.TaxCalculationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -38,36 +36,6 @@ public class PayrollServiceImpl implements PayrollService {
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
     private final BranchRepository branchRepository;
     private final UserRepository userRepository;
-    private final TaxCalculationService taxCalculationService;
-
-    public PayrollServiceImpl(
-            PayrollPeriodRepository payrollPeriodRepository,
-            PayrollItemRepository payrollItemRepository,
-            SalaryAdvanceRepository salaryAdvanceRepository,
-            SalaryAdvanceAllocationRepository salaryAdvanceAllocationRepository,
-            AttendanceRecordRepository attendanceRecordRepository,
-            OperatingExpenseRepository operatingExpenseRepository,
-            ServiceCommissionRepository serviceCommissionRepository,
-            StaffProfileRepository staffProfileRepository,
-            StaffBranchAssignmentRepository staffBranchAssignmentRepository,
-            BranchRepository branchRepository,
-            UserRepository userRepository
-    ) {
-        this(
-                payrollPeriodRepository,
-                payrollItemRepository,
-                salaryAdvanceRepository,
-                salaryAdvanceAllocationRepository,
-                attendanceRecordRepository,
-                operatingExpenseRepository,
-                serviceCommissionRepository,
-                staffProfileRepository,
-                staffBranchAssignmentRepository,
-                branchRepository,
-                userRepository,
-                null
-        );
-    }
 
     @Autowired
     public PayrollServiceImpl(
@@ -81,8 +49,7 @@ public class PayrollServiceImpl implements PayrollService {
             StaffProfileRepository staffProfileRepository,
             StaffBranchAssignmentRepository staffBranchAssignmentRepository,
             BranchRepository branchRepository,
-            UserRepository userRepository,
-            TaxCalculationService taxCalculationService
+            UserRepository userRepository
     ) {
         this.payrollPeriodRepository = payrollPeriodRepository;
         this.payrollItemRepository = payrollItemRepository;
@@ -95,7 +62,6 @@ public class PayrollServiceImpl implements PayrollService {
         this.staffBranchAssignmentRepository = staffBranchAssignmentRepository;
         this.branchRepository = branchRepository;
         this.userRepository = userRepository;
-        this.taxCalculationService = taxCalculationService;
     }
 
     @Override
@@ -145,10 +111,27 @@ public class PayrollServiceImpl implements PayrollService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<PayrollItem> getPeriodItems(Long periodId, Long currentUserId) {
         PayrollPeriod period = getPeriodDetail(periodId, currentUserId);
-        return payrollItemRepository.findByPeriodIdWithStaff(period.getPeriodId());
+        List<PayrollItem> items = payrollItemRepository.findByPeriodIdWithStaff(period.getPeriodId());
+        if (period.getStatus() == PayrollStatus.DRAFT
+                && attendanceRecordRepository != null
+                && period.getYear() != null
+                && period.getMonth() != null) {
+            LocalDate periodStartDate = LocalDate.of(period.getYear(), period.getMonth(), 1);
+            LocalDate periodEndDate = periodStartDate.plusMonths(1).minusDays(1);
+            for (PayrollItem item : items) {
+                if (item.getStaff() == null || item.getStaff().getStaffId() == null) {
+                    continue;
+                }
+                BigDecimal syncedWorkDays = resolveActualWorkDays(item.getStaff().getStaffId(), periodStartDate, periodEndDate);
+                if (item.getActualWorkDays() == null || item.getActualWorkDays().compareTo(syncedWorkDays) != 0) {
+                    item.setActualWorkDays(syncedWorkDays);
+                    payrollItemRepository.save(item);
+                }
+            }
+        }
+        return items;
     }
 
     @Override
@@ -243,6 +226,10 @@ public class PayrollServiceImpl implements PayrollService {
                 targetStaffList.add(staff);
             }
         }
+        targetStaffList.sort(Comparator.comparing(StaffProfile::getStaffId));
+
+        LocalDateTime periodStartDateTime = periodStartDate.atStartOfDay();
+        LocalDateTime periodEndDateExclusive = periodEndDate.plusDays(1).atStartOfDay();
 
         for (StaffProfile staff : targetStaffList) {
             PayrollItem item = new PayrollItem();
@@ -258,22 +245,8 @@ public class PayrollServiceImpl implements PayrollService {
             item.setActualBaseSalary(base); // Lương cố định tháng giữ nguyên
             item.setTotalAllowance(allowance);
 
-            // Dữ liệu chấm công tham khảo thật nếu có
-            List<AttendanceRecord> attendanceRecords = attendanceRecordRepository.findByStaffAndRange(
-                    staff.getStaffId(),
-                    periodStartDate,
-                    periodEndDate
-            );
-            if (attendanceRecords != null && !attendanceRecords.isEmpty()) {
-                long workedDays = attendanceRecords.stream()
-                        .filter(a -> a.getStatus() == AttendanceStatus.ON_TIME
-                                || a.getStatus() == AttendanceStatus.LATE
-                                || a.getStatus() == AttendanceStatus.EARLY_LEAVE)
-                        .count();
-                item.setActualWorkDays(BigDecimal.valueOf(workedDays));
-            } else {
-                item.setActualWorkDays(BigDecimal.ZERO); // Không có dữ liệu, KHÔNG hard-code 26.00
-            }
+            // Dữ liệu chấm công đồng bộ từ bảng chấm công Quản lý nhân sự
+            item.setActualWorkDays(resolveActualWorkDays(staff.getStaffId(), periodStartDate, periodEndDate));
 
             // Giữ lại các khoản nhập tay của kế toán khi tính toán lại
             ManualAdjustment adj = preservedAdjustments != null ? preservedAdjustments.get(staff.getStaffId()) : null;
@@ -285,18 +258,22 @@ public class PayrollServiceImpl implements PayrollService {
             item.setDeductionAmount(deduction);
             item.setNote(note);
 
-            // Hoa hồng bác sĩ / nhân viên theo dịch vụ thực hiện trong kỳ
+            // Khóa và tải duy nhất một tập hoa hồng PENDING chưa gắn kỳ lương trong [đầu tháng, đầu tháng sau)
+            List<ServiceCommission> pendingComms = Collections.emptyList();
             BigDecimal commission = BigDecimal.ZERO;
             if (serviceCommissionRepository != null) {
-                LocalDateTime startDateTime = periodStartDate.atStartOfDay();
-                LocalDateTime endDateTime = periodEndDate.atTime(java.time.LocalTime.MAX);
-                commission = serviceCommissionRepository.sumUnpaidCommissionsForStaffInPeriod(
+                List<ServiceCommission> lockedComms = serviceCommissionRepository.findPendingUnboundCommissionsForStaffInPeriodForUpdate(
                         staff.getStaffId(),
-                        startDateTime,
-                        endDateTime
+                        periodStartDateTime,
+                        periodEndDateExclusive
                 );
-                if (commission == null) {
-                    commission = BigDecimal.ZERO;
+                if (lockedComms != null && !lockedComms.isEmpty()) {
+                    pendingComms = lockedComms;
+                    for (ServiceCommission sc : pendingComms) {
+                        if (sc.getCommissionAmount() != null) {
+                            commission = commission.add(sc.getCommissionAmount());
+                        }
+                    }
                 }
             }
             item.setTotalCommission(commission);
@@ -306,48 +283,15 @@ public class PayrollServiceImpl implements PayrollService {
             item.setGrossSalary(grossSalary);
             item.setNonTaxableIncome(BigDecimal.ZERO);
 
-            if (taxCalculationService != null) {
-                // Tính BHXH người lao động, các khoản giảm trừ và thuế TNCN (PIT)
-                PitCalculationResult pitResult = taxCalculationService.calculatePit(
-                        grossSalary,
-                        BigDecimal.ZERO,
-                        staff,
-                        periodStartDate
-                );
+            resetLegacyDeductionsToZero(item);
 
-                item.setInsuranceEmployeeDeduction(pitResult.getInsuranceEmployeeDeduction());
-                item.setInsuranceEmployerAmount(pitResult.getInsuranceEmployerAmount());
-                item.setPersonalDeductionAmount(pitResult.getPersonalDeductionAmount());
-                item.setDependentDeductionAmount(pitResult.getDependentDeductionAmount());
-                item.setTaxableIncome(pitResult.getTaxableIncome());
-                item.setAssessableIncome(pitResult.getAssessableIncome());
-                item.setPitAmount(pitResult.getPitAmount());
-                item.setTaxPolicyCode(pitResult.getTaxPolicyCode());
-                item.setTaxCalculationDetail(pitResult.getTaxCalculationDetail());
-
-                // Lương Net = Gross - BHXH NLĐ - Thuế TNCN - Giảm trừ khác
-                BigDecimal netSalary = grossSalary
-                        .subtract(pitResult.getInsuranceEmployeeDeduction())
-                        .subtract(pitResult.getPitAmount())
-                        .subtract(deduction)
-                        .max(BigDecimal.ZERO);
-                item.setNetSalary(netSalary);
-                item.setAdvanceAllocatedAmount(BigDecimal.ZERO);
-                item.setRemainingPayable(netSalary);
-            } else {
-                item.setInsuranceEmployeeDeduction(BigDecimal.ZERO);
-                item.setInsuranceEmployerAmount(BigDecimal.ZERO);
-                item.setPersonalDeductionAmount(BigDecimal.ZERO);
-                item.setDependentDeductionAmount(BigDecimal.ZERO);
-                item.setTaxableIncome(grossSalary);
-                item.setAssessableIncome(BigDecimal.ZERO);
-                item.setPitAmount(BigDecimal.ZERO);
-
-                BigDecimal netSalary = grossSalary.subtract(deduction).max(BigDecimal.ZERO);
-                item.setNetSalary(netSalary);
-                item.setAdvanceAllocatedAmount(BigDecimal.ZERO);
-                item.setRemainingPayable(netSalary);
-            }
+            // Lương Net = Gross - Giảm trừ khác
+            BigDecimal computedNetSalary = grossSalary
+                    .subtract(deduction)
+                    .max(BigDecimal.ZERO);
+            item.setNetSalary(computedNetSalary);
+            item.setAdvanceAllocatedAmount(BigDecimal.ZERO);
+            item.setRemainingPayable(computedNetSalary);
             item.setPaymentStatus(PayrollItemStatus.UNPAID);
             BigDecimal netSalary = item.getNetSalary();
 
@@ -363,17 +307,10 @@ public class PayrollServiceImpl implements PayrollService {
                 salaryAdvanceAllocationRepository.save(alloc);
             }
 
-            if (serviceCommissionRepository != null && item.getTotalCommission().compareTo(BigDecimal.ZERO) > 0) {
-                LocalDateTime startDateTime = periodStartDate.atStartOfDay();
-                LocalDateTime endDateTime = periodEndDate.atTime(java.time.LocalTime.MAX);
-                List<ServiceCommission> unpaidComms = serviceCommissionRepository.findUnpaidCommissionsForStaffInPeriod(
-                        staff.getStaffId(),
-                        CommissionStatus.PENDING,
-                        startDateTime,
-                        endDateTime
-                );
-                for (ServiceCommission c : unpaidComms) {
-                    c.setPayrollItem(savedItem != null ? savedItem : item);
+            if (!pendingComms.isEmpty()) {
+                PayrollItem targetItem = savedItem != null ? savedItem : item;
+                for (ServiceCommission c : pendingComms) {
+                    c.setPayrollItem(targetItem);
                     serviceCommissionRepository.save(c);
                 }
             }
@@ -463,10 +400,6 @@ public class PayrollServiceImpl implements PayrollService {
         BigDecimal totalAdvanceAllocated = BigDecimal.ZERO;
         BigDecimal totalRemainingPayable = BigDecimal.ZERO;
         BigDecimal totalGrossSalary = BigDecimal.ZERO;
-        BigDecimal totalInsuranceEmployee = BigDecimal.ZERO;
-        BigDecimal totalInsuranceEmployer = BigDecimal.ZERO;
-        BigDecimal totalPitAmount = BigDecimal.ZERO;
-        String policyCode = null;
 
         for (PayrollItem item : items) {
             totalSalary = totalSalary.add(item.getNetSalary() != null ? item.getNetSalary() : BigDecimal.ZERO);
@@ -478,12 +411,6 @@ public class PayrollServiceImpl implements PayrollService {
             totalAdvanceAllocated = totalAdvanceAllocated.add(item.getAdvanceAllocatedAmount() != null ? item.getAdvanceAllocatedAmount() : BigDecimal.ZERO);
             totalRemainingPayable = totalRemainingPayable.add(item.getRemainingPayable() != null ? item.getRemainingPayable() : BigDecimal.ZERO);
             totalGrossSalary = totalGrossSalary.add(item.getGrossSalary() != null ? item.getGrossSalary() : BigDecimal.ZERO);
-            totalInsuranceEmployee = totalInsuranceEmployee.add(item.getInsuranceEmployeeDeduction() != null ? item.getInsuranceEmployeeDeduction() : BigDecimal.ZERO);
-            totalInsuranceEmployer = totalInsuranceEmployer.add(item.getInsuranceEmployerAmount() != null ? item.getInsuranceEmployerAmount() : BigDecimal.ZERO);
-            totalPitAmount = totalPitAmount.add(item.getPitAmount() != null ? item.getPitAmount() : BigDecimal.ZERO);
-            if (policyCode == null && item.getTaxPolicyCode() != null) {
-                policyCode = item.getTaxPolicyCode();
-            }
         }
 
         period.setTotalSalary(totalSalary);
@@ -495,10 +422,10 @@ public class PayrollServiceImpl implements PayrollService {
         period.setTotalAdvanceAllocated(totalAdvanceAllocated);
         period.setTotalRemainingPayable(totalRemainingPayable);
         period.setTotalGrossSalary(totalGrossSalary);
-        period.setTotalInsuranceEmployee(totalInsuranceEmployee);
-        period.setTotalInsuranceEmployer(totalInsuranceEmployer);
-        period.setTotalPitAmount(totalPitAmount);
-        period.setTaxPolicyCode(policyCode);
+        period.setTotalInsuranceEmployee(BigDecimal.ZERO);
+        period.setTotalInsuranceEmployer(BigDecimal.ZERO);
+        period.setTotalPitAmount(BigDecimal.ZERO);
+        period.setTaxPolicyCode(null);
 
         payrollPeriodRepository.save(period);
     }
@@ -532,19 +459,9 @@ public class PayrollServiceImpl implements PayrollService {
                 .add(bonus)
                 .add(item.getTotalCommission());
 
-        LocalDate periodDate = LocalDate.of(period.getYear(), period.getMonth(), 1);
-        PitCalculationResult pitResult = taxCalculationService.calculatePit(
-                grossSalary,
-                item.getNonTaxableIncome() != null ? item.getNonTaxableIncome() : BigDecimal.ZERO,
-                item.getStaff(),
-                periodDate
-        );
-
-        BigDecimal mandatoryDeductions = pitResult.getInsuranceEmployeeDeduction().add(pitResult.getPitAmount());
-        if (deduction.add(mandatoryDeductions).compareTo(grossSalary) > 0) {
-            throw new IllegalArgumentException("Tổng các khoản giảm trừ (Bảo hiểm " + pitResult.getInsuranceEmployeeDeduction()
-                    + " đ, Thuế TNCN " + pitResult.getPitAmount()
-                    + " đ, Khấu trừ khác " + deduction + " đ) vượt quá tổng thu nhập Gross (" + grossSalary + " đ). Không cho phép lương Net âm.");
+        if (deduction.compareTo(grossSalary) > 0) {
+            throw new IllegalArgumentException("Khoản giảm trừ (" + deduction
+                    + " đ) vượt quá tổng thu nhập Gross (" + grossSalary + " đ). Không cho phép lương Net âm.");
         }
 
         if ((bonus.compareTo(BigDecimal.ZERO) > 0 || deduction.compareTo(BigDecimal.ZERO) > 0)
@@ -555,18 +472,10 @@ public class PayrollServiceImpl implements PayrollService {
         item.setGrossSalary(grossSalary);
         item.setBonusAmount(bonus);
         item.setDeductionAmount(deduction);
-        item.setInsuranceEmployeeDeduction(pitResult.getInsuranceEmployeeDeduction());
-        item.setInsuranceEmployerAmount(pitResult.getInsuranceEmployerAmount());
-        item.setPersonalDeductionAmount(pitResult.getPersonalDeductionAmount());
-        item.setDependentDeductionAmount(pitResult.getDependentDeductionAmount());
-        item.setTaxableIncome(pitResult.getTaxableIncome());
-        item.setAssessableIncome(pitResult.getAssessableIncome());
-        item.setPitAmount(pitResult.getPitAmount());
-        item.setTaxPolicyCode(pitResult.getTaxPolicyCode());
-        item.setTaxCalculationDetail(pitResult.getTaxCalculationDetail());
+        resetLegacyDeductionsToZero(item);
         item.setNote(dto.getNote() != null ? dto.getNote().trim() : null);
 
-        BigDecimal netSalary = grossSalary.subtract(mandatoryDeductions).subtract(deduction).max(BigDecimal.ZERO);
+        BigDecimal netSalary = grossSalary.subtract(deduction).max(BigDecimal.ZERO);
         item.setNetSalary(netSalary);
 
         // Xóa các allocation giữ chỗ cũ của dòng lương này để tính toán lại
@@ -584,6 +493,63 @@ public class PayrollServiceImpl implements PayrollService {
         recalculatePeriodTotals(period.getPeriodId());
 
         return savedItem;
+    }
+
+    @Override
+    public void recalculateDraftItemAfterCommissionChange(Long payrollItemId) {
+        if (payrollItemId == null) {
+            return;
+        }
+        PayrollItem item = payrollItemRepository.findWithDetailsById(payrollItemId).orElse(null);
+        if (item == null || item.getPayrollPeriod() == null) {
+            return;
+        }
+        PayrollPeriod period = payrollPeriodRepository.findByIdForUpdate(item.getPayrollPeriod().getPeriodId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kỳ lương."));
+        if (period.getStatus() != PayrollStatus.DRAFT) {
+            throw new IllegalStateException("Chỉ có thể tính lại dòng lương khi kỳ lương ở trạng thái Nháp (DRAFT)");
+        }
+
+        BigDecimal newCommission = BigDecimal.ZERO;
+        if (serviceCommissionRepository != null) {
+            List<ServiceCommission> bound = serviceCommissionRepository.findByPayrollItem_ItemId(payrollItemId);
+            if (bound != null) {
+                for (ServiceCommission sc : bound) {
+                    if (sc.getStatus() == CommissionStatus.PENDING
+                            && (sc.getPerformedService() == null || sc.getPerformedService().getStatus() == PerformedServiceStatus.COMPLETED)
+                            && sc.getCommissionAmount() != null) {
+                        newCommission = newCommission.add(sc.getCommissionAmount());
+                    }
+                }
+            }
+        }
+        item.setTotalCommission(newCommission);
+
+        BigDecimal base = item.getActualBaseSalary() != null ? item.getActualBaseSalary() : BigDecimal.ZERO;
+        BigDecimal allowance = item.getTotalAllowance() != null ? item.getTotalAllowance() : BigDecimal.ZERO;
+        BigDecimal bonus = item.getBonusAmount() != null ? item.getBonusAmount() : BigDecimal.ZERO;
+        BigDecimal deduction = item.getDeductionAmount() != null ? item.getDeductionAmount() : BigDecimal.ZERO;
+        BigDecimal grossSalary = base.add(allowance).add(bonus).add(newCommission);
+        item.setGrossSalary(grossSalary);
+
+        resetLegacyDeductionsToZero(item);
+
+        item.setNetSalary(grossSalary.subtract(deduction).max(BigDecimal.ZERO));
+
+        List<SalaryAdvanceAllocation> oldAllocations = salaryAdvanceAllocationRepository.findByPayrollItem_ItemId(payrollItemId);
+        if (oldAllocations != null && !oldAllocations.isEmpty()) {
+            salaryAdvanceAllocationRepository.deleteAll(oldAllocations);
+            salaryAdvanceAllocationRepository.flush();
+        }
+
+        BigDecimal netSalary = item.getNetSalary();
+        BigDecimal allocatedAdvance = reserveAdvanceAllocationsForItem(item, netSalary);
+        item.setAdvanceAllocatedAmount(allocatedAdvance);
+        item.setRemainingPayable(netSalary.subtract(allocatedAdvance).max(BigDecimal.ZERO));
+
+        payrollItemRepository.save(item);
+        payrollItemRepository.flush();
+        recalculatePeriodTotals(period.getPeriodId());
     }
 
     @Override
@@ -609,7 +575,11 @@ public class PayrollServiceImpl implements PayrollService {
         salaryAdvanceAllocationRepository.deleteByPeriodId(periodId);
         payrollItemRepository.deleteByPayrollPeriod_PeriodId(periodId);
         payrollPeriodRepository.flush();
-        populatePeriodItems(period, preserved);
+
+        // deleteByPeriodId xóa persistence context -> nạp lại PayrollPeriod managed trước khi populate lại
+        PayrollPeriod reloadedPeriod = payrollPeriodRepository.findByIdForUpdate(periodId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy kỳ lương: " + periodId));
+        populatePeriodItems(reloadedPeriod, preserved);
 
         return payrollPeriodRepository.findById(periodId).orElseThrow();
     }
@@ -628,6 +598,7 @@ public class PayrollServiceImpl implements PayrollService {
         if (items.isEmpty()) {
             throw new IllegalStateException("Bảng lương chưa có nhân viên nào. Không thể trình duyệt.");
         }
+        reconcileBoundCommissionsForPeriod(period, items);
 
         StaffProfile submitter = staffProfileRepository.findByUser_UserId(currentUserId).orElse(null);
 
@@ -652,6 +623,7 @@ public class PayrollServiceImpl implements PayrollService {
         if (period.getStatus() != PayrollStatus.SUBMITTED) {
             throw new IllegalStateException("Kỳ lương phải ở trạng thái Chờ duyệt (SUBMITTED) mới có thể phê duyệt");
         }
+        List<PayrollItem> items = payrollItemRepository.findByPayrollPeriod_PeriodId(periodId);
 
         StaffProfile approver = staffProfileRepository.findByUser_UserId(currentUserId).orElse(null);
 
@@ -727,6 +699,7 @@ public class PayrollServiceImpl implements PayrollService {
         if (items.isEmpty()) {
             throw new IllegalStateException("Bảng lương không có dòng dữ liệu nào");
         }
+        reconcileBoundCommissionsForPeriod(period, items);
 
         // BẢO VỆ BẤT BIẾN VÀ ĐỐI SOÁT TOÀN DIỆN TRƯỚC KHI CHI TRẢ
         BigDecimal runningNet = BigDecimal.ZERO;
@@ -746,10 +719,8 @@ public class PayrollServiceImpl implements PayrollService {
                     ? item.getGrossSalary()
                     : baseSal.add(allowance).add(bonus).add(comm);
 
-            BigDecimal ins = item.getInsuranceEmployeeDeduction() != null ? item.getInsuranceEmployeeDeduction() : BigDecimal.ZERO;
-            BigDecimal pit = item.getPitAmount() != null ? item.getPitAmount() : BigDecimal.ZERO;
             BigDecimal deduction = item.getDeductionAmount() != null ? item.getDeductionAmount() : BigDecimal.ZERO;
-            BigDecimal expectedNet = gross.subtract(ins).subtract(pit).subtract(deduction).max(BigDecimal.ZERO);
+            BigDecimal expectedNet = gross.subtract(deduction).max(BigDecimal.ZERO);
 
             if (item.getNetSalary() == null || item.getNetSalary().compareTo(expectedNet) != 0) {
                 throw new IllegalStateException("Lương Net của nhân sự " + (item.getStaff() != null ? item.getStaff().getFullName() : item.getItemId())
@@ -883,8 +854,7 @@ public class PayrollServiceImpl implements PayrollService {
                 expense.setSourceType(ExpenseSourceType.PAYROLL);
                 expense.setPayrollPeriod(savedPeriod);
                 expense.setDescription("Thực chi trả bảng lương: " + savedPeriod.getPeriodName()
-                        + " (Tổng Gross: " + savedPeriod.getTotalGrossSalary() + " VNĐ, BHXH NLĐ: " + savedPeriod.getTotalInsuranceEmployee()
-                        + " VNĐ, Thuế TNCN: " + savedPeriod.getTotalPitAmount() + " VNĐ, Đã cấn trừ tạm ứng: "
+                        + " (Tổng Gross: " + savedPeriod.getTotalGrossSalary() + " VNĐ, Đã cấn trừ tạm ứng: "
                         + savedPeriod.getTotalAdvanceAllocated() + " VNĐ, Thực chi: " + savedPeriod.getTotalRemainingPayable() + " VNĐ)");
                 expense.setCreatedBy(currentUser);
                 expense.setIsCancelled(false);
@@ -893,6 +863,7 @@ public class PayrollServiceImpl implements PayrollService {
         }
 
         if (serviceCommissionRepository != null) {
+            payrollPeriodRepository.flush();
             serviceCommissionRepository.markCommissionsAsPaidForPeriod(periodId);
         }
 
@@ -926,7 +897,84 @@ public class PayrollServiceImpl implements PayrollService {
 
         salaryAdvanceAllocationRepository.deleteByPeriodId(periodId);
         payrollItemRepository.deleteByPayrollPeriod_PeriodId(periodId);
-        payrollPeriodRepository.delete(period);
+        payrollPeriodRepository.flush();
+
+        // deleteByPeriodId xóa persistence context -> nạp lại entity managed trước khi xóa
+        payrollPeriodRepository.findByIdForUpdate(periodId).ifPresent(payrollPeriodRepository::delete);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ServiceCommission> getLateUnboundCommissionsForPeriod(Long periodId, Long currentUserId) {
+        if (serviceCommissionRepository == null) {
+            return Collections.emptyList();
+        }
+        PayrollPeriod period = getPeriodDetail(periodId, currentUserId);
+        if (period.getYear() == null || period.getMonth() == null) {
+            return Collections.emptyList();
+        }
+        List<PayrollItem> items = payrollItemRepository.findByPayrollPeriod_PeriodId(period.getPeriodId());
+        if (items == null || items.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Long> staffIds = items.stream()
+                .map(i -> i.getStaff() != null ? i.getStaff().getStaffId() : null)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (staffIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        LocalDate periodStartDate = LocalDate.of(period.getYear(), period.getMonth(), 1);
+        LocalDateTime startDateTime = periodStartDate.atStartOfDay();
+        LocalDateTime endDateExclusive = periodStartDate.plusMonths(1).atStartOfDay();
+        List<ServiceCommission> late = serviceCommissionRepository.findUnboundPendingCommissionsForStaffListInPeriod(
+                staffIds, startDateTime, endDateExclusive);
+        return late != null ? late : Collections.emptyList();
+    }
+
+    private void reconcileBoundCommissionsForPeriod(PayrollPeriod period, List<PayrollItem> items) {
+        if (serviceCommissionRepository == null || period == null || items == null) {
+            return;
+        }
+        List<ServiceCommission> boundAll = serviceCommissionRepository.findByPayrollItem_PayrollPeriod_PeriodId(period.getPeriodId());
+        Map<Long, List<ServiceCommission>> boundByItemId = new HashMap<>();
+        if (boundAll != null) {
+            for (ServiceCommission sc : boundAll) {
+                if (sc.getPayrollItem() != null && sc.getPayrollItem().getItemId() != null) {
+                    boundByItemId.computeIfAbsent(sc.getPayrollItem().getItemId(), k -> new ArrayList<>()).add(sc);
+                }
+            }
+        }
+
+        BigDecimal runningCommission = BigDecimal.ZERO;
+        for (PayrollItem item : items) {
+            BigDecimal itemCommission = item.getTotalCommission() != null ? item.getTotalCommission() : BigDecimal.ZERO;
+            runningCommission = runningCommission.add(itemCommission);
+
+            List<ServiceCommission> itemBound = boundByItemId.getOrDefault(item.getItemId(), Collections.emptyList());
+            BigDecimal boundSum = BigDecimal.ZERO;
+            for (ServiceCommission sc : itemBound) {
+                if (sc.getStatus() != CommissionStatus.PENDING) {
+                    throw new IllegalStateException("Hoa hồng ID " + sc.getCommissionId() + " gắn vào bảng lương không ở trạng thái PENDING.");
+                }
+                if (sc.getPerformedService() != null && sc.getPerformedService().getStatus() != PerformedServiceStatus.COMPLETED) {
+                    throw new IllegalStateException("Hoa hồng ID " + sc.getCommissionId() + " thuộc dịch vụ không còn ở trạng thái COMPLETED. Vui lòng tính lại bảng lương.");
+                }
+                boundSum = boundSum.add(sc.getCommissionAmount() != null ? sc.getCommissionAmount() : BigDecimal.ZERO);
+            }
+            if (itemCommission.compareTo(boundSum) != 0) {
+                throw new IllegalStateException("Tổng hoa hồng của nhân sự "
+                        + (item.getStaff() != null ? item.getStaff().getFullName() : item.getItemId())
+                        + " (" + itemCommission + " đ) không khớp với chi tiết hoa hồng đã gắn (" + boundSum
+                        + " đ). Vui lòng tính toán lại bảng lương trước khi chốt.");
+            }
+        }
+
+        if (period.getTotalCommission() != null && period.getTotalCommission().compareTo(runningCommission) != 0) {
+            throw new IllegalStateException("Tổng hoa hồng của kỳ (" + period.getTotalCommission()
+                    + ") không khớp tổng các dòng (" + runningCommission + ").");
+        }
     }
 
     private void requirePayrollPermission(Long currentUserId) {
@@ -952,5 +1000,45 @@ public class PayrollServiceImpl implements PayrollService {
                 throw new AccessDeniedException("Bạn không có quyền truy cập dữ liệu của chi nhánh này");
             }
         }
+    }
+
+    private BigDecimal resolveActualWorkDays(Long staffId, LocalDate periodStartDate, LocalDate periodEndDate) {
+        if (attendanceRecordRepository == null || staffId == null || periodStartDate == null || periodEndDate == null) {
+            return BigDecimal.ZERO;
+        }
+        List<AttendanceRecord> attendanceRecords = attendanceRecordRepository.findByStaffAndRange(
+                staffId,
+                periodStartDate,
+                periodEndDate
+        );
+        if (attendanceRecords == null || attendanceRecords.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        long workedDays = attendanceRecords.stream()
+                .filter(a -> a.getCheckInAt() != null
+                        || a.getStatus() == AttendanceStatus.ON_TIME
+                        || a.getStatus() == AttendanceStatus.LATE
+                        || a.getStatus() == AttendanceStatus.EARLY_LEAVE)
+                .count();
+        return BigDecimal.valueOf(workedDays);
+    }
+
+    private void resetLegacyDeductionsToZero(PayrollItem item) {
+        item.setInsuranceEmployeeDeduction(BigDecimal.ZERO);
+        item.setInsuranceEmployerAmount(BigDecimal.ZERO);
+        item.setInsuranceParticipationStatus(InsuranceParticipationStatus.EXEMPT);
+        item.setInsuranceBaseSalarySnapshot(BigDecimal.ZERO);
+        item.setInsuranceEmployeeRateSnapshot(BigDecimal.ZERO);
+        item.setInsuranceEmployerRateSnapshot(BigDecimal.ZERO);
+        item.setInsuranceBasisNote(null);
+        item.setPersonalDeductionAmount(BigDecimal.ZERO);
+        item.setDependentDeductionAmount(BigDecimal.ZERO);
+        item.setTaxableIncome(BigDecimal.ZERO);
+        item.setAssessableIncome(BigDecimal.ZERO);
+        item.setPitAmount(BigDecimal.ZERO);
+        item.setTaxPolicyCode(null);
+        item.setPitCalculationMethod(null);
+        item.setPitScheduleSnapshot(null);
+        item.setTaxCalculationDetail(null);
     }
 }

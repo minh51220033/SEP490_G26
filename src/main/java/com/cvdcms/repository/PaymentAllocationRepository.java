@@ -7,6 +7,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -28,5 +30,22 @@ public interface PaymentAllocationRepository extends JpaRepository<PaymentAlloca
 
     @Query("SELECT COALESCE(SUM(pa.allocatedAmount), 0) FROM PaymentAllocation pa WHERE pa.invoice.invoiceId = :invoiceId AND pa.itemType = 'SURCHARGE'")
     BigDecimal sumAllocatedByInvoiceSurcharge(@Param("invoiceId") Long invoiceId);
+
+    @Query("""
+        SELECT pa.payment.paymentId,
+               UPPER(pa.itemType),
+               COALESCE(SUM(pa.allocatedAmount), 0)
+        FROM PaymentAllocation pa
+        WHERE (:branchIds IS NULL OR pa.payment.branch.branchId IN :branchIds)
+          AND pa.payment.paymentType = com.cvdcms.entity.enums.PaymentType.PAYMENT
+          AND (:startDate IS NULL OR pa.payment.paidAt >= :startDate)
+          AND (:endExclusive IS NULL OR pa.payment.paidAt < :endExclusive)
+        GROUP BY pa.payment.paymentId, UPPER(pa.itemType)
+    """)
+    List<Object[]> sumAllocatedByPaymentAndItemType(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endExclusive") LocalDateTime endExclusive
+    );
 }
 

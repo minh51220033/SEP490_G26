@@ -1450,20 +1450,113 @@
     text-align: center;
 }
 
+@page {
+    size: A5;
+    margin: 10mm;
+}
+
 @media print {
-    body * {
-        visibility: hidden;
+    html,
+    body {
+        width: auto !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        background: #ffffff !important;
     }
-    #printablePrescriptionArea, #printablePrescriptionArea * {
-        visibility: visible;
+
+    body.modal-open {
+        overflow: visible !important;
+        padding-right: 0 !important;
     }
+
+    body > *:not(:has(#printPrescriptionModal)),
+    .modal-backdrop,
+    .modal:not(#printPrescriptionModal) {
+        display: none !important;
+    }
+
+    #printPrescriptionModal,
+    #printPrescriptionModal.modal {
+        position: static !important;
+        inset: auto !important;
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    #printPrescriptionModal .modal-dialog {
+        position: static !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        transform: none !important;
+        display: block !important;
+    }
+
+    #printPrescriptionModal .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+    }
+
+    #printPrescriptionModal .modal-header,
+    #printPrescriptionModal .modal-footer {
+        display: none !important;
+    }
+
+    #printPrescriptionModal .modal-body {
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+    }
+
     #printablePrescriptionArea {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        padding: 20px;
+        position: static !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 12px !important;
+    }
+
+    #printablePrescriptionArea .print-clinic-header {
+        padding-bottom: 10px;
+        margin-bottom: 12px;
+    }
+
+    #printablePrescriptionArea .print-title {
+        font-size: 18px;
+        margin: 10px 0 12px 0;
+    }
+
+    #printablePrescriptionArea .print-info-grid {
+        font-size: 12px;
+        gap: 4px 12px;
+        margin-bottom: 12px;
+    }
+
+    #printablePrescriptionArea .print-drugs-list {
+        margin-bottom: 14px;
+    }
+
+    #printablePrescriptionArea .print-drug-row {
+        font-size: 12px;
+        margin-bottom: 8px;
+        break-inside: avoid;
+    }
+
+    #printablePrescriptionArea .print-footer-grid {
+        margin-top: 16px;
+        font-size: 12px;
+        break-inside: avoid;
     }
 }
 

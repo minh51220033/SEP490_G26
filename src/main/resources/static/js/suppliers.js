@@ -2,7 +2,7 @@ const API = "/api/suppliers";
 let pageSize = 10;
 
 const REGEX = {
-    SUPPLIER_CODE: /^[A-Za-z0-9_-]{2,20}$/,
+    SUPPLIER_CODE: /^[A-Za-z0-9_-]{2,30}$/,
     TAX_CODE: /^[0-9]{10}(-[0-9]{3})?$/,
     PHONE: /^(0|\+84)[0-9]{9,10}$/,
     REFERENCE_NO: /^[A-Za-z0-9._/-]{1,100}$/
@@ -328,7 +328,7 @@ function validateSupplierPayload(payload) {
         setFieldError("supplierCode", "Mã nhà cung cấp không được để trống.");
         valid = false;
     } else if (!REGEX.SUPPLIER_CODE.test(payload.supplierCode)) {
-        setFieldError("supplierCode", "Mã NCC từ 2-20 ký tự, chỉ gồm chữ, số, dấu - hoặc _.");
+        setFieldError("supplierCode", "Mã NCC từ 2-30 ký tự, chỉ gồm chữ, số, dấu - hoặc _.");
         valid = false;
     }
 

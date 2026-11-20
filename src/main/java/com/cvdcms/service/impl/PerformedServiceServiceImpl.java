@@ -75,6 +75,29 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.ServiceCommissionService serviceCommissionService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.ServiceCommissionRepository serviceCommissionRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.ParaclinicalOrderItemRepository paraclinicalOrderItemRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
+    private jakarta.servlet.http.HttpSession currentHttpSession() {
+        var attrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        return attrs instanceof org.springframework.web.context.request.ServletRequestAttributes sra
+                ? sra.getRequest().getSession(false) : null;
+    }
+
+    private boolean isHttpRequestActive() {
+        return org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
+                instanceof org.springframework.web.context.request.ServletRequestAttributes;
+    }
+
     public void setServiceCommissionService(com.cvdcms.service.ServiceCommissionService serviceCommissionService) {
         this.serviceCommissionService = serviceCommissionService;
     }
@@ -153,7 +176,8 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
     public PerformedServiceResponseDTO createPerformedService(PerformedServiceRequestDTO requestDTO) {
         log.info("Creating performed service for visitId={}, serviceId={}", requestDTO.getVisitId(), requestDTO.getServiceId());
 
-        Visit visit = visitRepository.findById(requestDTO.getVisitId())
+        Visit visit = visitRepository.lockById(requestDTO.getVisitId())
+                .or(() -> visitRepository.findById(requestDTO.getVisitId()))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám với ID: " + requestDTO.getVisitId()));
 
         // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi chuyển thanh toán, hoàn tất, hủy hoặc EMR đã khóa
@@ -169,6 +193,20 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
             throw new IllegalStateException("Dịch vụ hoặc nhóm dịch vụ đang ngừng hoạt động, không thể chỉ định thực hiện.");
         }
 
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            jakarta.servlet.http.HttpSession session = currentHttpSession();
+            com.cvdcms.entity.User currentUser = doctorVisitAccess.requireAuthenticatedUser(session);
+            if (!doctorVisitAccess.isAdmin(currentUser)) {
+                StaffProfile callerDoctor = staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null);
+                if (callerDoctor != null && requestDTO.getDoctorId() != null
+                        && !requestDTO.getDoctorId().equals(callerDoctor.getStaffId())) {
+                    throw new org.springframework.web.server.ResponseStatusException(
+                            org.springframework.http.HttpStatus.FORBIDDEN,
+                            "Chỉ quản trị viên mới được chỉ định bác sĩ thực hiện khác.");
+                }
+            }
+        }
+
         StaffProfile doctor = staffProfileRepository.findById(requestDTO.getDoctorId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bác sĩ với ID: " + requestDTO.getDoctorId()));
         if (doctor.getStatus() != null && doctor.getStatus() != StaffStatus.ACTIVE) {
@@ -181,22 +219,81 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
             assistant = staffProfileRepository.findById(requestDTO.getAssistantId()).orElse(null);
         }
 
+        TreatmentPlanItem linkedPlanItem = null;
+        TreatmentPlan linkedPlan = null;
+        if (requestDTO.getPlanItemId() != null) {
+            linkedPlanItem = treatmentPlanItemRepository.findById(requestDTO.getPlanItemId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bước thủ thuật trong kế hoạch điều trị với ID: " + requestDTO.getPlanItemId()));
+            linkedPlan = linkedPlanItem.getPlan() != null
+                    ? linkedPlanItem.getPlan()
+                    : (linkedPlanItem.getStage() != null ? linkedPlanItem.getStage().getPlan() : null);
+            if (linkedPlan != null && linkedPlan.getPlanId() != null) {
+                treatmentPlanRepository.findByIdForUpdate(linkedPlan.getPlanId());
+            }
+            if (entityManager != null && entityManager.contains(linkedPlanItem)) {
+                entityManager.lock(linkedPlanItem, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+            }
+            if (linkedPlan != null && linkedPlan.getStatus() == TreatmentPlanStatus.CANCELLED) {
+                throw new IllegalStateException("Kế hoạch điều trị đã bị hủy, không thể ghi nhận thực hiện.");
+            }
+            if (linkedPlanItem.getStatus() == TreatmentPlanItemStatus.CANCELLED) {
+                throw new IllegalStateException("Bước thủ thuật trong kế hoạch đã bị hủy, không thể thực hiện.");
+            }
+            if (linkedPlanItem.getStatus() == TreatmentPlanItemStatus.COMPLETED) {
+                throw new IllegalStateException("Bước thủ thuật này đã ở trạng thái Đã thực hiện, không thể thực hiện lại.");
+            }
+            if (linkedPlan != null && linkedPlan.getPatientProfile() != null && visit.getPatientProfile() != null
+                    && !linkedPlan.getPatientProfile().getProfileId().equals(visit.getPatientProfile().getProfileId())) {
+                throw new IllegalArgumentException("Bước kế hoạch điều trị không khớp với hồ sơ bệnh nhân của ca khám.");
+            }
+            if (performedServiceRepository.existsByPlanItem_PlanItemIdAndStatusNot(
+                    linkedPlanItem.getPlanItemId(), PerformedServiceStatus.CANCELLED)) {
+                throw new IllegalStateException("Bước phác đồ này đã được ghi nhận dịch vụ thực hiện, không thể tạo trùng lặp.");
+            }
+        }
+
         BigDecimal qty = requestDTO.getQuantity() != null && requestDTO.getQuantity().compareTo(BigDecimal.ZERO) > 0
                 ? requestDTO.getQuantity() : BigDecimal.ONE;
 
-        BigDecimal unitPrice = requestDTO.getUnitPrice() != null && requestDTO.getUnitPrice().compareTo(BigDecimal.ZERO) >= 0
-                ? requestDTO.getUnitPrice() : service.getBasePrice();
+        BigDecimal unitPrice;
+        if (linkedPlanItem != null) {
+            boolean isInstallment = linkedPlan != null && Boolean.TRUE.equals(linkedPlan.getIsInstallment());
+            if (isInstallment) {
+                unitPrice = BigDecimal.ZERO;
+            } else if (linkedPlanItem.getService() != null && linkedPlanItem.getEstimatedPrice() != null) {
+                unitPrice = linkedPlanItem.getEstimatedPrice();
+            } else if (linkedPlanItem.getEstimatedPrice() != null && linkedPlanItem.getEstimatedPrice().compareTo(BigDecimal.ZERO) > 0) {
+                unitPrice = linkedPlanItem.getEstimatedPrice();
+            } else {
+                unitPrice = service.getBasePrice() != null ? service.getBasePrice() : BigDecimal.ZERO;
+            }
+        } else {
+            BigDecimal basePrice = service.getBasePrice() != null ? service.getBasePrice() : BigDecimal.ZERO;
+            if (requestDTO.getUnitPrice() != null) {
+                if (requestDTO.getUnitPrice().compareTo(BigDecimal.ZERO) < 0) {
+                    throw new IllegalArgumentException("Đơn giá dịch vụ không được nhỏ hơn 0.");
+                }
+                if (requestDTO.getUnitPrice().compareTo(BigDecimal.ZERO) == 0
+                        && basePrice.compareTo(BigDecimal.ZERO) > 0) {
+                    throw new IllegalArgumentException("Đơn giá dịch vụ có giá niêm yết phải lớn hơn 0.");
+                }
+                unitPrice = requestDTO.getUnitPrice();
+            } else {
+                unitPrice = basePrice;
+            }
+        }
 
-        BigDecimal discount = requestDTO.getDiscountAmount() != null && requestDTO.getDiscountAmount().compareTo(BigDecimal.ZERO) >= 0
-                ? requestDTO.getDiscountAmount() : BigDecimal.ZERO;
-
-        BigDecimal calculatedFinal = unitPrice.multiply(qty).subtract(discount);
-        if (calculatedFinal.compareTo(BigDecimal.ZERO) < 0) {
-            calculatedFinal = BigDecimal.ZERO;
+        BigDecimal lineTotal = unitPrice.multiply(qty);
+        BigDecimal discount = requestDTO.getDiscountAmount() != null ? requestDTO.getDiscountAmount() : BigDecimal.ZERO;
+        if (discount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Giảm giá / chiết khấu không được nhỏ hơn 0.");
+        }
+        if (discount.compareTo(lineTotal) > 0) {
+            throw new IllegalArgumentException("Giảm giá / chiết khấu không được vượt quá thành tiền.");
         }
 
         // Luôn đồng bộ thành tiền theo công thức backend (unitPrice * qty - discount) khớp InvoiceServiceImpl
-        BigDecimal finalPrice = calculatedFinal;
+        BigDecimal finalPrice = lineTotal.subtract(discount);
 
         PerformedService ps = new PerformedService();
         ps.setVisit(visit);
@@ -205,10 +302,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         ps.setService(service);
 
         String stepName = requestDTO.getStepName();
-        if (stepName == null && requestDTO.getPlanItemId() != null) {
-            stepName = treatmentPlanItemRepository.findById(requestDTO.getPlanItemId())
-                    .map(it -> it.getStepName() != null ? it.getStepName() : (it.getService() != null ? it.getService().getServiceName() : null))
-                    .orElse(null);
+        if (stepName == null && linkedPlanItem != null) {
+            stepName = linkedPlanItem.getStepName() != null
+                    ? linkedPlanItem.getStepName()
+                    : (linkedPlanItem.getService() != null ? linkedPlanItem.getService().getServiceName() : null);
         }
         if (stepName == null && service != null) {
             stepName = service.getServiceName();
@@ -226,41 +323,39 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         ps.setStatus(PerformedServiceStatus.COMPLETED); // Ghi nhận hoàn thành để bàn giao Người 4 lập hóa đơn
         ps.setClinicalNotes(requestDTO.getClinicalNotes());
 
-        if (requestDTO.getPlanItemId() != null) {
-            treatmentPlanItemRepository.findById(requestDTO.getPlanItemId()).ifPresent(planItem -> {
-                ps.setPlanItem(planItem);
-                planItem.setStatus(TreatmentPlanItemStatus.COMPLETED);
-                planItem.setCompletedAt(LocalDateTime.now());
-                treatmentPlanItemRepository.save(planItem);
+        if (linkedPlanItem != null) {
+            ps.setPlanItem(linkedPlanItem);
+            linkedPlanItem.setStatus(TreatmentPlanItemStatus.COMPLETED);
+            linkedPlanItem.setCompletedAt(LocalDateTime.now());
+            treatmentPlanItemRepository.save(linkedPlanItem);
 
-                // Tự động cập nhật tiến độ giai đoạn và kế hoạch
-                TreatmentPlanStage stage = planItem.getStage();
-                if (stage != null) {
-                    List<TreatmentPlanItem> stageItems = stage.getItems();
-                    boolean allDone = stageItems != null && !stageItems.isEmpty() &&
-                            stageItems.stream().allMatch(i -> i.getStatus() == TreatmentPlanItemStatus.COMPLETED);
-                    if (allDone) {
-                        stage.setStatus(TreatmentPlanStageStatus.COMPLETED);
-                        stage.setCompletedAt(LocalDateTime.now());
-                    } else {
-                        stage.setStatus(TreatmentPlanStageStatus.IN_PROGRESS);
-                    }
-                    treatmentPlanStageRepository.save(stage);
-
-                    TreatmentPlan plan = stage.getPlan();
-                    if (plan != null) {
-                        List<TreatmentPlanStage> allStages = plan.getStages();
-                        boolean allStagesDone = allStages != null && !allStages.isEmpty() &&
-                                allStages.stream().allMatch(s -> s.getStatus() == TreatmentPlanStageStatus.COMPLETED);
-                        if (allStagesDone) {
-                            plan.setStatus(TreatmentPlanStatus.COMPLETED);
-                        } else {
-                            plan.setStatus(TreatmentPlanStatus.IN_PROGRESS);
-                        }
-                        treatmentPlanRepository.save(plan);
-                    }
+            // Tự động cập nhật tiến độ giai đoạn và kế hoạch
+            TreatmentPlanStage stage = linkedPlanItem.getStage();
+            if (stage != null) {
+                List<TreatmentPlanItem> stageItems = stage.getItems();
+                boolean allDone = stageItems != null && !stageItems.isEmpty() &&
+                        stageItems.stream().allMatch(i -> i.getStatus() == TreatmentPlanItemStatus.COMPLETED);
+                if (allDone) {
+                    stage.setStatus(TreatmentPlanStageStatus.COMPLETED);
+                    stage.setCompletedAt(LocalDateTime.now());
+                } else {
+                    stage.setStatus(TreatmentPlanStageStatus.IN_PROGRESS);
                 }
-            });
+                treatmentPlanStageRepository.save(stage);
+
+                TreatmentPlan plan = stage.getPlan();
+                if (plan != null) {
+                    List<TreatmentPlanStage> allStages = plan.getStages();
+                    boolean allStagesDone = allStages != null && !allStages.isEmpty() &&
+                            allStages.stream().allMatch(s -> s.getStatus() == TreatmentPlanStageStatus.COMPLETED);
+                    if (allStagesDone) {
+                        plan.setStatus(TreatmentPlanStatus.COMPLETED);
+                    } else {
+                        plan.setStatus(TreatmentPlanStatus.IN_PROGRESS);
+                    }
+                    treatmentPlanRepository.save(plan);
+                }
+            }
         }
 
         PerformedService saved = performedServiceRepository.save(ps);
@@ -278,8 +373,13 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
     @Transactional
     public void cancelPerformedService(Long performedId) {
         log.info("Cancelling/Deleting performed service with id={}", performedId);
-        PerformedService ps = performedServiceRepository.findById(performedId)
+        PerformedService ps = performedServiceRepository.findByIdForUpdate(performedId)
+                .or(() -> performedServiceRepository.findById(performedId))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ thực hiện với ID: " + performedId));
+
+        if (ps.getStatus() == PerformedServiceStatus.CANCELLED) {
+            return;
+        }
 
         // Quy tắc BR-EMR-02: Khóa bất biến theo VisitStatus & trạng thái EMR
         com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
@@ -292,7 +392,7 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
             throw new IllegalStateException("Dịch vụ thực hiện đã được Kế toán xuất hóa đơn còn hiệu lực, không thể hủy hoặc xóa.");
         }
 
-        // Hoàn lại vật tư tiêu hao lâm sàng (nếu có) trước khi xóa
+        // Hoàn lại vật tư tiêu hao lâm sàng (nếu có) trước khi hủy
         revertMaterialConsumptions(ps);
 
         // Nếu dịch vụ này gắn với bước trong Kế hoạch điều trị (FT15), hoàn tác lại trạng thái nếu không còn dịch vụ khác thực hiện
@@ -336,10 +436,47 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
             }
         }
 
+        boolean hasAnyInvoiceHistory = invoiceItemRepository != null
+                && invoiceItemRepository.existsByPerformedService_PerformedId(performedId);
+        boolean hasParaclinicalLink = paraclinicalOrderItemRepository != null
+                && paraclinicalOrderItemRepository.existsByPerformedService_PerformedId(performedId);
+        boolean hasAnyCommissionHistory = serviceCommissionRepository != null
+                && !serviceCommissionRepository.findByPerformedService_PerformedId(performedId).isEmpty();
+
         if (serviceCommissionService != null) {
             serviceCommissionService.cancelPendingCommissionsForPerformedService(ps.getPerformedId());
         }
-        performedServiceRepository.delete(ps);
+
+        // Gỡ liên kết và hoàn tác trạng thái chỉ định cận lâm sàng nếu có để tránh kẹt COMPLETED không lập được hóa đơn
+        if (paraclinicalOrderItemRepository != null && ps.getVisit() != null && ps.getVisit().getVisitId() != null) {
+            List<ParaclinicalOrderItem> visitOrderItems = paraclinicalOrderItemRepository
+                    .findByOrder_Visit_VisitIdOrderByOrder_OrderIdDescOrderItemIdDesc(ps.getVisit().getVisitId());
+            if (visitOrderItems != null) {
+                for (ParaclinicalOrderItem orderItem : visitOrderItems) {
+                    if (orderItem.getPerformedService() != null
+                            && performedId.equals(orderItem.getPerformedService().getPerformedId())) {
+                        ParaclinicalOrderItem lockedItem = paraclinicalOrderItemRepository
+                                .findByIdForUpdate(orderItem.getOrderItemId()).orElse(orderItem);
+                        lockedItem.setPerformedService(null);
+                        if (lockedItem.getStatus() == com.cvdcms.entity.enums.ParaclinicalOrderItemStatus.COMPLETED) {
+                            lockedItem.setStatus(com.cvdcms.entity.enums.ParaclinicalOrderItemStatus.WAITING);
+                            lockedItem.setPerformedAt(null);
+                        }
+                        paraclinicalOrderItemRepository.save(lockedItem);
+                    }
+                }
+            }
+        }
+
+        boolean hasRemainingCommission = serviceCommissionRepository != null
+                && !serviceCommissionRepository.findByPerformedService_PerformedId(performedId).isEmpty();
+
+        if (hasAnyInvoiceHistory || hasParaclinicalLink || hasAnyCommissionHistory || hasRemainingCommission) {
+            ps.setStatus(PerformedServiceStatus.CANCELLED);
+            performedServiceRepository.save(ps);
+        } else {
+            performedServiceRepository.delete(ps);
+        }
     }
 
     private void recordMaterialConsumptions(
@@ -354,29 +491,39 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 || saved.getBranch() == null) {
             return;
         }
-        Long branchId = saved.getBranch().getBranchId();
-        java.time.LocalDate today = java.time.LocalDate.now();
+        // Gộp & khử trùng theo materialId theo thứ tự xác định để tránh vi phạm uk_mc_dedup và deadlock
+        java.util.Map<Long, BigDecimal> aggregatedUsages = new java.util.TreeMap<>();
         for (PerformedServiceRequestDTO.MaterialUsageDTO usage : usages) {
             if (usage == null || usage.getMaterialId() == null
                     || usage.getQuantity() == null || usage.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
-            Material material = materialRepository.findById(usage.getMaterialId())
-                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy vật tư ID: " + usage.getMaterialId()));
+            aggregatedUsages.merge(usage.getMaterialId(), usage.getQuantity(), BigDecimal::add);
+        }
+        if (aggregatedUsages.isEmpty()) {
+            return;
+        }
+        Long branchId = saved.getBranch().getBranchId();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        for (java.util.Map.Entry<Long, BigDecimal> entry : aggregatedUsages.entrySet()) {
+            Long materialId = entry.getKey();
+            BigDecimal requiredQty = entry.getValue();
+            Material material = materialRepository.findById(materialId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy vật tư ID: " + materialId));
             BranchInventory inventory = branchInventoryRepository.findForUpdate(branchId, material.getMaterialId())
                     .orElseThrow(() -> new IllegalStateException("Kho chi nhánh chưa có tồn kho vật tư: " + material.getMaterialName()));
             BigDecimal currentStock = inventory.getCurrentStock() != null ? inventory.getCurrentStock() : BigDecimal.ZERO;
-            if (currentStock.compareTo(usage.getQuantity()) < 0) {
-                throw new IllegalStateException("Kho chi nhánh không đủ vật tư tiêu hao '" + material.getMaterialName() + "' (Tồn: " + currentStock + ", Cần: " + usage.getQuantity() + ").");
+            if (currentStock.compareTo(requiredQty) < 0) {
+                throw new IllegalStateException("Kho chi nhánh không đủ vật tư tiêu hao '" + material.getMaterialName() + "' (Tồn: " + currentStock + ", Cần: " + requiredQty + ").");
             }
             List<MaterialBatch> batches = materialBatchRepository.findAvailableBatchesFefoForUpdate(branchId, material.getMaterialId(), today);
             BigDecimal totalBatchQty = batches.stream()
                     .map(b -> b.getQuantityRemaining() != null ? b.getQuantityRemaining() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            if (totalBatchQty.compareTo(usage.getQuantity()) < 0) {
+            if (totalBatchQty.compareTo(requiredQty) < 0) {
                 throw new IllegalStateException("Các lô còn hạn của vật tư '" + material.getMaterialName() + "' không đủ để trừ tiêu hao.");
             }
-            BigDecimal remainingToConsume = usage.getQuantity();
+            BigDecimal remainingToConsume = requiredQty;
             for (MaterialBatch batch : batches) {
                 if (remainingToConsume.compareTo(BigDecimal.ZERO) <= 0) break;
                 BigDecimal batchQty = batch.getQuantityRemaining() != null ? batch.getQuantityRemaining() : BigDecimal.ZERO;
@@ -401,7 +548,7 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
 
                 remainingToConsume = remainingToConsume.subtract(take);
             }
-            inventory.setCurrentStock(currentStock.subtract(usage.getQuantity()));
+            inventory.setCurrentStock(currentStock.subtract(requiredQty));
             branchInventoryRepository.save(inventory);
         }
     }
@@ -415,26 +562,54 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
             return;
         }
         java.time.LocalDate today = java.time.LocalDate.now();
-        for (MaterialConsumption mc : consumptions) {
-            BigDecimal qty = mc.getQuantity() != null ? mc.getQuantity() : BigDecimal.ZERO;
-            if (qty.compareTo(BigDecimal.ZERO) > 0 && mc.getBatch() != null && materialBatchRepository != null) {
-                MaterialBatch batch = materialBatchRepository.findByIdForUpdate(mc.getBatch().getBatchId()).orElse(mc.getBatch());
-                BigDecimal curBatch = batch.getQuantityRemaining() != null ? batch.getQuantityRemaining() : BigDecimal.ZERO;
-                batch.setQuantityRemaining(curBatch.add(qty));
-                if (batch.getExpiryDate() == null || !batch.getExpiryDate().isBefore(today)) {
-                    batch.setStatus(com.cvdcms.entity.enums.BatchStatus.ACTIVE);
+        // Khóa theo đúng thứ tự BranchInventory TRƯỚC rồi mới đến MaterialBatch (khớp recordMaterialConsumptions) để tránh deadlock
+        java.util.List<MaterialConsumption> sorted = new ArrayList<>(consumptions);
+        sorted.sort(java.util.Comparator
+                .comparing((MaterialConsumption mc) -> mc.getBranch() != null && mc.getBranch().getBranchId() != null ? mc.getBranch().getBranchId() : Long.MAX_VALUE)
+                .thenComparing(mc -> mc.getMaterial() != null && mc.getMaterial().getMaterialId() != null ? mc.getMaterial().getMaterialId() : Long.MAX_VALUE)
+                .thenComparing(mc -> mc.getBatch() != null && mc.getBatch().getBatchId() != null ? mc.getBatch().getBatchId() : Long.MAX_VALUE));
+
+        if (branchInventoryRepository != null) {
+            java.util.Map<String, BigDecimal> invRestores = new java.util.LinkedHashMap<>();
+            java.util.Map<String, Long[]> invKeys = new java.util.LinkedHashMap<>();
+            for (MaterialConsumption mc : sorted) {
+                BigDecimal qty = mc.getQuantity() != null ? mc.getQuantity() : BigDecimal.ZERO;
+                if (qty.compareTo(BigDecimal.ZERO) > 0 && mc.getBranch() != null && mc.getMaterial() != null
+                        && mc.getBranch().getBranchId() != null && mc.getMaterial().getMaterialId() != null) {
+                    String key = mc.getBranch().getBranchId() + ":" + mc.getMaterial().getMaterialId();
+                    invRestores.merge(key, qty, BigDecimal::add);
+                    invKeys.putIfAbsent(key, new Long[]{mc.getBranch().getBranchId(), mc.getMaterial().getMaterialId()});
                 }
-                materialBatchRepository.save(batch);
             }
-            if (qty.compareTo(BigDecimal.ZERO) > 0 && mc.getBranch() != null && mc.getMaterial() != null && branchInventoryRepository != null) {
-                branchInventoryRepository.findForUpdate(mc.getBranch().getBranchId(), mc.getMaterial().getMaterialId())
+            for (java.util.Map.Entry<String, BigDecimal> entry : invRestores.entrySet()) {
+                Long[] ids = invKeys.get(entry.getKey());
+                BigDecimal restoreQty = entry.getValue();
+                branchInventoryRepository.findForUpdate(ids[0], ids[1])
                         .ifPresent(inv -> {
                             BigDecimal cur = inv.getCurrentStock() != null ? inv.getCurrentStock() : BigDecimal.ZERO;
-                            inv.setCurrentStock(cur.add(qty));
+                            inv.setCurrentStock(cur.add(restoreQty));
                             branchInventoryRepository.save(inv);
                         });
             }
         }
+
+        if (materialBatchRepository != null) {
+            for (MaterialConsumption mc : sorted) {
+                BigDecimal qty = mc.getQuantity() != null ? mc.getQuantity() : BigDecimal.ZERO;
+                if (qty.compareTo(BigDecimal.ZERO) > 0 && mc.getBatch() != null) {
+                    MaterialBatch batch = materialBatchRepository.findByIdForUpdate(mc.getBatch().getBatchId()).orElse(mc.getBatch());
+                    BigDecimal curBatch = batch.getQuantityRemaining() != null ? batch.getQuantityRemaining() : BigDecimal.ZERO;
+                    batch.setQuantityRemaining(curBatch.add(qty));
+                    if (batch.getExpiryDate() != null && batch.getExpiryDate().isBefore(today)) {
+                        batch.setStatus(com.cvdcms.entity.enums.BatchStatus.EXPIRED);
+                    } else {
+                        batch.setStatus(com.cvdcms.entity.enums.BatchStatus.ACTIVE);
+                    }
+                    materialBatchRepository.save(batch);
+                }
+            }
+        }
+
         materialConsumptionRepository.deleteAll(consumptions);
     }
 

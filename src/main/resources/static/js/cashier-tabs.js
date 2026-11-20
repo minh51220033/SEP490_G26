@@ -209,6 +209,13 @@
         });
     }
 
+    window.changePageSize = function (newSize) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('size', newSize);
+        url.searchParams.set('page', '0');
+        window.location.href = url.toString();
+    };
+
     /**
      * Điền nhanh khoảng ngày vào 2 input Từ ngày / Đến ngày cho các bộ lọc Thu ngân
      */

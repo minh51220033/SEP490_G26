@@ -53,6 +53,8 @@ public interface InvoiceItemRepository extends JpaRepository<InvoiceItem, Long> 
             @Param("cancelledStatus") InvoiceStatus cancelledStatus
     );
 
+    boolean existsByPerformedService_PerformedId(Long performedId);
+
     default boolean existsByPerformedIdAndInvoiceNotCancelled(Long performedId) {
         return existsByPerformedIdAndInvoiceNotCancelled(performedId, InvoiceStatus.CANCELLED);
     }

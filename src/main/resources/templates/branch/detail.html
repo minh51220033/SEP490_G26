@@ -70,8 +70,8 @@
                     <span class="stat-card__icon"><i class="bi bi-person-check" aria-hidden="true"></i></span>
                 </article>
                 <article class="stat-card">
-                    <p class="stat-card__label">Vệ sinh / Bảo trì</p>
-                    <p class="stat-card__value" th:text="${cleaningChairs + maintenanceChairs}">0</p>
+                    <p class="stat-card__label">Bảo trì</p>
+                    <p class="stat-card__value" th:text="${maintenanceChairs}">0</p>
                     <span class="stat-card__icon"><i class="bi bi-tools" aria-hidden="true"></i></span>
                 </article>
             </section>
@@ -103,7 +103,6 @@
                             <div class="legend">
                                 <span><i class="legend__dot legend__dot--available"></i>Trống</span>
                                 <span><i class="legend__dot legend__dot--in_use"></i>Đang khám</span>
-                                <span><i class="legend__dot legend__dot--cleaning"></i>Đang vệ sinh</span>
                                 <span><i class="legend__dot legend__dot--maintenance"></i>Bảo trì</span>
                             </div>
                             <div class="d-flex gap-2">
@@ -543,7 +542,7 @@
                         <label for="chairStatus" class="form-label">Trạng thái</label>
                         <select id="chairStatus" name="status" class="form-select">
                             <option th:each="s : ${chairStatuses}" th:value="${s}"
-                                    th:text="${s.name() == 'AVAILABLE' ? 'Trống (Sẵn sàng)' : s.name() == 'IN_USE' ? 'Đang khám' : s.name() == 'CLEANING' ? 'Đang vệ sinh' : 'Bảo trì'}"></option>
+                                    th:text="${s.name() == 'AVAILABLE' ? 'Trống (Sẵn sàng)' : s.name() == 'IN_USE' ? 'Đang khám' : 'Bảo trì'}"></option>
                         </select>
                     </div>
                 </div>

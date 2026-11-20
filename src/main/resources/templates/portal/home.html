@@ -20,6 +20,14 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
     </div>
 </div>
+<div class="cv-container mt-3" id="directBranchSwitchAlert" style="display: none;">
+    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm border-0 mb-0"
+         style="border-radius: 14px; background: #dcfce7; color: #166534;" role="alert">
+        <i class="bi bi-check-circle-fill fs-5"></i>
+        <span class="fw-semibold" id="directBranchSwitchAlertText">Đã chuyển cơ sở thành công!</span>
+        <button type="button" class="btn-close" aria-label="Đóng" onclick="this.closest('#directBranchSwitchAlert').style.display='none'"></button>
+    </div>
+</div>
 
 <!-- ===================================================================== -->
 <!-- THANH TIỆN ÍCH CÁ NHÂN (CHỈ HIỂN THỊ KHI NGƯỜI DÙNG ĐÃ ĐĂNG NHẬP)      -->
@@ -35,10 +43,12 @@
                 Xin chào,
                 <strong th:text="${displayName != null and !#strings.isEmpty(displayName)
                         ? displayName : session.loggedInUser.username}">Khách hàng</strong>!
-                <span class="text-muted d-none d-md-inline"
-                      th:if="${currentPortalBranch != null}">
+                <span id="cvUserBarBranchWrap"
+                      class="text-muted d-none d-md-inline"
+                      th:style="${currentPortalBranch == null} ? 'display: none !important;' : ''">
                     · Cơ sở đang xem:
-                    <strong class="text-primary" th:text="${currentPortalBranch.branchName}">Cơ sở Cường Việt</strong>
+                    <strong id="cvUserBarBranchName" class="text-primary"
+                            th:text="${currentPortalBranch != null ? currentPortalBranch.branchName : 'Cơ sở Cường Việt'}">Cơ sở Cường Việt</strong>
                     <a href="#lien-he" class="ms-1 small text-decoration-underline">(Đổi cơ sở)</a>
                 </span>
             </span>
@@ -81,7 +91,8 @@
             <div class="cv-hero__content">
                 <span class="cv-pill-tag">
                     <span class="cv-pill-tag__dot"></span>
-                    <span th:text="${currentPortalBranch != null
+                    <span id="heroBranchPillText"
+                          th:text="${currentPortalBranch != null
                             ? 'Răng – Hàm – Mặt · ' + currentPortalBranch.branchName
                             : 'Răng – Hàm – Mặt · Bắc Giang'}">Răng – Hàm – Mặt · Bắc Giang</span>
                 </span>
@@ -93,17 +104,19 @@
 
                 <p class="cv-hero__desc">
                     Phòng khám Cường Việt do BS. Nguyễn Đình Toàn phụ trách — chăm sóc răng miệng cho cả gia đình, từ trẻ nhỏ đến ông bà.
-                    <span th:if="${currentPortalBranch != null and currentPortalBranch.address != null}"
+                    <span id="heroBranchAddressWrap"
+                          th:style="${currentPortalBranch == null or currentPortalBranch.address == null} ? 'display: none !important;' : ''"
                           class="d-block mt-1 small text-secondary">
                         <i class="bi bi-geo-alt-fill text-primary me-1"></i>
-                        <span th:text="${currentPortalBranch.branchName + ' — ' + currentPortalBranch.address}">Địa chỉ cơ sở</span>
+                        <span id="heroBranchAddressText"
+                              th:text="${currentPortalBranch != null and currentPortalBranch.address != null ? currentPortalBranch.branchName + ' — ' + currentPortalBranch.address : ''}">Địa chỉ cơ sở</span>
                     </span>
                 </p>
 
                 <div class="cv-hero__actions">
-                    <a th:href="'tel:' + ${effectivePhone}" class="cv-btn cv-btn--primary">
+                    <a id="heroCallLink" th:href="'tel:' + ${effectivePhone}" class="cv-btn cv-btn--primary">
                         <i class="bi bi-telephone-fill" aria-hidden="true"></i>
-                        <span th:text="'Gọi đặt lịch · ' + ${effectivePhone}">Gọi đặt lịch · 0987654321</span>
+                        <span id="heroCallText" th:text="'Gọi đặt lịch · ' + ${effectivePhone}">Gọi đặt lịch · 0987654321</span>
                     </a>
                     <button type="button" data-open-booking class="cv-btn cv-btn--secondary">
                         <i class="bi bi-calendar2-check" aria-hidden="true"></i> Đặt lịch khám
@@ -144,8 +157,8 @@
                 <div>
                     <p class="cv-section__eyebrow">
                         Dịch vụ
-                        <span th:if="${currentPortalBranch != null}"
-                              th:text="'· ' + ${currentPortalBranch.branchName}"></span>
+                        <span id="serviceSectionBranchLabel"
+                              th:text="${currentPortalBranch != null ? '· ' + currentPortalBranch.branchName : ''}"></span>
                     </p>
                     <h2 class="cv-section__title">Chúng tôi điều trị gì</h2>
                 </div>
@@ -327,14 +340,15 @@
     <!-- ================================================================= -->
     <!-- SECTION 4: ĐỘI NGŨ BÁC SĨ (LỌC THEO CƠ SỞ ĐANG CHỌN)              -->
     <!-- ================================================================= -->
+    <div id="homeDoctorsSlot">
     <section id="bac-si" class="cv-section" th:if="${featuredDoctors != null and !#lists.isEmpty(featuredDoctors)}">
         <div class="cv-container">
             <div class="cv-section__head">
                 <div>
                     <p class="cv-section__eyebrow">
                         Đội ngũ chuyên môn
-                        <span th:if="${currentPortalBranch != null}"
-                              th:text="'· ' + ${currentPortalBranch.branchName}"></span>
+                        <span id="doctorsSectionBranchLabel"
+                              th:text="${currentPortalBranch != null ? '· ' + currentPortalBranch.branchName : ''}"></span>
                     </p>
                     <h2 class="cv-section__title">Bác sĩ Răng – Hàm – Mặt trực tiếp điều trị</h2>
                 </div>
@@ -383,18 +397,20 @@
             </div>
         </div>
     </section>
+    </div>
 
     <!-- ================================================================= -->
     <!-- SECTION 5: TIN TỨC & KIẾN THỨC NHA KHOA (BỐ CỤC EDITORIAL NỔI BẬT)-->
     <!-- ================================================================= -->
+    <div id="homeNewsSlot">
     <section id="tin-tuc" class="cv-section" th:if="${latestNews != null and !#lists.isEmpty(latestNews)}">
         <div class="cv-container">
             <div class="cv-section__head">
                 <div>
                     <p class="cv-section__eyebrow">
                         Góc kiến thức
-                        <span th:if="${currentPortalBranch != null}"
-                              th:text="'· ' + ${currentPortalBranch.branchName}"></span>
+                        <span id="newsSectionBranchLabel"
+                              th:text="${currentPortalBranch != null ? '· ' + currentPortalBranch.branchName : ''}"></span>
                     </p>
                     <h2 class="cv-section__title">Tin tức &amp; Cẩm nang chăm sóc răng miệng</h2>
                 </div>
@@ -515,6 +531,7 @@
             </div>
         </div>
     </section>
+    </div>
 
     <!-- ================================================================= -->
     <!-- SECTION 6: GHÉ THĂM / HỆ THỐNG CƠ SỞ (SLIDER 2 BÊN + ĐỔI CƠ SỞ)   -->
@@ -613,25 +630,26 @@
                                 </div>
 
                                 <div class="d-flex flex-wrap gap-2 mt-4">
-                                    <!-- Nút Chuyển sang cơ sở này -->
+                                    <!-- Nút Chuyển sang cơ sở này: lưu trực tiếp tại Trang chủ qua AJAX -->
                                     <button type="button"
                                             th:if="${!isCurrentBranch}"
-                                            class="cv-btn cv-btn--primary"
-                                            data-switch-branch-btn
-                                            th:attr="data-target-branch-id=${br.branchId},
-                                                     data-target-branch-name=${br.branchName},
-                                                     data-current-branch-name=${currentPortalBranch != null ? currentPortalBranch.branchName : ''}">
+                                            data-direct-switch-branch
+                                            th:attr="data-branch-id=${br.branchId},
+                                                     data-branch-name=${br.branchName},
+                                                     data-authenticated=${session.loggedInUser != null}"
+                                            class="cv-btn cv-btn--primary">
                                         <i class="bi bi-arrow-left-right" aria-hidden="true"></i>
                                         Chuyển sang cơ sở này
                                     </button>
 
                                     <button type="button"
                                             th:if="${isCurrentBranch}"
+                                            data-current-branch-btn
                                             class="cv-btn cv-btn--primary"
                                             disabled
                                             style="opacity: 0.88; cursor: default;">
                                         <i class="bi bi-check2-circle" aria-hidden="true"></i>
-                                        Cơ sở hiện tại của bạn
+                                        Cơ sở hiện tại
                                     </button>
 
                                     <button type="button"
@@ -675,37 +693,11 @@
 </main>
 
 <!-- ===================================================================== -->
-<!-- MODAL XÁC NHẬN ĐỔI CƠ SỞ ("BẠN CÓ MUỐN ĐỔI TỪ CƠ SỞ A SANG B KHÔNG?") -->
-<!-- ===================================================================== -->
-<div class="cv-confirm-modal" id="switchBranchModal" role="dialog" aria-modal="true" aria-labelledby="switchBranchModalTitle">
-    <div class="cv-confirm-modal__dialog">
-        <div class="cv-confirm-modal__icon">
-            <i class="bi bi-buildings-fill" aria-hidden="true"></i>
-        </div>
-        <h3 class="cv-confirm-modal__title" id="switchBranchModalTitle">Xác nhận chuyển cơ sở</h3>
-        <p class="cv-confirm-modal__desc" id="switchBranchModalDesc">
-            Bạn có muốn đổi từ cơ sở A sang cơ sở B không?
-        </p>
-        <form th:action="@{/portal/switch-branch}" method="post" id="switchBranchForm">
-            <input type="hidden" name="branchId" id="switchBranchInputId" value="" />
-            <input type="hidden" name="redirectUrl" value="/#dich-vu" />
-            <div class="cv-confirm-modal__actions">
-                <button type="button" class="cv-btn cv-btn--card" id="cancelSwitchBranchBtn">
-                    Không, giữ nguyên
-                </button>
-                <button type="submit" class="cv-btn cv-btn--primary">
-                    <i class="bi bi-check2-circle" aria-hidden="true"></i>
-                    Có, chuyển cơ sở
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- ===================================================================== -->
 <!-- FOOTER DÙNG CHUNG CỦA HỆ THỐNG                                        -->
 <!-- ===================================================================== -->
+<div id="homeFooterSlot">
 <footer th:replace="~{fragments/footer :: siteFooter}"></footer>
+</div>
 
 <!-- ===================================================================== -->
 <!-- SLIDE-OVER DRAWER ĐẶT LỊCH KHÁM NHANH & TƯ VẤN                        -->
@@ -787,7 +779,15 @@
             </select>
         </div>
 
-        <!-- 3. Ngày mong muốn & Buổi khám -->
+        <!-- 3. Người khám (chọn từ hồ sơ của tài khoản khi đã đăng nhập; ẩn nhập tự do) -->
+        <div id="bkProfileGroup" class="cv-form-group" style="display: none;">
+            <label for="bkProfile" class="cv-form-label">
+                <i class="bi bi-person-vcard-fill text-primary me-1"></i> Người khám <span class="text-danger">*</span>
+            </label>
+            <select id="bkProfile" name="profileId" class="cv-form-select"></select>
+        </div>
+
+        <!-- 4. Ngày mong muốn & 5. Buổi khám -->
         <div class="cv-form-row-2">
             <div>
                 <label for="bkDate" class="cv-form-label">
@@ -807,7 +807,7 @@
             </div>
         </div>
 
-        <!-- 4. Bác sĩ đích danh & Giờ hẹn dự kiến -->
+        <!-- 6. Bác sĩ chỉ định & 7. Giờ hẹn dự kiến -->
         <div class="cv-form-row-2">
             <div>
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -816,7 +816,7 @@
                     </label>
                 </div>
                 <select id="bkDoctor" name="doctorId" class="cv-form-select">
-                    <option value="">Không yêu cầu bác sĩ</option>
+                    <option value="">Không yêu cầu bác sĩ cụ thể</option>
                 </select>
             </div>
             <div>
@@ -826,7 +826,7 @@
                     </label>
                 </div>
                 <select id="bkSlotTime" name="slotTime" class="cv-form-select">
-                    <option value="">Linh hoạt trong ca</option>
+                    <option value="">Đang tải giờ hẹn...</option>
                 </select>
             </div>
         </div>
@@ -834,8 +834,8 @@
         <!-- Thông báo kiểm tra lịch trực và khả năng tiếp nhận theo chính sách -->
         <div id="bkAvailabilityNotice" class="cv-drawer__notice" style="display: none;"></div>
 
-        <!-- 5. Thông tin bệnh nhân -->
-        <div class="cv-form-row-2">
+        <!-- Thông tin người đặt (chỉ hiển thị cho khách vãng lai chưa đăng nhập) -->
+        <div id="bkGuestContactRow" class="cv-form-row-2">
             <div>
                 <label for="bkName" class="cv-form-label">
                     <i class="bi bi-person-fill text-primary me-1"></i> Họ và tên <span class="text-danger">*</span>
@@ -844,7 +844,6 @@
                        name="name"
                        type="text"
                        required
-                       th:value="${displayName != null and !#strings.isEmpty(displayName) ? displayName : ''}"
                        placeholder="Nguyễn Văn A"
                        class="cv-form-input" />
             </div>
@@ -857,11 +856,12 @@
                        type="tel"
                        required
                        pattern="[0-9\s+.-]{8,15}"
-                       th:value="${defaultPatientProfile != null and defaultPatientProfile.phoneNumber != null ? defaultPatientProfile.phoneNumber : (session.loggedInUser != null and session.loggedInUser.phoneNumber != null ? session.loggedInUser.phoneNumber : '')}"
                        placeholder="0912 345 678"
                        class="cv-form-input" />
             </div>
         </div>
+
+        <!-- 8. Lý do đến khám / Triệu chứng ban đầu -->
 
         <div class="cv-form-group">
             <label for="bkNote" class="cv-form-label">
@@ -927,15 +927,37 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     (function () {
+        // 0. Toast thông báo dùng chung (khởi tạo đầu script để không gặp Temporal Dead Zone)
+        const toastEl = document.getElementById('bookingToast');
+        const toastTitleEl = toastEl ? toastEl.querySelector('.cv-toast__title') : null;
+        const toastDescEl = document.getElementById('bookingToastDesc');
+        const toastCloseEl = document.getElementById('bookingToastClose');
+        let toastTimer = null;
+
+        if (toastCloseEl) {
+            toastCloseEl.addEventListener('click', () => toastEl && toastEl.classList.remove('is-visible'));
+        }
+
+        function showToast(message, title = 'Đặt lịch thành công!') {
+            if (!toastEl) return;
+            if (toastTitleEl) toastTitleEl.textContent = title;
+            if (toastDescEl) toastDescEl.textContent = message;
+            toastEl.classList.add('is-visible');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toastEl && toastEl.classList.remove('is-visible'), 6000);
+        }
+
         // 1. Bộ lọc danh mục dịch vụ (Hiển thị tối đa 5 dịch vụ + ô CTA thứ 6 và đánh lại số thứ tự 01..05)
         const filterButtons = document.querySelectorAll('[data-service-filter]');
-        const serviceCards = document.querySelectorAll('[data-service-category]');
+        let activeServiceFilter = 'all';
 
         function applyServiceFilter(cat) {
+            activeServiceFilter = cat || 'all';
+            const serviceCards = document.querySelectorAll('#portalServicesBento [data-service-category]');
             let visibleCount = 0;
             serviceCards.forEach((card) => {
                 const cardCat = card.getAttribute('data-service-category');
-                const matches = (cat === 'all') || (cardCat === cat);
+                const matches = (activeServiceFilter === 'all') || (cardCat === activeServiceFilter);
                 if (matches && visibleCount < 5) {
                     visibleCount++;
                     card.classList.remove('is-hidden');
@@ -1022,44 +1044,282 @@
             }, { passive: true });
         }
 
-        // 3. Modal xác nhận "Chuyển sang cơ sở này"
-        const switchModal = document.getElementById('switchBranchModal');
-        const switchDesc = document.getElementById('switchBranchModalDesc');
-        const switchInputId = document.getElementById('switchBranchInputId');
-        const cancelSwitchBtn = document.getElementById('cancelSwitchBranchBtn');
+        // 3. Chuyển cơ sở trực tiếp tại Trang chủ (AJAX + CSRF + cập nhật DOM tại chỗ, KHÔNG reload trang)
+        const directSwitchAlert = document.getElementById('directBranchSwitchAlert');
+        const directSwitchAlertText = document.getElementById('directBranchSwitchAlertText');
+        let isBranchSwitchInFlight = false;
+        let branchSyncSeq = 0;
+        let branchSyncAbort = null;
 
-        document.querySelectorAll('[data-switch-branch-btn]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const targetId = btn.getAttribute('data-target-branch-id');
-                const targetName = btn.getAttribute('data-target-branch-name') || 'cơ sở mới';
-                const currentName = btn.getAttribute('data-current-branch-name');
+        // Xóa key cũ nếu còn sót từ phiên bản trước để không ảnh hưởng giao diện
+        try { sessionStorage.removeItem('cv_branch_switched_msg'); } catch (_) {}
 
-                if (switchInputId) switchInputId.value = targetId;
-                if (switchDesc) {
-                    if (currentName && currentName.trim().length > 0) {
-                        switchDesc.innerHTML = 'Bạn có muốn đổi từ cơ sở <strong>' + currentName + '</strong> sang cơ sở <strong>' + targetName + '</strong> không? Khi đồng ý, toàn bộ bác sĩ, tin tức, dịch vụ và thông tin liên hệ sẽ chuyển sang <strong>' + targetName + '</strong>.';
-                    } else {
-                        switchDesc.innerHTML = 'Bạn có muốn chuyển sang cơ sở <strong>' + targetName + '</strong> không? Khi đồng ý, toàn bộ bác sĩ, tin tức, dịch vụ và thông tin liên hệ sẽ hiển thị theo <strong>' + targetName + '</strong>.';
+        function getCsrfHeaders() {
+            const tokenMeta = document.querySelector('meta[name="_csrf"]');
+            const headerMeta = document.querySelector('meta[name="_csrf_header"]');
+            const headers = {};
+            if (tokenMeta && headerMeta && tokenMeta.content && headerMeta.content) {
+                headers[headerMeta.content] = tokenMeta.content;
+            }
+            return headers;
+        }
+
+        function showDirectSwitchAlert(message, isError = false) {
+            if (!directSwitchAlert || !directSwitchAlertText) return;
+            const box = directSwitchAlert.querySelector('.alert');
+            const icon = directSwitchAlert.querySelector('i');
+            if (box) {
+                box.style.background = isError ? '#fee2e2' : '#dcfce7';
+                box.style.color = isError ? '#991b1b' : '#166534';
+            }
+            if (icon) {
+                icon.className = isError ? 'bi bi-exclamation-triangle-fill fs-5' : 'bi bi-check-circle-fill fs-5';
+            }
+            directSwitchAlertText.textContent = message;
+            directSwitchAlert.style.display = '';
+        }
+
+        function updateHomeBranchCardsDom(data) {
+            const switchedBranchId = data && data.branchId != null ? String(data.branchId) : '';
+            const switchedBranchName = (data && data.branchName) || '';
+            const switchedBranchAddress = (data && data.branchAddress) || '';
+            const switchedBranchPhone = (data && data.branchPhone) || '';
+            const switchedOpeningHours = (data && data.openingHours) || '';
+
+            document.querySelectorAll('[data-branch-slide]').forEach((slide) => {
+                const slideBranchId = slide.getAttribute('data-branch-id');
+                const isTarget = String(slideBranchId) === switchedBranchId;
+                slide.setAttribute('data-is-current', isTarget ? 'true' : 'false');
+
+                const headerRow = slide.querySelector('.cv-visit__content > div');
+                const existingBadge = headerRow ? headerRow.querySelector('.cv-branch-active-badge') : null;
+                if (isTarget) {
+                    if (headerRow && !existingBadge) {
+                        const badge = document.createElement('span');
+                        badge.className = 'cv-branch-active-badge';
+                        badge.innerHTML = '<i class="bi bi-check-circle-fill" aria-hidden="true"></i> Đang xem cơ sở này';
+                        headerRow.appendChild(badge);
+                    }
+                } else if (existingBadge) {
+                    existingBadge.remove();
+                }
+
+                const switchBtn = slide.querySelector('[data-direct-switch-branch]');
+                const currentBtn = slide.querySelector('[data-current-branch-btn]');
+                const brName = slide.querySelector('.cv-visit__title')?.textContent?.trim() || 'cơ sở này';
+
+                if (isTarget) {
+                    if (switchBtn) {
+                        const lockedBtn = document.createElement('button');
+                        lockedBtn.type = 'button';
+                        lockedBtn.setAttribute('data-current-branch-btn', '');
+                        lockedBtn.className = 'cv-btn cv-btn--primary';
+                        lockedBtn.disabled = true;
+                        lockedBtn.style.opacity = '0.88';
+                        lockedBtn.style.cursor = 'default';
+                        lockedBtn.innerHTML = '<i class="bi bi-check2-circle" aria-hidden="true"></i> Cơ sở hiện tại';
+                        switchBtn.replaceWith(lockedBtn);
+                    } else if (currentBtn) {
+                        currentBtn.disabled = true;
+                        currentBtn.innerHTML = '<i class="bi bi-check2-circle" aria-hidden="true"></i> Cơ sở hiện tại';
+                    }
+                } else {
+                    if (currentBtn) {
+                        const nextBtn = document.createElement('button');
+                        nextBtn.type = 'button';
+                        nextBtn.setAttribute('data-direct-switch-branch', '');
+                        nextBtn.setAttribute('data-branch-id', slideBranchId || '');
+                        nextBtn.setAttribute('data-branch-name', brName);
+                        nextBtn.setAttribute('data-authenticated', 'true');
+                        nextBtn.className = 'cv-btn cv-btn--primary';
+                        nextBtn.innerHTML = '<i class="bi bi-arrow-left-right" aria-hidden="true"></i> Chuyển sang cơ sở này';
+                        currentBtn.replaceWith(nextBtn);
+                    } else if (switchBtn) {
+                        switchBtn.disabled = false;
+                        switchBtn.innerHTML = '<i class="bi bi-arrow-left-right" aria-hidden="true"></i> Chuyển sang cơ sở này';
                     }
                 }
-                if (switchModal) {
-                    switchModal.classList.add('is-open');
+            });
+
+            // Đồng bộ thanh tiện ích tài khoản, banner đầu trang, hotline và Hero theo cơ sở mới
+            const userBarWrap = document.getElementById('cvUserBarBranchWrap');
+            const userBarBranch = document.getElementById('cvUserBarBranchName');
+            if (userBarWrap && switchedBranchName) {
+                userBarWrap.style.removeProperty('display');
+            }
+            if (userBarBranch && switchedBranchName) {
+                userBarBranch.textContent = switchedBranchName;
+            }
+
+            const announcementStrong = document.querySelector('.announcement-bar p strong');
+            if (announcementStrong && switchedBranchName) {
+                announcementStrong.textContent = switchedBranchName;
+            }
+            const announcementHours = document.querySelector('.announcement-bar p span span');
+            if (announcementHours && switchedOpeningHours) {
+                announcementHours.textContent = switchedOpeningHours;
+            }
+
+            const heroPillText = document.getElementById('heroBranchPillText');
+            if (heroPillText && switchedBranchName) {
+                heroPillText.textContent = 'Răng – Hàm – Mặt · ' + switchedBranchName;
+            }
+            const heroAddrWrap = document.getElementById('heroBranchAddressWrap');
+            const heroAddrText = document.getElementById('heroBranchAddressText');
+            if (heroAddrWrap && heroAddrText && switchedBranchName && switchedBranchAddress) {
+                heroAddrText.textContent = switchedBranchName + ' — ' + switchedBranchAddress;
+                heroAddrWrap.style.removeProperty('display');
+            }
+
+            if (switchedBranchPhone) {
+                const navPhone = document.querySelector('.site-nav__phone');
+                if (navPhone) {
+                    navPhone.href = 'tel:' + switchedBranchPhone;
+                    const navSpan = navPhone.querySelector('span');
+                    if (navSpan) navSpan.textContent = switchedBranchPhone;
+                }
+                const heroCallLink = document.getElementById('heroCallLink');
+                const heroCallText = document.getElementById('heroCallText');
+                if (heroCallLink) heroCallLink.href = 'tel:' + switchedBranchPhone;
+                if (heroCallText) heroCallText.textContent = 'Gọi đặt lịch · ' + switchedBranchPhone;
+
+                const serviceCtaPhone = document.querySelector('.cv-service-cell__cta-phone');
+                if (serviceCtaPhone) {
+                    serviceCtaPhone.href = 'tel:' + switchedBranchPhone;
+                    serviceCtaPhone.textContent = 'Gọi ' + switchedBranchPhone;
+                }
+            }
+
+            ['serviceSectionBranchLabel', 'doctorsSectionBranchLabel', 'newsSectionBranchLabel'].forEach((elId) => {
+                const el = document.getElementById(elId);
+                if (el && switchedBranchName) {
+                    el.textContent = '· ' + switchedBranchName;
                 }
             });
+
+            // Đồng bộ sẵn chi nhánh mặc định trong Drawer đặt lịch nhanh
+            const drawerBranchEl = document.getElementById('bkBranch');
+            if (drawerBranchEl && switchedBranchId) {
+                drawerBranchEl.value = switchedBranchId;
+                if (typeof branchCustomSelect !== 'undefined' && branchCustomSelect) {
+                    branchCustomSelect.sync();
+                }
+                if (typeof updateBranchInfo === 'function') {
+                    updateBranchInfo();
+                }
+                if (typeof updateFullAppointmentUrl === 'function') {
+                    updateFullAppointmentUrl();
+                }
+            }
+        }
+
+        async function syncHomeBranchSections() {
+            const seq = ++branchSyncSeq;
+            if (branchSyncAbort) {
+                branchSyncAbort.abort();
+            }
+            branchSyncAbort = new AbortController();
+            try {
+                const res = await fetch('/?_=' + Date.now(), {
+                    headers: { 'Accept': 'text/html' },
+                    credentials: 'same-origin',
+                    signal: branchSyncAbort.signal
+                });
+                if (seq !== branchSyncSeq || !res.ok) return;
+                const html = await res.text();
+                if (seq !== branchSyncSeq || !html) return;
+
+                const parsed = new DOMParser().parseFromString(html, 'text/html');
+                if (!parsed.getElementById('branchCarousel')) return;
+
+                ['portalServicesBento', 'homeDoctorsSlot', 'homeNewsSlot', 'homeFooterSlot'].forEach((id) => {
+                    const currentEl = document.getElementById(id);
+                    const nextEl = parsed.getElementById(id);
+                    if (currentEl && nextEl) {
+                        currentEl.innerHTML = nextEl.innerHTML;
+                    }
+                });
+                applyServiceFilter(activeServiceFilter);
+
+                const nextCsrf = parsed.querySelector('meta[name="_csrf"]');
+                const curCsrf = document.querySelector('meta[name="_csrf"]');
+                if (nextCsrf && curCsrf && nextCsrf.content) {
+                    curCsrf.content = nextCsrf.content;
+                }
+            } catch (err) {
+                if (err && err.name !== 'AbortError') {
+                    console.warn('Could not background-sync branch sections:', err);
+                }
+            }
+        }
+
+        document.addEventListener('click', async (event) => {
+            const btn = event.target.closest('[data-direct-switch-branch]');
+            if (!btn) return;
+            event.preventDefault();
+
+            const branchId = btn.getAttribute('data-branch-id');
+            const isAuthenticated = btn.getAttribute('data-authenticated') === 'true';
+            if (!isAuthenticated) {
+                window.location.href = '/login';
+                return;
+            }
+            if (isBranchSwitchInFlight || !branchId || btn.disabled) return;
+
+            isBranchSwitchInFlight = true;
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Đang chuyển...';
+
+            try {
+                const res = await fetch('/portal/switch-branch/ajax', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        ...getCsrfHeaders()
+                    },
+                    body: new URLSearchParams({ branchId: String(branchId) }).toString()
+                });
+
+                if (res.status === 401 || (res.redirected && res.url && res.url.includes('/login'))) {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                const contentType = res.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                const data = await res.json().catch(() => ({}));
+                if (data && data.loginRequired) {
+                    window.location.href = data.loginUrl || '/login';
+                    return;
+                }
+                if (!res.ok || !data.success) {
+                    throw new Error((data && data.message) || 'Không thể chuyển sang cơ sở này.');
+                }
+
+                updateHomeBranchCardsDom(data);
+                const msg = data.message || `Đã chuyển sang cơ sở ${data.branchName} thành công!`;
+                showDirectSwitchAlert(msg, false);
+                showToast(msg, 'Chuyển cơ sở thành công!');
+                syncHomeBranchSections();
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                const errMsg = (err && err.message) || 'Không thể chuyển cơ sở lúc này.';
+                showDirectSwitchAlert(errMsg, true);
+                if (directSwitchAlert) {
+                    directSwitchAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            } finally {
+                isBranchSwitchInFlight = false;
+            }
         });
-
-        function closeSwitchModal() {
-            if (switchModal) switchModal.classList.remove('is-open');
-        }
-
-        if (cancelSwitchBtn) {
-            cancelSwitchBtn.addEventListener('click', closeSwitchModal);
-        }
-        if (switchModal) {
-            switchModal.addEventListener('click', (e) => {
-                if (e.target === switchModal) closeSwitchModal();
-            });
-        }
 
         // 4. Slide-over Drawer đặt lịch nhanh & Đồng bộ với /portal/appointments/new
         const drawer = document.getElementById('bookingDrawer');
@@ -1070,6 +1330,9 @@
         const branchBadge = document.getElementById('bkBranchBadge');
         const serviceSelect = document.getElementById('bkService');
         const serviceDetailBtn = document.getElementById('bkServiceDetailBtn');
+        const profileGroup = document.getElementById('bkProfileGroup');
+        const profileSelect = document.getElementById('bkProfile');
+        const guestContactRow = document.getElementById('bkGuestContactRow');
         const doctorSelect = document.getElementById('bkDoctor');
         const slotSelect = document.getElementById('bkSlotTime');
         const noticeEl = document.getElementById('bkAvailabilityNotice');
@@ -1092,6 +1355,8 @@
         let targetDoctorId = null;
         let targetDoctorName = null;
         let availSequence = 0;
+        let bookingContext = { authenticated: false, isPatientUser: false, profiles: [] };
+        let hasSessionConflict = false;
 
         // --- Custom Select Engine cho Drawer ---
         function removeVietnameseTones(str) {
@@ -1246,25 +1511,27 @@
                             title = remainingText;
                         }
                     }
+                } else if (config.type === 'profile') {
+                    title = rawText;
+                    desc = '';
+                    badge = null;
+                    badgeType = '';
                 } else if (config.type === 'slot') {
                     if (!value) {
-                        if (rawText.toLowerCase().includes('linh hoạt')) {
-                            title = 'Linh hoạt trong ca';
-                            desc = 'Khám theo thứ tự khi đến';
-                        } else if (rawText.toLowerCase().includes('không có giờ')) {
-                            title = 'Không có giờ trống';
-                            desc = 'Vui lòng đổi buổi khám';
+                        if (rawText.toLowerCase().includes('không còn giờ') || rawText.toLowerCase().includes('không có giờ')) {
+                            title = 'Không còn giờ hẹn khả dụng';
+                            desc = '';
                         } else if (rawText.toLowerCase().includes('đang tải')) {
                             title = 'Đang tải giờ trống...';
+                        } else if (rawText.toLowerCase().includes('không thể đặt thêm')) {
+                            title = rawText;
+                            desc = '';
                         }
                     } else {
-                        if (rawText.includes('·')) {
-                            const parts = rawText.split('·');
-                            title = parts[0].trim();
-                            const sub = parts[1].trim();
-                            badge = sub;
-                            if (sub.includes('1 chỗ')) badgeType = 'is-few';
-                        }
+                        title = rawText;
+                        desc = '';
+                        badge = null;
+                        badgeType = '';
                     }
                 }
 
@@ -1453,6 +1720,12 @@
             placeholder: 'Chọn dịch vụ quan tâm'
         });
 
+        const profileCustomSelect = profileSelect ? initBookingCustomSelect(profileSelect, {
+            type: 'profile',
+            search: false,
+            placeholder: 'Chọn người khám'
+        }) : null;
+
         const sessionCustomSelect = initBookingCustomSelect(sessionSelect, {
             type: 'session',
             search: false,
@@ -1498,14 +1771,78 @@
             const params = new URLSearchParams();
             if (branchSelect && branchSelect.value) params.set('branchId', branchSelect.value);
             if (serviceSelect && serviceSelect.value) params.set('serviceId', serviceSelect.value);
+            if (bookingContext.isPatientUser && profileSelect && profileSelect.value) params.set('profileId', profileSelect.value);
             if (doctorSelect && doctorSelect.value) params.set('doctorId', doctorSelect.value);
             if (dateInput && dateInput.value) params.set('date', dateInput.value);
             if (sessionSelect && sessionSelect.value) params.set('session', sessionSelect.value);
+            if (slotSelect && slotSelect.value) params.set('slotTime', slotSelect.value);
 
             const queryString = params.toString();
             const fullUrl = '/portal/appointments/new' + (queryString ? '?' + queryString : '');
             if (goFullPageBtn) goFullPageBtn.href = fullUrl;
-            if (nextLink) nextLink.href = fullUrl;
+        }
+
+        async function loadBookingContext(preferredProfileId = null) {
+            try {
+                const res = await fetch('/api/public/booking/context', { headers: { Accept: 'application/json' } });
+                const ctx = await res.json().catch(() => ({ authenticated: false, isPatientUser: false, profiles: [] }));
+                bookingContext = ctx || { authenticated: false, isPatientUser: false, profiles: [] };
+            } catch (_) {
+                bookingContext = { authenticated: false, isPatientUser: false, profiles: [] };
+            }
+
+            if (bookingContext.isPatientUser && profileGroup && profileSelect) {
+                const profiles = Array.isArray(bookingContext.profiles) ? bookingContext.profiles : [];
+                profileGroup.style.display = 'block';
+                if (guestContactRow) guestContactRow.style.display = 'none';
+                if (nameInput) nameInput.required = false;
+                if (phoneInput) phoneInput.required = false;
+
+                profileSelect.replaceChildren();
+                if (profiles.length === 0) {
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'Chưa có hồ sơ bệnh nhân — Vui lòng tạo tại Hồ sơ gia đình';
+                    profileSelect.appendChild(opt);
+                    profileSelect.disabled = true;
+                } else {
+                    const nameCounts = new Map();
+                    profiles.forEach(p => {
+                        const key = String(p.fullName || 'Bệnh nhân').trim().toLowerCase();
+                        nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
+                    });
+                    profiles.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = String(p.id);
+                        const fullName = p.fullName || 'Bệnh nhân';
+                        const relation = p.relation || (p.self ? 'Bản thân' : 'Người phụ thuộc');
+                        const key = fullName.trim().toLowerCase();
+                        opt.setAttribute('data-name', fullName);
+                        opt.setAttribute('data-phone', p.phoneNumber || '');
+                        opt.setAttribute('data-relation', relation);
+                        opt.setAttribute('data-code', p.code || '');
+                        opt.setAttribute('data-branch-id', p.branchId ? String(p.branchId) : '');
+                        opt.textContent = (nameCounts.get(key) || 0) > 1
+                            ? `${fullName} (${relation})`
+                            : fullName;
+                        profileSelect.appendChild(opt);
+                    });
+
+                    let defaultId = preferredProfileId ? String(preferredProfileId) : null;
+                    if (!defaultId || !profiles.some(p => String(p.id) === defaultId)) {
+                        const selfProf = profiles.find(p => p.self || p.defaultProfile) || profiles[0];
+                        defaultId = String(selfProf.id);
+                    }
+                    profileSelect.value = defaultId;
+                    profileSelect.disabled = false;
+                }
+                if (profileCustomSelect) profileCustomSelect.sync();
+            } else {
+                if (profileGroup) profileGroup.style.display = 'none';
+                if (guestContactRow) guestContactRow.style.display = '';
+                if (nameInput) nameInput.required = true;
+                if (phoneInput) phoneInput.required = true;
+            }
         }
 
         // Cập nhật thông tin chi tiết dịch vụ (link chi tiết cạnh dropdown)
@@ -1565,25 +1902,43 @@
                 if (seq !== availSequence) return;
                 const list = await res.json().catch(() => []);
 
-                slotSelect.innerHTML = '<option value="">Linh hoạt trong ca (Khám theo thứ tự đến)</option>';
+                slotSelect.replaceChildren();
                 if (Array.isArray(list) && list.length > 0) {
                     list.forEach(slot => {
                         const opt = document.createElement('option');
                         opt.value = slot.time;
-                        opt.textContent = `${slot.time} · còn ${slot.remaining} chỗ`;
+                        opt.textContent = slot.time;
                         slotSelect.appendChild(opt);
                     });
+
                     if (prevValue && list.some(s => s.time === prevValue)) {
                         slotSelect.value = prevValue;
+                    } else {
+                        slotSelect.value = list[0].time;
                     }
                     slotSelect.disabled = false;
+                    if (submitBtn && !hasSessionConflict) submitBtn.disabled = false;
                 } else {
-                    slotSelect.disabled = false;
+                    const emptyOpt = document.createElement('option');
+                    emptyOpt.value = '';
+                    emptyOpt.textContent = 'Không còn giờ hẹn khả dụng trong buổi này';
+                    slotSelect.appendChild(emptyOpt);
+                    slotSelect.value = '';
+                    slotSelect.disabled = true;
+                    if (submitBtn) submitBtn.disabled = true;
+                    if (noticeEl && !hasSessionConflict) {
+                        noticeEl.className = 'cv-drawer__notice is-warning';
+                        noticeEl.innerHTML = '<i class="bi bi-calendar-x-fill me-1"></i> Không còn giờ trống phù hợp với bác sĩ/thời lượng dịch vụ đã chọn. Vui lòng chọn giờ khác, bác sĩ khác hoặc buổi khác.';
+                        noticeEl.style.display = 'block';
+                    }
                 }
+                if (slotCustomSelect) slotCustomSelect.sync();
+                updateFullAppointmentUrl();
             } catch (err) {
                 if (seq === availSequence) {
-                    slotSelect.innerHTML = '<option value="">Linh hoạt trong ca</option>';
-                    slotSelect.disabled = false;
+                    slotSelect.innerHTML = '<option value="">Không tải được khung giờ</option>';
+                    slotSelect.disabled = true;
+                    if (slotCustomSelect) slotCustomSelect.sync();
                 }
             }
         }
@@ -1591,6 +1946,7 @@
         // Kiểm tra khả năng tiếp nhận và lịch làm việc của Bác sĩ (Availability)
         async function checkAvailability() {
             const seq = ++availSequence;
+            hasSessionConflict = false;
             if (!branchSelect || !dateInput || !sessionSelect) return;
             const branchId = branchSelect.value;
             const dateVal = dateInput.value;
@@ -1625,9 +1981,33 @@
                     date: dateVal,
                     sessionPeriod: sessionVal
                 });
+                if (bookingContext.isPatientUser && profileSelect && profileSelect.value) {
+                    params.set('profileId', profileSelect.value);
+                }
                 const res = await fetch(`/api/public/booking/availability?${params.toString()}`);
                 if (seq !== availSequence) return;
                 const data = await res.json().catch(() => ({ available: false }));
+
+                if (data.sameSessionConflict) {
+                    hasSessionConflict = true;
+                    if (noticeEl) {
+                        noticeEl.className = 'cv-drawer__notice is-error';
+                        noticeEl.innerHTML = `<i class="bi bi-exclamation-octagon-fill me-1"></i> ${data.conflictMessage || 'Người khám đã có lịch hẹn trong buổi này.'} <a href="/portal/appointments" class="fw-bold text-decoration-underline ms-1">Xem lịch hiện tại</a>`;
+                        noticeEl.style.display = 'block';
+                    }
+                    if (doctorSelect) {
+                        doctorSelect.innerHTML = '<option value="">Hồ sơ đã có lịch trong buổi này</option>';
+                        doctorSelect.disabled = true;
+                        if (typeof doctorCustomSelect !== 'undefined' && doctorCustomSelect) doctorCustomSelect.sync();
+                    }
+                    if (slotSelect) {
+                        slotSelect.innerHTML = '<option value="">Không thể đặt thêm cùng buổi</option>';
+                        slotSelect.disabled = true;
+                        if (slotCustomSelect) slotCustomSelect.sync();
+                    }
+                    if (submitBtn) submitBtn.disabled = true;
+                    return;
+                }
 
                 if (!data.available) {
                     if (noticeEl) {
@@ -1638,10 +2018,12 @@
                     if (doctorSelect) {
                         doctorSelect.innerHTML = '<option value="">Chưa có bác sĩ trực buổi này</option>';
                         doctorSelect.disabled = true;
+                        if (typeof doctorCustomSelect !== 'undefined' && doctorCustomSelect) doctorCustomSelect.sync();
                     }
                     if (slotSelect) {
                         slotSelect.innerHTML = '<option value="">Không có giờ trống</option>';
                         slotSelect.disabled = true;
+                        if (slotCustomSelect) slotCustomSelect.sync();
                     }
                     if (submitBtn) submitBtn.disabled = true;
                     return;
@@ -1764,6 +2146,13 @@
             updateFullAppointmentUrl();
             loadSlots(availSequence);
         });
+        if (profileSelect) profileSelect.addEventListener('change', () => {
+            updateFullAppointmentUrl();
+            checkAvailability();
+        });
+        if (slotSelect) slotSelect.addEventListener('change', () => {
+            updateFullAppointmentUrl();
+        });
 
         async function openBooking(opts = {}) {
             if (!drawer || !overlay) return;
@@ -1774,6 +2163,8 @@
             // 1. Lưu bác sĩ đích danh được chọn từ thẻ ngoài
             targetDoctorId = opts.doctorId ? String(opts.doctorId) : null;
             targetDoctorName = opts.doctorName || null;
+
+            await loadBookingContext(opts.profileId || null);
 
             // 2. Pre-fill Cơ sở (Branch)
             if (opts.branchId && branchSelect) {
@@ -1835,7 +2226,13 @@
             drawer.classList.add('is-open');
             overlay.classList.add('is-open');
             document.body.style.overflow = 'hidden';
-            setTimeout(() => nameInput && nameInput.focus(), 180);
+            setTimeout(() => {
+                if (!bookingContext.isPatientUser && nameInput) {
+                    nameInput.focus();
+                } else if (serviceSelect) {
+                    serviceSelect.focus();
+                }
+            }, 180);
         }
 
         function closeBooking() {
@@ -1846,24 +2243,24 @@
             document.body.style.overflow = '';
         }
 
-        openBtns.forEach((b) => {
-            b.addEventListener('click', (e) => {
-                e.preventDefault();
-                const serviceId = b.getAttribute('data-service-id');
-                const serviceName = b.getAttribute('data-service-name');
-                const doctorId = b.getAttribute('data-doctor-id');
-                const doctorName = b.getAttribute('data-doctor-name');
-                const branchId = b.getAttribute('data-branch-id');
-                const branchName = b.getAttribute('data-branch-name');
+        document.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-open-booking]');
+            if (!b) return;
+            e.preventDefault();
+            const serviceId = b.getAttribute('data-service-id');
+            const serviceName = b.getAttribute('data-service-name');
+            const doctorId = b.getAttribute('data-doctor-id');
+            const doctorName = b.getAttribute('data-doctor-name');
+            const branchId = b.getAttribute('data-branch-id');
+            const branchName = b.getAttribute('data-branch-name');
 
-                openBooking({
-                    serviceId: serviceId || null,
-                    serviceName: serviceName || null,
-                    doctorId: doctorId || null,
-                    doctorName: doctorName || null,
-                    branchId: branchId || null,
-                    branchName: branchName || null
-                });
+            openBooking({
+                serviceId: serviceId || null,
+                serviceName: serviceName || null,
+                doctorId: doctorId || null,
+                doctorName: doctorName || null,
+                branchId: branchId || null,
+                branchName: branchName || null
             });
         });
 
@@ -1873,27 +2270,12 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closeBooking();
-                closeSwitchModal();
             }
         });
 
         const submitSpinner = document.getElementById('bkSubmitSpinner');
         const submitIcon = document.getElementById('bkSubmitIcon');
         const submitText = document.getElementById('bkSubmitText');
-        const toast = document.getElementById('bookingToast');
-        const toastDesc = document.getElementById('bookingToastDesc');
-        const toastClose = document.getElementById('bookingToastClose');
-
-        if (toastClose) {
-            toastClose.addEventListener('click', () => toast && toast.classList.remove('is-visible'));
-        }
-
-        function showToast(message) {
-            if (!toast) return;
-            if (toastDesc) toastDesc.textContent = message;
-            toast.classList.add('is-visible');
-            setTimeout(() => toast && toast.classList.remove('is-visible'), 6000);
-        }
 
         // Tự động mở drawer nếu URL có query ?openBooking=true
         if (new URLSearchParams(window.location.search).get('openBooking') === 'true') {
@@ -1906,8 +2288,15 @@
                 if (errorEl) errorEl.classList.remove('is-visible');
                 if (successBox) successBox.classList.remove('is-visible');
 
-                const name = nameInput ? nameInput.value.trim() : '';
-                const phone = phoneInput ? phoneInput.value.trim() : '';
+                const isLoggedInPatient = Boolean(bookingContext && bookingContext.isPatientUser);
+                const selectedProfileId = isLoggedInPatient && profileSelect && profileSelect.value ? Number(profileSelect.value) : null;
+                const selectedOpt = isLoggedInPatient && profileSelect ? profileSelect.options[profileSelect.selectedIndex] : null;
+                const name = isLoggedInPatient
+                        ? (selectedOpt ? (selectedOpt.getAttribute('data-name') || '') : '')
+                        : (nameInput ? nameInput.value.trim() : '');
+                const phone = isLoggedInPatient
+                        ? (selectedOpt ? (selectedOpt.getAttribute('data-phone') || '') : '')
+                        : (phoneInput ? phoneInput.value.trim() : '');
                 const branchVal = branchSelect ? branchSelect.value : null;
                 const serviceVal = serviceSelect && serviceSelect.value ? serviceSelect.value : null;
                 const doctorVal = doctorSelect && doctorSelect.value ? doctorSelect.value : null;
@@ -1916,23 +2305,34 @@
                 const slotVal = slotSelect && slotSelect.value ? slotSelect.value : null;
                 const noteVal = noteInput ? noteInput.value.trim() : '';
 
-                if (!name || !phone) {
+                if (isLoggedInPatient && !selectedProfileId) {
                     if (errorEl) {
-                        errorEl.textContent = 'Vui lòng nhập đầy đủ họ tên và số điện thoại liên hệ.';
+                        errorEl.textContent = 'Vui lòng chọn hồ sơ người khám trong gia đình.';
                         errorEl.classList.add('is-visible');
                         errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }
                     return;
                 }
 
-                const digits = phone.replace(/\D/g, '');
-                if (digits.length < 9 || digits.length > 11) {
-                    if (errorEl) {
-                        errorEl.textContent = 'Số điện thoại chưa đúng định dạng (9–11 chữ số).';
-                        errorEl.classList.add('is-visible');
-                        errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                if (!isLoggedInPatient) {
+                    if (!name || !phone) {
+                        if (errorEl) {
+                            errorEl.textContent = 'Vui lòng nhập đầy đủ họ tên và số điện thoại liên hệ.';
+                            errorEl.classList.add('is-visible');
+                            errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                        return;
                     }
-                    return;
+
+                    const digits = phone.replace(/\D/g, '');
+                    if (digits.length < 9 || digits.length > 11) {
+                        if (errorEl) {
+                            errorEl.textContent = 'Số điện thoại chưa đúng định dạng (9–11 chữ số).';
+                            errorEl.classList.add('is-visible');
+                            errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                        return;
+                    }
                 }
 
                 if (!branchVal) {
@@ -1961,12 +2361,13 @@
                     const payload = {
                         branchId: Number(branchVal),
                         serviceId: serviceVal ? Number(serviceVal) : null,
+                        profileId: selectedProfileId,
                         doctorId: doctorVal ? Number(doctorVal) : null,
                         appointmentDate: dateVal,
                         preferredSession: sessionVal,
                         slotTime: slotVal || null,
-                        fullName: name,
-                        phoneNumber: phone,
+                        fullName: isLoggedInPatient ? null : name,
+                        phoneNumber: isLoggedInPatient ? null : phone,
                         note: noteVal || null
                     };
 
@@ -1994,9 +2395,17 @@
                         successBox.classList.add('is-visible');
                         successBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }
+                    if (actionNext && nextLink) {
+                        nextLink.href = data.appointmentId ? `/portal/appointments/${data.appointmentId}` : '/portal/appointments';
+                        nextLink.textContent = 'Xem lịch hẹn của tôi';
+                        actionNext.style.display = 'block';
+                    }
 
                     // Hiển thị Floating Toast trên trang
-                    showToast(`Đặt lịch thành công! Mã hẹn: ${appointmentCode}. Cơ sở sẽ liên hệ lại qua SĐT ${phone}.`);
+                    showToast(`Đặt lịch thành công! Mã hẹn: ${appointmentCode}.${phone ? ' Liên hệ: ' + phone : ''}`);
+
+                    // Cập nhật lại trạng thái slot/trùng buổi ngay sau khi đặt
+                    checkAvailability();
 
                     // Reset form fields
                     if (noteInput) noteInput.value = '';
@@ -2010,8 +2419,8 @@
                     }
 
                     setTimeout(() => {
-                        if (submitBtn) submitBtn.disabled = false;
-                        if (submitText) submitText.textContent = 'Gửi yêu cầu đặt lịch khác';
+                        if (submitBtn) submitBtn.disabled = hasSessionConflict;
+                        if (submitText) submitText.textContent = hasSessionConflict ? 'Đã đặt lịch trong buổi này' : 'Gửi yêu cầu đặt lịch khác';
                         if (submitIcon) submitIcon.className = 'bi bi-send-check me-1';
                     }, 4000);
 

@@ -58,9 +58,9 @@ public class PrescriptionRestController {
     @PostMapping("/prescriptions")
     public ResponseEntity<?> createPrescription(@RequestBody PrescriptionRequestDTO request, jakarta.servlet.http.HttpSession session) {
         if (request != null && request.getVisitId() != null) {
-            doctorVisitAccess.require(session, request.getVisitId());
+            doctorVisitAccess.requireActiveClinicalExam(session, request.getVisitId());
         } else if (request != null && request.getPatientId() != null) {
-            doctorVisitAccess.requirePatientWrite(session, request.getPatientId());
+            doctorVisitAccess.requirePatient(session, request.getPatientId());
         } else {
             doctorVisitAccess.requireAuthenticatedUser(session);
         }

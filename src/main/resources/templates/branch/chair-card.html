@@ -13,7 +13,6 @@
         <span class="chair-badge" th:classappend="'chair-badge--' + ${#strings.toLowerCase(chair.status.name())}"
               th:text="${chair.status.name() == 'AVAILABLE' ? 'Trống'
                       : chair.status.name() == 'IN_USE' ? 'Đang khám'
-                      : chair.status.name() == 'CLEANING' ? 'Vệ sinh'
                       : 'Bảo trì'}">Trống</span>
     </div>
 
@@ -23,7 +22,7 @@
         <select name="status" class="form-select form-select-sm" onchange="this.form.submit()"
                 aria-label="Đổi trạng thái ghế">
             <option th:each="s : ${chairStatuses}" th:value="${s}"
-                    th:text="${s.name() == 'AVAILABLE' ? 'Trống (Sẵn sàng)' : s.name() == 'IN_USE' ? 'Đang khám' : s.name() == 'CLEANING' ? 'Đang vệ sinh' : 'Bảo trì'}"
+                    th:text="${s.name() == 'AVAILABLE' ? 'Trống (Sẵn sàng)' : s.name() == 'IN_USE' ? 'Đang khám' : 'Bảo trì'}"
                     th:selected="${s == chair.status}"></option>
         </select>
     </form>

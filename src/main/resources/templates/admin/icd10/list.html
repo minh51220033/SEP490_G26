@@ -3,7 +3,7 @@
 
 <head th:replace="~{fragments/head :: head('Quản lý danh mục - Danh mục ICD-10')}"></head>
 
-<body class="app-body icd10-catalog-page">
+<body class="app-body icd10-catalog-page fin-brand-theme">
 <div class="app-shell">
 
   <aside th:replace="~{fragments/sidebar :: sidebar('catalogs')}"></aside>
@@ -39,31 +39,29 @@
       <div class="alert alert-danger" role="alert"
            th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
-      <section class="panel mb-4">
+      <section class="panel catalog-filter-panel p-0 mb-3">
         <h2 class="visually-hidden">Danh mục mã bệnh ICD-10</h2>
         <!-- TÌM KIẾM -->
-        <form th:action="@{/admin/icd10}" method="get" class="p-3 border-bottom">
+        <form th:action="@{/admin/icd10}" method="get" class="p-3">
           <div class="row g-2 align-items-end">
-            <div class="col-12 col-md-4 col-lg-3">
-              <label for="searchKeyword" class="form-label">Tìm kiếm</label>
-              <input id="searchKeyword" type="text" name="q" class="form-control"
-                     placeholder="Mã ICD-10, tên tiếng Việt, tiếng Anh..."
-                     th:value="${keyword}">
+            <div class="col-12 col-md-5 col-lg-4">
+              <label for="searchKeyword" class="form-label small text-muted mb-1">Tìm kiếm mã ICD-10</label>
+              <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input id="searchKeyword" type="text" name="q" class="form-control"
+                       placeholder="Mã ICD-10, tên tiếng Việt, tiếng Anh..."
+                       th:value="${keyword}">
+              </div>
             </div>
-            <div class="col-md-auto">
+            <div class="col-auto ms-auto d-flex gap-2">
               <button type="submit" class="btn btn-primary">
-                <i class="bi bi-search" aria-hidden="true"></i> Tìm
+                <i class="bi bi-funnel" aria-hidden="true"></i> Lọc
               </button>
-              <a th:href="@{/admin/icd10}" class="btn btn-outline-secondary ms-1">Bỏ lọc</a>
-            </div>
-            <div class="col-12 col-md-auto ms-md-auto d-flex align-items-center justify-content-end gap-2">
-              <button type="button" class="btn btn-primary"
-                      data-bs-toggle="modal" data-bs-target="#modalCreate">
-                <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm mã ICD-10
-              </button>
+              <a th:href="@{/admin/icd10}" class="btn btn-outline-secondary">Bỏ lọc</a>
             </div>
           </div>
         </form>
+      </section>
 
         <!-- BẢNG DỮ LIỆU ICD-10 (ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS) -->
       <div class="dv-grid-card">
@@ -72,8 +70,11 @@
             <span class="fw-bold text-dark fs-6">Danh mục mã bệnh ICD-10</span>
             <span class="badge bg-primary-subtle text-primary rounded-pill fw-bold" th:text="|Tổng ${#lists.size(diseases)}|">Tổng 0</span>
           </div>
-          <div class="small text-muted">
-            <i class="bi bi-info-circle me-1 text-primary"></i> Cuộn ngang để xem đầy đủ cột · Cột Thao tác được ghim cố định
+          <div class="fin-topbar-right">
+            <button type="button" class="btn btn-primary btn-sm fw-semibold d-inline-flex align-items-center gap-1"
+                    data-bs-toggle="modal" data-bs-target="#modalCreate">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm mã ICD-10
+            </button>
           </div>
         </div>
 
@@ -158,6 +159,7 @@
               </tr>
             </tbody>
           </table>
+        </div>
         <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS -->
         <div class="misa-pagination-footer">
           <!-- Bên trái: Tổng số -->

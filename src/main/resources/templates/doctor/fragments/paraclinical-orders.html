@@ -29,7 +29,7 @@
                     <i class="bi bi-arrow-clockwise me-1"></i>Làm mới kết quả
                 </button>
                 <button type="button" class="btn df-btn-tonal-primary btn-sm rounded-pill px-3 py-1 fw-semibold"
-                        th:if="${!isClinicalLocked}"
+                        th:if="${isClinicalLocked != true}"
                         onclick="openAddParaclinicalModal()">
                     <i class="bi bi-plus-circle me-1"></i>Thêm chỉ định
                 </button>
@@ -130,7 +130,7 @@
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-secondary"
                                             title="Tải ảnh kết quả / Chụp ảnh"
-                                            th:if="${!isClinicalLocked}"
+                                            th:if="${isClinicalLocked != true}"
                                             th:data-id="${ord.orderItemId}"
                                             th:data-service="${ord.serviceName}"
                                             onclick="openUploadParaclinicalImageModal(this.getAttribute('data-id'), this.getAttribute('data-service'))">
@@ -139,7 +139,7 @@
                                     <button type="button" class="btn btn-sm"
                                             th:classappend="${ord.status == 'COMPLETED'} ? 'btn-outline-success' : 'df-btn-tonal-primary'"
                                             th:title="${ord.status == 'COMPLETED'} ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'"
-                                            th:disabled="${isClinicalLocked}"
+                                            th:disabled="${isClinicalLocked == true}"
                                             th:data-id="${ord.orderItemId}"
                                             th:data-status="${ord.status}"
                                             onclick="toggleOrderStatus(this.getAttribute('data-id'), this.getAttribute('data-status'))">
@@ -147,7 +147,7 @@
                                     </button>
                                     <button type="button" class="df-btn-icon-muted ms-1"
                                             title="Xóa chỉ định này"
-                                            th:if="${!isClinicalLocked}"
+                                            th:if="${isClinicalLocked != true}"
                                             th:data-id="${ord.orderItemId}"
                                             onclick="deleteOrder(this.getAttribute('data-id'))">
                                         <i class="bi bi-trash3"></i>
@@ -180,6 +180,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                 </div>
                 <form id="addParaclinicalForm" novalidate onsubmit="event.preventDefault(); submitParaclinicalOrderModal();">
+                    <input type="hidden" id="pcoCreatedOrderItemId" value="">
                     <div class="modal-body p-4">
                         <div id="pcoOrderErrorAlert" class="alert alert-danger py-2 px-3 small d-none mb-3" role="alert"></div>
 
@@ -481,6 +482,18 @@
         if (modalEl) {
             const form = document.getElementById('addParaclinicalForm');
             if (form) form.reset();
+            const createdIdEl = document.getElementById('pcoCreatedOrderItemId');
+            if (createdIdEl) {
+                createdIdEl.value = '';
+                delete createdIdEl.dataset.orderCode;
+            }
+            const serviceSelect = document.getElementById('pcoServiceSelect');
+            if (serviceSelect) serviceSelect.disabled = false;
+            const submitBtn = document.getElementById('btnSubmitParaclinical');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Lưu chỉ định';
+            }
             const stageEl = document.getElementById('pcoOrderStageSelect');
             if (stageEl) stageEl.value = 'BEFORE';
             const catEl = document.getElementById('pcoOrderCategorySelect');
@@ -496,6 +509,11 @@
     }
 
     async function submitParaclinicalOrderModal() {
+        if (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể lưu chỉ định.');
+            return;
+        }
+        const createdIdEl = document.getElementById('pcoCreatedOrderItemId');
         const serviceSelect = document.getElementById('pcoServiceSelect');
         const toothInput = document.getElementById('pcoToothInput');
         const stageSelect = document.getElementById('pcoOrderStageSelect');
@@ -505,13 +523,15 @@
         const submitBtn = document.getElementById('btnSubmitParaclinical');
         const errBox = document.getElementById('pcoOrderErrorAlert');
 
+        let existingOrderItemId = createdIdEl && createdIdEl.value ? createdIdEl.value.trim() : '';
+        let orderCode = createdIdEl ? (createdIdEl.dataset.orderCode || '') : '';
         const serviceId = serviceSelect ? serviceSelect.value : null;
         const toothNumbers = toothInput ? toothInput.value.trim() : '';
         const stage = stageSelect ? stageSelect.value : 'BEFORE';
         const category = categorySelect ? categorySelect.value : 'OTHER';
         const notes = notesInput ? notesInput.value.trim() : '';
 
-        if (!serviceId) {
+        if (!existingOrderItemId && !serviceId) {
             if (errBox) {
                 errBox.textContent = 'Vui lòng chọn dịch vụ cận lâm sàng trước khi lưu.';
                 errBox.classList.remove('d-none');
@@ -528,40 +548,63 @@
 
         try {
             const visitId = (typeof getCurrentVisitId === 'function') ? getCurrentVisitId() : 1;
-            const res = await fetch(`/api/doctor/visits/${visitId}/paraclinical-orders`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    serviceId: parseInt(serviceId, 10),
-                    toothNumbers: toothNumbers,
-                    notes: notes
-                })
-            });
 
-            const data = await res.json();
-            if (!res.ok) {
-                if (errBox) {
-                    errBox.textContent = 'Không thể lưu chỉ định: ' + (data.message || 'Lỗi không xác định');
-                    errBox.classList.remove('d-none');
+            if (!existingOrderItemId) {
+                const res = await fetch(`/api/doctor/visits/${visitId}/paraclinical-orders`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        serviceId: parseInt(serviceId, 10),
+                        toothNumbers: toothNumbers,
+                        notes: notes
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    if (errBox) {
+                        errBox.textContent = 'Không thể lưu chỉ định: ' + (data.message || 'Lỗi không xác định');
+                        errBox.classList.remove('d-none');
+                    }
+                    return;
                 }
-                return;
+
+                existingOrderItemId = data.orderItemId ? String(data.orderItemId) : '';
+                orderCode = data.externalRefId || data.orderCode || '';
+                if (createdIdEl && existingOrderItemId) {
+                    createdIdEl.value = existingOrderItemId;
+                    createdIdEl.dataset.orderCode = orderCode;
+                }
+                if (serviceSelect && existingOrderItemId) {
+                    serviceSelect.disabled = true;
+                }
+            } else {
+                // Retry mode: cập nhật thông tin trên phiếu đã tạo, tuyệt đối không POST tạo phiếu trùng
+                await fetch(`/api/doctor/paraclinical-orders/${existingOrderItemId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        toothNumbers: toothNumbers,
+                        notes: notes
+                    })
+                }).catch(() => {});
             }
 
             let uploadedImg = false;
-            if (fileInput && fileInput.files && fileInput.files.length > 0 && data.orderItemId) {
+            if (fileInput && fileInput.files && fileInput.files.length > 0 && existingOrderItemId) {
                 const fd = new FormData();
                 fd.append('file', fileInput.files[0]);
                 fd.append('stage', stage);
                 fd.append('category', category);
                 if (notes) fd.append('resultSummary', notes);
-                const upRes = await fetch(`/api/doctor/paraclinical-orders/${data.orderItemId}/upload`, {
+                const upRes = await fetch(`/api/doctor/paraclinical-orders/${existingOrderItemId}/upload`, {
                     method: 'POST',
                     body: fd
                 });
                 if (!upRes.ok) {
                     const upErr = await upRes.json().catch(() => ({}));
                     if (errBox) {
-                        errBox.textContent = 'Đã tạo chỉ định nhưng tải ảnh đính kèm thất bại: ' + (upErr.message || 'Lỗi tải ảnh');
+                        errBox.textContent = `Đã tạo chỉ định${orderCode ? ' (' + orderCode + ')' : ''} nhưng tải ảnh đính kèm thất bại: ` + (upErr.message || 'Lỗi tải ảnh') + '. Bạn có thể chọn lại ảnh và nhấn "Thử tải ảnh lại" (không tạo trùng chỉ định).';
                         errBox.classList.remove('d-none');
                     }
                     await loadParaclinicalOrders();
@@ -570,16 +613,21 @@
                 uploadedImg = true;
             }
 
+            if (createdIdEl) {
+                createdIdEl.value = '';
+                delete createdIdEl.dataset.orderCode;
+            }
+            if (serviceSelect) serviceSelect.disabled = false;
+
             const modalEl = document.getElementById('addParaclinicalModal');
             if (modalEl) {
                 const modal = bootstrap.Modal.getInstance(modalEl);
                 if (modal) modal.hide();
             }
             if (typeof showToast === 'function') {
-                const code = data.externalRefId || data.orderCode || '';
                 showToast(uploadedImg
-                    ? `✓ Đã lưu chỉ định & đồng bộ ảnh (${code})`
-                    : `✓ Đã lưu chỉ định cận lâm sàng (${code})`);
+                    ? `✓ Đã lưu chỉ định & đồng bộ ảnh (${orderCode})`
+                    : `✓ Đã lưu chỉ định cận lâm sàng (${orderCode})`);
             }
             await loadParaclinicalOrders();
             if (uploadedImg && typeof window.reloadClinicalPhotos === 'function') {
@@ -588,13 +636,18 @@
         } catch (err) {
             console.error('Error creating paraclinical order:', err);
             if (errBox) {
-                errBox.textContent = 'Lỗi kết nối khi tạo chỉ định: ' + err.message;
+                errBox.textContent = existingOrderItemId
+                    ? 'Chỉ định đã được tạo nhưng lỗi kết nối khi tải ảnh: ' + err.message + '. Nhấn "Thử tải ảnh lại" để tiếp tục.'
+                    : 'Lỗi kết nối khi tạo chỉ định: ' + err.message;
                 errBox.classList.remove('d-none');
             }
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Lưu chỉ định';
+                const hasPendingOrder = createdIdEl && createdIdEl.value && createdIdEl.value.trim().length > 0;
+                submitBtn.innerHTML = hasPendingOrder
+                    ? '<i class="bi bi-cloud-arrow-up me-1"></i>Thử tải ảnh lại'
+                    : '<i class="bi bi-check2-circle me-1"></i>Lưu chỉ định';
             }
         }
     }
@@ -877,6 +930,10 @@
     }
 
     async function submitUploadParaclinicalImage() {
+        if (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tải thêm kết quả.');
+            return;
+        }
         const orderItemId = document.getElementById('uploadOrderItemId')?.value;
         const fileInput = document.getElementById('pcoImageFileInput');
         const stageSelect = document.getElementById('pcoUploadStageSelect');

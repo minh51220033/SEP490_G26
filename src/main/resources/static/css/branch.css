@@ -59,7 +59,6 @@
 
 .chair-card--available   { border-left-color: var(--success); }
 .chair-card--in_use      { border-left-color: #2563eb; }
-.chair-card--cleaning    { border-left-color: #f0a30a; }
 .chair-card--maintenance { border-left-color: #d64545; }
 
 .chair-badge {
@@ -72,14 +71,12 @@
 }
 .chair-badge--available   { background: #e3f6ed; color: #14744b; }
 .chair-badge--in_use      { background: #e1ebff; color: #1d4fc4; }
-.chair-badge--cleaning    { background: #fff3d6; color: #8a5a00; }
 .chair-badge--maintenance { background: #fde4e4; color: #a02727; }
 
 .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: .85rem; color: var(--muted); }
 .legend__dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
 .legend__dot--available   { background: var(--success); }
 .legend__dot--in_use      { background: #2563eb; }
-.legend__dot--cleaning    { background: #f0a30a; }
 .legend__dot--maintenance { background: #d64545; }
 
 .empty-hint {

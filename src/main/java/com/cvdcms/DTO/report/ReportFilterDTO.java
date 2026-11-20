@@ -5,7 +5,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.format.annotation.DateTimeFormat;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
@@ -26,11 +25,6 @@ public class ReportFilterDTO {
      * overview, financial, operational, debts
      */
     private String tab = "overview";
-
-    /**
-     * Thuế suất TNDN (%) áp dụng: mặc định 20%
-     */
-    private BigDecimal taxRate = BigDecimal.valueOf(20);
 
     /**
      * Định dạng xuất Excel: xlsx

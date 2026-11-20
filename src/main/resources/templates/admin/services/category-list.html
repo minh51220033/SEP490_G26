@@ -18,30 +18,25 @@
       <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
       <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
 
-      <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN QUẢN LÝ DANH MỤC -->
-      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-        <div class="d-flex align-items-center gap-3">
-          <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
-            <i class="bi bi-grid-3x3-gap-fill"></i>
-          </div>
-          <div>
-            <h1 class="dv-page-title mb-0">Quản lý nhóm dịch vụ</h1>
-            <p class="dv-page-subtitle">Quản lý phân nhóm chuyên khoa, kỹ thuật và cấu trúc danh mục dịch vụ</p>
-          </div>
-        </div>
+      <!-- BREADCRUMB & BỘ CHỌN CƠ SỞ PHÍA TRÊN CÙNG -->
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a th:href="@{/admin/services/categories}">Quản lý danh mục</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Nhóm dịch vụ</li>
+          </ol>
+        </nav>
         <div class="d-flex align-items-center gap-2">
           <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-          <a th:href="@{/admin/services/categories}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
-            <i class="bi bi-arrow-clockwise"></i> Làm mới
-          </a>
-          <button type="button" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createCategoryModal" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
-            <i class="bi bi-plus-lg"></i> Thêm mới nhóm dịch vụ
-          </button>
         </div>
       </div>
 
+      <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
+      <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('categories')}"></nav>
+
       <!-- 4 THẺ KPI TỔNG QUAN -->
-      <div class="row g-3 mb-4">
+      <div class="row g-3 mb-3">
         <div class="col-xl-3 col-sm-6">
           <a th:href="@{/admin/services/categories}" class="text-decoration-none">
             <div class="dv-kpi-card" style="--kpi-accent: #0284c7;" th:classappend="${selectedActive == null} ? 'active-kpi' : ''">
@@ -100,9 +95,6 @@
         </div>
       </div>
 
-      <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
-      <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('categories')}"></nav>
-
       <!-- THÔNG BÁO -->
       <div class="alert alert-success"
            role="status"
@@ -121,7 +113,7 @@
         <!-- TÌM KIẾM & BỘ LỌC NHÓM DỊCH VỤ -->
         <form th:action="@{/admin/services/categories}"
               method="get"
-              class="p-3 border-bottom">
+              class="p-3">
 
           <div class="row g-2 align-items-end">
 
@@ -156,7 +148,7 @@
             </div>
 
             <!-- 3. Nút Lọc và Bỏ lọc -->
-            <div class="col-auto d-flex gap-2">
+            <div class="col-auto ms-auto d-flex gap-2">
               <button type="submit" class="btn btn-primary">
                 <i class="bi bi-funnel" aria-hidden="true"></i>
                 Lọc
@@ -178,8 +170,10 @@
             <span class="fw-bold text-dark fs-6">Danh sách nhóm dịch vụ</span>
             <span class="badge bg-primary-subtle text-primary rounded-pill fw-bold" th:text="|Tổng ${#lists.size(categories)}|">Tổng 0</span>
           </div>
-          <div class="small text-muted">
-            <i class="bi bi-info-circle me-1 text-primary"></i> Cuộn ngang để xem đầy đủ cột · Cột Thao tác được ghim cố định
+          <div class="fin-topbar-right">
+            <button type="button" class="btn btn-primary btn-sm fw-semibold d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createCategoryModal">
+              <i class="bi bi-plus-lg"></i> Thêm mới nhóm dịch vụ
+            </button>
           </div>
         </div>
 
@@ -203,8 +197,8 @@
               <th scope="col" data-column-key="status">
                 <div class="dv-th-inner"><span>Trạng thái</span></div>
               </th>
-              <th scope="col" class="text-end" data-column-key="actions" data-column-action="true" style="min-width: 130px;">
-                <div class="dv-th-inner justify-content-end"><span>Thao tác</span></div>
+              <th scope="col" class="text-center" data-column-key="actions" data-column-action="true" style="min-width: 130px;">
+                <div class="dv-th-inner justify-content-center"><span>Thao tác</span></div>
               </th>
             </tr>
             </thead>
@@ -240,8 +234,8 @@
                 </span>
               </td>
 
-              <td data-column-key="actions" data-column-action="true" class="text-end text-nowrap">
-                <div class="d-inline-flex align-items-center justify-content-end gap-1 flex-nowrap">
+              <td data-column-key="actions" data-column-action="true" class="text-center text-nowrap">
+                <div class="d-inline-flex align-items-center justify-content-center gap-1 flex-nowrap">
 
                   <!-- Sửa: icon bút chì, viền xanh -->
                   <a th:href="@{/admin/services/categories/{id}/edit(id=${category.categoryId})}"

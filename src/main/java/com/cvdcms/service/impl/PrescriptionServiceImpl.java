@@ -33,6 +33,18 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     private org.springframework.context.ApplicationEventPublisher careEventPublisher;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private CustomerCareTaskRepository customerCareTaskRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private InvoiceRepository invoiceRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private InvoiceItemRepository invoiceItemRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private StaffBranchAssignmentRepository staffBranchAssignmentRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private DoctorCoverGrantRepository doctorCoverGrantRepository;
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -64,15 +76,21 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     @Override
     @Transactional
     public PrescriptionResponseDTO createPrescription(PrescriptionRequestDTO request) {
-        Visit visit = null;
+        if (request == null) {
+            throw new IllegalArgumentException("Dữ liệu đơn thuốc không hợp lệ!");
+        }
+        Visit visit;
         if (request.getVisitId() != null) {
             visit = visitRepository.findById(request.getVisitId())
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám để kê đơn thuốc!"));
-        }
-        if (visit == null && request.getPatientId() != null) {
-            visit = visitRepository.findFirstByPatientProfile_ProfileIdOrderByCheckInAtDesc(request.getPatientId()).orElse(null);
-        }
-        if (visit == null && request.getPatientId() == null) {
+            if (request.getPatientId() != null && visit.getPatientProfile() != null
+                    && !visit.getPatientProfile().getProfileId().equals(request.getPatientId())) {
+                throw new IllegalArgumentException("Ca khám không thuộc về hồ sơ bệnh nhân được chọn!");
+            }
+        } else if (request.getPatientId() != null) {
+            visit = visitRepository.findFirstByPatientProfile_ProfileIdOrderByCheckInAtDesc(request.getPatientId())
+                    .orElseThrow(() -> new IllegalArgumentException("Bệnh nhân chưa có ca khám nào để kê đơn thuốc!"));
+        } else {
             throw new IllegalArgumentException("Không tìm thấy ca khám hoặc hồ sơ bệnh nhân để kê đơn thuốc!");
         }
 
@@ -82,27 +100,33 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 emrRecordRepository,
                 "Bệnh án lâm sàng đã hoàn tất và khóa bất biến. Không thể tạo đơn thuốc mới");
 
-        PatientProfile patient = (visit != null && visit.getPatientProfile() != null)
+        PatientProfile patient = visit.getPatientProfile() != null
                 ? visit.getPatientProfile()
                 : (request.getPatientId() != null ? patientProfileRepository.findById(request.getPatientId()).orElse(null) : null);
         if (patient == null) {
             throw new IllegalArgumentException("Không tìm thấy hồ sơ bệnh nhân!");
         }
 
+        Branch targetBranch = visit.getBranch() != null ? visit.getBranch() : patient.getPreferredBranch();
+        if (targetBranch == null) {
+            throw new IllegalArgumentException("Không xác định được chi nhánh của ca khám để kê đơn thuốc!");
+        }
+
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new IllegalArgumentException("Đơn thuốc phải có ít nhất 1 loại thuốc!");
         }
 
-        StaffProfile doctor = null;
+        StaffProfile doctor;
         if (request.getDoctorId() != null) {
             doctor = staffProfileRepository.findById(request.getDoctorId())
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin bác sĩ kê đơn!"));
-        } else if (visit != null) {
+        } else {
             doctor = visit.getPrimaryDoctor();
         }
         if (doctor == null) {
             throw new IllegalArgumentException("Vui lòng chọn bác sĩ kê đơn!");
         }
+        validateDoctorForPrescription(doctor, visit, targetBranch);
 
         validatePatientAllergySafety(patient, request);
 
@@ -110,7 +134,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         prescription.setPrescriptionCode("DT" + (System.currentTimeMillis() % 10000000));
         prescription.setVisit(visit);
         prescription.setPatientProfile(patient);
-        prescription.setBranch(visit != null && visit.getBranch() != null ? visit.getBranch() : patient.getPreferredBranch());
+        prescription.setBranch(targetBranch);
         prescription.setDoctor(doctor);
         prescription.setDiagnosisText(
                 (request.getDiagnosisText() != null && !request.getDiagnosisText().trim().isEmpty())
@@ -184,10 +208,13 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                                         ? med.getUsageInstruction() : "Uống sau khi ăn")
                 );
 
-                // Ưu tiên giá bán niêm yết trên danh mục Medication nếu thuốc liên kết danh mục
-                BigDecimal unitPrice = null;
-                if (med != null && med.getSalePrice() != null && med.getSalePrice().compareTo(BigDecimal.ZERO) > 0) {
-                    unitPrice = med.getSalePrice();
+                // Với thuốc trong danh mục (med != null), luôn dùng giá niêm yết Medication.salePrice trên server
+                if (itemDTO.getUnitPrice() != null && itemDTO.getUnitPrice().compareTo(BigDecimal.ZERO) < 0) {
+                    throw new IllegalArgumentException("Đơn giá thuốc không được âm!");
+                }
+                BigDecimal unitPrice;
+                if (med != null) {
+                    unitPrice = med.getSalePrice() != null ? med.getSalePrice() : BigDecimal.ZERO;
                 } else if (itemDTO.getUnitPrice() != null && itemDTO.getUnitPrice().compareTo(BigDecimal.ZERO) > 0) {
                     unitPrice = itemDTO.getUnitPrice();
                 } else {
@@ -233,6 +260,48 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 "Cảnh báo dị ứng: Bệnh nhân có tiền sử dị ứng (" + desc + "). Vui lòng kiểm tra kỹ hoạt chất và xác nhận trước khi kê đơn!");
     }
 
+    private void validateDoctorForPrescription(StaffProfile doctor, Visit visit, Branch targetBranch) {
+        if (doctor.getStatus() != com.cvdcms.entity.enums.StaffStatus.ACTIVE) {
+            throw new IllegalArgumentException("Bác sĩ kê đơn hiện không ở trạng thái hoạt động.");
+        }
+        if (doctor.getUser() != null && Boolean.FALSE.equals(doctor.getUser().getIsActive())) {
+            throw new IllegalArgumentException("Tài khoản bác sĩ kê đơn đã bị khóa.");
+        }
+        if (visit != null && visit.getPrimaryDoctor() != null
+                && doctor.getStaffId().equals(visit.getPrimaryDoctor().getStaffId())) {
+            return;
+        }
+        if (visit != null && doctorCoverGrantRepository != null && doctorCoverGrantRepository
+                .existsByVisitVisitIdAndCoveringDoctorStaffIdAndRevokedAtIsNullAndExpiresAtAfter(
+                        visit.getVisitId(), doctor.getStaffId(), LocalDateTime.now())) {
+            return;
+        }
+        Long branchId = targetBranch != null ? targetBranch.getBranchId() : null;
+        if (branchId == null) {
+            return;
+        }
+        boolean hasBranchMetadata = false;
+        if (doctor.getUser() != null && doctor.getUser().getBranch() != null) {
+            hasBranchMetadata = true;
+            if (branchId.equals(doctor.getUser().getBranch().getBranchId())) {
+                return;
+            }
+        }
+        if (staffBranchAssignmentRepository != null) {
+            List<Long> branchIds = staffBranchAssignmentRepository.findActiveBranchIdsByStaffId(
+                    doctor.getStaffId(), com.cvdcms.entity.enums.AssignmentStatus.ACTIVE);
+            if (branchIds != null && !branchIds.isEmpty()) {
+                hasBranchMetadata = true;
+                if (branchIds.contains(branchId)) {
+                    return;
+                }
+            }
+        }
+        if (hasBranchMetadata) {
+            throw new IllegalArgumentException("Bác sĩ kê đơn không thuộc chi nhánh của ca khám.");
+        }
+    }
+
     @Override
     @Transactional
     public void deletePrescription(Long prescriptionId) {
@@ -245,8 +314,9 @@ public class PrescriptionServiceImpl implements PrescriptionService {
                 "Bệnh án lâm sàng đã khóa bất biến. Không thể xóa đơn thuốc");
 
         if (prescription.getStatus() == com.cvdcms.entity.enums.PrescriptionStatus.CLINIC_PURCHASE_PARTIAL
-                || prescription.getStatus() == com.cvdcms.entity.enums.PrescriptionStatus.CLINIC_PURCHASE_COMPLETED) {
-            throw new IllegalStateException("Đơn thuốc đã phát sinh mua/xuất tại phòng khám, không thể xóa.");
+                || prescription.getStatus() == com.cvdcms.entity.enums.PrescriptionStatus.CLINIC_PURCHASE_COMPLETED
+                || prescription.getStatus() == com.cvdcms.entity.enums.PrescriptionStatus.DISPENSED) {
+            throw new IllegalStateException("Đơn thuốc đã phát sinh mua/xuất/cấp phát tại phòng khám, không thể xóa.");
         }
         boolean anyBought = prescription.getItems() != null && prescription.getItems().stream()
                 .anyMatch(it -> it.getBoughtQuantity() != null && it.getBoughtQuantity().compareTo(BigDecimal.ZERO) > 0);
@@ -254,8 +324,88 @@ public class PrescriptionServiceImpl implements PrescriptionService {
             throw new IllegalStateException("Đơn thuốc đã có dòng thuốc được lập hóa đơn/xuất bán, không thể xóa.");
         }
 
+        assertNotReferencedByActiveInvoices(prescription);
+        deleteLinkedCareTasks(prescription);
+
         prescriptionRepository.delete(prescription);
         log.info("Đã xóa đơn thuốc ID: {}", prescriptionId);
+    }
+
+    private void assertNotReferencedByActiveInvoices(Prescription prescription) {
+        Long prescriptionId = prescription.getPrescriptionId();
+        if (prescriptionId == null) {
+            return;
+        }
+        if (invoiceRepository != null && prescription.getPatientProfile() != null) {
+            List<Invoice> activeInvoices = invoiceRepository.findByPatientProfile_ProfileIdAndStatusNotOrderByIssuedAtDesc(
+                    prescription.getPatientProfile().getProfileId(),
+                    com.cvdcms.entity.enums.InvoiceStatus.CANCELLED
+            );
+            if (activeInvoices != null) {
+                for (Invoice inv : activeInvoices) {
+                    if (inv.getPrescription() != null && prescriptionId.equals(inv.getPrescription().getPrescriptionId())) {
+                        throw new IllegalStateException("Đơn thuốc đã được lập hóa đơn, không thể xóa.");
+                    }
+                    if (invoiceItemRepository != null) {
+                        List<InvoiceItem> items = invoiceItemRepository.findByInvoice_InvoiceId(inv.getInvoiceId());
+                        if (items != null) {
+                            boolean linked = items.stream().anyMatch(ii ->
+                                    ii.getPrescriptionItem() != null
+                                            && ii.getPrescriptionItem().getPrescription() != null
+                                            && prescriptionId.equals(ii.getPrescriptionItem().getPrescription().getPrescriptionId()));
+                            if (linked) {
+                                throw new IllegalStateException("Đơn thuốc đã có dòng thuốc được lập hóa đơn, không thể xóa.");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (entityManager != null) {
+            Long directCount = entityManager.createQuery(
+                            "SELECT COUNT(i) FROM Invoice i WHERE i.prescription.prescriptionId = :pid AND i.status <> :cancelled",
+                            Long.class)
+                    .setParameter("pid", prescriptionId)
+                    .setParameter("cancelled", com.cvdcms.entity.enums.InvoiceStatus.CANCELLED)
+                    .getSingleResult();
+            if (directCount != null && directCount > 0) {
+                throw new IllegalStateException("Đơn thuốc đã được lập hóa đơn, không thể xóa.");
+            }
+            Long itemCount = entityManager.createQuery(
+                            "SELECT COUNT(ii) FROM InvoiceItem ii WHERE ii.prescriptionItem.prescription.prescriptionId = :pid AND ii.invoice.status <> :cancelled",
+                            Long.class)
+                    .setParameter("pid", prescriptionId)
+                    .setParameter("cancelled", com.cvdcms.entity.enums.InvoiceStatus.CANCELLED)
+                    .getSingleResult();
+            if (itemCount != null && itemCount > 0) {
+                throw new IllegalStateException("Đơn thuốc đã có dòng thuốc được lập hóa đơn, không thể xóa.");
+            }
+        }
+    }
+
+    private void deleteLinkedCareTasks(Prescription prescription) {
+        Long prescriptionId = prescription.getPrescriptionId();
+        if (prescriptionId == null) {
+            return;
+        }
+        if (customerCareTaskRepository != null && prescription.getPatientProfile() != null) {
+            List<CustomerCareTask> patientTasks = customerCareTaskRepository.findByPatientProfileIdWithDetails(
+                    prescription.getPatientProfile().getProfileId());
+            if (patientTasks != null && !patientTasks.isEmpty()) {
+                List<CustomerCareTask> toDelete = patientTasks.stream()
+                        .filter(t -> t.getPrescription() != null && prescriptionId.equals(t.getPrescription().getPrescriptionId()))
+                        .collect(Collectors.toList());
+                if (!toDelete.isEmpty()) {
+                    customerCareTaskRepository.deleteAll(toDelete);
+                    customerCareTaskRepository.flush();
+                }
+            }
+        }
+        if (entityManager != null) {
+            entityManager.createQuery("DELETE FROM CustomerCareTask t WHERE t.prescription.prescriptionId = :pid")
+                    .setParameter("pid", prescriptionId)
+                    .executeUpdate();
+        }
     }
 
     private MedicationDTO mapToMedicationDTO(Medication entity) {

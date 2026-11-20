@@ -50,7 +50,8 @@ public class QueueWorkflowController {
         var nextByDoctor = new LinkedHashMap<Long, Long>();
         board.tickets().stream()
                 .filter(ticket -> ticket.getStatus() == QueueStatus.WAITING
-                        && ticket.getVisit().getStatus() == VisitStatus.WAITING
+                        && ticket.getVisit() != null
+                        && (ticket.getVisit().getStatus() == VisitStatus.WAITING || ticket.getVisit().getStatus() == VisitStatus.WAITING_RESULT)
                         && ticket.getVisit().getPrimaryDoctor() != null)
                 .forEach(ticket -> nextByDoctor.putIfAbsent(
                         ticket.getVisit().getPrimaryDoctor().getStaffId(), ticket.getTicketId()));
@@ -58,6 +59,7 @@ public class QueueWorkflowController {
         model.addAttribute("nextTicketIds", Set.copyOf(nextByDoctor.values()));
         model.addAttribute("lanes", List.of(QueueStatus.WAITING, QueueStatus.CALLED,
                 QueueStatus.IN_SERVICE, QueueStatus.DONE));
+        model.addAttribute("pausedStatus", QueueStatus.PAUSED);
         model.addAttribute("laneCounts", board.tickets().stream()
                 .collect(Collectors.groupingBy(t -> t.getStatus(), Collectors.counting())));
     }
@@ -66,6 +68,12 @@ public class QueueWorkflowController {
             @RequestParam Long branchId, @RequestParam(required = false) Long chairId, @RequestParam(required = false) String reason,
             @RequestHeader(value = "X-Requested-With", required = false) String requestedWith,
             HttpSession session, RedirectAttributes flash) {
+        if (action == QueueWorkflowService.Action.CALL) {
+            return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body(java.util.Map.of(
+                            "success", false,
+                            "error", "Hệ thống tự động gọi số theo thứ tự. Lễ tân không được phép gọi số hoặc gọi vượt thủ công."));
+        }
         try {
             service.transition(session, id, action, chairId, reason);
             String notice = switch (action) {
@@ -73,7 +81,7 @@ public class QueueWorkflowController {
                 case PAUSE -> "Đã tạm dừng số khám.";
                 case RESUME -> "Số khám đã trở lại hàng chờ.";
                 case PRIORITIZE -> "Đã cập nhật mức ưu tiên.";
-                case EMERGENCY -> "Đã chuyển số khám sang cấp cứu.";
+                case EMERGENCY -> "Đã báo cấp cứu thành công và gửi cảnh báo tới bàn bác sĩ.";
                 case START -> "Đã bắt đầu khám.";
                 case DONE -> "Đã hoàn tất số khám.";
             };
@@ -90,15 +98,13 @@ public class QueueWorkflowController {
         return "redirect:/reception/queue?branchId=" + branchId;
     }
     @PostMapping("/doctors/{doctorId}/call-next")
-    public String callNext(@PathVariable Long doctorId, @RequestParam Long branchId,
-            HttpSession session, RedirectAttributes flash) {
-        try {
-            var ticket = service.callNext(session, branchId, doctorId);
-            flash.addFlashAttribute("notice", "Đã gọi số " + ticket.getDisplayNumber() + ".");
-        } catch (ResponseStatusException ex) {
-            flash.addFlashAttribute("error", ex.getReason());
-        }
-        return "redirect:/reception/queue?branchId=" + branchId;
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<java.util.Map<String, Object>> callNext(
+            @PathVariable Long doctorId, @RequestParam Long branchId, HttpSession session) {
+        return org.springframework.http.ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                .body(java.util.Map.of(
+                        "success", false,
+                        "error", "Hệ thống tự động gọi số theo thứ tự. Lễ tân không được phép gọi số tiếp theo."));
     }
     @GetMapping({"/tv", "/tv/{branchId}"})
     public String tv(@PathVariable(name = "branchId", required = false) Long branchId,

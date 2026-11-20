@@ -59,6 +59,8 @@ import static org.mockito.Mockito.when;
         ReceptionService.class,
         DispatchService.class,
         QueueWorkflowService.class,
+        com.cvdcms.service.ClinicQueueCoordinatorService.class,
+        com.cvdcms.security.UrlIdCodec.class,
         AppointmentLifecycleServiceImpl.class,
         com.cvdcms.service.impl.ClinicalExaminationBootstrapServiceImpl.class,
         EmrModuleService.class, EmrAttachmentStorage.class
@@ -76,6 +78,7 @@ class FullPatientJourneyE2EIntegrationTest {
     @org.springframework.beans.factory.annotation.Autowired ReceptionService receptionService;
     @org.springframework.beans.factory.annotation.Autowired DispatchService dispatchService;
     @org.springframework.beans.factory.annotation.Autowired QueueWorkflowService queueWorkflowService;
+    @org.springframework.beans.factory.annotation.Autowired com.cvdcms.service.ClinicQueueCoordinatorService queueCoordinatorService;
     @org.springframework.beans.factory.annotation.Autowired AppointmentLifecycleService lifecycleService;
 
     @org.springframework.beans.factory.annotation.Autowired UserRepository userRepository;
@@ -91,6 +94,7 @@ class FullPatientJourneyE2EIntegrationTest {
     @org.springframework.beans.factory.annotation.Autowired ReceptionCheckInAppointmentRepository checkInAppointmentRepository;
     @org.springframework.beans.factory.annotation.Autowired ReceptionVisitRepository visitRepository;
     @org.springframework.beans.factory.annotation.Autowired DispatchTicketRepository ticketRepository;
+    @org.springframework.beans.factory.annotation.Autowired ClinicalQueueTicketRepository clinicalQueueTicketRepository;
     @org.springframework.beans.factory.annotation.Autowired AppointmentHistoryRepository historyRepository;
     @org.springframework.beans.factory.annotation.Autowired ReceptionCheckInKeyRepository keyRepository;
     @org.springframework.beans.factory.annotation.Autowired ClinicalExaminationRepository examinationRepository;
@@ -362,28 +366,28 @@ class FullPatientJourneyE2EIntegrationTest {
         assertEquals(room1.getRoomId(), assignedVisit.getRoomId());
         assertEquals(chair1.getChairId(), assignedVisit.getChairId());
 
-        // [FT09] Issue Exam Ticket: Normal sequence
+        // [FT09] Issue Exam Ticket (idempotent over auto-issued ticket on check-in; appointment without fixed time -> Tier 4 "01", score 25, auto-CALLED)
         QueueTicket ticket = dispatchService.issue(session, branch.getBranchId(), visit.getVisitId(), false, null);
         assertNotNull(ticket.getTicketId());
         assertEquals("01", ticket.getDisplayNumber());
         assertEquals(1, ticket.getTicketNumber());
         assertFalse(ticket.getIsPriority());
         assertFalse(ticket.getIsEmergency());
-        assertEquals(0, ticket.getPriorityScore());
-        assertEquals(QueueStatus.WAITING, ticket.getStatus());
+        assertEquals(25, ticket.getPriorityScore());
+        assertEquals(QueueStatus.CALLED, ticket.getStatus());
+        assertNotNull(ticket.getCalledAt());
 
         // Idempotency: re-issuing ticket for same visit returns identical ticket without advancing sequence
         QueueTicket reissuedTicket = dispatchService.issue(session, branch.getBranchId(), visit.getVisitId(), false, null);
         assertEquals(ticket.getTicketId(), reissuedTicket.getTicketId());
         assertEquals("01", reissuedTicket.getDisplayNumber());
 
-        // [FT10] Doctor Nam calls next ticket
-        QueueTicket calledTicket = queueWorkflowService.callNext(session, branch.getBranchId(), doctorNam.getStaffId());
-        assertEquals(ticket.getTicketId(), calledTicket.getTicketId());
-        assertEquals(QueueStatus.CALLED, calledTicket.getStatus());
-        assertNotNull(calledTicket.getCalledAt());
+        // [FT10] Receptionist manual callNext must be forbidden (HTTP 403)
+        ResponseStatusException callNextEx = assertThrows(ResponseStatusException.class,
+                () -> queueWorkflowService.callNext(session, branch.getBranchId(), doctorNam.getStaffId()));
+        assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, callNextEx.getStatusCode());
 
-        // [FT10] Start Examination
+        // [FT10] Start Examination on the auto-CALLED ticket
         queueWorkflowService.transition(session, ticket.getTicketId(), QueueWorkflowService.Action.START, null, null);
 
         QueueTicket serviceTicket = ticketRepository.findById(ticket.getTicketId()).orElseThrow();
@@ -406,6 +410,9 @@ class FullPatientJourneyE2EIntegrationTest {
         diagnosis.setIcd10Disease(disease); diagnosis.setDiagnosisText("Sâu răng");
         diagnosisRepository.saveAndFlush(diagnosis);
 
+        // Doctor acting on clinical record creates draft EMR
+        when(emrAccess.require(any())).thenReturn(new EmrAccess.Scope(doctorNam.getUser(), false, true,
+                Set.of(branch.getBranchId())));
         Long emrId = emrModuleService.create(session, visit.getVisitId());
         assertNotNull(emrId);
         assertEquals(EmrRecordStatus.DRAFT, emrRecordRepository.findByVisit_VisitId(visit.getVisitId())
@@ -420,15 +427,15 @@ class FullPatientJourneyE2EIntegrationTest {
         examVisit.setStatus(VisitStatus.WAITING_PAYMENT);
         visitRepository.saveAndFlush(examVisit);
 
-        // [FT10] Complete ticket (DONE) -> Chair automatically transitions to CLEANING
+        // [FT10] Complete ticket (DONE) -> Chair automatically returns to AVAILABLE
         queueWorkflowService.transition(session, ticket.getTicketId(), QueueWorkflowService.Action.DONE, null, null);
 
         QueueTicket doneTicket = ticketRepository.findById(ticket.getTicketId()).orElseThrow();
         assertEquals(QueueStatus.DONE, doneTicket.getStatus());
         assertNotNull(doneTicket.getCompletedAt());
 
-        DentalChair cleanedChair = chairRepository.findById(chair1.getChairId()).orElseThrow();
-        assertEquals(ChairStatus.CLEANING, cleanedChair.getStatus());
+        DentalChair releasedChair = chairRepository.findById(chair1.getChairId()).orElseThrow();
+        assertEquals(ChairStatus.AVAILABLE, releasedChair.getStatus());
 
         // Payment completes the visit before the appointment can be closed.
         examVisit.setStatus(VisitStatus.COMPLETED);
@@ -483,38 +490,45 @@ class FullPatientJourneyE2EIntegrationTest {
         assertEquals(room2.getRoomId(), autoAssignedVisit.getRoomId());
         assertEquals(chair3.getChairId(), autoAssignedVisit.getChairId());
 
-        // [FT09] Normal ticket issued for walk-in patient
+        // [FT09] Auto-issued walk-in ticket for least-loaded doctor (priorityScore = 50, auto-called to CALLED)
         QueueTicket walkInTicket = dispatchService.issue(session, branch.getBranchId(), walkInVisit.getVisitId(), false, null);
         assertEquals(1, walkInTicket.getTicketNumber());
         assertEquals("01", walkInTicket.getDisplayNumber());
-        assertEquals(0, walkInTicket.getPriorityScore());
+        assertEquals(50, walkInTicket.getPriorityScore());
+        assertEquals(QueueStatus.CALLED, walkInTicket.getStatus());
 
-        // [FT10] Priority Upgrade: Staff identifies patient age >= 65 and triggers PRIORITIZE
-        queueWorkflowService.transition(session, walkInTicket.getTicketId(),
-                QueueWorkflowService.Action.PRIORITIZE, null, "Bệnh nhân 78 tuổi, sức khỏe yếu cần ưu tiên");
+        // [FT10] Manual PRIORITIZE by reception is forbidden (403); queue relies on system priority/emergency rules
+        ResponseStatusException prioritizeEx = assertThrows(ResponseStatusException.class,
+                () -> queueWorkflowService.transition(session, walkInTicket.getTicketId(),
+                        QueueWorkflowService.Action.PRIORITIZE, null, "Bệnh nhân 78 tuổi, sức khỏe yếu cần ưu tiên"));
+        assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, prioritizeEx.getStatusCode());
 
-        QueueTicket prioritizedTicket = ticketRepository.findById(walkInTicket.getTicketId()).orElseThrow();
-        assertEquals(50, prioritizedTicket.getPriorityScore());
-        assertEquals("Bệnh nhân 78 tuổi, sức khỏe yếu cần ưu tiên", prioritizedTicket.getPriorityReason());
+        // Queue ordering & auto-call verification: give Dr. Nam higher load (2 visits) so new walk-in auto-assigns to Dr. Huong (load 1)
+        Visit busyVisit2 = new Visit();
+        busyVisit2.setPatientProfile(createPatient("Bệnh nhân Chờ 2", "0911000222", 34));
+        busyVisit2.setBranch(branch);
+        busyVisit2.setVisitType(VisitType.WALK_IN);
+        busyVisit2.setCheckInAt(LocalDateTime.now(CLINIC_ZONE));
+        busyVisit2.setStatus(VisitStatus.WAITING);
+        busyVisit2.setPrimaryDoctor(doctorNam);
+        visitRepository.saveAndFlush(busyVisit2);
 
-        // Priority ordering verification: Add a subsequent normal walk-in ticket for Dr. Huong
         PatientProfile youngerPatient = createPatient("Anh Lê Trẻ", "0944111222", 25);
         ReceptionService.VisitResult secondWalkIn = receptionService.checkInWalkIn(
                 session, branch.getBranchId(), youngerPatient.getProfileId(),
                 "Lấy cao răng", false, UUID.randomUUID().toString());
+        Visit secondVisit = visitRepository.findById(secondWalkIn.id()).orElseThrow();
+        assertEquals(doctorHuong.getStaffId(), secondVisit.getPrimaryDoctor().getStaffId(),
+                "Least-loaded auto-assignment must select Dr. Huong (load 1) over Dr. Nam (load 2)");
         dispatchService.assign(session, branch.getBranchId(), secondWalkIn.id(),
                 doctorHuong.getStaffId(), room2.getRoomId(), chair3.getChairId(), null);
         QueueTicket normalTicket = dispatchService.issue(session, branch.getBranchId(), secondWalkIn.id(), false, null);
         assertEquals("02", normalTicket.getDisplayNumber());
-        assertEquals(0, normalTicket.getPriorityScore());
+        assertEquals(50, normalTicket.getPriorityScore());
+        assertEquals(QueueStatus.WAITING, normalTicket.getStatus(),
+                "Second ticket must stay WAITING while first ticket is already CALLED");
 
-        // Dr. Huong calls next -> The prioritized ticket (score 50) is selected ahead of normal ticket (score 0)
-        QueueTicket calledByHuong = queueWorkflowService.callNext(session, branch.getBranchId(), doctorHuong.getStaffId());
-        assertEquals(walkInTicket.getTicketId(), calledByHuong.getTicketId(),
-                "Prioritized ticket must be called before standard tickets");
-        assertEquals(QueueStatus.CALLED, calledByHuong.getStatus());
-
-        // Start and Finish
+        // Start first CALLED ticket and Finish -> automatically calls "02"
         queueWorkflowService.transition(session, walkInTicket.getTicketId(), QueueWorkflowService.Action.START, null, null);
         DentalChair chair = chairRepository.findById(chair3.getChairId()).orElseThrow();
         assertEquals(ChairStatus.IN_USE, chair.getStatus());
@@ -525,32 +539,59 @@ class FullPatientJourneyE2EIntegrationTest {
 
         queueWorkflowService.transition(session, walkInTicket.getTicketId(), QueueWorkflowService.Action.DONE, null, null);
         chair = chairRepository.findById(chair3.getChairId()).orElseThrow();
-        assertEquals(ChairStatus.CLEANING, chair.getStatus());
+        assertEquals(ChairStatus.AVAILABLE, chair.getStatus());
+        assertEquals(QueueStatus.CALLED, ticketRepository.findById(normalTicket.getTicketId()).orElseThrow().getStatus(),
+                "Completing active visit must automatically promote next waiting ticket to CALLED");
     }
 
     @Test
     @DisplayName("Track 3: Emergency Intake with Instant Top-of-Queue Jump & Dynamic Chair Switching (FT07 -> FT08 -> FT09 -> FT10)")
     void testTrack3_EmergencyIntake_InstantTopQueue_DynamicChairSwitch_E2E() {
-        // [FT07] Emergency patient arrives with acute oral bleeding
-        PatientProfile emergencyPatient = createPatient("Nguyễn Cấp Cứu", "0999115115", 35);
-        String requestKey = UUID.randomUUID().toString();
+        // Make Dr. Huong busier (3 waiting visits) so subsequent check-ins deterministically select Dr. Nam
+        for (int i = 1; i <= 3; i++) {
+            Visit hLoad = new Visit();
+            hLoad.setPatientProfile(createPatient("BN Tải BS Hương " + i, "099900010" + i, 28 + i));
+            hLoad.setBranch(branch);
+            hLoad.setVisitType(VisitType.WALK_IN);
+            hLoad.setCheckInAt(LocalDateTime.now(CLINIC_ZONE));
+            hLoad.setStatus(VisitStatus.WAITING);
+            hLoad.setPrimaryDoctor(doctorHuong);
+            visitRepository.saveAndFlush(hLoad);
+        }
 
+        // Prepare Dr. Nam desk busy with an ongoing CALLED visit and a normal WAITING visit
+        ReceptionService.VisitResult busyResult = receptionService.checkInWalkIn(
+                session, branch.getBranchId(),
+                createPatient("Trần Đang Khám", "0999115000", 30).getProfileId(),
+                "Khám kiểm tra răng định kỳ", false, UUID.randomUUID().toString());
+        dispatchService.assign(session, branch.getBranchId(), busyResult.id(),
+                doctorNam.getStaffId(), room1.getRoomId(), chair1.getChairId(), null);
+        QueueTicket busyTicket = clinicalQueueTicketRepository.findByVisitIdAndTypeOrderByDesc(busyResult.id(), QueueType.EXAM).get(0);
+        assertEquals(QueueStatus.CALLED, busyTicket.getStatus());
+
+        ReceptionService.VisitResult normalResult = receptionService.checkInWalkIn(
+                session, branch.getBranchId(),
+                createPatient("Bệnh nhân Thường", "0988777666", 40).getProfileId(),
+                "Khám sâu răng thông thường", false, UUID.randomUUID().toString());
+        dispatchService.assign(session, branch.getBranchId(), normalResult.id(),
+                doctorNam.getStaffId(), room1.getRoomId(), chair1.getChairId(), null);
+        QueueTicket normalTicket = clinicalQueueTicketRepository.findByVisitIdAndTypeOrderByDesc(normalResult.id(), QueueType.EXAM).get(0);
+        assertEquals(QueueStatus.WAITING, normalTicket.getStatus());
+
+        // [FT07] Emergency patient arrives -> auto-assigned to Dr. Nam (load 2 < Dr. Huong load 3), auto-issued P-01 (score 100), stays WAITING while Dr. Nam desk is busy
+        PatientProfile emergencyPatient = createPatient("Nguyễn Cấp Cứu", "0999115115", 35);
         ReceptionService.VisitResult emergencyResult = receptionService.checkInWalkIn(
                 session, branch.getBranchId(), emergencyPatient.getProfileId(),
-                "Chảy máu ổ răng ồ ạt sau nhổ tại nhà", true, requestKey);
+                "Chảy máu ổ răng ồ ạt sau nhổ tại nhà", true, UUID.randomUUID().toString());
 
-        assertNotNull(emergencyResult.id());
         Visit emergencyVisit = visitRepository.findById(emergencyResult.id()).orElseThrow();
         assertEquals(VisitStatus.WAITING, emergencyVisit.getStatus());
         assertEquals(VisitType.EMERGENCY, emergencyVisit.getVisitType());
+        assertEquals(doctorNam.getStaffId(), emergencyVisit.getPrimaryDoctor().getStaffId());
 
-        // [FT08] Assign to Dr. Nam and Room 101, Chair 1
+        // [FT08] Confirm Room 101, Chair 1 on Dr. Nam's desk
         dispatchService.assign(session, branch.getBranchId(), emergencyVisit.getVisitId(),
                 doctorNam.getStaffId(), room1.getRoomId(), chair1.getChairId(), null);
-
-        // [FT09] Emergency ticket issuance requires priority=true
-        assertThrows(ResponseStatusException.class, () ->
-                dispatchService.issue(session, branch.getBranchId(), emergencyVisit.getVisitId(), false, null));
 
         QueueTicket emergencyTicket = dispatchService.issue(session, branch.getBranchId(), emergencyVisit.getVisitId(),
                 true, "Ca cấp cứu chảy máu ổ răng nặng");
@@ -558,20 +599,20 @@ class FullPatientJourneyE2EIntegrationTest {
         assertTrue(emergencyTicket.getIsEmergency());
         assertTrue(emergencyTicket.getIsPriority());
         assertEquals(100, emergencyTicket.getPriorityScore());
+        assertEquals(QueueStatus.WAITING, emergencyTicket.getStatus());
 
-        // Queue Head Verification: Add an existing normal ticket for Dr. Nam
-        PatientProfile normalPatient = createPatient("Bệnh nhân Thường", "0988777666", 40);
-        ReceptionService.VisitResult normalResult = receptionService.checkInWalkIn(
-                session, branch.getBranchId(), normalPatient.getProfileId(),
-                "Khám sâu răng thông thường", false, UUID.randomUUID().toString());
-        dispatchService.assign(session, branch.getBranchId(), normalResult.id(),
-                doctorNam.getStaffId(), room1.getRoomId(), chair1.getChairId(), null);
-        QueueTicket normalTicket = dispatchService.issue(session, branch.getBranchId(), normalResult.id(), false, null);
+        // Finish ongoing busyTicket -> system automatically calls Emergency ticket ahead of normalTicket!
+        queueWorkflowService.transition(session, busyTicket.getTicketId(), QueueWorkflowService.Action.START, null, null);
+        Visit startedBusy = visitRepository.findById(busyResult.id()).orElseThrow();
+        startedBusy.setStatus(VisitStatus.WAITING_PAYMENT);
+        visitRepository.saveAndFlush(startedBusy);
+        queueWorkflowService.transition(session, busyTicket.getTicketId(), QueueWorkflowService.Action.DONE, null, null);
 
-        // Doctor Nam calls next -> Emergency ticket (score 100) instantly called first
-        QueueTicket nextCalled = queueWorkflowService.callNext(session, branch.getBranchId(), doctorNam.getStaffId());
-        assertEquals(emergencyTicket.getTicketId(), nextCalled.getTicketId(),
-                "Emergency ticket must immediately top the queue ahead of normal tickets");
+        QueueTicket updatedEmergency = ticketRepository.findById(emergencyTicket.getTicketId()).orElseThrow();
+        QueueTicket updatedNormal = ticketRepository.findById(normalTicket.getTicketId()).orElseThrow();
+        assertEquals(QueueStatus.CALLED, updatedEmergency.getStatus(),
+                "Emergency ticket must jump ahead of normal ticket and become CALLED automatically");
+        assertEquals(QueueStatus.WAITING, updatedNormal.getStatus());
 
         // [FT10 Dynamic Chair Switching before START]
         // Simulate chair 1 unexpectedly occupied by another procedure
@@ -596,7 +637,7 @@ class FullPatientJourneyE2EIntegrationTest {
                 "Visit chairId must be dynamically updated to Chair 2");
         assertEquals(VisitStatus.IN_EXAM, startedEmergencyVisit.getStatus());
 
-        // Conclude exam and complete ticket
+        // Conclude exam and complete ticket -> chair 2 released & normalTicket auto-called
         startedEmergencyVisit.setStatus(VisitStatus.WAITING_PAYMENT);
         visitRepository.saveAndFlush(startedEmergencyVisit);
 
@@ -604,11 +645,12 @@ class FullPatientJourneyE2EIntegrationTest {
                 QueueWorkflowService.Action.DONE, null, null);
 
         switchedChair = chairRepository.findById(chair2.getChairId()).orElseThrow();
-        assertEquals(ChairStatus.CLEANING, switchedChair.getStatus());
+        assertEquals(ChairStatus.AVAILABLE, switchedChair.getStatus());
+        assertEquals(QueueStatus.CALLED, ticketRepository.findById(normalTicket.getTicketId()).orElseThrow().getStatus());
     }
 
     @Test
-    @DisplayName("Track 4: Cross-Cutting Safeguards (Revert Check-in, Public TV Board Zero-PII, Queue Isolation & Out-of-Order Calling)")
+    @DisplayName("Track 4: Cross-Cutting Safeguards (Revert Check-in, Public TV Board Zero-PII, Queue Isolation & Anti-Bypass Controls)")
     void testTrack4_CrossCuttingSafeguards_E2E() {
         // Safeguard 1: Revert Check-In
         PatientProfile patient = createPatient("Lê Hoài Nam", "0912345678", 32);
@@ -629,88 +671,111 @@ class FullPatientJourneyE2EIntegrationTest {
         Visit cancelledVisit = visitRepository.findById(checkInResult.id()).orElseThrow();
         assertEquals(VisitStatus.CANCELLED, cancelledVisit.getStatus());
 
-        // Can cleanly re-check-in after reverting
+        // Can cleanly re-check-in after reverting -> auto-issues & auto-calls CALLED on Dr. Nam's idle desk
         ReceptionService.VisitResult reCheckIn = receptionService.checkInAppointment(
                 session, appointment.getAppointmentId(), "Khám tổng quát định kỳ", UUID.randomUUID().toString());
         assertNotEquals(checkInResult.id(), reCheckIn.id());
         assertEquals(AppointmentStatus.CHECKED_IN,
                 checkInAppointmentRepository.findById(appointment.getAppointmentId()).orElseThrow().getStatus());
 
-        // Safeguard 2: Public TV Board Zero-PII Protection
         dispatchService.assign(session, branch.getBranchId(), reCheckIn.id(),
                 doctorNam.getStaffId(), room1.getRoomId(), chair1.getChairId(), null);
         QueueTicket ticket = dispatchService.issue(session, branch.getBranchId(), reCheckIn.id(), false, null);
-        queueWorkflowService.callNext(session, branch.getBranchId(), doctorNam.getStaffId());
+        assertEquals(QueueStatus.CALLED, ticket.getStatus());
 
-        QueueWorkflowService.PublicBoard publicBoard = queueWorkflowService.publicBoard(branch.getBranchId());
-        assertNotNull(publicBoard);
-        assertEquals(branch.getBranchName(), publicBoard.branch());
-        assertEquals(1, publicBoard.called().size());
-
-        QueueWorkflowService.PublicNumber publicCalled = publicBoard.called().get(0);
-        assertEquals(ticket.getDisplayNumber(), publicCalled.number());
-        assertEquals("BS. CK1 Lê Hoàng Nam", publicCalled.doctor());
-        assertEquals("Phòng Khám 101", publicCalled.room());
-        assertEquals("Ghế Khám 1", publicCalled.chair());
-
-        // Assert absolutely NO Patient PII exposed on TV Board
-        String publicBoardString = publicBoard.toString();
-        assertFalse(publicBoardString.contains("Lê Hoài Nam"), "Public TV board must not reveal patient name");
-        assertFalse(publicBoardString.contains("0912345678"), "Public TV board must not reveal patient phone");
-        assertFalse(publicBoardString.contains("Khám tổng quát"), "Public TV board must not reveal patient symptoms");
-
-        // Safeguard 3: Queue Isolation between Doctors
-        // Prepare ticket for Doctor Huong
+        // Safeguard 2: Queue Isolation between Doctors (give Dr. Nam load 1 so Dr. Huong gets walk-in via least-loaded)
         PatientProfile huongPatient = createPatient("Vũ Thị Mai", "0966555444", 26);
         ReceptionService.VisitResult huongResult = receptionService.checkInWalkIn(
                 session, branch.getBranchId(), huongPatient.getProfileId(),
                 "Tẩy trắng răng", false, UUID.randomUUID().toString());
+        assertEquals(doctorHuong.getStaffId(), visitRepository.findById(huongResult.id()).orElseThrow().getPrimaryDoctor().getStaffId());
         dispatchService.assign(session, branch.getBranchId(), huongResult.id(),
                 doctorHuong.getStaffId(), room2.getRoomId(), chair3.getChairId(), null);
-        QueueTicket huongTicket = dispatchService.issue(session, branch.getBranchId(), huongResult.id(), false, null);
+        QueueTicket huongTicket = ticketRepository.findById(
+                clinicalQueueTicketRepository.findByVisitIdAndTypeOrderByDesc(huongResult.id(), QueueType.EXAM).get(0).getTicketId()).orElseThrow();
+        assertEquals(QueueStatus.CALLED, huongTicket.getStatus());
 
-        // Calling next for Doctor Huong only affects Doctor Huong's queue
-        QueueTicket calledHuongTicket = queueWorkflowService.callNext(session, branch.getBranchId(), doctorHuong.getStaffId());
-        assertEquals(huongTicket.getTicketId(), calledHuongTicket.getTicketId());
+        // Manual callNext must always be rejected (403 FORBIDDEN)
+        ResponseStatusException callNextDocEx = assertThrows(ResponseStatusException.class,
+                () -> queueWorkflowService.callNext(session, branch.getBranchId(), doctorNam.getStaffId()));
+        assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, callNextDocEx.getStatusCode());
 
-        // Doctor Nam has no other waiting tickets -> callNext for Doctor Nam fails with CONFLICT
-        assertThrows(ResponseStatusException.class, () ->
-                queueWorkflowService.callNext(session, branch.getBranchId(), doctorNam.getStaffId()));
+        // Safeguard 3: Anti-Bypass Controls (No manual CALL, no receptionist PAUSE on CALLED/WAITING)
+        Visit namBusy2 = new Visit();
+        namBusy2.setPatientProfile(createPatient("BN Tải BS Nam 2", "0977000099", 30));
+        namBusy2.setBranch(branch);
+        namBusy2.setVisitType(VisitType.WALK_IN);
+        namBusy2.setCheckInAt(LocalDateTime.now(CLINIC_ZONE));
+        namBusy2.setStatus(VisitStatus.WAITING);
+        namBusy2.setPrimaryDoctor(doctorNam);
+        visitRepository.saveAndFlush(namBusy2);
 
-        // Safeguard 4: Out-of-Order Calling Rules
-        // Add two tickets for Doctor Huong: ticketA and ticketB
         ReceptionService.VisitResult resA = receptionService.checkInWalkIn(session, branch.getBranchId(),
                 createPatient("Bệnh nhân A", "0977000001", 20).getProfileId(), "Khám A", false, UUID.randomUUID().toString());
-        dispatchService.assign(session, branch.getBranchId(), resA.id(), doctorHuong.getStaffId(), room2.getRoomId(), chair3.getChairId(), null);
-        QueueTicket ticketA = dispatchService.issue(session, branch.getBranchId(), resA.id(), false, null);
+        dispatchService.assign(session, branch.getBranchId(), resA.id(), doctorHuong.getStaffId(), room2.getRoomId(), chair3.getChairId(),
+                "Điều phối bệnh nhân A vào BS Hương");
+        QueueTicket ticketA = clinicalQueueTicketRepository.findByVisitIdAndTypeOrderByDesc(resA.id(), QueueType.EXAM).get(0);
 
         ReceptionService.VisitResult resB = receptionService.checkInWalkIn(session, branch.getBranchId(),
                 createPatient("Bệnh nhân B", "0977000002", 21).getProfileId(), "Khám B", false, UUID.randomUUID().toString());
-        dispatchService.assign(session, branch.getBranchId(), resB.id(), doctorHuong.getStaffId(), room2.getRoomId(), chair3.getChairId(), null);
-        QueueTicket ticketB = dispatchService.issue(session, branch.getBranchId(), resB.id(), false, null);
+        dispatchService.assign(session, branch.getBranchId(), resB.id(), doctorHuong.getStaffId(), room2.getRoomId(), chair3.getChairId(),
+                "Điều phối bệnh nhân B vào BS Hương");
+        QueueTicket ticketB = clinicalQueueTicketRepository.findByVisitIdAndTypeOrderByDesc(resB.id(), QueueType.EXAM).get(0);
 
-        // Complete the earlier called huongTicket to allow doctor Huong to call again
+        // Complete earlier called huongTicket -> system auto-calls ticketA ahead of ticketB
         queueWorkflowService.transition(session, huongTicket.getTicketId(), QueueWorkflowService.Action.START, null, null);
         Visit huongVisit = visitRepository.findById(huongResult.id()).orElseThrow();
         huongVisit.setStatus(VisitStatus.WAITING_PAYMENT);
         visitRepository.saveAndFlush(huongVisit);
         queueWorkflowService.transition(session, huongTicket.getTicketId(), QueueWorkflowService.Action.DONE, null, null);
 
-        // ticketA is front of line. Calling ticketB out-of-order without permission throws error
+        assertEquals(QueueStatus.CALLED, ticketRepository.findById(ticketA.getTicketId()).orElseThrow().getStatus());
+        assertEquals(QueueStatus.WAITING, ticketRepository.findById(ticketB.getTicketId()).orElseThrow().getStatus());
+
+        // Receptionist (non-admin role) cannot CALL ticketB or PAUSE CALLED ticketA or PAUSE WAITING ticketB
+        Role recRole = roleRepository.findByRoleName("LE_TAN").orElseGet(() -> {
+            Role r = new Role();
+            r.setRoleName("LE_TAN");
+            r.setIsActive(true);
+            return roleRepository.saveAndFlush(r);
+        });
         User regularStaff = new User();
-        regularStaff.setUserId(999L);
-        when(access.require(session)).thenReturn(new ReceptionAccess.Scope(regularStaff, false, false, List.of(branch.getBranchId())));
+        regularStaff.setUserId(staffUser.getUserId());
+        regularStaff.setRoles(Set.of(recRole));
+        when(access.require(session)).thenReturn(new ReceptionAccess.Scope(regularStaff, false, true, List.of(branch.getBranchId())));
 
-        assertThrows(ResponseStatusException.class, () ->
-                queueWorkflowService.transition(session, ticketB.getTicketId(), QueueWorkflowService.Action.CALL, null, "Lý do hợp lệ trên mười ký tự"));
+        assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, assertThrows(ResponseStatusException.class, () ->
+                queueWorkflowService.transition(session, ticketB.getTicketId(), QueueWorkflowService.Action.CALL, null, "Lý do hợp lệ trên mười ký tự")).getStatusCode());
+        assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, assertThrows(ResponseStatusException.class, () ->
+                queueWorkflowService.transition(session, ticketA.getTicketId(), QueueWorkflowService.Action.PAUSE, null, "Lễ tân thử tạm dừng để gọi vượt")).getStatusCode());
+        assertEquals(org.springframework.http.HttpStatus.FORBIDDEN, assertThrows(ResponseStatusException.class, () ->
+                queueWorkflowService.transition(session, ticketB.getTicketId(), QueueWorkflowService.Action.PAUSE, null, "Lễ tân thử tạm dừng số chờ")).getStatusCode());
 
-        // With management permission but without sufficient reason length (< 10 chars) -> fails
-        when(access.require(session)).thenReturn(new ReceptionAccess.Scope(staffUser, true, true, List.of(branch.getBranchId())));
-        assertThrows(ResponseStatusException.class, () ->
-                queueWorkflowService.transition(session, ticketB.getTicketId(), QueueWorkflowService.Action.CALL, null, "Ngắn"));
+        assertEquals(QueueStatus.CALLED, ticketRepository.findById(ticketA.getTicketId()).orElseThrow().getStatus());
+        assertEquals(QueueStatus.WAITING, ticketRepository.findById(ticketB.getTicketId()).orElseThrow().getStatus());
 
-        // With management permission and valid justification (>= 10 chars) -> succeeds
-        queueWorkflowService.transition(session, ticketB.getTicketId(), QueueWorkflowService.Action.CALL, null, "Bệnh nhân có lịch hẹn trước cần vào sớm");
-        assertEquals(QueueStatus.CALLED, ticketRepository.findById(ticketB.getTicketId()).orElseThrow().getStatus());
+        // Safeguard 4: Public TV Board Zero-PII Protection
+        QueueWorkflowService.PublicBoard publicBoard = queueWorkflowService.publicBoard(branch.getBranchId());
+        assertNotNull(publicBoard);
+        assertEquals(branch.getBranchName(), publicBoard.branch());
+        assertFalse(publicBoard.called().isEmpty());
+
+        QueueWorkflowService.PublicNumber publicCalled = publicBoard.called().stream()
+                .filter(c -> ticket.getDisplayNumber().equals(c.number()))
+                .findFirst().orElse(publicBoard.called().get(0));
+        assertEquals("BS. CK1 Lê Hoàng Nam", publicCalled.doctor());
+        assertEquals("Phòng Khám 101", publicCalled.room());
+        assertEquals("Ghế Khám 1", publicCalled.chair());
+
+        // Public TV called slot must contain zero patient PII
+        String calledSlotString = publicCalled.toString();
+        assertFalse(calledSlotString.contains("Lê Hoài Nam"), "TV called slot must not reveal patient name");
+        assertFalse(calledSlotString.contains("0912345678"), "TV called slot must not reveal patient phone");
+
+        // Pre-existing HEAD behavior: PublicBoard.queueList() includes PublicQueueRow.patientName for TV table display
+        String publicBoardString = publicBoard.toString();
+        assertFalse(publicBoardString.contains("Lê Hoài Nam"), "Public TV board must not reveal patient name");
+        assertFalse(publicBoardString.contains("0912345678"), "Public TV board must not reveal patient phone");
+        assertFalse(publicBoardString.contains("Khám tổng quát"), "Public TV board must not reveal patient symptoms");
     }
 }

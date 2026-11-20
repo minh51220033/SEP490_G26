@@ -25,7 +25,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Collections;
@@ -125,7 +124,6 @@ public class AdminReportController {
             @RequestParam(required = false) Long branchId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false, defaultValue = "20") BigDecimal taxRate,
             @RequestParam(required = false, defaultValue = "overview") String tab,
             Model model,
             HttpSession session
@@ -137,7 +135,6 @@ public class AdminReportController {
             if (branchId != null) builder.queryParam("branchId", branchId);
             if (startDate != null) builder.queryParam("startDate", startDate);
             if (endDate != null) builder.queryParam("endDate", endDate);
-            if (taxRate != null) builder.queryParam("taxRate", taxRate);
             if (tab != null && !tab.isBlank()) builder.queryParam("tab", tab);
             return "redirect:" + builder.toUriString();
         }
@@ -154,19 +151,17 @@ public class AdminReportController {
         }
 
         boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId);
-        BigDecimal safeTaxRate = (taxRate != null && taxRate.compareTo(BigDecimal.ZERO) >= 0) ? taxRate : BigDecimal.valueOf(20);
         String branchDisplayName = resolveBranchDisplayName(branchId, resolvedBranchIds, allowedBranches, isPrivileged);
 
         // Lấy dữ liệu cho từng tab
-        ReportDashboardDTO dashboard = reportService.getDashboardReport(resolvedBranchIds, safeStart, safeEnd, branchDisplayName, safeTaxRate);
-        FinancialReportDTO financial = reportService.getFinancialReport(resolvedBranchIds, safeStart, safeEnd, safeTaxRate);
+        ReportDashboardDTO dashboard = reportService.getDashboardReport(resolvedBranchIds, safeStart, safeEnd, branchDisplayName);
+        FinancialReportDTO financial = reportService.getFinancialReport(resolvedBranchIds, safeStart, safeEnd);
         OperationalReportDTO operational = reportService.getOperationalReport(resolvedBranchIds, safeStart, safeEnd);
 
         ReportFilterDTO filter = new ReportFilterDTO();
         filter.setBranchId(branchId);
         filter.setStartDate(safeStart);
         filter.setEndDate(safeEnd);
-        filter.setTaxRate(safeTaxRate);
         filter.setTab(tab);
 
         model.addAttribute("filter", filter);
@@ -188,7 +183,6 @@ public class AdminReportController {
             @RequestParam(required = false) Long branchId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false, defaultValue = "20") BigDecimal taxRate,
             HttpSession session
     ) {
         Long currentUserId = getCurrentUserId(session);
@@ -204,10 +198,9 @@ public class AdminReportController {
         }
 
         boolean isPrivileged = isFinanceAdminOrAccountant(currentUserId);
-        BigDecimal safeTaxRate = (taxRate != null && taxRate.compareTo(BigDecimal.ZERO) >= 0) ? taxRate : BigDecimal.valueOf(20);
         String branchDisplayName = resolveBranchDisplayName(branchId, resolvedBranchIds, allowedBranches, isPrivileged);
 
-        byte[] excelBytes = reportService.exportReportToExcel(reportType, resolvedBranchIds, safeStart, safeEnd, branchDisplayName, safeTaxRate);
+        byte[] excelBytes = reportService.exportReportToExcel(reportType, resolvedBranchIds, safeStart, safeEnd, branchDisplayName);
 
         String typePrefix = switch (reportType.toUpperCase()) {
             case "FINANCIAL" -> "Tai_Chinh";

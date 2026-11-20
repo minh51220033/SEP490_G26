@@ -35,23 +35,13 @@ public class FinancialReportDTO {
 
     // 3. Hoàn tiền & Chi phí
     private BigDecimal totalRefundAmount = BigDecimal.ZERO;
+    private BigDecimal invoiceRefundAmount = BigDecimal.ZERO;
+    private BigDecimal walletRefundAmount = BigDecimal.ZERO;
     private BigDecimal netRevenue = BigDecimal.ZERO;           // Thực thu thuần = totalCollected - totalRefundAmount
     private BigDecimal operatingExpenses = BigDecimal.ZERO;    // Chi phí vận hành
-    private BigDecimal operatingMargin = BigDecimal.ZERO;      // Thặng dư thu chi vận hành = netRevenue - operatingExpenses
+    private BigDecimal operatingMargin = BigDecimal.ZERO;      // Chênh lệch thu - chi vận hành = netRevenue - operatingExpenses
 
-    // 4. Thuế & Lợi nhuận ròng sau thuế
-    private BigDecimal taxRate = BigDecimal.valueOf(20);       // Thuế suất TNDN (%)
-    private BigDecimal estimatedTaxAmount = BigDecimal.ZERO;   // Nghĩa vụ thuế TNDN tạm tính
-    private BigDecimal netProfitAfterTax = BigDecimal.ZERO;    // Lợi nhuận ròng sau thuế
-
-    // Thông tin chế độ thuế & Căn cứ pháp lý
-    private String taxRegimeName = "Doanh nghiệp (TNDN tạm tính quản trị)";
-    private boolean isTaxConfigured = true;
-    private String taxCalculationBasis = "Căn cứ Luật Thuế TNDN 14/2008/QH12 (Tạm tính phục vụ quản trị nội bộ)";
-    private BigDecimal totalPitWithheld = BigDecimal.ZERO;
-    private BigDecimal totalVatAmount = BigDecimal.ZERO;
-
-    // 5. Công nợ
+    // 4. Công nợ
     private BigDecimal periodDebt = BigDecimal.ZERO;           // Nợ phát sinh của hóa đơn trong kỳ
     private BigDecimal currentTotalOutstandingDebt = BigDecimal.ZERO; // Nợ lũy kế hiện tại
     private List<PatientDebtSummaryDTO> patientDebts = new ArrayList<>();

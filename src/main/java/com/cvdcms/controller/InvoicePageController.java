@@ -169,16 +169,27 @@ public class InvoicePageController {
         LocalDateTime startDt = startDate != null ? startDate.atStartOfDay() : null;
         LocalDateTime endDt = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "issuedAt"));
+        int safePage = Math.max(0, page);
+        int safeSize = size <= 0 ? 10 : Math.min(size, 100);
+
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "issuedAt"));
         Page<Invoice> invoicePage = invoiceService.getInvoices(effectiveBranchId, paymentStatus, status, keyword, startDt, endDt, pageable);
+
+        long totalItems = invoicePage.getTotalElements();
+        long fromItem = invoicePage.getContent().isEmpty() ? 0 : (long) safePage * safeSize + 1;
+        long toItem = invoicePage.getContent().isEmpty() ? 0 : Math.min((long) (safePage + 1) * safeSize, totalItems);
 
         LocalDate today = LocalDate.now();
         FinancialMetricsDTO todayMetrics = invoiceService.getFinancialMetrics(effectiveBranchId, today.atStartOfDay(), today.atTime(LocalTime.MAX));
 
         model.addAttribute("invoices", invoicePage.getContent());
-        model.addAttribute("currentPage", page);
+        model.addAttribute("currentPage", safePage);
+        model.addAttribute("pageSize", safeSize);
         model.addAttribute("totalPages", invoicePage.getTotalPages());
-        model.addAttribute("totalElements", invoicePage.getTotalElements());
+        model.addAttribute("totalElements", totalItems);
+        model.addAttribute("totalItems", totalItems);
+        model.addAttribute("fromItem", fromItem);
+        model.addAttribute("toItem", toItem);
         model.addAttribute("branches", allowedBranches);
         model.addAttribute("selectedBranchId", effectiveBranchId);
         model.addAttribute("selectedPaymentStatus", paymentStatus);
@@ -288,9 +299,8 @@ public class InvoicePageController {
                 model.addAttribute("referenceTreatmentPlans", treatmentPlanRepository.findByProfileIdWithDetails(profileId));
             });
         } else {
-            // Hiển thị các đơn thuốc chờ xử lý tại chi nhánh
-            List<PrescriptionResponseDTO> handedOverPrescriptions = invoiceService.getHandedOverPrescriptions(effectiveBranchId, null, null);
-            model.addAttribute("handedOverPrescriptions", handedOverPrescriptions);
+            // Chưa chọn lượt khám hoặc bệnh nhân -> không hiển thị tràn danh sách đơn thuốc toàn chi nhánh
+            model.addAttribute("handedOverPrescriptions", List.of());
         }
 
         return "finance/invoices/create";

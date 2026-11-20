@@ -3,7 +3,7 @@
 
 <head th:replace="~{fragments/head :: head('Quản lý danh mục - Danh mục thuốc')}"></head>
 
-<body class="app-body medication-catalog-page">
+<body class="app-body medication-catalog-page fin-brand-theme">
 <div class="app-shell">
 
   <aside th:replace="~{fragments/sidebar :: sidebar('catalogs')}"></aside>
@@ -42,24 +42,27 @@
         <!-- TÌM KIẾM & BỘ LỌC -->
       <section class="panel catalog-filter-panel p-0 mb-3">
         <h2 class="visually-hidden">Danh mục thuốc nha khoa</h2>
-        <form id="medicationFilterForm" th:action="@{/admin/medications}" method="get" class="p-3 border-bottom">
+        <form id="medicationFilterForm" th:action="@{/admin/medications}" method="get" class="p-3">
           <div class="row g-2 align-items-end">
             <div class="col-12 col-md-4 col-lg-3">
-              <label for="searchKeyword" class="form-label">Tìm kiếm</label>
-              <input id="searchKeyword" type="text" name="q" class="form-control"
-                     placeholder="Tên thuốc, mã thuốc, hoạt chất..."
-                     th:value="${keyword}">
+              <label for="searchKeyword" class="form-label small text-muted mb-1">Tìm kiếm thuốc</label>
+              <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input id="searchKeyword" type="text" name="q" class="form-control"
+                       placeholder="Tên thuốc, mã thuốc, hoạt chất..."
+                       th:value="${keyword}">
+              </div>
             </div>
-            <div class="col-md-3 col-lg-2">
-              <label for="filterActive" class="form-label">Trạng thái</label>
+            <div class="col-12 col-sm-6 col-md-3 col-lg-2">
+              <label for="filterActive" class="form-label small text-muted mb-1">Trạng thái</label>
               <select id="filterActive" name="active" class="form-select">
                 <option value="">Tất cả trạng thái</option>
                 <option value="true" th:selected="${selectedActive != null and selectedActive == true}">Đang dùng</option>
                 <option value="false" th:selected="${selectedActive != null and selectedActive == false}">Ngừng dùng</option>
               </select>
             </div>
-            <div class="col-md-2 col-lg-2">
-              <label for="filterSize" class="form-label">Số dòng / trang</label>
+            <div class="col-12 col-sm-6 col-md-2 col-lg-2">
+              <label for="filterSize" class="form-label small text-muted mb-1">Số dòng / trang</label>
               <select id="filterSize" name="size" class="form-select">
                 <option value="10" th:selected="${size == 10}">10 dòng</option>
                 <option value="15" th:selected="${size == null or size == 15}">15 dòng</option>
@@ -67,16 +70,11 @@
                 <option value="50" th:selected="${size == 50}">50 dòng</option>
               </select>
             </div>
-            <div class="col-md-auto">
+            <div class="col-auto ms-auto d-flex gap-2">
               <button type="submit" class="btn btn-primary">
-                <i class="bi bi-search" aria-hidden="true"></i> Tìm
+                <i class="bi bi-funnel" aria-hidden="true"></i> Lọc
               </button>
-              <a th:href="@{/admin/medications}" class="btn btn-outline-secondary ms-1">Bỏ lọc</a>
-            </div>
-            <div class="col-12 col-md-auto ms-md-auto d-flex align-items-center justify-content-end gap-2">
-               <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCreate">
-                 <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm thuốc mới
-               </button>
+              <a th:href="@{/admin/medications}" class="btn btn-outline-secondary">Bỏ lọc</a>
             </div>
           </div>
         </form>
@@ -90,8 +88,10 @@
             <span class="fw-bold text-dark fs-6">Danh mục thuốc &amp; Dược phẩm</span>
             <span class="badge bg-primary-subtle text-primary rounded-pill fw-bold" th:text="|Tổng ${totalItems ?: #lists.size(medications)}|">Tổng 0</span>
           </div>
-          <div class="small text-muted">
-            <i class="bi bi-info-circle me-1 text-primary"></i> Cuộn ngang để xem đầy đủ cột · Cột Thao tác được ghim cố định
+          <div class="fin-topbar-right">
+            <button type="button" class="btn btn-primary btn-sm fw-semibold d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#modalCreate">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i> Thêm thuốc mới
+            </button>
           </div>
         </div>
 

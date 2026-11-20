@@ -37,8 +37,18 @@ public class DailyVisitDTO {
     private Long ticketId;
     private Integer ticketNumber;
     private String ticketDisplayNumber;
+    private String queueStatus;
+    private String calledAt;
     private Boolean isPriority;
     private Boolean isEmergency;
     private String priorityReason;
     private String visitType;
+    private Long appointmentId;
+    private Boolean isBookedAndOnTime;
+    private Integer queuePriorityRank;
+    private String queuePriorityLabel;
+    private String actualStartTime;
+    private String actualEndTime;
+    private boolean coveredByCurrentDoctor;
+    private boolean accessibleByCurrentDoctor;
 }

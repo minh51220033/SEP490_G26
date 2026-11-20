@@ -476,7 +476,6 @@ public class StaffController {
         f.setMohDoctorCode(s.getMohDoctorCode());
         f.setBaseSalary(s.getBaseSalary() != null ? java.math.BigDecimal.valueOf(s.getBaseSalary().longValue()) : null);
         f.setAllowanceAmount(s.getAllowanceAmount() != null ? java.math.BigDecimal.valueOf(s.getAllowanceAmount().longValue()) : null);
-        f.setInsuranceSalary(s.getInsuranceSalary() != null ? java.math.BigDecimal.valueOf(s.getInsuranceSalary().longValue()) : null);
         f.setBankAccountNumber(s.getBankAccountNumber());
         f.setBankName(s.getBankName());
         f.setHireDate(s.getHireDate());

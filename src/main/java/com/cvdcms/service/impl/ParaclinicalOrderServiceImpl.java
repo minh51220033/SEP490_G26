@@ -1,5 +1,6 @@
 package com.cvdcms.service.impl;
 
+import com.cvdcms.DTO.ParaclinicalBackfillReportDTO;
 import com.cvdcms.DTO.ParaclinicalOrderCreateDTO;
 import com.cvdcms.DTO.ParaclinicalOrderItemResponseDTO;
 import com.cvdcms.DTO.ServiceDTO;
@@ -36,8 +37,15 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.ServiceCommissionService serviceCommissionService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ServiceCommissionRepository serviceCommissionRepository;
+
     public void setServiceCommissionService(com.cvdcms.service.ServiceCommissionService serviceCommissionService) {
         this.serviceCommissionService = serviceCommissionService;
+    }
+
+    public void setServiceCommissionRepository(ServiceCommissionRepository serviceCommissionRepository) {
+        this.serviceCommissionRepository = serviceCommissionRepository;
     }
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -82,9 +90,7 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         if (visitId == null) {
             return Collections.emptyList();
         }
-        // Tự động đồng bộ các chỉ định đã có kết quả sang bảng Dịch vụ thực hiện (để Kế toán lập hóa đơn)
-        syncParaclinicalOrdersToPerformedServices(visitId);
-
+        // Đọc thuần (không phát sinh INSERT/UPDATE trong GET)
         List<ParaclinicalOrderItem> items = paraclinicalOrderItemRepository
                 .findByOrder_Visit_VisitIdOrderByOrder_OrderIdDescOrderItemIdDesc(visitId);
         return items.stream().map(this::mapToDTO).collect(Collectors.toList());
@@ -95,6 +101,10 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     public ParaclinicalOrderItemResponseDTO createOrder(Long visitId, ParaclinicalOrderCreateDTO dto, Long currentDoctorId) {
         Visit visit = visitRepository.findById(visitId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lượt khám ID: " + visitId));
+
+        if (visit.getBranch() == null || visit.getPatientProfile() == null) {
+            throw new IllegalStateException("Lượt khám ID " + visitId + " thiếu thông tin chi nhánh hoặc bệnh nhân.");
+        }
 
         // Ràng buộc nghiệp vụ BR-EMR-02: Khóa bệnh án bất biến
         com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
@@ -134,13 +144,13 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                             )));
         }
 
-        // Xác định Bác sĩ chỉ định
+        // Xác định Bác sĩ chỉ định (không fallback findAll().get(0))
         StaffProfile doctor = visit.getPrimaryDoctor();
         if (doctor == null && currentDoctorId != null) {
             doctor = staffProfileRepository.findById(currentDoctorId).orElse(null);
         }
         if (doctor == null) {
-            doctor = staffProfileRepository.findAll().stream().findFirst().orElse(null);
+            throw new IllegalStateException("Không xác định được bác sĩ chỉ định cho lượt khám ID: " + visitId);
         }
 
         // Tìm hoặc tạo mới ParaclinicalOrder gắn với Visit
@@ -185,8 +195,8 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             item.setPerformedAt(LocalDateTime.now());
         }
 
-        // Tự động đồng bộ sang PerformedService nếu đã hoàn thành (hoặc cập nhật)
-        syncOrderItemToPerformedService(item);
+        // Tự động đồng bộ sang PerformedService nếu đã hoàn thành
+        syncOrderItemToPerformedService(item, false);
 
         ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
         if (savedItem != null && (savedItem.getExternalRefId() == null || savedItem.getExternalRefId().isBlank())) {
@@ -211,7 +221,8 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     @Override
     @Transactional
     public ParaclinicalOrderItemResponseDTO updateOrder(Long orderItemId, ParaclinicalOrderCreateDTO dto) {
-        ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findById(orderItemId)
+        ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findByIdForUpdate(orderItemId)
+                .or(() -> paraclinicalOrderItemRepository.findById(orderItemId))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chỉ định ID: " + orderItemId));
 
         Visit visit = item.getOrder().getVisit();
@@ -220,8 +231,31 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 emrRecordRepository,
                 "Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến");
 
-        if (dto.getServiceId() != null) {
-            serviceRepository.findById(dto.getServiceId()).ifPresent(item::setService);
+        PerformedService existingPs = item.getPerformedService();
+        boolean hasActiveInvoice = existingPs != null && invoiceItemRepository != null
+                && invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(existingPs.getPerformedId());
+
+        boolean serviceChanged = dto.getServiceId() != null
+                && (item.getService() == null || !dto.getServiceId().equals(item.getService().getServiceId()));
+
+        ParaclinicalOrderItemStatus requestedStatus = null;
+        if (dto.getStatus() != null && !dto.getStatus().isBlank()) {
+            requestedStatus = ParaclinicalOrderItemStatus.valueOf(dto.getStatus().trim());
+        }
+
+        if (hasActiveInvoice) {
+            if (serviceChanged) {
+                throw new IllegalStateException("Chỉ định cận lâm sàng đã được lập hóa đơn còn hiệu lực. Không thể thay đổi dịch vụ; vui lòng điều chỉnh hóa đơn theo nghiệp vụ.");
+            }
+            if (requestedStatus != null && requestedStatus != ParaclinicalOrderItemStatus.COMPLETED) {
+                throw new IllegalStateException("Chỉ định cận lâm sàng đã được lập hóa đơn còn hiệu lực. Không thể hủy hoặc hoàn tác trạng thái hoàn thành.");
+            }
+        }
+
+        if (dto.getServiceId() != null && serviceChanged) {
+            com.cvdcms.entity.Service newService = serviceRepository.findById(dto.getServiceId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ ID: " + dto.getServiceId()));
+            item.setService(newService);
         }
 
         if (dto.getToothNumbers() != null) {
@@ -233,10 +267,9 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             item.setResultSummary(summary.trim());
         }
 
-        if (dto.getStatus() != null && !dto.getStatus().isBlank()) {
-            ParaclinicalOrderItemStatus st = ParaclinicalOrderItemStatus.valueOf(dto.getStatus().trim());
-            item.setStatus(st);
-            if (st == ParaclinicalOrderItemStatus.COMPLETED && item.getPerformedAt() == null) {
+        if (requestedStatus != null) {
+            item.setStatus(requestedStatus);
+            if (requestedStatus == ParaclinicalOrderItemStatus.COMPLETED && item.getPerformedAt() == null) {
                 item.setPerformedAt(LocalDateTime.now());
             }
         }
@@ -257,7 +290,7 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 } else {
                     item.getAttachments().get(0).setFileUrl(trimmedUrl);
                 }
-                if (dto.getStatus() == null || dto.getStatus().isBlank()) {
+                if (requestedStatus == null) {
                     item.setStatus(ParaclinicalOrderItemStatus.COMPLETED);
                     if (item.getPerformedAt() == null) {
                         item.setPerformedAt(LocalDateTime.now());
@@ -266,8 +299,8 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             }
         }
 
-        // Đồng bộ sang PerformedService
-        syncOrderItemToPerformedService(item);
+        // Đồng bộ sang PerformedService (giữ nguyên giá đã chốt khi không đổi dịch vụ)
+        syncOrderItemToPerformedService(item, serviceChanged);
 
         ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
         checkAndUpdateVisitParaclinicalStatus(savedItem.getOrder());
@@ -277,7 +310,8 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     @Override
     @Transactional
     public ParaclinicalOrderItemResponseDTO updateStatus(Long orderItemId, ParaclinicalOrderItemStatus newStatus, String resultSummary) {
-        ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findById(orderItemId)
+        ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findByIdForUpdate(orderItemId)
+                .or(() -> paraclinicalOrderItemRepository.findById(orderItemId))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chỉ định ID: " + orderItemId));
 
         Visit visit = item.getOrder().getVisit();
@@ -286,16 +320,25 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 emrRecordRepository,
                 "Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến");
 
+        if (item.getPerformedService() != null
+                && newStatus != ParaclinicalOrderItemStatus.COMPLETED
+                && invoiceItemRepository != null
+                && invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(item.getPerformedService().getPerformedId())) {
+            throw new IllegalStateException("Chỉ định cận lâm sàng đã được lập hóa đơn còn hiệu lực. Không thể hủy hoặc chuyển trạng thái chưa hoàn thành.");
+        }
+
         item.setStatus(newStatus);
         if (newStatus == ParaclinicalOrderItemStatus.COMPLETED) {
-            item.setPerformedAt(LocalDateTime.now());
+            if (item.getPerformedAt() == null) {
+                item.setPerformedAt(LocalDateTime.now());
+            }
             if (resultSummary != null && !resultSummary.isBlank()) {
                 item.setResultSummary(resultSummary);
             }
         }
 
-        // Đồng bộ sang PerformedService
-        syncOrderItemToPerformedService(item);
+        // Đồng bộ sang PerformedService (không ghi đè giá cũ nếu PerformedService đã tồn tại)
+        syncOrderItemToPerformedService(item, false);
 
         ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
         checkAndUpdateVisitParaclinicalStatus(savedItem.getOrder());
@@ -322,7 +365,8 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     @Override
     @Transactional
     public void deleteOrder(Long orderItemId) {
-        ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findById(orderItemId)
+        ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findByIdForUpdate(orderItemId)
+                .or(() -> paraclinicalOrderItemRepository.findById(orderItemId))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chỉ định ID: " + orderItemId));
 
         Visit visit = item.getOrder().getVisit();
@@ -331,24 +375,54 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 emrRecordRepository,
                 "Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến. Không thể xóa chỉ định");
 
-        if (performedServiceRepository != null && invoiceItemRepository != null) {
-            PerformedService ps = item.getPerformedService();
-            if (ps != null) {
-                boolean isBilled = invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId());
-                if (isBilled) {
-                    throw new IllegalStateException("Không thể xóa chỉ định cận lâm sàng đã được Kế toán xuất hóa đơn.");
-                }
-                item.setPerformedService(null);
-                paraclinicalOrderItemRepository.save(item);
-                performedServiceRepository.delete(ps);
+        PerformedService ps = item.getPerformedService();
+        boolean hasAnyInvoiceHistory = ps != null && invoiceItemRepository != null
+                && invoiceItemRepository.existsByPerformedService_PerformedId(ps.getPerformedId());
+        boolean hasCommissionHistory = ps != null && serviceCommissionRepository != null
+                && !serviceCommissionRepository.findByPerformedService_PerformedId(ps.getPerformedId()).isEmpty();
+        boolean hasExternalRef = item.getExternalRefId() != null && !item.getExternalRefId().isBlank();
+        boolean hasResultOrMedia = (item.getResultSummary() != null && !item.getResultSummary().isBlank())
+                || (item.getResultsJson() != null && !item.getResultsJson().isBlank())
+                || item.getPerformedAt() != null
+                || (item.getAttachments() != null && !item.getAttachments().isEmpty())
+                || item.getLabExternalOrder() != null
+                || item.getStatus() == ParaclinicalOrderItemStatus.COMPLETED
+                || item.getStatus() == ParaclinicalOrderItemStatus.IN_PROGRESS;
+
+        if (ps != null) {
+            boolean isBilled = invoiceItemRepository != null
+                    && invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId());
+            if (isBilled) {
+                throw new IllegalStateException("Không thể xóa chỉ định cận lâm sàng đã được Kế toán xuất hóa đơn còn hiệu lực.");
+            }
+            if (serviceCommissionService != null) {
+                serviceCommissionService.cancelPendingCommissionsForPerformedService(ps.getPerformedId());
             }
         }
 
+        // Giữ lại lịch sử liên kết (externalRefId, kết quả, ảnh/labo, hóa đơn CANCELLED, hoa hồng từng phát sinh) bằng hủy mềm
+        if (hasAnyInvoiceHistory || hasCommissionHistory || hasExternalRef || hasResultOrMedia) {
+            if (ps != null) {
+                ps.setStatus(PerformedServiceStatus.CANCELLED);
+                performedServiceRepository.save(ps);
+            }
+            item.setStatus(ParaclinicalOrderItemStatus.CANCELLED);
+            paraclinicalOrderItemRepository.save(item);
+            log.info("Đã hủy mềm chỉ định cận lâm sàng có lịch sử liên kết ID: {}, ExternalRefId={}", orderItemId, item.getExternalRefId());
+            return;
+        }
+
+        if (ps != null && performedServiceRepository != null) {
+            item.setPerformedService(null);
+            paraclinicalOrderItemRepository.save(item);
+            performedServiceRepository.delete(ps);
+        }
+
         paraclinicalOrderItemRepository.delete(item);
-        log.info("Đã xóa chỉ định cận lâm sàng ID: {}", orderItemId);
+        log.info("Đã xóa chỉ định cận lâm sàng nháp ID: {}", orderItemId);
     }
 
-    private void syncOrderItemToPerformedService(ParaclinicalOrderItem item) {
+    private void syncOrderItemToPerformedService(ParaclinicalOrderItem item, boolean serviceChanged) {
         if (performedServiceRepository == null) {
             return;
         }
@@ -362,46 +436,84 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
 
         if (item.getStatus() == ParaclinicalOrderItemStatus.COMPLETED) {
             PerformedService ps = item.getPerformedService();
+            String notes = "Chỉ định cận lâm sàng [" + item.getOrder().getOrderCode() + "]: " + item.getService().getServiceName()
+                    + (item.getResultSummary() != null && !item.getResultSummary().isBlank() ? " - " + item.getResultSummary() : "");
+            String teeth = item.getToothNumbers() != null && !item.getToothNumbers().isBlank() ? item.getToothNumbers() : "Toàn hàm";
+
             if (ps == null) {
+                // Lần tạo/chốt giá đầu tiên: lấy giá danh mục hiện hành và kiểm tra đủ dữ liệu nguồn
+                PatientProfile patient = item.getOrder().getPatientProfile() != null
+                        ? item.getOrder().getPatientProfile()
+                        : visit.getPatientProfile();
+                Branch branch = visit.getBranch();
+                StaffProfile doctor = item.getOrder().getDoctor() != null
+                        ? item.getOrder().getDoctor()
+                        : visit.getPrimaryDoctor();
+                if (patient == null || branch == null || doctor == null) {
+                    throw new IllegalStateException("Không thể đồng bộ dịch vụ thực hiện cho chỉ định CLS ID "
+                            + item.getOrderItemId() + " do thiếu thông tin bệnh nhân, chi nhánh hoặc bác sĩ.");
+                }
+
                 ps = new PerformedService();
                 ps.setVisit(visit);
-                ps.setPatientProfile(item.getOrder().getPatientProfile() != null ? item.getOrder().getPatientProfile() : visit.getPatientProfile());
-                ps.setBranch(visit.getBranch());
-                ps.setDoctor(item.getOrder().getDoctor() != null ? item.getOrder().getDoctor() : visit.getPrimaryDoctor());
-                if (ps.getDoctor() == null) {
-                    ps.setDoctor(staffProfileRepository.findAll().stream().findFirst().orElse(null));
+                ps.setPatientProfile(patient);
+                ps.setBranch(branch);
+                ps.setDoctor(doctor);
+                ps.setService(item.getService());
+                ps.setToothNumbers(teeth);
+                ps.setQuantity(BigDecimal.ONE);
+                BigDecimal price = item.getService().getBasePrice() != null ? item.getService().getBasePrice() : BigDecimal.ZERO;
+                ps.setUnitPrice(price);
+                ps.setDiscountAmount(BigDecimal.ZERO);
+                ps.setFinalPrice(price);
+                ps.setCompletedAt(item.getPerformedAt() != null ? item.getPerformedAt() : LocalDateTime.now());
+                ps.setStatus(PerformedServiceStatus.COMPLETED);
+                ps.setClinicalNotes(notes);
+
+                PerformedService savedPs = performedServiceRepository.save(ps);
+                item.setPerformedService(savedPs);
+                if (serviceCommissionService != null) {
+                    serviceCommissionService.calculateCommissionsForPerformedService(savedPs);
                 }
-            }
+            } else {
+                // Đã tồn tại PerformedService: bảo toàn giá, chiết khấu, số lượng và completedAt đã chốt
+                boolean wasCancelled = ps.getStatus() == PerformedServiceStatus.CANCELLED;
+                ps.setToothNumbers(teeth);
+                ps.setClinicalNotes(notes);
+                if (wasCancelled) {
+                    ps.setStatus(PerformedServiceStatus.COMPLETED);
+                }
+                if (serviceChanged) {
+                    ps.setService(item.getService());
+                    BigDecimal newPrice = item.getService().getBasePrice() != null ? item.getService().getBasePrice() : BigDecimal.ZERO;
+                    ps.setUnitPrice(newPrice);
+                    ps.setDiscountAmount(BigDecimal.ZERO);
+                    ps.setFinalPrice(newPrice);
+                }
 
-            ps.setService(item.getService());
-            ps.setToothNumbers(item.getToothNumbers() != null && !item.getToothNumbers().isBlank() ? item.getToothNumbers() : "Toàn hàm");
-            ps.setQuantity(BigDecimal.ONE);
-            BigDecimal price = item.getService().getBasePrice() != null ? item.getService().getBasePrice() : BigDecimal.ZERO;
-            ps.setUnitPrice(price);
-            ps.setDiscountAmount(BigDecimal.ZERO);
-            ps.setFinalPrice(price);
-            ps.setCompletedAt(item.getPerformedAt() != null ? item.getPerformedAt() : LocalDateTime.now());
-            ps.setStatus(PerformedServiceStatus.COMPLETED);
-            ps.setClinicalNotes("Chỉ định cận lâm sàng [" + item.getOrder().getOrderCode() + "]: " + item.getService().getServiceName()
-                    + (item.getResultSummary() != null && !item.getResultSummary().isBlank() ? " - " + item.getResultSummary() : ""));
-
-            PerformedService savedPs = performedServiceRepository.save(ps);
-            item.setPerformedService(savedPs);
-            if (serviceCommissionService != null) {
-                serviceCommissionService.calculateCommissionsForPerformedService(savedPs);
+                PerformedService savedPs = performedServiceRepository.save(ps);
+                if (serviceCommissionService != null) {
+                    if (serviceChanged) {
+                        serviceCommissionService.recalculateCommissionsForPerformedService(savedPs);
+                    } else if (wasCancelled) {
+                        serviceCommissionService.calculateCommissionsForPerformedService(savedPs);
+                    }
+                }
             }
         } else {
             // Khi trạng thái chưa hoàn thành hoặc hủy
             PerformedService ps = item.getPerformedService();
             if (ps != null) {
-                boolean isBilled = invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId());
-                if (!isBilled) {
-                    if (serviceCommissionService != null) {
-                        serviceCommissionService.cancelPendingCommissionsForPerformedService(ps.getPerformedId());
-                    }
-                    ps.setStatus(PerformedServiceStatus.CANCELLED);
-                    performedServiceRepository.save(ps);
+                boolean isBilled = invoiceItemRepository != null
+                        && invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId());
+                if (isBilled) {
+                    throw new IllegalStateException("Chỉ định cận lâm sàng đã được lập hóa đơn còn hiệu lực, không thể hủy dịch vụ thực hiện.");
                 }
+                if (serviceCommissionService != null) {
+                    serviceCommissionService.cancelPendingCommissionsForPerformedService(ps.getPerformedId());
+                }
+                ps.setStatus(PerformedServiceStatus.CANCELLED);
+                performedServiceRepository.save(ps);
             }
         }
     }
@@ -412,12 +524,70 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         if (visitId == null) return;
         List<ParaclinicalOrderItem> items = paraclinicalOrderItemRepository
                 .findByOrder_Visit_VisitIdOrderByOrder_OrderIdDescOrderItemIdDesc(visitId);
-        for (ParaclinicalOrderItem item : items) {
+        for (ParaclinicalOrderItem candidate : items) {
+            if (candidate.getOrderItemId() == null) continue;
+            ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findByIdForUpdate(candidate.getOrderItemId())
+                    .orElse(candidate);
             if (item.getStatus() == ParaclinicalOrderItemStatus.COMPLETED && item.getPerformedService() == null) {
-                syncOrderItemToPerformedService(item);
+                syncOrderItemToPerformedService(item, false);
                 paraclinicalOrderItemRepository.save(item);
             }
         }
+    }
+
+    @Override
+    @Transactional
+    public ParaclinicalBackfillReportDTO reconcileCompletedOrdersMissingPerformedService(boolean dryRun) {
+        ParaclinicalBackfillReportDTO report = new ParaclinicalBackfillReportDTO();
+        report.setDryRun(dryRun);
+        if (performedServiceRepository == null) {
+            return report;
+        }
+        List<Long> candidateIds = paraclinicalOrderItemRepository.findCompletedOrderItemIdsMissingPerformedService();
+        if (candidateIds == null || candidateIds.isEmpty()) {
+            return report;
+        }
+        report.setTotalCandidates(candidateIds.size());
+
+        for (Long orderItemId : candidateIds) {
+            ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findByIdForUpdate(orderItemId).orElse(null);
+            if (item == null || item.getStatus() != ParaclinicalOrderItemStatus.COMPLETED || item.getPerformedService() != null) {
+                report.setSkippedCount(report.getSkippedCount() + 1);
+                continue;
+            }
+            ParaclinicalOrder order = item.getOrder();
+            Visit visit = order != null ? order.getVisit() : null;
+            PatientProfile patient = order != null && order.getPatientProfile() != null
+                    ? order.getPatientProfile()
+                    : (visit != null ? visit.getPatientProfile() : null);
+            Branch branch = visit != null ? visit.getBranch() : null;
+            StaffProfile doctor = order != null && order.getDoctor() != null
+                    ? order.getDoctor()
+                    : (visit != null ? visit.getPrimaryDoctor() : null);
+            com.cvdcms.entity.Service service = item.getService();
+
+            if (order == null || visit == null || patient == null || branch == null || doctor == null || service == null) {
+                report.setErrorCount(report.getErrorCount() + 1);
+                report.getErrors().add("OrderItem ID " + orderItemId
+                        + " thiếu liên kết bắt buộc (order/visit/patient/branch/doctor/service).");
+                continue;
+            }
+
+            if (dryRun) {
+                report.setProcessedCount(report.getProcessedCount() + 1);
+                report.getAffectedOrderItemIds().add(orderItemId);
+            } else {
+                syncOrderItemToPerformedService(item, false);
+                ParaclinicalOrderItem saved = paraclinicalOrderItemRepository.save(item);
+                report.setProcessedCount(report.getProcessedCount() + 1);
+                report.getAffectedOrderItemIds().add(orderItemId);
+                if (saved.getPerformedService() != null && saved.getPerformedService().getPerformedId() != null) {
+                    report.getCreatedPerformedIds().add(saved.getPerformedService().getPerformedId());
+                }
+            }
+        }
+
+        return report;
     }
 
     @Override

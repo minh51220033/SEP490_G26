@@ -104,7 +104,7 @@
 
                 <div class="d-flex align-items-center gap-2 flex-shrink-0 flex-wrap">
                     <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-                    <button type="button" class="btn btn-primary fw-bold px-3 py-1.5 rounded-3 shadow-xs d-inline-flex align-items-center gap-1.5"
+                    <button type="button" class="btn btn-primary fw-bold px-3 py-1 rounded-3 shadow-xs d-inline-flex align-items-center gap-2"
                             style="height: 32px; font-size: 12.5px; background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;"
                             data-bs-toggle="modal" data-bs-target="#createLeaveModal"
                             th:disabled="${doctor == null}">
@@ -116,12 +116,12 @@
             <!-- THANH 2 TAB CHUYỂN NHANH: LỊCH LÀM VIỆC & CHẤM CÔNG | YÊU CẦU NGHỈ / KHÓA LỊCH -->
             <div class="d-flex flex-wrap align-items-center gap-2 mb-3 pb-2 border-bottom" style="border-color: #e2e8f0 !important;">
                 <a th:href="@{${permissionCodes != null and #lists.contains(permissionCodes, 'HR_MY_ATTENDANCE') ? '/attendance/my' : '/schedules/my'}}"
-                   class="btn btn-sm fw-semibold px-3 py-1.5 rounded-3 d-inline-flex align-items-center gap-1.5"
+                   class="btn btn-sm fw-semibold px-3 py-1 rounded-3 d-inline-flex align-items-center gap-2"
                    style="background: #ffffff; color: #475569; border: 1px solid #cbd5e1; font-size: 13px;">
                     <i class="bi bi-calendar-check text-primary"></i><span>Lịch làm việc &amp; Chấm công</span>
                 </a>
                 <a th:href="@{/doctor/leave-requests}"
-                   class="btn btn-sm fw-bold px-3 py-1.5 rounded-3 d-inline-flex align-items-center gap-1.5"
+                   class="btn btn-sm fw-bold px-3 py-1 rounded-3 d-inline-flex align-items-center gap-2"
                    style="background: #0284c7; color: #fff; border: 1px solid #0284c7; font-size: 13px;">
                     <i class="bi bi-calendar2-x"></i><span>Yêu cầu nghỉ / Khóa lịch</span>
                 </a>
@@ -196,7 +196,7 @@
                 <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-list-task text-primary"></i>
                     <h6 class="mb-0 fw-bold" style="font-size: 13.5px; color: #1e293b;">Lịch sử đơn xin nghỉ phép &amp; khóa lịch</h6>
-                    <span class="badge bg-primary-subtle text-primary rounded-pill px-2.5 py-1 fw-semibold" id="leaveVisibleCount"
+                    <span class="badge bg-primary-subtle text-primary rounded-pill px-2 py-1 fw-semibold" id="leaveVisibleCount"
                           th:text="|Hiển thị ${requests.size()} đơn|">Hiển thị 0 đơn</span>
                 </div>
                 <div class="dv-search-box">
@@ -407,10 +407,10 @@
                                             Loại nghỉ phép <span class="text-danger">*</span>
                                         </label>
                                         <select class="form-select form-select-sm" id="leaveTypeSelect" name="leaveType" required>
-                                            <option value="ANNUAL">Nghỉ phép năm (ANNUAL)</option>
-                                            <option value="SICK">Nghỉ ốm đau (SICK)</option>
-                                            <option value="PERSONAL">Việc riêng (PERSONAL)</option>
-                                            <option value="UNPAID">Nghỉ không lương (UNPAID)</option>
+                                            <option value="ANNUAL" th:selected="${prevLeaveType != null and prevLeaveType.name() == 'ANNUAL'}">Nghỉ phép năm (ANNUAL)</option>
+                                            <option value="SICK" th:selected="${prevLeaveType != null and prevLeaveType.name() == 'SICK'}">Nghỉ ốm đau (SICK)</option>
+                                            <option value="PERSONAL" th:selected="${prevLeaveType != null and prevLeaveType.name() == 'PERSONAL'}">Việc riêng (PERSONAL)</option>
+                                            <option value="UNPAID" th:selected="${prevLeaveType != null and prevLeaveType.name() == 'UNPAID'}">Nghỉ không lương (UNPAID)</option>
                                         </select>
                                     </div>
 
@@ -420,6 +420,7 @@
                                             Từ ngày <span class="text-danger">*</span>
                                         </label>
                                         <input type="date" class="form-control form-control-sm" id="startDateInput" name="startDate"
+                                               th:value="${prevStartDate != null ? prevStartDate : ''}"
                                                th:min="${today}" required>
                                     </div>
 
@@ -429,6 +430,7 @@
                                             Đến ngày <span class="text-danger">*</span>
                                         </label>
                                         <input type="date" class="form-control form-control-sm" id="endDateInput" name="endDate"
+                                               th:value="${prevEndDate != null ? prevEndDate : ''}"
                                                th:min="${today}" required>
                                     </div>
 
@@ -464,7 +466,8 @@
                                     <!-- CHECKBOX NGHỈ ĐỘT XUẤT -->
                                     <div class="col-12">
                                         <div class="form-check p-2 bg-light rounded border">
-                                            <input class="form-check-input ms-0 me-2" type="checkbox" id="isEmergencyCheck" name="isEmergency" value="true">
+                                            <input class="form-check-input ms-0 me-2" type="checkbox" id="isEmergencyCheck" name="isEmergency" value="true"
+                                                   th:checked="${prevIsEmergency != null and prevIsEmergency}">
                                             <label class="form-check-label fw-semibold text-danger small" for="isEmergencyCheck">
                                                 Nghỉ đột xuất / Khẩn cấp (Trường hợp phát sinh sự cố hoặc báo trước dưới 3 ngày)
                                             </label>
@@ -477,7 +480,8 @@
                                             Lý do xin nghỉ / Khóa lịch khám <span class="text-danger">*</span>
                                         </label>
                                         <textarea class="form-control form-control-sm" id="reasonInput" name="reason" rows="3"
-                                                  placeholder="Nhập chi tiết lý do xin nghỉ phép (tối thiểu 5 ký tự)..." required></textarea>
+                                                  placeholder="Nhập chi tiết lý do xin nghỉ phép (tối thiểu 5 ký tự)..."
+                                                  th:text="${prevReason}" required></textarea>
                                         <div class="form-text text-muted" style="font-size: 0.75rem;">
                                             Thông tin này sẽ được gửi tới Ban Quản lý / Admin cơ sở để kiểm duyệt.
                                         </div>
@@ -548,7 +552,8 @@
                     });
 
                     // Tải ca làm việc theo chi nhánh
-                    function loadShifts(branchId) {
+                    const prevShiftId = /*[[${prevShiftId}]]*/ null;
+                    function loadShifts(branchId, selectedShiftId = null) {
                         shiftSelect.innerHTML = '<option value="">-- Nghỉ cả ngày (Khóa toàn bộ ca trong ngày) --</option>';
                         if (!branchId) return;
 
@@ -560,6 +565,9 @@
                                         const opt = document.createElement('option');
                                         opt.value = s.shiftId;
                                         opt.textContent = `${s.shiftName} (${s.startTime} - ${s.endTime})`;
+                                        if (selectedShiftId !== null && selectedShiftId !== undefined && String(s.shiftId) === String(selectedShiftId)) {
+                                            opt.selected = true;
+                                        }
                                         shiftSelect.appendChild(opt);
                                     });
                                 }
@@ -573,10 +581,10 @@
 
                     // Nếu có chi nhánh được chọn mặc định
                     if (branchSelect.value) {
-                        loadShifts(branchSelect.value);
+                        loadShifts(branchSelect.value, prevShiftId);
                     } else if (branchSelect.options.length > 1) {
                         branchSelect.selectedIndex = 1;
-                        loadShifts(branchSelect.value);
+                        loadShifts(branchSelect.value, prevShiftId);
                     }
 
                     // Lọc nhanh theo thẻ KPI trạng thái & ô tìm kiếm

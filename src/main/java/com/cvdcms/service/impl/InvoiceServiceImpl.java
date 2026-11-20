@@ -441,8 +441,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                     medItem.setUnitPrice(unitPrice);
                     BigDecimal lineTotal = unitPrice.multiply(takeFromBatch).setScale(2, RoundingMode.HALF_UP);
                     medItem.setFinalAmount(lineTotal);
-                    medItem.setVatRate(BigDecimal.valueOf(5.0));
-                    medItem.setVatAmount(lineTotal.multiply(BigDecimal.valueOf(0.05)).setScale(0, RoundingMode.HALF_UP));
+                    medItem.setVatRate(BigDecimal.ZERO);
+                    medItem.setVatAmount(BigDecimal.ZERO);
 
                     invoiceItems.add(medItem);
                     totalMedicineAmount = totalMedicineAmount.add(lineTotal);
@@ -524,11 +524,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         // Tổng phải thanh toán = (Tiền dịch vụ - Các khoản giảm) + Tiền thuốc
         BigDecimal netPayable = benefit.netAmount.add(totalMedicineAmount).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal totalVat = invoiceItems.stream()
-                .map(InvoiceItem::getVatAmount)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        invoice.setTotalVatAmount(totalVat);
+        invoice.setTotalVatAmount(BigDecimal.ZERO);
         invoice.setTotalAmount(netPayable);
         invoice.setPaidAmount(BigDecimal.ZERO);
         invoice.setRemainingDebt(netPayable);
@@ -1455,6 +1451,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             List<Long> serviceIds,
             LocalDateTime now
     ) {
+        PromotionServiceImpl.validatePromotionDiscountConfig(promo);
         if (!Boolean.TRUE.equals(promo.getIsActive())) {
             throw new IllegalStateException("Chương trình khuyến mãi '" + promo.getPromoName() + "' đang bị vô hiệu hóa.");
         }
@@ -1499,15 +1496,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     private BigDecimal calculatePromoDiscount(Promotion promo, BigDecimal totalServiceAmount) {
-        if (promo.getPromoType() == PromotionType.PERCENTAGE) {
-            BigDecimal calc = totalServiceAmount.multiply(promo.getDiscountValue()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-            if (promo.getMaxDiscountAmount() != null && calc.compareTo(promo.getMaxDiscountAmount()) > 0) {
-                calc = promo.getMaxDiscountAmount();
-            }
-            return calc;
-        } else {
-            return promo.getDiscountValue().min(totalServiceAmount);
-        }
+        return PromotionServiceImpl.computeBoundedDiscount(promo, totalServiceAmount);
     }
 
     @Override
@@ -1694,8 +1683,8 @@ public class InvoiceServiceImpl implements InvoiceService {
                 invoiceItem.setQuantity(takeFromBatch);
                 invoiceItem.setUnitPrice(unitPrice);
                 invoiceItem.setFinalAmount(batchLineTotal);
-                invoiceItem.setVatRate(BigDecimal.valueOf(5.0));
-                invoiceItem.setVatAmount(batchLineTotal.multiply(BigDecimal.valueOf(0.05)).setScale(0, RoundingMode.HALF_UP));
+                invoiceItem.setVatRate(BigDecimal.ZERO);
+                invoiceItem.setVatAmount(BigDecimal.ZERO);
                 invoiceItem.setPrescriptionItem(prescItem);
                 invoiceItem.setMedication(med);
                 invoiceItem.setBatch(b);
@@ -1745,11 +1734,7 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setDiscountAmount(BigDecimal.ZERO);
         invoice.setPromotionDiscount(BigDecimal.ZERO);
         invoice.setPointDiscount(BigDecimal.ZERO);
-        BigDecimal totalMedVat = invoiceItems.stream()
-                .map(InvoiceItem::getVatAmount)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        invoice.setTotalVatAmount(totalMedVat);
+        invoice.setTotalVatAmount(BigDecimal.ZERO);
         invoice.setTotalAmount(totalMedicineAmount);
         invoice.setPaidAmount(BigDecimal.ZERO);
         invoice.setRemainingDebt(totalMedicineAmount);
@@ -1856,7 +1841,8 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
 
         return list.stream()
-                .filter(p -> p.getStatus() != PrescriptionStatus.CANCELLED)
+                .filter(p -> p.getStatus() != PrescriptionStatus.CANCELLED
+                        && p.getStatus() != PrescriptionStatus.CLINIC_PURCHASE_COMPLETED)
                 .filter(p -> {
                     Visit v = p.getVisit();
                     if (v == null) return true;
