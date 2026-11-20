@@ -92,6 +92,9 @@ public class WorkShiftController {
                     .filter(b -> b.getBranchId().equals(selectedBranchId))
                     .findFirst()
                     .orElseGet(() -> branchService.getBranchById(selectedBranchId));
+            model.addAttribute("currentBranch", selectedBranch);
+            model.addAttribute("selectedBranch", selectedBranch);
+            session.setAttribute("currentBranchId", selectedBranchId);
             List<WorkShift> shifts = workShiftService.getShiftsByBranch(selectedBranchId);
             List<AppointmentSessionWindow> sessionWindows = workShiftService.getSessionWindowsByBranch(selectedBranchId);
             Map<Long, String> shiftSessionLabels = new LinkedHashMap<>();

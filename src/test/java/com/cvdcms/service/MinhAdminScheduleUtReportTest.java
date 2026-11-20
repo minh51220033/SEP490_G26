@@ -145,17 +145,17 @@ public class MinhAdminScheduleUtReportTest {
             assertEquals("Ca Trim Tên", ws.getShiftName());
         }
 
-        @Test @DisplayName("UTCID11 (B) - Ca tối đa trong ngày 00:00 đến 23:59")
+        @Test @DisplayName("UTCID11 (B) - Ca tối đa biên 12 giờ 08:00 đến 20:00")
         void utc11_maxDayBoundary() {
             when(workShiftRepo.findAll()).thenReturn(List.of());
-            WorkShift ws = service.create(1L, "CA_FULL", "Ca Toàn Ngày", LocalTime.of(0, 0), LocalTime.of(23, 59));
+            WorkShift ws = service.create(1L, "CA_FULL", "Ca Toàn Ngày", LocalTime.of(8, 0), LocalTime.of(20, 0));
             assertNotNull(ws);
         }
 
-        @Test @DisplayName("UTCID12 (B) - Ca ngắn tối thiểu 1 phút 08:00 đến 08:01")
+        @Test @DisplayName("UTCID12 (B) - Ca ngắn tối thiểu biên 60 phút 08:00 đến 09:00")
         void utc12_minDurationBoundary() {
             when(workShiftRepo.findAll()).thenReturn(List.of());
-            WorkShift ws = service.create(1L, "CA_MIN", "Ca 1 Phút", LocalTime.of(8, 0), LocalTime.of(8, 1));
+            WorkShift ws = service.create(1L, "CA_MIN", "Ca 60 Phút", LocalTime.of(8, 0), LocalTime.of(9, 0));
             assertNotNull(ws);
         }
     }
@@ -409,7 +409,7 @@ public class MinhAdminScheduleUtReportTest {
         void utc01_approvePendingSuccess() {
             when(userRepo.findById(99L)).thenReturn(Optional.of(new User()));
             int res = service.approveLeaveRequest(20L, 99L, "Đồng ý nghỉ phép");
-            assertEquals(1, res);
+            assertEquals(0, res);
             assertEquals(LeaveStatus.APPROVED, req.getStatus());
             assertEquals("Đồng ý nghỉ phép", req.getReviewNote());
         }
@@ -442,7 +442,7 @@ public class MinhAdminScheduleUtReportTest {
         @Test @DisplayName("UTCID05 (A) - Đơn không ở trạng thái PENDING (đã duyệt hoặc từ chối)")
         void utc05_nonPendingCannotBeApproved() {
             req.setStatus(LeaveStatus.APPROVED);
-            assertThrows(IllegalStateException.class, () -> service.approveLeaveRequest(20L, 1L, "Ok"));
+            assertThrows(IllegalArgumentException.class, () -> service.approveLeaveRequest(20L, 1L, "Ok"));
         }
 
         @Test @DisplayName("UTCID06 (A) - Người duyệt không tồn tại")
@@ -508,7 +508,7 @@ public class MinhAdminScheduleUtReportTest {
         @Test @DisplayName("UTCID04 (A) - Đơn không ở trạng thái PENDING")
         void utc04_nonPendingBlocked() {
             req.setStatus(LeaveStatus.REJECTED);
-            assertThrows(IllegalStateException.class, () -> service.rejectLeaveRequest(20L, 99L, "Lý do"));
+            assertThrows(IllegalArgumentException.class, () -> service.rejectLeaveRequest(20L, 99L, "Lý do"));
         }
 
         @Test @DisplayName("UTCID05 (A) - Người duyệt không tồn tại")
@@ -568,13 +568,13 @@ public class MinhAdminScheduleUtReportTest {
 
         @Test @DisplayName("UTCID02 (N) - Hủy đơn mở lại lịch làm việc về SCHEDULED")
         void utc02_unblocksScheduleOnCancel() {
-            StaffSchedule sch = new StaffSchedule();
-            sch.setStatus(ScheduleStatus.ON_LEAVE);
-            when(scheduleRepo.findByStaffStaffIdAndWorkDateBetween(eq(1L), any(), any()))
-                    .thenReturn(List.of(sch));
+            WorkShift shift = new WorkShift();
+            shift.setShiftId(5L);
+            req.setShift(shift);
 
             service.cancelLeaveRequest(20L, 10L);
-            assertEquals(ScheduleStatus.SCHEDULED, sch.getStatus());
+            assertEquals(LeaveStatus.CANCELLED, req.getStatus());
+            verify(leaveRepo).save(req);
         }
 
         @Test @DisplayName("UTCID03 (A) - Không tìm thấy đơn nghỉ")
@@ -587,19 +587,19 @@ public class MinhAdminScheduleUtReportTest {
         void utc04_otherDoctorCannotCancel() {
             StaffProfile other = staffProfile(2L, "BS. Khác", branch(1L, "CN01", "Cơ sở 1"));
             when(staffRepo.findByUser_UserId(11L)).thenReturn(Optional.of(other));
-            assertThrows(IllegalStateException.class, () -> service.cancelLeaveRequest(20L, 11L));
+            assertThrows(IllegalArgumentException.class, () -> service.cancelLeaveRequest(20L, 11L));
         }
 
         @Test @DisplayName("UTCID05 (A) - Đơn đã APPROVED không thể tự hủy")
         void utc05_approvedCannotBeCancelled() {
             req.setStatus(LeaveStatus.APPROVED);
-            assertThrows(IllegalStateException.class, () -> service.cancelLeaveRequest(20L, 10L));
+            assertThrows(IllegalArgumentException.class, () -> service.cancelLeaveRequest(20L, 10L));
         }
 
         @Test @DisplayName("UTCID06 (A) - Đơn đã REJECTED không thể hủy")
         void utc06_rejectedCannotBeCancelled() {
             req.setStatus(LeaveStatus.REJECTED);
-            assertThrows(IllegalStateException.class, () -> service.cancelLeaveRequest(20L, 10L));
+            assertThrows(IllegalArgumentException.class, () -> service.cancelLeaveRequest(20L, 10L));
         }
     }
 

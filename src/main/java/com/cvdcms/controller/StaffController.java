@@ -94,6 +94,33 @@ public class StaffController {
         }
         addLayoutAttributes(session, model);
 
+        List<Branch> activeBranches = branchService.getActiveBranches();
+
+        // Mặc định ban đầu của màn Quản lý nhân sự là Toàn hệ thống (trừ khi người dùng chủ động chọn chi nhánh trên URL)
+        if (branchId != null) {
+            Long checkId = branchId;
+            Branch chosen = activeBranches.stream().filter(b -> b.getBranchId().equals(checkId)).findFirst().orElse(null);
+            if (chosen != null) {
+                model.addAttribute("selectedBranchId", branchId);
+                model.addAttribute("currentBranchId", branchId);
+                model.addAttribute("currentBranch", chosen);
+                model.addAttribute("selectedBranch", chosen);
+                model.addAttribute("currentBranchCode", chosen.getBranchCode());
+                model.addAttribute("currentBranchName", chosen.getBranchName());
+                session.setAttribute("currentBranchId", branchId);
+            } else {
+                branchId = null;
+            }
+        }
+        if (branchId == null) {
+            model.addAttribute("selectedBranchId", null);
+            model.addAttribute("currentBranchId", null);
+            model.addAttribute("currentBranch", null);
+            model.addAttribute("selectedBranch", null);
+            model.addAttribute("currentBranchCode", null);
+            model.addAttribute("currentBranchName", null);
+        }
+
         List<StaffProfile> all = staffService.searchStaff(
                 keyword, specialty, status, branchId, positionTitle, hasLicense, roleId, sort, direction);
 

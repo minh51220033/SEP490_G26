@@ -80,14 +80,26 @@ public class StaffScheduleController {
         model.addAttribute("nextWeek", monday.plusWeeks(1));
         model.addAttribute("today", LocalDate.now());
 
-        // Đảm bảo branchId hợp lệ thuộc danh sách chi nhánh đang hoạt động
+        // Đảm bảo branchId hợp lệ thuộc danh sách chi nhánh đang hoạt động; không cho phép Toàn hệ thống
         if (branchId != null) {
             Long targetBranchId = branchId;
             if (branches.stream().noneMatch(b -> b.getBranchId().equals(targetBranchId))) {
                 branchId = null;
             }
         }
-
+        if (branchId == null) {
+            Object sb = session.getAttribute("currentBranchId");
+            if (sb instanceof Long l && branches.stream().anyMatch(b -> b.getBranchId().equals(l))) {
+                branchId = l;
+            } else if (sb instanceof String s && !s.isBlank()) {
+                try {
+                    Long l = Long.parseLong(s);
+                    if (branches.stream().anyMatch(b -> b.getBranchId().equals(l))) {
+                        branchId = l;
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        }
         if (branchId == null && !branches.isEmpty()) {
             branchId = branches.get(0).getBranchId();
         }
@@ -96,6 +108,12 @@ public class StaffScheduleController {
         model.addAttribute("activeMenu", "schedules");
 
         if (branchId != null) {
+            Long finalId = branchId;
+            Branch currentBranch = branches.stream().filter(b -> b.getBranchId().equals(finalId)).findFirst().orElse(null);
+            model.addAttribute("currentBranch", currentBranch);
+            model.addAttribute("selectedBranch", currentBranch);
+            session.setAttribute("currentBranchId", branchId);
+
             List<WorkShift> shifts = scheduleService.getShifts(branchId);
             model.addAttribute("shifts", shifts);
             model.addAttribute("matrix", scheduleService.buildWeekMatrix(branchId, monday, shifts));

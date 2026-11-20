@@ -215,7 +215,31 @@ public class AttendanceController {
 
         List<Branch> branches = branchService.getActiveBranches();
         model.addAttribute("branches", branches);
-        model.addAttribute("selectedBranchId", branchId);
+
+        // Mặc định ban đầu của màn Chấm công là Toàn hệ thống (trừ khi người dùng chủ động chọn chi nhánh trên URL)
+        if (branchId != null) {
+            Long checkId = branchId;
+            Branch chosen = branches.stream().filter(b -> b.getBranchId().equals(checkId)).findFirst().orElse(null);
+            if (chosen != null) {
+                model.addAttribute("selectedBranchId", branchId);
+                model.addAttribute("currentBranchId", branchId);
+                model.addAttribute("currentBranch", chosen);
+                model.addAttribute("selectedBranch", chosen);
+                model.addAttribute("currentBranchCode", chosen.getBranchCode());
+                model.addAttribute("currentBranchName", chosen.getBranchName());
+                session.setAttribute("currentBranchId", branchId);
+            } else {
+                branchId = null;
+            }
+        }
+        if (branchId == null) {
+            model.addAttribute("selectedBranchId", null);
+            model.addAttribute("currentBranchId", null);
+            model.addAttribute("currentBranch", null);
+            model.addAttribute("selectedBranch", null);
+            model.addAttribute("currentBranchCode", null);
+            model.addAttribute("currentBranchName", null);
+        }
 
         List<AttendanceRecord> records = attendanceService.getBranchHistory(branchId, selected);
         model.addAttribute("records", records);
