@@ -24,6 +24,17 @@ public class DoctorExaminationRestController {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.ClinicQueueCoordinatorService queueCoordinator;
 
+    private Long resolveEffectiveBranchForQueue(com.cvdcms.entity.User user, Long requestedBranchId, jakarta.servlet.http.HttpSession session) {
+        if (requestedBranchId != null) {
+            return requestedBranchId;
+        }
+        if (user != null && doctorVisitAccess.isAdmin(user) && session != null
+                && session.getAttribute("currentBranchId") instanceof Long sBranchId) {
+            return sBranchId;
+        }
+        return null;
+    }
+
     /**
      * Lấy trạng thái bàn khám hiện tại của bác sĩ (lượt đang gọi, đang khám, số lượng chờ, cảnh báo cấp cứu).
      * Chỉ đọc, không tự chuyển trạng thái hàng đợi.
@@ -33,7 +44,8 @@ public class DoctorExaminationRestController {
             @RequestParam(value = "branchId", required = false) Long branchId,
             jakarta.servlet.http.HttpSession session) {
         com.cvdcms.entity.User user = doctorVisitAccess.requireAuthenticatedUser(session);
-        return ResponseEntity.ok(queueCoordinator.getDoctorDeskStatus(user, branchId));
+        Long effectiveBranchId = resolveEffectiveBranchForQueue(user, branchId, session);
+        return ResponseEntity.ok(queueCoordinator.getDoctorDeskStatus(user, effectiveBranchId));
     }
 
     /**
@@ -44,8 +56,9 @@ public class DoctorExaminationRestController {
             @RequestParam(value = "branchId", required = false) Long branchId,
             jakarta.servlet.http.HttpSession session) {
         com.cvdcms.entity.User user = doctorVisitAccess.requireAuthenticatedUser(session);
+        Long effectiveBranchId = resolveEffectiveBranchForQueue(user, branchId, session);
         try {
-            var res = queueCoordinator.enterExaminationForDoctor(user, branchId);
+            var res = queueCoordinator.enterExaminationForDoctor(user, effectiveBranchId);
             Map<String, Object> body = new HashMap<>();
             body.put("success", true);
             body.put("visitId", res.visit().getVisitId());
@@ -95,8 +108,9 @@ public class DoctorExaminationRestController {
                     "message", "Thiếu mã phiếu đang gọi (ticketId) để xác nhận vắng mặt."));
         }
         try {
-            var result = queueCoordinator.markCalledPatientAbsent(user, branchId, ticketId, reason);
-            var deskStatus = queueCoordinator.getDoctorDeskStatus(user, branchId);
+            Long effectiveBranchId = resolveEffectiveBranchForQueue(user, branchId, session);
+            var result = queueCoordinator.markCalledPatientAbsent(user, effectiveBranchId, ticketId, reason);
+            var deskStatus = queueCoordinator.getDoctorDeskStatus(user, effectiveBranchId);
             Map<String, Object> resp = new HashMap<>();
             resp.put("success", true);
             resp.put("absentDisplayNumber", result.absentTicket().getDisplayNumber());

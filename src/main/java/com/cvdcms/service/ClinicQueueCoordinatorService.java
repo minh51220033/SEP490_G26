@@ -41,6 +41,12 @@ public class ClinicQueueCoordinatorService {
     private static final Set<VisitStatus> WAITING_VISIT_STATUSES = Set.of(VisitStatus.WAITING, VisitStatus.WAITING_RESULT);
     private static final Set<VisitStatus> ACTIVE_EXAM_VISIT_STATUSES = Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT);
 
+    /**
+     * TODO: Tạm thời cho phép tài khoản ADMIN xem trạng thái bàn & bấm Vào khám/Vắng mặt khi test nhanh.
+     * Đặt thành false sau khi test xong để khóa quyền ADMIN không vào ca khám thay bác sĩ.
+     */
+    private static final boolean ALLOW_ADMIN_DESK_ACCESS_FOR_TESTING = true;
+
     private final BranchRepository branches;
     private final ClinicalQueueTicketRepository tickets;
     private final VisitRepository visits;
@@ -551,39 +557,24 @@ public class ClinicQueueCoordinatorService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
         }
         LocalDate today = LocalDate.now(CLINIC_ZONE);
-        Optional<StaffProfile> ownStaffOpt = staffProfiles.findByUserUserId(actor.getUserId());
         boolean isAdmin = users.hasActiveAdminRole(actor.getUserId());
-        if (ownStaffOpt.isEmpty()) {
-            if (!isAdmin) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản hiện tại không gắn hồ sơ bác sĩ.");
-            }
+        DeskTarget target = resolveDeskTargetForActor(actor, requestedBranchId, today, false);
+        if (target == null) {
             Long fallbackBranch = requestedBranchId != null ? requestedBranchId
                     : branches.findByIsActiveTrueOrderByBranchNameAsc().stream()
                             .map(Branch::getBranchId).findFirst().orElse(null);
-            String adminBanner = buildAdminDeskHintBanner(fallbackBranch, today, actor.getUsername());
+            String adminBanner = ALLOW_ADMIN_DESK_ACCESS_FOR_TESTING
+                    ? "Không có bệnh nhân đang chờ"
+                    : buildAdminDeskHintBanner(fallbackBranch, today, actor.getUsername());
             return new DoctorDeskStatusDTO(null, actor.getUsername(), fallbackBranch,
                     null, null, 0, false, false, adminBanner, List.of());
         }
 
-        StaffProfile doctor = ownStaffOpt.get();
-        Long branchId = resolveDoctorBranchId(actor, doctor, requestedBranchId);
+        StaffProfile doctor = target.doctor();
+        Long branchId = target.branchId();
         Long doctorId = doctor.getStaffId();
 
         List<QueueTicket> doctorTickets = tickets.findForDoctorOnDay(branchId, today, QueueType.EXAM, doctorId);
-        if (doctorTickets.isEmpty()) {
-            List<Long> allowedBranchIds = branchAssignments.findActiveBranchIdsByStaffId(doctorId, AssignmentStatus.ACTIVE);
-            for (QueueTicket t : tickets.findForDoctorAcrossAllBranchesOnDay(today, QueueType.EXAM, doctorId)) {
-                if (t.getBranch() != null && t.getBranch().getBranchId() != null
-                        && t.getStatus() != QueueStatus.CANCELLED && t.getStatus() != QueueStatus.DONE) {
-                    Long altBranchId = t.getBranch().getBranchId();
-                    if (isAdmin || allowedBranchIds.isEmpty() || allowedBranchIds.contains(altBranchId)) {
-                        branchId = altBranchId;
-                        doctorTickets = tickets.findForDoctorOnDay(branchId, today, QueueType.EXAM, doctorId);
-                        break;
-                    }
-                }
-            }
-        }
 
         QueueTicket inServiceTicket = doctorTickets.stream()
                 .filter(t -> t.getStatus() == QueueStatus.IN_SERVICE
@@ -629,7 +620,7 @@ public class ClinicQueueCoordinatorService {
         } else if (inServiceSummary != null) {
             bannerText = "Đang khám " + inServiceSummary.displayNumber() + " – " + inServiceSummary.patientName();
         } else if (waitingList.isEmpty()) {
-            bannerText = isAdmin
+            bannerText = isAdmin && !ALLOW_ADMIN_DESK_ACCESS_FOR_TESTING
                     ? buildAdminDeskHintBanner(branchId, today, doctor.getFullName())
                     : "Không có bệnh nhân đang chờ";
         } else {
@@ -653,11 +644,15 @@ public class ClinicQueueCoordinatorService {
 
     @Transactional
     public EnterExamResult enterExaminationForDoctor(User actor, Long requestedBranchId) {
-        StaffProfile doctor = requireActingDoctor(actor);
-        Long branchId = resolveDoctorBranchId(actor, doctor, requestedBranchId);
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        DeskTarget target = resolveDeskTargetForActor(actor, requestedBranchId, today, true);
+        if (target == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Không có bệnh nhân đang chờ tại bàn khám.");
+        }
+        StaffProfile doctor = target.doctor();
+        Long branchId = target.branchId();
         Branch branch = branches.findByIdForUpdate(branchId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy chi nhánh."));
-        LocalDate today = LocalDate.now(CLINIC_ZONE);
         Long doctorId = doctor.getStaffId();
 
         List<QueueTicket> doctorTickets = tickets.findForDoctorOnDay(branchId, today, QueueType.EXAM, doctorId);
@@ -748,11 +743,16 @@ public class ClinicQueueCoordinatorService {
 
     @Transactional
     public AbsentResult markCalledPatientAbsent(User actor, Long requestedBranchId, Long expectedTicketId, String reason) {
-        StaffProfile doctor = requireActingDoctor(actor);
-        Long branchId = resolveDoctorBranchId(actor, doctor, requestedBranchId);
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        DeskTarget target = resolveDeskTargetForActor(actor, requestedBranchId, today, true);
+        if (target == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Hiện không có lượt đang gọi hợp lệ để ghi nhận vắng mặt.");
+        }
+        StaffProfile doctor = target.doctor();
+        Long branchId = target.branchId();
         Branch branch = branches.findByIdForUpdate(branchId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy chi nhánh."));
-        LocalDate today = LocalDate.now(CLINIC_ZONE);
         Long doctorId = doctor.getStaffId();
 
         List<QueueTicket> doctorTickets = tickets.findForDoctorOnDay(branchId, today, QueueType.EXAM, doctorId);
@@ -1025,6 +1025,87 @@ public class ClinicQueueCoordinatorService {
                     et.getStatus().name()));
         }
         return alerts;
+    }
+
+    private record DeskTarget(StaffProfile doctor, Long branchId) {
+    }
+
+    private DeskTarget resolveDeskTargetForActor(User actor, Long requestedBranchId, LocalDate today, boolean strictRequireForAdmin) {
+        if (actor == null || actor.getUserId() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
+        boolean isAdmin = users.hasActiveAdminRole(actor.getUserId());
+        Optional<StaffProfile> ownOpt = staffProfiles.findByUserUserId(actor.getUserId());
+        if (ownOpt.isPresent()) {
+            StaffProfile own = ownOpt.get();
+            Long branchId = resolveDoctorBranchId(actor, own, requestedBranchId);
+            if (!isAdmin || !ALLOW_ADMIN_DESK_ACCESS_FOR_TESTING) {
+                return new DeskTarget(own, branchId);
+            }
+            List<QueueTicket> ownTickets = tickets.findForDoctorOnDay(branchId, today, QueueType.EXAM, own.getStaffId());
+            boolean ownHasWork = ownTickets.stream().anyMatch(t -> t.getStatus() != QueueStatus.CANCELLED && t.getStatus() != QueueStatus.DONE)
+                    || !visits.findActiveExamsForDoctorAtBranch(branchId, own.getStaffId(), ACTIVE_EXAM_VISIT_STATUSES).isEmpty();
+            if (ownHasWork) {
+                return new DeskTarget(own, branchId);
+            }
+        }
+
+        if (!isAdmin) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản hiện tại không gắn hồ sơ bác sĩ.");
+        }
+        if (!ALLOW_ADMIN_DESK_ACCESS_FOR_TESTING) {
+            if (strictRequireForAdmin) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản hiện tại không gắn hồ sơ bác sĩ.");
+            }
+            return null;
+        }
+        DeskTarget adminTarget = findAdminTestingDeskTarget(requestedBranchId, today);
+        if (adminTarget == null && strictRequireForAdmin && ownOpt.isPresent()) {
+            StaffProfile own = ownOpt.get();
+            return new DeskTarget(own, resolveDoctorBranchId(actor, own, requestedBranchId));
+        }
+        return adminTarget;
+    }
+
+    // TODO: Xóa helper này (cùng ALLOW_ADMIN_DESK_ACCESS_FOR_TESTING) khi hoàn tất test nhanh bằng Admin
+    private DeskTarget findAdminTestingDeskTarget(Long requestedBranchId, LocalDate today) {
+        List<Long> candidateBranches = new ArrayList<>();
+        if (requestedBranchId != null) {
+            candidateBranches.add(requestedBranchId);
+        } else {
+            for (Branch b : branches.findByIsActiveTrueOrderByBranchNameAsc()) {
+                candidateBranches.add(b.getBranchId());
+            }
+        }
+
+        QueueTicket fallbackCalled = null;
+        QueueTicket fallbackInService = null;
+        QueueTicket fallbackWaiting = null;
+        for (Long bId : candidateBranches) {
+            List<QueueTicket> board = tickets.findForBoard(bId, today, QueueType.EXAM);
+            for (QueueTicket t : board) {
+                if (t.getVisit() == null || t.getVisit().getPrimaryDoctor() == null) {
+                    continue;
+                }
+                if (t.getStatus() == QueueStatus.CALLED && WAITING_VISIT_STATUSES.contains(t.getVisit().getStatus())) {
+                    fallbackCalled = t;
+                    break;
+                } else if (fallbackInService == null && t.getStatus() == QueueStatus.IN_SERVICE && ACTIVE_EXAM_VISIT_STATUSES.contains(t.getVisit().getStatus())) {
+                    fallbackInService = t;
+                } else if (fallbackWaiting == null && t.getStatus() == QueueStatus.WAITING && WAITING_VISIT_STATUSES.contains(t.getVisit().getStatus())) {
+                    fallbackWaiting = t;
+                }
+            }
+            if (fallbackCalled != null) {
+                break;
+            }
+        }
+        QueueTicket picked = fallbackCalled != null ? fallbackCalled
+                : (fallbackInService != null ? fallbackInService : fallbackWaiting);
+        if (picked != null) {
+            return new DeskTarget(picked.getVisit().getPrimaryDoctor(), picked.getBranch().getBranchId());
+        }
+        return null;
     }
 
     private String buildAdminDeskHintBanner(Long branchId, LocalDate today, String currentAccountName) {

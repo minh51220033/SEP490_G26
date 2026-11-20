@@ -803,6 +803,24 @@ class QueueAutoCallWorkflowIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.canEnterExam").value(true))
                 .andExpect(jsonPath("$.calledVisit.displayNumber").value("P-01"));
+
+        // Tạm thời cho phép tài khoản ADMIN vào ca khám để test nhanh
+        Role adminRole = ensureRole("ADMIN", List.of());
+        User adminUser = createUser("adm_test_" + UUID.randomUUID().toString().substring(0, 6), UserType.STAFF, branch, adminRole);
+        MockHttpSession adminSession = sessionWith(adminUser);
+
+        mockMvc.perform(get("/api/doctor/visits/queue-status").session(adminSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.canEnterExam").value(true))
+                .andExpect(jsonPath("$.calledVisit.displayNumber").value("P-01"));
+
+        mockMvc.perform(post("/api/doctor/visits/enter-exam").session(adminSession)
+                        .param("branchId", String.valueOf(branch.getBranchId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.visitId").value(v1.getVisitId()));
+
+        assertEquals(VisitStatus.IN_EXAM, visitRepository.findById(v1.getVisitId()).orElseThrow().getStatus());
+        assertEquals(QueueStatus.IN_SERVICE, latestExamTicket(v1.getVisitId()).getStatus());
     }
 
     // -------------------------------------------------------------------------
@@ -943,7 +961,7 @@ class QueueAutoCallWorkflowIntegrationTest {
         a.setBranch(branch);
         a.setDoctor(doctor);
         a.setAppointmentDate(LocalDate.now(ZONE));
-        a.setPreferredSession(PreferredSession.MORNING);
+        a.setPreferredSession(PreferredSession.ANY);
         a.setExpectedTime(LocalTime.now(ZONE).plusMinutes(10));
         a.setSource(AppointmentSource.ONLINE);
         a.setStatus(AppointmentStatus.CONFIRMED);
