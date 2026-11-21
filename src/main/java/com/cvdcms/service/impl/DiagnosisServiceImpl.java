@@ -702,10 +702,13 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                             + visit.getStatus().name());
         }
         if (visit.getBranch() != null && visit.getPrimaryDoctor() != null) {
-            List<Visit> activeSameDesk = visitRepository.findActiveExamsForDoctorAtBranch(
+            LocalDate today = LocalDate.now(com.cvdcms.service.AppointmentPolicyService.CLINIC_ZONE);
+            List<Visit> activeSameDesk = visitRepository.findActiveExamsForDoctorAtBranchOnDay(
                     visit.getBranch().getBranchId(),
                     visit.getPrimaryDoctor().getStaffId(),
-                    List.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT));
+                    List.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT),
+                    today.atStartOfDay(),
+                    today.plusDays(1).atStartOfDay());
             for (Visit other : activeSameDesk) {
                 if (!Objects.equals(other.getVisitId(), visitId)) {
                     throw new IllegalStateException(
