@@ -9,6 +9,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -85,31 +86,59 @@ public class PatientRestController {
      */
     @PostMapping("/quick-create")
     @ResponseStatus(HttpStatus.CREATED)
+    @Transactional
     public PatientView quickCreate(@Valid @RequestBody QuickPatientRequest req, HttpSession session) {
         var scope = access.require(session);
+
+        String cleanName = req.fullName() != null ? req.fullName().trim() : "";
+        String cleanPhone = req.phoneNumber() != null ? req.phoneNumber().trim() : "";
+        if (cleanName.isBlank() || cleanPhone.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng nhập đầy đủ Họ và tên cùng Số điện thoại bệnh nhân.");
+        }
 
         Long targetBranchId = req.branchId();
         if (targetBranchId == null || !scope.permits(targetBranchId)) {
             targetBranchId = scope.branchId();
         }
+        final Long resolvedBranchId = targetBranchId;
         Branch branch;
-        if (targetBranchId != null) {
-            branch = branchRepository.findById(targetBranchId)
+        if (resolvedBranchId != null) {
+            branch = branchRepository.findByIdForUpdate(resolvedBranchId)
+                    .or(() -> branchRepository.findById(resolvedBranchId))
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Chi nhánh không tồn tại."));
         } else {
-            branch = branchRepository.findByIsActiveTrueOrderByBranchNameAsc().stream().findFirst()
+            Branch firstActive = branchRepository.findByIsActiveTrueOrderByBranchNameAsc().stream().findFirst()
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Không có chi nhánh khả dụng."));
+            branch = branchRepository.findByIdForUpdate(firstActive.getBranchId())
+                    .orElse(firstActive);
+        }
+
+        List<ReceptionPatientRecord> existingByPhone = searchRepository.candidates(
+                null, cleanPhone, null, "", "", PageRequest.of(0, 20));
+        for (ReceptionPatientRecord cand : existingByPhone) {
+            if (cand != null && cleanPhone.equals(cand.getPhoneNumber())
+                    && !"INACTIVE".equalsIgnoreCase(cand.getStatus())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Số điện thoại " + cleanPhone + " đã được sử dụng cho bệnh nhân (Mã: "
+                                + cand.getPatientCode() + " - " + cand.getFullName()
+                                + "). Không được tạo hồ sơ trùng số điện thoại.");
+            }
+        }
+
+        String resolvedSource = req.customerSource();
+        if ((resolvedSource == null || resolvedSource.isBlank()) && req.referralSource() != null) {
+            resolvedSource = req.referralSource();
         }
 
         ReceptionPatientRecord profile = new ReceptionPatientRecord();
         String codeSuffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
         profile.setPatientCode("BN" + codeSuffix);
-        profile.setFullName(req.fullName() != null ? req.fullName().trim() : "Bệnh nhân mới");
-        profile.setPhoneNumber(req.phoneNumber() != null ? req.phoneNumber().trim() : "0900000000");
+        profile.setFullName(cleanName);
+        profile.setPhoneNumber(cleanPhone);
         profile.setDob(req.dob() != null ? req.dob() : LocalDate.of(1990, 1, 1));
         profile.setGender(req.gender() != null && !req.gender().isBlank() ? req.gender().trim() : "Nam");
         profile.setAddress(req.address() != null ? req.address().trim() : "");
-        profile.setCustomerSource(req.customerSource() != null && !req.customerSource().isBlank() ? req.customerSource().trim() : "Vãng lai");
+        profile.setCustomerSource(resolvedSource != null && !resolvedSource.isBlank() ? resolvedSource.trim() : "Vãng lai");
         profile.setPreferredBranch(branch);
         profile.setStatus("ACTIVE");
         profile.setIsDefault(false);
@@ -229,7 +258,9 @@ public class PatientRestController {
             String gender,
             String address,
             String customerSource,
+            String referralSource,
             Long branchId,
+            String branchName,
             String allergyDetails,
             String underlyingDiseaseDetails
     ) {}

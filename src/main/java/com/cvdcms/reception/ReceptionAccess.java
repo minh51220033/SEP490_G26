@@ -43,12 +43,13 @@ public class ReceptionAccess {
         }
         List<Long> assignedIds = admin ? List.of() : assignments.activeReceptionBranchIds(user.getUserId(), LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")));
         java.util.Set<Long> merged = new java.util.LinkedHashSet<>(assignedIds);
-        if (!admin && user.getBranch() != null && user.getBranch().getBranchId() != null) {
+        if (!admin && user.getBranch() != null && user.getBranch().getBranchId() != null
+                && !Boolean.FALSE.equals(user.getBranch().getIsActive())) {
             merged.add(user.getBranch().getBranchId());
         }
-        List<Long> branchIds = new java.util.ArrayList<>(merged);
+        List<Long> branchIds = List.copyOf(merged);
         if (!admin && branchIds.isEmpty()) {
-            return new Scope(user, true, true, List.of());
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản chưa được phân công chi nhánh tiếp đón.");
         }
         boolean canManage = admin || users.hasActivePermission(user.getUserId(), "APPOINTMENT_MANAGE");
         return new Scope(user, admin, canManage, branchIds);
@@ -69,7 +70,7 @@ public class ReceptionAccess {
             this(user, admin, admin, branchIds);
         }
         public boolean permits(Long branchId) {
-            return admin || branchIds.contains(branchId);
+            return admin || (branchId != null && branchIds != null && branchIds.contains(branchId));
         }
     }
 }

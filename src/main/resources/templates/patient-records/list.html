@@ -1763,6 +1763,23 @@
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
             }
 
+            const buildPatientCsrfHeaders = (includeJsonContentType = true) => {
+                const headers = includeJsonContentType
+                    ? { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    : { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+                const metaToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+                const metaHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+                if (metaToken && metaHeader) {
+                    headers[metaHeader] = metaToken;
+                    return headers;
+                }
+                const xsrfMatch = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+                if (xsrfMatch && xsrfMatch[1]) {
+                    headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfMatch[1]);
+                }
+                return headers;
+            };
+
             const payload = {
                 fullName: document.getElementById('addFullName').value.trim(),
                 phoneNumber: document.getElementById('addPhoneNumber').value.trim(),
@@ -1778,7 +1795,8 @@
             try {
                 const res = await fetch('/patients/quick-create', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    headers: buildPatientCsrfHeaders(true),
                     body: JSON.stringify(payload)
                 });
                 if (res.ok) {
@@ -1851,9 +1869,14 @@
             };
 
             try {
+                const metaToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+                const metaHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+                const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+                if (metaToken && metaHeader) headers[metaHeader] = metaToken;
                 const res = await fetch(`/patients/${id}/quick-update`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    headers,
                     body: JSON.stringify(payload)
                 });
                 if (res.ok) {
@@ -1903,8 +1926,14 @@
             }
 
             try {
+                const metaToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+                const metaHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+                const headers = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+                if (metaToken && metaHeader) headers[metaHeader] = metaToken;
                 const res = await fetch(`/patients/${id}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    credentials: 'same-origin',
+                    headers
                 });
                 if (res.ok) {
                     showToastMsg('✓ Đã chuyển hồ sơ vào danh sách lưu trữ thành công!');

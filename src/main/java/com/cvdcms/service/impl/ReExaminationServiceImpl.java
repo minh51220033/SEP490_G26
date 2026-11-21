@@ -7,10 +7,14 @@ import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.ReExaminationService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -47,6 +51,10 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     private com.cvdcms.service.AppointmentPolicyService appointmentPolicyService;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.AppointmentBookingLockRepository appointmentBookingLockRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private StaffScheduleRepository staffScheduleRepository;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Override
     @Transactional
@@ -352,14 +360,15 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     @Override
     @Transactional
     public ReExaminationResponseDTO updateAppointmentDate(Long appointmentId, LocalDate newDate, String newTime, PreferredSession session) {
-        Appointment appt = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch hẹn tái khám."));
-
-        assertAppointmentMutable(appt, "Không thể dời lịch hẹn đã hoàn thành, đã check-in hoặc đã hủy.");
+        AppointmentLockSnapshot snap = readLockSnapshot(appointmentId);
+        if (snap == null) {
+            throw new IllegalArgumentException("Không tìm thấy lịch hẹn tái khám.");
+        }
+        assertStatusMutable(snap.status(), "Không thể dời lịch hẹn đã hoàn thành, đã check-in hoặc đã hủy.");
 
         LocalDate today = LocalDate.now(CLINIC_ZONE);
         LocalTime nowTime = LocalTime.now(CLINIC_ZONE);
-        LocalDate targetDate = newDate != null ? newDate : appt.getAppointmentDate();
+        LocalDate targetDate = newDate != null ? newDate : snap.appointmentDate();
         if (targetDate == null) {
             throw new IllegalArgumentException("Vui lòng chọn ngày hẹn tái khám!");
         }
@@ -367,13 +376,41 @@ public class ReExaminationServiceImpl implements ReExaminationService {
             throw new IllegalArgumentException("Ngày hẹn tái khám không được nằm trong quá khứ!");
         }
 
+        // Global lock hierarchy: PatientProfile -> Branch -> StaffProfile -> StaffSchedule -> Appointment
+        if (snap.patientProfileId() != null) {
+            PatientProfile lockedPatient = patientProfileRepository.findByIdForUpdate(snap.patientProfileId()).orElse(null);
+            refreshIfManaged(lockedPatient);
+        }
+        if (appointmentBookingLockRepository != null && snap.branchId() != null) {
+            Branch lockedBranch = appointmentBookingLockRepository.findByIdForBooking(snap.branchId()).orElse(null);
+            refreshIfManaged(lockedBranch);
+            if (lockedBranch == null || !Boolean.TRUE.equals(lockedBranch.getIsActive())) {
+                throw new IllegalStateException("Chi nhánh thực hiện tái khám hiện không còn hoạt động.");
+            }
+        }
+        if (snap.doctorId() != null) {
+            staffProfileRepository.lockById(snap.doctorId()).ifPresent(this::refreshIfManaged);
+            if (staffScheduleRepository != null) {
+                TreeSet<LocalDate> lockDates = new TreeSet<>();
+                if (snap.appointmentDate() != null) lockDates.add(snap.appointmentDate());
+                lockDates.add(targetDate);
+                for (LocalDate d : lockDates) {
+                    staffScheduleRepository.lockDoctorSchedulesForDate(snap.doctorId(), d, ScheduleStatus.SCHEDULED);
+                }
+            }
+        }
+
+        Appointment appt = appointmentRepository.lockById(appointmentId)
+                .or(() -> entityManager == null ? appointmentRepository.findById(appointmentId) : Optional.empty())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch hẹn tái khám."));
+        refreshIfManaged(appt);
+        if (!snap.matchesLockedState(appt)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Lịch hẹn tái khám vừa được cập nhật bởi thao tác khác. Vui lòng tải lại trang và thử lại.");
+        }
+        assertAppointmentMutable(appt, "Không thể dời lịch hẹn đã hoàn thành, đã check-in hoặc đã hủy.");
+
         PreferredSession targetSession = session != null ? session : (appt.getPreferredSession() != null ? appt.getPreferredSession() : PreferredSession.MORNING);
-        if (appt.getPatientProfile() != null && appt.getPatientProfile().getProfileId() != null) {
-            patientProfileRepository.findByIdForUpdate(appt.getPatientProfile().getProfileId());
-        }
-        if (appointmentBookingLockRepository != null && appt.getBranch() != null) {
-            appointmentBookingLockRepository.findByIdForBooking(appt.getBranch().getBranchId());
-        }
         if (appointmentPolicyService != null && appt.getPatientProfile() != null) {
             var dupConflict = appointmentPolicyService.findSameSessionConflict(
                     appt.getPatientProfile().getProfileId(), targetDate, targetSession, appt.getAppointmentId());
@@ -390,6 +427,9 @@ public class ReExaminationServiceImpl implements ReExaminationService {
             throw new IllegalArgumentException("Giờ hẹn tái khám hôm nay không được nằm trong quá khứ!");
         }
         if (appt.getDoctor() != null) {
+            if (appt.getDoctor().getStatus() != null && appt.getDoctor().getStatus() != StaffStatus.ACTIVE) {
+                throw new IllegalStateException("Bác sĩ phụ trách tái khám hiện không ở trạng thái hoạt động!");
+            }
             int durationMinutes = appt.getDurationMinutes() != null && appt.getDurationMinutes() > 0
                     ? appt.getDurationMinutes()
                     : com.cvdcms.service.AppointmentSlotService.duration(appt.getService());
@@ -405,6 +445,13 @@ public class ReExaminationServiceImpl implements ReExaminationService {
                     }
                 } catch (com.cvdcms.service.SlotAlreadyTakenException ex) {
                     throw new IllegalArgumentException(ex.getReason() != null ? ex.getReason() : "Khung giờ tái khám đã bị trùng.");
+                }
+            } else if (appointmentSlotService != null && appt.getBranch() != null && targetTime == null) {
+                try {
+                    appointmentSlotService.lockAndValidateDoctorSession(
+                            appt.getBranch().getBranchId(), appt.getDoctor().getStaffId(), targetDate, targetSession, appt.getAppointmentId());
+                } catch (com.cvdcms.service.SlotAlreadyTakenException ex) {
+                    throw new IllegalArgumentException(ex.getReason() != null ? ex.getReason() : "Bác sĩ đã hết khả năng nhận lịch trong buổi.");
                 }
             } else {
                 validateDoctorAvailabilityForReExam(appt.getDoctor(), appt.getBranch(), targetDate, targetTime, appt.getAppointmentId());
@@ -465,10 +512,25 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     }
 
     private void assertAppointmentMutable(Appointment appt, String errorMessage) {
-        if (appt.getStatus() == AppointmentStatus.COMPLETED
-                || appt.getStatus() == AppointmentStatus.CHECKED_IN
-                || appt.getStatus() == AppointmentStatus.CANCELLED) {
+        assertStatusMutable(appt.getStatus(), errorMessage);
+    }
+
+    private void assertStatusMutable(AppointmentStatus status, String errorMessage) {
+        if (status == AppointmentStatus.COMPLETED
+                || status == AppointmentStatus.CHECKED_IN
+                || status == AppointmentStatus.CANCELLED) {
             throw new IllegalStateException(errorMessage);
+        }
+    }
+
+    private AppointmentLockSnapshot readLockSnapshot(Long appointmentId) {
+        return appointmentRepository.findLockSnapshotById(appointmentId)
+                .orElseGet(() -> appointmentRepository.findById(appointmentId).map(AppointmentLockSnapshot::from).orElse(null));
+    }
+
+    private void refreshIfManaged(Object entity) {
+        if (entityManager != null && entity != null && entityManager.contains(entity)) {
+            entityManager.refresh(entity);
         }
     }
 

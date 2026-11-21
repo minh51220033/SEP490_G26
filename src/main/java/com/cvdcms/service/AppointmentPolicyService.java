@@ -51,4 +51,8 @@ public interface AppointmentPolicyService {
     SessionRange sessionRange(Branch branch, PreferredSession session);
 
     List<SessionWindowInfo> sessionWindows(Branch branch);
+
+    default int doctorCapacityForSession(Long branchId, LocalDate date, PreferredSession session) {
+        return Integer.MAX_VALUE;
+    }
 }

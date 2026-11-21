@@ -241,8 +241,16 @@
                                 sĩ điều trị</p>
                         </div>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
                         <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                        <a th:href="@{/reception/consultations}"
+                            id="openConsultationsLinkBtn"
+                            class="btn fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                            style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
+                            <i class="bi bi-headset"></i>
+                            <span>Yêu cầu tư vấn</span>
+                            <span id="guestConsultationBadge" class="badge bg-danger rounded-pill d-none">0</span>
+                        </a>
                         <a th:href="@{/reception/appointments}"
                             class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
                             <i class="bi bi-arrow-clockwise"></i> Làm mới
@@ -1617,6 +1625,39 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script th:src="@{/js/reception-appointments.js}" defer></script>
     <script th:src="@{/js/reception-workflow-navigation.js}" defer></script>
+    <script>
+        (() => {
+            const badge = document.getElementById('guestConsultationBadge');
+            if (!badge) return;
+            let timerId = null;
+            let inFlight = false;
+            async function refreshConsultationBadge() {
+                if (inFlight || document.visibilityState === 'hidden') return;
+                inFlight = true;
+                try {
+                    const branchSelect = document.getElementById('filterBranch');
+                    const branchId = branchSelect && branchSelect.value ? branchSelect.value : '';
+                    const url = branchId
+                        ? `/reception/consultations/api/summary?branchId=${encodeURIComponent(branchId)}`
+                        : '/reception/consultations/api/summary';
+                    const res = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+                    if (!res.ok) return;
+                    const data = await res.json().catch(() => null);
+                    const count = data && typeof data.newCount === 'number' ? data.newCount : 0;
+                    badge.textContent = String(count);
+                    badge.classList.toggle('d-none', count <= 0);
+                } catch (_) {
+                } finally {
+                    inFlight = false;
+                }
+            }
+            document.addEventListener('DOMContentLoaded', () => {
+                refreshConsultationBadge();
+                if (timerId) clearInterval(timerId);
+                timerId = setInterval(refreshConsultationBadge, 30000);
+            });
+        })();
+    </script>
 </body>
 
 </html>

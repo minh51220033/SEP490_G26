@@ -1,6 +1,8 @@
 package com.cvdcms.patientportal;
 
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -24,5 +26,11 @@ public class PortalAppointmentApiExceptionHandler {
     public ResponseEntity<Map<String, String>> responseStatus(ResponseStatusException ex) {
         String message = ex.getReason() == null ? "Không thể xử lý lịch hẹn." : ex.getReason();
         return ResponseEntity.status(ex.getStatusCode()).body(Map.of("message", message));
+    }
+
+    @ExceptionHandler(PessimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, String>> lockConflict(PessimisticLockingFailureException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("message", "Khung giờ đang có người khác thao tác đồng thời. Vui lòng thử lại."));
     }
 }

@@ -213,28 +213,16 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         }
 
         List<Long> explicitIds = taskRepository.findExplicitBranchIdsByUserId(userId);
-        if (explicitIds != null && !explicitIds.isEmpty()) {
-            Set<Long> allowedSet = new LinkedHashSet<>(explicitIds);
-            return allActive.stream()
-                    .filter(b -> allowedSet.contains(b.getBranchId()))
-                    .toList();
+        if (explicitIds == null || explicitIds.isEmpty()) {
+            return List.of();
         }
 
-        Optional<StaffProfile> staffOpt = staffRepository.findByUser_UserId(userId);
-        if (staffOpt.isPresent()) {
-            List<Long> inferredIds = taskRepository.findInferredBranchIdsByStaffId(staffOpt.get().getStaffId());
-            if (inferredIds != null && !inferredIds.isEmpty()) {
-                Set<Long> allowedSet = new LinkedHashSet<>(inferredIds);
-                List<Branch> matched = allActive.stream()
-                        .filter(b -> allowedSet.contains(b.getBranchId()))
-                        .toList();
-                if (!matched.isEmpty()) {
-                    return matched;
-                }
-            }
-        }
-
-        return allActive;
+        Set<Long> allowedSet = new LinkedHashSet<>(explicitIds);
+        return allActive.stream()
+                .filter(b -> b.getBranchId() != null
+                        && !Boolean.FALSE.equals(b.getIsActive())
+                        && allowedSet.contains(b.getBranchId()))
+                .toList();
     }
 
     private Long resolveAndAuthorizeBranchId(Long requestedBranchId, Long userId, boolean requireSpecificBranch) {
@@ -301,6 +289,12 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     public Map<String, Object> getAccessibleBranches(Long userId) {
         String careRole = requireCareRole(userId);
         List<Branch> allowedBranches = resolveAllowedBranches(userId, careRole);
+        if (!"ADMIN".equals(careRole) && allowedBranches.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Tài khoản của bạn chưa được phân công cơ sở làm việc nên không thể tiếp nhận chăm sóc khách hàng."
+            );
+        }
 
         List<BranchOptionDTO> options = allowedBranches.stream()
                 .map(b -> new BranchOptionDTO(b.getBranchId(), b.getBranchCode(), b.getBranchName()))
@@ -1738,11 +1732,12 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         Visit visit = visitRepository.findWithDetailsById(visitId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy lượt khám phù hợp."));
 
-        if (!"ADMIN".equals(careRole) && visit.getBranch() != null) {
+        if (!"ADMIN".equals(careRole)) {
             Set<Long> allowedBranchIds = resolveAllowedBranches(userId, careRole).stream()
                     .map(Branch::getBranchId)
                     .collect(Collectors.toSet());
-            if (!allowedBranchIds.contains(visit.getBranch().getBranchId())) {
+            Long visitBranchId = visit.getBranch() != null ? visit.getBranch().getBranchId() : null;
+            if (visitBranchId == null || !allowedBranchIds.contains(visitBranchId)) {
                 throw new ResponseStatusException(
                         HttpStatus.FORBIDDEN,
                         "Lượt khám này thuộc cơ sở khác. Bạn chỉ được xem thông tin khám của bệnh nhân tại cơ sở mình đang công tác."
