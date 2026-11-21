@@ -47,7 +47,6 @@ public class SecurityConfig {
                         // Bỏ qua CSRF cho màn hình TV công cộng, WebSocket và các API nội bộ
                         .ignoringRequestMatchers(
                                 "/reception/queue/tv/**",
-                                "/patients/**",
                                 "/portal/patients/**",
                                 "/portal/appointments/api/**",
                                 "/ws/**",
@@ -56,8 +55,11 @@ public class SecurityConfig {
                         )
                         .ignoringRequestMatchers(request -> {
                             String path = request.getRequestURI().substring(request.getContextPath().length());
-                            return path.startsWith("/api/") && !path.equals("/api/reception/check-ins")
-                                    && !path.startsWith("/api/reception/check-ins/");
+                            return path.startsWith("/api/")
+                                    && !path.equals("/api/reception/check-ins")
+                                    && !path.startsWith("/api/reception/check-ins/")
+                                    && !path.equals("/api/public/booking")
+                                    && !path.startsWith("/api/public/booking/");
                         })
                 )
                 // Keep the browser's unload permission policy used by the shared layout & allow same-origin iframe printing.

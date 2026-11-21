@@ -18,9 +18,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -439,7 +441,7 @@ class ReceptionAppointmentRegressionTest {
         when(appointments.lockById(304L)).thenReturn(Optional.of(a));
         when(lifecycle.canTransition(AppointmentStatus.CONFIRMED, AppointmentStatus.NO_SHOW,
                 AppointmentLifecycleAction.MARK_NO_SHOW)).thenReturn(true);
-        when(rules.sessionEnded(any(), any(), any(), any())).thenReturn(true);
+        lenient().when(rules.sessionEnded(any(), any(), any(), any())).thenReturn(true);
         when(careTasks.findByAppointment_AppointmentId(304L)).thenReturn(List.of(reminder));
         doAnswer(inv -> { a.setStatus(AppointmentStatus.NO_SHOW); return null; })
                 .when(lifecycle).transition(a, AppointmentStatus.NO_SHOW, AppointmentLifecycleAction.MARK_NO_SHOW);
@@ -456,6 +458,96 @@ class ReceptionAppointmentRegressionTest {
                 "Hà Nội", "Vãng lai", false, null, LocalDate.now().minusYears(10), "Nam",
                 "Người giám hộ", "123", "Cha", null, false);
         assertThrows(ResponseStatusException.class, () -> service.create(session, req));
+        verify(patientService, never()).create(any(), any());
+    }
+
+    @Test
+    @DisplayName("Phase A: Nhánh tạo hồ sơ mới phải khóa Branch (FOR UPDATE) trước khi gọi PatientService.create()")
+    void newPatientCreateLocksBranchBeforePatientServiceCreate() {
+        LocalDate dob = LocalDate.of(1996, 4, 10);
+        var request = new ReceptionAppointmentService.CreateRequest(
+                1L, null, LocalDate.now().plusDays(1), PreferredSession.MORNING,
+                null, null, "Khám tư vấn", null,
+                "Nguyễn Bệnh Nhân Mới", "0988112233", "TP.HCM", "Vãng lai",
+                false, null, dob, "Nam", null, null, null, null, false
+        );
+
+        ReceptionPatientRecord record = new ReceptionPatientRecord();
+        record.setProfileId(77L);
+        record.setPatientCode("BNNEW77");
+        record.setFullName("Nguyễn Bệnh Nhân Mới");
+        record.setDob(dob);
+        record.setGender("Nam");
+        record.setPhoneNumber("0988112233");
+        record.setPreferredBranch(branch);
+        record.setStatus("ACTIVE");
+        when(patientService.create(eq(session), any(PatientProfileForm.class))).thenReturn(PatientView.from(record));
+        when(patients.findById(77L)).thenReturn(Optional.of(profile));
+
+        PatientProfileRepository patientProfileLockRepo = mock(PatientProfileRepository.class);
+        when(patientProfileLockRepo.findByIdForUpdate(profile.getProfileId())).thenReturn(Optional.of(profile));
+        ReflectionTestUtils.setField(service, "patientProfiles", patientProfileLockRepo);
+
+        service.create(session, request);
+
+        InOrder order = inOrder(lockedBranches, patientService, patientProfileLockRepo);
+        order.verify(lockedBranches).findByIdForBooking(1L);
+        order.verify(patientService).create(eq(session), any(PatientProfileForm.class));
+        order.verify(patientProfileLockRepo).findByIdForUpdate(profile.getProfileId());
+        verify(branches, never()).findById(1L);
+    }
+
+    @Test
+    @DisplayName("Phase A: Nhánh hồ sơ đã tồn tại giữ nguyên thứ tự khóa PatientProfile -> Branch")
+    void existingProfileCreatePreservesPatientBeforeBranchLockOrder() {
+        PatientProfileRepository patientProfileLockRepo = mock(PatientProfileRepository.class);
+        when(patientProfileLockRepo.findByIdForUpdate(10L)).thenReturn(Optional.of(profile));
+        ReflectionTestUtils.setField(service, "patientProfiles", patientProfileLockRepo);
+        when(patients.findBookable(10L)).thenReturn(Optional.of(profile));
+
+        var request = new ReceptionAppointmentService.CreateRequest(
+                1L, 10L, LocalDate.now().plusDays(1), PreferredSession.MORNING,
+                null, null, "Khám định kỳ", null
+        );
+
+        service.create(session, request);
+
+        InOrder order = inOrder(patientProfileLockRepo, lockedBranches);
+        order.verify(patientProfileLockRepo).findByIdForUpdate(10L);
+        order.verify(lockedBranches).findByIdForBooking(1L);
+    }
+
+    @Test
+    @DisplayName("Phase A: Chặn tạo hồ sơ mới khi Branch INACTIVE ngay sau khi lấy lock")
+    void newPatientAtInactiveBranchIsRejectedAfterLockWithoutCreatingPatient() {
+        branch.setIsActive(false);
+        var request = new ReceptionAppointmentService.CreateRequest(
+                1L, null, LocalDate.now().plusDays(1), PreferredSession.MORNING,
+                null, null, "Khám răng", null,
+                "Khách Mới", "0988776655", "Hà Nội", "Vãng lai",
+                false, null, LocalDate.of(1994, 3, 15), "Nữ", null, null, null, null, false
+        );
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.create(session, request));
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(lockedBranches).findByIdForBooking(1L);
+        verify(patientService, never()).create(any(), any());
+        verify(appointments, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("Phase A: Từ chối 403 trước khi khóa Branch hoặc tạo hồ sơ nếu nhân viên không thuộc chi nhánh")
+    void newPatientAtUnauthorizedBranchIsForbiddenWithoutLockOrCreate() {
+        var request = new ReceptionAppointmentService.CreateRequest(
+                99L, null, LocalDate.now().plusDays(1), PreferredSession.MORNING,
+                null, null, "Khám răng", null,
+                "Khách Mới", "0988776644", "Hà Nội", "Vãng lai",
+                false, null, LocalDate.of(1994, 3, 15), "Nữ", null, null, null, null, false
+        );
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.create(session, request));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        verify(lockedBranches, never()).findByIdForBooking(any());
         verify(patientService, never()).create(any(), any());
     }
 }

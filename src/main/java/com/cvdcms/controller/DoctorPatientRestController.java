@@ -940,8 +940,12 @@ public class DoctorPatientRestController {
                 || v.getVisitType() == VisitType.EMERGENCY;
         boolean isBookedOnTime = Boolean.TRUE.equals(v.getIsBookedAndOnTime())
                 && (v.getAppointmentId() != null || v.getVisitType() == VisitType.APPOINTMENT);
+        String priorityReason = turnInfo != null ? turnInfo.priorityReason() : null;
         int priorityRank;
         String priorityLabel;
+        boolean isEarlyWaiting = queueCoordinator != null
+                ? queueCoordinator.isEarlyWaitingReason(priorityReason)
+                : (priorityReason != null && priorityReason.toUpperCase(Locale.ROOT).contains("EARLY_WAITING"));
         if (isEmergency) {
             priorityRank = 1;
             priorityLabel = "Ưu tiên 1 · Cấp cứu";
@@ -951,11 +955,13 @@ public class DoctorPatientRestController {
         } else if (v.getAppointmentId() == null && v.getVisitType() != VisitType.APPOINTMENT) {
             priorityRank = 3;
             priorityLabel = "Ưu tiên 3 · Vãng lai (Walk-in)";
+        } else if (isEarlyWaiting) {
+            priorityRank = 3;
+            priorityLabel = "Ưu tiên 3 · Đặt lịch đến sớm (Chờ giờ)";
         } else {
             priorityRank = 4;
             priorityLabel = "Ưu tiên 4 · Lịch hẹn đến trễ";
         }
-        String priorityReason = turnInfo != null ? turnInfo.priorityReason() : null;
         String visitTypeName = v.getVisitType() != null ? v.getVisitType().name() : "WALK_IN";
 
         return com.cvdcms.DTO.DailyVisitDTO.builder()

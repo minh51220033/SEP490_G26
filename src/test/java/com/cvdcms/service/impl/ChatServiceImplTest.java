@@ -748,15 +748,15 @@ class ChatServiceImplTest {
     }
 
     @Test
-    void getAccessibleBranchesForInbox_FallsBackToInferredBranchAndAllBranchesOrderByName() {
+    void getAccessibleBranchesForInbox_RejectsInferredFallbackAndReturnsAllBranchesForAdminOrderByName() {
         User staffUser = activeUser(12L, "lt12", UserType.STAFF, null);
         stubRole(staffUser, "LE_TAN", receptionistStaff, null);
         when(conversationRepository.findExplicitBranchIdsByUserId(12L)).thenReturn(List.of());
-        when(customerCareTaskRepository.findInferredBranchIdsByStaffId(100L)).thenReturn(List.of(2L));
+        lenient().when(customerCareTaskRepository.findInferredBranchIdsByStaffId(100L)).thenReturn(List.of(2L));
 
-        List<Branch> inferred = chatService.getAccessibleBranchesForInbox(12L);
-        assertEquals(1, inferred.size());
-        assertEquals(2L, inferred.get(0).getBranchId());
+        List<Branch> resolved = chatService.getAccessibleBranchesForInbox(12L);
+        assertTrue(resolved.isEmpty());
+        verify(customerCareTaskRepository, never()).findInferredBranchIdsByStaffId(100L);
 
         when(branchRepository.findByIsActiveTrueOrderByBranchNameAsc()).thenReturn(List.of());
         when(branchRepository.findAllByOrderByBranchNameAsc()).thenReturn(List.of(branch1, branch2));
@@ -1035,5 +1035,125 @@ class ChatServiceImplTest {
         when(conversationRepository.findByIdWithDetails(999L)).thenReturn(Optional.empty());
         assertEquals(HttpStatus.NOT_FOUND,
                 assertThrows(ResponseStatusException.class, () -> chatService.deleteConversationForUser(40L, 999L)).getStatusCode());
+    }
+
+    // ==================== 5. Security: Fail-Closed Unassigned Staff Branch Scope ====================
+
+    @Test
+    void unassignedStaffWithoutBranchesOrTasksFailsClosedAcrossInboxTopicsHomeAndSend() {
+        User unassigned = activeUser(77L, "lt_unassigned", UserType.STAFF, null);
+        StaffProfile sp = new StaffProfile();
+        sp.setStaffId(700L);
+        sp.setFullName("Nhân viên Chưa Phân Công");
+        sp.setPositionTitle("Lễ tân");
+        sp.setStatus(StaffStatus.ACTIVE);
+        sp.setUser(unassigned);
+
+        stubRole(unassigned, "LE_TAN", sp, null);
+        lenient().when(conversationRepository.findExplicitBranchIdsByUserId(77L)).thenReturn(List.of());
+        lenient().when(customerCareTaskRepository.findInferredBranchIdsByStaffId(700L)).thenReturn(List.of());
+
+        assertTrue(chatService.getAccessibleBranchesForInbox(77L).isEmpty());
+        assertFalse(chatService.canAccessBranchTopic(77L, 1L));
+        assertFalse(chatService.canAccessBranchTopic(77L, 2L));
+        assertEquals(0L, chatService.getTotalUnreadCount(77L));
+
+        Map<String, Object> ctx = chatService.getUserChatContext(77L);
+        assertNull(ctx.get("branchId"));
+        assertEquals("Chưa gắn cơ sở", ctx.get("branchName"));
+        assertTrue(((List<?>) ctx.get("accessibleBranches")).isEmpty());
+
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.searchRecipientUsers(77L, null, null, null)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.searchInboxConversations(77L, null, null, null, null, PageRequest.of(0, 10))).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.startOrGetConversationWithRecipient(77L, 20L, 1L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.sendMessage(77L, ChatSendRequestDTO.builder().messageText("Hello").build())).getStatusCode());
+
+        ChatConversation b1Conv = generalConv(91L, patientUser, branch1);
+        when(conversationRepository.findByIdWithDetails(91L)).thenReturn(Optional.of(b1Conv));
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.getConversationMessages(77L, 91L)).getStatusCode());
+    }
+
+    @Test
+    void unassignedStaffWithHistoricalInferredTasksCannotSubscribeToBranchTopic_WhileMultiBranchExplicitWorks() {
+        User unassignedWithHistory = activeUser(78L, "lt_oldtask", UserType.STAFF, null);
+        StaffProfile sp = new StaffProfile();
+        sp.setStaffId(701L);
+        sp.setFullName("Lễ tân Cũ");
+        sp.setPositionTitle("Lễ tân");
+        sp.setStatus(StaffStatus.ACTIVE);
+        sp.setUser(unassignedWithHistory);
+
+        stubRole(unassignedWithHistory, "LE_TAN", sp, null);
+        when(conversationRepository.findExplicitBranchIdsByUserId(78L)).thenReturn(List.of());
+        lenient().when(customerCareTaskRepository.findInferredBranchIdsByStaffId(701L)).thenReturn(List.of(2L));
+
+        assertFalse(chatService.canAccessBranchTopic(78L, 1L));
+        assertFalse(chatService.canAccessBranchTopic(78L, 2L));
+        assertTrue(chatService.getAccessibleBranchesForInbox(78L).isEmpty());
+        assertEquals(0L, chatService.getTotalUnreadCount(78L));
+
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.searchRecipientUsers(78L, null, null, null)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.searchInboxConversations(78L, null, null, null, null, PageRequest.of(0, 10))).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.startOrGetConversationWithRecipient(78L, 20L, 2L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.sendMessage(78L, ChatSendRequestDTO.builder().messageText("Hello").build())).getStatusCode());
+
+        ChatConversation b2Conv = generalConv(92L, patientUser, branch2);
+        lenient().when(conversationRepository.findByIdWithDetails(92L)).thenReturn(Optional.of(b2Conv));
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.getConversationMessages(78L, 92L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.markConversationAsRead(78L, 92L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.sendMessage(78L, ChatSendRequestDTO.builder().conversationId(92L).messageText("Follow up").build())).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.deleteConversationForUser(78L, 92L)).getStatusCode());
+
+        ChatMessage ownOldMsg = new ChatMessage();
+        ownOldMsg.setMessageId(502L);
+        ownOldMsg.setConversation(b2Conv);
+        ownOldMsg.setSenderId(78L);
+        ownOldMsg.setSenderType(SenderType.STAFF);
+        ownOldMsg.setMessageText("Old message");
+        ownOldMsg.setSentAt(LocalDateTime.now().minusMinutes(1));
+        lenient().when(messageRepository.findByIdWithConversation(502L)).thenReturn(Optional.of(ownOldMsg));
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.editMessage(78L, 502L, "Edited")).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class,
+                        () -> chatService.recallMessage(78L, 502L)).getStatusCode());
+
+        verify(customerCareTaskRepository, never()).findInferredBranchIdsByStaffId(701L);
+
+        // Multi-branch explicit scope: user.branch=1L + StaffBranchAssignment=2L
+        stubRole(receptionistUser, "LE_TAN", receptionistStaff, null);
+        when(conversationRepository.findExplicitBranchIdsByUserId(10L)).thenReturn(List.of(1L, 2L));
+        assertTrue(chatService.canAccessBranchTopic(10L, 1L));
+        assertTrue(chatService.canAccessBranchTopic(10L, 2L));
+        assertFalse(chatService.canAccessBranchTopic(10L, 3L));
+        assertEquals(List.of(1L, 2L),
+                chatService.getAccessibleBranchesForInbox(10L).stream().map(Branch::getBranchId).toList());
     }
 }

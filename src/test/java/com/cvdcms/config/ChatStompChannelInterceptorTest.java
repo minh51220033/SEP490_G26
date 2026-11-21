@@ -166,4 +166,14 @@ class ChatStompChannelInterceptorTest {
                 new ChatStompPrincipal(1L, "admin"), null);
         assertSame(msg, interceptor.preSend(msg, channel));
     }
+
+    @Test
+    void validateSubscription_QueueBranchTopicEnforcesStrictBranchAccess() {
+        when(chatService.canAccessBranchTopic(10L, 1L)).thenReturn(true);
+        when(chatService.canAccessBranchTopic(10L, 2L)).thenReturn(false);
+
+        assertDoesNotThrow(() -> interceptor.validateSubscription(10L, "/topic/queue/branch/1"));
+        assertThrows(AccessDeniedException.class, () -> interceptor.validateSubscription(10L, "/topic/queue/branch/2"));
+        assertThrows(AccessDeniedException.class, () -> interceptor.validateSubscription(10L, "/topic/queue/branch/notanumber"));
+    }
 }

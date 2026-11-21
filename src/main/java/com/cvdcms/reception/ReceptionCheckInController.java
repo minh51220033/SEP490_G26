@@ -65,8 +65,9 @@ public class ReceptionCheckInController {
     @GetMapping("/patients/search")
     @ResponseBody
     public List<ReceptionService.PatientRow> searchPatients(@RequestParam(required = false) String query,
+                                                            @RequestParam(required = false) Long branchId,
                                                             HttpSession session) {
-        return service.searchPatients(session, query);
+        return service.searchPatients(session, branchId, query);
     }
 
     @PostMapping("/appointments/{id}")
@@ -108,7 +109,7 @@ public class ReceptionCheckInController {
     }
 
     @PostMapping("/appointments/{id}/revert")
-    public String revertCheckIn(@PathVariable Long id, @RequestParam Long branchId,
+    public String revertCheckIn(@PathVariable Long id, @RequestParam(required = false) Long branchId,
                                 @RequestParam(required = false) String returnUrl,
                                 HttpSession session, RedirectAttributes redirect) {
         try {
@@ -123,7 +124,13 @@ public class ReceptionCheckInController {
                 return "redirect:" + trimmed;
             }
         }
-        return "redirect:/reception/check-in?branchId=" + branchId;
+        Long resolvedBranchId = branchId;
+        if (resolvedBranchId == null && session != null && session.getAttribute("currentBranchId") instanceof Long bId) {
+            resolvedBranchId = bId;
+        }
+        return resolvedBranchId != null
+                ? "redirect:/reception/check-in?branchId=" + resolvedBranchId
+                : "redirect:/reception/check-in";
     }
 
     @PostMapping("/appointments/{id}/note")

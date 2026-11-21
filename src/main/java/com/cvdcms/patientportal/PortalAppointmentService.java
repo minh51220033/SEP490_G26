@@ -6,6 +6,8 @@ import com.cvdcms.repository.*;
 import com.cvdcms.service.AppointmentLifecycleService;
 import com.cvdcms.service.AppointmentPolicyService;
 import com.cvdcms.service.AppointmentSlotService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.constraints.*;
 import org.springframework.http.HttpStatus;
@@ -37,7 +39,11 @@ public class PortalAppointmentService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private PatientProfileRepository patientProfiles;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private StaffScheduleRepository staffSchedules;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
     private org.springframework.context.ApplicationEventPublisher careEventPublisher;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public PortalAppointmentService(PortalAccess access, PortalAppointmentRepository appointments,
             AppointmentHistoryRepository histories, BranchRepository branches,
@@ -180,12 +186,17 @@ public class PortalAppointmentService {
         requireActiveProfile(verifiedProfile);
         if (request.requestKey() == null || !validKey(request.requestKey()))
             throw bad("Mã yêu cầu không hợp lệ.");
-        // Global lock hierarchy: 1. PatientProfile -> 2. Branch -> 3. StaffProfile -> 4. Appointment
+        // Global lock hierarchy: 1. PatientProfile -> 2. Branch -> 3. StaffProfile -> 4. StaffSchedule -> 5. Appointment
         PatientProfile profile = patientProfiles != null
                 ? patientProfiles.findByIdForUpdate(verifiedProfile.getProfileId()).orElse(verifiedProfile)
                 : verifiedProfile;
+        refreshIfManaged(profile);
         requireActiveProfile(profile);
         Branch branch = lockedBranches.findByIdForBooking(request.branchId()).orElseThrow(() -> bad("Chi nhánh không tồn tại."));
+        refreshIfManaged(branch);
+        if (!Boolean.TRUE.equals(branch.getIsActive())) {
+            throw bad("Chi nhánh không hoạt động.");
+        }
         Optional<Appointment> existing = bookingRequests.findById(request.requestKey()).map(PortalBookingRequest::getAppointment);
         if (existing.isPresent()) {
             Appointment a = existing.get();
@@ -207,6 +218,10 @@ public class PortalAppointmentService {
         StaffProfile assignedDoctor = doctor(request.doctorId());
         LocalTime resolvedTime = slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
                 durationMinutes, null, request.expectedTime(), AppointmentActorType.PATIENT);
+        if (assignedDoctor != null && resolvedTime == null) {
+            slots.lockAndValidateDoctorSession(branch.getBranchId(), assignedDoctor.getStaffId(),
+                    request.date(), request.session(), null);
+        }
         if (assignedDoctor == null && resolvedTime != null) {
             StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
                     branch, request.date(), request.session(), resolvedTime, durationMinutes, null);
@@ -265,15 +280,41 @@ public class PortalAppointmentService {
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentView reschedule(HttpSession httpSession, Long appointmentId, RescheduleRequest request) {
         User user = access.requireUser(httpSession);
-        Appointment beforeLock = owned(user, appointmentId);
-        // Global lock hierarchy: 1. PatientProfile -> 2. Branch -> 3. Appointment
-        if (patientProfiles != null && beforeLock.getPatientProfile() != null) {
-            patientProfiles.findByIdForUpdate(beforeLock.getPatientProfile().getProfileId());
+        AppointmentLockSnapshot snap = readLockSnapshot(appointmentId);
+        if (snap == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         }
-        Branch branch = lockedBranches.findByIdForBooking(beforeLock.getBranch().getBranchId())
+        if (snap.patientProfileId() != null) {
+            access.requireProfile(user, snap.patientProfileId());
+        }
+        if (snap.status() != AppointmentStatus.PENDING && snap.status() != AppointmentStatus.CONFIRMED) {
+            throw conflict("Lịch hẹn không còn ở trạng thái có thể đổi hoặc hủy.");
+        }
+        if (snap.preferredSession() == PreferredSession.ANY) {
+            throw conflict("Lịch hẹn chưa có buổi khám cụ thể. Vui lòng liên hệ lễ tân.");
+        }
+
+        // Global lock hierarchy: 1. PatientProfile -> 2. Branch -> 3. StaffProfile (staffId ASC) -> 4. StaffSchedule -> 5. Appointment
+        if (patientProfiles != null && snap.patientProfileId() != null) {
+            PatientProfile lockedProfile = patientProfiles.findByIdForUpdate(snap.patientProfileId()).orElse(null);
+            refreshIfManaged(lockedProfile);
+        }
+        Branch branch = lockedBranches.findByIdForBooking(snap.branchId())
                 .orElseThrow(() -> bad("Chi nhánh không tồn tại."));
+        refreshIfManaged(branch);
+        if (!Boolean.TRUE.equals(branch.getIsActive())) {
+            throw bad("Chi nhánh không hoạt động.");
+        }
+        lockDoctorsAndSchedules(Arrays.asList(snap.doctorId(), request.doctorId()),
+                Arrays.asList(snap.appointmentDate(), request.date()));
+
         Appointment a = appointments.findByIdForUpdate(appointmentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        refreshIfManaged(a);
+        if (!snap.matchesLockedState(a)) {
+            throw conflict("Lịch hẹn vừa được cập nhật bởi thao tác khác. Vui lòng tải lại trang và thử lại.");
+        }
+
         access.requireProfile(user, a.getPatientProfile().getProfileId());
         requireMutable(a);
         policy.ensureModificationCutoff(a, AppointmentActorType.PATIENT);
@@ -288,12 +329,14 @@ public class PortalAppointmentService {
         LocalTime requestedTime = request.expectedTime() != null ? request.expectedTime()
                 : Objects.equals(a.getAppointmentDate(), request.date()) && a.getPreferredSession() == request.session()
                     ? a.getExpectedTime() : null;
-        a.setAppointmentDate(request.date());
-        a.setPreferredSession(request.session());
         int durationMinutes = AppointmentSlotService.duration(a.getService());
         StaffProfile assignedDoctor = doctor(request.doctorId());
         LocalTime resolvedTime = slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
                 durationMinutes, appointmentId, requestedTime, AppointmentActorType.PATIENT);
+        if (assignedDoctor != null && resolvedTime == null) {
+            slots.lockAndValidateDoctorSession(branch.getBranchId(), assignedDoctor.getStaffId(),
+                    request.date(), request.session(), appointmentId);
+        }
         if (assignedDoctor == null && resolvedTime != null) {
             StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
                     branch, request.date(), request.session(), resolvedTime, durationMinutes, appointmentId);
@@ -301,6 +344,8 @@ public class PortalAppointmentService {
                 assignedDoctor = autoAssigned;
             }
         }
+        a.setAppointmentDate(request.date());
+        a.setPreferredSession(request.session());
         a.setDoctor(assignedDoctor);
         a.setDurationMinutes(durationMinutes);
         a.setExpectedTime(resolvedTime);
@@ -373,6 +418,48 @@ public class PortalAppointmentService {
         Appointment a = appointments.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         access.requireProfile(user, a.getPatientProfile().getProfileId());
         return a;
+    }
+
+    private AppointmentLockSnapshot readLockSnapshot(Long appointmentId) {
+        return appointments.findLockSnapshotById(appointmentId)
+                .orElseGet(() -> appointments.findById(appointmentId).map(AppointmentLockSnapshot::from).orElse(null));
+    }
+
+    private void lockDoctorsAndSchedules(Collection<Long> doctorIds, Collection<LocalDate> dates) {
+        TreeSet<Long> sortedDoctorIds = new TreeSet<>();
+        for (Long docId : doctorIds) {
+            if (docId != null) {
+                sortedDoctorIds.add(docId);
+            }
+        }
+        if (sortedDoctorIds.isEmpty()) {
+            return;
+        }
+        for (Long docId : sortedDoctorIds) {
+            if (staff != null) {
+                staff.lockById(docId).ifPresent(this::refreshIfManaged);
+            }
+        }
+        if (staffSchedules == null) {
+            return;
+        }
+        TreeSet<LocalDate> sortedDates = new TreeSet<>();
+        for (LocalDate d : dates) {
+            if (d != null) {
+                sortedDates.add(d);
+            }
+        }
+        for (Long docId : sortedDoctorIds) {
+            for (LocalDate d : sortedDates) {
+                staffSchedules.lockDoctorSchedulesForDate(docId, d, ScheduleStatus.SCHEDULED);
+            }
+        }
+    }
+
+    private void refreshIfManaged(Object entity) {
+        if (entityManager != null && entity != null && entityManager.contains(entity)) {
+            entityManager.refresh(entity);
+        }
     }
     private void requireMutable(Appointment a) {
         if (a.getStatus() != AppointmentStatus.PENDING && a.getStatus() != AppointmentStatus.CONFIRMED)

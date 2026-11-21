@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -66,6 +67,17 @@ public class ClinicQueueCoordinatorService {
     @Autowired(required = false)
     private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
+    @Autowired(required = false)
+    private AppointmentRepository appointmentRepository;
+
+    private Clock clock = Clock.system(CLINIC_ZONE);
+
+    public void setClock(Clock clock) {
+        if (clock != null) {
+            this.clock = clock;
+        }
+    }
+
     @Autowired
     public ClinicQueueCoordinatorService(
             BranchRepository branches,
@@ -106,11 +118,47 @@ public class ClinicQueueCoordinatorService {
         return upper.contains("LATE_BOOKING") || upper.contains("TRỄ") || upper.contains("TRE");
     }
 
+    public boolean isEarlyWaitingReason(String reason) {
+        if (reason == null || reason.isBlank() || isLateBookingReason(reason)) {
+            return false;
+        }
+        String upper = reason.trim().toUpperCase(Locale.ROOT);
+        return upper.contains("EARLY_WAITING") || upper.contains("ĐẾN SỚM") || upper.contains("DEN SOM")
+                || upper.contains("KHÔNG GIỜ CỐ ĐỊNH");
+    }
+
+    /**
+     * Tách bệnh nhân đặt giờ cố định đến sớm (>15 phút trước expectedTime) khỏi hàng gọi lượt
+     * cho đến khi đồng hồ bước vào cửa sổ [expectedTime - 15 phút, ...].
+     */
+    public boolean isWaitingBeforeWindow(QueueTicket ticket, LocalDateTime now) {
+        if (ticket == null || ticket.getStatus() != QueueStatus.WAITING || ticket.getVisit() == null || now == null) {
+            return false;
+        }
+        Visit v = ticket.getVisit();
+        boolean emergency = Boolean.TRUE.equals(ticket.getIsEmergency())
+                || Boolean.TRUE.equals(v.getIsEmergency())
+                || v.getVisitType() == VisitType.EMERGENCY;
+        if (emergency || v.getAppointmentId() == null || appointmentRepository == null) {
+            return false;
+        }
+        return appointmentRepository.findById(v.getAppointmentId())
+                .map(appt -> {
+                    if (appt.getExpectedTime() == null || appt.getAppointmentDate() == null) {
+                        return false;
+                    }
+                    LocalDateTime windowStart = LocalDateTime.of(appt.getAppointmentDate(), appt.getExpectedTime())
+                            .minusMinutes(AppointmentSlotService.GRACE_PERIOD_MINUTES);
+                    return now.isBefore(windowStart);
+                })
+                .orElse(false);
+    }
+
     /**
      * 4 tiers:
      * 1 = Cấp cứu (EMERGENCY)
-     * 2 = Đặt lịch đúng giờ / Ưu tiên (BOOKED_ON_TIME / PRIORITY)
-     * 3 = Vãng lai / Thường (WALK_IN / NORMAL)
+     * 2 = Đặt lịch đúng giờ / Ưu tiên (ON_TIME / PRIORITY)
+     * 3 = Vãng lai / Đặt lịch đến sớm chờ giờ hẹn (WALK_IN / EARLY_WAITING)
      * 4 = Đặt lịch đến trễ (LATE_BOOKING)
      */
     public int queueTierRank(QueueTicket ticket) {
@@ -132,6 +180,9 @@ public class ClinicQueueCoordinatorService {
         if (ticket != null && isLateBookingReason(ticket.getPriorityReason())) {
             return 4;
         }
+        if (ticket != null && isEarlyWaitingReason(ticket.getPriorityReason())) {
+            return 3;
+        }
         if (visit != null) {
             if (Boolean.TRUE.equals(visit.getIsBookedAndOnTime())
                     && (visit.getAppointmentId() != null || visit.getVisitType() == VisitType.APPOINTMENT)) {
@@ -149,12 +200,56 @@ public class ClinicQueueCoordinatorService {
             if (ticket != null && Boolean.TRUE.equals(ticket.getIsPriority())) {
                 return 2;
             }
+            if (score >= 50 || isEarlyBookedVisit(visit)) {
+                return 3;
+            }
             return 4;
         }
         if (ticket != null && (Boolean.TRUE.equals(ticket.getIsPriority()) || score >= 75)) {
             return 2;
         }
         return 3;
+    }
+
+    private boolean isEarlyBookedVisit(Visit visit) {
+        if (visit == null || visit.getAppointmentId() == null || appointmentRepository == null) {
+            return false;
+        }
+        return appointmentRepository.findById(visit.getAppointmentId())
+                .map(appt -> classifyBookedArrival(appt, visit.getCheckInAt()) == BookedArrivalClass.EARLY_WAITING)
+                .orElse(false);
+    }
+
+    private enum BookedArrivalClass { ON_TIME, EARLY_WAITING, LATE_BOOKING }
+
+    private BookedArrivalClass classifyBookedArrival(Visit visit) {
+        if (Boolean.TRUE.equals(visit.getIsBookedAndOnTime())) {
+            return BookedArrivalClass.ON_TIME;
+        }
+        if (visit.getAppointmentId() != null && appointmentRepository != null) {
+            Optional<Appointment> apptOpt = appointmentRepository.findById(visit.getAppointmentId());
+            if (apptOpt.isPresent()) {
+                return classifyBookedArrival(apptOpt.get(), visit.getCheckInAt());
+            }
+        }
+        return BookedArrivalClass.LATE_BOOKING;
+    }
+
+    private BookedArrivalClass classifyBookedArrival(Appointment appt, LocalDateTime checkInAt) {
+        if (appt == null || appt.getExpectedTime() == null || appt.getAppointmentDate() == null || checkInAt == null) {
+            // Lịch chưa chốt giờ cố định giữ phân loại mức 4 (score 25) theo quy ước hiện hành
+            return BookedArrivalClass.LATE_BOOKING;
+        }
+        LocalDateTime expected = LocalDateTime.of(appt.getAppointmentDate(), appt.getExpectedTime());
+        LocalDateTime earliestOnTime = expected.minusMinutes(AppointmentSlotService.GRACE_PERIOD_MINUTES);
+        LocalDateTime latestOnTime = expected.plusMinutes(AppointmentSlotService.GRACE_PERIOD_MINUTES);
+        if (checkInAt.isBefore(earliestOnTime)) {
+            return BookedArrivalClass.EARLY_WAITING;
+        }
+        if (!checkInAt.isAfter(latestOnTime)) {
+            return BookedArrivalClass.ON_TIME;
+        }
+        return BookedArrivalClass.LATE_BOOKING;
     }
 
     public int effectivePriorityScore(QueueTicket ticket, Visit visit) {
@@ -314,7 +409,7 @@ public class ClinicQueueCoordinatorService {
         Long branchId = snapshot.getBranch().getBranchId();
         Branch branch = branches.findByIdForUpdate(branchId).orElse(snapshot.getBranch());
         Visit visit = visits.lockById(visitId).orElse(snapshot);
-        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        LocalDate today = LocalDate.now(clock);
         if (!Boolean.TRUE.equals(branch.getIsActive())
                 || visit.getCheckInAt() == null
                 || !visit.getCheckInAt().toLocalDate().equals(today)
@@ -335,7 +430,10 @@ public class ClinicQueueCoordinatorService {
         boolean returningParaclinical = visit.getStatus() == VisitStatus.WAITING_RESULT;
         boolean bookedOnTime = Boolean.TRUE.equals(visit.getIsBookedAndOnTime())
                 && (visit.getAppointmentId() != null || visit.getVisitType() == VisitType.APPOINTMENT);
-        boolean walkIn = visit.getAppointmentId() == null && visit.getVisitType() != VisitType.APPOINTMENT;
+        boolean bookedVisit = visit.getAppointmentId() != null || visit.getVisitType() == VisitType.APPOINTMENT;
+        BookedArrivalClass arrivalClass = bookedVisit && !bookedOnTime ? classifyBookedArrival(visit) : BookedArrivalClass.ON_TIME;
+        boolean earlyWaiting = bookedVisit && !bookedOnTime && arrivalClass == BookedArrivalClass.EARLY_WAITING;
+        boolean walkIn = !bookedVisit;
         boolean priority = emergency || returningParaclinical || bookedOnTime;
 
         String priorityReason = null;
@@ -345,8 +443,10 @@ public class ClinicQueueCoordinatorService {
         } else if (returningParaclinical) {
             priorityReason = "Bệnh nhân quay lại sau cận lâm sàng chờ đọc kết quả";
         } else if (bookedOnTime) {
-            priorityReason = "Bệnh nhân đặt lịch hẹn check-in đúng giờ";
-        } else if (visit.getVisitType() == VisitType.APPOINTMENT) {
+            priorityReason = "ON_TIME: Bệnh nhân đặt lịch hẹn check-in đúng giờ";
+        } else if (earlyWaiting) {
+            priorityReason = "EARLY_WAITING: Bệnh nhân đặt lịch đến sớm chờ tới giờ hẹn";
+        } else if (bookedVisit) {
             priorityReason = "LATE_BOOKING: Bệnh nhân đặt lịch hẹn check-in trễ giờ";
         }
 
@@ -361,7 +461,7 @@ public class ClinicQueueCoordinatorService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Đã hết dải số trong ngày.");
         }
 
-        LocalDateTime now = LocalDateTime.now(CLINIC_ZONE);
+        LocalDateTime now = LocalDateTime.now(clock);
         ticket.setVisit(visit);
         ticket.setBranch(branch);
         ticket.setQueueDate(today);
@@ -372,7 +472,7 @@ public class ClinicQueueCoordinatorService {
         ticket.setCalledAt(null);
         ticket.setIsPriority(priority);
         ticket.setIsEmergency(emergency);
-        ticket.setPriorityScore(emergency ? 100 : (bookedOnTime || returningParaclinical ? 75 : (walkIn ? 50 : 25)));
+        ticket.setPriorityScore(emergency ? 100 : (bookedOnTime || returningParaclinical ? 75 : (walkIn || earlyWaiting ? 50 : 25)));
         ticket.setPriorityReason(trimTo255(priorityReason));
         ticket.setIssuedAt(now);
         ticket.setPausedAt(null);
@@ -405,7 +505,7 @@ public class ClinicQueueCoordinatorService {
             return Optional.empty();
         }
         User actor = actorUserId != null ? users.findById(actorUserId).orElse(null) : null;
-        return autoCallNextForDoctorIfIdleLocked(branchId, doctorId, actor, LocalDate.now(CLINIC_ZONE));
+        return autoCallNextForDoctorIfIdleLocked(branchId, doctorId, actor, LocalDate.now(clock));
     }
 
     /**
@@ -431,10 +531,12 @@ public class ClinicQueueCoordinatorService {
             return Optional.empty();
         }
 
+        LocalDateTime nowCheck = LocalDateTime.now(clock);
         Optional<QueueTicket> candidateOpt = doctorTickets.stream()
                 .filter(t -> t.getStatus() == QueueStatus.WAITING
                         && t.getVisit() != null
-                        && WAITING_VISIT_STATUSES.contains(t.getVisit().getStatus()))
+                        && WAITING_VISIT_STATUSES.contains(t.getVisit().getStatus())
+                        && !isWaitingBeforeWindow(t, nowCheck))
                 .min(waitingQueueComparator());
         if (candidateOpt.isEmpty()) {
             return Optional.empty();
@@ -556,7 +658,7 @@ public class ClinicQueueCoordinatorService {
         if (actor == null || actor.getUserId() == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
         }
-        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        LocalDate today = LocalDate.now(clock);
         boolean isAdmin = users.hasActiveAdminRole(actor.getUserId());
         DeskTarget target = resolveDeskTargetForActor(actor, requestedBranchId, today, false);
         if (target == null) {
@@ -590,12 +692,19 @@ public class ClinicQueueCoordinatorService {
                 .findFirst()
                 .orElse(null);
 
-        List<QueueTicket> waitingList = doctorTickets.stream()
+        LocalDateTime nowDesk = LocalDateTime.now(clock);
+        List<QueueTicket> allWaitingTickets = doctorTickets.stream()
                 .filter(t -> t.getStatus() == QueueStatus.WAITING
                         && t.getVisit() != null
                         && WAITING_VISIT_STATUSES.contains(t.getVisit().getStatus()))
+                .toList();
+        List<QueueTicket> waitingList = allWaitingTickets.stream()
+                .filter(t -> !isWaitingBeforeWindow(t, nowDesk))
                 .sorted(waitingQueueComparator())
                 .toList();
+        long earlyWaitingCount = allWaitingTickets.stream()
+                .filter(t -> isWaitingBeforeWindow(t, nowDesk))
+                .count();
 
         Visit reopenedActiveVisit = null;
         if (inServiceTicket == null) {
@@ -620,9 +729,13 @@ public class ClinicQueueCoordinatorService {
         } else if (inServiceSummary != null) {
             bannerText = "Đang khám " + inServiceSummary.displayNumber() + " – " + inServiceSummary.patientName();
         } else if (waitingList.isEmpty()) {
-            bannerText = isAdmin && !ALLOW_ADMIN_DESK_ACCESS_FOR_TESTING
-                    ? buildAdminDeskHintBanner(branchId, today, doctor.getFullName())
-                    : "Không có bệnh nhân đang chờ";
+            if (earlyWaitingCount > 0) {
+                bannerText = "Chưa có lượt đủ điều kiện gọi (" + earlyWaitingCount + " bệnh nhân đến sớm đang chờ tới giờ hẹn)";
+            } else {
+                bannerText = isAdmin && !ALLOW_ADMIN_DESK_ACCESS_FOR_TESTING
+                        ? buildAdminDeskHintBanner(branchId, today, doctor.getFullName())
+                        : "Không có bệnh nhân đang chờ";
+            }
         } else {
             bannerText = "Chưa có lượt đang gọi (" + waitingList.size() + " lượt chờ)";
         }
@@ -859,9 +972,60 @@ public class ClinicQueueCoordinatorService {
         }
 
         if (doctorId != null && closedActiveTicket) {
-            return autoCallNextForDoctorIfIdleLocked(branchId, doctorId, actor, LocalDate.now(CLINIC_ZONE));
+            return autoCallNextForDoctorIfIdleLocked(branchId, doctorId, actor, LocalDate.now(clock));
         }
         return Optional.empty();
+    }
+
+    /**
+     * Kích hoạt các phiếu EARLY_WAITING đã bước vào cửa sổ giờ hẹn [expectedTime - 15 phút, ...]
+     * sang hàng đợi đủ điều kiện gọi lượt (ON_TIME) và tự gọi nếu bàn bác sĩ đang rảnh.
+     */
+    @Transactional
+    public int promoteEligibleEarlyWaitingTickets(LocalDateTime now) {
+        LocalDateTime effectiveNow = now != null ? now : LocalDateTime.now(clock);
+        LocalDate today = effectiveNow.toLocalDate();
+        int promoted = 0;
+        Set<String> candidatePairs = new LinkedHashSet<>();
+        for (QueueTicket t : tickets.findWaitingWithDoctorOnDay(today, QueueType.EXAM)) {
+            if (t == null || t.getVisit() == null || !isEarlyWaitingReason(t.getPriorityReason())) {
+                continue;
+            }
+            if (!WAITING_VISIT_STATUSES.contains(t.getVisit().getStatus())) {
+                continue;
+            }
+            if (isWaitingBeforeWindow(t, effectiveNow)) {
+                continue;
+            }
+            Branch branch = t.getBranch();
+            StaffProfile doc = t.getVisit().getPrimaryDoctor();
+            if (branch == null || branch.getBranchId() == null || doc == null || doc.getStaffId() == null) {
+                continue;
+            }
+            QueueTicket lockedTicket = tickets.lockById(t.getTicketId()).orElse(null);
+            if (lockedTicket == null || lockedTicket.getStatus() != QueueStatus.WAITING || lockedTicket.getVisit() == null) {
+                continue;
+            }
+            Visit lockedVisit = visits.lockById(lockedTicket.getVisit().getVisitId()).orElse(lockedTicket.getVisit());
+            if (!WAITING_VISIT_STATUSES.contains(lockedVisit.getStatus())
+                    || !isEarlyWaitingReason(lockedTicket.getPriorityReason())
+                    || isWaitingBeforeWindow(lockedTicket, effectiveNow)) {
+                continue;
+            }
+            lockedVisit.setIsBookedAndOnTime(true);
+            visits.saveAndFlush(lockedVisit);
+            lockedTicket.setIsPriority(true);
+            lockedTicket.setPriorityScore(75);
+            lockedTicket.setPriorityReason("ON_TIME: Bệnh nhân đặt lịch đến sớm đã bước vào khung giờ hẹn");
+            tickets.saveAndFlush(lockedTicket);
+            promoted++;
+            candidatePairs.add(branch.getBranchId() + ":" + doc.getStaffId());
+        }
+        for (String pair : candidatePairs) {
+            String[] parts = pair.split(":");
+            autoCallNextForDoctorIfIdle(Long.parseLong(parts[0]), Long.parseLong(parts[1]), null);
+        }
+        return promoted;
     }
 
     // -------------------------------------------------------------------------
