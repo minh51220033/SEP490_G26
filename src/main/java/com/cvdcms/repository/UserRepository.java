@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,6 +33,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // Kiểm tra số điện thoại đã được tài khoản khác sử dụng hay chưa.
     boolean existsByPhoneNumber(String phoneNumber);
+
+    boolean existsByPhoneNumberIn(Collection<String> phoneNumbers);
 
     // Kiểm tra username đã tồn tại hay chưa.
     boolean existsByUsername(String username);

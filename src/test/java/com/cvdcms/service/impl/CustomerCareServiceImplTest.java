@@ -243,7 +243,7 @@ class CustomerCareServiceImplTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void getAccessibleBranches_ReturnsAllForAdminAndFilteredInferredBranchesForStaff() {
+    void getAccessibleBranches_ReturnsAllForAdmin_MultiBranchExplicitForStaff_AndRejectsNoExplicitAssignment() {
         mockAdmin(1L);
         when(branchRepository.findByIsActiveTrueOrderByBranchNameAsc()).thenReturn(List.of(branch1, branch2));
         when(staffRepository.findByUser_UserId(1L)).thenReturn(Optional.empty());
@@ -253,19 +253,23 @@ class CustomerCareServiceImplTest {
         assertTrue((Boolean) adminRes.get("isAdmin"));
         assertEquals(2, ((List<BranchOptionDTO>) adminRes.get("branches")).size());
 
-        // Receptionist with inferred branch via StaffProfile when explicit branch list is empty
+        // Staff được phân công nhiều chi nhánh hợp lệ truy cập được đúng các chi nhánh đó
         mockReceptionist(10L, null);
         when(branchRepository.findByIsActiveTrueOrderByBranchNameAsc()).thenReturn(List.of(branch1, branch2));
-        when(taskRepository.findExplicitBranchIdsByUserId(10L)).thenReturn(List.of());
+        when(taskRepository.findExplicitBranchIdsByUserId(10L)).thenReturn(List.of(1L, 2L));
         when(staffRepository.findByUser_UserId(10L)).thenReturn(Optional.of(receptionistStaff));
-        when(taskRepository.findInferredBranchIdsByStaffId(100L)).thenReturn(List.of(2L));
 
-        Map<String, Object> staffRes = service.getAccessibleBranches(10L);
-        List<BranchOptionDTO> opts = (List<BranchOptionDTO>) staffRes.get("branches");
-        assertEquals(1, opts.size());
-        assertEquals(2L, opts.get(0).getBranchId());
-        assertFalse((Boolean) staffRes.get("branchSelectionAllowed"));
-        assertEquals(100L, staffRes.get("currentStaffId"));
+        Map<String, Object> multiBranchRes = service.getAccessibleBranches(10L);
+        List<BranchOptionDTO> multiOpts = (List<BranchOptionDTO>) multiBranchRes.get("branches");
+        assertEquals(2, multiOpts.size());
+        assertTrue((Boolean) multiBranchRes.get("branchSelectionAllowed"));
+
+        // Nhân viên không có phân công explicit (kể cả từng có dữ liệu lịch sử tại CS2) phải bị từ chối 403, không suy luận từ lịch sử cũ
+        when(taskRepository.findExplicitBranchIdsByUserId(10L)).thenReturn(List.of());
+        ResponseStatusException forbidden = assertThrows(ResponseStatusException.class,
+                () -> service.getAccessibleBranches(10L));
+        assertEquals(HttpStatus.FORBIDDEN, forbidden.getStatusCode());
+        verify(taskRepository, never()).findInferredBranchIdsByStaffId(any());
     }
 
     @Test
@@ -1490,5 +1494,66 @@ class CustomerCareServiceImplTest {
 
         CustomerCareTaskDTO res = service.recordVisitInteraction(91L, dto, 10L);
         assertEquals(300L, res.getTaskId());
+    }
+
+    @Test
+    void unassignedOrRevokedStaffIsDenied403AcrossAllCareEndpointsEvenWhenActiveBranchesExist() {
+        mockReceptionist(10L, null);
+        lenient().when(branchRepository.findByIsActiveTrueOrderByBranchNameAsc()).thenReturn(List.of(branch1, branch2));
+        lenient().when(taskRepository.findExplicitBranchIdsByUserId(10L)).thenReturn(List.of());
+
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.getAccessibleBranches(10L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.getLookups(1L, 10L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.getLookups(null, 10L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.getSummary(1L, 10L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.getSummary(null, 10L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.searchTasks(1L, "ALL", null, null, null, null, null, null, PageRequest.of(0, 10), 10L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.getCalendarTasks(1L, null, null, null, null, null, null, false, 10L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.searchInteractions(1L, null, null, null, null, null, null, null, null, null, null, PageRequest.of(0, 10), 10L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.getPatientCareHistory(1000L, 1L, 10L)).getStatusCode());
+
+        CustomerCareCreateDTO createDto = new CustomerCareCreateDTO();
+        createDto.setBranchId(1L);
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.createTask(createDto, 10L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.autoGenerateTasks(1L, 10L)).getStatusCode());
+
+        CustomerCareTask taskB2 = sampleTask(501L, CustomerCareTaskStatus.PENDING, LocalDate.now());
+        taskB2.setBranch(branch2);
+        when(taskRepository.findByIdWithDetails(501L)).thenReturn(Optional.of(taskB2));
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.getTaskDetail(501L, 10L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.updateTask(501L, createDto, 10L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.recordInteraction(501L, new CustomerCareInteractionCreateDTO(), 10L)).getStatusCode());
+
+        Visit visitB2 = new Visit();
+        visitB2.setVisitId(601L);
+        visitB2.setBranch(branch2);
+        when(visitRepository.findWithDetailsById(601L)).thenReturn(Optional.of(visitB2));
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.getVisitExaminationSummary(601L, 10L)).getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.recordVisitInteraction(601L, new CustomerCareInteractionCreateDTO(), 10L)).getStatusCode());
+
+        Visit visitNullBranch = new Visit();
+        visitNullBranch.setVisitId(602L);
+        visitNullBranch.setBranch(null);
+        when(visitRepository.findWithDetailsById(602L)).thenReturn(Optional.of(visitNullBranch));
+        assertEquals(HttpStatus.FORBIDDEN,
+                assertThrows(ResponseStatusException.class, () -> service.getVisitExaminationSummary(602L, 10L)).getStatusCode());
+
+        verify(taskRepository, never()).findInferredBranchIdsByStaffId(any());
     }
 }

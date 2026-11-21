@@ -1,10 +1,13 @@
 package com.cvdcms.receptionappointment;
 
 import com.cvdcms.patient.PatientAccess;
+import com.cvdcms.reception.ReceptionService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -13,9 +16,14 @@ import java.util.List;
 public class ReceptionAppointmentPageController {
     private final PatientAccess access;
     private final ReceptionAppointmentService appointments;
+    private final ReceptionService receptionService;
 
-    public ReceptionAppointmentPageController(PatientAccess access, ReceptionAppointmentService appointments) {
-        this.access = access; this.appointments = appointments;
+    public ReceptionAppointmentPageController(PatientAccess access,
+                                              ReceptionAppointmentService appointments,
+                                              ReceptionService receptionService) {
+        this.access = access;
+        this.appointments = appointments;
+        this.receptionService = receptionService;
     }
     @ModelAttribute
     public void validateAccess(HttpSession session, Model model) {
@@ -56,5 +64,26 @@ public class ReceptionAppointmentPageController {
         appointments.detail(session, id);
         model.addAttribute("appointmentId", id);
         return "reception/appointments/form";
+    }
+
+    @PostMapping("/{id}/revert")
+    public String revertCheckIn(@PathVariable Long id,
+                                @RequestParam(required = false) Long branchId,
+                                @RequestParam(required = false) String returnUrl,
+                                HttpSession session,
+                                RedirectAttributes redirect) {
+        try {
+            var r = receptionService.revertCheckIn(session, id);
+            redirect.addFlashAttribute("notice", "Đã hoàn tác check-in thành công cho " + r.patientName() + " – Lịch hẹn trở về trạng thái Đã xác nhận.");
+        } catch (ResponseStatusException e) {
+            redirect.addFlashAttribute("error", e.getReason());
+        }
+        if (returnUrl != null && !returnUrl.isBlank()) {
+            String trimmed = returnUrl.trim();
+            if (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.contains("\\")) {
+                return "redirect:" + trimmed;
+            }
+        }
+        return "redirect:/reception/appointments/" + id;
     }
 }

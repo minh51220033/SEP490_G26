@@ -151,6 +151,41 @@
                 color: #0284c7 !important;
                 background: #f0f9ff !important;
               }
+              #unifiedReceptionTable th[data-col="actions"],
+              #unifiedReceptionTable td[data-col="actions"] {
+                width: 264px !important;
+                min-width: 264px !important;
+                max-width: 264px !important;
+                padding: 12px 16px !important;
+              }
+              #unifiedReceptionTable .dv-actions-cell-always,
+              #unifiedReceptionTable tbody tr.dv-data-row:hover .dv-actions-cell-always,
+              #unifiedReceptionTable tbody tr.is-row-hovered .dv-actions-cell-always {
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 8px !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+              }
+              #unifiedReceptionTable .dv-floating-actions-track,
+              #unifiedReceptionTable .dv-floating-actions-bar {
+                display: none !important;
+                pointer-events: none !important;
+              }
+              @media (min-width: 992px) {
+                #unifiedReceptionTable th[data-col="actions"],
+                #unifiedReceptionTable td[data-col="actions"] {
+                  position: sticky !important;
+                  right: 0 !important;
+                  z-index: 20 !important;
+                  border-left: 1px solid #e2e8f0 !important;
+                  box-shadow: -4px 0 12px rgba(15, 23, 42, 0.04) !important;
+                }
+                #unifiedReceptionTable thead th[data-col="actions"] {
+                  z-index: 30 !important;
+                }
+              }
             </style>
 
             <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN HỆ THỐNG -->
@@ -331,7 +366,7 @@
                  4. PANEL TIẾP NHẬN KHÁCH VÃNG LAI TRỰC TIẾP (COLLAPSIBLE TRƯỢT XUỐNG MƯỢT MÀ)
                  ========================================================================= -->
             <div id="walkInIntakePanel" class="card border-0 shadow-sm rounded-4 mb-3 bg-white border"
-                 th:classappend="${!#lists.isEmpty(dashboard.matches) or savedProfileId != null or (savedSymptoms != null and !savedSymptoms.isBlank())} ? '' : ' d-none'">
+                 th:classappend="${!#lists.isEmpty(dashboard.matches) or dashboard.walkInWarning != null or savedProfileId != null or (savedSymptoms != null and !savedSymptoms.isBlank())} ? '' : ' d-none'">
                 <div class="card-header bg-success-subtle border-0 py-2 px-3 rounded-top-4 d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center gap-2 text-success-emphasis fw-bold">
                         <i class="bi bi-person-plus-fill fs-5"></i>
@@ -371,20 +406,21 @@
                                 </div>
                             </form>
 
-                            <!-- Thẻ bệnh nhân đã chọn từ Live Search -->
+                            <!-- Thẻ bệnh nhân đã chọn từ Live Search (chỉ tự chọn khi có đúng 1 hồ sơ nội chi nhánh nhất quán) -->
                             <div id="walkInSelectedPatientCard"
                                  class="patient-profile-card-selected p-3 bg-light rounded-3 border mt-auto"
-                                 th:classappend="${#lists.isEmpty(dashboard.matches)} ? ' d-none' : ''">
+                                 th:with="autoMatch=${#lists.size(dashboard.matches) == 1 and !dashboard.matches[0].crossBranch}"
+                                 th:classappend="${!autoMatch} ? ' d-none' : ''">
                                 <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
                                     <div class="d-flex align-items-center gap-2">
                                         <div id="walkInSelectedAvatar" class="patient-card-avatar flex-shrink-0"
                                              style="background:#dcfce7;color:#15803d; width: 34px; height: 34px; font-size: 13px;"
-                                             th:text="${!#lists.isEmpty(dashboard.matches) ? #strings.substring(dashboard.matches[0].name, 0, 1) : 'B'}">V</div>
+                                             th:text="${#lists.size(dashboard.matches) == 1 and !dashboard.matches[0].crossBranch ? #strings.substring(dashboard.matches[0].name, 0, 1) : 'B'}">V</div>
                                         <div>
                                             <h6 id="walkInSelectedName" class="fw-bold text-dark mb-0" style="font-size: 14px;"
-                                                th:text="${!#lists.isEmpty(dashboard.matches) ? dashboard.matches[0].name : 'Chưa chọn bệnh nhân'}">Đỗ Khánh Vy</h6>
+                                                th:text="${#lists.size(dashboard.matches) == 1 and !dashboard.matches[0].crossBranch ? dashboard.matches[0].name : 'Chưa chọn bệnh nhân'}">Đỗ Khánh Vy</h6>
                                             <span id="walkInSelectedCode" class="badge bg-white text-success border border-success-subtle font-monospace"
-                                                  th:text="${!#lists.isEmpty(dashboard.matches) ? dashboard.matches[0].code : 'BN001'}">BNFLOW1</span>
+                                                  th:text="${#lists.size(dashboard.matches) == 1 and !dashboard.matches[0].crossBranch ? dashboard.matches[0].code : 'BN001'}">BNFLOW1</span>
                                         </div>
                                     </div>
                                     <div class="d-flex align-items-center gap-2">
@@ -397,18 +433,26 @@
                                     </div>
                                 </div>
                                 <div id="walkInSelectedMeta" class="small text-muted">
-                                    <span th:if="${!#lists.isEmpty(dashboard.matches)}">
+                                    <span th:if="${#lists.size(dashboard.matches) == 1 and !dashboard.matches[0].crossBranch}">
                                         <i class="bi bi-telephone text-success me-1"></i>
                                         <span th:text="|SĐT: ${dashboard.matches[0].phone}|">SĐT: 0912345678</span>
                                     </span>
                                 </div>
                             </div>
 
+                            <!-- Cảnh báo cần xác minh nếu dữ liệu trùng định danh / không nhất quán -->
+                            <div th:if="${dashboard.walkInWarning != null}"
+                                 class="p-2 px-3 rounded-3 bg-warning-subtle border border-warning-subtle text-warning-emphasis small d-flex align-items-center gap-2 mt-2">
+                                <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                                <span th:text="${dashboard.walkInWarning}"></span>
+                            </div>
+
                             <!-- Gợi ý khi chưa chọn hồ sơ -->
                             <div id="walkInEmptyHint" class="p-2 px-3 rounded-3 bg-light border d-flex align-items-center gap-2 mt-auto"
-                                 th:classappend="${!#lists.isEmpty(dashboard.matches)} ? ' d-none' : ''">
+                                 th:classappend="${#lists.size(dashboard.matches) == 1 and !dashboard.matches[0].crossBranch} ? ' d-none' : ''">
                                 <i class="bi bi-info-circle text-success flex-shrink-0"></i>
-                                <span class="small text-muted">Tìm hồ sơ có sẵn hoặc bấm <strong>Tạo hồ sơ mới</strong> nếu khách đến lần đầu.</span>
+                                <span class="small text-muted"
+                                      th:text="${#lists.size(dashboard.matches) > 1 or (#lists.size(dashboard.matches) == 1 and dashboard.matches[0].crossBranch)} ? 'Vui lòng bấm chọn chính xác hồ sơ từ danh sách gợi ý để xác minh trước khi tiếp đón.' : 'Tìm hồ sơ có sẵn hoặc bấm Tạo hồ sơ mới nếu khách đến lần đầu.'"></span>
                             </div>
                         </div>
 
@@ -420,7 +464,7 @@
                                 <input type="hidden" name="requestKey" th:value="${dashboard.walkInKey}">
                                 <input type="hidden" name="query" id="walkInHiddenQuery" th:value="${dashboard.query}">
                                 <input type="hidden" name="profileId" id="walkInSelectedProfileId"
-                                       th:value="${!#lists.isEmpty(dashboard.matches) ? dashboard.matches[0].id : savedProfileId}">
+                                       th:value="${#lists.size(dashboard.matches) == 1 and !dashboard.matches[0].crossBranch ? dashboard.matches[0].id : savedProfileId}">
 
                                 <div class="mb-2 flex-grow-1 d-flex flex-column">
                                     <label for="walkInSymptoms" class="form-label small fw-bold text-dark mb-2">
@@ -671,10 +715,11 @@
 
                                     <!-- 7. Phân loại -->
                                     <td data-col="type" class="text-center">
-                                        <span th:if="${v.queueTierRank() == 1}" class="badge rounded-pill bg-danger text-white" style="font-size: 11px;">P1 · Cấp cứu</span>
-                                        <span th:if="${v.queueTierRank() == 2}" class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 11px;">P2 · Hẹn đúng giờ</span>
-                                        <span th:if="${v.queueTierRank() == 3}" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size: 11px;">P3 · Vãng lai</span>
-                                        <span th:if="${v.queueTierRank() == 4}" class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 11px;">P4 · Hẹn trễ &gt;15p</span>
+                                        <span th:if="${v.queueTierRank() == 1}" class="badge rounded-pill bg-danger text-white" style="font-size: 11px;" data-priority-group="EMERGENCY">P1 · Cấp cứu</span>
+                                        <span th:if="${v.queueTierRank() == 2}" class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 11px;" data-priority-group="ON_TIME">P2 · Hẹn đúng giờ</span>
+                                        <span th:if="${v.queueTierRank() == 3}" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size: 11px;" data-priority-group="WALK_IN">P3 · Vãng lai</span>
+                                        <span th:if="${v.queueTierRank() == 4 and v.earlyWaiting}" class="badge rounded-pill bg-info-subtle text-info-emphasis border border-info-subtle" style="font-size: 11px;" data-priority-group="EARLY_WAITING" title="EARLY_WAITING: Bệnh nhân đặt lịch đến sớm chờ tới giờ hẹn">Đến sớm · Chờ giờ hẹn</span>
+                                        <span th:if="${v.queueTierRank() == 4 and !v.earlyWaiting}" class="badge rounded-pill bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 11px;" data-priority-group="LATE_BOOKING">P4 · Hẹn trễ &gt;15p</span>
                                     </td>
 
                                     <!-- 8. Triệu chứng -->
@@ -885,6 +930,7 @@
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <form id="addPatientForm" novalidate>
+                            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                             <div class="modal-body p-4 bg-white">
                                 <div id="addPatientErrorAlert" class="alert alert-danger d-none py-2 px-3 small rounded-3 mb-3"></div>
                                 <div class="row g-3">
@@ -1083,10 +1129,24 @@
                     }
                     walkInTimer = setTimeout(async () => {
                         try {
-                            const res = await fetch(`/reception/check-in/patients/search?query=${encodeURIComponent(q)}`, { cache: 'no-store' });
-                            if (!res.ok) return;
-                            const items = await res.json();
+                            const walkInBranchId = document.querySelector('#walkInSearchForm input[name="branchId"]')?.value || '';
+                            const searchUrl = `/reception/check-in/patients/search?query=${encodeURIComponent(q)}`
+                                + (walkInBranchId ? `&branchId=${encodeURIComponent(walkInBranchId)}` : '');
+                            const res = await fetch(searchUrl, { cache: 'no-store' });
                             walkInDropdown.innerHTML = '';
+                            if (!res.ok) {
+                                const err = await res.json().catch(() => ({}));
+                                const errMsg = res.status === 409
+                                    ? (err.message || 'Phát hiện nhiều hồ sơ trùng định danh hoặc dữ liệu không nhất quán. Vui lòng xác minh thủ công trước khi tiếp đón.')
+                                    : (res.status === 403 ? 'Không có quyền tìm kiếm bệnh nhân ở chi nhánh này.' : (err.message || 'Không thể tải danh sách hồ sơ.'));
+                                walkInDropdown.innerHTML = `
+                                    <div class="p-3 text-center small text-warning-emphasis bg-warning-subtle rounded-2">
+                                        ${escapeHtml(errMsg)}
+                                    </div>`;
+                                walkInDropdown.classList.remove('d-none');
+                                return;
+                            }
+                            const items = await res.json();
                             if (!items || items.length === 0) {
                                 walkInDropdown.innerHTML = `
                                     <div class="p-3 text-center small text-muted">
@@ -1096,12 +1156,17 @@
                                 items.forEach(p => {
                                     const itemEl = document.createElement('div');
                                     itemEl.className = 'walkin-live-item';
+                                    const crossBadge = p.crossBranch
+                                        ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1">Liên cơ sở</span>'
+                                        : '';
                                     itemEl.innerHTML = `
                                         <div>
                                             <strong class="text-dark d-block">${escapeHtml(p.name)}</strong>
                                             <small class="text-muted">SĐT: ${escapeHtml(p.phone || '—')}</small>
                                         </div>
-                                        <span class="badge bg-light text-dark border font-monospace">${escapeHtml(p.code)}</span>
+                                        <div class="d-flex align-items-center flex-shrink-0">
+                                            <span class="badge bg-light text-dark border font-monospace">${escapeHtml(p.code)}</span>${crossBadge}
+                                        </div>
                                     `;
                                     itemEl.addEventListener('click', () => selectWalkInPatient(p));
                                     walkInDropdown.appendChild(itemEl);
@@ -1170,12 +1235,39 @@
                     if (addPatientErrorAlert) addPatientErrorAlert.classList.add('d-none');
                     if (btnSubmitQuickAddPatient) btnSubmitQuickAddPatient.disabled = true;
 
+                    const resolveCsrfHeaders = () => {
+                        const headers = {};
+                        const metaToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+                        const metaHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+                        if (metaToken && metaHeader) {
+                            headers[metaHeader] = metaToken;
+                            return headers;
+                        }
+                        const formToken = addPatientForm.querySelector('input[name="_csrf"]')?.value
+                            || document.querySelector('input[name="_csrf"]')?.value;
+                        if (formToken) {
+                            headers[metaHeader || 'X-XSRF-TOKEN'] = formToken;
+                            return headers;
+                        }
+                        const xsrfMatch = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+                        if (xsrfMatch && xsrfMatch[1]) {
+                            headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfMatch[1]);
+                        }
+                        return headers;
+                    };
+
+                    const currentBranchIdVal = Number(document.querySelector('#walkInCheckInForm input[name="branchId"]')?.value
+                        || document.getElementById('reception-content-area')?.dataset?.branchId) || null;
+                    const selectedReferralSource = document.getElementById('quickAddReferralSource')?.value || 'Vãng lai';
+
                     const payload = {
                         fullName,
                         phoneNumber,
                         dob: document.getElementById('quickAddDob')?.value || null,
                         gender: document.getElementById('quickAddGender')?.value || 'Nam',
-                        referralSource: document.getElementById('quickAddReferralSource')?.value || 'Vãng lai',
+                        customerSource: selectedReferralSource,
+                        referralSource: selectedReferralSource,
+                        branchId: currentBranchIdVal,
                         branchName: document.getElementById('quickAddBranchName')?.value || null,
                         address: document.getElementById('quickAddAddress')?.value?.trim() || null,
                         allergyDetails: document.getElementById('quickAddAllergy')?.value?.trim() || null,
@@ -1185,9 +1277,31 @@
                     try {
                         const res = await fetch('/patients/quick-create', {
                             method: 'POST',
-                            headers: Object.assign({ 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, (document.querySelector('meta[name="_csrf"]') && document.querySelector('meta[name="_csrf_header"]')) ? { [document.querySelector('meta[name="_csrf_header"]').content]: document.querySelector('meta[name="_csrf"]').content } : {}),
+                            credentials: 'same-origin',
+                            headers: Object.assign(
+                                { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                                resolveCsrfHeaders()
+                            ),
                             body: JSON.stringify(payload)
                         });
+                        const contentType = res.headers.get('content-type') || '';
+                        if ((res.redirected && res.url && res.url.includes('/login'))
+                                || res.status === 401
+                                || res.status === 403
+                                || (res.ok && contentType.includes('text/html'))) {
+                            let csrfOrAuthMsg = 'Mã bảo mật (CSRF) không hợp lệ hoặc phiên đăng nhập đã hết hạn (403). Vui lòng tải lại trang và thử lại.';
+                            try {
+                                if (contentType.includes('application/json')) {
+                                    const errJson = await res.json();
+                                    if (errJson && errJson.message) csrfOrAuthMsg = errJson.message;
+                                }
+                            } catch (_) {}
+                            if (addPatientErrorAlert) {
+                                addPatientErrorAlert.textContent = csrfOrAuthMsg;
+                                addPatientErrorAlert.classList.remove('d-none');
+                            }
+                            return;
+                        }
                         if (!res.ok) {
                             let errMsg = 'Không thể lưu hồ sơ bệnh nhân. Vui lòng kiểm tra lại thông tin.';
                             try {

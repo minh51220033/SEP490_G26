@@ -2282,7 +2282,26 @@
             setTimeout(() => openBooking(), 300);
         }
 
+        let pendingBookingRequestKey = null;
+
+        function generateBookingRequestKey() {
+            if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+                return window.crypto.randomUUID();
+            }
+            const chars = 'abcdef0123456789';
+            let out = 'gk-';
+            for (let i = 0; i < 29; i++) {
+                out += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return out;
+        }
+
+        function resetBookingRequestKey() {
+            pendingBookingRequestKey = null;
+        }
+
         if (form) {
+            ['input', 'change'].forEach((evt) => form.addEventListener(evt, resetBookingRequestKey));
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 if (errorEl) errorEl.classList.remove('is-visible');
@@ -2324,10 +2343,13 @@
                         return;
                     }
 
-                    const digits = phone.replace(/\D/g, '');
-                    if (digits.length < 9 || digits.length > 11) {
+                    let digits = phone.replace(/\D/g, '');
+                    if (digits.startsWith('84') && (digits.length === 11 || digits.length === 12)) {
+                        digits = '0' + digits.substring(2);
+                    }
+                    if (!/^0\d{9,10}$/.test(digits)) {
                         if (errorEl) {
-                            errorEl.textContent = 'Số điện thoại chưa đúng định dạng (9–11 chữ số).';
+                            errorEl.textContent = 'Số điện thoại chưa đúng định dạng (gồm 10 hoặc 11 chữ số, bắt đầu bằng 0).';
                             errorEl.classList.add('is-visible');
                             errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                         }
@@ -2358,6 +2380,9 @@
                 if (submitText) submitText.textContent = 'Đang lưu yêu cầu...';
 
                 try {
+                    if (!pendingBookingRequestKey) {
+                        pendingBookingRequestKey = generateBookingRequestKey();
+                    }
                     const payload = {
                         branchId: Number(branchVal),
                         serviceId: serviceVal ? Number(serviceVal) : null,
@@ -2368,14 +2393,17 @@
                         slotTime: slotVal || null,
                         fullName: isLoggedInPatient ? null : name,
                         phoneNumber: isLoggedInPatient ? null : phone,
-                        note: noteVal || null
+                        note: noteVal || null,
+                        requestKey: pendingBookingRequestKey
                     };
 
                     const response = await fetch('/api/public/booking', {
                         method: 'POST',
+                        credentials: 'same-origin',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Accept': 'application/json'
+                            'Accept': 'application/json',
+                            ...getCsrfHeaders()
                         },
                         body: JSON.stringify(payload)
                     });
@@ -2383,26 +2411,51 @@
                     const data = await response.json().catch(() => ({}));
 
                     if (!response.ok || !data.success) {
-                        throw new Error(data.message || `Lỗi khi lưu lịch hẹn (${response.status}). Vui lòng thử lại.`);
+                        throw new Error(data.message || `Lỗi khi lưu yêu cầu (${response.status}). Vui lòng thử lại.`);
                     }
 
-                    // Thành công: cập nhật giao diện trong Drawer
-                    const appointmentCode = data.appointmentCode || '';
-                    if (summaryEl) {
-                        summaryEl.innerHTML = `<strong>Mã đặt lịch: <span class="text-primary">${appointmentCode}</span></strong><br>${data.message}`;
-                    }
-                    if (successBox) {
-                        successBox.classList.add('is-visible');
-                        successBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }
-                    if (actionNext && nextLink) {
-                        nextLink.href = data.appointmentId ? `/portal/appointments/${data.appointmentId}` : '/portal/appointments';
-                        nextLink.textContent = 'Xem lịch hẹn của tôi';
-                        actionNext.style.display = 'block';
-                    }
+                    pendingBookingRequestKey = null;
 
-                    // Hiển thị Floating Toast trên trang
-                    showToast(`Đặt lịch thành công! Mã hẹn: ${appointmentCode}.${phone ? ' Liên hệ: ' + phone : ''}`);
+                    if (data.consultationMode) {
+                        if (summaryEl) {
+                            summaryEl.textContent = data.message || 'Đã tiếp nhận thông tin đặt lịch của Quý khách.';
+                        }
+                        if (actionNext && nextLink) {
+                            nextLink.href = data.loginUrl || '/login';
+                            nextLink.textContent = 'Đăng nhập tài khoản';
+                            actionNext.style.display = 'block';
+                        }
+                        if (successBox) {
+                            successBox.classList.add('is-visible');
+                            successBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                        showToast(data.message || 'Đã tiếp nhận thông tin của Quý khách.', 'Đã tiếp nhận thông tin!');
+                    } else {
+                        // Thành công: cập nhật giao diện trong Drawer cho tài khoản bệnh nhân
+                        const appointmentCode = data.appointmentCode || '';
+                        if (summaryEl) {
+                            summaryEl.replaceChildren();
+                            const strong = document.createElement('strong');
+                            strong.append('Mã đặt lịch: ');
+                            const codeSpan = document.createElement('span');
+                            codeSpan.className = 'text-primary';
+                            codeSpan.textContent = appointmentCode;
+                            strong.appendChild(codeSpan);
+                            summaryEl.appendChild(strong);
+                            summaryEl.appendChild(document.createElement('br'));
+                            summaryEl.append(data.message || '');
+                        }
+                        if (successBox) {
+                            successBox.classList.add('is-visible');
+                            successBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                        if (actionNext && nextLink) {
+                            nextLink.href = data.appointmentId ? `/portal/appointments/${data.appointmentId}` : '/portal/appointments';
+                            nextLink.textContent = 'Xem lịch hẹn của tôi';
+                            actionNext.style.display = 'block';
+                        }
+                        showToast(`Đặt lịch thành công! Mã hẹn: ${appointmentCode}.`);
+                    }
 
                     // Cập nhật lại trạng thái slot/trùng buổi ngay sau khi đặt
                     checkAvailability();

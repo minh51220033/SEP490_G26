@@ -1,6 +1,5 @@
 package com.cvdcms.patient;
 
-import com.cvdcms.entity.Branch;
 import com.cvdcms.entity.Role;
 import com.cvdcms.entity.User;
 import com.cvdcms.entity.enums.AssignmentStatus;
@@ -22,11 +21,10 @@ import java.util.Set;
 public class PatientAccess {
     private final UserRepository users;
     private final StaffBranchAssignmentRepository staffBranchAssignments;
-    private BranchRepository branchRepository;
 
     @Autowired(required = false)
     public void setBranchRepository(BranchRepository branchRepository) {
-        this.branchRepository = branchRepository;
+        // Không fallback sang toàn bộ chi nhánh active khi nhân viên chưa được phân công.
     }
 
     public PatientAccess(UserRepository users) {
@@ -74,23 +72,24 @@ public class PatientAccess {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản của bạn không được cấp quyền truy cập chức năng này.");
         }
         Set<Long> accessibleBranchIds = new HashSet<>();
-        if (user.getBranch() != null && user.getBranch().getBranchId() != null) {
+        if (!admin && user.getBranch() != null && user.getBranch().getBranchId() != null
+                && !Boolean.FALSE.equals(user.getBranch().getIsActive())) {
             accessibleBranchIds.add(user.getBranch().getBranchId());
         }
-        if (staffBranchAssignments != null) {
+        if (!admin && staffBranchAssignments != null) {
             List<Long> activeBranches = staffBranchAssignments.findActiveBranchIdsByUserId(user.getUserId(), AssignmentStatus.ACTIVE);
             if (activeBranches != null && !activeBranches.isEmpty()) {
                 accessibleBranchIds.addAll(activeBranches);
             }
         }
 
-        if (!admin && accessibleBranchIds.isEmpty() && branchRepository != null) {
-            for (Branch b : branchRepository.findByIsActiveTrueOrderByBranchNameAsc()) {
-                if (b.getBranchId() != null) accessibleBranchIds.add(b.getBranchId());
-            }
+        if (!admin && accessibleBranchIds.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản của bạn chưa được phân công chi nhánh hoạt động.");
         }
 
-        Long branchId = admin ? null : (user.getBranch() == null ? null : user.getBranch().getBranchId());
+        Long branchId = (!admin && user.getBranch() != null && !Boolean.FALSE.equals(user.getBranch().getIsActive()))
+                ? user.getBranch().getBranchId()
+                : null;
         if (session != null) {
             Object sBranchId = session.getAttribute("currentBranchId");
             if (sBranchId instanceof Long sId && (admin || accessibleBranchIds.contains(sId))) {
@@ -99,9 +98,6 @@ public class PatientAccess {
         }
         if (!admin && branchId == null && !accessibleBranchIds.isEmpty()) {
             branchId = accessibleBranchIds.iterator().next();
-        }
-        if (!admin && branchId == null && accessibleBranchIds.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản của bạn chưa được phân công chi nhánh hoạt động.");
         }
         return new Scope(user, branchId, admin, Collections.unmodifiableSet(accessibleBranchIds));
     }

@@ -14,7 +14,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 public interface ReceptionVisitRepository extends JpaRepository<Visit, Long> {
-    @Lock(LockModeType.PESSIMISTIC_WRITE) Optional<Visit> findByAppointmentId(Long appointmentId);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT v FROM Visit v WHERE v.appointmentId = :appointmentId AND v.status <> com.cvdcms.entity.enums.VisitStatus.CANCELLED ORDER BY v.visitId DESC")
+    List<Visit> findActiveByAppointmentIdForUpdate(@Param("appointmentId") Long appointmentId);
+
+    @Query("SELECT v FROM Visit v WHERE v.appointmentId = :appointmentId ORDER BY v.visitId DESC")
+    List<Visit> findAllByAppointmentIdOrderByVisitIdDesc(@Param("appointmentId") Long appointmentId);
+
+    default Optional<Visit> findByAppointmentId(Long appointmentId) {
+        List<Visit> active = findActiveByAppointmentIdForUpdate(appointmentId);
+        return active == null || active.isEmpty() ? Optional.empty() : Optional.of(active.get(0));
+    }
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT v FROM Visit v WHERE v.patientProfile.profileId = :profileId AND v.status IN :statuses")
     List<Visit> activeForProfile(@Param("profileId") Long profileId, @Param("statuses") Set<VisitStatus> statuses);

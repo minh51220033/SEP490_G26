@@ -263,7 +263,7 @@ public class ChatServiceImpl implements ChatService {
             if ("ADMIN".equals(roleCode)) {
                 return true;
             }
-            List<Branch> allowed = resolveStaffAllowedBranches(userId, roleCode);
+            List<Branch> allowed = resolveExplicitStaffBranches(userId, roleCode);
             return allowed.stream().anyMatch(b -> Objects.equals(b.getBranchId(), branchId));
         } catch (Exception ex) {
             return false;
@@ -285,49 +285,38 @@ public class ChatServiceImpl implements ChatService {
         return active != null ? active : List.of();
     }
 
-    private List<Branch> resolveStaffAllowedBranches(Long userId, String roleCode) {
+    private List<Branch> resolveExplicitStaffBranches(Long userId, String roleCode) {
         List<Branch> allActive = getAllActiveBranches();
         if ("ADMIN".equals(roleCode)) {
             return allActive;
         }
 
+        Set<Long> allowedSet = new LinkedHashSet<>();
         Optional<User> userOpt = userRepository.findById(userId);
-        if (userOpt.isPresent() && userOpt.get().getBranch() != null && userOpt.get().getBranch().getBranchId() != null) {
-            Long userBranchId = userOpt.get().getBranch().getBranchId();
-            List<Branch> matched = allActive.stream()
-                    .filter(b -> Objects.equals(b.getBranchId(), userBranchId))
-                    .toList();
-            if (!matched.isEmpty()) {
-                return List.of(matched.get(0));
+        if (userOpt.isPresent()) {
+            Branch userBranch = userOpt.get().getBranch();
+            if (userBranch != null && userBranch.getBranchId() != null && !Boolean.FALSE.equals(userBranch.getIsActive())) {
+                allowedSet.add(userBranch.getBranchId());
             }
         }
 
         List<Long> explicitIds = conversationRepository.findExplicitBranchIdsByUserId(userId);
         if (explicitIds != null && !explicitIds.isEmpty()) {
-            Set<Long> allowedSet = new LinkedHashSet<>(explicitIds);
-            List<Branch> matched = allActive.stream()
-                    .filter(b -> allowedSet.contains(b.getBranchId()))
-                    .toList();
-            if (!matched.isEmpty()) {
-                return matched;
-            }
+            explicitIds.stream().filter(Objects::nonNull).forEach(allowedSet::add);
         }
 
-        Optional<StaffProfile> staffOpt = staffProfileRepository.findByUser_UserId(userId);
-        if (staffOpt.isPresent()) {
-            List<Long> inferredIds = customerCareTaskRepository.findInferredBranchIdsByStaffId(staffOpt.get().getStaffId());
-            if (inferredIds != null && !inferredIds.isEmpty()) {
-                Set<Long> allowedSet = new LinkedHashSet<>(inferredIds);
-                List<Branch> matched = allActive.stream()
-                        .filter(b -> allowedSet.contains(b.getBranchId()))
-                        .toList();
-                if (!matched.isEmpty()) {
-                    return List.of(matched.get(0));
-                }
-            }
+        if (allowedSet.isEmpty()) {
+            return List.of();
         }
+        return allActive.stream()
+                .filter(b -> b.getBranchId() != null
+                        && !Boolean.FALSE.equals(b.getIsActive())
+                        && allowedSet.contains(b.getBranchId()))
+                .toList();
+    }
 
-        return allActive;
+    private List<Branch> resolveStaffAllowedBranches(Long userId, String roleCode) {
+        return resolveExplicitStaffBranches(userId, roleCode);
     }
 
     private List<PatientProfile> loadPatientProfilesForUser(Long userId) {
@@ -343,36 +332,39 @@ public class ChatServiceImpl implements ChatService {
     }
 
     private Branch resolveUserHomeBranch(User user, String roleCode) {
-        if (user.getBranch() != null && user.getBranch().getBranchId() != null) {
-            Optional<Branch> branchOpt = branchRepository.findById(user.getBranch().getBranchId());
+        if (user.getBranch() != null && user.getBranch().getBranchId() != null
+                && !Boolean.FALSE.equals(user.getBranch().getIsActive())) {
+            Optional<Branch> branchOpt = branchRepository.findById(user.getBranch().getBranchId())
+                    .filter(b -> !Boolean.FALSE.equals(b.getIsActive()));
             if (branchOpt.isPresent()) {
                 return branchOpt.get();
             }
         }
 
-        List<PatientProfile> profiles = loadPatientProfilesForUser(user.getUserId());
-        for (PatientProfile p : profiles) {
-            if (p.getPreferredBranch() != null) {
-                return p.getPreferredBranch();
+        if ("BENH_NHAN".equals(roleCode)) {
+            List<PatientProfile> profiles = loadPatientProfilesForUser(user.getUserId());
+            for (PatientProfile p : profiles) {
+                if (p.getPreferredBranch() != null) {
+                    return p.getPreferredBranch();
+                }
             }
-        }
-
-        if (!"BENH_NHAN".equals(roleCode)) {
-            List<Branch> staffBranches = resolveStaffAllowedBranches(user.getUserId(), roleCode);
-            if (!staffBranches.isEmpty()) {
-                return staffBranches.get(0);
+            List<Branch> activeBranches = getAllActiveBranches();
+            if (!activeBranches.isEmpty()) {
+                return activeBranches.get(0);
             }
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Tài khoản của bạn chưa gắn với cơ sở nha khoa nào. Vui lòng cập nhật cơ sở trong trang Thông tin cá nhân."
+            );
         }
 
-        List<Branch> activeBranches = getAllActiveBranches();
-        if (!activeBranches.isEmpty()) {
-            return activeBranches.get(0);
+        if ("ADMIN".equals(roleCode)) {
+            List<Branch> activeBranches = getAllActiveBranches();
+            return activeBranches.isEmpty() ? null : activeBranches.get(0);
         }
 
-        throw new ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "Tài khoản của bạn chưa gắn với cơ sở nha khoa nào. Vui lòng cập nhật cơ sở trong trang Thông tin cá nhân."
-        );
+        List<Branch> staffBranches = resolveExplicitStaffBranches(user.getUserId(), roleCode);
+        return staffBranches.isEmpty() ? null : staffBranches.get(0);
     }
 
     private List<Branch> resolveAccountBranches(User account, String accountRoleCode) {
@@ -796,6 +788,27 @@ public class ChatServiceImpl implements ChatService {
             Long targetUserId,
             Long requestedBranchId) {
 
+        List<Branch> senderBranches = resolveStaffAllowedBranches(sender.getUserId(), senderRole);
+        Set<Long> senderBranchIds = senderBranches.stream()
+                .map(Branch::getBranchId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (!"ADMIN".equals(senderRole)) {
+            if (senderBranchIds.isEmpty()) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Tài khoản của bạn chưa được phân công cơ sở làm việc nên không thể tạo cuộc hội thoại."
+                );
+            }
+            if (requestedBranchId != null && !senderBranchIds.contains(requestedBranchId)) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Bạn không được phép tạo cuộc hội thoại ở cơ sở khác."
+                );
+            }
+        }
+
         User targetUser = requireActiveUser(targetUserId);
         String targetRole = resolvePrimaryRoleCode(targetUserId);
 
@@ -803,19 +816,6 @@ public class ChatServiceImpl implements ChatService {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Chỉ Lễ tân, Bác sĩ thuộc cơ sở và Admin mới có quyền tiếp nhận và phản hồi tin nhắn của Bệnh nhân."
-            );
-        }
-
-        List<Branch> senderBranches = resolveStaffAllowedBranches(sender.getUserId(), senderRole);
-        Set<Long> senderBranchIds = senderBranches.stream()
-                .map(Branch::getBranchId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        if (!"ADMIN".equals(senderRole) && requestedBranchId != null && !senderBranchIds.contains(requestedBranchId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Bạn không được phép tạo cuộc hội thoại ở cơ sở khác."
             );
         }
 
@@ -1054,7 +1054,7 @@ public class ChatServiceImpl implements ChatService {
         List<ChatMessageDTO> messages = List.of();
         long unreadCount = 0L;
 
-        if ("BENH_NHAN".equals(roleCode) || canHandlePatientMessages(roleCode)) {
+        if (homeBranch != null && ("BENH_NHAN".equals(roleCode) || canHandlePatientMessages(roleCode))) {
             conversation = findActiveConversationForUserAndBranch(user, homeBranch);
             if (conversation != null) {
                 if (conversation.getStatus() == ChatStatus.BOT_HANDLING) {
@@ -1087,9 +1087,9 @@ public class ChatServiceImpl implements ChatService {
         result.put("roleCode", roleCode);
         result.put("roleLabel", toRoleLabel(roleCode));
         result.put("canSearchRecipients", !"BENH_NHAN".equals(roleCode));
-        result.put("canHandlePatients", canHandlePatientMessages(roleCode));
-        result.put("branchId", homeBranch.getBranchId());
-        result.put("branchName", homeBranch.getBranchName());
+        result.put("canHandlePatients", canHandlePatientMessages(roleCode) && homeBranch != null);
+        result.put("branchId", homeBranch != null ? homeBranch.getBranchId() : null);
+        result.put("branchName", homeBranch != null ? homeBranch.getBranchName() : "Chưa gắn cơ sở");
         result.put("conversationId", conversation != null ? conversation.getConversationId() : null);
         result.put("unreadCount", unreadCount);
         result.put("totalUnreadCount", totalUnreadCount);
@@ -1607,7 +1607,10 @@ public class ChatServiceImpl implements ChatService {
             if (conversation.getBranch() == null) {
                 User initiator = conversation.getUser() != null ? conversation.getUser() : sender;
                 String initRole = resolvePrimaryRoleCode(initiator.getUserId());
-                conversation.setBranch(resolveUserHomeBranch(initiator, initRole));
+                Branch fallbackBranch = resolveUserHomeBranch(initiator, initRole);
+                if (fallbackBranch != null) {
+                    conversation.setBranch(fallbackBranch);
+                }
             }
         } else if (request.getRecipientUserId() != null && request.getRecipientUserId() > 0) {
             if ("BENH_NHAN".equals(senderRoleCode)) {
@@ -1625,6 +1628,12 @@ public class ChatServiceImpl implements ChatService {
                 );
             }
             Branch homeBranch = resolveUserHomeBranch(sender, senderRoleCode);
+            if (homeBranch == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Tài khoản của bạn chưa được phân công cơ sở làm việc."
+                );
+            }
             conversation = getOrCreateConversationForInitiator(sender, homeBranch);
         }
 

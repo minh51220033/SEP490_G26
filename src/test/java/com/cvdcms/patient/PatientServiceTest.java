@@ -53,7 +53,7 @@ class PatientServiceTest {
     }
 
     private void mockPermission() {
-        when(access.require(session)).thenReturn(new PatientAccess.Scope(actor, null, false));
+        when(access.require(session)).thenReturn(new PatientAccess.Scope(actor, 1L, false));
         when(branches.findById(1L)).thenReturn(Optional.of(branch));
     }
 
@@ -122,6 +122,34 @@ class PatientServiceTest {
 
         assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
         assertTrue(ex.getReason() != null && ex.getReason().contains("Số CCCD 001234567890 đã được sử dụng"));
+        verify(profiles, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void createPatientRejectsUnauthorizedOrMissingBranchScopeWithForbidden() {
+        PatientProfileForm branch1Form = new PatientProfileForm(
+                "Nguyễn Văn E",
+                LocalDate.of(1994, 4, 15),
+                "Nam",
+                "0933445566",
+                "Đà Nẵng",
+                1L,
+                null, null, null, null, null, null, null,
+                false
+        );
+
+        // Nhân viên không có chi nhánh được phân công -> 403
+        when(access.require(session)).thenReturn(new PatientAccess.Scope(actor, null, false));
+        ResponseStatusException noBranchEx = assertThrows(ResponseStatusException.class,
+                () -> service.create(session, branch1Form));
+        assertEquals(HttpStatus.FORBIDDEN, noBranchEx.getStatusCode());
+
+        // Nhân viên chi nhánh 2 tạo hồ sơ ở chi nhánh 1 -> 403
+        when(access.require(session)).thenReturn(new PatientAccess.Scope(actor, 2L, false));
+        ResponseStatusException wrongBranchEx = assertThrows(ResponseStatusException.class,
+                () -> service.create(session, branch1Form));
+        assertEquals(HttpStatus.FORBIDDEN, wrongBranchEx.getStatusCode());
+
         verify(profiles, never()).saveAndFlush(any());
     }
 }

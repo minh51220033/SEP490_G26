@@ -4,6 +4,7 @@ import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.patient.PatientAccess;
 import com.cvdcms.patient.PatientProfileForm;
+import com.cvdcms.patient.PatientSearchPolicy;
 import com.cvdcms.patient.PatientService;
 import com.cvdcms.patient.PatientView;
 import com.cvdcms.patient.ReceptionPatientRecord;
@@ -14,6 +15,8 @@ import com.cvdcms.service.AppointmentConflictDetectionService;
 import com.cvdcms.service.AppointmentLifecycleService;
 import com.cvdcms.service.AppointmentPolicyService;
 import com.cvdcms.service.AppointmentSlotService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Validator;
 import jakarta.validation.constraints.*;
@@ -61,6 +64,15 @@ public class ReceptionAppointmentService {
 
     @Autowired(required = false)
     private PatientProfileRepository patientProfiles;
+
+    @Autowired(required = false)
+    private StaffScheduleRepository staffSchedules;
+
+    @Autowired(required = false)
+    private SystemNotificationRepository notifications;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Autowired
     public ReceptionAppointmentService(PatientAccess access, ReceptionAppointmentRepository appointments,
@@ -132,9 +144,13 @@ public class ReceptionAppointmentService {
     public record CancelRequest(@NotBlank String reasonCode, @Size(max = 180) String note) {}
     public record BranchOption(Long id, String name) {}
     public record ServiceOption(Long id, String name, int durationMinutes) {}
-    public record PatientOption(Long id, String code, String name, String phone, LocalDate dob, String gender) {
+    public record PatientOption(Long id, String code, String name, String phone,
+            LocalDate dob, String gender, boolean crossBranch) {
+        public PatientOption(Long id, String code, String name, String phone, LocalDate dob, String gender) {
+            this(id, code, name, phone, dob, gender, false);
+        }
         public PatientOption(Long id, String code, String name, String phone) {
-            this(id, code, name, phone, null, null);
+            this(id, code, name, phone, null, null, false);
         }
     }
     public record Options(List<BranchOption> branches, List<ServiceOption> services) {}
@@ -159,6 +175,14 @@ public class ReceptionAppointmentService {
 
         public String getPatientToken() {
             return com.cvdcms.security.UrlIdCodec.shared().encodePatient(profileId);
+        }
+
+        public boolean isNeedsReassignment() {
+            return doctorUnavailable && (status == AppointmentStatus.PENDING || status == AppointmentStatus.CONFIRMED);
+        }
+
+        public String getWorkflowFlag() {
+            return isNeedsReassignment() ? "NEEDS_REASSIGNMENT" : null;
         }
     }
     public record HistoryView(String action, String oldValue, String newValue, String reason, LocalDateTime createdAt) {}
@@ -191,24 +215,77 @@ public class ReceptionAppointmentService {
     @Transactional(readOnly = true)
     public List<PatientOption> searchPatients(HttpSession session, Long branchId, String query) {
         PatientAccess.Scope scope = access.require(session);
-        if (branchId != null) {
-            try {
-                requireBranch(scope, branchId);
-            } catch (Exception ignored) {}
+        List<Long> scopedBranchIds = resolvePatientSearchBranches(scope, branchId);
+        String q = PatientSearchPolicy.normalize(query);
+
+        if (q.isEmpty()) {
+            List<PatientProfile> list = scopedBranchIds == null
+                    ? patients.findRecentBookable(PageRequest.of(0, 30))
+                    : patients.findRecentBookableByBranches(scopedBranchIds, PageRequest.of(0, 30));
+            return list.stream().map(p -> toPatientOption(p, false)).toList();
         }
-        String q = query == null ? "" : query.trim();
-        List<PatientProfile> list = q.isEmpty()
-                ? patients.findRecentBookable(PageRequest.of(0, 30))
-                : patients.search(q).stream().limit(30).toList();
-        return list.stream()
-                .map(p -> new PatientOption(
-                        p.getProfileId(),
-                        p.getPatientCode(),
-                        p.getFullName(),
-                        p.getPhoneNumber(),
-                        p.getDob(),
-                        p.getGender()))
-                .toList();
+
+        PatientSearchPolicy.ExactIdentifierType exactType = PatientSearchPolicy.classifyExactIdentifier(q);
+        if (exactType != PatientSearchPolicy.ExactIdentifierType.NONE) {
+            List<PatientProfile> exactCandidates = switch (exactType) {
+                case PHONE -> patients.findExactActiveByPhone(q);
+                case ID_CARD -> patients.findExactActiveByIdCard(q);
+                case PATIENT_CODE -> patients.findExactActiveByPatientCode(q);
+                case NONE -> List.of();
+            };
+            Optional<PatientProfile> matched = PatientSearchPolicy.resolveSingleConsistentExactMatch(exactType, q, exactCandidates);
+            if (matched.isEmpty()) {
+                return List.of();
+            }
+            PatientProfile profile = matched.get();
+            boolean inScope = scopedBranchIds == null || isProfileAccessibleInBranches(profile, scopedBranchIds);
+            return List.of(toPatientOption(profile, !inScope));
+        }
+
+        List<PatientProfile> list = scopedBranchIds == null
+                ? patients.search(q).stream().limit(30).toList()
+                : patients.searchByBranches(scopedBranchIds, q, PageRequest.of(0, 30));
+        return list.stream().map(p -> toPatientOption(p, false)).toList();
+    }
+
+    private List<Long> resolvePatientSearchBranches(PatientAccess.Scope scope, Long requestedBranchId) {
+        if (requestedBranchId != null) {
+            Branch requested = requireBranch(scope, requestedBranchId);
+            return scope.admin() ? null : List.of(requested.getBranchId());
+        }
+        if (scope.admin()) {
+            return null;
+        }
+        Long currentBranchId = scope.branchId();
+        if (currentBranchId == null || !scope.permits(currentBranchId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Tài khoản chưa được phân công chi nhánh hợp lệ để tìm kiếm bệnh nhân.");
+        }
+        Branch currentBranch = branches.findById(currentBranchId)
+                .filter(b -> Boolean.TRUE.equals(b.getIsActive()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Chi nhánh hiện tại không hoạt động hoặc không hợp lệ."));
+        return List.of(currentBranch.getBranchId());
+    }
+
+    private boolean isProfileAccessibleInBranches(PatientProfile p, List<Long> branchIds) {
+        if (p.getPreferredBranch() != null && p.getPreferredBranch().getBranchId() != null
+                && branchIds.contains(p.getPreferredBranch().getBranchId())) {
+            return true;
+        }
+        return p.getProfileId() != null && patients.isProfileAccessibleInBranches(p.getProfileId(), branchIds);
+    }
+
+    private PatientOption toPatientOption(PatientProfile p, boolean crossBranch) {
+        return new PatientOption(
+                p.getProfileId(),
+                p.getPatientCode(),
+                p.getFullName(),
+                p.getPhoneNumber(),
+                p.getDob(),
+                p.getGender(),
+                crossBranch
+        );
     }
 
     @Transactional(readOnly = true)
@@ -329,62 +406,38 @@ public class ReceptionAppointmentService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Lễ tân không được tự ý gán bác sĩ thủ công. Hệ thống sẽ tự động phân bổ bác sĩ.");
         }
-        Branch branch = requireBranch(scope, request.branchId());
+        Long branchId = request.branchId();
+        if (branchId == null || !scope.permits(branchId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        Branch branch;
         PatientProfile profile;
         if (request.profileId() != null) {
+            branch = requireBranch(scope, branchId);
             profile = patients.findBookable(request.profileId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hồ sơ không thuộc phạm vi chi nhánh."));
+            // Giữ nguyên thứ tự khóa chuẩn cho hồ sơ đã tồn tại: 1. PatientProfile -> 2. Branch -> 3. StaffProfile
+            if (patientProfiles != null && profile.getProfileId() != null) {
+                profile = patientProfiles.findByIdForUpdate(profile.getProfileId()).orElse(profile);
+                refreshIfManaged(profile);
+            }
+            branch = lockBranch(scope, branchId);
         } else if (request.patientName() != null && !request.patientName().isBlank()) {
-            String name = request.patientName().trim();
-            String phone = request.patientPhone() != null ? request.patientPhone().trim() : "";
-            LocalDate dob = request.patientDob();
-            String gender = request.patientGender() != null ? request.patientGender().trim() : "";
-
-            if (phone.isBlank() || !phone.matches("^0\\d{9,10}$")) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Số điện thoại bệnh nhân mới phải có 10 hoặc 11 chữ số và bắt đầu bằng 0.");
-            }
-            if (dob == null || dob.isAfter(LocalDate.now())) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Ngày sinh bệnh nhân mới không hợp lệ hoặc không được ở tương lai.");
-            }
-            if (!Set.of("Nam", "Nữ", "Khác").contains(gender)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Giới tính bệnh nhân mới phải là Nam, Nữ hoặc Khác.");
-            }
-
-            PatientProfileForm form = new PatientProfileForm(
-                    name,
-                    dob,
-                    gender,
-                    phone,
-                    request.patientAddress() != null ? request.patientAddress().trim() : "",
-                    branch.getBranchId(),
-                    null,
-                    null,
-                    request.guardianName() != null ? request.guardianName().trim() : null,
-                    request.guardianPhone() != null ? request.guardianPhone().trim() : null,
-                    request.guardianRelationship() != null ? request.guardianRelationship().trim() : null,
-                    request.idCardNumber() != null ? request.idCardNumber().trim() : null,
-                    null,
-                    Boolean.TRUE.equals(request.confirmDuplicate())
-            );
-
+            PatientProfileForm form = buildAndValidateNewPatientForm(request, branchId);
+            // Nhánh tạo hồ sơ mới: khóa Branch (FOR UPDATE) trước INSERT patient_profiles để tránh FK S-lock -> X-lock deadlock.
+            branch = lockBranch(scope, branchId);
             // Tái sử dụng PatientService chuẩn: kiểm tra quyền chi nhánh, phát hiện trùng, bắt buộc người giám hộ nếu < 18 tuổi (BR-PAT-09), ghi audit log
-            var violations = validator.validate(form);
-            if (!violations.isEmpty()) throw bad(violations.iterator().next().getMessage());
             PatientView createdProfile = patientService.create(session, form);
             profile = patients.findById(createdProfile.id())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Không thể tải hồ sơ sau khi tạo."));
+            if (patientProfiles != null && profile.getProfileId() != null) {
+                profile = patientProfiles.findByIdForUpdate(profile.getProfileId()).orElse(profile);
+                refreshIfManaged(profile);
+            }
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng chọn hồ sơ bệnh nhân hoặc nhập đầy đủ thông tin bệnh nhân mới hợp lệ.");
         }
-
-        // Global lock hierarchy: 1. PatientProfile -> 2. Branch -> 3. StaffProfile
-        if (patientProfiles != null && profile.getProfileId() != null) {
-            patientProfiles.findByIdForUpdate(profile.getProfileId());
-        }
-        branch = lockBranch(scope, request.branchId());
 
         PreferredSession targetSession = request.session();
         if (targetSession == null || targetSession == PreferredSession.ANY) {
@@ -418,6 +471,10 @@ public class ReceptionAppointmentService {
             // Bắt buộc xác minh khung giờ hợp lệ, không fallback sang raw time nếu kiểm tra thất bại
             expectedTime = slots.resolveFlexibly(branch, request.date(), targetSession, request.doctorId(),
                     a.getDurationMinutes(), null, request.expectedTime(), AppointmentActorType.RECEPTIONIST);
+        } else if (request.doctorId() != null) {
+            // Lịch linh hoạt (expectedTime == null) có bác sĩ chỉ định vẫn phải khóa bác sĩ/ca trực & kiểm tra doctorCapacity
+            slots.lockAndValidateDoctorSession(branch.getBranchId(), request.doctorId(),
+                    request.date(), targetSession, null);
         }
         if (a.getDoctor() == null && expectedTime != null) {
             StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
@@ -443,11 +500,9 @@ public class ReceptionAppointmentService {
         return view(a);
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentView quickStatus(HttpSession session, Long id, QuickStatusRequest request) {
         PatientAccess.Scope scope = access.require(session);
-        Appointment a = lockAppointment(scope, id);
-        String old = snapshot(a);
-
         String rawStatus = request.status() != null ? request.status().trim() : "";
         AppointmentStatus targetStatus;
         try {
@@ -455,6 +510,12 @@ public class ReceptionAppointmentService {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trạng thái lịch hẹn không hợp lệ: " + rawStatus);
         }
+
+        AppointmentLockSnapshot snap = readAndAuthorizeSnapshot(scope, id);
+        Appointment a = targetStatus == AppointmentStatus.CONFIRMED
+                ? lockAppointmentWithDoctorScope(scope, snap, snap.doctorId(), snap.appointmentDate())
+                : lockAppointment(scope, snap);
+        String old = snapshot(a);
 
         String note = request.note() != null ? request.note().trim() : "";
 
@@ -510,55 +571,94 @@ public class ReceptionAppointmentService {
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentView update(HttpSession session, Long id, UpdateRequest request) {
         PatientAccess.Scope scope = access.require(session);
-        Appointment a = lockAppointment(scope, id);
-        mutable(a);
-        activeProfile(a.getPatientProfile());
-        Long currentDoctorId = a.getDoctor() != null ? a.getDoctor().getStaffId() : null;
-        if (request.doctorId() != null && !Objects.equals(currentDoctorId, request.doctorId()) && !access.canAssignDoctor(scope)) {
+        AppointmentLockSnapshot snap = readAndAuthorizeSnapshot(scope, id);
+        if (snap.status() != AppointmentStatus.PENDING && snap.status() != AppointmentStatus.CONFIRMED) {
+            throw conflict("Lịch đã check-in, hoàn thành, hủy hoặc không đến không thể sửa.");
+        }
+        Long oldDoctorId = snap.doctorId();
+        if (request.doctorId() != null && oldDoctorId == null && !access.canAssignDoctor(scope)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Lễ tân không được tự ý gán hoặc thay đổi bác sĩ thủ công.");
         }
-        Long targetDoctorId = request.doctorId() != null ? request.doctorId() : currentDoctorId;
+        Long targetDoctorId = request.doctorId() != null ? request.doctorId() : oldDoctorId;
+
+        // Global lock hierarchy: PatientProfile -> Branch -> StaffProfile (staffId ASC) -> StaffSchedule -> Appointment
+        Appointment a = lockAppointmentWithDoctorScope(scope, snap, targetDoctorId, request.date());
+        mutable(a);
+        activeProfile(a.getPatientProfile());
+        Long lockedCurrentDoctorId = a.getDoctor() != null ? a.getDoctor().getStaffId() : null;
+        boolean wasNeedingReassignment = isDoctorReassignmentNeeded(a);
+        if (request.doctorId() != null && !Objects.equals(lockedCurrentDoctorId, request.doctorId())
+                && !access.canAssignDoctor(scope) && !wasNeedingReassignment) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Lễ tân không được tự ý gán hoặc thay đổi bác sĩ thủ công.");
+        }
+        Long effectiveTargetDoctorId = request.doctorId() != null ? request.doctorId() : lockedCurrentDoctorId;
         rules.ensureBookable(a.getBranch(), a.getPatientProfile(), request.date(), request.session(),
-                targetDoctorId, id);
+                effectiveTargetDoctorId, id);
         String old = snapshot(a);
+        boolean doctorChanged = !Objects.equals(lockedCurrentDoctorId, effectiveTargetDoctorId);
         boolean moved = !Objects.equals(a.getAppointmentDate(), request.date())
                 || a.getPreferredSession() != request.session()
                 || request.expectedTime() != null && !Objects.equals(a.getExpectedTime(), request.expectedTime());
         LocalTime requestedTime = request.expectedTime() != null ? request.expectedTime()
                 : Objects.equals(a.getAppointmentDate(), request.date()) && a.getPreferredSession() == request.session()
                     ? a.getExpectedTime() : null;
-        a.setAppointmentDate(request.date()); a.setPreferredSession(request.session());
-        a.setDoctor(doctor(targetDoctorId)); a.setService(service(request.serviceId()));
-        a.setInitialSymptoms(clean(request.symptoms()));
-        a.setDurationMinutes(AppointmentSlotService.duration(a.getService()));
+        StaffProfile targetDoctor = doctor(effectiveTargetDoctorId);
+        com.cvdcms.entity.Service targetService = service(request.serviceId());
+        int targetDuration = AppointmentSlotService.duration(targetService);
         LocalTime expectedTime = null;
         if (requestedTime != null) {
-            expectedTime = slots.resolveFlexibly(a.getBranch(), request.date(), request.session(), targetDoctorId,
-                    a.getDurationMinutes(), id, requestedTime, AppointmentActorType.RECEPTIONIST);
+            expectedTime = slots.resolveFlexibly(a.getBranch(), request.date(), request.session(), effectiveTargetDoctorId,
+                    targetDuration, id, requestedTime, AppointmentActorType.RECEPTIONIST);
+        } else if (effectiveTargetDoctorId != null) {
+            slots.lockAndValidateDoctorSession(a.getBranch().getBranchId(), effectiveTargetDoctorId,
+                    request.date(), request.session(), id);
         }
-        if (a.getDoctor() == null && expectedTime != null) {
+        if (targetDoctor == null && expectedTime != null) {
             StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
-                    a.getBranch(), request.date(), request.session(), expectedTime, a.getDurationMinutes(), id);
+                    a.getBranch(), request.date(), request.session(), expectedTime, targetDuration, id);
             if (autoAssigned != null) {
-                a.setDoctor(autoAssigned);
+                targetDoctor = autoAssigned;
+                doctorChanged = !Objects.equals(lockedCurrentDoctorId, autoAssigned.getStaffId());
             }
         }
+        a.setAppointmentDate(request.date()); a.setPreferredSession(request.session());
+        a.setDoctor(targetDoctor); a.setService(targetService);
+        a.setInitialSymptoms(clean(request.symptoms()));
+        a.setDurationMinutes(targetDuration);
         a.setExpectedTime(expectedTime);
         a.syncExpectedEndTime();
         if (moved) a.setRescheduleCount(a.getRescheduleCount() + 1);
         lifecycle.transition(a, a.getStatus(), AppointmentLifecycleAction.RESCHEDULE);
         appointments.saveAndFlush(a);
+        String historyReason = clean(request.reason());
+        if (historyReason == null && wasNeedingReassignment && (doctorChanged || moved)) {
+            historyReason = "Điều phối đổi bác sĩ hoặc dời lịch do bác sĩ trước đó không khả dụng";
+        }
         history(a, scope.user().getUserId(), moved ? "RESCHEDULE" : "UPDATE", old,
-                snapshot(a), clean(request.reason()));
+                snapshot(a), historyReason);
         updateReminders(a, moved);
+        if (wasNeedingReassignment && (doctorChanged || moved)) {
+            notifyPatientReassignment(a, targetDoctor, moved);
+        }
         return view(a);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentView confirm(HttpSession session, Long id, ConfirmRequest request) {
         PatientAccess.Scope scope = access.require(session);
-        Appointment a = lockAppointment(scope, id);
+        AppointmentLockSnapshot snap = readAndAuthorizeSnapshot(scope, id);
+        if (snap.status() != AppointmentStatus.PENDING) {
+            throw conflict("Chỉ có thể xác nhận lịch đang chờ lễ tân.");
+        }
+        Long currentDoctorId = snap.doctorId();
+        if (request.doctorId() != null && currentDoctorId == null && !access.canAssignDoctor(scope)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Lễ tân không được tự ý gán bác sĩ thủ công khi xác nhận lịch.");
+        }
+        Long targetDoctorId = request.doctorId() != null ? request.doctorId() : currentDoctorId;
+        Appointment a = lockAppointmentWithDoctorScope(scope, snap, targetDoctorId, snap.appointmentDate());
         return confirmLocked(scope, a, request.doctorId());
     }
 
@@ -567,7 +667,8 @@ public class ReceptionAppointmentService {
         if (a.getStatus() != AppointmentStatus.PENDING)
             throw conflict("Chỉ có thể xác nhận lịch đang chờ lễ tân.");
         Long currentDoctorId = a.getDoctor() != null ? a.getDoctor().getStaffId() : null;
-        if (doctorId != null && !Objects.equals(currentDoctorId, doctorId) && !access.canAssignDoctor(scope)) {
+        if (doctorId != null && !Objects.equals(currentDoctorId, doctorId)
+                && !access.canAssignDoctor(scope) && !isDoctorReassignmentNeeded(a)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Lễ tân không được tự ý gán bác sĩ thủ công khi xác nhận lịch.");
         }
@@ -576,19 +677,23 @@ public class ReceptionAppointmentService {
         rules.ensureBookable(a.getBranch(), a.getPatientProfile(), a.getAppointmentDate(),
                 a.getPreferredSession(), effectiveDoctorId, id);
         String old = snapshot(a);
-        a.setDoctor(doctor(effectiveDoctorId));
+        StaffProfile resolvedDoctor = doctor(effectiveDoctorId);
         if (a.getExpectedTime() != null) {
             slots.resolveFlexibly(a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(), effectiveDoctorId,
                     a.getDurationMinutes(), id, a.getExpectedTime(), AppointmentActorType.RECEPTIONIST);
-            if (a.getDoctor() == null) {
+            if (resolvedDoctor == null) {
                 StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
                         a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(),
                         a.getExpectedTime(), a.getDurationMinutes(), id);
                 if (autoAssigned != null) {
-                    a.setDoctor(autoAssigned);
+                    resolvedDoctor = autoAssigned;
                 }
             }
+        } else if (effectiveDoctorId != null) {
+            slots.lockAndValidateDoctorSession(a.getBranch().getBranchId(), effectiveDoctorId,
+                    a.getAppointmentDate(), a.getPreferredSession(), id);
         }
+        a.setDoctor(resolvedDoctor);
         a.syncExpectedEndTime();
         lifecycle.transition(a, AppointmentStatus.CONFIRMED, AppointmentLifecycleAction.CONFIRM);
         appointments.saveAndFlush(a);
@@ -702,23 +807,141 @@ public class ReceptionAppointmentService {
     }
 
     private Appointment lockAppointment(PatientAccess.Scope scope, Long id) {
-        Appointment before = owned(scope, id);
-        if (patientProfiles != null && before.getPatientProfile() != null) {
-            patientProfiles.findByIdForUpdate(before.getPatientProfile().getProfileId());
+        return lockAppointment(scope, readAndAuthorizeSnapshot(scope, id));
+    }
+
+    private Appointment lockAppointment(PatientAccess.Scope scope, AppointmentLockSnapshot snap) {
+        return lockAppointmentInternal(scope, snap, List.of(), List.of());
+    }
+
+    private Appointment lockAppointmentWithDoctorScope(
+            PatientAccess.Scope scope,
+            AppointmentLockSnapshot snap,
+            Long targetDoctorId,
+            LocalDate targetDate
+    ) {
+        TreeSet<Long> doctorIds = new TreeSet<>();
+        if (snap.doctorId() != null) doctorIds.add(snap.doctorId());
+        if (targetDoctorId != null) doctorIds.add(targetDoctorId);
+
+        TreeSet<LocalDate> dates = new TreeSet<>();
+        if (snap.appointmentDate() != null) dates.add(snap.appointmentDate());
+        if (targetDate != null) dates.add(targetDate);
+
+        return lockAppointmentInternal(scope, snap, new ArrayList<>(doctorIds), new ArrayList<>(dates));
+    }
+
+    private Appointment lockAppointmentInternal(
+            PatientAccess.Scope scope,
+            AppointmentLockSnapshot snap,
+            List<Long> sortedDoctorIds,
+            List<LocalDate> sortedDates
+    ) {
+        if (patientProfiles != null && snap.patientProfileId() != null) {
+            PatientProfile p = patientProfiles.findByIdForUpdate(snap.patientProfileId()).orElse(null);
+            refreshIfManaged(p);
         }
-        lockBranch(scope, before.getBranch().getBranchId());
-        Appointment a = appointments.lockById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        if (!scope.permits(a.getBranch().getBranchId())) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        if (snap.branchId() != null) {
+            lockBranch(scope, snap.branchId());
+        }
+        if (!sortedDoctorIds.isEmpty()) {
+            for (Long docId : sortedDoctorIds) {
+                if (staff != null && docId != null) {
+                    staff.lockById(docId).ifPresent(this::refreshIfManaged);
+                }
+            }
+            if (staffSchedules != null && !sortedDates.isEmpty()) {
+                for (Long docId : sortedDoctorIds) {
+                    for (LocalDate d : sortedDates) {
+                        staffSchedules.lockDoctorSchedulesForDate(docId, d, ScheduleStatus.SCHEDULED);
+                    }
+                }
+            }
+        }
+        Appointment a = appointments.lockById(snap.appointmentId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        refreshIfManaged(a);
+        if (a.getBranch() == null || !scope.permits(a.getBranch().getBranchId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        if (!snap.matchesLockedState(a)) {
+            throw conflict("Lịch hẹn vừa được cập nhật bởi thao tác khác. Vui lòng tải lại trang và thử lại.");
+        }
         return a;
+    }
+
+    private AppointmentLockSnapshot readAndAuthorizeSnapshot(PatientAccess.Scope scope, Long id) {
+        AppointmentLockSnapshot snap = appointments.findLockSnapshotById(id)
+                .orElseGet(() -> appointments.findById(id).map(AppointmentLockSnapshot::from).orElse(null));
+        if (snap == null || snap.branchId() == null || !scope.permits(snap.branchId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return snap;
+    }
+
+    private void refreshIfManaged(Object entity) {
+        if (entityManager != null && entity != null && entityManager.contains(entity)) {
+            entityManager.refresh(entity);
+        }
     }
     private Appointment owned(PatientAccess.Scope scope, Long id) {
         Appointment a = appointments.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (!scope.permits(a.getBranch().getBranchId())) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         return a;
     }
+    private PatientProfileForm buildAndValidateNewPatientForm(CreateRequest request, Long branchId) {
+        String name = request.patientName().trim();
+        String phone = request.patientPhone() != null ? request.patientPhone().trim() : "";
+        LocalDate dob = request.patientDob();
+        String gender = request.patientGender() != null ? request.patientGender().trim() : "";
+
+        if (phone.isBlank() || !phone.matches("^0\\d{9,10}$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Số điện thoại bệnh nhân mới phải có 10 hoặc 11 chữ số và bắt đầu bằng 0.");
+        }
+        if (dob == null || dob.isAfter(LocalDate.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Ngày sinh bệnh nhân mới không hợp lệ hoặc không được ở tương lai.");
+        }
+        if (!Set.of("Nam", "Nữ", "Khác").contains(gender)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Giới tính bệnh nhân mới phải là Nam, Nữ hoặc Khác.");
+        }
+
+        PatientProfileForm form = new PatientProfileForm(
+                name,
+                dob,
+                gender,
+                phone,
+                request.patientAddress() != null ? request.patientAddress().trim() : "",
+                branchId,
+                null,
+                null,
+                request.guardianName() != null ? request.guardianName().trim() : null,
+                request.guardianPhone() != null ? request.guardianPhone().trim() : null,
+                request.guardianRelationship() != null ? request.guardianRelationship().trim() : null,
+                request.idCardNumber() != null ? request.idCardNumber().trim() : null,
+                null,
+                Boolean.TRUE.equals(request.confirmDuplicate())
+        );
+        var violations = validator.validate(form);
+        if (!violations.isEmpty()) throw bad(violations.iterator().next().getMessage());
+        return form;
+    }
+
     private Branch lockBranch(PatientAccess.Scope scope, Long id) {
-        requireBranch(scope, id);
-        return lockedBranches.findByIdForBooking(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (id == null || !scope.permits(id)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        Branch locked = lockedBranches.findByIdForBooking(id)
+                .orElseThrow(() -> bad("Chi nhánh không hoạt động hoặc không tồn tại."));
+        if (entityManager != null && entityManager.contains(locked)) {
+            entityManager.refresh(locked);
+        }
+        if (!Boolean.TRUE.equals(locked.getIsActive())) {
+            throw bad("Chi nhánh không hoạt động hoặc không tồn tại.");
+        }
+        return locked;
     }
     private Branch requireBranch(PatientAccess.Scope scope, Long id) {
         if (id == null || !scope.permits(id)) throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -766,6 +989,48 @@ public class ReceptionAppointmentService {
         h.setReason(reason);
         histories.save(h);
     }
+    private boolean isDoctorReassignmentNeeded(Appointment a) {
+        if (a == null || a.getDoctor() == null) {
+            return false;
+        }
+        if (a.getStatus() != AppointmentStatus.PENDING && a.getStatus() != AppointmentStatus.CONFIRMED) {
+            return false;
+        }
+        if (a.getDoctor().getStatus() != StaffStatus.ACTIVE) {
+            return true;
+        }
+        List<AppointmentConflictDetectionService.Conflict> foundConflicts = conflictDetection != null
+                ? conflictDetection.detectConflicts(a) : List.of();
+        boolean doctorConflict = foundConflicts.stream().anyMatch(c ->
+                "DOCTOR_ON_LEAVE".equals(c.code())
+                        || "DOCTOR_NO_SCHEDULE".equals(c.code())
+                        || "DOCTOR_NOT_ASSIGNED".equals(c.code())
+                        || "DOCTOR_INACTIVE".equals(c.code()));
+        if (doctorConflict) {
+            return true;
+        }
+        return a.getAppointmentDate() != null
+                && !a.getAppointmentDate().isBefore(LocalDate.now(ReceptionAppointmentRules.ZONE))
+                && !rules.doctorAvailable(a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(), a.getDoctor().getStaffId());
+    }
+
+    private void notifyPatientReassignment(Appointment a, StaffProfile newDoctor, boolean moved) {
+        if (notifications == null || a == null || a.getPatientProfile() == null
+                || a.getPatientProfile().getUser() == null) {
+            return;
+        }
+        SystemNotification notif = new SystemNotification();
+        notif.setUser(a.getPatientProfile().getUser());
+        notif.setTitle("Cập nhật điều phối lịch hẹn #" + a.getAppointmentCode());
+        String docLabel = newDoctor != null ? "Bác sĩ " + newDoctor.getFullName() : "bác sĩ phụ trách phù hợp";
+        String timeStr = a.getExpectedTime() != null ? " lúc " + a.getExpectedTime() : "";
+        notif.setMessage("Lịch hẹn #" + a.getAppointmentCode()
+                + (moved ? " đã được đề xuất/dời sang ngày " + a.getAppointmentDate() + timeStr + " với " + docLabel + "."
+                        : " ngày " + a.getAppointmentDate() + timeStr + " đã được điều phối sang " + docLabel + "."));
+        notif.setNotificationType(NotificationType.APPOINTMENT);
+        notifications.save(notif);
+    }
+
     private AppointmentView view(Appointment a) {
         List<AppointmentConflictDetectionService.Conflict> foundConflicts = conflictDetection != null
                 ? conflictDetection.detectConflicts(a) : List.of();

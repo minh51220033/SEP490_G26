@@ -255,7 +255,7 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
             if (linked != null && !linked.isEmpty()) {
                 visitByAppt = new HashMap<>();
                 for (Visit v : linked) {
-                    if (v != null && v.getAppointmentId() != null) {
+                    if (v != null && v.getAppointmentId() != null && v.getStatus() != VisitStatus.CANCELLED) {
                         visitByAppt.putIfAbsent(v.getAppointmentId(), v);
                     }
                 }
@@ -654,6 +654,14 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
 
     private int doctorCapacity(AppointmentSessionPolicy policy) {
         return policy == null ? defaultDoctorCapacity : policy.getDoctorCapacity();
+    }
+
+    @Override
+    public int doctorCapacityForSession(Long branchId, LocalDate date, PreferredSession session) {
+        if (branchId == null || date == null || session == null) {
+            return defaultDoctorCapacity;
+        }
+        return doctorCapacity(policy(branchId, date, session));
     }
 
     private static ResponseStatusException conflict(String message) {
