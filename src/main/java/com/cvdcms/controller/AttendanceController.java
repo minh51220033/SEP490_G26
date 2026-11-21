@@ -208,6 +208,7 @@ public class AttendanceController {
     @GetMapping("/admin/attendance")
     public String branchAttendance(@RequestParam(required = false) Long branchId,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
+            @RequestParam(required = false) String keyword,
             Model model, HttpSession session) {
         if (!(session.getAttribute("loggedInUser") instanceof User)) {
             return "redirect:/login";
@@ -220,6 +221,7 @@ public class AttendanceController {
 
         List<Branch> branches = branchService.getActiveBranches();
         model.addAttribute("branches", branches);
+        model.addAttribute("keyword", keyword != null ? keyword.trim() : "");
 
         // Mặc định ban đầu của màn Chấm công là Toàn hệ thống (trừ khi người dùng chủ
         // động chọn chi nhánh trên URL)
