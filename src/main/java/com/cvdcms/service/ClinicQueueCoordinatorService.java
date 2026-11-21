@@ -526,7 +526,7 @@ public class ClinicQueueCoordinatorService {
 
         List<QueueTicket> doctorTickets = tickets.findForDoctorOnDay(branchId, today, QueueType.EXAM, doctorId);
         boolean deskBusy = doctorTickets.stream().anyMatch(t -> ACTIVE_DESK_STATUSES.contains(t.getStatus()))
-                || !visits.findActiveExamsForDoctorAtBranch(branchId, doctorId, ACTIVE_EXAM_VISIT_STATUSES).isEmpty();
+                || !findActiveExamsForDoctorToday(branchId, doctorId, today).isEmpty();
         if (deskBusy) {
             return Optional.empty();
         }
@@ -708,7 +708,7 @@ public class ClinicQueueCoordinatorService {
 
         Visit reopenedActiveVisit = null;
         if (inServiceTicket == null) {
-            reopenedActiveVisit = visits.findActiveExamsForDoctorAtBranch(branchId, doctorId, ACTIVE_EXAM_VISIT_STATUSES)
+            reopenedActiveVisit = findActiveExamsForDoctorToday(branchId, doctorId, today)
                     .stream()
                     .findFirst()
                     .orElse(null);
@@ -749,7 +749,7 @@ public class ClinicQueueCoordinatorService {
                 inServiceSummary,
                 calledSummary,
                 waitingList.size(),
-                reopenedActiveVisit == null && (calledSummary != null || inServiceSummary != null),
+                reopenedActiveVisit == null && (calledSummary != null || inServiceSummary != null || !waitingList.isEmpty()),
                 calledSummary != null && inServiceSummary == null && reopenedActiveVisit == null,
                 bannerText,
                 emergencyAlerts);
@@ -783,8 +783,8 @@ public class ClinicQueueCoordinatorService {
             return new EnterExamResult(activeVisit, activeTicket, urlIdCodec.encodeVisit(activeVisit.getVisitId()), true);
         }
 
-        // 1b. Bảo đảm cùng bàn khám chỉ có duy nhất 1 ca IN_EXAM/IN_TREATMENT (kể cả ca mở lại trước thanh toán)
-        List<Visit> activeDoctorVisits = visits.findActiveExamsForDoctorAtBranch(branchId, doctorId, ACTIVE_EXAM_VISIT_STATUSES);
+        // 1b. Bảo đảm cùng bàn khám chỉ có duy nhất 1 ca IN_EXAM/IN_TREATMENT trong ngày (kể cả ca mở lại trước thanh toán)
+        List<Visit> activeDoctorVisits = findActiveExamsForDoctorToday(branchId, doctorId, today);
         if (!activeDoctorVisits.isEmpty()) {
             Visit reopenedActive = activeDoctorVisits.get(0);
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -793,13 +793,17 @@ public class ClinicQueueCoordinatorService {
                             + "). Vui lòng hoàn tất lại ca này trước khi bấm Vào khám lượt tiếp theo.");
         }
 
-        // 2. Xác định đúng lượt đang ở trạng thái Đang gọi (CALLED) của bàn này
+        // 2. Xác định đúng lượt đang ở trạng thái Đang gọi (CALLED) của bàn này; nếu bàn rảnh và còn WAITING thì tự gọi ngay
         QueueTicket calledSnapshot = doctorTickets.stream()
                 .filter(t -> t.getStatus() == QueueStatus.CALLED
                         && t.getVisit() != null
                         && WAITING_VISIT_STATUSES.contains(t.getVisit().getStatus()))
                 .findFirst()
                 .orElse(null);
+
+        if (calledSnapshot == null) {
+            calledSnapshot = autoCallNextForDoctorIfIdleLocked(branchId, doctorId, actor, today).orElse(null);
+        }
 
         if (calledSnapshot == null) {
             long waitingCount = doctorTickets.stream()
@@ -1032,45 +1036,25 @@ public class ClinicQueueCoordinatorService {
     // Internal Helpers
     // -------------------------------------------------------------------------
 
+    private List<Visit> findActiveExamsForDoctorToday(Long branchId, Long doctorId, LocalDate day) {
+        LocalDateTime startOfDay = day.atStartOfDay();
+        LocalDateTime endOfDay = day.plusDays(1).atStartOfDay();
+        return visits.findActiveExamsForDoctorAtBranchOnDay(
+                branchId, doctorId, ACTIVE_EXAM_VISIT_STATUSES, startOfDay, endOfDay);
+    }
+
     private void allocateChairIfConfigured(Long branchId, Visit visit) {
         List<DentalChair> branchChairs = chairs.findByBranchBranchIdOrderByChairCodeAsc(branchId);
         if (branchChairs.isEmpty()) {
             return;
         }
-        DentalChair chosen = null;
-        if (visit.getChairId() != null) {
-            DentalChair current = chairs.findById(visit.getChairId()).orElse(null);
-            if (current != null
-                    && Objects.equals(current.getBranch().getBranchId(), branchId)
-                    && current.getStatus() == ChairStatus.AVAILABLE
-                    && current.getRoom() != null
-                    && current.getRoom().getStatus() == RoomStatus.ACTIVE
-                    && visits.countOccupiedChair(current.getChairId(), visit.getVisitId(), ACTIVE_EXAM_VISIT_STATUSES) == 0) {
-                chosen = current;
-            }
-        }
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+
+        DentalChair chosen = pickAvailableChairForToday(branchId, visit, branchChairs, startOfDay, endOfDay, false);
         if (chosen == null) {
-            for (DentalChair c : branchChairs) {
-                if (c.getStatus() == ChairStatus.AVAILABLE
-                        && c.getRoom() != null
-                        && c.getRoom().getStatus() == RoomStatus.ACTIVE
-                        && (visit.getRoomId() == null || Objects.equals(visit.getRoomId(), c.getRoom().getRoomId()))
-                        && visits.countOccupiedChair(c.getChairId(), visit.getVisitId(), ACTIVE_EXAM_VISIT_STATUSES) == 0) {
-                    chosen = c;
-                    break;
-                }
-            }
-        }
-        if (chosen == null && visit.getRoomId() != null) {
-            for (DentalChair c : branchChairs) {
-                if (c.getStatus() == ChairStatus.AVAILABLE
-                        && c.getRoom() != null
-                        && c.getRoom().getStatus() == RoomStatus.ACTIVE
-                        && visits.countOccupiedChair(c.getChairId(), visit.getVisitId(), ACTIVE_EXAM_VISIT_STATUSES) == 0) {
-                    chosen = c;
-                    break;
-                }
-            }
+            chosen = pickAvailableChairForToday(branchId, visit, branchChairs, startOfDay, endOfDay, true);
         }
         if (chosen == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -1080,6 +1064,51 @@ public class ClinicQueueCoordinatorService {
         chairs.saveAndFlush(chosen);
         visit.setChairId(chosen.getChairId());
         visit.setRoomId(chosen.getRoom().getRoomId());
+    }
+
+    private DentalChair pickAvailableChairForToday(Long branchId, Visit visit, List<DentalChair> branchChairs,
+                                                   LocalDateTime startOfDay, LocalDateTime endOfDay,
+                                                   boolean reclaimStalePreviousDayInUse) {
+        if (!reclaimStalePreviousDayInUse && visit.getChairId() != null) {
+            DentalChair current = chairs.findById(visit.getChairId()).orElse(null);
+            if (isChairUsableForToday(branchId, current, visit, startOfDay, endOfDay, false)) {
+                return current;
+            }
+        }
+        for (DentalChair c : branchChairs) {
+            if (isChairUsableForToday(branchId, c, visit, startOfDay, endOfDay, reclaimStalePreviousDayInUse)
+                    && (visit.getRoomId() == null || Objects.equals(visit.getRoomId(), c.getRoom().getRoomId()))) {
+                return c;
+            }
+        }
+        if (visit.getRoomId() != null) {
+            for (DentalChair c : branchChairs) {
+                if (isChairUsableForToday(branchId, c, visit, startOfDay, endOfDay, reclaimStalePreviousDayInUse)) {
+                    return c;
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean isChairUsableForToday(Long branchId, DentalChair chair, Visit visit,
+                                          LocalDateTime startOfDay, LocalDateTime endOfDay,
+                                          boolean reclaimStalePreviousDayInUse) {
+        if (chair == null || chair.getBranch() == null
+                || !Objects.equals(chair.getBranch().getBranchId(), branchId)
+                || chair.getRoom() == null
+                || chair.getRoom().getStatus() != RoomStatus.ACTIVE) {
+            return false;
+        }
+        if (visits.countOccupiedChairOnDay(chair.getChairId(), visit.getVisitId(), ACTIVE_EXAM_VISIT_STATUSES, startOfDay, endOfDay) > 0) {
+            return false;
+        }
+        if (chair.getStatus() == ChairStatus.AVAILABLE) {
+            return true;
+        }
+        return reclaimStalePreviousDayInUse
+                && chair.getStatus() == ChairStatus.IN_USE
+                && visits.countOccupiedChairBefore(chair.getChairId(), visit.getVisitId(), ACTIVE_EXAM_VISIT_STATUSES, startOfDay) > 0;
     }
 
     private QueueTicket findLatestActiveOrPausedTicket(Long visitId) {
@@ -1208,7 +1237,7 @@ public class ClinicQueueCoordinatorService {
             }
             List<QueueTicket> ownTickets = tickets.findForDoctorOnDay(branchId, today, QueueType.EXAM, own.getStaffId());
             boolean ownHasWork = ownTickets.stream().anyMatch(t -> t.getStatus() != QueueStatus.CANCELLED && t.getStatus() != QueueStatus.DONE)
-                    || !visits.findActiveExamsForDoctorAtBranch(branchId, own.getStaffId(), ACTIVE_EXAM_VISIT_STATUSES).isEmpty();
+                    || !findActiveExamsForDoctorToday(branchId, own.getStaffId(), today).isEmpty();
             if (ownHasWork) {
                 return new DeskTarget(own, branchId);
             }

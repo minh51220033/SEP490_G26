@@ -3,6 +3,25 @@
         return new Intl.NumberFormat('vi-VN').format(value) + ' đ';
     }
 
+    function ensureVietQrLoaded() {
+        if (typeof window.VietQrPaymentBox === 'function') {
+            return Promise.resolve(window.VietQrPaymentBox);
+        }
+        return new Promise((resolve) => {
+            const existing = document.querySelector('script[src*="/js/vietqr-payment.js"]');
+            if (existing) {
+                existing.addEventListener('load', () => resolve(window.VietQrPaymentBox || null), {once: true});
+                existing.addEventListener('error', () => resolve(null), {once: true});
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = '/js/vietqr-payment.js';
+            script.onload = () => resolve(window.VietQrPaymentBox || null);
+            script.onerror = () => resolve(null);
+            document.head.appendChild(script);
+        });
+    }
+
     window.openDebtQuickPay = async function (button) {
         const template = document.getElementById('debtCollectionTemplate');
         if (!template || document.querySelector('[data-active-debt-collection]')) return;
@@ -13,15 +32,39 @@
         const abort = new AbortController();
         const picker = root.querySelector('[data-invoice-picker]');
         const notice = root.querySelector('[data-feedback]');
+        const dialog = root.querySelector('[data-debt-dialog]');
         const form = root.querySelector('form');
+        const formCol = root.querySelector('[data-debt-form-col]');
+        const qrCol = root.querySelector('[data-debt-qr-col]');
+        const qrContainer = root.querySelector('[data-debt-qr-container]');
         const amount = form.querySelector('[name=amount]');
         const select = form.querySelector('[name=invoiceId]');
+        const methodSelect = form.querySelector('[name=paymentMethod]');
+        const bankAccountIdInput = form.querySelector('[name=bankAccountId]');
+        const expectedContentInput = form.querySelector('[name=expectedTransferContent]');
         const box = form.querySelector('#debtPayAllocationPreviewBox');
         let previewTimer;
         let previewVersion = 0;
+        let qrBox = null;
+
+        function syncQrLayout() {
+            const isBank = methodSelect && methodSelect.value === 'BANK_TRANSFER';
+            if (dialog) {
+                dialog.classList.toggle('modal-xl', isBank);
+                dialog.classList.toggle('modal-lg', !isBank);
+            }
+            if (formCol) {
+                formCol.classList.toggle('col-lg-7', isBank);
+            }
+            if (qrCol) {
+                qrCol.style.display = isBank ? 'block' : 'none';
+            }
+        }
+
         root.addEventListener('hidden.bs.modal', () => {
             abort.abort();
             clearTimeout(previewTimer);
+            if (qrBox) qrBox.reset();
             modal.dispose();
             root.remove();
             if (button.isConnected) button.focus();
@@ -55,7 +98,7 @@
             }, 200);
         }
 
-        function choose(inv) {
+        async function choose(inv) {
             const debt = Number(inv.remainingDebt);
             select.replaceChildren(new Option(inv.invoiceCode + ' - Còn nợ: ' + formatMoney(debt), inv.invoiceId));
             form.querySelector('#debtModalDebtDisplay').value = formatMoney(debt);
@@ -65,12 +108,39 @@
             wallet.textContent = 'Ví tiền tạm ứng (Số dư: ' + formatMoney(balance) + ')';
             wallet.disabled = balance <= 0;
             form.querySelector('[name=idempotencyKey]').value = 'pay-' + (window.crypto?.randomUUID?.() || Date.now() + '-' + Math.random().toString(36).slice(2));
+            if (bankAccountIdInput) bankAccountIdInput.value = '';
+            if (expectedContentInput) expectedContentInput.value = '';
             picker.hidden = true;
             form.hidden = false;
+            syncQrLayout();
             amount.focus();
             preview();
+
+            const QrBox = await ensureVietQrLoaded();
+            if (abort.signal.aborted || !root.isConnected) return;
+            if (QrBox && qrContainer) {
+                if (!qrBox) {
+                    qrBox = new QrBox({
+                        container: qrContainer,
+                        methodSelect,
+                        amountInput: amount,
+                        invoiceId: () => select.value,
+                        profileId: () => button.dataset.profileId || null,
+                        bankAccountIdInput,
+                        expectedContentInput
+                    });
+                } else {
+                    qrBox.refresh(true);
+                }
+            }
         }
 
+        if (methodSelect) {
+            methodSelect.addEventListener('change', syncQrLayout);
+        }
+        select.addEventListener('change', () => {
+            if (qrBox) qrBox.refresh(true);
+        });
         amount.addEventListener('input', preview);
         form.addEventListener('submit', () => { form.querySelector('[type=submit]').disabled = true; });
         root.querySelector('[data-patient]').textContent = button.dataset.patientName + ' (' + button.dataset.patientCode + ')';

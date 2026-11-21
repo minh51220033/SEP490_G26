@@ -299,6 +299,7 @@ public class DiagnosisController {
         }
 
         if (visitId == null) {
+            LocalDate today = LocalDate.now(com.cvdcms.service.ClinicQueueCoordinatorService.CLINIC_ZONE);
             if (currentDoctor != null) {
                 final Long docStaffId = currentDoctor.getStaffId();
                 java.util.Set<Long> coveredIds = doctorCoverGrantRepository != null
@@ -306,6 +307,7 @@ public class DiagnosisController {
                         : java.util.Collections.<Long>emptySet();
                 List<Visit> myActiveVisits = diagnosisService.getAvailableVisitsForDiagnosis(branchId).stream()
                         .filter(v -> v.getStatus() == VisitStatus.IN_EXAM || v.getStatus() == VisitStatus.IN_TREATMENT)
+                        .filter(v -> v.getCheckInAt() != null && v.getCheckInAt().toLocalDate().equals(today))
                         .filter(v -> (v.getPrimaryDoctor() != null && docStaffId.equals(v.getPrimaryDoctor().getStaffId()))
                                 || coveredIds.contains(v.getVisitId()))
                         .toList();
@@ -321,6 +323,7 @@ public class DiagnosisController {
             } else {
                 List<Visit> activeVisits = diagnosisService.getAvailableVisitsForDiagnosis(branchId).stream()
                         .filter(v -> v.getStatus() == VisitStatus.IN_EXAM || v.getStatus() == VisitStatus.IN_TREATMENT)
+                        .filter(v -> v.getCheckInAt() != null && v.getCheckInAt().toLocalDate().equals(today))
                         .toList();
                 if (!activeVisits.isEmpty()) {
                     visitId = activeVisits.get(0).getVisitId();
