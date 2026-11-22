@@ -264,6 +264,7 @@ function renderPlanInlineRoadmapHtml(plan) {
                             : '<span class="text-muted">---</span>';
 
                         const isComp = it.status === 'COMPLETED';
+                        const isInProg = it.status === 'IN_PROGRESS';
 
                         let statusBadgeHtml = '';
                         let actionBtnHtml = '';
@@ -285,20 +286,36 @@ function renderPlanInlineRoadmapHtml(plan) {
                                 </button>
                             `;
                         } else {
-                            statusBadgeHtml = `
-                                <span class="badge bg-light text-secondary border px-2 py-1 rounded-pill fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 12px;">
-                                    <i class="bi bi-clock"></i>
-                                    <span>Chưa làm</span>
-                                </span>
-                            `;
+                            statusBadgeHtml = isInProg
+                                ? `
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-pill fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 12px;">
+                                        <i class="bi bi-play-circle-fill"></i>
+                                        <span>Đang điều trị</span>
+                                    </span>
+                                `
+                                : `
+                                    <span class="badge bg-light text-secondary border px-2 py-1 rounded-pill fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 12px;">
+                                        <i class="bi bi-clock"></i>
+                                        <span>Chưa làm</span>
+                                    </span>
+                                `;
                             actionBtnHtml = `
-                                <button type="button" class="btn btn-sm df-btn-tonal-primary rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1"
-                                        style="font-size: 12px;"
-                                        title="Thực hiện thủ thuật này trong ca khám hôm nay (Tự động đưa vào Dịch vụ thực hiện FT16)"
-                                        onclick="executePlanItemDirectly(${it.planItemId})">
-                                    <i class="bi bi-lightning-charge-fill"></i>
-                                    <span>Làm trong ca này</span>
-                                </button>
+                                <div class="d-inline-flex flex-wrap justify-content-center gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 fw-semibold d-inline-flex align-items-center gap-1"
+                                            style="font-size: 12px;"
+                                            title="Mở tab Quy trình thực hiện để khám &amp; cập nhật theo từng bước"
+                                            onclick="startPlanItemWorkflow(${it.planItemId}, ${it.serviceId}, ${st.stageId ? Number(st.stageId) : 'null'})">
+                                        <i class="bi bi-list-check"></i>
+                                        <span>${isInProg ? 'Tiếp tục bước' : 'Theo bước'}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm df-btn-tonal-primary rounded-pill px-2 py-1 fw-semibold d-inline-flex align-items-center gap-1"
+                                            style="font-size: 12px;"
+                                            title="Ghi nhận hoàn tất nhanh dịch vụ này vào Dịch vụ thực hiện (FT16)"
+                                            onclick="executePlanItemDirectly(${it.planItemId})">
+                                        <i class="bi bi-lightning-charge-fill"></i>
+                                        <span>Làm nhanh</span>
+                                    </button>
+                                </div>
                             `;
                         }
 
@@ -944,6 +961,52 @@ function executePlanItemDirectly(planItemId) {
         showToast(err.message, true);
     });
 }
+
+/**
+ * Mở tab Quy trình thực hiện để khám & cập nhật từng bước cho hạng mục KHDT (FT43 <-> FT15)
+ */
+function startPlanItemWorkflow(planItemId, serviceId, planStageId) {
+    if (typeof window.openTreatmentPlanStepWorkflow === 'function') {
+        window.openTreatmentPlanStepWorkflow(planItemId, serviceId, planStageId);
+        return;
+    }
+    const visitIdInput = document.getElementById('visitId') || document.getElementById('treatVisitId');
+    const visitId = visitIdInput ? visitIdInput.value : null;
+    if (!visitId) {
+        showToast('Không xác định được ca khám hiện tại!', true);
+        return;
+    }
+    const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+    const tokenMeta = document.querySelector('meta[name="_csrf"]');
+    const headerMeta = document.querySelector('meta[name="_csrf_header"]');
+    if (tokenMeta && headerMeta && tokenMeta.content && headerMeta.content) {
+        headers[headerMeta.content] = tokenMeta.content;
+    }
+    fetch('/api/doctor/workflows/execution/start', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+            visitId: Number(visitId),
+            serviceId: serviceId ? Number(serviceId) : null,
+            planItemId: planItemId ? Number(planItemId) : null,
+            planStageId: planStageId ? Number(planStageId) : null
+        })
+    })
+    .then(res => res.json().then(body => {
+        if (!res.ok) throw new Error(body.message || 'Không thể khởi tạo quy trình cho hạng mục này.');
+        return body;
+    }))
+    .then(dto => {
+        if (typeof window.switchMainTab === 'function') {
+            window.switchMainTab('tab-workflow-execution');
+        }
+        if (window.FT43 && typeof window.FT43.selectExecution === 'function') {
+            window.FT43.selectExecution(dto.executionId);
+        }
+    })
+    .catch(err => showToast(err.message, true));
+}
+window.startPlanItemWorkflow = startPlanItemWorkflow;
 
 /**
  * Hoàn tác bước KHDT về lại Chưa làm

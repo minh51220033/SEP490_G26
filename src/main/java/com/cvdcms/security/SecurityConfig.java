@@ -143,8 +143,20 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
-                // Nếu chưa đăng nhập, chuyển hướng người dùng về trang đăng nhập /login
+                // Nếu chưa đăng nhập: API trả 401 JSON (tránh lỗi <!DOCTYPE), trang web chuyển hướng về /login
                 .exceptionHandling(ex -> ex
+                        .defaultAuthenticationEntryPointFor(
+                                (req, res, authEx) -> {
+                                    res.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                                    res.setContentType("application/json;charset=UTF-8");
+                                    res.getWriter().write("{\"message\":\"Phiên đăng nhập đã hết hạn hoặc máy chủ vừa khởi động lại, vui lòng đăng nhập lại.\"}");
+                                },
+                                req -> {
+                                    String ctx = req.getContextPath() != null ? req.getContextPath() : "";
+                                    String path = req.getRequestURI().substring(ctx.length());
+                                    return path.startsWith("/api/");
+                                }
+                        )
                         .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
                 );
 

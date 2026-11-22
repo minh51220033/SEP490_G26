@@ -366,7 +366,13 @@
                         </div>
 
                         <!-- THANH CÔNG CỤ KHI Ở CHẾ ĐỘ CHỈ XEM CHI TIẾT LƯỢT KHÁM -->
-                        <div class="d-flex align-items-center gap-2" th:if="${isReadOnlyView == true}">
+                        <div class="d-flex align-items-center gap-2 flex-wrap" th:if="${isReadOnlyView == true}">
+                            <a th:if="${canSwitchToEditMode == true and visit != null}"
+                               th:href="@{/doctor/examination/{id}/diagnoses(id=${visitToken != null ? visitToken : idCodec.encodeVisit(visit.visitId)})}"
+                               class="btn btn-primary btn-sm rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center gap-2 shadow-sm text-white"
+                               title="Chuyển sang chế độ Khám &amp; Cập nhật lượt khám này">
+                                <i class="bi bi-pencil-square"></i><span>Mở bàn khám</span>
+                            </a>
                             <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-2 rounded-pill fw-bold">
                                 <i class="bi bi-eye-fill me-1"></i>Chế độ Chỉ xem (Không chỉnh sửa)
                             </span>
@@ -534,6 +540,10 @@
                                 <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-treatment-plan"
                                       th:text="${treatmentPlans != null ? #lists.size(treatmentPlans) : 0}">0</span>
                             </a>
+                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-workflow-execution" onclick="switchMainTab('tab-workflow-execution', this)">
+                                <i class="bi bi-list-check"></i> Quy trình điều trị
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num d-none" id="ft43SubnavCount">0</span>
+                            </a>
                             <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-prescriptions" onclick="switchMainTab('tab-prescriptions', this)">
                                 <i class="bi bi-capsule"></i> Đơn thuốc
                                 <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-prescriptions"
@@ -553,10 +563,6 @@
                                 <i class="bi bi-tools"></i> Dịch vụ thực hiện
                                 <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-performed-services"
                                       th:text="${performedServices != null ? #lists.size(performedServices) : 0}">0</span>
-                            </a>
-                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-workflow-execution" onclick="switchMainTab('tab-workflow-execution', this)">
-                                <i class="bi bi-list-check"></i> Quy trình thực hiện
-                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num d-none" id="ft43SubnavCount">0</span>
                             </a>
                             <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-labo" onclick="switchMainTab('tab-labo', this)">
                                 <i class="bi bi-box-seam"></i> Đặt xưởng
@@ -1059,11 +1065,11 @@
             'tab-patient-info': 'Thông tin bệnh nhân',
             'tab-examination': 'Khám & Điều trị',
             'tab-treatment-plan': 'Kế hoạch điều trị',
+            'tab-workflow-execution': 'Quy trình điều trị',
             'tab-prescriptions': 'Đơn thuốc',
             'tab-appointments': 'Lịch hẹn',
             'tab-customer-care': 'Chăm sóc',
             'tab-performed-services': 'Dịch vụ thực hiện',
-            'tab-workflow-execution': 'Quy trình thực hiện',
             'tab-labo': 'Đặt xưởng',
             'tab-clinical-photos': 'Film ảnh',
             'tab-instructions': 'Lời dặn'

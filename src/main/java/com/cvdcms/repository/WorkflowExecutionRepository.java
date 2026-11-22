@@ -20,6 +20,16 @@ public interface WorkflowExecutionRepository extends JpaRepository<WorkflowExecu
 
     Optional<WorkflowExecution> findFirstByVisit_VisitIdAndVersion_Template_Service_ServiceId(Long visitId, Long serviceId);
 
+    List<WorkflowExecution> findByPatientProfile_ProfileIdOrderByStartedAtDesc(Long profileId);
+
+    Optional<WorkflowExecution> findFirstByPlanItem_PlanItemId(Long planItemId);
+
+    List<WorkflowExecution> findByPlanItem_PlanItemId(Long planItemId);
+
+    List<WorkflowExecution> findByPlanStage_StageId(Long stageId);
+
+    Optional<WorkflowExecution> findFirstByPlanStage_StageIdAndVersion_Template_Service_ServiceId(Long stageId, Long serviceId);
+
     // FT43: khóa bản ghi khi cập nhật bước để tránh hai thao tác đồng thời làm sai thứ tự bước
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from WorkflowExecution e where e.executionId = :id")

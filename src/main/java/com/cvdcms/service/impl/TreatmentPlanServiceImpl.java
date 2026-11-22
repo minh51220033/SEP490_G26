@@ -103,6 +103,8 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     private com.cvdcms.service.PerformedServiceService performedServiceService;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private VisitRepository visitRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private WorkflowExecutionRepository workflowExecutionRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
@@ -369,19 +371,74 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         if (plan.getTotalPaidAmount() != null && plan.getTotalPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
             throw new IllegalStateException("Không thể xóa kế hoạch điều trị đã có thanh toán theo đợt!");
         }
-        if (plan.getStages() != null) {
-            for (TreatmentPlanStage stage : plan.getStages()) {
-                if (stage.getItems() == null) continue;
-                for (TreatmentPlanItem item : stage.getItems()) {
-                    if (isPlanItemLockedForEdit(item)) {
-                        throw new IllegalStateException("Không thể xóa kế hoạch điều trị đã có thủ thuật đang thực hiện hoặc đã hoàn thành trong ca khám!");
+        boolean allowDeleteCompletedUnbilled = plan.getStatus() == TreatmentPlanStatus.CANCELLED;
+        detachLinkedRecordsForPlanDelete(plan, allowDeleteCompletedUnbilled);
+
+        treatmentPlanRepository.delete(plan);
+        log.info("Deleted TreatmentPlan {}", plan.getPlanCode());
+    }
+
+    private void detachLinkedRecordsForPlanDelete(TreatmentPlan plan, boolean allowDeleteCompletedUnbilled) {
+        if (plan.getStages() == null) {
+            return;
+        }
+        List<PerformedService> servicesToSave = new ArrayList<>();
+        List<WorkflowExecution> executionsToSave = new ArrayList<>();
+        Set<Long> seenExecIds = new HashSet<>();
+
+        for (TreatmentPlanStage stage : plan.getStages()) {
+            if (stage.getStageId() != null && workflowExecutionRepository != null) {
+                for (WorkflowExecution ex : workflowExecutionRepository.findByPlanStage_StageId(stage.getStageId())) {
+                    if (ex.getExecutionId() != null && seenExecIds.add(ex.getExecutionId())) {
+                        ex.setPlanStage(null);
+                        ex.setPlanItem(null);
+                        executionsToSave.add(ex);
+                    }
+                }
+            }
+            if (stage.getItems() == null) {
+                continue;
+            }
+            for (TreatmentPlanItem item : stage.getItems()) {
+                if (!allowDeleteCompletedUnbilled && isPlanItemLockedForEdit(item)) {
+                    throw new IllegalStateException("Không thể xóa kế hoạch điều trị đã có thủ thuật đang thực hiện hoặc đã hoàn thành trong ca khám! Nếu muốn xóa, hãy chuyển trạng thái sang Đã hủy trước.");
+                }
+                if (item.getPlanItemId() == null) {
+                    continue;
+                }
+                if (performedServiceRepository != null) {
+                    for (PerformedService ps : performedServiceRepository.findByPlanItem_PlanItemId(item.getPlanItemId())) {
+                        boolean isBilled = invoiceItemRepository != null && ps.getPerformedId() != null
+                                && invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId());
+                        if (isBilled) {
+                            throw new IllegalStateException("Không thể xóa kế hoạch điều trị đã có dịch vụ được lập hóa đơn!");
+                        }
+                        if (ps.getStatus() != PerformedServiceStatus.CANCELLED) {
+                            ps.setStatus(PerformedServiceStatus.CANCELLED);
+                        }
+                        ps.setPlanItem(null);
+                        servicesToSave.add(ps);
+                    }
+                }
+                if (workflowExecutionRepository != null) {
+                    for (WorkflowExecution ex : workflowExecutionRepository.findByPlanItem_PlanItemId(item.getPlanItemId())) {
+                        if (ex.getExecutionId() != null && seenExecIds.add(ex.getExecutionId())) {
+                            ex.setPlanItem(null);
+                            ex.setPlanStage(null);
+                            executionsToSave.add(ex);
+                        }
                     }
                 }
             }
         }
-
-        treatmentPlanRepository.delete(plan);
-        log.info("Deleted TreatmentPlan {}", plan.getPlanCode());
+        if (!servicesToSave.isEmpty() && performedServiceRepository != null) {
+            performedServiceRepository.saveAll(servicesToSave);
+            performedServiceRepository.flush();
+        }
+        if (!executionsToSave.isEmpty() && workflowExecutionRepository != null) {
+            workflowExecutionRepository.saveAll(executionsToSave);
+            workflowExecutionRepository.flush();
+        }
     }
 
     @Override
