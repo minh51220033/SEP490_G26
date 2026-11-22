@@ -978,6 +978,11 @@
                             aria-selected="false">Khám &amp; Điều trị</button>
                     </li>
                     <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-odontogram-btn" data-bs-toggle="tab"
+                            data-bs-target="#tab-odontogram" type="button" role="tab" aria-controls="tab-odontogram"
+                            aria-selected="false">Tình trạng răng <span class="badge bg-light text-secondary border ms-1 d-none" id="tabBadge-patient-odontogram">0</span></button>
+                    </li>
+                    <li class="nav-item" role="presentation">
                         <button class="nav-link" id="tab-emr-btn" data-bs-toggle="tab" data-bs-target="#tab-emr"
                             type="button" role="tab" aria-controls="tab-emr" aria-selected="false">Bệnh án
                             (BAĐT)</button>
@@ -3197,6 +3202,13 @@
                         </div>
                     </div>
 
+                    <!-- -----------------------------------------------------------------
+                     TAB: TÌNH TRẠNG RĂNG (ODONTOGRAM FDI)
+                     ----------------------------------------------------------------- -->
+                    <div class="tab-pane fade" id="tab-odontogram" role="tabpanel" aria-labelledby="tab-odontogram-btn">
+                        <div th:replace="~{doctor/fragments/odontogram-tab :: odontogramTab(${patient.id}, ${activeVisit != null ? activeVisit.id : null}, ${activeVisit != null ? activeVisit.code : ''}, false, ${patient.dob != null ? #temporals.format(patient.dob, 'yyyy-MM-dd') : ''}, 'tabBadge-patient-odontogram')}"></div>
+                    </div>
+
                 </div>
             </main>
         </div>
@@ -4766,6 +4778,7 @@
             let clean = tabId.replace('#', '').trim();
             if (clean === 'personal' || clean === 'info') return 'tab-info';
             if (clean === 'clinical' || clean === 'treatment') return 'tab-treatment';
+            if (clean === 'odontogram' || clean === 'dental-chart') return 'tab-odontogram';
             if (clean === 'emr' || clean === 'medical') return 'tab-emr';
             if (clean === 'appointments') return 'tab-appointments';
             if (clean === 'care') return 'tab-care';
@@ -4876,6 +4889,10 @@
                 if (window.initializeEnhancedTables) {
                     window.initializeEnhancedTables();
                 }
+
+                if (cleanKey === 'odontogram' && window.OdontogramTab && typeof window.OdontogramTab.onTabShown === 'function') {
+                    window.OdontogramTab.onTabShown();
+                }
             }
         }
 
@@ -4909,6 +4926,10 @@
                     // Khởi tạo Enhanced Table nếu có
                     if (window.initializeEnhancedTables) {
                         window.initializeEnhancedTables();
+                    }
+
+                    if (cleanKey === 'odontogram' && window.OdontogramTab && typeof window.OdontogramTab.onTabShown === 'function') {
+                        window.OdontogramTab.onTabShown();
                     }
                 });
             });
