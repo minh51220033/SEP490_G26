@@ -196,7 +196,7 @@ class ReceptionServiceTest {
         var res = service.revertCheckIn(session, 20L);
         assertEquals(VisitStatus.CANCELLED, res.status());
         assertEquals(AppointmentStatus.CONFIRMED, a.getStatus());
-        assertNull(v.getAppointmentId());
+        assertEquals(20L, v.getAppointmentId());
     }
 
     @Test

@@ -132,13 +132,15 @@
                                     <span class="room-card__meta">
                                         <span th:text="${room.roomType}">TREATMENT</span> ·
                                         <span th:text="${room.status}">ACTIVE</span> ·
+                                        <span th:if="${room.floorLabel != null}" th:text="${room.floorLabel + ' · '}">Tầng 1 · </span>
+                                        <span th:if="${room.zoneLabel != null}" th:text="${room.zoneLabel + ' · '}">Khu A · </span>
                                         <span th:text="${#lists.size(chairsByRoom[room.roomId])}">0</span> ghế
                                     </span>
                                 </div>
                                 <div class="d-flex gap-2">
                                     <button type="button" class="btn btn-sm btn-outline-secondary"
                                             data-bs-toggle="modal" data-bs-target="#roomModal" data-mode="edit"
-                                            th:attr="data-room-id=${room.roomId},data-room-code=${room.roomCode},data-room-name=${room.roomName},data-room-type=${room.roomType},data-room-status=${room.status}">
+                                            th:attr="data-room-id=${room.roomId},data-room-code=${room.roomCode},data-room-name=${room.roomName},data-room-type=${room.roomType},data-room-status=${room.status},data-floor-label=${room.floorLabel},data-zone-label=${room.zoneLabel},data-floor-order=${room.floorOrder}">
                                         <i class="bi bi-pencil" aria-hidden="true"></i> Sửa
                                     </button>
                                     <form th:action="@{/admin/branches/{id}/rooms/{rid}/delete(id=${branch.branchId},rid=${room.roomId})}"
@@ -180,6 +182,90 @@
                                 </div>
                             </div>
                         </article>
+
+                        <!-- PHASE 1: QUY TẮC DI CHUYỂN & DANH SÁCH THIẾT BỊ CỦA CƠ SỞ -->
+                        <div class="row g-3 mt-2">
+                            <div class="col-lg-6">
+                                <div class="card border rounded-3 p-3 bg-white h-100" id="phase1TransitionRulesCard">
+                                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                        <h6 class="fw-bold mb-0"><i class="bi bi-signpost-split me-1 text-primary"></i>Quy tắc di chuyển liên phòng / tầng</h6>
+                                    </div>
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-md-5">
+                                            <select id="trScope" class="form-select form-select-sm">
+                                                <option value="SAME_FLOOR_DIFF_ROOM">Cùng tầng, khác phòng</option>
+                                                <option value="DIFF_FLOOR">Khác tầng</option>
+                                                <option value="SPECIFIC_PAIR">Cặp phòng cụ thể</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <input type="number" id="trBufferMinutes" class="form-control form-control-sm" min="0" max="120" value="5" placeholder="Phút di chuyển">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <button type="button" id="btnAddTransitionRule" class="btn btn-sm btn-primary w-100">Thêm rule</button>
+                                        </div>
+                                        <div class="col-md-6 tr-pair-only d-none">
+                                            <select id="trFromRoom" class="form-select form-select-sm">
+                                                <option value="">-- Phòng đi --</option>
+                                                <option th:each="r : ${rooms}" th:value="${r.roomId}" th:text="${r.roomCode + ' - ' + r.roomName}"></option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 tr-pair-only d-none">
+                                            <select id="trToRoom" class="form-select form-select-sm">
+                                                <option value="">-- Phòng đến --</option>
+                                                <option th:each="r : ${rooms}" th:value="${r.roomId}" th:text="${r.roomCode + ' - ' + r.roomName}"></option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div id="transitionRuleList" class="small text-muted">Đang tải quy tắc...</div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="card border rounded-3 p-3 bg-white h-100" id="phase1EquipmentsCard">
+                                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                        <h6 class="fw-bold mb-0"><i class="bi bi-cpu me-1 text-primary"></i>Thiết bị tại cơ sở</h6>
+                                        <span class="badge bg-warning-subtle text-warning-emphasis">Chỉ ACTIVE mới được xếp lịch</span>
+                                    </div>
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-md-3">
+                                            <input type="text" id="eqCode" class="form-control form-control-sm text-uppercase" placeholder="Mã TB" maxlength="30">
+                                        </div>
+                                        <div class="col-md-5">
+                                            <input type="text" id="eqName" class="form-control form-control-sm" placeholder="Tên thiết bị" maxlength="150">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <select id="eqType" class="form-select form-select-sm">
+                                                <option value="XRAY">XRAY</option>
+                                                <option value="CONE_BEAM">CONE_BEAM</option>
+                                                <option value="IMPLANT_MOTOR">IMPLANT_MOTOR</option>
+                                                <option value="SCANNER">SCANNER</option>
+                                                <option value="LASER">LASER</option>
+                                                <option value="OTHER">OTHER</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <select id="eqMode" class="form-select form-select-sm">
+                                                <option value="FIXED_ROOM">Cố định phòng</option>
+                                                <option value="BRANCH_SHARED">Dùng chung cơ sở</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <select id="eqFixedRoom" class="form-select form-select-sm">
+                                                <option value="">-- Phòng cố định --</option>
+                                                <option th:each="r : ${rooms}" th:value="${r.roomId}" th:text="${r.roomCode + ' - ' + r.roomName}"></option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <input type="text" id="eqSerial" class="form-control form-control-sm" placeholder="Serial thực tế">
+                                        </div>
+                                        <div class="col-12 d-flex justify-content-end">
+                                            <button type="button" id="btnAddEquipment" class="btn btn-sm btn-primary">Khai báo (PENDING_VERIFICATION)</button>
+                                        </div>
+                                    </div>
+                                    <div id="equipmentList" class="small text-muted">Đang tải danh sách thiết bị...</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- ============ TAB 2: GỘP THÔNG TIN, HÌNH ẢNH & CẤU HÌNH CƠ SỞ ============ -->
@@ -504,6 +590,18 @@
                                     th:text="${s.name() == 'ACTIVE' ? 'Đang hoạt động' : s.name() == 'MAINTENANCE' ? 'Bảo trì' : 'Tạm ngưng'}"></option>
                         </select>
                     </div>
+                    <div class="col-md-4">
+                        <label for="roomFloorLabel" class="form-label">Tầng</label>
+                        <input type="text" id="roomFloorLabel" name="floorLabel" class="form-control" maxlength="50" placeholder="VD: Tầng 1">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="roomZoneLabel" class="form-label">Khu vực</label>
+                        <input type="text" id="roomZoneLabel" name="zoneLabel" class="form-control" maxlength="50" placeholder="VD: Khu A">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="roomFloorOrder" class="form-label">Thứ tự tầng</label>
+                        <input type="number" id="roomFloorOrder" name="floorOrder" class="form-control" min="1" max="50" value="1">
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -759,7 +857,106 @@
             f.roomName.value = edit ? b.dataset.roomName : '';
             f.roomType.value = edit ? b.dataset.roomType : 'TREATMENT';
             f.status.value = edit ? b.dataset.roomStatus : 'ACTIVE';
+            f.floorLabel.value = edit ? (b.dataset.floorLabel || '') : '';
+            f.zoneLabel.value = edit ? (b.dataset.zoneLabel || '') : '';
+            f.floorOrder.value = edit ? (b.dataset.floorOrder || '1') : '1';
         });
+
+        // Phase 1 Master Data JS: Quy tắc di chuyển & Thiết bị cơ sở
+        (function () {
+            var csrfMeta = document.querySelector('meta[name="_csrf"]');
+            var csrfHeaderMeta = document.querySelector('meta[name="_csrf_header"]');
+            var csrfInput = document.querySelector('input[name="_csrf"]');
+            var csrfToken = csrfMeta ? csrfMeta.content : (csrfInput ? csrfInput.value : '');
+            var csrfHeader = csrfHeaderMeta ? csrfHeaderMeta.content : 'X-CSRF-TOKEN';
+            var branchId = /*[[${branch.branchId}]]*/ 0;
+
+            function postForm(url, params) {
+                var headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+                if (csrfToken) headers[csrfHeader] = csrfToken;
+                return fetch(url, { method: 'POST', headers: headers, body: new URLSearchParams(params) })
+                    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok) throw new Error(d.message || 'Thao tác thất bại'); return d; }); });
+            }
+
+            var trScopeEl = document.getElementById('trScope');
+            if (trScopeEl) {
+                trScopeEl.addEventListener('change', function () {
+                    var isPair = this.value === 'SPECIFIC_PAIR';
+                    document.querySelectorAll('.tr-pair-only').forEach(function (el) { el.classList.toggle('d-none', !isPair); });
+                });
+            }
+
+            function loadTransitionRules() {
+                var box = document.getElementById('transitionRuleList');
+                if (!box || !branchId) return;
+                fetch('/admin/api/resources/branches/' + branchId + '/transition-rules')
+                    .then(function (r) { return r.json(); })
+                    .then(function (list) {
+                        if (!list.length) { box.innerHTML = '<span>Chưa có quy tắc di chuyển nào.</span>'; return; }
+                        box.innerHTML = list.map(function (r) {
+                            return '<div class="d-flex justify-content-between align-items-center py-1 border-bottom"><span><strong>' + r.ruleScope + '</strong>: ' + r.travelBufferMinutes + ' phút</span></div>';
+                        }).join('');
+                    }).catch(function () { box.innerHTML = '<span class="text-danger">Không tải được quy tắc.</span>'; });
+            }
+
+            function loadEquipments() {
+                var box = document.getElementById('equipmentList');
+                if (!box || !branchId) return;
+                fetch('/admin/api/resources/branches/' + branchId + '/equipments')
+                    .then(function (r) { return r.json(); })
+                    .then(function (list) {
+                        if (!list.length) { box.innerHTML = '<span>Chưa có thiết bị nào được khai báo.</span>'; return; }
+                        box.innerHTML = list.map(function (e) {
+                            var badge = e.status === 'ACTIVE' ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning-emphasis';
+                            var btn = e.status === 'PENDING_VERIFICATION'
+                                ? ' <button type="button" class="btn btn-outline-success btn-sm py-0 px-2 btn-verify-eq" data-id="' + e.equipmentId + '">Xác nhận kích hoạt</button>'
+                                : '';
+                            return '<div class="d-flex justify-content-between align-items-center py-1 border-bottom"><div><strong>' + e.equipmentCode + '</strong> - ' + e.equipmentName + ' <span class="badge ' + badge + '">' + e.status + '</span></div><div>' + btn + '</div></div>';
+                        }).join('');
+                        box.querySelectorAll('.btn-verify-eq').forEach(function (btn) {
+                            btn.addEventListener('click', function () {
+                                postForm('/admin/api/resources/branches/' + branchId + '/equipments/' + this.dataset.id + '/verify', {})
+                                    .then(loadEquipments).catch(function (err) { alert(err.message); });
+                            });
+                        });
+                    }).catch(function () { box.innerHTML = '<span class="text-danger">Không tải được thiết bị.</span>'; });
+            }
+
+            var btnTr = document.getElementById('btnAddTransitionRule');
+            if (btnTr) {
+                btnTr.addEventListener('click', function () {
+                    var params = { ruleScope: document.getElementById('trScope').value, travelBufferMinutes: document.getElementById('trBufferMinutes').value || '0' };
+                    if (params.ruleScope === 'SPECIFIC_PAIR') {
+                        params.fromRoomId = document.getElementById('trFromRoom').value;
+                        params.toRoomId = document.getElementById('trToRoom').value;
+                    }
+                    postForm('/admin/api/resources/branches/' + branchId + '/transition-rules', params)
+                        .then(loadTransitionRules).catch(function (err) { alert(err.message); });
+                });
+            }
+
+            var btnEq = document.getElementById('btnAddEquipment');
+            if (btnEq) {
+                btnEq.addEventListener('click', function () {
+                    var params = {
+                        equipmentCode: document.getElementById('eqCode').value,
+                        equipmentName: document.getElementById('eqName').value,
+                        equipmentType: document.getElementById('eqType').value,
+                        allocationMode: document.getElementById('eqMode').value,
+                        deviceSerialNumber: document.getElementById('eqSerial').value,
+                        status: 'PENDING_VERIFICATION'
+                    };
+                    var fr = document.getElementById('eqFixedRoom').value;
+                    if (fr) params.fixedRoomId = fr;
+                    postForm('/admin/api/resources/branches/' + branchId + '/equipments', params)
+                        .then(function () { document.getElementById('eqCode').value = ''; document.getElementById('eqName').value = ''; loadEquipments(); })
+                        .catch(function (err) { alert(err.message); });
+                });
+            }
+
+            loadTransitionRules();
+            loadEquipments();
+        })();
 
         // Modal ghế: đổi form theo chế độ thêm / sửa.
         document.getElementById('chairModal').addEventListener('show.bs.modal', function (e) {

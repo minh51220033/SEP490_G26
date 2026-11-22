@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 public class DispatchService {
     public static final int MAX_DOCTOR_QUEUE_LIMIT = 8;
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+    private Clock clock = Clock.system(ZONE);
     private final ReceptionAccess access;
     private final DispatchVisitRepository visits;
     private final DispatchDoctorRepository doctors;
@@ -38,6 +39,10 @@ public class DispatchService {
 
     @Autowired(required = false)
     private com.cvdcms.service.ClinicQueueCoordinatorService queueCoordinator;
+
+    public void setClock(Clock clock) {
+        this.clock = clock != null ? clock : Clock.system(ZONE);
+    }
 
     @Autowired
     public DispatchService(ReceptionAccess access, DispatchVisitRepository visits, DispatchDoctorRepository doctors,
@@ -78,8 +83,8 @@ public class DispatchService {
         if (options.isEmpty()) throw fail(HttpStatus.FORBIDDEN, "Không có chi nhánh được phân công.");
         Long branchId = requestedBranch == null ? options.get(0).getBranchId() : requestedBranch;
         checkBranch(session, branchId);
-        LocalDate day = requestedDay != null ? requestedDay : LocalDate.now(ZONE);
-        LocalTime now = LocalTime.now(ZONE);
+        LocalDate day = requestedDay != null ? requestedDay : LocalDate.now(clock);
+        LocalTime now = LocalTime.now(clock);
         String preset = datePreset == null ? "DAY" : datePreset.trim().toUpperCase();
         List<Visit> dayVisits;
         if ("THIS_WEEK".equals(preset)) {
@@ -283,8 +288,8 @@ public class DispatchService {
         Visit visit = visit(branchId, visitId);
         if (visit.getStatus() != VisitStatus.WAITING && visit.getStatus() != VisitStatus.WAITING_RESULT)
             throw fail(HttpStatus.CONFLICT, "Chỉ phân công lượt khám đang chờ hoặc chờ kết quả cận lâm sàng.");
-        LocalDate today = LocalDate.now(ZONE);
-        LocalTime now = LocalTime.now(ZONE);
+        LocalDate today = LocalDate.now(clock);
+        LocalTime now = LocalTime.now(clock);
         if (branchObj != null && branchObj.getClosingTime() != null && !now.isBefore(branchObj.getClosingTime())) {
             throw fail(HttpStatus.CONFLICT, "Chi nhánh đã đóng cửa, không thể điều phối tiếp nhận khám.");
         }
@@ -425,7 +430,7 @@ public class DispatchService {
         if (visit.getStatus() != VisitStatus.WAITING && visit.getStatus() != VisitStatus.WAITING_RESULT)
             throw fail(HttpStatus.CONFLICT, "Chỉ cấp số cho lượt đang chờ khám hoặc chờ kết quả cận lâm sàng.");
         if (visit.getPrimaryDoctor() == null) throw fail(HttpStatus.CONFLICT, "Cần phân công bác sĩ trước khi cấp số.");
-        LocalDate day = LocalDate.now(ZONE);
+        LocalDate day = LocalDate.now(clock);
         if (!visit.getCheckInAt().toLocalDate().equals(day)) throw fail(HttpStatus.CONFLICT, "Chỉ cấp số trong ngày check-in.");
 
         boolean emergency = Boolean.TRUE.equals(visit.getIsEmergency()) || visit.getVisitType() == VisitType.EMERGENCY;

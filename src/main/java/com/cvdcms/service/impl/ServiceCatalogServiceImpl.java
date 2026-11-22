@@ -238,6 +238,13 @@ public class ServiceCatalogServiceImpl
         dto.setIsBookableOnline(service.getIsBookableOnline());
         dto.setWarrantyMonths(service.getWarrantyMonths());
         dto.setEstimatedDurationMinutes(service.getEstimatedDurationMinutes());
+        dto.setPreparationDurationMinutes(service.getPreparationDurationMinutes());
+        dto.setProcedureDurationMinutes(service.getProcedureDurationMinutes());
+        dto.setTurnoverDurationMinutes(service.getTurnoverDurationMinutes());
+        dto.setRequiresChair(service.getRequiresChair());
+        dto.setIsRoomExclusive(service.getIsRoomExclusive());
+        dto.setDoctorRequiredInPrep(service.getDoctorRequiredInPrep());
+        dto.setDoctorRequiredInTurnover(service.getDoctorRequiredInTurnover());
         dto.setDescription(sanitizeDescription(service.getDescription()));
         dto.setImageUrl(service.getImageUrl());
         dto.setStatus(service.getStatus());
@@ -296,7 +303,20 @@ public class ServiceCatalogServiceImpl
 
         service.setIsBookableOnline(dto.getIsBookableOnline());
         service.setWarrantyMonths(dto.getWarrantyMonths());
-        service.setEstimatedDurationMinutes(validDuration(dto.getEstimatedDurationMinutes(), 30));
+        applyThreePhaseDurations(
+                service,
+                dto.getPreparationDurationMinutes(),
+                dto.getProcedureDurationMinutes(),
+                dto.getTurnoverDurationMinutes(),
+                dto.getEstimatedDurationMinutes(),
+                30
+        );
+        service.setRequiresChair(dto.getRequiresChair() != null
+                ? dto.getRequiresChair()
+                : dto.getServiceType() != ServiceType.XRAY);
+        service.setIsRoomExclusive(Boolean.TRUE.equals(dto.getIsRoomExclusive()));
+        service.setDoctorRequiredInPrep(Boolean.TRUE.equals(dto.getDoctorRequiredInPrep()));
+        service.setDoctorRequiredInTurnover(Boolean.TRUE.equals(dto.getDoctorRequiredInTurnover()));
         service.setDescription(sanitizeDescription(dto.getDescription()));
         service.setImageUrl(validatedImageUrl);
         service.setStatus(dto.getStatus());
@@ -371,7 +391,26 @@ public class ServiceCatalogServiceImpl
         String newImageUrl = validateAndNormalizeImageUrl(dto.getImageUrl());
 
         service.setWarrantyMonths(dto.getWarrantyMonths());
-        service.setEstimatedDurationMinutes(validDuration(dto.getEstimatedDurationMinutes(), service.getEstimatedDurationMinutes()));
+        applyThreePhaseDurations(
+                service,
+                dto.getPreparationDurationMinutes(),
+                dto.getProcedureDurationMinutes(),
+                dto.getTurnoverDurationMinutes(),
+                dto.getEstimatedDurationMinutes(),
+                service.getEstimatedDurationMinutes()
+        );
+        if (dto.getRequiresChair() != null) {
+            service.setRequiresChair(dto.getRequiresChair());
+        }
+        if (dto.getIsRoomExclusive() != null) {
+            service.setIsRoomExclusive(dto.getIsRoomExclusive());
+        }
+        if (dto.getDoctorRequiredInPrep() != null) {
+            service.setDoctorRequiredInPrep(dto.getDoctorRequiredInPrep());
+        }
+        if (dto.getDoctorRequiredInTurnover() != null) {
+            service.setDoctorRequiredInTurnover(dto.getDoctorRequiredInTurnover());
+        }
         service.setDescription(sanitizeDescription(dto.getDescription()));
         service.setImageUrl(newImageUrl);
         service.setStatus(dto.getStatus());
@@ -614,10 +653,43 @@ public class ServiceCatalogServiceImpl
         }
     }
 
+    private void applyThreePhaseDurations(
+            Service service,
+            Integer reqPrep,
+            Integer reqProc,
+            Integer reqTurn,
+            Integer reqEstimated,
+            Integer fallbackEstimated
+    ) {
+        boolean hasThreePhase = reqPrep != null || reqProc != null || reqTurn != null;
+        if (hasThreePhase) {
+            int prep = reqPrep != null ? reqPrep : 0;
+            int proc = reqProc != null ? reqProc : validDuration(reqEstimated, fallbackEstimated);
+            int turn = reqTurn != null ? reqTurn : 0;
+            if (prep < 0 || proc < 1 || turn < 0) {
+                throw new IllegalArgumentException("Thời gian chuẩn bị/bàn giao phải >= 0 phút và thời gian thực hiện phải >= 1 phút.");
+            }
+            int total = prep + proc + turn;
+            if (total < 5 || total > 240) {
+                throw new IllegalArgumentException("Tổng thời lượng giữ phòng (Chuẩn bị + Thực hiện + Bàn giao) phải từ 5 đến 240 phút.");
+            }
+            service.setPreparationDurationMinutes(prep);
+            service.setProcedureDurationMinutes(proc);
+            service.setTurnoverDurationMinutes(turn);
+            service.setEstimatedDurationMinutes(total);
+        } else {
+            int total = validDuration(reqEstimated, fallbackEstimated);
+            service.setPreparationDurationMinutes(0);
+            service.setProcedureDurationMinutes(total);
+            service.setTurnoverDurationMinutes(0);
+            service.setEstimatedDurationMinutes(total);
+        }
+    }
+
     private int validDuration(Integer requested, Integer fallback) {
         int value = requested == null ? (fallback == null ? 30 : fallback) : requested;
-        if (value < 15 || value > 240 || value % 5 != 0) {
-            throw new IllegalArgumentException("Thời lượng dự kiến phải từ 15 đến 240 phút, theo bước 5 phút.");
+        if (value < 5 || value > 240) {
+            throw new IllegalArgumentException("Thời lượng dự kiến phải từ 5 đến 240 phút.");
         }
         return value;
     }

@@ -400,25 +400,23 @@
         <span>Toàn màn hình</span>
       </button>
 
-      <div class="tv-live-pill">
+      <div id="tvLivePill" class="tv-live-pill">
         <span class="tv-live-dot"></span>
-        <span>TRỰC TIẾP</span>
+        <span id="tvLiveText">TRỰC TIẾP</span>
       </div>
     </div>
   </header>
 
-  <!-- ================= MAIN TABLE (6 CỘT TỐI GIẢN CHUẨN YÊU CẦU) ================= -->
+  <!-- ================= MAIN TABLE (4 CỘT ZERO-PII CÔNG KHAI) ================= -->
   <main class="tv-main-card">
     <div class="tv-table-container">
       <table class="tv-table" id="tvListTable">
         <thead>
           <tr>
-            <th class="cell-center" style="width: 130px;">STT / Số</th>
-            <th>Tên bệnh nhân</th>
-            <th class="cell-center" style="width: 170px;">Ngày sinh</th>
-            <th class="cell-center" style="width: 220px;">Phòng khám</th>
-            <th class="cell-center" style="width: 200px;">Ghế nha</th>
-            <th style="width: 280px;">Bác sĩ khám</th>
+            <th class="cell-center" style="width: 170px;">Số thứ tự / Phiếu</th>
+            <th class="cell-center" style="width: 240px;">Trạng thái</th>
+            <th class="cell-center" style="width: 260px;">Phòng khám</th>
+            <th class="cell-center" style="width: 240px;">Ghế nha</th>
           </tr>
         </thead>
         <tbody>
@@ -428,24 +426,24 @@
             <td class="cell-center">
               <span class="tv-badge-stt" th:text="${row.ticketNumber}">01</span>
             </td>
-            <td>
-              <span class="tv-patient-name" th:text="${row.patientName}">Nguyễn Văn A</span>
+            <td class="cell-center">
               <span th:if="${row.status == 'CALLED'}" class="tv-status-badge calling">
                 <i class="bi bi-megaphone-fill me-1"></i>Đang gọi
               </span>
               <span th:if="${row.status == 'IN_SERVICE'}" class="tv-status-badge examining">
                 <i class="bi bi-heart-pulse-fill me-1"></i>Đang khám
               </span>
+              <span th:if="${row.status != 'CALLED' and row.status != 'IN_SERVICE'}" class="tv-status-badge" style="background: #f1f5f9; color: #475569;">
+                Đang chờ
+              </span>
             </td>
-            <td class="cell-center" th:text="${row.dob}">01/01/1990</td>
             <td class="cell-center cell-room" th:text="${row.isCallingOrExam ? row.roomName : '—'}">Phòng 101</td>
             <td class="cell-center cell-chair" th:text="${row.isCallingOrExam ? row.chairName : '—'}">Ghế 01</td>
-            <td th:text="${row.doctorName}">BS. Lê Hoàng Nam</td>
           </tr>
 
           <!-- Empty state row -->
           <tr th:if="${board.queueList == null or #lists.isEmpty(board.queueList)}" id="tvEmptyRow">
-            <td colspan="6">
+            <td colspan="4">
               <div class="tv-empty-box">
                 <i class="bi bi-person-lines-fill"></i>
                 <div style="font-size: 18px; font-weight: 700; color: #475569;">Hiện tại chưa có bệnh nhân trong hàng chờ gọi số</div>

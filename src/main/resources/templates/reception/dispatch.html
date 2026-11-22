@@ -249,10 +249,8 @@
           <div class="d-flex flex-wrap align-items-center gap-2">
             <button th:if="${issuedTicketId != null}"
               type="button"
-              class="btn btn-sm btn-primary fw-bold d-inline-flex align-items-center gap-2 shadow-sm btn-print-k80"
-              th:attr="data-ticket-number=${issuedTicketNumber != null ? issuedTicketNumber : '01'},
-                       data-patient-name=${notice != null ? notice : 'Bệnh nhân'},
-                       data-ticket-id=${issuedTicketId}"
+              class="btn btn-sm btn-primary fw-bold d-inline-flex align-items-center gap-2 shadow-sm"
+              th:attr="data-ticket-id=${issuedTicketId}"
               th:onclick="|printTicketDirect(${issuedTicketId})|">
               <i class="bi bi-printer-fill"></i><span>In phiếu A6 ngay</span>
             </button>
@@ -638,7 +636,12 @@
                                    data-visit-code=${v.visitCode},
                                    data-patient-name=${v.patientProfile != null ? v.patientProfile.fullName : ''},
                                    data-patient-code=${v.patientProfile != null ? v.patientProfile.patientCode : ''},
-                                   data-symptoms=${v.initialSymptoms}">
+                                   data-symptoms=${v.initialSymptoms},
+                                   data-is-emergency=${v.visitType != null and v.visitType.name() == 'EMERGENCY'},
+                                   data-requested-doctor=${board.requestedDoctors != null ? board.requestedDoctors[v.visitId] : null},
+                                   data-requested-doctor-name=${board.requestedDoctorNames != null ? board.requestedDoctorNames[v.visitId] : null},
+                                   data-current-room=${v.roomId},
+                                   data-current-chair=${v.chairId}">
                           <i class="bi bi-person-plus-fill"></i>
                           <span>Phân BS</span>
                         </button>

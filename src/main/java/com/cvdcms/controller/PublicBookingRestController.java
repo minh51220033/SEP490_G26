@@ -94,6 +94,12 @@ public class PublicBookingRestController {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private PlatformTransactionManager transactionManager;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ResourceBookingTransactionService resourceBookingTransactionService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ResourceAvailabilityService resourceAvailabilityService;
+
     public PublicBookingRestController(
             BranchRepository branchRepository,
             ServiceRepository serviceRepository,
@@ -331,7 +337,17 @@ public class PublicBookingRestController {
                 branch, date, sessionPeriod, doctorId, duration, null, AppointmentActorType.PATIENT
         );
 
+        boolean useResourceEngine = Boolean.TRUE.equals(branch.getResourceEngineEnabled())
+                && service != null && resourceAvailabilityService != null;
         for (AppointmentSlotService.Slot s : slots) {
+            if (useResourceEngine) {
+                var avail = resourceAvailabilityService.checkAvailability(
+                        new com.cvdcms.DTO.availability.AvailabilityCheckRequest(
+                                branchId, service.getServiceId(), date, s.time(), doctorId, null, false));
+                if (!avail.available()) {
+                    continue;
+                }
+            }
             Map<String, Object> item = new HashMap<>();
             item.put("time", s.time().toString().substring(0, 5));
             item.put("endTime", s.time().plusMinutes(duration).toString().substring(0, 5));
@@ -443,7 +459,7 @@ public class PublicBookingRestController {
             // 4. Kiểm tra dịch vụ (nếu có chọn) - không bỏ qua khi serviceId không tồn tại hoặc ngừng hoạt động
             Service service = null;
             if (form.getServiceId() != null) {
-                service = serviceRepository.findById(form.getServiceId()).orElse(null);
+                service = serviceRepository.findWithCategoryByServiceId(form.getServiceId()).orElse(null);
                 if (service == null || !Boolean.TRUE.equals(service.getIsBookableOnline())
                         || service.getStatus() != ServiceStatus.ACTIVE
                         || (service.getCategory() != null && Boolean.FALSE.equals(service.getCategory().getIsActive()))) {
@@ -579,6 +595,10 @@ public class PublicBookingRestController {
             LocalTime requestedSlot,
             String cleanNote
     ) {
+        if (Boolean.TRUE.equals(branch.getResourceEngineEnabled())) {
+            return executeLoggedInBookingWithResourceEngine(
+                    sessionAccount, form, branch, doctor, service, bookDate, sessionPeriod, requestedSlot, cleanNote);
+        }
         if (transactionManager != null && !TransactionSynchronizationManager.isActualTransactionActive()) {
             TransactionTemplate tx = new TransactionTemplate(transactionManager);
             tx.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
@@ -596,6 +616,103 @@ public class PublicBookingRestController {
         }
         return persistLoggedInBooking(
                 sessionAccount, form, branch, doctor, service, bookDate, sessionPeriod, requestedSlot, cleanNote);
+    }
+
+    private ResponseEntity<Map<String, Object>> executeLoggedInBookingWithResourceEngine(
+            User sessionAccount,
+            QuickBookingForm form,
+            Branch branch,
+            StaffProfile doctor,
+            Service service,
+            LocalDate bookDate,
+            PreferredSession sessionPeriod,
+            LocalTime requestedSlot,
+            String cleanNote
+    ) {
+        if (resourceBookingTransactionService == null) {
+            return errorResponse(HttpStatus.SERVICE_UNAVAILABLE, "Resource Booking Engine chưa sẵn sàng.");
+        }
+        if (form.getProfileId() == null) {
+            return errorResponse(HttpStatus.BAD_REQUEST, "Vui lòng chọn hồ sơ người đi khám.");
+        }
+        if (service == null) {
+            return errorResponse(HttpStatus.BAD_REQUEST, "Vui lòng chọn dịch vụ khám trước khi đặt lịch.");
+        }
+        if (requestedSlot == null) {
+            return errorResponse(HttpStatus.BAD_REQUEST, "Vui lòng chọn khung giờ khám cụ thể.");
+        }
+        PatientProfile profile;
+        try {
+            profile = resolveVerifiedProfileForUser(sessionAccount, form.getProfileId());
+        } catch (ResponseStatusException ex) {
+            return errorResponse(HttpStatus.FORBIDDEN, ex.getStatusCode() == HttpStatus.NOT_FOUND
+                    ? "Không tìm thấy hồ sơ người đi khám thuộc tài khoản của bạn."
+                    : (ex.getReason() != null ? ex.getReason() : "Không có quyền đặt lịch cho hồ sơ này."));
+        }
+        if (profile == null) {
+            return errorResponse(HttpStatus.FORBIDDEN, "Không tìm thấy hồ sơ người đi khám thuộc tài khoản của bạn.");
+        }
+        if (!"ACTIVE".equalsIgnoreCase(profile.getStatus())) {
+            return errorResponse(HttpStatus.CONFLICT, "Hồ sơ bệnh nhân đã ngừng hoạt động.");
+        }
+        try {
+            if (transactionManager != null) {
+                TransactionTemplate readTx = new TransactionTemplate(transactionManager);
+                readTx.setReadOnly(true);
+                readTx.executeWithoutResult(status -> appointmentPolicyService.ensureBookable(
+                        branch, profile, bookDate, sessionPeriod,
+                        doctor != null ? doctor.getStaffId() : null,
+                        null, AppointmentActorType.PATIENT));
+            } else {
+                appointmentPolicyService.ensureBookable(
+                        branch, profile, bookDate, sessionPeriod,
+                        doctor != null ? doctor.getStaffId() : null,
+                        null, AppointmentActorType.PATIENT);
+            }
+        } catch (ResponseStatusException ex) {
+            return errorResponse(HttpStatus.valueOf(ex.getStatusCode().value()),
+                    ex.getReason() != null ? ex.getReason() : "Lịch khám hoặc bác sĩ không khả dụng.");
+        }
+
+        String idempotencyKey = (form.getRequestKey() != null && !form.getRequestKey().isBlank())
+                ? "PUB:" + form.getRequestKey().trim() : null;
+        var req = new com.cvdcms.DTO.availability.ResourceBookingRequest(
+                branch.getBranchId(),
+                profile.getProfileId(),
+                service.getServiceId(),
+                bookDate,
+                requestedSlot,
+                doctor != null ? doctor.getStaffId() : null,
+                doctor == null,
+                null,
+                sessionPeriod,
+                AppointmentSource.ONLINE,
+                cleanNote,
+                idempotencyKey,
+                false);
+        var result = resourceBookingTransactionService.bookWithRetry(req, AppointmentStatus.PENDING);
+
+        if (!result.idempotentReplay()) {
+            appointmentRepository.findById(result.appointmentId()).ifPresent(appt -> {
+                AppointmentHistory history = new AppointmentHistory();
+                history.setAppointment(appt);
+                history.setActorUserId(sessionAccount.getUserId());
+                history.setAction("CREATE");
+                history.setNewValue(bookDate + "|" + sessionPeriod + "|doctor=" + result.doctorId()
+                        + "|room=" + result.roomId() + "|time=" + requestedSlot);
+                appointmentHistoryRepository.save(history);
+            });
+        }
+
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("success", true);
+        resp.put("appointmentId", result.appointmentId());
+        resp.put("appointmentCode", result.appointmentCode());
+        resp.put("consultationMode", false);
+        resp.put("idempotentReplay", result.idempotentReplay());
+        resp.put("message", "Đặt lịch hẹn thành công! Mã lịch hẹn của bạn là #" + result.appointmentCode()
+                + ". Lễ tân sẽ xác nhận lại qua số điện thoại.");
+        return ResponseEntity.ok(resp);
     }
 
     private ResponseEntity<Map<String, Object>> persistLoggedInBooking(
@@ -635,6 +752,43 @@ public class PublicBookingRestController {
         Branch branch = initialBranch;
         if (appointmentBookingLockRepository != null && branch.getBranchId() != null) {
             branch = appointmentBookingLockRepository.findByIdForBooking(branch.getBranchId()).orElse(branch);
+        }
+
+        String rawRequestKey = form.getRequestKey() != null && !form.getRequestKey().isBlank()
+                ? form.getRequestKey().trim() : null;
+        String idempotentCode = rawRequestKey != null
+                ? com.cvdcms.service.ResourceBookingTransactionService.deriveIdempotentAppointmentCode("PUB:" + rawRequestKey)
+                : null;
+        if (idempotentCode != null) {
+            Optional<Appointment> existingOpt = appointmentRepository.findByAppointmentCode(idempotentCode);
+            if (existingOpt.isPresent()) {
+                Appointment existing = existingOpt.get();
+                Long exProfileId = existing.getPatientProfile() != null ? existing.getPatientProfile().getProfileId() : null;
+                Long exBranchId = existing.getBranch() != null ? existing.getBranch().getBranchId() : null;
+                Long exServiceId = existing.getService() != null ? existing.getService().getServiceId() : null;
+                Long exDoctorId = existing.getDoctor() != null ? existing.getDoctor().getStaffId() : null;
+                Long reqServiceId = service != null ? service.getServiceId() : null;
+                Long reqDoctorId = initialDoctor != null ? initialDoctor.getStaffId() : null;
+                boolean samePayload = java.util.Objects.equals(exProfileId, profile.getProfileId())
+                        && java.util.Objects.equals(exBranchId, branch.getBranchId())
+                        && java.util.Objects.equals(exServiceId, reqServiceId)
+                        && java.util.Objects.equals(existing.getAppointmentDate(), bookDate)
+                        && existing.getPreferredSession() == sessionPeriod
+                        && (requestedSlot == null || java.util.Objects.equals(existing.getExpectedTime(), requestedSlot))
+                        && (reqDoctorId == null || java.util.Objects.equals(exDoctorId, reqDoctorId));
+                if (!samePayload) {
+                    return errorResponse(HttpStatus.CONFLICT, "Mã yêu cầu (requestKey) đã được sử dụng cho thông tin lịch hẹn khác.");
+                }
+                Map<String, Object> replayResp = new HashMap<>();
+                replayResp.put("success", true);
+                replayResp.put("appointmentId", existing.getAppointmentId());
+                replayResp.put("appointmentCode", existing.getAppointmentCode());
+                replayResp.put("branchId", branch.getBranchId());
+                replayResp.put("branchName", branch.getBranchName());
+                replayResp.put("idempotentReplay", true);
+                replayResp.put("message", "Lịch hẹn đã được ghi nhận trước đó (#" + existing.getAppointmentCode() + ").");
+                return ResponseEntity.ok(replayResp);
+            }
         }
 
         StaffProfile doctor = initialDoctor;
@@ -691,7 +845,9 @@ public class PublicBookingRestController {
             }
         }
 
-        String appointmentCode = "LH" + UUID.randomUUID().toString().replace("-", "").substring(0, 14).toUpperCase();
+        String appointmentCode = idempotentCode != null
+                ? idempotentCode
+                : "LH" + UUID.randomUUID().toString().replace("-", "").substring(0, 14).toUpperCase();
 
         Appointment appointment = new Appointment();
         appointment.setAppointmentCode(appointmentCode);

@@ -42,6 +42,10 @@ public class PortalAppointmentService {
     private StaffScheduleRepository staffSchedules;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private org.springframework.context.ApplicationEventPublisher careEventPublisher;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ResourceBookingTransactionService resourceBookingTransactionService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ResourceAvailabilityService resourceAvailabilityService;
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -161,9 +165,18 @@ public class PortalAppointmentService {
                     .map(s -> new SlotOption(s.startTime(), 1))
                     .toList();
         }
-        return slots.available(branch, date, period, doctorId, duration, excludeId,
-                        AppointmentActorType.PATIENT)
-                .stream().map(s -> new SlotOption(s.time(), s.remaining())).toList();
+        List<AppointmentSlotService.Slot> candidateSlots = slots.available(branch, date, period, doctorId, duration, excludeId,
+                        AppointmentActorType.PATIENT);
+        final Long effectiveServiceId = service != null ? service.getServiceId() : null;
+        boolean useEngine = Boolean.TRUE.equals(branch.getResourceEngineEnabled())
+                && effectiveServiceId != null && resourceAvailabilityService != null;
+        return candidateSlots.stream()
+                .filter(s -> !useEngine || resourceAvailabilityService.checkAvailability(
+                        new com.cvdcms.DTO.availability.AvailabilityCheckRequest(
+                                branchId, effectiveServiceId, date, s.time(), doctorId, excludeId, false))
+                        .available())
+                .map(s -> new SlotOption(s.time(), s.remaining()))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -214,6 +227,46 @@ public class PortalAppointmentService {
         policy.ensureBookable(branch, profile, request.date(), request.session(), request.doctorId(),
                 null, AppointmentActorType.PATIENT);
         com.cvdcms.entity.Service service = requestedService(request.serviceId());
+        if (Boolean.TRUE.equals(branch.getResourceEngineEnabled())) {
+            if (service == null) {
+                throw bad("Vui lòng chọn dịch vụ khám trước khi đặt lịch.");
+            }
+            if (resourceBookingTransactionService == null) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Resource Booking Engine chưa sẵn sàng.");
+            }
+            int durationMinutes = AppointmentSlotService.duration(service);
+            LocalTime resolvedTime = request.expectedTime() != null
+                    ? request.expectedTime()
+                    : slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
+                            durationMinutes, null, null, AppointmentActorType.PATIENT);
+            if (resolvedTime == null) {
+                throw bad("Vui lòng chọn khung giờ khám cụ thể.");
+            }
+            var result = resourceBookingTransactionService.bookInExistingTransaction(
+                    new com.cvdcms.DTO.availability.ResourceBookingRequest(
+                            branch.getBranchId(), profile.getProfileId(), service.getServiceId(),
+                            request.date(), resolvedTime, request.doctorId(), request.doctorId() == null,
+                            null, request.session(), AppointmentSource.ONLINE, clean(request.symptoms()),
+                            "PORTAL:" + request.requestKey(), false),
+                    AppointmentStatus.PENDING);
+            Appointment appointment = appointments.findById(result.appointmentId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR));
+            if (!result.idempotentReplay()) {
+                PortalBookingRequest bookingRequest = new PortalBookingRequest();
+                bookingRequest.setRequestKey(request.requestKey());
+                bookingRequest.setAppointment(appointment);
+                bookingRequests.save(bookingRequest);
+                history(appointment, user.getUserId(), "CREATE", null, snapshot(appointment), null);
+                if (careEventPublisher != null) {
+                    careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentUpsertedCareEvent(appointment.getAppointmentId()));
+                    careEventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                            "APPOINTMENT_BOOKED", branch.getBranchId(), result.doctorId(),
+                            null, appointment.getAppointmentId(), appointment.getStatus().name(),
+                            "Đặt lịch hẹn mới #" + appointment.getAppointmentCode(), LocalDateTime.now(CLINIC_ZONE)));
+                }
+            }
+            return view(appointment);
+        }
         int durationMinutes = AppointmentSlotService.duration(service);
         StaffProfile assignedDoctor = doctor(request.doctorId());
         LocalTime resolvedTime = slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
@@ -329,6 +382,36 @@ public class PortalAppointmentService {
         LocalTime requestedTime = request.expectedTime() != null ? request.expectedTime()
                 : Objects.equals(a.getAppointmentDate(), request.date()) && a.getPreferredSession() == request.session()
                     ? a.getExpectedTime() : null;
+        if (Boolean.TRUE.equals(branch.getResourceEngineEnabled())) {
+            if (resourceBookingTransactionService == null) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Resource Booking Engine chưa sẵn sàng.");
+            }
+            int durationMinutes = AppointmentSlotService.duration(a.getService());
+            LocalTime resolvedTime = requestedTime != null ? requestedTime
+                    : slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
+                            durationMinutes, appointmentId, null, AppointmentActorType.PATIENT);
+            if (resolvedTime == null) {
+                throw bad("Vui lòng chọn khung giờ khám cụ thể.");
+            }
+            resourceBookingTransactionService.rescheduleInExistingTransaction(
+                    com.cvdcms.DTO.availability.ResourceRescheduleRequest.reschedule(
+                            appointmentId, branch.getBranchId(), null,
+                            request.date(), resolvedTime, request.session(),
+                            request.doctorId(), request.doctorId() == null,
+                            "RESCHEDULED", AppointmentStatus.PENDING, true));
+            Appointment updated = appointments.findById(appointmentId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+            history(updated, user.getUserId(), "RESCHEDULE", oldValue, snapshot(updated), clean(request.reason()));
+            for (CustomerCareTask task : careTasks.findByAppointment_AppointmentId(appointmentId)) {
+                if (task.getTaskType() == CustomerCareTaskType.APPOINTMENT_REMINDER
+                        && task.getStatus() != CustomerCareTaskStatus.CANCELLED) {
+                    task.setDueDate(request.date().minusDays(1).isBefore(LocalDate.now(CLINIC_ZONE))
+                            ? LocalDate.now(CLINIC_ZONE) : request.date().minusDays(1));
+                    task.setStatus(CustomerCareTaskStatus.PENDING);
+                }
+            }
+            return view(updated);
+        }
         int durationMinutes = AppointmentSlotService.duration(a.getService());
         StaffProfile assignedDoctor = doctor(request.doctorId());
         LocalTime resolvedTime = slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
@@ -381,6 +464,10 @@ public class PortalAppointmentService {
         String reason = clean(request.reason());
         if (reason == null) throw bad("Vui lòng nhập lý do hủy.");
         String oldValue = snapshot(a);
+        if (resourceBookingTransactionService != null) {
+            resourceBookingTransactionService.releaseReservationsOnCancelOrNoShow(
+                    appointmentId, ReservationStatus.CANCELLED, "APPOINTMENT_CANCELLED", LocalDateTime.now(CLINIC_ZONE));
+        }
         lifecycle.transition(a, AppointmentStatus.CANCELLED, AppointmentLifecycleAction.CANCEL);
         a.setCancelReason(reason);
         a.setCancelledBy(user.getUserId());

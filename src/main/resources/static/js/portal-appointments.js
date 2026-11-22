@@ -328,8 +328,10 @@
 
         // Render Profile Selection Cards (FT35)
         const cardsGrid = $('profileCardsGrid');
+        const profileSelect = $('profileId');
         if (cardsGrid && !editing) {
             cardsGrid.replaceChildren();
+            if (profileSelect) profileSelect.replaceChildren();
             if (!options.profiles || options.profiles.length === 0) {
                 cardsGrid.innerHTML = `
                     <div class="alert alert-warning p-3 w-100 rounded-3">
@@ -348,6 +350,12 @@
                 }
 
                 options.profiles.forEach(p => {
+                    if (profileSelect) {
+                        const opt = document.createElement('option');
+                        opt.value = String(p.id);
+                        opt.textContent = p.name || String(p.id);
+                        profileSelect.appendChild(opt);
+                    }
                     const card = document.createElement('div');
                     const isSelected = String(p.id) === String(targetId);
                     card.className = `profile-card-option ${isSelected ? 'selected' : ''}`;
@@ -388,6 +396,7 @@
             const detail = await request(`/${id}`);
             current = detail.appointment;
             if ($('step1Container')) $('step1Container').hidden = true;
+            if ($('profileId')) $('profileId').disabled = true;
             $('branchId').value = current.branchId;
             $('appointmentDate').value = current.date;
             $('preferredSession').value = current.session;

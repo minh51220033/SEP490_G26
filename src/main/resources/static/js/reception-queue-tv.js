@@ -27,15 +27,35 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/'/g, '&#039;');
     }
 
-    // Digital Clock
+    let serverOffsetMs = 0;
+    let lastSuccessTimeStr = null;
+
+    // Digital Clock aligned with server clock
     function updateClock() {
         const timeEl = document.getElementById('tvClockTime');
         const dateEl = document.getElementById('tvClockDate');
-        const now = new Date();
+        const now = new Date(Date.now() + serverOffsetMs);
         const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const dateStr = now.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
         if (timeEl) timeEl.textContent = timeStr;
         if (dateEl) dateEl.textContent = dateStr;
+    }
+
+    function setConnectionStatus(online) {
+        const pill = document.getElementById('tvLivePill');
+        const text = document.getElementById('tvLiveText');
+        if (!pill || !text) return;
+        if (online) {
+            pill.style.background = '';
+            pill.style.color = '';
+            text.textContent = 'TRỰC TIẾP';
+        } else {
+            pill.style.background = '#fef2f2';
+            pill.style.color = '#b91c1c';
+            text.textContent = lastSuccessTimeStr
+                ? `MẤT KẾT NỐI · ${lastSuccessTimeStr}`
+                : 'MẤT KẾT NỐI';
+        }
     }
     updateClock();
     setInterval(updateClock, 1000);
@@ -129,9 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
         newCalls.sort((left, right) => (left.number.callTime || 0) - (right.number.callTime || 0));
         newCalls.forEach(({ number, key }) => {
             seenCallEventKeys.add(key);
-            const place = [number.room, number.chair].filter(Boolean).join(' ') || 'phòng khám';
-            const doctor = number.doctor || 'bác sĩ phụ trách';
-            speak(`Xin mời bệnh nhân số ${number.number}, vào ${place}, gặp ${doctor}.`);
+            const place = [number.room, number.chair].filter(Boolean).join(', ') || 'phòng khám';
+            speak(`Xin mời bệnh nhân số ${number.number}, vào ${place}.`);
         });
     }
 
@@ -141,18 +160,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(url, { cache: 'no-store' });
             if (!response.ok) {
                 failCount++;
+                setConnectionStatus(false);
                 return;
             }
             failCount = 0;
             const data = await response.json();
+            if (typeof data.serverNowEpochMs === 'number' && data.serverNowEpochMs > 0) {
+                serverOffsetMs = data.serverNowEpochMs - Date.now();
+            }
+            lastSuccessTimeStr = new Date(Date.now() + serverOffsetMs)
+                .toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            setConnectionStatus(true);
             if (branch && data.branch) branch.textContent = data.branch;
 
-            // Render danh sách bệnh nhân gọi số (TV List Table)
+            // Render danh sách số thứ tự công khai (Zero-PII & không tên bác sĩ)
             if (tableBody && Array.isArray(data.queueList)) {
                 if (data.queueList.length === 0) {
                     tableBody.innerHTML = `
                         <tr id="tvEmptyRow">
-                            <td colspan="6">
+                            <td colspan="4">
                                 <div class="tv-empty-box">
                                     <i class="bi bi-person-lines-fill"></i>
                                     <div style="font-size: 18px; font-weight: 700; color: #475569;">Hiện tại chưa có bệnh nhân trong hàng chờ gọi số</div>
@@ -170,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const roomClass = isCallingOrExam ? 'cell-room' : 'cell-dash';
                         const chairClass = isCallingOrExam ? 'cell-chair' : 'cell-dash';
 
-                        let badgeHtml = '';
+                        let badgeHtml = '<span class="tv-status-badge" style="background: #f1f5f9; color: #475569;">Đang chờ</span>';
                         if (row.status === 'CALLED') {
                             badgeHtml = '<span class="tv-status-badge calling"><i class="bi bi-megaphone-fill me-1"></i>Đang gọi</span>';
                         } else if (row.status === 'IN_SERVICE') {
@@ -182,14 +208,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <td class="cell-center">
                                     <span class="tv-badge-stt">${escapeHtml(row.ticketNumber || row.stt)}</span>
                                 </td>
-                                <td>
-                                    <span class="tv-patient-name">${escapeHtml(row.patientName || '—')}</span>
-                                    ${badgeHtml}
-                                </td>
-                                <td class="cell-center">${escapeHtml(row.dob || '—')}</td>
+                                <td class="cell-center">${badgeHtml}</td>
                                 <td class="cell-center ${roomClass}">${roomText}</td>
                                 <td class="cell-center ${chairClass}">${chairText}</td>
-                                <td>${escapeHtml(row.doctorName || '—')}</td>
                             </tr>
                         `;
                     }).join('');
@@ -207,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (_) {
             failCount++;
+            setConnectionStatus(false);
         }
     }
 

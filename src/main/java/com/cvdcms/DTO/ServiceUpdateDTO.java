@@ -61,9 +61,29 @@ public class ServiceUpdateDTO {
     @Min(value = 0, message = "Số tháng bảo hành không được âm.")
     private Integer warrantyMonths;
 
-    @Min(value = 15, message = "Thời lượng tối thiểu 15 phút.")
+    @Min(value = 5, message = "Thời lượng tối thiểu 5 phút.")
     @Max(value = 240, message = "Thời lượng tối đa 240 phút.")
     private Integer estimatedDurationMinutes;
+
+    @Min(value = 0, message = "Thời gian chuẩn bị không được âm.")
+    @Max(value = 120, message = "Thời gian chuẩn bị tối đa 120 phút.")
+    private Integer preparationDurationMinutes;
+
+    @Min(value = 1, message = "Thời gian thực hiện tối thiểu 1 phút.")
+    @Max(value = 240, message = "Thời gian thực hiện tối đa 240 phút.")
+    private Integer procedureDurationMinutes;
+
+    @Min(value = 0, message = "Thời gian bàn giao không được âm.")
+    @Max(value = 120, message = "Thời gian bàn giao tối đa 120 phút.")
+    private Integer turnoverDurationMinutes;
+
+    private Boolean requiresChair;
+
+    private Boolean isRoomExclusive;
+
+    private Boolean doctorRequiredInPrep;
+
+    private Boolean doctorRequiredInTurnover;
 
     private String description;
 

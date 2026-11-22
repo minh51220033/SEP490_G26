@@ -173,6 +173,12 @@ public class ReceptionService {
 
         Visit visit = newVisit(patient, branch, emergency ? VisitType.EMERGENCY : VisitType.APPOINTMENT, appointmentId,
                 resolvedSymptoms, nowDateTime, emergency, bookedAndOnTime);
+        if (appointment.getAssignedRoom() != null) {
+            visit.setRoomId(appointment.getAssignedRoom().getRoomId());
+        }
+        if (appointment.getAssignedChair() != null) {
+            visit.setChairId(appointment.getAssignedChair().getChairId());
+        }
         if (priority || emergency) {
             visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] · " + visit.getNotes());
         }
@@ -292,6 +298,12 @@ public class ReceptionService {
 
         Visit visit = newVisit(patient, branch, emergency ? VisitType.EMERGENCY : VisitType.APPOINTMENT, appointmentId,
                 resolvedSymptoms, nowDateTime, emergency, bookedAndOnTime);
+        if (appointment.getAssignedRoom() != null) {
+            visit.setRoomId(appointment.getAssignedRoom().getRoomId());
+        }
+        if (appointment.getAssignedChair() != null) {
+            visit.setChairId(appointment.getAssignedChair().getChairId());
+        }
         if (priority || emergency) {
             visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] · " + visit.getNotes());
         }

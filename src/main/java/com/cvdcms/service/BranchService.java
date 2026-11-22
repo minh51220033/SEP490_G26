@@ -458,12 +458,6 @@ public class BranchService {
             branchMap.putIfAbsent(user.getBranch().getBranchId(), user.getBranch());
         }
 
-        if (branchMap.isEmpty() && !allActive.isEmpty()) {
-            for (Branch b : allActive) {
-                branchMap.put(b.getBranchId(), b);
-            }
-        }
-
         return new ArrayList<>(branchMap.values());
     }
 
