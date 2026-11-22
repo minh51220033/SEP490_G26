@@ -124,6 +124,9 @@ public class AppointmentConflictDetectionServiceImpl implements AppointmentConfl
 
         // 4. Doctor schedule & leave checks
         if (doctor != null) {
+            if (doctor.getStatus() != StaffStatus.ACTIVE) {
+                conflicts.add(new Conflict("DOCTOR_INACTIVE", "Bác sĩ " + doctor.getFullName() + " hiện không ở trạng thái hoạt động.", true));
+            }
             Long doctorId = doctor.getStaffId();
             boolean assigned = isDoctorAssigned(branch.getBranchId(), doctorId, date);
             if (!assigned) {

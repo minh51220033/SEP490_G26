@@ -47,7 +47,6 @@ public class SecurityConfig {
                         // Bỏ qua CSRF cho màn hình TV công cộng, WebSocket và các API nội bộ
                         .ignoringRequestMatchers(
                                 "/reception/queue/tv/**",
-                                "/patients/**",
                                 "/portal/patients/**",
                                 "/portal/appointments/api/**",
                                 "/ws/**",
@@ -56,8 +55,11 @@ public class SecurityConfig {
                         )
                         .ignoringRequestMatchers(request -> {
                             String path = request.getRequestURI().substring(request.getContextPath().length());
-                            return path.startsWith("/api/") && !path.equals("/api/reception/check-ins")
-                                    && !path.startsWith("/api/reception/check-ins/");
+                            return path.startsWith("/api/")
+                                    && !path.equals("/api/reception/check-ins")
+                                    && !path.startsWith("/api/reception/check-ins/")
+                                    && !path.equals("/api/public/booking")
+                                    && !path.startsWith("/api/public/booking/");
                         })
                 )
                 // Keep the browser's unload permission policy used by the shared layout & allow same-origin iframe printing.
@@ -141,8 +143,20 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
-                // Nếu chưa đăng nhập, chuyển hướng người dùng về trang đăng nhập /login
+                // Nếu chưa đăng nhập: API trả 401 JSON (tránh lỗi <!DOCTYPE), trang web chuyển hướng về /login
                 .exceptionHandling(ex -> ex
+                        .defaultAuthenticationEntryPointFor(
+                                (req, res, authEx) -> {
+                                    res.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                                    res.setContentType("application/json;charset=UTF-8");
+                                    res.getWriter().write("{\"message\":\"Phiên đăng nhập đã hết hạn hoặc máy chủ vừa khởi động lại, vui lòng đăng nhập lại.\"}");
+                                },
+                                req -> {
+                                    String ctx = req.getContextPath() != null ? req.getContextPath() : "";
+                                    String path = req.getRequestURI().substring(ctx.length());
+                                    return path.startsWith("/api/");
+                                }
+                        )
                         .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
                 );
 

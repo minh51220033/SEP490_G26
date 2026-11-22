@@ -20,7 +20,9 @@ import com.cvdcms.entity.LeaveRequest;
 import java.util.Locale;
 import java.util.Optional;
 import com.cvdcms.repository.WorkShiftRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
@@ -46,6 +48,9 @@ public class StaffScheduleService {
     private final BranchRepository branchRepository;
     private final AttendanceRecordRepository attendanceRepository;
     private final LeaveRequestRepository leaveRequestRepository;
+
+    @Autowired(required = false)
+    private com.cvdcms.repository.AppointmentRepository appointmentRepository;
 
     public StaffScheduleService(WorkShiftRepository shiftRepository,
                                 StaffScheduleRepository scheduleRepository,
@@ -146,7 +151,8 @@ public class StaffScheduleService {
         }
         Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chi nhánh."));
-        StaffProfile staff = staffRepository.findById(staffId)
+        StaffProfile staff = staffRepository.lockById(staffId)
+                .or(() -> staffRepository.findById(staffId))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân viên."));
         WorkShift shift = shiftRepository.findById(shiftId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca làm việc."));
@@ -227,13 +233,62 @@ public class StaffScheduleService {
         scheduleRepository.save(s);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public boolean remove(Long scheduleId) {
         StaffSchedule s = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch phân ca."));
         if (s.getWorkDate().isBefore(LocalDate.now())) {
             throw new IllegalArgumentException("Không thể xóa ca đã qua.");
         }
+        Long staffId = s.getStaff() != null ? s.getStaff().getStaffId() : null;
+        if (staffId != null) {
+            // Global lock hierarchy: StaffProfile -> StaffSchedule -> Appointment
+            staffRepository.lockById(staffId);
+            scheduleRepository.lockDoctorSchedulesForDate(staffId, s.getWorkDate(), ScheduleStatus.SCHEDULED);
+            s = scheduleRepository.findById(scheduleId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch phân ca."));
+        }
+
+        if (s.getStatus() == ScheduleStatus.SCHEDULED && appointmentRepository != null && staffId != null) {
+            List<com.cvdcms.entity.Appointment> activeAppts = appointmentRepository.findAffectedAppointments(
+                    staffId, s.getWorkDate(), s.getWorkDate(),
+                    List.of(com.cvdcms.entity.enums.AppointmentStatus.PENDING,
+                            com.cvdcms.entity.enums.AppointmentStatus.CONFIRMED,
+                            com.cvdcms.entity.enums.AppointmentStatus.CHECKED_IN));
+            if (activeAppts != null && !activeAppts.isEmpty()) {
+                Long branchId = s.getBranch() != null ? s.getBranch().getBranchId() : null;
+                Long removedScheduleId = s.getScheduleId();
+                List<StaffSchedule> remainingScheduled = scheduleRepository.findDoctorSchedulesForDate(
+                                staffId, s.getWorkDate(), ScheduleStatus.SCHEDULED).stream()
+                        .filter(other -> !other.getScheduleId().equals(removedScheduleId))
+                        .filter(other -> branchId == null || (other.getBranch() != null && branchId.equals(other.getBranch().getBranchId())))
+                        .toList();
+                LocalTime removedStart = s.getShift() != null ? s.getShift().getStartTime() : null;
+                LocalTime removedEnd = s.getShift() != null ? s.getShift().getEndTime() : null;
+                for (com.cvdcms.entity.Appointment app : activeAppts) {
+                    if (branchId != null && app.getBranch() != null && !branchId.equals(app.getBranch().getBranchId())) {
+                        continue;
+                    }
+                    LocalTime apptTime = app.getExpectedTime();
+                    boolean fallsInRemoved = apptTime == null || removedStart == null || removedEnd == null
+                            || (!apptTime.isBefore(removedStart) && apptTime.isBefore(removedEnd));
+                    if (!fallsInRemoved) {
+                        continue;
+                    }
+                    boolean coveredByOther = remainingScheduled.stream().anyMatch(other -> {
+                        WorkShift sh = other.getShift();
+                        if (sh == null || sh.getStartTime() == null || sh.getEndTime() == null) return false;
+                        return apptTime == null || (!apptTime.isBefore(sh.getStartTime()) && apptTime.isBefore(sh.getEndTime()));
+                    });
+                    if (!coveredByOther) {
+                        throw new IllegalStateException(
+                                "Không thể xóa ca trực vì bác sĩ vẫn còn lịch hẹn #" + app.getAppointmentCode()
+                                        + " trong khung giờ này. Vui lòng đổi bác sĩ hoặc dời lịch hẹn trước.");
+                    }
+                }
+            }
+        }
+
         boolean removedAttendance = false;
         // Nếu nhân viên đã chấm công (check-in) hôm nay, tự động xóa luôn bản ghi chấm công nhầm cùng ca trực
         Optional<AttendanceRecord> attendanceOpt = attendanceRepository.findByStaffStaffIdAndWorkDate(

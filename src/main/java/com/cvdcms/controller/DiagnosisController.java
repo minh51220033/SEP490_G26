@@ -299,6 +299,7 @@ public class DiagnosisController {
         }
 
         if (visitId == null) {
+            LocalDate today = LocalDate.now(com.cvdcms.service.ClinicQueueCoordinatorService.CLINIC_ZONE);
             if (currentDoctor != null) {
                 final Long docStaffId = currentDoctor.getStaffId();
                 java.util.Set<Long> coveredIds = doctorCoverGrantRepository != null
@@ -306,6 +307,7 @@ public class DiagnosisController {
                         : java.util.Collections.<Long>emptySet();
                 List<Visit> myActiveVisits = diagnosisService.getAvailableVisitsForDiagnosis(branchId).stream()
                         .filter(v -> v.getStatus() == VisitStatus.IN_EXAM || v.getStatus() == VisitStatus.IN_TREATMENT)
+                        .filter(v -> v.getCheckInAt() != null && v.getCheckInAt().toLocalDate().equals(today))
                         .filter(v -> (v.getPrimaryDoctor() != null && docStaffId.equals(v.getPrimaryDoctor().getStaffId()))
                                 || coveredIds.contains(v.getVisitId()))
                         .toList();
@@ -321,6 +323,7 @@ public class DiagnosisController {
             } else {
                 List<Visit> activeVisits = diagnosisService.getAvailableVisitsForDiagnosis(branchId).stream()
                         .filter(v -> v.getStatus() == VisitStatus.IN_EXAM || v.getStatus() == VisitStatus.IN_TREATMENT)
+                        .filter(v -> v.getCheckInAt() != null && v.getCheckInAt().toLocalDate().equals(today))
                         .toList();
                 if (!activeVisits.isEmpty()) {
                     visitId = activeVisits.get(0).getVisitId();
@@ -472,6 +475,7 @@ public class DiagnosisController {
             @PathVariable("visitRef") String visitRef,
             @RequestParam(value = "branchId", required = false) Long branchIdParam,
             @RequestParam(value = "readOnly", required = false, defaultValue = "false") boolean readOnly,
+            @RequestParam(value = "fromQueue", required = false, defaultValue = "false") boolean fromQueue,
             @RequestParam(value = "fromPatientRef", required = false) String fromPatientRef,
             @RequestParam(value = "fromPatientId", required = false) Long fromPatientId,
             jakarta.servlet.http.HttpSession session,
@@ -482,7 +486,55 @@ public class DiagnosisController {
         Long resolvedFromPatientId = (fromPatientRef != null && !fromPatientRef.isBlank())
                 ? decodePatientRef(fromPatientRef)
                 : fromPatientId;
+        if (readOnly && fromQueue && resolvedFromPatientId == null) {
+            try {
+                Visit queueVisit = diagnosisService.getVisitOrThrow(visitId);
+                User currentUser = getLoggedInUser(session);
+                boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+                StaffProfile currentDoctor = currentUser != null
+                        ? staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null)
+                        : null;
+                Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
+                boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
+                if (canSwitchReadOnlyToEditMode(session, queueVisit, isAdmin, isDoctorRestricted, assignedBranch, currentDoctor)) {
+                    String target = "redirect:/doctor/examination/" + encodeVisit(visitId) + "/diagnoses";
+                    return branchIdParam != null ? target + "?branchId=" + branchIdParam : target;
+                }
+            } catch (Exception ignored) {
+                // Giữ nguyên chế độ chỉ xem an toàn cho lễ tân hoặc bác sĩ không phụ trách ca
+            }
+        }
         return examinationDiagnosesInternal(visitId, branchIdParam, readOnly, resolvedFromPatientId, session, redirectAttributes, model);
+    }
+
+    private boolean canSwitchReadOnlyToEditMode(
+            jakarta.servlet.http.HttpSession session,
+            Visit visit,
+            boolean isAdmin,
+            boolean isDoctorRestricted,
+            Branch assignedBranch,
+            StaffProfile currentDoctor
+    ) {
+        if (visit == null || visit.getVisitId() == null || visit.getPrimaryDoctor() == null) {
+            return false;
+        }
+        VisitStatus st = visit.getStatus();
+        if (st == VisitStatus.WAITING_PAYMENT || st == VisitStatus.COMPLETED || st == VisitStatus.CANCELLED) {
+            return false;
+        }
+        if (isDoctorRestricted && visit.getBranch() != null && !visit.getBranch().getBranchId().equals(assignedBranch.getBranchId())) {
+            return false;
+        }
+        if (!canDoctorAccessVisitForExam(isAdmin, currentDoctor, visit)) {
+            return false;
+        }
+        try {
+            doctorVisitAccess.require(session, visit.getVisitId());
+            doctorVisitAccess.requireActiveClinicalExam(session, visit.getVisitId());
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     private String examinationDiagnosesInternal(
@@ -711,8 +763,10 @@ public class DiagnosisController {
 
         boolean isClinicalLocked = readOnly || (visit.getStatus() != null &&
                 (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED));
+        boolean canSwitchToEditMode = readOnly && canSwitchReadOnlyToEditMode(session, visit, isAdmin, isDoctorRestricted, assignedBranch, currentDoctor);
         model.addAttribute("isClinicalLocked", isClinicalLocked);
         model.addAttribute("isReadOnlyView", readOnly);
+        model.addAttribute("canSwitchToEditMode", canSwitchToEditMode);
         Long resolvedFromPatientId = fromPatientId != null ? fromPatientId
                 : (visit.getPatientProfile() != null ? visit.getPatientProfile().getProfileId() : null);
         model.addAttribute("fromPatientId", resolvedFromPatientId);
@@ -847,22 +901,10 @@ public class DiagnosisController {
             return "redirect:/doctor/daily-visits";
         }
 
-        if (visit.getStatus() == VisitStatus.WAITING
-                || visit.getStatus() == VisitStatus.WAITING_RESULT
-                || visit.getStatus() == VisitStatus.CANCELLED) {
+        try {
+            doctorVisitAccess.requireActiveClinicalExam(session, visitId);
+        } catch (org.springframework.web.server.ResponseStatusException ex) {
             return "redirect:/doctor/daily-visits";
-        }
-        if (clinicalQueueTicketRepository != null && visit.getVisitId() != null) {
-            var ticketOpt = clinicalQueueTicketRepository.findByVisitIdAndTypeOrderByDesc(visit.getVisitId(), QueueType.EXAM)
-                    .stream()
-                    .filter(t -> t.getStatus() != QueueStatus.CANCELLED)
-                    .findFirst();
-            if (ticketOpt.isPresent()) {
-                QueueStatus qs = ticketOpt.get().getStatus();
-                if (qs == QueueStatus.WAITING || qs == QueueStatus.PAUSED || qs == QueueStatus.CALLED) {
-                    return "redirect:/doctor/daily-visits";
-                }
-            }
         }
 
         if (isDoctorRestricted && visit.getBranch() != null && !visit.getBranch().getBranchId().equals(assignedBranch.getBranchId())) {
@@ -904,6 +946,10 @@ public class DiagnosisController {
                 ? clinicalWorkflowService.getAllTemplates()
                 : List.of();
         model.addAttribute("workflowTemplates", workflowTemplates);
+        List<com.cvdcms.DTO.ServiceComboDTO> workflowCombos = (clinicalWorkflowService != null)
+                ? clinicalWorkflowService.getAllCombos(true)
+                : List.of();
+        model.addAttribute("workflowCombos", workflowCombos);
         String workflowTemplatesJson = "[]";
         try {
             workflowTemplatesJson = new ObjectMapper().writeValueAsString(workflowTemplates);

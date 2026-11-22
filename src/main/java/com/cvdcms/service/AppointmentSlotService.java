@@ -13,16 +13,16 @@ import com.cvdcms.entity.enums.LeaveStatus;
 import com.cvdcms.entity.enums.PreferredSession;
 import com.cvdcms.entity.enums.ScheduleStatus;
 import com.cvdcms.entity.enums.StaffStatus;
+import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.repository.AppointmentPolicyRepository;
 import com.cvdcms.repository.AppointmentSessionWindowRepository;
 import com.cvdcms.repository.LeaveRequestRepository;
 import com.cvdcms.repository.StaffProfileRepository;
 import com.cvdcms.repository.StaffScheduleRepository;
 import com.cvdcms.repository.VisitRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.CannotAcquireLockException;
-import org.springframework.dao.DeadlockLoserDataAccessException;
-import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -39,6 +39,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeSet;
@@ -53,7 +54,6 @@ public class AppointmentSlotService {
     public static final int NO_SHOW_CUTOFF_MINUTES = 30;
     public static final int SUGGESTED_STEP_MINUTES = 5;
     public static final int DEFAULT_CONCURRENT_ARRIVALS_PER_DOCTOR = 3;
-    private static final int MAX_LOCK_RETRIES = 2;
 
     /**
      * Chỉ các trạng thái đang chiếm giữ khung giờ của bác sĩ.
@@ -74,6 +74,8 @@ public class AppointmentSlotService {
     private final StaffProfileRepository staffProfiles;
     private int maxConcurrentPerDoctorSlot = DEFAULT_CONCURRENT_ARRIVALS_PER_DOCTOR;
     private Clock clock = Clock.system(AppointmentPolicyService.CLINIC_ZONE);
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public AppointmentSlotService(
             AppointmentPolicyRepository appointments,
@@ -332,52 +334,170 @@ public class AppointmentSlotService {
         }
         validateDynamicDuration(requiredDuration);
 
-        return executeWithDeadlockRetry(() -> {
-            if (staffProfiles != null) {
-                StaffProfile lockedDoctor = staffProfiles.lockById(doctorId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bác sĩ không tồn tại."));
-                if (lockedDoctor.getStatus() != StaffStatus.ACTIVE) {
-                    throw new SlotAlreadyTakenException("Bác sĩ hiện không ở trạng thái hoạt động.");
-                }
+        // Không retry deadlock/lock failure bên trong transaction đang mở hoặc đã rollback
+        return validateDoctorSlotInternal(
+                branchId, doctorId, date, requestedStart, requiredDuration, excludeAppointmentId, true);
+    }
+
+    private LocalTime validateDoctorSlotInternal(
+            Long branchId,
+            Long doctorId,
+            LocalDate date,
+            LocalTime requestedStart,
+            int requiredDuration,
+            Long excludeAppointmentId,
+            boolean lockRows
+    ) {
+        if (lockRows && staffProfiles != null) {
+            StaffProfile lockedDoctor = staffProfiles.lockById(doctorId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bác sĩ không tồn tại."));
+            if (lockedDoctor.getStatus() != StaffStatus.ACTIVE) {
+                throw new SlotAlreadyTakenException("Bác sĩ hiện không ở trạng thái hoạt động.");
             }
-            if (staffSchedules == null) {
-                return requestedStart;
-            }
+        }
+        if (staffSchedules == null) {
+            return requestedStart;
+        }
+        if (lockRows) {
             // Khóa toàn bộ ca trực của bác sĩ trong ngày theo thứ tự scheduleId tăng dần để tránh deadlock
             staffSchedules.lockDoctorSchedulesForDate(doctorId, date, ScheduleStatus.SCHEDULED);
+        }
 
-            LocalDateTime nowDt = LocalDateTime.now(clock);
-            List<StaffSchedule> schedules = staffSchedules.findDoctorSchedulesForDate(doctorId, date, ScheduleStatus.SCHEDULED).stream()
-                    .filter(s -> branchId == null || (s.getBranch() != null && branchId.equals(s.getBranch().getBranchId())))
-                    .filter(s -> s.getBranch() != null && Boolean.TRUE.equals(s.getBranch().getIsActive()))
-                    .filter(s -> s.getShift() != null && Boolean.TRUE.equals(s.getShift().getIsActive()))
-                    .toList();
-            if (schedules.isEmpty()) {
-                throw new SlotAlreadyTakenException("Bác sĩ không có ca làm việc hợp lệ vào ngày " + date + ".");
-            }
+        LocalDateTime nowDt = LocalDateTime.now(clock);
+        List<StaffSchedule> schedules = staffSchedules.findDoctorSchedulesForDate(doctorId, date, ScheduleStatus.SCHEDULED).stream()
+                .filter(s -> branchId == null || (s.getBranch() != null && branchId.equals(s.getBranch().getBranchId())))
+                .filter(s -> s.getBranch() != null && Boolean.TRUE.equals(s.getBranch().getIsActive()))
+                .filter(s -> s.getShift() != null && Boolean.TRUE.equals(s.getShift().getIsActive()))
+                .toList();
+        if (schedules.isEmpty()) {
+            throw new SlotAlreadyTakenException("Bác sĩ không có ca làm việc hợp lệ vào ngày " + date + ".");
+        }
 
-            List<LeaveRequest> approvedLeaves = leaveRequests != null
-                    ? leaveRequests.findApprovedForStaffOnDate(doctorId, date, LeaveStatus.APPROVED)
-                    : List.of();
-            // Dùng locking read (FOR UPDATE) để tránh stale snapshot trên MySQL REPEATABLE_READ
-            List<Appointment> occupying = appointments.lockDoctorAppointmentsForDate(doctorId, date, OCCUPYING);
-            Map<Long, Visit> visitByApptId = loadVisitsForCheckedInAppointments(occupying);
+        List<LeaveRequest> approvedLeaves = leaveRequests != null
+                ? leaveRequests.findApprovedForStaffOnDate(doctorId, date, LeaveStatus.APPROVED)
+                : List.of();
+        // Dùng locking read (FOR UPDATE) khi lockRows=true để tránh stale snapshot trên MySQL REPEATABLE_READ
+        List<Appointment> occupying = lockRows
+                ? appointments.lockDoctorAppointmentsForDate(doctorId, date, OCCUPYING)
+                : appointments.findDoctorAppointmentsForDate(doctorId, date, OCCUPYING);
+        Map<Long, Visit> visitByApptId = loadVisitsForCheckedInAppointments(occupying);
 
-            DoctorAvailabilityResult availability = computeAvailabilityFromLoadedData(
-                    doctorId, branchId, date, requiredDuration, excludeAppointmentId, nowDt,
-                    schedules, approvedLeaves, occupying, visitByApptId
+        DoctorAvailabilityResult availability = computeAvailabilityFromLoadedData(
+                doctorId, branchId, date, requiredDuration, excludeAppointmentId, nowDt,
+                schedules, approvedLeaves, occupying, visitByApptId
+        );
+
+        LocalTime requestedEnd = requestedStart.plusMinutes(requiredDuration);
+        boolean fits = availability.availableIntervals().stream()
+                .anyMatch(iv -> !requestedStart.isBefore(iv.start()) && !requestedEnd.isAfter(iv.end()));
+        if (!fits) {
+            throw new SlotAlreadyTakenException(
+                    "Khung giờ " + requestedStart + " - " + requestedEnd + " của bác sĩ đã được đặt hoặc không còn khả dụng."
             );
+        }
+        return requestedStart;
+    }
 
-            LocalTime requestedEnd = requestedStart.plusMinutes(requiredDuration);
-            boolean fits = availability.availableIntervals().stream()
-                    .anyMatch(iv -> !requestedStart.isBefore(iv.start()) && !requestedEnd.isAfter(iv.end()));
-            if (!fits) {
-                throw new SlotAlreadyTakenException(
-                        "Khung giờ " + requestedStart + " - " + requestedEnd + " của bác sĩ đã được đặt hoặc không còn khả dụng."
-                );
+    /**
+     * Khóa bi quan bác sĩ, lịch trực và lịch hẹn chiếm chỗ cho lịch linh hoạt (expectedTime == null)
+     * có chỉ định bác sĩ nhằm kiểm tra trạng thái bác sĩ, ca trực/nghỉ phép và giới hạn doctorCapacity theo buổi.
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void lockAndValidateDoctorSession(
+            Long branchId,
+            Long doctorId,
+            LocalDate date,
+            PreferredSession session,
+            Long excludeAppointmentId
+    ) {
+        if (branchId == null || doctorId == null || date == null || session == null || session == PreferredSession.ANY) {
+            return;
+        }
+        StaffProfile lockedDoctor = staffProfiles != null
+                ? staffProfiles.lockById(doctorId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bác sĩ không tồn tại."))
+                : null;
+        if (lockedDoctor != null) {
+            refreshIfManaged(lockedDoctor);
+            if (lockedDoctor.getStatus() != StaffStatus.ACTIVE) {
+                throw new SlotAlreadyTakenException("Bác sĩ hiện không ở trạng thái hoạt động.");
             }
-            return requestedStart;
-        });
+        }
+        if (staffSchedules == null) {
+            return;
+        }
+        staffSchedules.lockDoctorSchedulesForDate(doctorId, date, ScheduleStatus.SCHEDULED);
+        List<StaffSchedule> schedules = staffSchedules.findDoctorSchedulesForDate(doctorId, date, ScheduleStatus.SCHEDULED).stream()
+                .filter(s -> s.getBranch() != null && branchId.equals(s.getBranch().getBranchId()))
+                .filter(s -> Boolean.TRUE.equals(s.getBranch().getIsActive()))
+                .filter(s -> s.getShift() != null && Boolean.TRUE.equals(s.getShift().getIsActive()))
+                .toList();
+        if (schedules.isEmpty()) {
+            throw new SlotAlreadyTakenException("Bác sĩ không có ca làm việc hợp lệ vào ngày " + date + ".");
+        }
+
+        List<LeaveRequest> approvedLeaves = leaveRequests != null
+                ? leaveRequests.findApprovedForStaffOnDate(doctorId, date, LeaveStatus.APPROVED)
+                : List.of();
+
+        Branch branch = schedules.get(0).getBranch();
+        Range sessionRange = range(branch, session);
+        if (!sessionRange.active || !sessionRange.start.isBefore(sessionRange.end)) {
+            throw new SlotAlreadyTakenException("Chi nhánh không nhận lịch trong buổi đã chọn.");
+        }
+
+        LocalDateTime nowDt = LocalDateTime.now(clock);
+        boolean hasWorkingShiftInSession = false;
+        for (StaffSchedule schedule : schedules) {
+            WorkShift shift = schedule.getShift();
+            if (shift == null || shift.getStartTime() == null || shift.getEndTime() == null
+                    || !shift.getEndTime().isAfter(shift.getStartTime())) {
+                continue;
+            }
+            long shiftMinutes = Duration.between(shift.getStartTime(), shift.getEndTime()).toMinutes();
+            String shiftCode = shift.getShiftCode() != null ? shift.getShiftCode().toUpperCase(Locale.ROOT) : "";
+            if (shiftMinutes > WorkShiftService.MAX_SHIFT_MINUTES
+                    || shiftCode.contains("ALL") || shiftCode.contains("FULL")
+                    || shiftCode.contains("DEMO") || shiftCode.contains("SEED")) {
+                continue;
+            }
+            boolean onLeave = approvedLeaves.stream().anyMatch(l ->
+                    (l.getBranch() == null || branchId.equals(l.getBranch().getBranchId()))
+                            && (l.getShift() == null || l.getShift().getShiftId().equals(shift.getShiftId())));
+            if (onLeave) {
+                continue;
+            }
+            if (!shift.getStartTime().isBefore(sessionRange.end) || !shift.getEndTime().isAfter(sessionRange.start)) {
+                continue;
+            }
+            LocalTime effectiveEnd = shift.getEndTime().isBefore(sessionRange.end) ? shift.getEndTime() : sessionRange.end;
+            if (date.equals(nowDt.toLocalDate()) && !nowDt.toLocalTime().isBefore(effectiveEnd)) {
+                continue;
+            }
+            hasWorkingShiftInSession = true;
+            break;
+        }
+        if (!hasWorkingShiftInSession) {
+            throw new SlotAlreadyTakenException("Bác sĩ không khả dụng trong ngày và buổi đã chọn.");
+        }
+
+        List<Appointment> occupying = appointments.lockDoctorAppointmentsForDate(doctorId, date, OCCUPYING);
+        int doctorCap = policy != null ? policy.doctorCapacityForSession(branchId, date, session) : Integer.MAX_VALUE;
+        long doctorSessionBooked = occupying.stream()
+                .filter(a -> excludeAppointmentId == null || !Objects.equals(a.getAppointmentId(), excludeAppointmentId))
+                .filter(a -> a.getBranch() != null && branchId.equals(a.getBranch().getBranchId()))
+                .filter(a -> a.getPreferredSession() == session || a.getPreferredSession() == PreferredSession.ANY)
+                .count();
+        if (doctorSessionBooked >= doctorCap) {
+            throw new SlotAlreadyTakenException(
+                    "Bác sĩ đã hết khả năng nhận lịch trong buổi (" + doctorSessionBooked + "/" + doctorCap + " ca).");
+        }
+    }
+
+    private void refreshIfManaged(Object entity) {
+        if (entityManager != null && entity != null && entityManager.contains(entity)) {
+            entityManager.refresh(entity);
+        }
     }
 
     /**
@@ -430,6 +550,8 @@ public class AppointmentSlotService {
 
         for (AppointmentPolicyService.DoctorOption candidate : candidates) {
             try {
+                // Pre-check không khóa để bỏ qua ứng viên không đủ giờ/trùng lịch trước khi lấy FOR UPDATE
+                validateDoctorSlotInternal(branch.getBranchId(), candidate.id(), date, requestedStart, requiredDuration, excludeAppointmentId, false);
                 lockAndValidateDoctorSlot(branch.getBranchId(), candidate.id(), date, requestedStart, requiredDuration, excludeAppointmentId);
                 return staffProfiles.findById(candidate.id()).orElse(null);
             } catch (SlotAlreadyTakenException ignored) {
@@ -442,6 +564,7 @@ public class AppointmentSlotService {
         );
     }
 
+    @Transactional(readOnly = true)
     public List<Slot> available(Branch branch, LocalDate date, PreferredSession session,
             Long doctorId, int durationMinutes, Long excludeId, AppointmentActorType actorType) {
         validateDuration(durationMinutes);
@@ -890,7 +1013,7 @@ public class AppointmentSlotService {
         }
         Map<Long, Visit> map = new HashMap<>();
         for (Visit v : linkedVisits) {
-            if (v.getAppointmentId() != null) {
+            if (v != null && v.getAppointmentId() != null && v.getStatus() != VisitStatus.CANCELLED) {
                 map.putIfAbsent(v.getAppointmentId(), v);
             }
         }
@@ -964,29 +1087,6 @@ public class AppointmentSlotService {
             }
         }
         return fallback;
-    }
-
-    private <T> T executeWithDeadlockRetry(java.util.function.Supplier<T> action) {
-        int attempt = 0;
-        while (true) {
-            try {
-                return action.get();
-            } catch (CannotAcquireLockException | DeadlockLoserDataAccessException ex) {
-                if (++attempt > MAX_LOCK_RETRIES) {
-                    throw new SlotAlreadyTakenException("Hệ thống đang xử lý đồng thời, vui lòng thử lại.");
-                }
-                try {
-                    Thread.sleep(30L * attempt);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    throw new SlotAlreadyTakenException("Yêu cầu đặt lịch bị gián đoạn, vui lòng thử lại.");
-                }
-            } catch (PessimisticLockingFailureException ex) {
-                if (++attempt > MAX_LOCK_RETRIES) {
-                    throw new SlotAlreadyTakenException("Khung giờ đang có người khác thao tác, vui lòng thử lại.");
-                }
-            }
-        }
     }
 
     private Range range(Branch branch, PreferredSession session) {

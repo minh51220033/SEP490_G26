@@ -27,6 +27,9 @@ public class WorkflowVisitOverviewDTO {
     @Builder.Default
     private List<ServiceOption> availableServices = new ArrayList<>();
 
+    @Builder.Default
+    private List<ServiceComboDTO> availableCombos = new ArrayList<>();
+
     @Data
     @Builder
     @NoArgsConstructor
@@ -37,7 +40,13 @@ public class WorkflowVisitOverviewDTO {
         private String serviceName;
         private String templateName;
         private Integer stepCount;
-        /** true nếu dịch vụ đã nằm trong dịch vụ thực hiện của lượt khám (FT16). */
+        /** true nếu dịch vụ đã nằm trong dịch vụ thực hiện của lượt khám (FT16) hoặc Kế hoạch điều trị. */
         private Boolean suggested;
+        private Long planItemId;
+        private Long planStageId;
+        private String planCode;
+        private String planName;
+        private String stepName;
+        private String toothNumbers;
     }
 }

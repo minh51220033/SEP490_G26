@@ -527,6 +527,10 @@ public class QueueWorkflowService {
             if (v.getAppointmentId() == null && v.getVisitType() != VisitType.APPOINTMENT) {
                 return 3;
             }
+            String reason = t.getPriorityReason() != null ? t.getPriorityReason().toUpperCase(Locale.ROOT) : "";
+            if (reason.contains("EARLY_WAITING") || (t.getPriorityScore() != null && t.getPriorityScore() >= 50)) {
+                return 3;
+            }
             return 4;
         }
         return (t.getPriorityScore() != null && t.getPriorityScore() >= 75) ? 2 : 3;

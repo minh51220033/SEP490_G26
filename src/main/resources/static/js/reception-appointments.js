@@ -1716,11 +1716,14 @@
                         const item = document.createElement('div');
                         item.className = 'patient-autocomplete-item d-flex align-items-center justify-content-between gap-2';
                         const dobText = p.dob ? ` · NS: ${dateLabel(p.dob)}` : '';
+                        const crossBadge = p.crossBranch
+                            ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1">Liên cơ sở</span>'
+                            : '';
                         item.innerHTML = `
                             <div class="min-w-0">
                                 <div class="text-truncate">
                                     <strong>${escapeHtml(p.name)}</strong>
-                                    <span class="badge bg-light text-secondary border font-monospace ms-1">${escapeHtml(p.code)}</span>
+                                    <span class="badge bg-light text-secondary border font-monospace ms-1">${escapeHtml(p.code)}</span>${crossBadge}
                                 </div>
                                 <div class="small text-muted">${escapeHtml(p.phone || 'Chưa có SĐT')}${escapeHtml(dobText)}</div>
                             </div>
@@ -1749,7 +1752,8 @@
                     resultsBox.style.display = 'block';
                 }
             } catch (err) {
-                resultsBox.innerHTML = '<div class="p-2 text-muted small">Không thể tải danh sách hồ sơ. Bạn có thể nhập khách mới bên dưới.</div>';
+                const msg = err?.message || 'Không thể tải danh sách hồ sơ. Bạn có thể nhập khách mới bên dưới.';
+                resultsBox.innerHTML = `<div class="p-2 text-warning-emphasis bg-warning-subtle small rounded-2">${escapeHtml(msg)}</div>`;
                 if (patientListVisible) resultsBox.style.display = 'block';
             }
         }
@@ -2023,6 +2027,7 @@
         const editModalEl = $('editAppointmentModal');
         const editModal = editModalEl ? new bootstrap.Modal(editModalEl) : null;
         let activeAppointmentIdForEdit = null;
+        let activeAllowReassignForEdit = false;
 
         function setEditModalSession(sessionKey) {
             const validSession = ['MORNING', 'AFTERNOON', 'EVENING'].includes(sessionKey) ? sessionKey : 'MORNING';
@@ -2092,7 +2097,7 @@
                     select.value = '';
                     prevMissing = hadPrevDoctor;
                 }
-                select.disabled = !canAssign;
+                select.disabled = !(canAssign || activeAllowReassignForEdit || prevMissing);
                 if (submitBtn) submitBtn.disabled = false;
                 const sessLabel = defaultSessionMeta[curSess]?.label || 'Ca Sáng';
                 if (help) {
@@ -2137,6 +2142,7 @@
         async function openEditAppointmentModal(appointment) {
             if (!editModal) return;
             activeAppointmentIdForEdit = appointment.id;
+            activeAllowReassignForEdit = Boolean(appointment.needsReassignment || appointment.doctorUnavailable);
 
             if ($('editModalCode')) {
                 $('editModalCode').textContent = appointment.code || ('LH' + appointment.id);
@@ -2536,7 +2542,10 @@
                         ? `/patients?branchId=${encodeURIComponent(bId)}&query=${encodeURIComponent(prefillQuery)}`
                         : `/patients?query=${encodeURIComponent(prefillQuery)}`;
                     const matched = await request(url);
-                    const target = matched?.find(p => p.code === prefillQuery) || matched?.[0];
+                    const exactMatches = Array.isArray(matched) ? matched.filter(p => p.code === prefillQuery) : [];
+                    const target = exactMatches.length === 1
+                        ? exactMatches[0]
+                        : (Array.isArray(matched) && matched.length === 1 && !matched[0].crossBranch ? matched[0] : null);
                     if (target) {
                         $('modalProfileId').value = target.id;
                         $('modalPatientCode').value = target.code || '';
@@ -2866,7 +2875,8 @@
             const result = await request(`/availability?branchId=${encodeURIComponent(branchId)}&date=${date}&sessionPeriod=${session}${exclude}`);
             if (token !== availabilitySeq) return;
             if (!result.available) { message.textContent = result.reason || 'Buổi khám không còn chỗ.'; message.classList.add('is-error'); return; }
-            if (!canAssignDoctor) {
+            const allowReassignDoctor = canAssignDoctor || Boolean(editing && (current?.needsReassignment || current?.doctorUnavailable));
+            if (!allowReassignDoctor) {
                 doctor.replaceChildren(option('', 'Tự động phân bổ bác sĩ theo lịch trống'));
                 if (current?.doctorId && result.doctors.some(d => d.id === current.doctorId)) {
                     const matched = result.doctors.find(d => d.id === current.doctorId);
@@ -2880,7 +2890,7 @@
                 doctor.disabled = false;
             }
             available = true; button.disabled = false;
-            message.textContent = `Buổi khám còn ${result.remainingBranch} chỗ.${canAssignDoctor ? '' : ' Bác sĩ được hệ thống tự động phân bổ theo lịch trống.'}`;
+            message.textContent = `Buổi khám còn ${result.remainingBranch} chỗ.${allowReassignDoctor ? '' : ' Bác sĩ được hệ thống tự động phân bổ theo lịch trống.'}`;
             if (current?.doctorId && !result.doctors.some(d => d.id === current.doctorId))
                 message.textContent += ' Bác sĩ cũ không khả dụng, vui lòng chọn lại.';
             message.classList.add('is-success');
@@ -2961,7 +2971,7 @@
                 $('doctorWarning').hidden = false;
             } else if (a.status === 'PENDING' || a.status === 'CONFIRMED') {
                 $('doctorWarning').className = 'alert alert-warning mb-3';
-                $('doctorWarning').innerHTML = `<strong><i class="bi bi-exclamation-triangle-fill me-1"></i> Lưu ý xung đột lịch:</strong> ${escapeHtml(a.conflictNotes)}. <a href="/reception/appointments/${id}/edit" class="alert-link ms-2">Khắc phục ngay</a>`;
+                $('doctorWarning').innerHTML = `<span class="badge bg-warning text-dark me-2">NEEDS_REASSIGNMENT</span><strong><i class="bi bi-exclamation-triangle-fill me-1"></i> Cần điều phối lại:</strong> ${escapeHtml(a.conflictNotes)}. <a href="/reception/appointments/${id}/edit" class="alert-link ms-2">Đổi bác sĩ / Đề xuất dời lịch</a>`;
                 $('doctorWarning').hidden = false;
             } else {
                 $('doctorWarning').hidden = true;
@@ -3060,7 +3070,7 @@
                 if (rBranch) rBranch.value = a.branchId || '';
                 const rForm = $('revertCheckInForm');
                 if (rForm) {
-                    rForm.action = `/reception/check-in/appointments/${id}/revert`;
+                    rForm.action = `/reception/appointments/${id}/revert`;
                     rForm.onsubmit = () => confirm('Bạn có chắc chắn muốn hoàn tác tiếp đón cho bệnh nhân này? Lịch hẹn sẽ quay về trạng thái Đã xác nhận và lượt khám chờ sẽ bị hủy.');
                 }
             }

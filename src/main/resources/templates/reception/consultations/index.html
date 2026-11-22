@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Yêu cầu tư vấn đặt lịch Guest')}"></head>
+
+<body class="app-body">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('appointments')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Yêu cầu tư vấn đặt lịch Guest')}"></header>
+
+        <main id="reception-consultation-area" class="app-content p-3"
+              th:attr="data-can-manage=${canManage},data-can-assign-doctor=${canAssignDoctor},data-is-admin=${isAdmin},data-current-user-id=${currentUserId},data-initial-branch-id=${currentBranchId}">
+            <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
+            <link rel="stylesheet" th:href="@{/css/reception-appointments.css}">
+            <link rel="stylesheet" th:href="@{/css/reception-workflow-navigation.css}">
+
+            <style>
+                .rc-badge-pulse {
+                    background: #dc2626;
+                    color: #ffffff;
+                    border-radius: 999px;
+                    padding: 2px 8px;
+                    font-size: 12px;
+                    font-weight: 700;
+                }
+                .rc-status-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 5px 12px;
+                    border-radius: 999px;
+                    font-size: 12px;
+                    font-weight: 700;
+                    white-space: nowrap;
+                }
+                .rc-status-NEW { background: #fef3c7; color: #92400e; }
+                .rc-status-CONTACTED { background: #e0f2fe; color: #0369a1; }
+                .rc-status-CONVERTED { background: #dcfce7; color: #166534; }
+                .rc-status-CLOSED { background: #f1f5f9; color: #475569; }
+                .rc-section-card {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 14px;
+                    padding: 16px;
+                    margin-bottom: 16px;
+                }
+                .rc-timeline-item {
+                    border-left: 2px solid #cbd5e1;
+                    padding-left: 14px;
+                    padding-bottom: 12px;
+                    position: relative;
+                }
+                .rc-timeline-item::before {
+                    content: '';
+                    position: absolute;
+                    left: -5px;
+                    top: 4px;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: #0284c7;
+                }
+                .rc-drawer {
+                    width: min(680px, 100vw) !important;
+                }
+                .rc-candidate-card {
+                    background: #ffffff;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 10px;
+                    padding: 10px 12px;
+                    cursor: pointer;
+                }
+                .rc-candidate-card.is-selected {
+                    border-color: #0284c7;
+                    background: #f0f9ff;
+                }
+            </style>
+
+            <!-- HEADER -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="dv-header-icon"
+                         style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: #ffffff;">
+                        <i class="bi bi-headset"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <h1 class="dv-page-title mb-0">Yêu cầu tư vấn đặt lịch Guest</h1>
+                            <span id="headerOpenBadge" class="rc-badge-pulse d-none">0 chưa xử lý</span>
+                        </div>
+                        <p class="dv-page-subtitle mb-0">
+                            Tiếp nhận, liên hệ xác minh và chuyển yêu cầu từ khách vãng lai thành lịch hẹn chính thức
+                        </p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span id="pollingStatusText" class="badge bg-light text-secondary border px-3 py-2 rounded-3 fw-medium">
+                        <i class="bi bi-arrow-repeat me-1"></i> Tự động cập nhật mỗi 30 giây
+                    </span>
+                    <button type="button" id="btnManualRefresh"
+                            class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-arrow-clockwise"></i> Làm mới
+                    </button>
+                    <a th:href="@{/reception/appointments}"
+                       class="btn fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2"
+                       style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
+                        <i class="bi bi-calendar-check"></i> Quản lý lịch hẹn
+                    </a>
+                </div>
+            </div>
+
+            <!-- BANNER LỖI TOÀN TRANG -->
+            <div id="pageErrorBanner" class="alert alert-danger rounded-3 mb-3 d-none" role="alert"></div>
+
+            <!-- TOOLBAR TÌM KIẾM & LỌC -->
+            <div class="dv-toolbar-card mb-3">
+                <div class="row g-2 align-items-end mb-3">
+                    <div class="col-12 col-lg-4">
+                        <label for="consultSearchInput" class="form-label small fw-semibold text-secondary mb-1">Tìm kiếm</label>
+                        <div class="dv-search-box" style="min-width: 0;">
+                            <i class="bi bi-search search-lead-icon"></i>
+                            <input id="consultSearchInput" type="search"
+                                   placeholder="Tên khách, số điện thoại, mã yêu cầu..." autocomplete="off">
+                            <button type="button" class="search-clear-btn" id="btnClearConsultSearch" title="Xóa">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-3" id="branchFilterCol">
+                        <label for="consultBranchFilter" class="form-label small fw-semibold text-secondary mb-1">Chi nhánh</label>
+                        <select id="consultBranchFilter" class="form-select dv-adv-control">
+                            <option value="">Đang tải...</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <label for="consultFromDate" class="form-label small fw-semibold text-secondary mb-1">Từ ngày gửi</label>
+                        <input type="date" id="consultFromDate" class="form-control dv-adv-control">
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <label for="consultToDate" class="form-label small fw-semibold text-secondary mb-1">Đến ngày gửi</label>
+                        <input type="date" id="consultToDate" class="form-control dv-adv-control">
+                    </div>
+                    <div class="col-6 col-md-12 col-lg-1 d-grid">
+                        <button type="button" id="btnResetFilters"
+                                class="btn btn-outline-secondary rounded-3 fw-semibold" style="height: 44px;">
+                            Đặt lại
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PHÂN LOẠI TRẠNG THÁI -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 border-top"
+                     style="border-color: #f1f5f9 !important;">
+                    <div class="dv-quick-segment flex-wrap" id="statusFilterGroup" role="group" aria-label="Trạng thái yêu cầu">
+                        <button type="button" class="dv-seg-btn active" data-status="">
+                            Tất cả <span class="dv-seg-count" id="cntAll">0</span>
+                        </button>
+                        <button type="button" class="dv-seg-btn" data-status="NEW">
+                            Yêu cầu mới <span class="dv-seg-count" id="cntNew">0</span>
+                        </button>
+                        <button type="button" class="dv-seg-btn" data-status="CONTACTED">
+                            Đã liên hệ <span class="dv-seg-count" id="cntContacted">0</span>
+                        </button>
+                        <button type="button" class="dv-seg-btn" data-status="CONVERTED">
+                            Đã chuyển lịch <span class="dv-seg-count" id="cntConverted">0</span>
+                        </button>
+                        <button type="button" class="dv-seg-btn" data-status="CLOSED">
+                            Đã đóng <span class="dv-seg-count" id="cntClosed">0</span>
+                        </button>
+                    </div>
+                    <div class="text-muted small fw-medium" id="resultCountText">0 yêu cầu</div>
+                </div>
+            </div>
+
+            <!-- LOADING STATE -->
+            <div id="loadingState" class="text-center py-5 d-none">
+                <div class="spinner-border text-primary mb-2" role="status"></div>
+                <div class="text-muted small">Đang tải danh sách yêu cầu tư vấn...</div>
+            </div>
+
+            <!-- EMPTY STATE -->
+            <div id="emptyState" class="dv-grid-card p-5 text-center d-none">
+                <i class="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
+                <h6 class="fw-bold text-dark mb-1">Không có yêu cầu tư vấn phù hợp</h6>
+                <p class="text-muted small mb-3">Thử thay đổi bộ lọc trạng thái, từ khóa tìm kiếm hoặc khoảng ngày gửi.</p>
+                <button type="button" id="btnEmptyReset" class="btn btn-outline-primary btn-sm rounded-3 px-3">
+                    Xem tất cả yêu cầu trong chi nhánh
+                </button>
+            </div>
+
+            <!-- DESKTOP COMPACT TABLE (KHÔNG TRÀN NGANG) -->
+            <div id="desktopTableCard" class="dv-grid-card d-none d-lg-block">
+                <div class="table-responsive">
+                    <table class="dv-amis-table table-hover align-middle mb-0" style="width: 100%; table-layout: fixed;">
+                        <thead>
+                        <tr>
+                            <th style="width: 14%;">Mã YC / Ngày gửi</th>
+                            <th style="width: 18%;">Khách hàng</th>
+                            <th style="width: 28%;">Nhu cầu khám</th>
+                            <th style="width: 17%;">Phụ trách &amp; Cập nhật</th>
+                            <th style="width: 11%;">Trạng thái</th>
+                            <th style="width: 12%;" class="text-end">Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody id="consultTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- MOBILE CARD LIST -->
+            <div id="consultMobileCards" class="d-lg-none d-flex flex-column gap-2"></div>
+
+            <!-- PAGINATION -->
+            <div id="paginationBar" class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3 d-none">
+                <div class="small text-muted" id="paginationInfo">Trang 1 / 1</div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" id="btnPrevPage" class="btn btn-outline-secondary btn-sm rounded-3 px-3">
+                        <i class="bi bi-chevron-left"></i> Trước
+                    </button>
+                    <button type="button" id="btnNextPage" class="btn btn-outline-secondary btn-sm rounded-3 px-3">
+                        Sau <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- DRAWER CHI TIẾT & XỬ LÝ YÊU CẦU TƯ VẤN -->
+<div class="offcanvas offcanvas-end rc-drawer" tabindex="-1" id="consultationDetailDrawer" aria-labelledby="drawerTitle">
+    <div class="offcanvas-header border-bottom bg-white py-3 px-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <h5 class="offcanvas-title fw-bold mb-0" id="drawerTitle">Chi tiết yêu cầu tư vấn</h5>
+                <span id="drawerStatusBadge" class="rc-status-pill rc-status-NEW">NEW</span>
+            </div>
+            <div class="text-muted small mt-1" id="drawerSubtitle">—</div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Đóng"></button>
+    </div>
+
+    <div class="offcanvas-body px-4 py-3 bg-white">
+        <!-- CẢNH BÁO POLLING NẾU NGƯỜI KHÁC VỪA CẬP NHẬT -->
+        <div id="drawerStaleBanner" class="alert alert-warning rounded-3 d-none align-items-center justify-content-between gap-2 py-2 px-3">
+            <span class="small fw-medium">Yêu cầu này vừa được cập nhật mới trên hệ thống bởi người khác.</span>
+            <button type="button" id="btnReloadDrawerDetail" class="btn btn-sm btn-warning fw-semibold">Tải lại chi tiết</button>
+        </div>
+
+        <!-- THÔNG BÁO LỖI / THÀNH CÔNG TRONG DRAWER -->
+        <div id="drawerAlertBox" class="alert rounded-3 d-none py-2 px-3 small" role="alert"></div>
+
+        <!-- THÔNG TIN KHÁCH GỬI -->
+        <div class="rc-section-card">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <h6 class="fw-bold text-dark mb-0">Thông tin khách đặt tư vấn</h6>
+                <span class="small text-muted" id="drawerBranchName">—</span>
+            </div>
+            <div class="row g-2 small">
+                <div class="col-sm-6">
+                    <div class="text-muted">Khách hàng</div>
+                    <div class="fw-bold text-dark" id="dGuestName">—</div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="text-muted">Số điện thoại</div>
+                    <div class="fw-bold text-primary" id="dGuestPhone">—</div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="text-muted">Thời gian mong muốn</div>
+                    <div class="fw-semibold text-dark" id="dPreferredWhen">—</div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="text-muted">Dịch vụ quan tâm</div>
+                    <div class="fw-semibold text-dark" id="dPreferredService">—</div>
+                </div>
+                <div class="col-12">
+                    <div class="text-muted">Nguyện vọng bác sĩ</div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="fw-semibold text-dark" id="dPreferredDoctor">—</span>
+                        <span id="dPreferredDoctorStatusBadge" class="badge d-none"></span>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="text-muted">Ghi chú khách gửi</div>
+                    <div class="bg-white border rounded-3 p-2 text-dark" id="dGuestNotes">—</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BƯỚC 1: PHỤ TRÁCH & BÀN GIAO -->
+        <div class="rc-section-card">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <div>
+                    <h6 class="fw-bold text-dark mb-0">Phụ trách xử lý</h6>
+                    <div class="small text-muted mt-1" id="dHandlerSummary">Chưa có lễ tân nhận xử lý</div>
+                </div>
+                <div class="d-flex align-items-center gap-2" id="claimHandoverBtnGroup">
+                    <button type="button" id="btnClaimConsultation"
+                            class="btn btn-sm fw-semibold rounded-3 d-none"
+                            style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;">
+                        <i class="bi bi-hand-index-thumb me-1"></i> Nhận xử lý
+                    </button>
+                    <button type="button" id="btnToggleHandover"
+                            class="btn btn-sm btn-outline-secondary fw-semibold rounded-3 d-none">
+                        <i class="bi bi-arrow-left-right me-1"></i> Bàn giao
+                    </button>
+                </div>
+            </div>
+
+            <div id="handoverFormBox" class="mt-3 pt-3 border-top d-none">
+                <div class="row g-2">
+                    <div class="col-sm-6">
+                        <label for="handoverTargetSelect" class="form-label small fw-semibold mb-1">Nhân sự nhận bàn giao</label>
+                        <select id="handoverTargetSelect" class="form-select form-select-sm rounded-3"></select>
+                    </div>
+                    <div class="col-sm-6">
+                        <label for="handoverReasonInput" class="form-label small fw-semibold mb-1">Lý do bàn giao *</label>
+                        <input type="text" id="handoverReasonInput" class="form-control form-control-sm rounded-3"
+                               placeholder="Ví dụ: Chuyển ca, hỗ trợ khách...">
+                    </div>
+                    <div class="col-12 d-flex justify-content-end gap-2 mt-2">
+                        <button type="button" id="btnCancelHandover" class="btn btn-sm btn-outline-secondary rounded-3">Hủy</button>
+                        <button type="button" id="btnSubmitHandover" class="btn btn-sm btn-primary rounded-3">Xác nhận bàn giao</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LINK KẾT QUẢ NẾU ĐÃ CONVERTED HOẶC LÝ DO ĐÓNG -->
+        <div id="terminalBannerCard" class="rc-section-card d-none">
+            <h6 class="fw-bold text-dark mb-1" id="terminalTitle">Kết quả xử lý</h6>
+            <div class="small text-dark" id="terminalDesc">—</div>
+            <a id="terminalAppointmentLink" href="#" class="btn btn-sm btn-outline-primary rounded-3 mt-2 d-none">
+                Xem chi tiết lịch hẹn <i class="bi bi-box-arrow-up-right ms-1"></i>
+            </a>
+        </div>
+
+        <!-- BƯỚC 2: GHI NHẬN LIÊN HỆ -->
+        <div class="rc-section-card" id="contactSectionCard">
+            <h6 class="fw-bold text-dark mb-2">Ghi nhận quá trình liên hệ</h6>
+            <form id="contactForm" class="mb-3">
+                <div class="row g-2">
+                    <div class="col-sm-5">
+                        <label for="contactResultSelect" class="form-label small fw-semibold mb-1">Kết quả gọi *</label>
+                        <select id="contactResultSelect" class="form-select form-select-sm rounded-3">
+                            <option value="CONNECTED">Đã nghe máy / Trao đổi</option>
+                            <option value="CALLBACK_LATER">Hẹn gọi lại sau</option>
+                            <option value="NO_ANSWER">Không nghe máy</option>
+                            <option value="BUSY">Máy bận</option>
+                            <option value="WRONG_NUMBER">Sai số / Nhầm người</option>
+                            <option value="DECLINED">Khách từ chối / Hủy nhu cầu</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-7">
+                        <label for="contactNotesInput" class="form-label small fw-semibold mb-1">Ghi chú cuộc gọi *</label>
+                        <input type="text" id="contactNotesInput" class="form-control form-control-sm rounded-3"
+                               placeholder="Tóm tắt nội dung trao đổi với khách..." maxlength="1000">
+                    </div>
+                    <div class="col-12 d-flex justify-content-end mt-2">
+                        <button type="submit" id="btnSubmitContact"
+                                class="btn btn-sm fw-semibold rounded-3"
+                                style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;">
+                            <i class="bi bi-telephone-plus me-1"></i> Lưu lần liên hệ
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- BƯỚC 3 & 4: XÁC MINH HỒ SƠ & CHUYỂN THÀNH LỊCH HẸN -->
+        <div class="rc-section-card" id="verifyAndConvertSection">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <h6 class="fw-bold text-dark mb-0">Xác minh hồ sơ &amp; Tạo lịch hẹn chính thức</h6>
+                <span class="badge bg-light text-secondary border">Bước 3 &amp; 4</span>
+            </div>
+
+            <!-- TRA CỨU XÁC MINH -->
+            <div class="input-group input-group-sm mb-2">
+                <input type="text" id="verifyQueryInput" class="form-control rounded-start-3"
+                       placeholder="Tra lại theo SĐT, CCCD hoặc Mã BN (BN...)">
+                <button type="button" id="btnVerifyPatient" class="btn btn-outline-primary rounded-end-3 fw-semibold">
+                    Kiểm tra hồ sơ
+                </button>
+            </div>
+            <div id="verifyMessageBanner" class="alert alert-info py-2 px-3 small rounded-3 mb-2 d-none"></div>
+            <div id="verifyCandidatesList" class="d-flex flex-column gap-2 mb-3"></div>
+
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="chkCreateNewPatient">
+                <label class="form-check-label small fw-semibold text-dark" for="chkCreateNewPatient">
+                    Khách chưa có hồ sơ — Tạo hồ sơ bệnh nhân mới sau khi đã xác minh thông tin
+                </label>
+            </div>
+
+            <!-- FORM TẠO HỒ SƠ MỚI -->
+            <div id="newPatientFieldsBox" class="bg-white border rounded-3 p-3 mb-3 d-none">
+                <div class="row g-2">
+                    <div class="col-sm-6">
+                        <label for="npName" class="form-label small fw-semibold mb-1">Họ tên bệnh nhân *</label>
+                        <input type="text" id="npName" class="form-control form-control-sm rounded-3" maxlength="100">
+                    </div>
+                    <div class="col-sm-6">
+                        <label for="npPhone" class="form-label small fw-semibold mb-1">SĐT xác minh *</label>
+                        <input type="text" id="npPhone" class="form-control form-control-sm rounded-3" maxlength="20">
+                    </div>
+                    <div class="col-sm-4">
+                        <label for="npDob" class="form-label small fw-semibold mb-1">Ngày sinh *</label>
+                        <input type="date" id="npDob" class="form-control form-control-sm rounded-3">
+                    </div>
+                    <div class="col-sm-4">
+                        <label for="npGender" class="form-label small fw-semibold mb-1">Giới tính *</label>
+                        <select id="npGender" class="form-select form-select-sm rounded-3">
+                            <option value="Nam">Nam</option>
+                            <option value="Nữ">Nữ</option>
+                            <option value="Khác">Khác</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-4">
+                        <label for="npIdCard" class="form-label small fw-semibold mb-1">CCCD (nếu có)</label>
+                        <input type="text" id="npIdCard" class="form-control form-control-sm rounded-3" maxlength="20">
+                    </div>
+                    <div class="col-12">
+                        <label for="npAddress" class="form-label small fw-semibold mb-1">Địa chỉ *</label>
+                        <input type="text" id="npAddress" class="form-control form-control-sm rounded-3" maxlength="255">
+                    </div>
+                    <div class="col-sm-4">
+                        <label for="npGuardianName" class="form-label small fw-semibold mb-1">Người giám hộ (&lt;18t)</label>
+                        <input type="text" id="npGuardianName" class="form-control form-control-sm rounded-3" maxlength="100">
+                    </div>
+                    <div class="col-sm-4">
+                        <label for="npGuardianPhone" class="form-label small fw-semibold mb-1">SĐT giám hộ</label>
+                        <input type="text" id="npGuardianPhone" class="form-control form-control-sm rounded-3" maxlength="20">
+                    </div>
+                    <div class="col-sm-4">
+                        <label for="npGuardianRel" class="form-label small fw-semibold mb-1">Quan hệ</label>
+                        <input type="text" id="npGuardianRel" class="form-control form-control-sm rounded-3" placeholder="Cha/Mẹ" maxlength="50">
+                    </div>
+                </div>
+            </div>
+
+            <!-- THÔNG SỐ CHUYỂN ĐỔI THÀNH LỊCH HẸN -->
+            <div class="row g-2">
+                <div class="col-sm-4">
+                    <label for="convDate" class="form-label small fw-semibold mb-1">Ngày hẹn *</label>
+                    <input type="date" id="convDate" class="form-control form-control-sm rounded-3">
+                </div>
+                <div class="col-sm-4">
+                    <label for="convSession" class="form-label small fw-semibold mb-1">Buổi khám *</label>
+                    <select id="convSession" class="form-select form-select-sm rounded-3">
+                        <option value="MORNING">Buổi sáng</option>
+                        <option value="AFTERNOON">Buổi chiều</option>
+                        <option value="EVENING">Buổi tối</option>
+                    </select>
+                </div>
+                <div class="col-sm-4">
+                    <label for="convTime" class="form-label small fw-semibold mb-1">Giờ dự kiến</label>
+                    <input type="time" id="convTime" class="form-control form-control-sm rounded-3">
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="checkbox" id="chkFlexibleTime">
+                        <label class="form-check-label text-muted" style="font-size: 11px;" for="chkFlexibleTime">
+                            Linh động cả ca
+                        </label>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <label for="convService" class="form-label small fw-semibold mb-1">Dịch vụ thực hiện</label>
+                    <select id="convService" class="form-select form-select-sm rounded-3">
+                        <option value="">Khám &amp; tư vấn tổng quát</option>
+                    </select>
+                </div>
+                <div class="col-sm-6" id="convDoctorCol">
+                    <label for="convDoctorId" class="form-label small fw-semibold mb-1">Bác sĩ chỉ định</label>
+                    <select id="convDoctorId" class="form-select form-select-sm rounded-3">
+                        <option value="">Tự động phân bổ theo ca trực</option>
+                    </select>
+                    <div id="convDoctorHint" class="text-muted mt-1" style="font-size: 11px;">
+                        Hệ thống kiểm tra lịch trực và sức chứa khi tạo lịch.
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label for="convSymptoms" class="form-label small fw-semibold mb-1">Nội dung / Triệu chứng hẹn</label>
+                    <textarea id="convSymptoms" rows="2" class="form-control form-control-sm rounded-3" maxlength="500"></textarea>
+                </div>
+                <div class="col-12 d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="chkIsTentative">
+                        <label class="form-check-label small text-muted" for="chkIsTentative">
+                            Đặt tạm trạng thái PENDING (Chờ xác nhận lại)
+                        </label>
+                    </div>
+                    <button type="button" id="btnConvertToAppointment"
+                            class="btn btn-primary fw-semibold px-4 py-2 rounded-3 shadow-sm">
+                        <i class="bi bi-calendar-plus me-1"></i> Xác nhận &amp; Tạo Lịch Hẹn
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ĐÓNG YÊU CẦU -->
+        <div class="rc-section-card" id="closeSectionCard">
+            <div class="d-flex align-items-center justify-content-between">
+                <h6 class="fw-bold text-dark mb-0">Đóng yêu cầu tư vấn</h6>
+                <button type="button" id="btnToggleCloseBox" class="btn btn-sm btn-outline-danger rounded-3">
+                    Đóng yêu cầu
+                </button>
+            </div>
+            <div id="closeFormBox" class="mt-2 pt-2 border-top d-none">
+                <label for="closeReasonInput" class="form-label small fw-semibold mb-1">Lý do đóng *</label>
+                <input type="text" id="closeReasonInput" class="form-control form-control-sm rounded-3 mb-2"
+                       maxlength="500" placeholder="Ví dụ: Không liên hệ được nhiều lần / Khách không còn nhu cầu...">
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="button" id="btnCancelClose" class="btn btn-sm btn-outline-secondary rounded-3">Hủy</button>
+                    <button type="button" id="btnConfirmClose" class="btn btn-sm btn-danger rounded-3">Xác nhận đóng</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LỊCH SỬ XỬ LÝ BẤT BIẾN -->
+        <div class="rc-section-card mb-0">
+            <h6 class="fw-bold text-dark mb-3">Lịch sử tiếp nhận &amp; liên hệ</h6>
+            <div id="drawerLogsTimeline" class="d-flex flex-column"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/reception-consultations.js}" defer></script>
+</body>
+</html>

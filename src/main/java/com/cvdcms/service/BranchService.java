@@ -12,6 +12,7 @@ import com.cvdcms.entity.enums.AppointmentStatus;
 import com.cvdcms.entity.enums.AssignmentStatus;
 import com.cvdcms.entity.enums.ChairStatus;
 import com.cvdcms.entity.enums.ScheduleStatus;
+import com.cvdcms.repository.AppointmentBookingLockRepository;
 import com.cvdcms.repository.AppointmentRepository;
 import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.DentalChairRepository;
@@ -20,6 +21,8 @@ import com.cvdcms.repository.StaffProfileRepository;
 import com.cvdcms.repository.StaffScheduleRepository;
 import com.cvdcms.repository.UserRepository;
 import com.cvdcms.repository.WorkShiftRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Isolation;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +47,9 @@ public class BranchService {
     private final DentalChairRepository dentalChairRepository;
     private final StaffScheduleRepository staffScheduleRepository;
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
+
+    @Autowired(required = false)
+    private AppointmentBookingLockRepository bookingLockRepository;
 
     // Constructor injection: Spring tự truyền Repository vào Service.
     public BranchService(
@@ -189,9 +195,11 @@ public class BranchService {
 
     // Ngừng hoạt động chi nhánh thay vì xóa vật lý.
     // Xử lý tự động: Chặn nếu còn lịch hẹn dở dang, bảo trì ghế nha, hủy ca trực tương lai.
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void deactivateBranch(Long branchId) {
-        Branch branch = branchRepository.findById(branchId)
+        Branch branch = (bookingLockRepository != null
+                ? bookingLockRepository.findByIdForBooking(branchId)
+                : branchRepository.findById(branchId))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chi nhánh."));
 
         LocalDate today = LocalDate.now();

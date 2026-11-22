@@ -6512,9 +6512,18 @@
                 try {
                     const bId = document.getElementById('ptApptBranchId')?.value || '';
                     const res = await fetch(`/reception/appointments/api/patients?query=${encodeURIComponent(q)}&branchId=${encodeURIComponent(bId)}`, { credentials: 'same-origin' });
-                    const list = await res.json().catch(() => []);
                     resultsEl.replaceChildren();
-                    if (!list.length) {
+                    if (!res.ok) {
+                        const errBody = await res.json().catch(() => ({}));
+                        const warn = document.createElement('div');
+                        warn.className = 'patient-autocomplete-item text-danger';
+                        warn.textContent = errBody.message || 'Không thể tải danh sách khách hàng.';
+                        resultsEl.appendChild(warn);
+                        resultsEl.style.display = 'block';
+                        return;
+                    }
+                    const list = await res.json().catch(() => []);
+                    if (!Array.isArray(list) || !list.length) {
                         resultsEl.innerHTML = '<div class="patient-autocomplete-item text-muted">Không tìm thấy khách hàng phù hợp</div>';
                     } else {
                         list.forEach(p => {

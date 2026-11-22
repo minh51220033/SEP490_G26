@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 190">
+  <rect width="360" height="190" fill="#0b1325"/>
+  <path d="M90 120 Q180 112 270 120 L270 190 L90 190 Z" fill="#1e293b" opacity="0.65"/>
+  <path d="M108 58 C108 42, 134 42, 134 58 L130 105 L125 148 L117 148 L112 105 Z" fill="#64748b" stroke="#94a3b8" stroke-width="1.5"/>
+  <path d="M150 50 C150 32, 206 32, 206 50 L204 94 L196 154 L184 154 L180 112 L174 156 L162 156 L154 94 Z" fill="#94a3b8" stroke="#e2e8f0" stroke-width="2"/>
+  <path d="M162 56 Q166 105 168 150" stroke="#f8fafc" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M178 54 Q179 102 180 140" stroke="#f8fafc" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M194 56 Q191 105 190 149" stroke="#f8fafc" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <rect x="156" y="42" width="44" height="22" rx="4" fill="#e2e8f0" opacity="0.85"/>
+  <path d="M222 56 C222 40, 256 40, 256 56 L252 105 L246 148 L234 148 L226 105 Z" fill="#64748b" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="14" y="22" fill="#38bdf8" font-family="monospace" font-size="11" font-weight="700">R16 · PERIAPICAL · XQ-16-001</text>
+  <text x="14" y="178" fill="#94a3b8" font-family="monospace" font-size="10">Ống tủy trám bít khít, không thấu quang chóp</text>
+</svg>

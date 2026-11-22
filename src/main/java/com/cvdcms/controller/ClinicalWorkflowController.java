@@ -24,6 +24,9 @@ public class ClinicalWorkflowController {
     private final ClinicalWorkflowService workflowService;
     private final PerformedServiceService performedServiceService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.UserRepository userRepository;
+
     @GetMapping
     public String getWorkflowsPage(
             @RequestParam(defaultValue = "0") int page,
@@ -31,6 +34,7 @@ public class ClinicalWorkflowController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long serviceId,
             @RequestParam(required = false) String status,
+            jakarta.servlet.http.HttpSession session,
             Model model) {
         if (size != 10 && size != 25 && size != 50 && size != 100) {
             size = 10;
@@ -66,9 +70,11 @@ public class ClinicalWorkflowController {
         long fromItem = totalItems == 0 ? 0 : Math.min(((long) currentPage * size) + 1, toItem);
 
         List<ServiceDTO> activeServices = performedServiceService.getAllActiveServices();
+        List<com.cvdcms.DTO.ServiceComboDTO> combos = workflowService.getAllCombos(false);
 
         model.addAttribute("workflows", pagedWorkflows);
         model.addAttribute("allWorkflows", workflowService.getAllTemplates());
+        model.addAttribute("combos", combos);
         model.addAttribute("items", pagedWorkflows);
         model.addAttribute("totalItems", totalItems);
         model.addAttribute("currentPage", currentPage);
@@ -80,7 +86,30 @@ public class ClinicalWorkflowController {
         model.addAttribute("selectedServiceId", serviceId);
         model.addAttribute("selectedStatus", status);
         model.addAttribute("activeServices", activeServices);
+        model.addAttribute("frameCustomFields", workflowService.getAllFrameCustomFields());
+        model.addAttribute("canManageWorkflowTemplates", resolveCanManageTemplates(session));
         model.addAttribute("activeMenu", "workflows");
         return "doctor/workflows";
+    }
+
+    private boolean resolveCanManageTemplates(jakarta.servlet.http.HttpSession session) {
+        Object principal = session != null ? session.getAttribute("loggedInUser") : null;
+        if (!(principal instanceof com.cvdcms.entity.User user) || user.getUserId() == null) {
+            return false;
+        }
+        if (userRepository != null && userRepository.hasActiveAdminRole(user.getUserId())) {
+            return true;
+        }
+        java.util.Set<String> allowed = java.util.Set.of(
+                "ADMIN", "ROLE_ADMIN", "MANAGER", "ROLE_MANAGER",
+                "CLINIC_MANAGER", "ROLE_CLINIC_MANAGER", "QUAN_LY", "ROLE_QUAN_LY",
+                "TRUONG_KHOA", "ROLE_TRUONG_KHOA");
+        if (userRepository != null) {
+            List<String> roles = userRepository.findActiveRoleNamesByUserId(user.getUserId());
+            if (roles != null && roles.stream().filter(r -> r != null).map(r -> r.trim().toUpperCase(java.util.Locale.ROOT)).anyMatch(allowed::contains)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

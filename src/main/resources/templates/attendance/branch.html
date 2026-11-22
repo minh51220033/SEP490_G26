@@ -293,13 +293,15 @@
                             </thead>
                             <tbody id="attSummaryTbody">
                             <tr th:if="${#lists.isEmpty(staffSummary)}">
-                                <td colspan="9" class="p-0">
-                                    <div class="account-empty-state">
-                                        <div class="account-empty-icon">
+                                <td colspan="9" class="p-0 border-0 text-center" style="text-align: center !important; background: #ffffff;">
+                                    <div class="account-empty-state d-flex flex-column align-items-center justify-content-center text-center py-5 px-4 w-100"
+                                         style="text-align: center !important;">
+                                        <div class="account-empty-icon d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
+                                             style="width: 56px; height: 56px; background: #f1f5f9; color: #64748b; font-size: 24px; margin: 0 auto 12px !important;">
                                             <i class="bi bi-calendar2-x"></i>
                                         </div>
-                                        <h5 class="account-empty-title">Chưa có dữ liệu chấm công</h5>
-                                        <p class="account-empty-desc">
+                                        <h5 class="account-empty-title fw-bold text-dark mb-1 text-center" style="font-size: 16px;">Chưa có dữ liệu chấm công</h5>
+                                        <p class="account-empty-desc text-muted mb-0 text-center mx-auto" style="font-size: 13.5px; max-width: 480px;">
                                             Chưa có nhân sự nào được xếp ca hoặc phát sinh lượt chấm công tại chi nhánh này trong tháng.
                                         </p>
                                     </div>

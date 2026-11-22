@@ -816,6 +816,25 @@
                             </div>
                         </div>
                         <div class="mt-2 d-flex flex-wrap align-items-center gap-2" id="quickServiceSuggestionBar" style="display: none;"></div>
+                        <!-- Áp dụng Combo dịch vụ mẫu -->
+                        <div class="mt-2 pt-2 border-top d-flex flex-wrap align-items-center gap-2"
+                             th:if="${workflowCombos != null and !#lists.isEmpty(workflowCombos)}"
+                             id="comboQuickApplyBar">
+                            <span class="small fw-semibold text-primary text-nowrap">
+                                <i class="bi bi-collection-fill me-1"></i>Áp dụng nhanh Combo:
+                            </span>
+                            <select id="planComboSelect" class="form-select form-select-sm" style="max-width: 440px;">
+                                <option value="">-- Chọn gói Combo dịch vụ --</option>
+                                <option th:each="c : ${workflowCombos}" th:value="${c.comboId}"
+                                        th:text="${c.comboCode + ' · ' + c.comboName + ' (' + c.serviceCount + ' dịch vụ · ' + (c.totalBasePrice != null ? #numbers.formatInteger(c.totalBasePrice, 1, 'POINT') + ' đ' : '0 đ') + ')'}">
+                                    Combo
+                                </option>
+                            </select>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-3 px-3 py-1 fw-semibold text-nowrap"
+                                    onclick="applySelectedCombo()">
+                                <i class="bi bi-lightning-charge me-1"></i>Nạp Combo vào phác đồ
+                            </button>
+                        </div>
                     </div>
 
                     <div class="table-responsive">
@@ -1088,6 +1107,7 @@
     const SERVER_DIAGNOSES = /*[[${diagnoses}]]*/ [];
     const SERVER_COMMON_ICDS = /*[[${commonIcds}]]*/ [];
     const SERVER_WORKFLOW_TEMPLATES = /*[[${workflowTemplates}]]*/ [];
+    const SERVER_WORKFLOW_COMBOS = /*[[${workflowCombos}]]*/ [];
     /*]]>*/
 </script>
 <script th:inline="none">
@@ -1296,6 +1316,104 @@
                     ]
                 }
             ]
+        },
+        'PRESET_ORTHO': {
+            key: 'PRESET_ORTHO',
+            title: 'Quy trình Niềng răng chỉnh nha (Toàn hàm)',
+            short: 'Niềng răng chỉnh nha',
+            matchIcdPrefix: ['K07'],
+            defaultServiceNameMatch: ['Chỉnh nha', 'Niềng', 'Mắc cài', 'Khay trong'],
+            stepsPool: [
+                'Khám lâm sàng chỉnh nha, chụp ảnh mặt & lấy dấu nghiên cứu',
+                'Phân tích phim Panorama / Cephalo & lập phác đồ di chuyển răng',
+                'Vệ sinh men răng, gắn mắc cài / bàn giao khay chỉnh nha & đi dây cung',
+                'Tái khám định kỳ siết lực, thay thun / khay mới & gắn hàm duy trì'
+            ],
+            stages: [
+                {
+                    name: 'Chuẩn bị & Gắn khí cụ / Mắc cài chỉnh nha',
+                    days: 0,
+                    steps: [
+                        { name: 'Khám chỉnh nha, lấy dấu hàm & chụp phim phân tích sọ nghiêng', notes: 'Lập phác đồ chi tiết' },
+                        { name: 'Vệ sinh mặt răng, Etching & gắn hệ thống mắc cài / khay', notes: 'Đi dây cung khởi đầu' }
+                    ]
+                },
+                {
+                    name: 'Tái khám chỉnh lực định kỳ & Duy trì sau chỉnh nha',
+                    days: 30,
+                    steps: [
+                        { name: 'Theo dõi dịch chuyển răng & điều chỉnh dây cung / chun liên hàm', notes: 'Tái khám mỗi 4 tuần' },
+                        { name: 'Tháo mắc cài khi đạt khớp cắn & gắn hàm duy trì', notes: 'Chụp phim hoàn tất' }
+                    ]
+                }
+            ]
+        },
+        'PRESET_XRAY': {
+            key: 'PRESET_XRAY',
+            title: 'Quy trình Chụp phim X-quang nha khoa',
+            short: 'Chụp X-quang RHM',
+            matchIcdPrefix: [],
+            defaultServiceNameMatch: ['X-quang', 'Panorama', 'CBCT', 'Phim'],
+            stepsPool: [
+                'Kiểm tra chỉ định, mang áo chì bảo hộ & định vị tư thế bệnh nhân',
+                'Thực hiện chụp phim kỹ thuật số & kiểm tra chất lượng hình ảnh',
+                'Đọc phim chẩn đoán tổn thương & bàn giao kết quả cho bác sĩ điều trị'
+            ],
+            stages: [
+                {
+                    name: 'Thực hiện chụp & đọc phim X-quang nha khoa',
+                    days: 0,
+                    steps: [
+                        { name: 'Chuẩn bị bệnh nhân, định vị cảm biến & chụp phim', notes: 'Tuân thủ an toàn bức xạ' },
+                        { name: 'Đọc phim và chuyển kết quả lên hồ sơ bệnh án', notes: 'Lưu PACS / đính kèm ảnh' }
+                    ]
+                }
+            ]
+        },
+        'PRESET_EXAM': {
+            key: 'PRESET_EXAM',
+            title: 'Quy trình Khám & Tư vấn răng miệng tổng quát',
+            short: 'Khám tổng quát',
+            matchIcdPrefix: [],
+            defaultServiceNameMatch: ['Khám', 'Tư vấn'],
+            stepsPool: [
+                'Khai thác tiền sử bệnh lý, dị ứng thuốc & lý do đến khám',
+                'Thăm khám lâm sàng răng - nướu - khớp cắn toàn hàm',
+                'Tư vấn chẩn đoán & đề xuất hướng xử trí phù hợp'
+            ],
+            stages: [
+                {
+                    name: 'Khám lâm sàng tổng quát & Tư vấn điều trị',
+                    days: 0,
+                    steps: [
+                        { name: 'Khai thác bệnh sử, khám răng - nha chu & đánh giá khớp cắn', notes: 'Ghi nhận sơ đồ răng FDI' },
+                        { name: 'Giải thích tình trạng răng miệng & thống nhất kế hoạch', notes: 'Ký xác nhận kế hoạch' }
+                    ]
+                }
+            ]
+        },
+        'PRESET_WHITENING': {
+            key: 'PRESET_WHITENING',
+            title: 'Quy trình Tẩy trắng răng thẩm mỹ',
+            short: 'Tẩy trắng răng',
+            matchIcdPrefix: ['K03'],
+            defaultServiceNameMatch: ['Tẩy trắng', 'Whitening', 'Laser'],
+            stepsPool: [
+                'So màu răng ban đầu & cạo vôi đánh bóng mặt răng',
+                'Cách ly môi - má - nướu bằng Block-out Resin',
+                'Bôi thuốc tẩy trắng & chiếu đèn kích hoạt theo chu kỳ',
+                'Làm sạch thuốc, bôi Gel chống ê buốt & so màu sau tẩy'
+            ],
+            stages: [
+                {
+                    name: 'Tẩy trắng răng tại phòng khám',
+                    days: 0,
+                    steps: [
+                        { name: 'Đo màu răng ban đầu, che nướu cách ly mô mềm', notes: 'Chụp ảnh trước khi tẩy' },
+                        { name: 'Bôi thuốc & chiếu đèn kích hoạt tẩy trắng nhiều chu kỳ', notes: 'Bôi gel chống ê buốt' }
+                    ]
+                }
+            ]
         }
     };
 
@@ -1304,30 +1422,68 @@
         if (!serviceId) return null;
         const numId = Number(serviceId);
         if (Array.isArray(SERVER_WORKFLOW_TEMPLATES) && SERVER_WORKFLOW_TEMPLATES.length > 0) {
-            const found = SERVER_WORKFLOW_TEMPLATES.find(w => Number(w.serviceId) === numId);
-            if (found) return found;
+            const activeExact = SERVER_WORKFLOW_TEMPLATES.find(w =>
+                Number(w.serviceId) === numId && (!w.status || w.status === 'ACTIVE'));
+            if (activeExact) return activeExact;
+            const anyExact = SERVER_WORKFLOW_TEMPLATES.find(w => Number(w.serviceId) === numId);
+            if (anyExact) return anyExact;
         }
         return null;
+    }
+
+    // Tạo quy trình động theo đúng tên dịch vụ nếu chưa có quy trình chuẩn trong DB và không thuộc nhóm preset có sẵn
+    function buildDynamicPresetForService(srv) {
+        const sName = srv ? (srv.name || 'Dịch vụ điều trị') : 'Dịch vụ điều trị';
+        return {
+            key: 'PRESET_CUSTOM_SRV',
+            title: 'Quy trình chuẩn: ' + sName,
+            short: sName,
+            stepsPool: [
+                'Thăm khám, đánh giá chỉ định & chuẩn bị dụng cụ ' + sName,
+                'Tiến hành kỹ thuật ' + sName + ' theo chỉ định bác sĩ',
+                'Kiểm tra kết quả hoàn tất & hướng dẫn chăm sóc sau điều trị'
+            ],
+            stages: [
+                {
+                    name: sName,
+                    days: 0,
+                    steps: [
+                        { name: 'Chuẩn bị lâm sàng & thực hiện ' + sName, notes: 'Theo phác đồ chuyên môn' },
+                        { name: 'Kiểm tra sau thực hiện & dặn dò bệnh nhân', notes: 'Hoàn tất dịch vụ' }
+                    ]
+                }
+            ]
+        };
     }
 
     // Dự phòng preset chuẩn theo đặc điểm dịch vụ nếu chưa có quy trình riêng trong DB
     function getFallbackPresetForService(serviceId) {
         const srv = SERVICES_DICT[serviceId];
-        if (!srv) return PRESETS_DICT['PRESET_FILLING_O'];
+        if (!srv) return buildDynamicPresetForService(null);
         const sNameNorm = normalizeText(srv.name);
 
-        if (sNameNorm.includes('tuy') || sNameNorm.includes('noi nha')) {
+        if (sNameNorm.includes('tuy') || sNameNorm.includes('noi nha') || sNameNorm.includes('ong tuy')) {
             return PRESETS_DICT['PRESET_ENDO_MOLAR'];
         } else if (sNameNorm.includes('khon') || sNameNorm.includes('nho')) {
             return PRESETS_DICT['PRESET_WISDOM'];
+        } else if (sNameNorm.includes('chinh nha') || sNameNorm.includes('nieng') || sNameNorm.includes('mac cai') || sNameNorm.includes('khay trong') || sNameNorm.includes('ortho')) {
+            return PRESETS_DICT['PRESET_ORTHO'];
+        } else if (sNameNorm.includes('x-quang') || sNameNorm.includes('xquang') || sNameNorm.includes('panorama') || sNameNorm.includes('cbct') || sNameNorm.includes('phim')) {
+            return PRESETS_DICT['PRESET_XRAY'];
+        } else if (sNameNorm.includes('tay trang') || sNameNorm.includes('whitening')) {
+            return PRESETS_DICT['PRESET_WHITENING'];
+        } else if (sNameNorm.includes('kham') || sNameNorm.includes('tu van')) {
+            return PRESETS_DICT['PRESET_EXAM'];
         } else if (sNameNorm.includes('cao voi') || sNameNorm.includes('lay cao') || sNameNorm.includes('nuou') || sNameNorm.includes('nha chu')) {
             return PRESETS_DICT['PRESET_SCALING'];
         } else if (sNameNorm.includes('implant') || sNameNorm.includes('cay ghep')) {
             return PRESETS_DICT['PRESET_IMPLANT'];
-        } else if (sNameNorm.includes('su') || sNameNorm.includes('phuc hinh') || sNameNorm.includes('cercon') || sNameNorm.includes('zirconia') || sNameNorm.includes('titan')) {
+        } else if (sNameNorm.includes('tram') || sNameNorm.includes('han rang') || sNameNorm.includes('composite')) {
+            return PRESETS_DICT['PRESET_FILLING_O'];
+        } else if (sNameNorm.includes('su') || sNameNorm.includes('phuc hinh') || sNameNorm.includes('cercon') || sNameNorm.includes('zirconia') || sNameNorm.includes('titan') || sNameNorm.includes('veneer') || sNameNorm.includes('mao')) {
             return PRESETS_DICT['PRESET_CROWN'];
         } else {
-            return PRESETS_DICT['PRESET_FILLING_O'];
+            return buildDynamicPresetForService(srv);
         }
     }
 
@@ -1525,7 +1681,7 @@
         return [{ num: text, surf: '', disp: text, isFullJaw: false }];
     }
 
-    function addServiceFromPicker(overrideSrvId, overrideTeethStr, overrideQty) {
+    function addServiceFromPicker(overrideSrvId, overrideTeethStr, overrideQty, skipRender) {
         const comboInput = document.getElementById('serviceComboInput');
         const hiddenEl = document.getElementById('selectedServiceIdHidden');
         const teethInp = document.getElementById('quickAddTeethInput');
@@ -1563,6 +1719,7 @@
             presetKey: '',
             workflowTemplateId: null,
             workflowTemplateName: '',
+            hasExplicitStepPrices: false,
             stepsPool: [],
             stages: []
         };
@@ -1576,7 +1733,45 @@
             if (teethInp) teethInp.value = '';
             if (qtyInp) qtyInp.value = '1';
         }
+        if (!skipRender) {
+            renderAll();
+        }
+    }
+
+    // Tầng 1 Combo VTTech: nạp toàn bộ dịch vụ thành phần & quy trình bước của từng dịch vụ vào phác đồ
+    function applySelectedCombo() {
+        const sel = document.getElementById('planComboSelect');
+        if (!sel || !sel.value) {
+            showInlineBanner('Vui lòng chọn 1 gói Combo trước khi bấm Nạp Combo.', 'error');
+            sel?.focus();
+            return;
+        }
+        hideInlineBanner();
+        const combo = (SERVER_WORKFLOW_COMBOS || []).find(c => String(c.comboId) === String(sel.value));
+        if (!combo || !Array.isArray(combo.items) || combo.items.length === 0) {
+            showToast('Gói Combo chưa có dịch vụ thành phần hợp lệ.', true);
+            return;
+        }
+        let addedCount = 0;
+        combo.items.forEach(it => {
+            const sId = it.serviceId != null ? String(it.serviceId) : '';
+            if (!sId || !SERVICES_DICT[sId]) return;
+            const defaultScope = isPackageService(sId) ? 'Toàn hàm' : '';
+            addServiceFromPicker(sId, defaultScope, it.defaultQuantity || 1, true);
+            addedCount++;
+        });
+        if (addedCount === 0) {
+            showToast('Các dịch vụ trong Combo chưa sẵn sàng trong Bảng giá hoạt động.', true);
+            return;
+        }
+        const titleEl = document.getElementById('planTitleInput');
+        if (titleEl && !titleEl.value.trim()) {
+            titleEl.value = 'Kế hoạch: ' + combo.comboName;
+        }
+        recalculatePlanEndDate();
         renderAll();
+        showToast(`Đã nạp Combo "${combo.comboName}" (${addedCount} dịch vụ kèm quy trình bước).`, false);
+        sel.value = '';
     }
 
     function addServiceFromDiagnosis(diagId) {
@@ -1670,6 +1865,20 @@
         }, initialTeeth);
     }
 
+    // Phân bổ tổng đơn giá thành các bước sao cho tổng bằng đúng đơn giá dịch vụ (dồn phần lẻ vào bước cuối)
+    function distributeUnitPrices(totalPrice, count) {
+        const n = Math.max(1, count || 1);
+        const total = Math.max(0, Math.round(Number(totalPrice || 0)));
+        if (total === 0) return Array(n).fill(0);
+        const base = Math.floor(total / n);
+        const rem = total - (base * n);
+        const arr = [];
+        for (let i = 0; i < n; i++) {
+            arr.push(i === n - 1 ? base + rem : base);
+        }
+        return arr;
+    }
+
     // Khởi tạo / cập nhật quy trình kỹ thuật & lộ trình ĐI THEO DỊCH VỤ ĐƯỢC CHỌN
     function initServiceStagesFromCatalog(d) {
         const isPackage = isPackageService(d.serviceId);
@@ -1683,6 +1892,7 @@
         const srv = SERVICES_DICT[d.serviceId];
         const srvP = srv ? Number(srv.price || 0) : 0;
         d.serviceName = srv ? srv.name : (d.serviceName || 'Dịch vụ điều trị');
+        d.hasExplicitStepPrices = false;
 
         // 1. Kiểm tra quy trình kỹ thuật chuẩn trong DB (/doctor/workflows)
         const wf = getWorkflowForService(d.serviceId);
@@ -1692,75 +1902,80 @@
             d.presetKey = `WF_${wf.templateId}`;
             d.stepsPool = wf.steps.map(s => s.stepName);
 
-            const wfStepCount = wf.steps.length || 1;
-            const defStepP = srvP > 0 ? Math.round(srvP / wfStepCount) : 0;
+            const hasAdminStepPrices = wf.steps.some(st => st.stepPrice != null && Number(st.stepPrice) > 0);
+            d.hasExplicitStepPrices = hasAdminStepPrices;
+            const distributed = distributeUnitPrices(srvP, wf.steps.length);
 
             d.stages = [{
                 stageId: null,
                 name: `${wf.templateName}`,
                 days: 0,
-                steps: wf.steps.map(st => ({
+                steps: wf.steps.map((st, idx) => ({
                     planItemId: null,
                     status: 'PLANNED',
                     isLocked: false,
                     name: st.stepName || 'Thủ thuật kỹ thuật',
                     activeTeeth: [...activeTeethNums],
                     qty: isPackage ? d.qty : (activeTeethNums.length || 1),
-                    price: defStepP,
+                    price: hasAdminStepPrices ? Number(st.stepPrice || 0) : distributed[idx],
                     notes: st.stepDescription || 'Thực hiện chuẩn Bộ Y Tế (QĐ 3207/QĐ-BYT)'
                 }))
             }];
             return;
         }
 
-        // 2. Dự phòng theo preset chuẩn tương ứng với dịch vụ
+        // 2. Dự phòng theo preset chuẩn tương ứng với dịch vụ (hoặc quy trình mang chính tên dịch vụ)
         const p = getFallbackPresetForService(d.serviceId);
         d.presetKey = p.key;
         d.workflowTemplateId = null;
         d.workflowTemplateName = p.title;
         d.stepsPool = p.stepsPool || [];
 
-        let totalPresetSteps = 0;
-        p.stages.forEach(st => { if (st.steps) totalPresetSteps += st.steps.length; });
-        if (totalPresetSteps === 0) totalPresetSteps = 1;
-        const defStepP = srvP > 0 ? Math.round(srvP / totalPresetSteps) : 0;
+        let flatStepCount = 0;
+        p.stages.forEach(st => { if (st.steps) flatStepCount += st.steps.length; });
+        const distributed = distributeUnitPrices(srvP, flatStepCount);
+        let flatIdx = 0;
 
         d.stages = p.stages.map(st => ({
             stageId: null,
             name: st.name,
             days: st.days,
-            steps: st.steps.map(sp => ({
-                planItemId: null,
-                status: 'PLANNED',
-                isLocked: false,
-                name: sp.name,
-                activeTeeth: [...activeTeethNums],
-                qty: isPackage ? d.qty : (activeTeethNums.length || 1),
-                price: (sp.price !== undefined && sp.price !== null) ? sp.price : defStepP,
-                notes: sp.notes || ''
-            }))
+            steps: st.steps.map(sp => {
+                const autoP = distributed[Math.min(flatIdx, distributed.length - 1)] || 0;
+                flatIdx++;
+                return {
+                    planItemId: null,
+                    status: 'PLANNED',
+                    isLocked: false,
+                    name: sp.name,
+                    activeTeeth: [...activeTeethNums],
+                    qty: isPackage ? d.qty : (activeTeethNums.length || 1),
+                    price: (sp.price !== undefined && sp.price !== null) ? sp.price : autoP,
+                    notes: sp.notes || ''
+                };
+            })
         }));
     }
 
-    // Tự động phân bổ lại đơn giá dịch vụ đều cho các bước thực hiện (giữ nguyên khi đang sửa phác đồ đã khóa bước)
+    // Tự động phân bổ lại đơn giá dịch vụ đều cho các bước thực hiện (giữ nguyên khi đang sửa phác đồ đã khóa bước hoặc bước đã cấu hình giá riêng)
     function recalculateStepPrices(d) {
         if (!d || !d.stages) return;
-        if (EDIT_PLAN_ID || hasServiceLockedSteps(d)) return;
+        if (EDIT_PLAN_ID || hasServiceLockedSteps(d) || d.hasExplicitStepPrices) return;
 
         const srv = SERVICES_DICT[d.serviceId];
         const srvP = srv ? Number(srv.price || 0) : 0;
-        let totalSteps = 0;
-        d.stages.forEach(st => {
-            if (st.steps) totalSteps += st.steps.length;
-        });
-        if (totalSteps === 0) return;
-        const avgPrice = srvP > 0 ? Math.round(srvP / totalSteps) : 0;
+        const unlockedSteps = [];
         d.stages.forEach(st => {
             if (st.steps) {
                 st.steps.forEach(sp => {
-                    if (!sp.isLocked) sp.price = avgPrice;
+                    if (!sp.isLocked) unlockedSteps.push(sp);
                 });
             }
+        });
+        if (unlockedSteps.length === 0) return;
+        const distributed = distributeUnitPrices(srvP, unlockedSteps.length);
+        unlockedSteps.forEach((sp, idx) => {
+            sp.price = distributed[idx];
         });
     }
 
@@ -2024,6 +2239,9 @@
             if (EDIT_PLAN_ID && (!d.presetKey || d.presetKey === 'CUSTOM')) {
                 presetOpts += `<option value="CUSTOM" selected>Lộ trình hiện tại của phác đồ</option>`;
             }
+            if (d.presetKey === 'PRESET_CUSTOM_SRV') {
+                presetOpts += `<option value="PRESET_CUSTOM_SRV" selected>Quy trình theo dịch vụ: ${escapeHtml(srv.name)}</option>`;
+            }
             if (currentWf) {
                 const wfKey = `WF_${currentWf.templateId}`;
                 const stepCount = currentWf.steps ? currentWf.steps.length : (currentWf.stepCount || 0);
@@ -2140,42 +2358,15 @@
         const srv = SERVICES_DICT[d.serviceId];
         const srvP = srv ? Number(srv.price || 0) : 0;
 
-        if (presetOrWfKey.startsWith('WF_')) {
-            const wfId = Number(presetOrWfKey.replace('WF_', ''));
-            const wf = (SERVER_WORKFLOW_TEMPLATES || []).find(w => w.templateId === wfId);
-            if (wf) {
-                d.workflowTemplateId = wf.templateId;
-                d.workflowTemplateName = wf.templateName;
-                d.presetKey = presetOrWfKey;
-                d.stepsPool = (wf.steps || []).map(s => s.stepName);
-                const wfCount = (wf.steps && wf.steps.length > 0) ? wf.steps.length : 1;
-                const defP = srvP > 0 ? Math.round(srvP / wfCount) : 0;
-                d.stages = [{
-                    stageId: null,
-                    name: `${wf.templateName}`,
-                    days: 0,
-                    steps: (wf.steps || []).map(st => ({
-                        planItemId: null,
-                        status: 'PLANNED',
-                        isLocked: false,
-                        name: st.stepName || 'Thủ thuật',
-                        activeTeeth: [...activeTeethNums],
-                        qty: isPackage ? d.qty : (activeTeethNums.length || 1),
-                        price: defP,
-                        notes: st.stepDescription || 'Thực hiện chuẩn Bộ Y Tế (QĐ 3207/QĐ-BYT)'
-                    }))
-                }];
-            }
-        } else if (PRESETS_DICT[presetOrWfKey]) {
-            const p = PRESETS_DICT[presetOrWfKey];
+        if (presetOrWfKey === 'PRESET_CUSTOM_SRV') {
+            const p = buildDynamicPresetForService(srv);
             d.presetKey = p.key;
             d.workflowTemplateId = null;
             d.workflowTemplateName = p.title;
+            d.hasExplicitStepPrices = false;
             d.stepsPool = p.stepsPool || [];
-            let totalSteps = 0;
-            p.stages.forEach(st => { if (st.steps) totalSteps += st.steps.length; });
-            if (totalSteps === 0) totalSteps = 1;
-            const defP = srvP > 0 ? Math.round(srvP / totalSteps) : 0;
+            const distributed = distributeUnitPrices(srvP, 2);
+            let idx = 0;
             d.stages = p.stages.map(st => ({
                 stageId: null,
                 name: st.name,
@@ -2187,9 +2378,66 @@
                     name: sp.name,
                     activeTeeth: [...activeTeethNums],
                     qty: isPackage ? d.qty : (activeTeethNums.length || 1),
-                    price: (sp.price !== undefined && sp.price !== null) ? sp.price : defP,
+                    price: distributed[idx++] || 0,
                     notes: sp.notes || ''
                 }))
+            }));
+        } else if (presetOrWfKey.startsWith('WF_')) {
+            const wfId = Number(presetOrWfKey.replace('WF_', ''));
+            const wf = (SERVER_WORKFLOW_TEMPLATES || []).find(w => w.templateId === wfId);
+            if (wf) {
+                d.workflowTemplateId = wf.templateId;
+                d.workflowTemplateName = wf.templateName;
+                d.presetKey = presetOrWfKey;
+                d.stepsPool = (wf.steps || []).map(s => s.stepName);
+                const hasAdminStepPrices = (wf.steps || []).some(st => st.stepPrice != null && Number(st.stepPrice) > 0);
+                d.hasExplicitStepPrices = hasAdminStepPrices;
+                const distributed = distributeUnitPrices(srvP, (wf.steps || []).length);
+                d.stages = [{
+                    stageId: null,
+                    name: `${wf.templateName}`,
+                    days: 0,
+                    steps: (wf.steps || []).map((st, idx) => ({
+                        planItemId: null,
+                        status: 'PLANNED',
+                        isLocked: false,
+                        name: st.stepName || 'Thủ thuật',
+                        activeTeeth: [...activeTeethNums],
+                        qty: isPackage ? d.qty : (activeTeethNums.length || 1),
+                        price: hasAdminStepPrices ? Number(st.stepPrice || 0) : distributed[idx],
+                        notes: st.stepDescription || 'Thực hiện chuẩn Bộ Y Tế (QĐ 3207/QĐ-BYT)'
+                    }))
+                }];
+            }
+        } else if (PRESETS_DICT[presetOrWfKey]) {
+            const p = PRESETS_DICT[presetOrWfKey];
+            d.presetKey = p.key;
+            d.workflowTemplateId = null;
+            d.workflowTemplateName = p.title;
+            d.hasExplicitStepPrices = false;
+            d.stepsPool = p.stepsPool || [];
+            let totalSteps = 0;
+            p.stages.forEach(st => { if (st.steps) totalSteps += st.steps.length; });
+            const distributed = distributeUnitPrices(srvP, totalSteps);
+            let idx = 0;
+            d.stages = p.stages.map(st => ({
+                stageId: null,
+                name: st.name,
+                days: st.days,
+                steps: st.steps.map(sp => {
+                    const autoP = distributed[Math.min(idx, distributed.length - 1)] || 0;
+                    idx++;
+                    return {
+                        planItemId: null,
+                        status: 'PLANNED',
+                        isLocked: false,
+                        name: sp.name,
+                        activeTeeth: [...activeTeethNums],
+                        qty: isPackage ? d.qty : (activeTeethNums.length || 1),
+                        price: (sp.price !== undefined && sp.price !== null) ? sp.price : autoP,
+                        notes: sp.notes || ''
+                    };
+                })
             }));
         }
         recalculateStepPrices(d);
