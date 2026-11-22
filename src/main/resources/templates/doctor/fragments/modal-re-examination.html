@@ -30,16 +30,16 @@
         <div class="modal-dialog modal-lg modal-dialog-centered" style="z-index: 2051 !important; position: relative;">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; background: #ffffff !important; position: relative; z-index: 2052 !important;">
                 <!-- Modal Header -->
-                <div class="modal-header py-3 px-4" style="background: #ffffff; border-bottom: 1px solid #f1f5f9;">
-                    <div class="d-flex align-items-center gap-2.5">
-                        <div class="p-2 rounded bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                <div class="modal-header py-3 px-4 bg-white border-bottom text-dark">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 rounded d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: #e0f2fe; color: #0284c7;">
                             <i class="bi bi-calendar2-plus-fill fs-5"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title fw-bold text-dark mb-0" id="reExamBookingModalLabel" style="font-size: 1.15rem; letter-spacing: -0.01em;">
+                            <h5 class="modal-title fw-bold text-dark mb-0 fs-6" id="reExamBookingModalLabel">
                                 Hẹn tái khám sau điều trị (SCR-18.1)
                             </h5>
-                            <div class="text-muted small" style="font-size: 12.5px;">
+                            <div class="df-meta-tertiary">
                                 Lập lịch tái khám, kiểm tra vết thương, dặn dò &amp; phân công nhắc hẹn CSKH
                             </div>
                         </div>
@@ -50,15 +50,15 @@
                 <!-- Modal Body -->
                 <div class="modal-body p-4 pt-3">
                     <!-- Patient summary banner -->
-                    <div class="p-2.5 px-3 rounded-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2" style="background: #f8fafc; border: 1px solid #e2e8f0;">
-                        <div class="d-flex align-items-center gap-2.5">
-                            <div style="width: 36px; height: 36px; border-radius: 50%; background: #e0e7ff; color: #4338ca; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"
+                    <div class="df-soft-panel p-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width: 36px; height: 36px; border-radius: 50%; background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;"
                                  th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? #strings.substring(patient.fullName, 0, 1) : 'BN'}">BN</div>
                             <div>
                                 <div class="fw-bold text-dark" style="font-size: 14px;" th:text="${patient != null ? patient.fullName : 'Bệnh nhân'}">Bệnh nhân</div>
-                                <div class="small text-secondary" style="font-size: 12px;">
+                                <div class="df-meta-tertiary df-num">
                                     <span th:text="${'Mã KH: ' + (patient != null ? patient.patientCode : '---')}">Mã KH</span>
-                                    <span class="mx-1">•</span>
+                                    <span class="mx-1">·</span>
                                     <span th:text="${'SĐT: ' + (patient != null ? patient.phoneNumber : '---')}">SĐT</span>
                                 </div>
                             </div>
@@ -69,7 +69,7 @@
                         </div>
                     </div>
 
-                    <!-- Hàng 1: Mốc hẹn nhanh & Ngày hẹn tái khám (Cột dọc lựa chọn, không ngoặc chi tiết) -->
+                    <!-- Hàng 1: Mốc hẹn nhanh & Ngày hẹn tái khám -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label small fw-bold text-secondary mb-1">
@@ -89,23 +89,30 @@
                             <label class="form-label small fw-bold text-secondary mb-1">
                                 Ngày hẹn tái khám: <span class="text-danger">*</span>
                             </label>
-                            <input type="date" class="form-control rounded-3" id="reExamDateInput" required onchange="onManualDateChange()" style="font-size: 13.5px; padding: 7px 12px; border-color: #cbd5e1;">
-                            <div class="mt-1 small" id="reExamDateFormatted" style="font-size: 12px; color: #0284c7; font-weight: 600;"></div>
+                            <input type="date" class="form-control rounded-3 df-num" id="reExamDateInput" required onchange="onManualDateChange()" style="font-size: 13.5px; padding: 7px 12px; border-color: #cbd5e1;">
+                            <div class="mt-1 small df-num" id="reExamDateFormatted" style="font-size: 12px; color: #0284c7; font-weight: 600;"></div>
                         </div>
                     </div>
 
-                    <!-- Hàng 2: Buổi hẹn & Bác sĩ phụ trách -->
+                    <!-- Hàng 2: Buổi hẹn, Giờ hẹn & Bác sĩ phụ trách -->
                     <div class="row g-3 mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label small fw-bold text-secondary mb-1">Buổi hẹn:</label>
-                            <select class="form-select rounded-3" id="reExamSessionSelect" style="font-size: 13.5px; padding: 7px 12px; border-color: #cbd5e1;">
+                            <select class="form-select rounded-3" id="reExamSessionSelect" onchange="onReExamSessionChange(this.value)" style="font-size: 13.5px; padding: 7px 12px; border-color: #cbd5e1;">
                                 <option value="MORNING" selected>Sáng (08:00 - 12:00)</option>
                                 <option value="AFTERNOON">Chiều (13:30 - 17:30)</option>
                                 <option value="EVENING">Tối (17:30 - 20:30)</option>
                                 <option value="ANY">Bất kỳ giờ nào</option>
                             </select>
                         </div>
-                        <div class="col-md-6" th:with="activeDoc=${defaultActingDoctor != null ? defaultActingDoctor : (visit != null ? visit.primaryDoctor : null)}">
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-secondary mb-1">
+                                Giờ hẹn dự kiến: <span class="text-danger">*</span>
+                            </label>
+                            <input type="time" class="form-control rounded-3 df-num" id="reExamTimeInput" value="09:00"
+                                   style="font-size: 13.5px; padding: 7px 12px; border-color: #cbd5e1;">
+                        </div>
+                        <div class="col-md-5" th:with="activeDoc=${defaultActingDoctor != null ? defaultActingDoctor : (visit != null ? visit.primaryDoctor : null)}">
                             <label class="form-label small fw-bold text-secondary mb-1">Bác sĩ phụ trách tái khám:</label>
                             <select class="form-select rounded-3" id="reExamDoctorSelect"
                                     th:if="${isDoctorSelectorEditable == true}"
@@ -142,26 +149,26 @@
                             <option value="OTHER">Khác (Tự nhập chi tiết bên dưới)</option>
                         </select>
                         
-                        <!-- Ô nhập dặn dò chi tiết (được tự động điền khi chọn dropdown trên, bác sĩ có thể gõ thêm lời dặn) -->
+                        <!-- Ô nhập dặn dò chi tiết -->
                         <input type="text" class="form-control rounded-3" id="reExamReasonInput"
                                placeholder="Nội dung hoặc lời dặn chi tiết cho bệnh nhân..."
                                value="Tái khám cắt chỉ R38 &amp; kiểm tra lành thương"
                                style="font-size: 13.5px; padding: 7px 12px; border-color: #cbd5e1;">
 
-                        <!-- Ẩn select serviceId nguyên bản nhưng vẫn giữ id="reExamServiceSelect" để API nhận serviceId nếu cần -->
+                        <!-- Ẩn select serviceId nguyên bản -->
                         <select id="reExamServiceSelect" class="d-none">
                             <option value="">-- Khám thông thường --</option>
                             <option th:each="svc : ${activeServices}" th:value="${svc.serviceId}" th:text="${svc.serviceName}"></option>
                         </select>
                     </div>
 
-                    <!-- Hàng 4: Toggle Tự động nhắc hẹn CSKH (Nhỏ gọn, tinh tế) -->
-                    <div class="p-2.5 px-3 rounded-3 mb-3 d-flex align-items-center justify-content-between" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                    <!-- Hàng 4: Toggle Tự động nhắc hẹn CSKH -->
+                    <div class="df-soft-panel p-3 mb-3 d-flex align-items-center justify-content-between" id="reExamCareTaskPanel">
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-headset text-primary fs-5"></i>
                             <div>
                                 <span class="fw-semibold text-dark small">Tự động phân công CSKH / Lễ tân gọi nhắc hẹn trước 1 ngày</span>
-                                <div class="text-muted" style="font-size: 11.5px;">Đồng bộ vào danh sách "Nhắc hẹn tái khám" của phòng khám</div>
+                                <div class="df-meta-tertiary">Đồng bộ vào danh sách "Nhắc hẹn tái khám" của phòng khám</div>
                             </div>
                         </div>
                         <div class="form-check form-switch m-0">
@@ -169,17 +176,17 @@
                         </div>
                     </div>
 
-                    <!-- Hàng 5: Danh sách các lịch hẹn đã tạo (Collapsible dạng gập/mở, không choán diện tích) -->
+                    <!-- Hàng 5: Danh sách các lịch hẹn đã tạo -->
                     <div class="border rounded-3 bg-white" style="border-color: #e2e8f0 !important; overflow: hidden;">
                         <div class="d-flex align-items-center justify-content-between p-2 px-3 bg-light"
                              style="cursor: pointer; user-select: none;"
                              data-bs-toggle="collapse" data-bs-target="#collapseExistingReExams" aria-expanded="false">
                             <div class="d-flex align-items-center gap-2">
                                 <i class="bi bi-clock-history text-secondary"></i>
-                                <span class="small fw-bold text-secondary text-uppercase" style="font-size: 11px; letter-spacing: 0.04em;">
+                                <span class="small fw-semibold text-secondary">
                                     Lịch hẹn tái khám đã tạo của bệnh nhân:
                                 </span>
-                                <span class="badge rounded-pill bg-white text-dark border" id="reExamExistingCount" style="font-size: 11px;">0 lịch hẹn</span>
+                                <span class="badge rounded-pill bg-white text-dark border df-num" id="reExamExistingCount" style="font-size: 11px;">0 lịch hẹn</span>
                             </div>
                             <span class="small text-primary fw-semibold" style="font-size: 12px;">
                                 Xem danh sách <i class="bi bi-chevron-down ms-1"></i>
@@ -188,8 +195,8 @@
                         <div class="collapse" id="collapseExistingReExams">
                             <div class="p-2 border-top">
                                 <div class="table-responsive" style="max-height: 140px; overflow-y: auto;">
-                                    <table class="table table-sm table-hover align-middle mb-0" style="font-size: 12px;">
-                                        <thead class="table-light">
+                                    <table class="table df-clean-table table-hover align-middle mb-0" data-disable-floating-actions="true" style="font-size: 12px;">
+                                        <thead>
                                         <tr>
                                             <th>Mã hẹn</th>
                                             <th>Ngày hẹn</th>
@@ -218,9 +225,9 @@
                 </div>
 
                 <!-- Modal Footer -->
-                <div class="modal-footer py-2.5 px-4 bg-white border-top d-flex justify-content-end gap-2">
-                    <button type="button" class="btn btn-light btn-sm px-3.5 rounded-pill text-secondary fw-semibold border" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" class="btn btn-primary btn-sm px-4 fw-bold rounded-pill shadow-xs" onclick="submitReExamBooking()">
+                <div class="modal-footer py-2 px-4 bg-white border-top d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm px-3 rounded-pill fw-semibold" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary btn-sm px-4 fw-semibold rounded-pill" id="reExamSubmitBtn" onclick="submitReExamBooking()">
                         <i class="bi bi-check-circle-fill me-1"></i>
                         Xác nhận đặt hẹn tái khám
                     </button>
@@ -231,23 +238,76 @@
 
     <!-- Re-examination Frontend Logic -->
     <script>
-        function openReExamModal() {
-            const input = document.getElementById('reExamDateInput');
-            const presetSelect = document.getElementById('reExamPresetSelect');
-            const nextWeek = new Date();
-            nextWeek.setDate(nextWeek.getDate() + 7);
-            const yyyy = nextWeek.getFullYear();
-            const mm = String(nextWeek.getMonth() + 1).padStart(2, '0');
-            const dd = String(nextWeek.getDate()).padStart(2, '0');
-            if (input && !input.value) {
-                input.value = `${yyyy}-${mm}-${dd}`;
-            }
-            if (presetSelect && !presetSelect.value) {
-                presetSelect.value = '7';
-            }
-            updateReExamDateDisplay(input && input.value ? parseDateString(input.value) : nextWeek);
+        let editingReExamId = null;
+        let cachedPatientReExams = [];
 
-            loadPatientReExams();
+        function getDefaultTimeForSession(sessionVal) {
+            if (sessionVal === 'AFTERNOON') return '14:00';
+            if (sessionVal === 'EVENING') return '18:00';
+            return '09:00';
+        }
+
+        function escapeReExamHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function getTodayStrLocal() {
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        function onReExamSessionChange(sessionVal) {
+            const timeInput = document.getElementById('reExamTimeInput');
+            if (timeInput) {
+                timeInput.value = getDefaultTimeForSession(sessionVal);
+            }
+        }
+
+        function setReExamModalMode(isEdit, appointmentCode) {
+            const titleEl = document.getElementById('reExamBookingModalLabel');
+            const submitBtn = document.getElementById('reExamSubmitBtn');
+            const doctorSelect = document.getElementById('reExamDoctorSelect');
+            const reasonSelect = document.getElementById('reExamReasonSelect');
+            const reasonInput = document.getElementById('reExamReasonInput');
+            const carePanel = document.getElementById('reExamCareTaskPanel');
+
+            if (isEdit) {
+                if (titleEl) {
+                    titleEl.textContent = appointmentCode
+                        ? `Chỉnh sửa lịch hẹn tái khám (${appointmentCode})`
+                        : 'Chỉnh sửa lịch hẹn tái khám';
+                }
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Lưu thay đổi lịch hẹn';
+                }
+                if (doctorSelect && doctorSelect.tagName === 'SELECT') doctorSelect.disabled = true;
+                if (reasonSelect) reasonSelect.disabled = true;
+                if (reasonInput) reasonInput.readOnly = true;
+                if (carePanel) carePanel.classList.add('d-none');
+            } else {
+                if (titleEl) {
+                    titleEl.textContent = 'Hẹn tái khám sau điều trị (SCR-18.1)';
+                }
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Xác nhận đặt hẹn tái khám';
+                }
+                if (doctorSelect && doctorSelect.tagName === 'SELECT') doctorSelect.disabled = false;
+                if (reasonSelect) reasonSelect.disabled = false;
+                if (reasonInput) reasonInput.readOnly = false;
+                if (carePanel) carePanel.classList.remove('d-none');
+            }
+        }
+
+        function showReExamModalElement() {
             const modalEl = document.getElementById('reExamBookingModal');
             if (modalEl) {
                 // Đảm bảo modal luôn là con trực tiếp của thẻ body để triệt tiêu stacking context
@@ -267,6 +327,110 @@
                     });
                 }, 50);
             }
+        }
+
+        function openReExamModal() {
+            editingReExamId = null;
+            setReExamModalMode(false, null);
+
+            const input = document.getElementById('reExamDateInput');
+            const presetSelect = document.getElementById('reExamPresetSelect');
+            const sessionSelect = document.getElementById('reExamSessionSelect');
+            const timeInput = document.getElementById('reExamTimeInput');
+
+            const nextWeek = new Date();
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            const yyyy = nextWeek.getFullYear();
+            const mm = String(nextWeek.getMonth() + 1).padStart(2, '0');
+            const dd = String(nextWeek.getDate()).padStart(2, '0');
+
+            if (input) {
+                input.min = getTodayStrLocal();
+                input.value = `${yyyy}-${mm}-${dd}`;
+            }
+            if (presetSelect) {
+                presetSelect.value = '7';
+            }
+            if (sessionSelect) {
+                sessionSelect.value = 'MORNING';
+            }
+            if (timeInput) {
+                timeInput.value = getDefaultTimeForSession(sessionSelect ? sessionSelect.value : 'MORNING');
+            }
+            updateReExamDateDisplay(input && input.value ? parseDateString(input.value) : nextWeek);
+
+            loadPatientReExams();
+            showReExamModalElement();
+        }
+
+        function openEditReExamModal(source) {
+            let apptData = null;
+            if (source && typeof source === 'object' && typeof source.getAttribute === 'function') {
+                apptData = {
+                    appointmentId: source.getAttribute('data-id'),
+                    appointmentCode: source.getAttribute('data-code'),
+                    appointmentDate: source.getAttribute('data-date'),
+                    expectedTime: source.getAttribute('data-time'),
+                    preferredSession: source.getAttribute('data-session') || 'MORNING',
+                    doctorId: source.getAttribute('data-doctor-id'),
+                    initialSymptoms: source.getAttribute('data-reason')
+                };
+            } else if (source !== null && source !== undefined) {
+                const targetId = String(source);
+                apptData = cachedPatientReExams.find(item => String(item.appointmentId) === targetId) || null;
+            }
+
+            if (!apptData || !apptData.appointmentId) {
+                openReExamModal();
+                return;
+            }
+
+            editingReExamId = apptData.appointmentId;
+            setReExamModalMode(true, apptData.appointmentCode);
+
+            const dateInput = document.getElementById('reExamDateInput');
+            const presetSelect = document.getElementById('reExamPresetSelect');
+            const sessionSelect = document.getElementById('reExamSessionSelect');
+            const timeInput = document.getElementById('reExamTimeInput');
+            const doctorSelect = document.getElementById('reExamDoctorSelect');
+            const reasonInput = document.getElementById('reExamReasonInput');
+
+            let normalizedDate = '';
+            if (typeof apptData.appointmentDate === 'string') {
+                normalizedDate = apptData.appointmentDate.substring(0, 10);
+            } else if (Array.isArray(apptData.appointmentDate) && apptData.appointmentDate.length >= 3) {
+                normalizedDate = `${apptData.appointmentDate[0]}-${String(apptData.appointmentDate[1]).padStart(2, '0')}-${String(apptData.appointmentDate[2]).padStart(2, '0')}`;
+            }
+
+            if (dateInput) {
+                dateInput.min = getTodayStrLocal();
+                dateInput.value = normalizedDate;
+            }
+            if (presetSelect) presetSelect.value = '';
+            const sessionVal = apptData.preferredSession || 'MORNING';
+            if (sessionSelect) sessionSelect.value = sessionVal;
+
+            let normalizedTime = '';
+            if (typeof apptData.expectedTime === 'string' && apptData.expectedTime.length >= 5) {
+                normalizedTime = apptData.expectedTime.substring(0, 5);
+            } else if (Array.isArray(apptData.expectedTime) && apptData.expectedTime.length >= 2) {
+                normalizedTime = `${String(apptData.expectedTime[0]).padStart(2, '0')}:${String(apptData.expectedTime[1]).padStart(2, '0')}`;
+            }
+            if (timeInput) {
+                timeInput.value = normalizedTime || getDefaultTimeForSession(sessionVal);
+            }
+            if (doctorSelect && doctorSelect.tagName === 'SELECT' && apptData.doctorId) {
+                doctorSelect.value = String(apptData.doctorId);
+            }
+            if (reasonInput && apptData.initialSymptoms) {
+                reasonInput.value = apptData.initialSymptoms;
+            }
+            if (normalizedDate) {
+                updateReExamDateDisplay(parseDateString(normalizedDate));
+            }
+
+            loadPatientReExams();
+            showReExamModalElement();
         }
 
         function onPresetDateChange(val) {
@@ -343,15 +507,27 @@
                 const res = await fetch(`/api/doctor/re-examinations/patient/${profileId}`);
                 if (!res.ok) return;
                 const list = await res.json();
-                renderExistingReExams(list);
+                cachedPatientReExams = Array.isArray(list) ? list : [];
+                renderExistingReExams(cachedPatientReExams);
 
                 const badge1 = document.getElementById('sessionReExamCountBadge');
-                if (badge1) badge1.textContent = list.length;
+                if (badge1) badge1.textContent = cachedPatientReExams.length;
                 const badge2 = document.getElementById('reExamExistingCount');
-                if (badge2) badge2.textContent = `${list.length} lịch hẹn`;
+                if (badge2) badge2.textContent = `${cachedPatientReExams.length} lịch hẹn`;
+                const badge3 = document.getElementById('appointmentsTabCountBadge');
+                if (badge3) badge3.textContent = `${cachedPatientReExams.length} lịch hẹn`;
             } catch (e) {
                 console.error('Error loading patient re-examinations:', e);
             }
+        }
+
+        function formatExpectedTimeStr(expectedTime) {
+            if (!expectedTime) return '09:00';
+            if (typeof expectedTime === 'string') return expectedTime.substring(0, 5);
+            if (Array.isArray(expectedTime) && expectedTime.length >= 2) {
+                return `${String(expectedTime[0]).padStart(2, '0')}:${String(expectedTime[1]).padStart(2, '0')}`;
+            }
+            return '09:00';
         }
 
         function renderExistingReExams(list) {
@@ -366,28 +542,39 @@
                 } else {
                     tbody.innerHTML = list.map(item => {
                         const dateStr = item.appointmentDate ? formatDateStr(item.appointmentDate) : '---';
+                        const timeStr = formatExpectedTimeStr(item.expectedTime);
                         const sessionMap = { 'MORNING': 'Sáng', 'AFTERNOON': 'Chiều', 'EVENING': 'Tối', 'ANY': 'Bất kỳ' };
-                        const sessionName = sessionMap[item.preferredSession] || item.preferredSession;
+                        const sessionName = sessionMap[item.preferredSession] || item.preferredSession || 'Sáng';
 
                         let statusBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Đã xác nhận</span>`;
                         if (item.status === 'COMPLETED') statusBadge = `<span class="badge bg-success-subtle text-success border">Đã khám</span>`;
+                        else if (item.status === 'CHECKED_IN') statusBadge = `<span class="badge bg-info-subtle text-info border border-info-subtle">Đã check-in</span>`;
                         else if (item.status === 'CANCELLED') statusBadge = `<span class="badge bg-secondary-subtle text-secondary border">Đã hủy</span>`;
                         else if (item.daysUntil < 0) statusBadge = `<span class="badge bg-danger-subtle text-danger border">Quá hạn</span>`;
 
+                        const isMutable = item.status !== 'COMPLETED' && item.status !== 'CANCELLED' && item.status !== 'CHECKED_IN';
+                        const actionButtons = isMutable
+                            ? `<div class="d-inline-flex align-items-center gap-1">
+                                   <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2 rounded-pill small"
+                                           onclick="openEditReExamModal(${item.appointmentId})" title="Chỉnh sửa lịch hẹn">
+                                       Sửa
+                                   </button>
+                                   <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill small"
+                                           onclick="cancelPatientReExam(${item.appointmentId})" title="Hủy lịch hẹn này">
+                                       Hủy
+                                   </button>
+                               </div>`
+                            : `<span class="text-muted small">---</span>`;
+
                         return `
                             <tr>
-                                <td><strong class="text-primary font-monospace">${item.appointmentCode || ('TK-' + item.appointmentId)}</strong></td>
-                                <td class="fw-bold text-dark">${dateStr}</td>
-                                <td>${sessionName}</td>
-                                <td>${item.doctorName || 'BS. Điều trị'}</td>
-                                <td class="text-truncate" style="max-width: 200px;" title="${item.initialSymptoms || ''}">${item.initialSymptoms || 'Tái khám'}</td>
+                                <td><strong class="text-primary font-monospace">${escapeReExamHtml(item.appointmentCode || ('TK-' + item.appointmentId))}</strong></td>
+                                <td class="fw-bold text-dark">${escapeReExamHtml(dateStr)} <span class="text-muted fw-normal">${escapeReExamHtml(timeStr)}</span></td>
+                                <td>${escapeReExamHtml(sessionName)}</td>
+                                <td>${escapeReExamHtml(item.doctorName || 'BS. Điều trị')}</td>
+                                <td class="text-truncate" style="max-width: 200px;" title="${escapeReExamHtml(item.initialSymptoms || '')}">${escapeReExamHtml(item.initialSymptoms || 'Tái khám')}</td>
                                 <td class="text-center">${statusBadge}</td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill small"
-                                            onclick="cancelPatientReExam(${item.appointmentId})" title="Hủy lịch hẹn này">
-                                        Hủy
-                                    </button>
-                                </td>
+                                <td class="text-center">${actionButtons}</td>
                             </tr>
                         `;
                     }).join('');
@@ -400,22 +587,22 @@
                 if (!list || list.length === 0) {
                     mainTbody.innerHTML = `
                         <tr id="emptyReExamRow">
-                            <td colspan="8" class="text-center" style="padding: 70px 24px 90px 24px !important; background: #ffffff;">
-                                <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 290px;">
-                                    <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
-                                         style="width: 88px; height: 88px; background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border: 2px dashed #c084fc; box-shadow: 0 8px 24px rgba(147, 51, 234, 0.12);">
-                                        <i class="bi bi-calendar2-check-fill" style="font-size: 42px; color: #7c3aed;"></i>
+                            <td colspan="8" class="text-center p-0 border-0">
+                                <div class="d-flex flex-column align-items-center justify-content-center py-4 px-3 rounded-3"
+                                     style="min-height: 130px; background: #f8fafc; border: 1px dashed #cbd5e1;">
+                                    <div class="mb-2 d-inline-flex align-items-center justify-content-center rounded-circle"
+                                         style="width: 44px; height: 44px; background: #e0f2fe; border: 1px dashed #38bdf8;">
+                                        <i class="bi bi-calendar2-check-fill fs-5" style="color: #0284c7;"></i>
                                     </div>
-                                    <h4 class="fw-bold text-dark mb-2" style="font-size: 20px; letter-spacing: -0.3px;">
-                                        Bệnh nhân chưa có Lịch hẹn tái khám nào
-                                    </h4>
-                                    <p class="text-muted mb-4" style="font-size: 14.5px; max-width: 540px; line-height: 1.6;">
-                                        Hẹn lịch tái khám giúp theo dõi tiến trình hồi phục vết thương, kiểm tra định kỳ hoặc phân bổ các công đoạn trong phác đồ điều trị kế tiếp.
+                                    <h5 class="fw-bold text-dark mb-1" style="font-size: 15px;">
+                                        Bệnh nhân chưa có lịch hẹn tái khám
+                                    </h5>
+                                    <p class="df-meta-tertiary mb-3" style="max-width: 480px;">
+                                        Đặt hẹn tái khám để theo dõi tiến trình hồi phục, cắt chỉ hoặc thực hiện công đoạn tiếp theo.
                                     </p>
-                                    <button type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
-                                            style="background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%); border: none; font-size: 15px;"
+                                    <button type="button" class="btn btn-sm df-btn-tonal-primary px-3 py-2 rounded-pill fw-semibold d-inline-flex align-items-center gap-2"
                                             onclick="openReExamModal()">
-                                        <i class="bi bi-calendar2-plus-fill fs-6"></i>
+                                        <i class="bi bi-calendar2-plus-fill"></i>
                                         <span>Đặt hẹn tái khám mới</span>
                                     </button>
                                 </div>
@@ -425,38 +612,43 @@
                 } else {
                     mainTbody.innerHTML = list.map(item => {
                         const dateStr = item.appointmentDate ? formatDateStr(item.appointmentDate) : '---';
+                        const timeStr = formatExpectedTimeStr(item.expectedTime);
                         const sessionMap = { 'MORNING': 'Sáng', 'AFTERNOON': 'Chiều', 'EVENING': 'Tối', 'ANY': 'Cả ngày' };
                         const sessionName = sessionMap[item.preferredSession] || item.preferredSession || 'Sáng';
                         let statusBadge = `<span class="badge bg-warning-subtle text-dark border border-warning">Chờ khám</span>`;
                         if (item.status === 'COMPLETED') statusBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle">Đã khám</span>`;
+                        else if (item.status === 'CHECKED_IN') statusBadge = `<span class="badge bg-info-subtle text-info border border-info-subtle">Đã check-in</span>`;
                         else if (item.status === 'CANCELLED') statusBadge = `<span class="badge bg-secondary-subtle text-secondary border">Đã hủy</span>`;
                         else if (item.status === 'CONFIRMED') statusBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Đã xác nhận</span>`;
 
+                        const isMutable = item.status !== 'COMPLETED' && item.status !== 'CANCELLED' && item.status !== 'CHECKED_IN';
+                        const editButton = isMutable
+                            ? `<button type="button" class="btn btn-sm btn-outline-primary" title="Chỉnh sửa hẹn" onclick="openEditReExamModal(${item.appointmentId})">
+                                   <i class="bi bi-pencil-square"></i>
+                               </button>`
+                            : '';
+
                         return `
                             <tr>
-                                <td><span class="badge bg-light text-dark border fw-bold">${item.appointmentCode || ('TK-' + item.appointmentId)}</span></td>
+                                <td><span class="badge bg-light text-dark border fw-bold df-num">${escapeReExamHtml(item.appointmentCode || ('TK-' + item.appointmentId))}</span></td>
                                 <td>
-                                    <strong class="text-dark">${dateStr}</strong>
-                                    <div class="small text-muted">${item.expectedTime ? item.expectedTime.substring(0,5) : '09:00'}</div>
+                                    <strong class="text-dark df-num">${escapeReExamHtml(dateStr)}</strong>
+                                    <div class="small text-muted df-num">${escapeReExamHtml(timeStr)}</div>
                                 </td>
                                 <td class="text-center">
-                                    <span class="badge bg-primary-subtle text-primary border">${sessionName}</span>
+                                    <span class="badge bg-primary-subtle text-primary border">${escapeReExamHtml(sessionName)}</span>
                                 </td>
                                 <td>
-                                    <div class="small fw-semibold text-dark">${item.doctorName || 'BS. Điều trị'}</div>
+                                    <div class="small fw-semibold text-dark">${escapeReExamHtml(item.doctorName || 'BS. Điều trị')}</div>
                                 </td>
                                 <td>
-                                    <strong class="text-dark">${item.serviceName || item.followupReason || 'Tái khám & Kiểm tra'}</strong>
+                                    <strong class="text-dark">${escapeReExamHtml(item.serviceName || 'Tái khám & Kiểm tra')}</strong>
                                 </td>
                                 <td>
-                                    <span class="small text-secondary">${item.followupReason || item.initialSymptoms || 'Tái khám định kỳ sau điều trị'}</span>
+                                    <span class="small text-secondary">${escapeReExamHtml(item.initialSymptoms || 'Tái khám định kỳ sau điều trị')}</span>
                                 </td>
                                 <td class="text-center">${statusBadge}</td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-outline-primary" title="Chỉnh sửa hẹn" onclick="openReExamModal()">
-                                        <i class="bi bi-pencil-square"></i>
-                                    </button>
-                                </td>
+                                <td class="text-center">${editButton}</td>
                             </tr>
                         `;
                     }).join('');
@@ -491,42 +683,66 @@
             const currentVisitId = modalEl?.getAttribute('data-visit-id') || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null);
 
             const sessionVal = document.getElementById('reExamSessionSelect')?.value || 'MORNING';
-            const defaultTime = sessionVal === 'AFTERNOON' ? '14:00' : (sessionVal === 'EVENING' ? '18:00' : '09:00');
+            const timeVal = document.getElementById('reExamTimeInput')?.value || getDefaultTimeForSession(sessionVal);
 
-            const payload = {
-                patientProfileId: patientId,
-                visitId: currentVisitId,
-                doctorId: document.getElementById('reExamDoctorSelect')?.value || null,
-                serviceId: document.getElementById('reExamServiceSelect')?.value || null,
-                appointmentDate: dateInput.value,
-                preferredSession: sessionVal,
-                expectedTime: defaultTime,
-                followupReason: document.getElementById('reExamReasonInput')?.value || 'Tái khám sau điều trị',
-                createCareTask: document.getElementById('reExamCareTaskCheck')?.checked || false,
-                careTaskNotes: 'Được tạo từ ca khám #' + currentVisitId
-            };
+            const todayStr = getTodayStrLocal();
+            if (dateInput.value < todayStr) {
+                const msg = 'Ngày hẹn tái khám không được nằm trong quá khứ!';
+                if (typeof showToast === 'function') showToast(msg, true); else alert(msg);
+                return;
+            }
+            if (dateInput.value === todayStr && timeVal) {
+                const now = new Date();
+                const nowHm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                if (timeVal < nowHm) {
+                    const msg = 'Giờ hẹn tái khám hôm nay không được nằm trong quá khứ!';
+                    if (typeof showToast === 'function') showToast(msg, true); else alert(msg);
+                    return;
+                }
+            }
 
             try {
-                const res = await fetch('/api/doctor/re-examinations', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                let res;
+                if (editingReExamId) {
+                    const url = `/api/doctor/re-examinations/${editingReExamId}/reschedule?newDate=${encodeURIComponent(dateInput.value)}&newTime=${encodeURIComponent(timeVal)}&session=${encodeURIComponent(sessionVal)}`;
+                    res = await fetch(url, { method: 'PUT' });
+                } else {
+                    const payload = {
+                        patientProfileId: patientId,
+                        visitId: currentVisitId,
+                        doctorId: document.getElementById('reExamDoctorSelect')?.value || null,
+                        serviceId: document.getElementById('reExamServiceSelect')?.value || null,
+                        appointmentDate: dateInput.value,
+                        preferredSession: sessionVal,
+                        expectedTime: timeVal,
+                        followupReason: document.getElementById('reExamReasonInput')?.value || 'Tái khám sau điều trị',
+                        createCareTask: document.getElementById('reExamCareTaskCheck')?.checked || false,
+                        careTaskNotes: currentVisitId ? ('Được tạo từ ca khám #' + currentVisitId) : ''
+                    };
+                    res = await fetch('/api/doctor/re-examinations', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
 
                 if (res.ok) {
                     const saved = await res.json();
+                    const successMsg = editingReExamId
+                        ? `Đã cập nhật lịch hẹn tái khám mã: ${saved.appointmentCode || editingReExamId}!`
+                        : `Đã tạo lịch hẹn tái khám thành công mã: ${saved.appointmentCode}!`;
+                    editingReExamId = null;
                     if (typeof showToast === 'function') {
-                        showToast(`Đã tạo lịch hẹn tái khám thành công mã: ${saved.appointmentCode}!`);
+                        showToast(successMsg);
                     } else {
-                        alert(`Đã tạo lịch hẹn tái khám thành công mã: ${saved.appointmentCode}!`);
+                        alert(successMsg);
                     }
                     loadPatientReExams();
-                    // Đóng modal sau khi đặt hẹn thành công
                     const modal = bootstrap.Modal.getInstance(modalEl);
                     if (modal) modal.hide();
                 } else {
                     const errData = await res.json().catch(() => ({}));
-                    const errMsg = errData.message || 'Có lỗi khi tạo lịch hẹn tái khám. Vui lòng thử lại.';
+                    const errMsg = errData.message || 'Có lỗi khi lưu lịch hẹn tái khám. Vui lòng thử lại.';
                     if (typeof showToast === 'function') {
                         showToast(errMsg, true);
                     } else {
@@ -554,7 +770,13 @@
                     }
                     loadPatientReExams();
                 } else {
-                    alert('Không thể hủy lịch hẹn.');
+                    const errData = await res.json().catch(() => ({}));
+                    const errMsg = errData.message || 'Không thể hủy lịch hẹn.';
+                    if (typeof showToast === 'function') {
+                        showToast(errMsg, true);
+                    } else {
+                        alert(errMsg);
+                    }
                 }
             } catch (e) {
                 console.error('Error cancelling re-examination:', e);

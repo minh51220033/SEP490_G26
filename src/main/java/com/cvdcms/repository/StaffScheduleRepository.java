@@ -2,8 +2,12 @@ package com.cvdcms.repository;
 
 import com.cvdcms.entity.StaffSchedule;
 import com.cvdcms.entity.enums.ScheduleStatus;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.QueryHint;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -21,6 +25,13 @@ public interface StaffScheduleRepository extends JpaRepository<StaffSchedule, Lo
     List<StaffSchedule> findByBranchAndRange(@Param("branchId") Long branchId,
                                              @Param("from") LocalDate from,
                                              @Param("to") LocalDate to);
+
+    // Toàn bộ ca đã xếp toàn hệ thống trong khoảng ngày
+    @Query("SELECT s FROM StaffSchedule s JOIN FETCH s.staff JOIN FETCH s.shift LEFT JOIN FETCH s.branch "
+            + "WHERE s.workDate BETWEEN :from AND :to "
+            + "ORDER BY s.workDate ASC, s.shift.startTime ASC, s.staff.fullName ASC")
+    List<StaffSchedule> findAllByRange(@Param("from") LocalDate from,
+                                       @Param("to") LocalDate to);
 
     // Lịch cá nhân của một nhân viên trong khoảng ngày (SCR-33.3).
     @Query("SELECT s FROM StaffSchedule s JOIN FETCH s.branch JOIN FETCH s.shift "
@@ -70,4 +81,21 @@ public interface StaffScheduleRepository extends JpaRepository<StaffSchedule, Lo
                                                                            @Param("shiftId") Long shiftId,
                                                                            @Param("from") LocalDate from,
                                                                            @Param("to") LocalDate to);
+
+    @Query("SELECT s FROM StaffSchedule s JOIN FETCH s.shift sh JOIN FETCH s.branch b "
+            + "WHERE s.staff.staffId = :doctorId AND s.workDate = :date AND s.status = :status "
+            + "AND sh.isActive = true AND b.isActive = true "
+            + "ORDER BY sh.startTime ASC, s.scheduleId ASC")
+    List<StaffSchedule> findDoctorSchedulesForDate(@Param("doctorId") Long doctorId,
+                                                   @Param("date") LocalDate date,
+                                                   @Param("status") ScheduleStatus status);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "5000")})
+    @Query("SELECT s FROM StaffSchedule s "
+            + "WHERE s.staff.staffId = :doctorId AND s.workDate = :date AND s.status = :status "
+            + "ORDER BY s.scheduleId ASC")
+    List<StaffSchedule> lockDoctorSchedulesForDate(@Param("doctorId") Long doctorId,
+                                                   @Param("date") LocalDate date,
+                                                   @Param("status") ScheduleStatus status);
 }

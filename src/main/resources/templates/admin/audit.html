@@ -31,23 +31,30 @@
                         right: 24px;
                     }
 
-                    /* Khung bảng mở rộng tối đa chiều cao, cố định thanh phân trang ở đáy và không để khoảng trống dư */
+                    /* Mở rộng chiều cao tự nhiên theo nội dung, bỏ thanh cuộn dọc bên trong bảng */
+                    body.account-page-body.staff-page-body,
+                    body.account-page-body.staff-page-body .app-shell,
+                    body.account-page-body.staff-page-body .app-main,
+                    body.account-page-body.staff-page-body .app-content {
+                        height: auto !important;
+                        min-height: 100vh !important;
+                        overflow: visible !important;
+                    }
+                    body.account-page-body.staff-page-body .app-content {
+                        min-height: calc(100vh - 64px) !important;
+                    }
                     .staff-table-card {
                         display: flex !important;
                         flex-direction: column !important;
-                        flex: 1 1 auto !important;
-                        min-height: 0 !important;
+                        height: auto !important;
                         margin-bottom: 0 !important;
                     }
                     .dv-table-scroll-container {
-                        flex: 1 1 auto !important;
-                        min-height: 0 !important;
-                        overflow-y: auto !important;
+                        overflow-y: hidden !important;
                         overflow-x: auto !important;
                     }
                     .misa-pagination-footer {
                         flex-shrink: 0 !important;
-                        margin-top: auto !important;
                     }
 
                     /* Hàng trong bảng có con trỏ pointer để bấm xem đối chiếu */

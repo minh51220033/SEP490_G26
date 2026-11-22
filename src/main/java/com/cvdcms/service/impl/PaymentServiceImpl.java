@@ -45,6 +45,8 @@ public class PaymentServiceImpl implements PaymentService {
     private com.cvdcms.service.PaymentAllocationService paymentAllocationService;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private org.springframework.context.ApplicationEventPublisher careEventPublisher;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ServiceCommissionService serviceCommissionService;
 
     @org.springframework.beans.factory.annotation.Autowired
     public PaymentServiceImpl(
@@ -177,6 +179,10 @@ public class PaymentServiceImpl implements PaymentService {
 
     public void setPaymentAllocationService(com.cvdcms.service.PaymentAllocationService paymentAllocationService) {
         this.paymentAllocationService = paymentAllocationService;
+    }
+
+    public void setServiceCommissionService(com.cvdcms.service.ServiceCommissionService serviceCommissionService) {
+        this.serviceCommissionService = serviceCommissionService;
     }
 
     /**
@@ -345,6 +351,9 @@ public class PaymentServiceImpl implements PaymentService {
             if (invoiceService != null) {
                 invoiceService.finalizeInvoiceBenefits(invoice);
             }
+            if (serviceCommissionService != null) {
+                serviceCommissionService.ensureCommissionsForInvoice(invoice);
+            }
             completeVisit(invoice, cashierUserId);
         } else {
             invoice.setPaymentStatus(InvoicePaymentStatus.PARTIAL);
@@ -412,11 +421,24 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         visit.setStatus(VisitStatus.COMPLETED);
-        visit.setCompletedAt(LocalDateTime.now());
+        LocalDateTime nowCompleted = LocalDateTime.now();
+        visit.setCompletedAt(nowCompleted);
+        if (visit.getActualEndTime() == null) {
+            visit.setActualEndTime(nowCompleted);
+        }
         visitRepository.saveAndFlush(visit);
         appointmentLifecycleService.completeByVisit(visit.getVisitId(), actorUserId);
         if (careEventPublisher != null && visit.getVisitId() != null) {
             careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.VisitCompletedCareEvent(visit.getVisitId()));
+            careEventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                    "VISIT_COMPLETED",
+                    visit.getBranch() != null ? visit.getBranch().getBranchId() : null,
+                    visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null,
+                    visit.getVisitId(),
+                    visit.getAppointmentId(),
+                    VisitStatus.COMPLETED.name(),
+                    "Hoàn tất thanh toán & kết thúc ca " + visit.getVisitCode(),
+                    nowCompleted));
         }
     }
 

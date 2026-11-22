@@ -2,17 +2,22 @@ package com.cvdcms.controller;
 
 import com.cvdcms.DTO.*;
 import com.cvdcms.entity.User;
+import com.cvdcms.repository.UserRepository;
 import com.cvdcms.service.ClinicalWorkflowService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @RestController
@@ -22,6 +27,17 @@ public class ClinicalWorkflowRestController {
 
     private final ClinicalWorkflowService workflowService;
     private final com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
+
+    @Autowired(required = false)
+    private UserRepository userRepository;
+
+    private static final Set<String> TEMPLATE_MANAGER_ROLES = Set.of(
+            "ADMIN", "ROLE_ADMIN",
+            "MANAGER", "ROLE_MANAGER",
+            "CLINIC_MANAGER", "ROLE_CLINIC_MANAGER",
+            "QUAN_LY", "ROLE_QUAN_LY",
+            "TRUONG_KHOA", "ROLE_TRUONG_KHOA"
+    );
 
     @GetMapping
     public ResponseEntity<List<WorkflowTemplateResponseDTO>> getAllWorkflows() {
@@ -46,15 +62,13 @@ public class ClinicalWorkflowRestController {
     public ResponseEntity<WorkflowTemplateResponseDTO> saveWorkflow(
             @RequestBody WorkflowTemplateRequestDTO requestDTO,
             HttpSession session) {
-        doctorVisitAccess.requireAuthenticatedUser(session);
-        Long userId = requireUserId(session);
+        Long userId = requireTemplateManager(session);
         return ResponseEntity.ok(workflowService.saveTemplate(requestDTO, userId));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteWorkflow(@PathVariable Long id, HttpSession session) {
-        doctorVisitAccess.requireAuthenticatedUser(session);
-        requireUserId(session);
+        requireTemplateManager(session);
         workflowService.deleteTemplate(id);
         return ResponseEntity.noContent().build();
     }
@@ -85,7 +99,7 @@ public class ClinicalWorkflowRestController {
             @PathVariable Long visitId,
             @PathVariable Long serviceId,
             HttpSession session) {
-        doctorVisitAccess.require(session, visitId);
+        doctorVisitAccess.requireActiveClinicalExam(session, visitId);
         WorkflowExecutionDTO dto = workflowService.getOrCreateExecution(visitId, serviceId, requireUserId(session));
         if (dto == null) {
             return ResponseEntity.notFound().build();
@@ -100,7 +114,7 @@ public class ClinicalWorkflowRestController {
             HttpSession session) {
         Long visitId = longOf(body, "visitId");
         Long serviceId = longOf(body, "serviceId");
-        doctorVisitAccess.require(session, visitId);
+        doctorVisitAccess.requireActiveClinicalExam(session, visitId);
         return ResponseEntity.ok(workflowService.startExecution(visitId, serviceId, requireUserId(session)));
     }
 
@@ -143,6 +157,35 @@ public class ClinicalWorkflowRestController {
         return ResponseEntity.ok(workflowService.getExecutionHistory(executionId));
     }
 
+    private Long requireTemplateManager(HttpSession session) {
+        User user = doctorVisitAccess.requireAuthenticatedUser(session);
+        Long userId = user.getUserId();
+        if (doctorVisitAccess.isAdmin(user)) {
+            return userId;
+        }
+        boolean hasManagerRole = false;
+        if (userRepository != null) {
+            List<String> dbRoles = userRepository.findActiveRoleNamesByUserId(userId);
+            if (dbRoles != null) {
+                hasManagerRole = dbRoles.stream()
+                        .filter(r -> r != null && !r.isBlank())
+                        .map(r -> r.trim().toUpperCase(Locale.ROOT))
+                        .anyMatch(TEMPLATE_MANAGER_ROLES::contains);
+            }
+        }
+        if (!hasManagerRole && user.getRoles() != null) {
+            hasManagerRole = user.getRoles().stream()
+                    .filter(r -> r != null && r.getRoleName() != null && (r.getIsActive() == null || Boolean.TRUE.equals(r.getIsActive())))
+                    .map(r -> r.getRoleName().trim().toUpperCase(Locale.ROOT))
+                    .anyMatch(TEMPLATE_MANAGER_ROLES::contains);
+        }
+        if (!hasManagerRole) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Chỉ Quản trị viên hoặc Quản lý chuyên môn mới có quyền thêm, sửa hoặc xóa mẫu quy trình kỹ thuật.");
+        }
+        return userId;
+    }
+
     private Long requireUserId(HttpSession session) {
         Object principal = session == null ? null : session.getAttribute("loggedInUser");
         if (principal instanceof User user && user.getUserId() != null) {
@@ -171,6 +214,13 @@ public class ClinicalWorkflowRestController {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, String>> handleConflict(IllegalStateException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", messageOf(ex)));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        log.warn("Data integrity violation in ClinicalWorkflowRestController: {}", ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("message", "Dữ liệu quy trình bị trùng mã hoặc đang được tham chiếu, không thể thực hiện thao tác."));
     }
 
     private String messageOf(RuntimeException ex) {

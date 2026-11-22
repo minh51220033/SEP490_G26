@@ -33,7 +33,8 @@ public class AttendanceController {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.StaffScheduleService scheduleService;
 
-    public AttendanceController(AttendanceService attendanceService, BranchService branchService, com.cvdcms.repository.UserRepository userRepository) {
+    public AttendanceController(AttendanceService attendanceService, BranchService branchService,
+            com.cvdcms.repository.UserRepository userRepository) {
         this.attendanceService = attendanceService;
         this.branchService = branchService;
         this.userRepository = userRepository;
@@ -60,7 +61,8 @@ public class AttendanceController {
         }
     }
 
-    // Lấy IP mạng của thiết bị; tự động ánh xạ IP card Wi-Fi thật khi demo trên localhost.
+    // Lấy IP mạng của thiết bị; tự động ánh xạ IP card Wi-Fi thật khi demo trên
+    // localhost.
     private String clientIp(HttpServletRequest request) {
         return AttendanceService.resolveClientIp(request);
     }
@@ -76,7 +78,8 @@ public class AttendanceController {
     private boolean isPureAdmin(HttpSession session) {
         Object roleNamesObj = session.getAttribute("roleNames");
         boolean isAdmin = roleNamesObj instanceof Collection<?> c
-                && c.stream().anyMatch(r -> "ADMIN".equalsIgnoreCase(String.valueOf(r)) || "ROLE_ADMIN".equalsIgnoreCase(String.valueOf(r)));
+                && c.stream().anyMatch(r -> "ADMIN".equalsIgnoreCase(String.valueOf(r))
+                        || "ROLE_ADMIN".equalsIgnoreCase(String.valueOf(r)));
         boolean isStaffRole = roleNamesObj instanceof Collection<?> c
                 && c.stream().anyMatch(r -> "BAC_SI".equalsIgnoreCase(String.valueOf(r))
                         || "LE_TAN".equalsIgnoreCase(String.valueOf(r))
@@ -127,13 +130,15 @@ public class AttendanceController {
             List<AttendanceRecord> history = attendanceService.getMyHistory(staff.getStaffId(), selected);
             model.addAttribute("history", history);
             model.addAttribute("summary", attendanceService.summarize(history));
-            model.addAttribute("shiftLabelsByDate", attendanceService.getShiftLabelsByDate(staff.getStaffId(), selected));
+            model.addAttribute("shiftLabelsByDate",
+                    attendanceService.getShiftLabelsByDate(staff.getStaffId(), selected));
 
             if (scheduleService != null) {
                 model.addAttribute("myWeek", scheduleService.getMyWeek(staff.getStaffId(), monday));
             }
 
-            // Đồng bộ tên cơ sở hiển thị trên Topbar theo ca trực hôm nay hoặc lịch sử chấm công gần nhất
+            // Đồng bộ tên cơ sở hiển thị trên Topbar theo ca trực hôm nay hoặc lịch sử chấm
+            // công gần nhất
             String activeBranchName = null;
             if (!todayShifts.isEmpty() && todayShifts.get(0).getBranch() != null) {
                 activeBranchName = todayShifts.get(0).getBranch().getBranchName();
@@ -215,17 +220,37 @@ public class AttendanceController {
 
         List<Branch> branches = branchService.getActiveBranches();
         model.addAttribute("branches", branches);
-        if (branchId == null && !branches.isEmpty()) {
-            branchId = branches.get(0).getBranchId();
-        }
-        model.addAttribute("selectedBranchId", branchId);
 
+        // Mặc định ban đầu của màn Chấm công là Toàn hệ thống (trừ khi người dùng chủ
+        // động chọn chi nhánh trên URL)
         if (branchId != null) {
-            List<AttendanceRecord> records = attendanceService.getBranchHistory(branchId, selected);
-            model.addAttribute("records", records);
-            model.addAttribute("summary", attendanceService.summarize(records));
-            model.addAttribute("staffSummary", attendanceService.summarizeByStaff(branchId, selected, records));
+            Long checkId = branchId;
+            Branch chosen = branches.stream().filter(b -> b.getBranchId().equals(checkId)).findFirst().orElse(null);
+            if (chosen != null) {
+                model.addAttribute("selectedBranchId", branchId);
+                model.addAttribute("currentBranchId", branchId);
+                model.addAttribute("currentBranch", chosen);
+                model.addAttribute("selectedBranch", chosen);
+                model.addAttribute("currentBranchCode", chosen.getBranchCode());
+                model.addAttribute("currentBranchName", chosen.getBranchName());
+                session.setAttribute("currentBranchId", branchId);
+            } else {
+                branchId = null;
+            }
         }
+        if (branchId == null) {
+            model.addAttribute("selectedBranchId", null);
+            model.addAttribute("currentBranchId", null);
+            model.addAttribute("currentBranch", null);
+            model.addAttribute("selectedBranch", null);
+            model.addAttribute("currentBranchCode", null);
+            model.addAttribute("currentBranchName", null);
+        }
+
+        List<AttendanceRecord> records = attendanceService.getBranchHistory(branchId, selected);
+        model.addAttribute("records", records);
+        model.addAttribute("summary", attendanceService.summarize(records));
+        model.addAttribute("staffSummary", attendanceService.summarizeByStaff(branchId, selected, records));
         return "attendance/branch";
     }
 }

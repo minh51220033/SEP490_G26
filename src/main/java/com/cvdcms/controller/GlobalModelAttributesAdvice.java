@@ -303,18 +303,18 @@ public class GlobalModelAttributesAdvice {
             return null;
         }
         List<Branch> activeBranches = populatePublicBranches();
-        // 1. Nếu người dùng đã đăng nhập: ưu tiên cơ sở ưu tiên của hồ sơ bệnh nhân
-        // hoặc cơ sở của tài khoản
+        // 1. Nếu người dùng đã đăng nhập: ưu tiên nguồn chuẩn User.branch từ DB,
+        // fallback sang hồ sơ mặc định khi tài khoản chưa gán chi nhánh trực tiếp
         if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
-            PatientProfile pp = populateDefaultPatientProfile(session);
-            if (pp != null && pp.getPreferredBranch() != null
-                    && Boolean.TRUE.equals(pp.getPreferredBranch().getIsActive())) {
-                return pp.getPreferredBranch();
-            }
             User user = userRepository != null ? userRepository.findById(sessionUser.getUserId()).orElse(sessionUser)
                     : sessionUser;
             if (user != null && user.getBranch() != null && Boolean.TRUE.equals(user.getBranch().getIsActive())) {
                 return user.getBranch();
+            }
+            PatientProfile pp = populateDefaultPatientProfile(session);
+            if (pp != null && pp.getPreferredBranch() != null
+                    && Boolean.TRUE.equals(pp.getPreferredBranch().getIsActive())) {
+                return pp.getPreferredBranch();
             }
         }
         // 2. Nếu có chọn cơ sở trong session (khi bấm "Chuyển sang cơ sở này")

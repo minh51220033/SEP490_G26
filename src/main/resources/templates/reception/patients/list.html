@@ -118,7 +118,7 @@
 
                                     <!-- 3. HỌ VÀ TÊN (BỎ CẢNH BÁO/GHI CHÚ CẠNH TÊN, TÊN ĐẬM + ĐỊA CHỈ NHỎ) -->
                                     <td>
-                                        <a th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id}"
+                                        <a th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + idCodec.encodePatient(patient.id)}"
                                             class="fw-bold text-dark text-decoration-none d-block text-truncate"
                                             style="max-width: 240px; font-size: 14px;" th:text="${patient.fullName}">Vũ
                                             Phương Anh</a>
@@ -174,11 +174,11 @@
                                     <td class="text-center">
                                         <div class="d-inline-flex align-items-center gap-1">
                                             <a th:if="${canManageAdministrative == null or canManageAdministrative}"
-                                                th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '/edit'}"
+                                                th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + idCodec.encodePatient(patient.id) + '/edit'}"
                                                 class="btn-action-icon" title="Chỉnh sửa hồ sơ">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
-                                            <a th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id}"
+                                            <a th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + idCodec.encodePatient(patient.id)}"
                                                 class="btn-action-icon text-secondary" title="Xem chi tiết / Bệnh án">
                                                 <i class="bi bi-trash"></i>
                                             </a>

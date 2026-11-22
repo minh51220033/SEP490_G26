@@ -57,7 +57,7 @@ public class ClinicalPhotoRestController {
             @RequestParam("file") MultipartFile file, jakarta.servlet.http.HttpSession session) {
         if (visitId == null) throw new org.springframework.web.server.ResponseStatusException(
                 org.springframework.http.HttpStatus.BAD_REQUEST, "Ảnh lâm sàng cần gắn ca khám.");
-        doctorVisitAccess.require(session, visitId);
+        doctorVisitAccess.requireActiveClinicalExam(session, visitId);
 
         Map<String, Object> response = new HashMap<>();
         try {

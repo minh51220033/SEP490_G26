@@ -81,6 +81,8 @@ public class WorkShiftController {
 
         model.addAttribute("branches", branches);
         model.addAttribute("selectedBranchId", selectedBranchId);
+        model.addAttribute("currentBranchId", selectedBranchId);
+        model.addAttribute("activeMenu", "work-shifts");
         model.addAttribute("roleNames", session.getAttribute("roleNames"));
         model.addAttribute("permissionCodes", session.getAttribute("permissionCodes"));
         model.addAttribute("isAdmin", isAdmin(session));
@@ -90,6 +92,9 @@ public class WorkShiftController {
                     .filter(b -> b.getBranchId().equals(selectedBranchId))
                     .findFirst()
                     .orElseGet(() -> branchService.getBranchById(selectedBranchId));
+            model.addAttribute("currentBranch", selectedBranch);
+            model.addAttribute("selectedBranch", selectedBranch);
+            session.setAttribute("currentBranchId", selectedBranchId);
             List<WorkShift> shifts = workShiftService.getShiftsByBranch(selectedBranchId);
             List<AppointmentSessionWindow> sessionWindows = workShiftService.getSessionWindowsByBranch(selectedBranchId);
             Map<Long, String> shiftSessionLabels = new LinkedHashMap<>();

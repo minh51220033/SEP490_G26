@@ -130,15 +130,41 @@
             .staff-table-wrapper {
                 width: 100% !important;
                 overflow-x: auto !important;
-                overflow-y: hidden !important;
+                overflow-y: auto !important;
+                max-height: calc(100vh - 330px) !important;
+                min-height: 380px !important;
                 position: relative !important;
                 scroll-behavior: smooth !important;
             }
 
-            .dv-table-scroll-container::-webkit-scrollbar:vertical,
-            .staff-table-wrapper::-webkit-scrollbar:vertical {
-                width: 0 !important;
-                display: none !important;
+            .dv-table-scroll-container::-webkit-scrollbar,
+            .staff-table-wrapper::-webkit-scrollbar {
+                width: 6px !important;
+                height: 8px !important;
+            }
+
+            .dv-table-scroll-container::-webkit-scrollbar-track,
+            .staff-table-wrapper::-webkit-scrollbar-track {
+                background: #f8fafc !important;
+            }
+
+            .dv-table-scroll-container::-webkit-scrollbar-thumb,
+            .staff-table-wrapper::-webkit-scrollbar-thumb {
+                background: #cbd5e1 !important;
+                border-radius: 4px !important;
+            }
+
+            .dv-table-scroll-container::-webkit-scrollbar-thumb:hover,
+            .staff-table-wrapper::-webkit-scrollbar-thumb:hover {
+                background: #94a3b8 !important;
+            }
+
+            /* Cố định tiêu đề bảng khi cuộn dọc (Sticky Header) */
+            .dv-amis-table thead th,
+            .staff-modern-table thead th {
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 10 !important;
             }
 
             /* Khung tìm kiếm chuẩn kích thước gọn gàng, không bị kéo dài quá mức */

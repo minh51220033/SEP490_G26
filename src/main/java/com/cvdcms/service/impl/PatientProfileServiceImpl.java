@@ -248,6 +248,69 @@ public class PatientProfileServiceImpl implements PatientProfileService {
     /**
      * Lấy chi nhánh đang hoạt động.
      */
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public BranchSwitchResult switchUserPreferredBranch(Long userId, Long branchId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("Tài khoản không hợp lệ.");
+        }
+        if (branchId == null) {
+            throw new IllegalArgumentException("Vui lòng chọn cơ sở khám.");
+        }
+        User user = userRepository.findById(userId)
+                .filter(u -> Boolean.TRUE.equals(u.getIsActive()))
+                .orElseThrow(() -> new IllegalArgumentException("Tài khoản không tồn tại hoặc đã ngừng hoạt động."));
+        Branch branch = branchRepository.findById(branchId)
+                .filter(b -> Boolean.TRUE.equals(b.getIsActive()))
+                .orElseThrow(() -> new IllegalArgumentException("Cơ sở không tồn tại hoặc hiện không hoạt động."));
+
+        user.setBranch(branch);
+        userRepository.save(user);
+        if (user.getRoles() != null) {
+            user.getRoles().size();
+        }
+
+        java.util.Map<Long, PatientProfile> merged = new java.util.LinkedHashMap<>();
+        java.util.List<PatientProfile> directProfiles =
+                patientProfileRepository.findByUser_UserIdOrderByIsDefaultDescProfileIdDesc(userId);
+        if (directProfiles != null) {
+            for (PatientProfile profile : directProfiles) {
+                if (profile != null && profile.getProfileId() != null) {
+                    merged.putIfAbsent(profile.getProfileId(), profile);
+                }
+            }
+        }
+        if (accountPatientProfileRepository != null) {
+            var links = accountPatientProfileRepository.findByAccount_UserIdOrderByProfile_ProfileIdDesc(userId);
+            if (links != null) {
+                for (var link : links) {
+                    PatientProfile profile = link != null ? link.getProfile() : null;
+                    if (profile != null && profile.getProfileId() != null) {
+                        merged.putIfAbsent(profile.getProfileId(), profile);
+                    }
+                }
+            }
+        }
+
+        java.util.List<PatientProfile> profiles = new java.util.ArrayList<>(merged.values());
+        for (PatientProfile profile : profiles) {
+            profile.setPreferredBranch(branch);
+        }
+        if (!profiles.isEmpty()) {
+            patientProfileRepository.saveAll(profiles);
+            for (PatientProfile profile : profiles) {
+                ensureAccountProfileLink(user, profile, Boolean.TRUE.equals(profile.getIsDefault()));
+            }
+        }
+
+        PatientProfile defaultProfile = profiles.stream()
+                .filter(p -> Boolean.TRUE.equals(p.getIsDefault()))
+                .findFirst()
+                .orElse(profiles.isEmpty() ? null : profiles.get(0));
+
+        return new BranchSwitchResult(user, branch, profiles, defaultProfile);
+    }
+
     private Branch getActiveBranch(Long branchId) {
         if (branchId == null) {
             throw new IllegalArgumentException(

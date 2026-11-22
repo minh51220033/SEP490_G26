@@ -13,12 +13,15 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.*;
 import java.util.*;
+import java.util.regex.Pattern;
 
 @Service
 public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
+    private static final Pattern WAREHOUSE_WORD_PATTERN =
+            Pattern.compile("(?<![\\p{L}\\p{N}])kho(?![\\p{L}\\p{N}])");
     private static final List<AppointmentStatus> OCCUPYING = List.of(
             AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED,
-            AppointmentStatus.CHECKED_IN, AppointmentStatus.COMPLETED);
+            AppointmentStatus.CHECKED_IN);
 
     private final AppointmentPolicyRepository appointments;
     private final AppointmentSessionWindowRepository windows;
@@ -30,6 +33,11 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
     private final WorkShiftRepository workShifts;
     private final int defaultBranchCapacity;
     private final int defaultDoctorCapacity;
+
+    @Autowired(required = false)
+    private VisitRepository visitRepository;
+
+    private Clock clock = Clock.system(CLINIC_ZONE);
 
     @Autowired
     public AppointmentPolicyServiceImpl(AppointmentPolicyRepository appointments,
@@ -80,9 +88,12 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         if (invalid != null) return new Availability(false, invalid, 0, List.of());
         List<Appointment> booked = booked(branch.getBranchId(), date, session, excludeAppointmentId);
         List<StaffProfile> doctors = eligibleDoctors(branch, date, session);
+        if (doctors.isEmpty()) {
+            return new Availability(false, "Không có bác sĩ trực khả dụng trong buổi đã chọn.", 0, List.of());
+        }
         AppointmentSessionPolicy policy = policy(branch.getBranchId(), date, session);
         int doctorCap = doctorCapacity(policy);
-        int capacity = Math.min(branchCapacity(policy), Math.max(1, doctors.size()) * doctorCap);
+        int capacity = Math.min(branchCapacity(policy), doctors.size() * doctorCap);
         int remaining = Math.max(0, capacity - booked.size());
         List<DoctorOption> options = doctors.stream().map(doctor -> {
             long doctorBooked = booked.stream().filter(a -> a.getDoctor() != null
@@ -157,11 +168,25 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
             AppointmentActorType actorType) {
         String invalid = invalidSession(branch, date, session, actorType);
         if (invalid != null) throw conflict(invalid);
-        // Cho phép đặt nhiều lịch hẹn trong ngày cho cả Lễ tân và Bệnh nhân (khám nhiều dịch vụ, tái khám hoặc đi theo ca)
+        if (profile != null && profile.getProfileId() != null) {
+            PatientSessionConflict dup = findSameSessionConflict(
+                    profile.getProfileId(),
+                    branch != null ? branch.getBranchId() : null,
+                    date,
+                    session,
+                    excludeAppointmentId
+            );
+            if (dup.hasConflict()) {
+                throw conflict(dup.message());
+            }
+        }
         List<StaffProfile> doctors = eligibleDoctors(branch, date, session);
+        if (doctors.isEmpty()) {
+            throw conflict("Không có bác sĩ trực khả dụng trong buổi đã chọn.");
+        }
         List<Appointment> booked = booked(branch.getBranchId(), date, session, excludeAppointmentId);
         AppointmentSessionPolicy policy = policy(branch.getBranchId(), date, session);
-        int maxCapacity = Math.min(branchCapacity(policy), Math.max(1, doctors.size()) * doctorCapacity(policy));
+        int maxCapacity = Math.min(branchCapacity(policy), doctors.size() * doctorCapacity(policy));
         if (booked.size() >= maxCapacity) {
             throw conflict("Buổi khám đã đủ định mức tiếp nhận (" + booked.size() + "/" + maxCapacity + " ca).");
         }
@@ -175,6 +200,104 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
                 throw conflict("Bác sĩ đã hết khả năng nhận lịch trong buổi (" + doctorBooked + "/" + doctorCapacity(policy) + " ca).");
             }
         }
+    }
+
+    public void setClock(Clock clock) {
+        if (clock != null) {
+            this.clock = clock;
+        }
+    }
+
+    @Override
+    public PatientSessionConflict findSameSessionConflict(Long profileId, LocalDate date,
+                                                          PreferredSession session, Long excludeAppointmentId) {
+        return findSameSessionConflict(profileId, null, date, session, excludeAppointmentId);
+    }
+
+    private PatientSessionConflict findSameSessionConflict(Long profileId, Long branchId, LocalDate date,
+                                                           PreferredSession session, Long excludeAppointmentId) {
+        if (profileId == null || date == null || session == null) {
+            return new PatientSessionConflict(false, null, null, null, null);
+        }
+        Map<Long, Appointment> uniqueCandidates = new LinkedHashMap<>();
+        List<Appointment> across = appointments.findOccupyingForPatientDayAcrossBranches(profileId, date, OCCUPYING);
+        if (across != null) {
+            for (Appointment a : across) {
+                if (a != null) uniqueCandidates.put(a.getAppointmentId(), a);
+            }
+        }
+        if (uniqueCandidates.isEmpty() && branchId != null) {
+            List<Appointment> branchScoped = appointments.findOccupyingForPatientDay(profileId, branchId, date, OCCUPYING);
+            if (branchScoped != null) {
+                for (Appointment a : branchScoped) {
+                    if (a != null) uniqueCandidates.put(a.getAppointmentId(), a);
+                }
+            }
+        }
+
+        List<Appointment> sessionMatches = uniqueCandidates.values().stream()
+                .filter(a -> excludeAppointmentId == null || !Objects.equals(a.getAppointmentId(), excludeAppointmentId))
+                .filter(a -> session == PreferredSession.ANY
+                        || a.getPreferredSession() == session
+                        || a.getPreferredSession() == PreferredSession.ANY)
+                .toList();
+        if (sessionMatches.isEmpty()) {
+            return new PatientSessionConflict(false, null, null, null, null);
+        }
+
+        Map<Long, Visit> visitByAppt = Collections.emptyMap();
+        List<Long> checkedInIds = sessionMatches.stream()
+                .filter(a -> a.getStatus() == AppointmentStatus.CHECKED_IN && a.getAppointmentId() != null)
+                .map(Appointment::getAppointmentId)
+                .toList();
+        if (!checkedInIds.isEmpty() && visitRepository != null) {
+            List<Visit> linked = visitRepository.findByAppointmentIdIn(checkedInIds);
+            if (linked != null && !linked.isEmpty()) {
+                visitByAppt = new HashMap<>();
+                for (Visit v : linked) {
+                    if (v != null && v.getAppointmentId() != null) {
+                        visitByAppt.putIfAbsent(v.getAppointmentId(), v);
+                    }
+                }
+            }
+        }
+
+        for (Appointment existing : sessionMatches) {
+            if (existing.getStatus() == AppointmentStatus.CHECKED_IN && visitRepository != null) {
+                Visit linkedVisit = visitByAppt.get(existing.getAppointmentId());
+                if (linkedVisit != null && isClinicalExamFinished(linkedVisit)) {
+                    // Bệnh nhân đã hoàn thành khám lâm sàng (WAITING_PAYMENT với actual_end_time / COMPLETED / CANCELLED)
+                    // -> Được phép đặt thêm lịch khám tiếp trong cùng buổi nếu còn sức chứa.
+                    continue;
+                }
+            }
+            String existingBranchName = existing.getBranch() != null ? existing.getBranch().getBranchName() : "cơ sở khác";
+            String sessionText = switch (session) {
+                case MORNING -> "buổi sáng";
+                case AFTERNOON -> "buổi chiều";
+                case EVENING -> "buổi tối";
+                default -> "buổi khám này";
+            };
+            String dateText = date.equals(LocalDate.now(clock))
+                    ? "hôm nay (" + date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + ")"
+                    : "ngày " + date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            String codeSuffix = existing.getAppointmentCode() != null ? " (Mã " + existing.getAppointmentCode() + ")" : "";
+            String msg = "Người khám này đã có lịch hẹn trong " + sessionText + " " + dateText
+                    + " tại " + existingBranchName + codeSuffix
+                    + ". Vui lòng kiểm tra lịch hẹn hiện tại trước khi đặt lịch mới.";
+            return new PatientSessionConflict(true, existing.getAppointmentId(), existing.getAppointmentCode(), existingBranchName, msg);
+        }
+        return new PatientSessionConflict(false, null, null, null, null);
+    }
+
+    private static boolean isClinicalExamFinished(Visit visit) {
+        if (visit == null || visit.getStatus() == null) {
+            return false;
+        }
+        return switch (visit.getStatus()) {
+            case COMPLETED, CANCELLED, WAITING_PAYMENT -> true;
+            case WAITING, IN_EXAM, WAITING_PARACLINICAL, WAITING_RESULT, IN_TREATMENT -> false;
+        };
     }
 
     @Override
@@ -279,46 +402,7 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
             StaffProfile staff = assignment.getStaff();
             if (staff == null || staff.getStatus() != StaffStatus.ACTIVE) continue;
 
-            boolean isDoctor = false;
-            if (assignment.getRole() != null && Boolean.TRUE.equals(assignment.getRole().getIsActive())) {
-                String role = assignment.getRole().getRoleName();
-                if (role != null) {
-                    String rUpper = role.trim().toUpperCase(Locale.ROOT);
-                    if (rUpper.contains("BAC_SI") || rUpper.contains("DOCTOR") || rUpper.contains("BÁC SĨ")) {
-                        isDoctor = true;
-                    }
-                }
-            }
-            if (!isDoctor && staff.getUser() != null && staff.getUser().getRoles() != null) {
-                for (Role r : staff.getUser().getRoles()) {
-                    if (Boolean.TRUE.equals(r.getIsActive()) && r.getRoleName() != null) {
-                        String rUpper = r.getRoleName().trim().toUpperCase(Locale.ROOT);
-                        if (rUpper.contains("BAC_SI") || rUpper.contains("DOCTOR") || rUpper.contains("BÁC SĨ")) {
-                            isDoctor = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            if (!isDoctor && staff.getPositionTitle() != null) {
-                String pos = staff.getPositionTitle().toLowerCase(Locale.ROOT);
-                if (pos.contains("bác sĩ") || pos.contains("doctor") || pos.contains("nha sĩ")) {
-                    isDoctor = true;
-                }
-            }
-            if (!isDoctor && staff.getFullName() != null) {
-                String nameUpper = staff.getFullName().toUpperCase(Locale.ROOT);
-                if (nameUpper.startsWith("BS") || nameUpper.startsWith("THS. BS") || nameUpper.startsWith("TS. BS") || nameUpper.startsWith("BÁC SĨ")) {
-                    isDoctor = true;
-                }
-            }
-            // Loại trừ các vị trí phi lâm sàng
-            String titleLower = (staff.getPositionTitle() != null ? staff.getPositionTitle() : "") + " " + (staff.getSpecialty() != null ? staff.getSpecialty() : "");
-            titleLower = titleLower.toLowerCase(Locale.ROOT);
-            if (titleLower.contains("lễ tân") || titleLower.contains("phụ tá") || titleLower.contains("kế toán") || titleLower.contains("bảo vệ") || titleLower.contains("kho")) {
-                isDoctor = false;
-            }
-            if (isDoctor) {
+            if (isDoctorAssignment(assignment, staff)) {
                 assigned.add(staff.getStaffId());
                 activeBranchDoctors.put(staff.getStaffId(), staff);
             }
@@ -352,26 +436,67 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
             if (!absent) result.put(doctor.getStaffId(), doctor);
         }
 
-        // Nếu ngày đó cơ sở ĐÃ LẬP ca trực cụ thể (branchSchedules không rỗng) nhưng ca này không có bác sĩ nào trực:
-        // -> Trả về rỗng (không mượn bác sĩ ca khác)
-        // Nếu ngày đó cơ sở CHƯA LẬP bất kỳ ca trực nào (branchSchedules rỗng):
-        // -> Chỉ lấy các bác sĩ thuộc biên chế của CHÍNH CƠ SỞ ĐÓ (activeBranchDoctors), loại trừ nghỉ phép
-        if (result.isEmpty() && branchSchedules.isEmpty()) {
-            if (date.equals(today)) {
-                if (branch.getClosingTime() != null && !now.isBefore(branch.getClosingTime())) {
-                    return List.of();
-                }
-                if (!now.isBefore(range.end())) {
-                    return List.of();
-                }
+        // Không âm thầm fallback sang toàn bộ bác sĩ biên chế khi ngày đó chưa có lịch phân ca (StaffSchedule).
+        // Nếu branchSchedules rỗng hoặc không có bác sĩ nào có ca trực hợp lệ trong buổi, trả về danh sách rỗng.
+        return result.values().stream().sorted(Comparator.comparing(StaffProfile::getFullName)).toList();
+    }
+
+    /** Xác định nhân sự được phân công tại chi nhánh có phải là bác sĩ lâm sàng hay không. */
+    private boolean isDoctorAssignment(StaffBranchAssignment assignment, StaffProfile staff) {
+        String assignmentRole = null;
+        if (assignment.getRole() != null && Boolean.TRUE.equals(assignment.getRole().getIsActive())
+                && assignment.getRole().getRoleName() != null) {
+            assignmentRole = assignment.getRole().getRoleName().trim().toUpperCase(Locale.ROOT);
+        }
+        if (assignmentRole != null) {
+            if (assignmentRole.contains("LE_TAN") || assignmentRole.contains("KE_TOAN")
+                    || assignmentRole.contains("QUAN_LY_KHO") || assignmentRole.contains("THU_KHO")
+                    || "KHO".equals(assignmentRole) || assignmentRole.contains("ADMIN")
+                    || assignmentRole.contains("PHU_TA") || assignmentRole.contains("BAO_VE")
+                    || assignmentRole.contains("THU_NGAN")) {
+                return false;
             }
-            activeBranchDoctors.values().forEach(doc -> {
-                boolean absent = approved.stream().anyMatch(leave -> leave.getStaff().getStaffId().equals(doc.getStaffId()));
-                if (!absent) result.put(doc.getStaffId(), doc);
-            });
+            if (assignmentRole.contains("BAC_SI") || assignmentRole.contains("DOCTOR")
+                    || assignmentRole.contains("BÁC SĨ")) {
+                return true;
+            }
         }
 
-        return result.values().stream().sorted(Comparator.comparing(StaffProfile::getFullName)).toList();
+        boolean isDoctor = false;
+        if (staff.getUser() != null && staff.getUser().getRoles() != null) {
+            for (Role r : staff.getUser().getRoles()) {
+                if (Boolean.TRUE.equals(r.getIsActive()) && r.getRoleName() != null) {
+                    String rUpper = r.getRoleName().trim().toUpperCase(Locale.ROOT);
+                    if (rUpper.contains("BAC_SI") || rUpper.contains("DOCTOR") || rUpper.contains("BÁC SĨ")) {
+                        isDoctor = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!isDoctor && staff.getPositionTitle() != null) {
+            String pos = staff.getPositionTitle().toLowerCase(Locale.ROOT);
+            if (pos.contains("bác sĩ") || pos.contains("doctor") || pos.contains("nha sĩ")) {
+                isDoctor = true;
+            }
+        }
+        if (!isDoctor && staff.getFullName() != null) {
+            String nameUpper = staff.getFullName().toUpperCase(Locale.ROOT);
+            if (nameUpper.startsWith("BS") || nameUpper.startsWith("THS. BS") || nameUpper.startsWith("THS.BS")
+                    || nameUpper.startsWith("TS. BS") || nameUpper.startsWith("TS.BS")
+                    || nameUpper.startsWith("BÁC SĨ")) {
+                isDoctor = true;
+            }
+        }
+        // Chỉ loại trừ từ "kho" đứng riêng (thủ kho, quản lý kho), không loại nhầm "nha khoa" / "chuyên khoa" / "trưởng khoa".
+        String titleLower = ((staff.getPositionTitle() != null ? staff.getPositionTitle() : "")
+                + " " + (staff.getSpecialty() != null ? staff.getSpecialty() : "")).toLowerCase(Locale.ROOT);
+        if (titleLower.contains("lễ tân") || titleLower.contains("phụ tá")
+                || titleLower.contains("kế toán") || titleLower.contains("bảo vệ")
+                || WAREHOUSE_WORD_PATTERN.matcher(titleLower).find()) {
+            isDoctor = false;
+        }
+        return isDoctor;
     }
 
     @Override

@@ -1,12 +1,18 @@
 package com.cvdcms.controller;
 
 import com.cvdcms.entity.Branch;
+import com.cvdcms.entity.ClinicalPhoto;
 import com.cvdcms.entity.NanopixXraySyncLog;
 import com.cvdcms.entity.PatientProfile;
 import com.cvdcms.entity.Role;
 import com.cvdcms.entity.User;
+import com.cvdcms.entity.enums.AssignmentStatus;
+import com.cvdcms.repository.ClinicalPhotoRepository;
 import com.cvdcms.repository.NanopixXraySyncLogRepository;
+import com.cvdcms.repository.StaffBranchAssignmentRepository;
 import com.cvdcms.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +34,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -62,6 +70,15 @@ public class SecuredUploadResourceController {
 
     @Autowired(required = false)
     private NanopixXraySyncLogRepository nanopixRepository;
+
+    @Autowired(required = false)
+    private ClinicalPhotoRepository clinicalPhotoRepository;
+
+    @Autowired(required = false)
+    private StaffBranchAssignmentRepository staffBranchAssignmentRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public SecuredUploadResourceController() {
     }
@@ -155,18 +172,17 @@ public class SecuredUploadResourceController {
             authorizeNanopixFileAccess(currentUser, fileName);
             return;
         }
+        if ("clinical_photos".equals(category)) {
+            authorizeClinicalPhotoAccess(currentUser, fileName);
+            return;
+        }
 
         User effectiveUser = currentUser;
         if (userRepository != null && currentUser.getUserId() != null) {
             effectiveUser = userRepository.findById(currentUser.getUserId()).orElse(currentUser);
         }
 
-        Set<String> roleNames = effectiveUser.getRoles() != null
-                ? effectiveUser.getRoles().stream()
-                    .filter(r -> r != null && r.getRoleName() != null)
-                    .map(r -> r.getRoleName().trim().toUpperCase(Locale.ROOT))
-                    .collect(Collectors.toSet())
-                : Set.of();
+        Set<String> roleNames = extractRoleNames(effectiveUser);
 
         boolean isAdmin = roleNames.contains("ADMIN") || roleNames.contains("ROLE_ADMIN");
         if (isAdmin) {
@@ -179,21 +195,134 @@ public class SecuredUploadResourceController {
                 || roleNames.contains("KE_TOAN") || roleNames.contains("ROLE_KE_TOAN")
                 || roleNames.contains("QUAN_LY_KHO") || roleNames.contains("ROLE_QUAN_LY_KHO");
 
-        if ("signatures".equals(category) || "labo".equals(category)) {
+        if ("signatures".equals(category) || "labo".equals(category) || "invoices".equals(category)) {
             if (!isAuthorizedStaff) {
                 log.warn("Từ chối người dùng không phải nhân viên phòng khám (User {}) xem tài liệu nội bộ {}/{}",
                         effectiveUser.getUserId(), category, fileName);
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền truy cập tài liệu nội bộ này.");
             }
-        } else if ("clinical_photos".equals(category)) {
-            if (!isAuthorizedStaff && !isPatient) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem ảnh lâm sàng.");
-            }
         } else if ("invoices".equals(category)) {
             if (!isAuthorizedStaff && !isPatient) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem hóa đơn tài chính.");
             }
+        } else if ("clinical_photos".equals(category)) {
+            if (!isAuthorizedStaff && !isPatient) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem ảnh lâm sàng.");
+            }
         }
+    }
+
+    private void authorizeClinicalPhotoAccess(User sessionUser, String fileName) {
+        User effectiveUser = sessionUser;
+        if (userRepository != null && sessionUser.getUserId() != null) {
+            effectiveUser = userRepository.findById(sessionUser.getUserId()).orElse(sessionUser);
+        }
+
+        Set<String> roleNames = extractRoleNames(effectiveUser);
+        boolean isAdmin = roleNames.contains("ADMIN") || roleNames.contains("ROLE_ADMIN");
+        if (isAdmin) {
+            return;
+        }
+
+        boolean isPatient = roleNames.contains("BENH_NHAN") || roleNames.contains("ROLE_BENH_NHAN");
+        boolean isClinicalOrReceptionStaff = roleNames.stream().anyMatch(XRAY_AUTHORIZED_STAFF_ROLES::contains)
+                || (!isPatient && userRepository != null && effectiveUser.getUserId() != null
+                && (userRepository.hasActivePermission(effectiveUser.getUserId(), "CLINICAL_PHOTOS")
+                || userRepository.hasActivePermission(effectiveUser.getUserId(), "MEDICAL_RECORD_VIEW")
+                || userRepository.hasActivePermission(effectiveUser.getUserId(), "PATIENT_PROFILE_MANAGE")));
+
+        if (!isClinicalOrReceptionStaff && !isPatient) {
+            log.warn("Từ chối vai trò {} (User {}) truy cập ảnh lâm sàng: {}", roleNames, effectiveUser.getUserId(), fileName);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem ảnh lâm sàng.");
+        }
+
+        String imageUrl = "/uploads/clinical_photos/" + fileName;
+        ClinicalPhoto photo = findClinicalPhotoByImageUrl(imageUrl);
+
+        if (isPatient && !isClinicalOrReceptionStaff) {
+            if (photo == null || photo.getPatientProfile() == null || photo.getPatientProfile().getUser() == null
+                    || !effectiveUser.getUserId().equals(photo.getPatientProfile().getUser().getUserId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Bệnh nhân chỉ được xem ảnh lâm sàng thuộc hồ sơ cá nhân của mình.");
+            }
+            return;
+        }
+
+        // Kiểm tra giới hạn cơ sở (Branch isolation) đối với nhân sự không phải Admin
+        Set<Long> userBranchIds = resolveUserBranchIds(effectiveUser);
+        if (photo != null) {
+            Branch photoBranch = (photo.getVisit() != null && photo.getVisit().getBranch() != null)
+                    ? photo.getVisit().getBranch()
+                    : (photo.getPatientProfile() != null ? photo.getPatientProfile().getPreferredBranch() : null);
+            if (photoBranch != null && photoBranch.getBranchId() != null
+                    && !userBranchIds.contains(photoBranch.getBranchId())) {
+                log.warn("Từ chối nhân sự cơ sở {} (User {}) xem ảnh lâm sàng thuộc cơ sở {}: {}",
+                        userBranchIds, effectiveUser.getUserId(), photoBranch.getBranchId(), fileName);
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Bạn không có quyền xem ảnh lâm sàng thuộc cơ sở khác.");
+            }
+        } else if (clinicalPhotoRepository != null || entityManager != null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Không thể xác minh quyền truy cập ảnh lâm sàng này.");
+        }
+    }
+
+    private ClinicalPhoto findClinicalPhotoByImageUrl(String imageUrl) {
+        if (entityManager != null) {
+            List<ClinicalPhoto> results = entityManager.createQuery(
+                            "SELECT p FROM ClinicalPhoto p " +
+                                    "LEFT JOIN FETCH p.patientProfile pp " +
+                                    "LEFT JOIN FETCH pp.user " +
+                                    "LEFT JOIN FETCH pp.preferredBranch " +
+                                    "LEFT JOIN FETCH p.visit v " +
+                                    "LEFT JOIN FETCH v.branch " +
+                                    "WHERE p.imageUrl = :imageUrl " +
+                                    "ORDER BY p.capturedAt DESC", ClinicalPhoto.class)
+                    .setParameter("imageUrl", imageUrl)
+                    .setMaxResults(1)
+                    .getResultList();
+            if (!results.isEmpty()) {
+                return results.get(0);
+            }
+        }
+        if (clinicalPhotoRepository != null) {
+            return clinicalPhotoRepository.findAll().stream()
+                    .filter(p -> imageUrl.equals(p.getImageUrl()))
+                    .findFirst()
+                    .orElse(null);
+        }
+        return null;
+    }
+
+    private Set<String> extractRoleNames(User user) {
+        return user != null && user.getRoles() != null
+                ? user.getRoles().stream()
+                    .filter(r -> r != null && r.getRoleName() != null)
+                    .map(r -> r.getRoleName().trim().toUpperCase(Locale.ROOT))
+                    .collect(Collectors.toSet())
+                : Set.of();
+    }
+
+    private Set<Long> resolveUserBranchIds(User effectiveUser) {
+        Set<Long> ids = new HashSet<>();
+        if (effectiveUser == null) {
+            return ids;
+        }
+        if (effectiveUser.getBranch() != null && effectiveUser.getBranch().getBranchId() != null) {
+            ids.add(effectiveUser.getBranch().getBranchId());
+        }
+        if (staffBranchAssignmentRepository != null && effectiveUser.getUserId() != null) {
+            List<Long> assigned = staffBranchAssignmentRepository.findActiveBranchIdsByUserId(
+                    effectiveUser.getUserId(), AssignmentStatus.ACTIVE);
+            if (assigned != null) {
+                for (Long id : assigned) {
+                    if (id != null) {
+                        ids.add(id);
+                    }
+                }
+            }
+        }
+        return ids;
     }
 
     private void authorizeNanopixFileAccess(User sessionUser, String fileName) {
@@ -202,12 +331,7 @@ public class SecuredUploadResourceController {
             effectiveUser = userRepository.findById(sessionUser.getUserId()).orElse(sessionUser);
         }
 
-        Set<String> roleNames = effectiveUser.getRoles() != null
-                ? effectiveUser.getRoles().stream()
-                    .filter(r -> r != null && r.getRoleName() != null)
-                    .map(r -> r.getRoleName().trim().toUpperCase(Locale.ROOT))
-                    .collect(Collectors.toSet())
-                : Set.of();
+        Set<String> roleNames = extractRoleNames(effectiveUser);
 
         boolean isAdmin = roleNames.contains("ADMIN") || roleNames.contains("ROLE_ADMIN");
         boolean isPatient = roleNames.contains("BENH_NHAN") || roleNames.contains("ROLE_BENH_NHAN");
@@ -240,12 +364,11 @@ public class SecuredUploadResourceController {
             Branch xrayBranch = syncLog.getBranch() != null
                     ? syncLog.getBranch()
                     : (syncLog.getMatchedVisit() != null ? syncLog.getMatchedVisit().getBranch() : null);
-            Branch userBranch = effectiveUser.getBranch();
+            Set<Long> userBranchIds = resolveUserBranchIds(effectiveUser);
             if (xrayBranch != null && xrayBranch.getBranchId() != null
-                    && userBranch != null && userBranch.getBranchId() != null
-                    && !xrayBranch.getBranchId().equals(userBranch.getBranchId())) {
+                    && !userBranchIds.contains(xrayBranch.getBranchId())) {
                 log.warn("Từ chối nhân sự cơ sở {} (User {}) xem phim X-quang thuộc cơ sở {}: {}",
-                        userBranch.getBranchId(), effectiveUser.getUserId(), xrayBranch.getBranchId(), fileName);
+                        userBranchIds, effectiveUser.getUserId(), xrayBranch.getBranchId(), fileName);
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem phim X-quang thuộc cơ sở khác.");
             }
         }

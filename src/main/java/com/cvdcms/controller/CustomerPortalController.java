@@ -49,6 +49,12 @@ public class CustomerPortalController {
         }
         List<Branch> activeBranches = customerPortalService.getActiveBranches();
         if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
+            User dbUser = userRepository != null
+                    ? userRepository.findById(sessionUser.getUserId()).orElse(sessionUser)
+                    : sessionUser;
+            if (dbUser != null && dbUser.getBranch() != null && Boolean.TRUE.equals(dbUser.getBranch().getIsActive())) {
+                return dbUser.getBranch();
+            }
             if (patientProfileRepository != null) {
                 PatientProfile defaultProfile = patientProfileRepository
                         .findFirstByUser_UserIdAndIsDefaultTrue(sessionUser.getUserId())
@@ -58,12 +64,6 @@ public class CustomerPortalController {
                         && Boolean.TRUE.equals(defaultProfile.getPreferredBranch().getIsActive())) {
                     return defaultProfile.getPreferredBranch();
                 }
-            }
-            User dbUser = userRepository != null
-                    ? userRepository.findById(sessionUser.getUserId()).orElse(sessionUser)
-                    : sessionUser;
-            if (dbUser != null && dbUser.getBranch() != null && Boolean.TRUE.equals(dbUser.getBranch().getIsActive())) {
-                return dbUser.getBranch();
             }
         }
         Object selectedBranchIdObj = session.getAttribute("selectedPortalBranchId");
@@ -179,6 +179,9 @@ public class CustomerPortalController {
         }
     }
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.PatientProfileService patientProfileService;
+
     @PostMapping("/portal/switch-branch")
     public String switchPortalBranch(
             @RequestParam("branchId") Long branchId,
@@ -186,9 +189,94 @@ public class CustomerPortalController {
             HttpSession session,
             RedirectAttributes redirectAttributes
     ) {
+        if (session == null
+                || !(session.getAttribute("loggedInUser") instanceof User sessionUser)
+                || sessionUser.getUserId() == null) {
+            return "redirect:/login";
+        }
+
+        String safeRedirect = (redirectUrl != null && redirectUrl.startsWith("/") && !redirectUrl.startsWith("//"))
+                ? redirectUrl
+                : "/";
+
+        try {
+            Branch targetBranch = applyBranchSwitch(sessionUser, branchId, session);
+            redirectAttributes.addFlashAttribute(
+                    "branchSwitchSuccess",
+                    "Đã chuyển sang cơ sở " + targetBranch.getBranchName() + " thành công!"
+            );
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("branchSwitchError", ex.getMessage());
+        }
+        return "redirect:" + safeRedirect;
+    }
+
+    @PostMapping("/portal/switch-branch/ajax")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public org.springframework.http.ResponseEntity<java.util.Map<String, Object>> switchPortalBranchAjax(
+            @RequestParam(value = "branchId", required = false) Long branchId,
+            HttpSession session
+    ) {
+        java.util.Map<String, Object> body = new java.util.LinkedHashMap<>();
+        if (session == null
+                || !(session.getAttribute("loggedInUser") instanceof User sessionUser)
+                || sessionUser.getUserId() == null) {
+            body.put("success", false);
+            body.put("loginRequired", true);
+            body.put("loginUrl", "/login");
+            body.put("message", "Vui lòng đăng nhập để chuyển cơ sở khám.");
+            return org.springframework.http.ResponseEntity
+                    .status(org.springframework.http.HttpStatus.UNAUTHORIZED)
+                    .body(body);
+        }
+
+        try {
+            Branch targetBranch = applyBranchSwitch(sessionUser, branchId, session);
+            body.put("success", true);
+            body.put("branchId", targetBranch.getBranchId());
+            body.put("branchName", targetBranch.getBranchName());
+            body.put("branchAddress", targetBranch.getAddress());
+            body.put("branchPhone", targetBranch.getPhone());
+            body.put("branchEmail", targetBranch.getEmail());
+            if (targetBranch.getOpeningTime() != null && targetBranch.getClosingTime() != null) {
+                body.put("openingHours", String.format("%02d:%02d - %02d:%02d",
+                        targetBranch.getOpeningTime().getHour(),
+                        targetBranch.getOpeningTime().getMinute(),
+                        targetBranch.getClosingTime().getHour(),
+                        targetBranch.getClosingTime().getMinute()));
+            }
+            body.put("message", "Đã chuyển sang cơ sở " + targetBranch.getBranchName() + " thành công!");
+            return org.springframework.http.ResponseEntity.ok(body);
+        } catch (IllegalArgumentException ex) {
+            body.put("success", false);
+            body.put("message", ex.getMessage());
+            return org.springframework.http.ResponseEntity
+                    .status(org.springframework.http.HttpStatus.BAD_REQUEST)
+                    .body(body);
+        }
+    }
+
+    private Branch applyBranchSwitch(User sessionUser, Long branchId, HttpSession session) {
+        if (patientProfileService != null) {
+            com.cvdcms.service.PatientProfileService.BranchSwitchResult result =
+                    patientProfileService.switchUserPreferredBranch(sessionUser.getUserId(), branchId);
+            Branch branch = result.branch();
+            session.setAttribute("loggedInUser", result.user());
+            session.setAttribute("selectedPortalBranchId", branch.getBranchId());
+            session.setAttribute("currentBranchName", branch.getBranchName());
+            session.setAttribute("currentBranchAddress", branch.getAddress() != null ? branch.getAddress() : "");
+            if (result.defaultProfile() != null) {
+                session.setAttribute("defaultPatientProfile", result.defaultProfile());
+            }
+            return branch;
+        }
+
+        if (branchId == null) {
+            throw new IllegalArgumentException("Vui lòng chọn cơ sở khám.");
+        }
         List<Branch> activeBranches = customerPortalService.getActiveBranches();
         Branch targetBranch = null;
-        if (activeBranches != null && branchId != null) {
+        if (activeBranches != null) {
             for (Branch b : activeBranches) {
                 if (branchId.equals(b.getBranchId())) {
                     targetBranch = b;
@@ -196,40 +284,32 @@ public class CustomerPortalController {
                 }
             }
         }
-        if (targetBranch != null && session != null) {
-            session.setAttribute("selectedPortalBranchId", targetBranch.getBranchId());
-            session.setAttribute("currentBranchName", targetBranch.getBranchName());
-
-            if (session.getAttribute("loggedInUser") instanceof User sessionUser && sessionUser.getUserId() != null) {
-                if (userRepository != null) {
-                    User dbUser = userRepository.findById(sessionUser.getUserId()).orElse(null);
-                    if (dbUser != null) {
-                        dbUser.setBranch(targetBranch);
-                        userRepository.save(dbUser);
-                        session.setAttribute("loggedInUser", dbUser);
-                    }
-                }
-                if (patientProfileRepository != null) {
-                    List<PatientProfile> profiles = patientProfileRepository
-                            .findByUser_UserIdOrderByIsDefaultDescProfileIdDesc(sessionUser.getUserId());
-                    for (PatientProfile p : profiles) {
-                        p.setPreferredBranch(targetBranch);
-                    }
-                    if (!profiles.isEmpty()) {
-                        patientProfileRepository.saveAll(profiles);
-                        session.setAttribute("defaultPatientProfile", profiles.get(0));
-                    }
-                }
-            }
-            redirectAttributes.addFlashAttribute(
-                    "branchSwitchSuccess",
-                    "Đã chuyển sang cơ sở " + targetBranch.getBranchName() + " thành công!"
-            );
+        if (targetBranch == null || !Boolean.TRUE.equals(targetBranch.getIsActive())) {
+            throw new IllegalArgumentException("Cơ sở không tồn tại hoặc hiện không hoạt động.");
         }
-        String safeRedirect = (redirectUrl != null && redirectUrl.startsWith("/") && !redirectUrl.startsWith("//"))
-                ? redirectUrl
-                : "/";
-        return "redirect:" + safeRedirect;
+
+        if (userRepository != null) {
+            User dbUser = userRepository.findById(sessionUser.getUserId()).orElse(null);
+            if (dbUser != null) {
+                dbUser.setBranch(targetBranch);
+                userRepository.save(dbUser);
+                session.setAttribute("loggedInUser", dbUser);
+            }
+        }
+        if (patientProfileRepository != null) {
+            List<PatientProfile> profiles = patientProfileRepository
+                    .findByUser_UserIdOrderByIsDefaultDescProfileIdDesc(sessionUser.getUserId());
+            for (PatientProfile p : profiles) {
+                p.setPreferredBranch(targetBranch);
+            }
+            if (!profiles.isEmpty()) {
+                patientProfileRepository.saveAll(profiles);
+                session.setAttribute("defaultPatientProfile", profiles.get(0));
+            }
+        }
+        session.setAttribute("selectedPortalBranchId", targetBranch.getBranchId());
+        session.setAttribute("currentBranchName", targetBranch.getBranchName());
+        return targetBranch;
     }
 
     @GetMapping("/about")

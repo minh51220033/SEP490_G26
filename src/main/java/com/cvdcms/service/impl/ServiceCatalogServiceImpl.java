@@ -616,8 +616,8 @@ public class ServiceCatalogServiceImpl
 
     private int validDuration(Integer requested, Integer fallback) {
         int value = requested == null ? (fallback == null ? 30 : fallback) : requested;
-        if (value < 15 || value > 240 || value % 15 != 0) {
-            throw new IllegalArgumentException("Thời lượng dự kiến phải từ 15 đến 240 phút, theo bước 15 phút.");
+        if (value < 15 || value > 240 || value % 5 != 0) {
+            throw new IllegalArgumentException("Thời lượng dự kiến phải từ 15 đến 240 phút, theo bước 5 phút.");
         }
         return value;
     }

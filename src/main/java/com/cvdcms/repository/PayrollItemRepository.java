@@ -34,7 +34,7 @@ public interface PayrollItemRepository extends JpaRepository<PayrollItem, Long> 
     """)
     Optional<PayrollItem> findWithDetailsById(@Param("itemId") Long itemId);
 
-    @Modifying
+    @Modifying(flushAutomatically = true)
     @Query("DELETE FROM PayrollItem i WHERE i.payrollPeriod.periodId = :periodId")
     void deleteByPayrollPeriod_PeriodId(@Param("periodId") Long periodId);
 

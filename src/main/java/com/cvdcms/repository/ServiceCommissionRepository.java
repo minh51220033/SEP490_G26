@@ -2,13 +2,14 @@ package com.cvdcms.repository;
 
 import com.cvdcms.entity.ServiceCommission;
 import com.cvdcms.entity.enums.CommissionRoleType;
-import com.cvdcms.entity.enums.CommissionStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -21,46 +22,66 @@ public interface ServiceCommissionRepository extends JpaRepository<ServiceCommis
             CommissionRoleType roleType
     );
 
+    List<ServiceCommission> findByPerformedService_PerformedId(Long performedId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT sc FROM ServiceCommission sc WHERE sc.performedService.performedId = :performedId ORDER BY sc.commissionId ASC")
+    List<ServiceCommission> findByPerformedService_PerformedIdForUpdate(@Param("performedId") Long performedId);
+
     List<ServiceCommission> findByPayrollItem_ItemId(Long itemId);
 
     List<ServiceCommission> findByPayrollItem_PayrollPeriod_PeriodId(Long periodId);
 
+    /**
+     * Khóa và tải duy nhất một danh sách hoa hồng PENDING chưa gắn kỳ lương, thuộc dịch vụ COMPLETED
+     * trong nửa khoảng [startDate, endDateExclusive) để vừa tính tổng vừa gắn vào PayrollItem trong cùng transaction.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT sc FROM ServiceCommission sc
+        JOIN sc.performedService ps
+        JOIN ps.service s
+        WHERE sc.staff.staffId = :staffId
+          AND sc.payrollItem IS NULL
+          AND sc.status = com.cvdcms.entity.enums.CommissionStatus.PENDING
+          AND ps.status = com.cvdcms.entity.enums.PerformedServiceStatus.COMPLETED
+          AND sc.calculatedAt >= :startDate
+          AND sc.calculatedAt < :endDateExclusive
+        ORDER BY sc.commissionId ASC
+    """)
+    List<ServiceCommission> findPendingUnboundCommissionsForStaffInPeriodForUpdate(
+            @Param("staffId") Long staffId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDateExclusive") LocalDateTime endDateExclusive
+    );
+
+    /**
+     * Truy vấn đối soát các hoa hồng phát sinh muộn chưa gắn kỳ lương cho tập nhân sự của một kỳ [startDate, endDateExclusive).
+     */
     @Query("""
         SELECT sc FROM ServiceCommission sc
         JOIN FETCH sc.performedService ps
         JOIN FETCH ps.service s
-        WHERE sc.staff.staffId = :staffId
-          AND sc.payrollItem IS NULL
-          AND sc.status = :status
+        JOIN FETCH sc.staff st
+        WHERE sc.payrollItem IS NULL
+          AND sc.status = com.cvdcms.entity.enums.CommissionStatus.PENDING
+          AND ps.status = com.cvdcms.entity.enums.PerformedServiceStatus.COMPLETED
+          AND sc.staff.staffId IN :staffIds
           AND sc.calculatedAt >= :startDate
-          AND sc.calculatedAt <= :endDate
+          AND sc.calculatedAt < :endDateExclusive
+        ORDER BY sc.calculatedAt ASC, sc.commissionId ASC
     """)
-    List<ServiceCommission> findUnpaidCommissionsForStaffInPeriod(
-            @Param("staffId") Long staffId,
-            @Param("status") CommissionStatus status,
+    List<ServiceCommission> findUnboundPendingCommissionsForStaffListInPeriod(
+            @Param("staffIds") List<Long> staffIds,
             @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+            @Param("endDateExclusive") LocalDateTime endDateExclusive
     );
 
-    @Query("""
-        SELECT COALESCE(SUM(sc.commissionAmount), 0) FROM ServiceCommission sc
-        WHERE sc.staff.staffId = :staffId
-          AND sc.payrollItem IS NULL
-          AND sc.status != 'CANCELLED'
-          AND sc.calculatedAt >= :startDate
-          AND sc.calculatedAt <= :endDate
-    """)
-    BigDecimal sumUnpaidCommissionsForStaffInPeriod(
-            @Param("staffId") Long staffId,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
-    );
-
-    @org.springframework.data.jpa.repository.Modifying
+    @Modifying(flushAutomatically = true)
     @Query("UPDATE ServiceCommission sc SET sc.payrollItem = null WHERE sc.payrollItem.payrollPeriod.periodId = :periodId")
     void unbindCommissionsFromPeriod(@Param("periodId") Long periodId);
 
-    @org.springframework.data.jpa.repository.Modifying
+    @Modifying(flushAutomatically = true)
     @Query("UPDATE ServiceCommission sc SET sc.status = com.cvdcms.entity.enums.CommissionStatus.PAID WHERE sc.payrollItem.payrollPeriod.periodId = :periodId")
     void markCommissionsAsPaidForPeriod(@Param("periodId") Long periodId);
 }

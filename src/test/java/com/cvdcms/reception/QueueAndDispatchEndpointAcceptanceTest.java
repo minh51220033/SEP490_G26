@@ -90,7 +90,7 @@ class QueueAndDispatchEndpointAcceptanceTest {
     }
 
     @Test
-    @DisplayName("Endpoint 3: POST /reception/dispatch/{id}/ticket cấp số khám và thông báo")
+    @DisplayName("Endpoint 3: POST /reception/dispatch/{id}/ticket cấp số khám và không cho lễ tân tự nâng priority")
     void issueTicketEndpoint() throws Exception {
         QueueTicket ticket = new QueueTicket();
         ticket.setTicketId(10L);
@@ -99,10 +99,12 @@ class QueueAndDispatchEndpointAcceptanceTest {
 
         dispatchMockMvc.perform(post("/reception/dispatch/10/ticket")
                         .param("branchId", "1")
-                        .param("priority", "false"))
+                        .param("priority", "true"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/reception/dispatch?branchId=1"))
                 .andExpect(flash().attributeExists("notice", "issuedTicketNumber"));
+
+        verify(dispatchService).issue(any(), eq(1L), eq(10L), eq(false), isNull());
     }
 
     @Test
@@ -129,16 +131,24 @@ class QueueAndDispatchEndpointAcceptanceTest {
     }
 
     @Test
-    @DisplayName("Endpoint 6: POST /reception/queue/doctors/{id}/call-next gọi số tiếp theo theo bác sĩ")
+    @DisplayName("Endpoint 6: POST /reception/queue/doctors/{id}/call-next, /{id}/CALL bị từ chối (HTTP 403) và PAUSE/PRIORITIZE trả 403 khi service chặn")
     void callNextEndpoint() throws Exception {
-        QueueTicket ticket = new QueueTicket();
-        ticket.setDisplayNumber("P-01");
-        when(queueWorkflowService.callNext(any(), eq(1L), eq(2L))).thenReturn(ticket);
-
         queueMockMvc.perform(post("/reception/queue/doctors/2/call-next").param("branchId", "1"))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/reception/queue?branchId=1"))
-                .andExpect(flash().attribute("notice", "Đã gọi số P-01."));
+                .andExpect(status().isForbidden());
+
+        queueMockMvc.perform(post("/reception/queue/15/CALL").param("branchId", "1"))
+                .andExpect(status().isForbidden());
+
+        doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Lễ tân không có quyền tạm dừng."))
+                .when(queueWorkflowService)
+                .transition(any(), eq(15L), eq(QueueWorkflowService.Action.PAUSE), isNull(), anyString());
+
+        queueMockMvc.perform(post("/reception/queue/15/PAUSE")
+                        .header("X-Requested-With", "XMLHttpRequest")
+                        .param("branchId", "1")
+                        .param("reason", "Thử tạm dừng lượt đang gọi để vượt"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false));
     }
 
     @Test

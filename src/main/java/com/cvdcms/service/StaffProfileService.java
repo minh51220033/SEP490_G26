@@ -891,7 +891,6 @@ public class StaffProfileService {
 
         checkNotNegative(dto.getBaseSalary(), "Lương cơ bản");
         checkNotNegative(dto.getAllowanceAmount(), "Phụ cấp");
-        checkNotNegative(dto.getInsuranceSalary(), "Lương đóng BHXH");
     }
 
     private void checkNotNegative(BigDecimal value, String label) {
@@ -916,7 +915,6 @@ public class StaffProfileService {
         staff.setMohDoctorCode(isDoctor ? trimToNull(dto.getMohDoctorCode()) : null);
         staff.setBaseSalary(dto.getBaseSalary() != null ? dto.getBaseSalary() : BigDecimal.ZERO);
         staff.setAllowanceAmount(dto.getAllowanceAmount() != null ? dto.getAllowanceAmount() : BigDecimal.ZERO);
-        staff.setInsuranceSalary(dto.getInsuranceSalary() != null ? dto.getInsuranceSalary() : BigDecimal.ZERO);
         staff.setBankAccountNumber(trimToNull(dto.getBankAccountNumber()));
         staff.setBankName(trimToNull(dto.getBankName()));
         staff.setHireDate(dto.getHireDate());

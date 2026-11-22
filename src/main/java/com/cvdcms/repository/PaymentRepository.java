@@ -181,14 +181,14 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
           AND p.paymentMethod = :paymentMethod
           AND (:paymentType IS NULL OR p.paymentType = :paymentType)
           AND (:startDate IS NULL OR p.paidAt >= :startDate)
-          AND (:endDate IS NULL OR p.paidAt <= :endDate)
+          AND (:endExclusive IS NULL OR p.paidAt < :endExclusive)
     """)
     BigDecimal sumAmountByMethodAndBranches(
             @Param("branchIds") java.util.Collection<Long> branchIds,
             @Param("paymentMethod") PaymentMethod paymentMethod,
             @Param("paymentType") PaymentType paymentType,
             @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+            @Param("endExclusive") LocalDateTime endExclusive
     );
 
     @Query("""
@@ -196,12 +196,12 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
         WHERE (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
           AND p.paymentMethod != com.cvdcms.entity.enums.PaymentMethod.DEPOSIT_WALLET
           AND (:startDate IS NULL OR p.paidAt >= :startDate)
-          AND (:endDate IS NULL OR p.paidAt <= :endDate)
+          AND (:endExclusive IS NULL OR p.paidAt < :endExclusive)
     """)
     BigDecimal sumRealRevenueByBranches(
             @Param("branchIds") java.util.Collection<Long> branchIds,
             @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+            @Param("endExclusive") LocalDateTime endExclusive
     );
 
     @Query("""
@@ -209,12 +209,12 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
         WHERE (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
           AND p.paymentMethod = com.cvdcms.entity.enums.PaymentMethod.DEPOSIT_WALLET
           AND (:startDate IS NULL OR p.paidAt >= :startDate)
-          AND (:endDate IS NULL OR p.paidAt <= :endDate)
+          AND (:endExclusive IS NULL OR p.paidAt < :endExclusive)
     """)
     BigDecimal sumDepositWalletUsedByBranches(
             @Param("branchIds") java.util.Collection<Long> branchIds,
             @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+            @Param("endExclusive") LocalDateTime endExclusive
     );
 
     @Query("""
@@ -222,12 +222,12 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
         WHERE (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
           AND p.paymentType = com.cvdcms.entity.enums.PaymentType.ADVANCE_DEPOSIT
           AND (:startDate IS NULL OR p.paidAt >= :startDate)
-          AND (:endDate IS NULL OR p.paidAt <= :endDate)
+          AND (:endExclusive IS NULL OR p.paidAt < :endExclusive)
     """)
     BigDecimal sumAdvanceDepositByBranches(
             @Param("branchIds") java.util.Collection<Long> branchIds,
             @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+            @Param("endExclusive") LocalDateTime endExclusive
     );
 
     @Query("""
@@ -236,13 +236,13 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
         WHERE (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
           AND p.paymentMethod != com.cvdcms.entity.enums.PaymentMethod.DEPOSIT_WALLET
           AND (:startDate IS NULL OR p.paidAt >= :startDate)
-          AND (:endDate IS NULL OR p.paidAt <= :endDate)
+          AND (:endExclusive IS NULL OR p.paidAt < :endExclusive)
         ORDER BY p.paidAt ASC
     """)
     List<Object[]> findDailyRealPaymentsForPeriod(
             @Param("branchIds") java.util.Collection<Long> branchIds,
             @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+            @Param("endExclusive") LocalDateTime endExclusive
     );
 
     @Query("""
@@ -265,4 +265,37 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     boolean existsByBankAccount_AccountId(Long accountId);
 
     long countByBankAccount_AccountId(Long accountId);
+
+    @Query("""
+        SELECT p.branch.branchId,
+               p.paymentType,
+               p.paymentMethod,
+               COALESCE(SUM(p.amount), 0)
+        FROM Payment p
+        WHERE (:branchIds IS NULL OR p.branch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR p.paidAt >= :startDate)
+          AND (:endExclusive IS NULL OR p.paidAt < :endExclusive)
+        GROUP BY p.branch.branchId, p.paymentType, p.paymentMethod
+    """)
+    List<Object[]> sumPaymentsByBranchTypeAndMethod(
+            @Param("branchIds") java.util.Collection<Long> branchIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endExclusive") LocalDateTime endExclusive
+    );
+
+    @Query("""
+        SELECT p FROM Payment p
+        JOIN FETCH p.branch b
+        LEFT JOIN FETCH p.invoice inv
+        WHERE (:branchIds IS NULL OR b.branchId IN :branchIds)
+          AND p.paymentType = com.cvdcms.entity.enums.PaymentType.PAYMENT
+          AND (:startDate IS NULL OR p.paidAt >= :startDate)
+          AND (:endExclusive IS NULL OR p.paidAt < :endExclusive)
+        ORDER BY p.paidAt ASC, p.paymentId ASC
+    """)
+    List<Payment> findPaidPaymentsForPeriod(
+            @Param("branchIds") java.util.Collection<Long> branchIds,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endExclusive") LocalDateTime endExclusive
+    );
 }

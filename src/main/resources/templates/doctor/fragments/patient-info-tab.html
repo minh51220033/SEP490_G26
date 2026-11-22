@@ -8,25 +8,25 @@
     <!-- Frontend Fragment: doctor/fragments/patient-info-tab.html             -->
     <!-- ===================================================================== -->
     <div th:fragment="patientInfoTab">
-        <div class="card border shadow-sm rounded-3 mb-4 overflow-hidden bg-white">
-            <div class="card-header df-tab-content-header bg-light d-flex align-items-center justify-content-between p-3 border-bottom">
-                <div class="df-tab-title-standard">
-                    <i class="bi bi-person-lines-fill"></i>
-                    <span>HỒ SƠ THÔNG TIN HÀNH CHÍNH BỆNH NHÂN</span>
-                    <span class="df-tab-subtitle-text d-none d-lg-inline">(Chi tiết liên hệ, tiền sử y khoa &amp; người bảo hộ)</span>
+        <div class="df-unified-tab-card mb-4 overflow-hidden bg-white">
+            <div class="df-tab-content-header bg-white d-flex align-items-center justify-content-between px-4 py-3 border-bottom">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <i class="bi bi-person-lines-fill text-primary fs-5"></i>
+                    <h2 class="df-title-primary mb-0">Hồ sơ thông tin hành chính bệnh nhân</h2>
+                    <span class="df-subtitle-secondary d-none d-lg-inline">· Chi tiết liên hệ, tiền sử y khoa &amp; người bảo hộ</span>
                 </div>
                 <span
-                    class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 rounded-pill fw-bold small"
+                    class="df-tab-count df-num"
                     th:text="${patient != null ? patient.patientCode : 'BN0001'}">
                     BN0001
                 </span>
             </div>
 
-            <div class="card-body p-4 bg-white">
+            <div class="p-4 bg-white">
                 <div class="row g-4">
                     <!-- 1. THÔNG TIN CÁ NHÂN -->
                     <div class="col-md-6 col-lg-4">
-                        <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                        <div class="df-soft-panel p-3 h-100">
                             <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
                                 <i class="bi bi-person-badge text-primary me-1"></i>Thông tin cá nhân
                             </h6>
@@ -35,19 +35,19 @@
                                         th:text="${patient != null ? patient.fullName : 'Chưa cập nhật'}">Nguyễn Văn
                                         A</strong></div>
                                 <div><span class="text-muted">Mã bệnh nhân:</span> <span
-                                        class="badge bg-light text-dark border fw-bold"
+                                        class="badge bg-white text-dark border fw-bold df-num"
                                         th:text="${patient != null ? patient.patientCode : 'BN0001'}">BN0001</span>
                                 </div>
                                 <div><span class="text-muted">Giới tính:</span> <strong
                                         th:text="${patient != null and patient.gender != null ? patient.gender : 'Chưa rõ'}">Nam</strong>
                                 </div>
-                                <div><span class="text-muted">Ngày sinh:</span> <span
+                                <div><span class="text-muted">Ngày sinh:</span> <span class="df-num"
                                         th:text="${patient != null and patient.dob != null ? #temporals.format(patient.dob, 'dd/MM/yyyy') : 'Chưa cập nhật'}">01/01/1990</span>
                                 </div>
-                                <div><span class="text-muted">Số CCCD / CMND:</span> <span
+                                <div><span class="text-muted">Số CCCD / CMND:</span> <span class="df-num"
                                         th:text="${patient != null and patient.idCardNumber != null ? patient.idCardNumber : 'Chưa có'}">-</span>
                                 </div>
-                                <div><span class="text-muted">Bảo hiểm y tế:</span> <span
+                                <div><span class="text-muted">Bảo hiểm y tế:</span> <span class="df-num"
                                         th:text="${patient != null and patient.healthInsuranceNumber != null ? patient.healthInsuranceNumber : 'Chưa có'}">-</span>
                                 </div>
                             </div>
@@ -56,12 +56,12 @@
 
                     <!-- 2. THÔNG TIN LIÊN HỆ -->
                     <div class="col-md-6 col-lg-4">
-                        <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                        <div class="df-soft-panel p-3 h-100">
                             <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
                                 <i class="bi bi-telephone text-primary me-1"></i>Thông tin liên hệ
                             </h6>
                             <div class="d-flex flex-column gap-2 small">
-                                <div><span class="text-muted">Số điện thoại:</span> <strong class="text-primary"
+                                <div><span class="text-muted">Số điện thoại:</span> <strong class="text-primary df-num"
                                         th:text="${patient != null ? patient.phoneNumber : 'Chưa có'}">0987654321</strong>
                                 </div>
                                 <div><span class="text-muted">Email:</span> <span
@@ -70,7 +70,7 @@
                                 <div><span class="text-muted">Địa chỉ:</span> <span
                                         th:text="${patient != null and patient.address != null ? patient.address : 'Chưa có'}">Hà
                                         Nội</span></div>
-                                <div><span class="text-muted">Người bảo hộ / Liên hệ:</span> <span
+                                <div><span class="text-muted">Người bảo hộ / Liên hệ:</span> <span class="df-num"
                                         th:text="${patient != null and patient.guardianName != null ? (patient.guardianName + (patient.guardianPhone != null ? ' (' + patient.guardianPhone + ')' : '') + (patient.guardianRelationship != null ? ' - ' + patient.guardianRelationship : '')) : 'Chưa có'}">-</span>
                                 </div>
                             </div>
@@ -79,9 +79,9 @@
 
                     <!-- 3. TIỀN SỬ Y KHOA & DỊ ỨNG -->
                     <div class="col-md-12 col-lg-4">
-                        <div class="border rounded-3 p-3 h-100 bg-light-subtle">
+                        <div class="df-soft-panel p-3 h-100">
                             <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
-                                <i class="bi bi-heart-pulse-fill text-danger me-1"></i>Tiền sử y khoa &amp; Cảnh báo
+                                <i class="bi bi-heart-pulse-fill text-danger me-1"></i>Tiền sử y khoa &amp; cảnh báo
                             </h6>
                             <div class="d-flex flex-column gap-2 small">
                                 <div>

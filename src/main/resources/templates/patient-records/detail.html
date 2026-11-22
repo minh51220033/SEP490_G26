@@ -1009,6 +1009,11 @@
                             data-bs-target="#tab-instructions" type="button" role="tab" aria-controls="tab-instructions"
                             aria-selected="false">Lời dặn</button>
                     </li>
+                    <li class="nav-item" role="presentation" th:if="${canViewBilling != false}">
+                        <button class="nav-link" id="tab-billing-btn" data-bs-toggle="tab"
+                            data-bs-target="#tab-billing" type="button" role="tab" aria-controls="tab-billing"
+                            aria-selected="false">Thanh toán</button>
+                    </li>
 
                     <!-- TAB DROPDOWN "THÊM ▾" CHUẨN DENTALSOFT -->
                     <li class="nav-item dropdown">
@@ -1475,7 +1480,7 @@
                                                 <td class="text-center text-muted fw-bold" th:text="${stat.count}">1
                                                 </td>
                                                 <td class="text-nowrap">
-                                                    <a th:href="${recordBasePath == '/doctor/patient-records' ? '/doctor/patient-records/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId) : (recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '/visits/' + item.visitId}"
+                                                    <a th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId)}"
                                                         class="dv-code-pill mb-1"
                                                         th:text="${item.visitCode}">VIS-001</a>
                                                     <div class="text-muted small fw-semibold d-flex align-items-center gap-1 mt-1">
@@ -1568,7 +1573,7 @@
                                                     </form>
                                                 </td>
                                                 <td class="text-center">
-                                                    <a th:href="${recordBasePath == '/doctor/patient-records' ? '/doctor/patient-records/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId) : (recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '/visits/' + item.visitId}"
+                                                    <a th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId)}"
                                                         class="dv-equal-btn-primary"
                                                         title="Xem chi tiết lượt khám">
                                                         <i class="bi bi-eye-fill"></i>
@@ -1577,7 +1582,7 @@
                                                 </td>
                                                 <td class="dv-floating-actions-track">
                                                     <div class="dv-floating-actions-bar" onclick="event.stopPropagation()">
-                                                        <a th:href="${recordBasePath == '/doctor/patient-records' ? '/doctor/patient-records/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId) : (recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '/visits/' + item.visitId}"
+                                                        <a th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(item.visitId)}"
                                                             class="dv-equal-btn-primary"
                                                             title="Xem chi tiết lượt khám">
                                                             <i class="bi bi-eye-fill"></i>
@@ -2126,7 +2131,7 @@
                                             </td>
                                             <td class="text-nowrap">
                                                 <a th:if="${emr.visitId != null}"
-                                                    th:href="${recordBasePath == '/doctor/patient-records' ? '/doctor/patient-records/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(emr.visitId) : (recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '/visits/' + emr.visitId}"
+                                                    th:href="${(recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + idCodec.encodePatient(patient.id) + '/visits/' + idCodec.encodeVisit(emr.visitId)}"
                                                     class="dv-code-pill"
                                                     title="Xem chi tiết lượt khám">
                                                     <i class="bi bi-box-arrow-up-right text-primary"></i>
@@ -4768,7 +4773,7 @@
             if (clean === 'labo') return 'tab-labo';
             if (clean === 'photos') return 'tab-photos';
             if (clean === 'instructions') return 'tab-instructions';
-            if (clean === 'invoices' || clean === 'billing') return 'tab-info';
+            if (clean === 'invoices' || clean === 'billing') return 'tab-billing';
             if (clean === 'audit') return 'tab-treatment';
             if (!clean.startsWith('tab-')) {
                 clean = 'tab-' + clean;
@@ -5562,9 +5567,17 @@
                 return;
             }
             try {
-                const list = await apptApiRequest(`/doctors?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}`);
-                select.innerHTML = '<option value="">-- Chọn bác sĩ phụ trách --</option>';
-                (list || []).forEach(d => {
+                const res = await apptApiRequest(`/availability?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}&sessionPeriod=${encodeURIComponent(session)}`);
+                if (!res || !res.available) {
+                    select.innerHTML = '<option value="">-- Ca khám không khả dụng --</option>';
+                    if (help) help.textContent = res?.reason || 'Không có bác sĩ trực khả dụng trong buổi đã chọn.';
+                    return;
+                }
+                const list = Array.isArray(res.doctors) ? res.doctors : [];
+                select.innerHTML = list.length
+                    ? '<option value="">-- Chọn bác sĩ phụ trách --</option>'
+                    : '<option value="">-- Không có bác sĩ trực ca này --</option>';
+                list.forEach(d => {
                     const opt = document.createElement('option');
                     opt.value = d.id;
                     opt.textContent = `BS. ${d.name}${d.specialty ? ' · ' + d.specialty : ''}`;
@@ -5574,7 +5587,7 @@
                 const sessNames = { MORNING: 'Ca Sáng', AFTERNOON: 'Ca Chiều', EVENING: 'Ca Tối' };
                 if (help) help.textContent = list.length
                     ? `Có ${list.length} bác sĩ trực (${sessNames[session] || 'Ca Sáng'}) ngày ${date.split('-').reverse().join('/')}.`
-                    : `Chưa có bác sĩ phân ca trực ngày ${date.split('-').reverse().join('/')}.`;
+                    : `Chưa có bác sĩ phân ca trực (${sessNames[session] || 'Ca Sáng'}) ngày ${date.split('-').reverse().join('/')}.`;
             } catch (e) {
                 select.innerHTML = '<option value="">Không tải được danh sách bác sĩ</option>';
                 if (help) help.textContent = e.message;
@@ -6029,7 +6042,8 @@
             let optionsHtml = '<option value="">-- Chọn thuốc hoặc nhập tên --</option>';
             meds.forEach(m => {
                 const label = m.drugName + (m.activeIngredient ? ' (' + m.activeIngredient + ')' : '');
-                optionsHtml += `<option value="${m.medicationId || ''}" data-name="${(m.drugName || '').replace(/"/g, '&quot;')}" data-unit="${(m.unit || 'Viên').replace(/"/g, '&quot;')}" data-dosage="${(m.defaultDosage || 'Ngày 2 lần, mỗi lần 1 viên').replace(/"/g, '&quot;')}" data-usage="${(m.usageInstruction || 'Uống sau ăn').replace(/"/g, '&quot;')}" data-price="${m.unitPrice || 0}">${label}</option>`;
+                const salePrice = m.salePrice != null ? m.salePrice : 0;
+                optionsHtml += `<option value="${m.medicationId || ''}" data-name="${(m.drugName || '').replace(/"/g, '&quot;')}" data-unit="${(m.unit || 'Viên').replace(/"/g, '&quot;')}" data-dosage="Ngày 2 lần, mỗi lần 1 viên" data-usage="${(m.usageInstruction || 'Uống sau ăn').replace(/"/g, '&quot;')}" data-price="${salePrice}">${label}</option>`;
             });
 
             const tr = document.createElement('tr');
@@ -6104,28 +6118,43 @@
 
             const btn = document.getElementById('btnSubmitPrescription');
             const origHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
 
-            try {
-                const headers = Object.assign({ 'Content-Type': 'application/json' }, getCsrfHeaders());
-                const res = await fetch('/api/doctor/prescriptions', {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok || data.success === false) {
-                    throw new Error(data.message || 'Không thể lưu đơn thuốc.');
+            const sendPrescriptionRequest = async (isRetry) => {
+                if (isRetry) {
+                    payload.confirmAllergyWarning = true;
                 }
-                bootstrap.Modal.getInstance(document.getElementById('createPrescriptionModal'))?.hide();
-                window.location.hash = '#prescriptions';
-                window.location.reload();
-            } catch (err) {
-                alert('Lỗi: ' + err.message);
-                btn.disabled = false;
-                btn.innerHTML = origHtml;
-            }
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+
+                try {
+                    const headers = Object.assign({ 'Content-Type': 'application/json' }, getCsrfHeaders());
+                    const res = await fetch('/api/doctor/prescriptions', {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok || data.success === false) {
+                        const msg = data.message || 'Không thể lưu đơn thuốc.';
+                        if (!isRetry && msg.startsWith('Cảnh báo dị ứng:')) {
+                            if (confirm(msg + '\n\nBác sĩ có xác nhận tiếp tục kê đơn thuốc này không?')) {
+                                await sendPrescriptionRequest(true);
+                                return;
+                            }
+                        }
+                        throw new Error(msg);
+                    }
+                    bootstrap.Modal.getInstance(document.getElementById('createPrescriptionModal'))?.hide();
+                    window.location.hash = '#prescriptions';
+                    window.location.reload();
+                } catch (err) {
+                    alert('Lỗi: ' + err.message);
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
+                }
+            };
+
+            await sendPrescriptionRequest(false);
         }
 
         // =========================================================================

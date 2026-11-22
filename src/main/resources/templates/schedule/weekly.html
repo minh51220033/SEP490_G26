@@ -67,21 +67,8 @@
                     <form th:action="@{/admin/schedules}" method="get" class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                         <input type="hidden" name="week" th:value="${monday}">
 
-                        <!-- Bên trái: Chọn Chi nhánh + Điều hướng tuần -->
+                        <!-- Bên trái: Điều hướng tuần -->
                         <div class="d-flex align-items-center flex-wrap gap-3">
-                            <!-- Dropdown Chi nhánh gọn gàng -->
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="text-muted small fw-semibold text-nowrap"><i class="bi bi-buildings me-1"></i>Chi nhánh:</span>
-                                <select id="branchId" name="branchId" class="form-select form-select-sm schedule-branch-select" onchange="this.form.submit()">
-                                    <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
-                                            th:selected="${selectedBranchId != null and selectedBranchId == b.branchId}">Chi nhánh
-                                    </option>
-                                </select>
-                            </div>
-
-                            <!-- Vạch ngăn cách -->
-                            <div class="schedule-toolbar-divider d-none d-md-block"></div>
-
                             <!-- Bộ nút điều hướng tuần -->
                             <div class="d-flex align-items-center gap-1">
                                 <a th:href="@{/admin/schedules(branchId=${selectedBranchId}, week=${prevWeek})}"

@@ -44,7 +44,7 @@ public class ReExaminationRestController {
             if (dto != null && dto.getVisitId() != null) {
                 doctorVisitAccess.require(session, dto.getVisitId());
             } else if (dto != null && dto.getPatientProfileId() != null) {
-                doctorVisitAccess.requirePatientWrite(session, dto.getPatientProfileId());
+                doctorVisitAccess.requirePatient(session, dto.getPatientProfileId());
             } else {
                 doctorVisitAccess.requireAuthenticatedUser(session);
             }

@@ -133,9 +133,10 @@ public class AppointmentConflictDetectionServiceImpl implements AppointmentConfl
             if (session != null && session != PreferredSession.ANY) {
                 SessionRange range = sessionRange(branch, session);
                 List<StaffSchedule> scheduledShifts = schedules.findForBooking(branch.getBranchId(), date, ScheduleStatus.SCHEDULED).stream()
-                        .filter(s -> s.getStaff().getStaffId().equals(doctorId))
-                        .filter(s -> Boolean.TRUE.equals(s.getShift().getIsActive()))
-                        .filter(s -> !s.getShift().getStartTime().isAfter(range.start()) && !s.getShift().getEndTime().isBefore(range.end()))
+                        .filter(s -> s.getStaff() != null && s.getStaff().getStaffId().equals(doctorId))
+                        .filter(s -> s.getShift() != null && Boolean.TRUE.equals(s.getShift().getIsActive()))
+                        .filter(s -> s.getShift().getStartTime() != null && s.getShift().getEndTime() != null)
+                        .filter(s -> s.getShift().getStartTime().isBefore(range.end()) && s.getShift().getEndTime().isAfter(range.start()))
                         .toList();
 
                 if (scheduledShifts.isEmpty()) {
@@ -153,15 +154,28 @@ public class AppointmentConflictDetectionServiceImpl implements AppointmentConfl
             }
         }
 
-        // 5. Patient duplicate booking check: Chỉ cảnh báo khi trùng hoàn toàn ca và giờ hẹn với cùng bác sĩ
-        if (profile != null && session != null && session != PreferredSession.ANY && appointment.getExpectedTime() != null) {
-            Long apptDoctorId = appointment.getDoctor() != null ? appointment.getDoctor().getStaffId() : null;
-            boolean duplicate = appointments.findOccupyingForPatientDay(profile.getProfileId(), branch.getBranchId(), date, OCCUPYING).stream()
+        // 5. Patient duplicate booking check across all branches within the same session
+        if (profile != null && session != null && session != PreferredSession.ANY) {
+            List<Appointment> candidateList = new ArrayList<>();
+            List<Appointment> across = appointments.findOccupyingForPatientDayAcrossBranches(
+                    profile.getProfileId(), date, OCCUPYING);
+            if (across != null) {
+                candidateList.addAll(across);
+            }
+            if (candidateList.isEmpty()) {
+                List<Appointment> sameBranch = appointments.findOccupyingForPatientDay(
+                        profile.getProfileId(), branch.getBranchId(), date, OCCUPYING);
+                if (sameBranch != null) {
+                    candidateList.addAll(sameBranch);
+                }
+            }
+            boolean duplicate = candidateList.stream()
                     .filter(a -> !Objects.equals(a.getAppointmentId(), appointment.getAppointmentId()))
-                    .anyMatch(a -> a.getPreferredSession() == session && Objects.equals(a.getExpectedTime(), appointment.getExpectedTime())
-                            && Objects.equals(a.getDoctor() != null ? a.getDoctor().getStaffId() : null, apptDoctorId));
+                    .anyMatch(a -> a.getPreferredSession() == session
+                            || a.getPreferredSession() == PreferredSession.ANY);
             if (duplicate) {
-                conflicts.add(new Conflict("DUPLICATE_PATIENT_APPOINTMENT", "Bệnh nhân đã có lịch hẹn trùng ca, giờ và bác sĩ tại chi nhánh.", false));
+                conflicts.add(new Conflict("DUPLICATE_PATIENT_APPOINTMENT",
+                        "Bệnh nhân đã có lịch hẹn đang hoạt động trong cùng buổi khám này trên hệ thống.", false));
             }
         }
 
@@ -227,10 +241,13 @@ public class AppointmentConflictDetectionServiceImpl implements AppointmentConfl
                 .filter(a -> a.getStaff().getStaffId().equals(doctorId))
                 .filter(a -> !a.getStartDate().isAfter(date) && (a.getEndDate() == null || !a.getEndDate().isBefore(date)))
                 .anyMatch(a -> {
-                    String role = a.getRole().getRoleName();
-                    return Boolean.TRUE.equals(a.getRole().getIsActive()) && role != null
-                            && ("BAC_SI".equalsIgnoreCase(role) || "ROLE_BAC_SI".equalsIgnoreCase(role))
-                            && a.getStaff().getStatus() == StaffStatus.ACTIVE;
+                    if (a.getRole() == null || !Boolean.TRUE.equals(a.getRole().getIsActive())
+                            || a.getRole().getRoleName() == null || a.getStaff() == null
+                            || a.getStaff().getStatus() != StaffStatus.ACTIVE) {
+                        return false;
+                    }
+                    String rUpper = a.getRole().getRoleName().trim().toUpperCase(Locale.ROOT);
+                    return rUpper.contains("BAC_SI") || rUpper.contains("DOCTOR") || rUpper.contains("BÁC SĨ");
                 });
     }
 

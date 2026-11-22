@@ -31,6 +31,7 @@ class AppointmentPolicyServiceTest {
     @Mock StaffBranchAssignmentRepository assignments;
     @Mock StaffScheduleRepository schedules;
     @Mock LeaveRequestRepository leaves;
+    @Mock VisitRepository visits;
 
     AppointmentPolicyService policy;
     Branch branch;
@@ -42,6 +43,7 @@ class AppointmentPolicyServiceTest {
     void setUp() {
         policy = new AppointmentPolicyServiceImpl(appointments, windows, policies, assignments,
                 schedules, leaves, 2, 1);
+        org.springframework.test.util.ReflectionTestUtils.setField(policy, "visitRepository", visits);
         date = LocalDate.now(AppointmentPolicyService.CLINIC_ZONE).plusDays(7);
         branch = new Branch();
         branch.setBranchId(1L); branch.setIsActive(true); branch.setWorkingDays("2,3,4,5,6,7,CN");
@@ -154,6 +156,87 @@ class AppointmentPolicyServiceTest {
         when(schedules.findForBooking(1L, date, ScheduleStatus.SCHEDULED)).thenReturn(List.of(schedule));
         assertTrue(policy.availability(branch, date, PreferredSession.MORNING, null,
                 AppointmentActorType.PATIENT).doctors().isEmpty());
+    }
+
+    @Test
+    void sameProfileSameSessionBlockedAcrossBranchesAndAllowedDifferentSessionOrFinishedVisit() {
+        Branch branch2 = new Branch(); branch2.setBranchId(2L); branch2.setBranchName("Cơ sở Cầu Giấy");
+        branch2.setIsActive(true); branch2.setWorkingDays("2,3,4,5,6,7,CN");
+        branch2.setOpeningTime(LocalTime.of(8, 0)); branch2.setClosingTime(LocalTime.of(20, 0));
+
+        Role role = new Role(); role.setRoleName("BAC_SI"); role.setIsActive(true);
+        StaffBranchAssignment assignment2 = new StaffBranchAssignment();
+        assignment2.setStaff(doctor); assignment2.setBranch(branch2); assignment2.setRole(role);
+        assignment2.setStatus(AssignmentStatus.ACTIVE);
+        WorkShift shift = new WorkShift(); shift.setShiftId(30L); shift.setIsActive(true);
+        shift.setStartTime(LocalTime.of(8, 0)); shift.setEndTime(LocalTime.NOON);
+        StaffSchedule sch2 = new StaffSchedule(); sch2.setStaff(doctor); sch2.setBranch(branch2);
+        sch2.setShift(shift); sch2.setWorkDate(date); sch2.setStatus(ScheduleStatus.SCHEDULED);
+        when(assignments.findByBranchAndStatus(2L, AssignmentStatus.ACTIVE)).thenReturn(List.of(assignment2));
+        when(schedules.findForBooking(2L, date, ScheduleStatus.SCHEDULED)).thenReturn(List.of(sch2));
+
+        // 1. Đã có lịch MORNING ở CN1 -> đặt thêm MORNING ở CN2 PHẢI bị chặn
+        Appointment existingMorning = appointment(500L, doctor);
+        existingMorning.setPreferredSession(PreferredSession.MORNING);
+        existingMorning.setStatus(AppointmentStatus.CONFIRMED);
+        when(appointments.findOccupyingForPatientDayAcrossBranches(eq(10L), eq(date), anyList()))
+                .thenReturn(List.of(existingMorning));
+        ResponseStatusException crossEx = assertThrows(ResponseStatusException.class, () ->
+                policy.ensureBookable(branch2, patient, date, PreferredSession.MORNING, null, null, AppointmentActorType.PATIENT));
+        assertTrue(crossEx.getReason().contains("đã có lịch"));
+
+        // 2. Nhưng đặt buổi chiều (AFTERNOON) ở CN1 vẫn được phép
+        WorkShift pmShift = new WorkShift(); pmShift.setShiftId(31L); pmShift.setIsActive(true);
+        pmShift.setStartTime(LocalTime.of(13, 30)); pmShift.setEndTime(LocalTime.of(17, 30));
+        StaffSchedule pmSch = new StaffSchedule(); pmSch.setStaff(doctor); pmSch.setBranch(branch);
+        pmSch.setShift(pmShift); pmSch.setWorkDate(date); pmSch.setStatus(ScheduleStatus.SCHEDULED);
+        when(schedules.findForBooking(1L, date, ScheduleStatus.SCHEDULED)).thenReturn(List.of(pmSch));
+        assertDoesNotThrow(() -> policy.ensureBookable(branch, patient, date, PreferredSession.AFTERNOON, null, null, AppointmentActorType.PATIENT));
+
+        // 3. Nếu lịch MORNING đang CHECKED_IN và Visit đang IN_EXAM -> CHẶN; nếu Visit đã WAITING_PAYMENT -> CHO PHÉP
+        existingMorning.setStatus(AppointmentStatus.CHECKED_IN);
+        Visit inExam = new Visit(); inExam.setVisitId(900L); inExam.setAppointmentId(500L); inExam.setStatus(VisitStatus.IN_EXAM);
+        when(visits.findByAppointmentIdIn(List.of(500L))).thenReturn(List.of(inExam));
+        assertThrows(ResponseStatusException.class, () ->
+                policy.ensureBookable(branch2, patient, date, PreferredSession.MORNING, null, null, AppointmentActorType.PATIENT));
+
+        inExam.setStatus(VisitStatus.WAITING_PAYMENT);
+        inExam.setActualEndTime(date.atTime(9, 15));
+        when(schedules.findForBooking(2L, date, ScheduleStatus.SCHEDULED)).thenReturn(List.of(sch2));
+        assertDoesNotThrow(() ->
+                policy.ensureBookable(branch2, patient, date, PreferredSession.MORNING, null, null, AppointmentActorType.PATIENT));
+    }
+
+    @Test
+    void doctorWithSpecialtyOrTitleContainingKhoaRemainsEligibleInAfternoon() {
+        doctor.setPositionTitle("Bác sĩ chuyên khoa");
+        doctor.setSpecialty("Nội nha & Nha khoa tổng quát");
+
+        WorkShift afternoonShift = new WorkShift();
+        afternoonShift.setShiftId(31L);
+        afternoonShift.setIsActive(true);
+        afternoonShift.setShiftCode("CA_CHIEU");
+        afternoonShift.setShiftName("Ca chiều");
+        afternoonShift.setStartTime(LocalTime.of(13, 30));
+        afternoonShift.setEndTime(LocalTime.of(17, 30));
+
+        StaffSchedule afternoonSchedule = new StaffSchedule();
+        afternoonSchedule.setStaff(doctor);
+        afternoonSchedule.setBranch(branch);
+        afternoonSchedule.setShift(afternoonShift);
+        afternoonSchedule.setWorkDate(date);
+        afternoonSchedule.setStatus(ScheduleStatus.SCHEDULED);
+
+        when(schedules.findForBooking(1L, date, ScheduleStatus.SCHEDULED)).thenReturn(List.of(afternoonSchedule));
+        when(appointments.findOccupyingForSession(eq(1L), eq(date), eq(PreferredSession.AFTERNOON), anyList()))
+                .thenReturn(List.of());
+
+        var result = policy.availability(branch, date, PreferredSession.AFTERNOON, null,
+                AppointmentActorType.RECEPTIONIST);
+
+        assertTrue(result.available());
+        assertEquals(1, result.doctors().size());
+        assertEquals(20L, result.doctors().get(0).id());
     }
 
     private Appointment appointment(Long id, StaffProfile assignedDoctor) {

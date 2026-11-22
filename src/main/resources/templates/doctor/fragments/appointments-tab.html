@@ -7,66 +7,69 @@
 <!-- Frontend Fragment: doctor/fragments/appointments-tab.html             -->
 <!-- ===================================================================== -->
 <div th:fragment="appointmentsTab">
-    <div class="card border shadow-sm rounded-3 mb-4 overflow-hidden bg-white">
-        <div class="card-header df-tab-content-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
-            <div class="df-tab-title-standard">
-                <i class="bi bi-calendar2-check"></i>
-                <span>LỊCH HẸN &amp; KẾ HOẠCH TÁI KHÁM</span>
-                <span class="df-tab-subtitle-text d-none d-lg-inline">(Theo dõi lịch hẹn theo lộ trình điều trị)</span>
+    <div class="df-unified-tab-card mb-4 overflow-hidden bg-white">
+        <div class="df-tab-content-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3 border-bottom">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <i class="bi bi-calendar2-check text-primary fs-5"></i>
+                <h2 class="df-title-primary mb-0">Lịch hẹn &amp; kế hoạch tái khám</h2>
+                <span class="df-tab-count df-num" id="appointmentsTabCountBadge"
+                      th:text="${reExaminations != null ? reExaminations.size() : 0} + ' lịch hẹn'">0 lịch hẹn</span>
+                <span class="df-subtitle-secondary d-none d-lg-inline">· Theo dõi lịch hẹn theo lộ trình điều trị</span>
             </div>
 
-            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white"
+            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-white"
                     onclick="openReExamModal()">
                 <i class="bi bi-calendar2-plus-fill"></i>
                 <span>Đặt hẹn tái khám mới</span>
             </button>
         </div>
 
-        <div class="table-responsive p-3 bg-white">
-            <table class="table table-hover align-middle mb-0 border rounded-3" style="font-size: 13.5px;">
-                <thead class="table-light">
+        <div class="table-responsive p-4 bg-white">
+            <table class="table df-clean-table table-hover align-middle mb-0" data-disable-floating-actions="true" style="font-size: 13.5px;">
+                <thead>
                 <tr>
                     <th style="width: 110px;">Mã hẹn</th>
                     <th style="width: 140px;">Ngày hẹn</th>
                     <th style="width: 120px;" class="text-center">Buổi hẹn</th>
                     <th style="width: 180px;">Bác sĩ phụ trách</th>
                     <th>Dịch vụ / Thủ thuật dự kiến</th>
-                    <th>Lý do &amp; Ghi chú dặn dò</th>
+                    <th>Lý do &amp; ghi chú dặn dò</th>
                     <th style="width: 130px;" class="text-center">Trạng thái</th>
                     <th style="width: 100px;" class="text-center">Thao tác</th>
                 </tr>
                 </thead>
                 <tbody id="reExaminationsTableBody">
                 <tr th:if="${reExaminations == null or reExaminations.isEmpty()}" id="emptyReExamRow">
-                    <td colspan="8" class="text-center" style="padding: 70px 24px 90px 24px !important; background: #ffffff;">
-                        <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 290px;">
-                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
-                                 style="width: 88px; height: 88px; background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border: 2px dashed #c084fc; box-shadow: 0 8px 24px rgba(147, 51, 234, 0.12);">
-                                <i class="bi bi-calendar2-check-fill" style="font-size: 42px; color: #7c3aed;"></i>
+                    <td colspan="8" class="text-center p-0 border-0">
+                        <div class="d-flex flex-column align-items-center justify-content-center py-4 px-3 rounded-3"
+                             style="min-height: 130px; background: #f8fafc; border: 1px dashed #cbd5e1;">
+                            <div class="mb-2 d-inline-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 44px; height: 44px; background: #e0f2fe; border: 1px dashed #38bdf8;">
+                                <i class="bi bi-calendar2-check-fill fs-5" style="color: #0284c7;"></i>
                             </div>
-                            <h4 class="fw-bold text-dark mb-2" style="font-size: 20px; letter-spacing: -0.3px;">
-                                Bệnh nhân chưa có Lịch hẹn tái khám nào
-                            </h4>
-                            <p class="text-muted mb-4" style="font-size: 14.5px; max-width: 540px; line-height: 1.6;">
-                                Hẹn lịch tái khám giúp theo dõi tiến trình hồi phục vết thương, kiểm tra định kỳ hoặc phân bổ các công đoạn trong phác đồ điều trị kế tiếp.
+                            <h5 class="fw-bold text-dark mb-1" style="font-size: 15px;">
+                                Bệnh nhân chưa có lịch hẹn tái khám
+                            </h5>
+                            <p class="df-meta-tertiary mb-3" style="max-width: 480px;">
+                                Đặt hẹn tái khám để theo dõi tiến trình hồi phục, cắt chỉ hoặc thực hiện công đoạn tiếp theo.
                             </p>
-                            <button type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
-                                    style="background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%); border: none; font-size: 15px;"
+                            <button type="button" class="btn btn-sm df-btn-tonal-primary px-3 py-2 rounded-pill fw-semibold d-inline-flex align-items-center gap-2"
                                     onclick="openReExamModal()">
-                                <i class="bi bi-calendar2-plus-fill fs-6"></i>
+                                <i class="bi bi-calendar2-plus-fill"></i>
                                 <span>Đặt hẹn tái khám mới</span>
                             </button>
                         </div>
                     </td>
                 </tr>
                 <tr th:each="re : ${reExaminations}">
-                    <td><span class="badge bg-light text-dark border fw-bold" th:text="${re.appointmentCode != null ? re.appointmentCode : 'HEN1001'}">HEN1001</span></td>
+                    <td><span class="badge bg-light text-dark border fw-bold df-num" th:text="${re.appointmentCode != null ? re.appointmentCode : 'HEN1001'}">HEN1001</span></td>
                     <td>
-                        <strong class="text-dark" th:text="${re.appointmentDate != null ? #temporals.format(re.appointmentDate, 'dd/MM/yyyy') : '-'}">28/10/2026</strong>
-                        <div class="small text-muted" th:if="${re.expectedTime != null}" th:text="${#temporals.format(re.expectedTime, 'HH:mm')}">09:00</div>
+                        <strong class="text-dark df-num" th:text="${re.appointmentDate != null ? #temporals.format(re.appointmentDate, 'dd/MM/yyyy') : '-'}">28/10/2026</strong>
+                        <div class="small text-muted df-num" th:if="${re.expectedTime != null}" th:text="${#temporals.format(re.expectedTime, 'HH:mm')}">09:00</div>
                     </td>
                     <td class="text-center">
-                        <span class="badge bg-primary-subtle text-primary border" th:text="${re.preferredSession != null ? (re.preferredSession.name() == 'MORNING' ? 'Sáng' : (re.preferredSession.name() == 'AFTERNOON' ? 'Chiều' : 'Cả ngày')) : 'Sáng'}">Sáng</span>
+                        <span class="badge bg-primary-subtle text-primary border"
+                              th:text="${re.preferredSession != null ? (re.preferredSession.name() == 'MORNING' ? 'Sáng' : (re.preferredSession.name() == 'AFTERNOON' ? 'Chiều' : (re.preferredSession.name() == 'EVENING' ? 'Tối' : 'Cả ngày'))) : 'Sáng'}">Sáng</span>
                     </td>
                     <td>
                         <div class="small fw-semibold text-dark" th:text="${re.doctorName != null ? re.doctorName : 'BS. Lê Hoàng Nam'}">BS. Lê Hoàng Nam</div>
@@ -78,13 +81,23 @@
                         <span class="small text-secondary" th:text="${re.initialSymptoms != null and !re.initialSymptoms.isEmpty() ? re.initialSymptoms : 'Tái khám định kỳ sau điều trị'}">Tái khám định kỳ</span>
                     </td>
                     <td class="text-center">
-                        <span class="badge bg-warning-subtle text-dark border border-warning"
-                              th:text="${re.status != null ? re.status.name() : 'Chờ khám'}">
+                        <span class="badge"
+                              th:classappend="${re.status != null and re.status.name() == 'COMPLETED' ? 'bg-success-subtle text-success border border-success-subtle' : (re.status != null and re.status.name() == 'CANCELLED' ? 'bg-secondary-subtle text-secondary border' : (re.status != null and re.status.name() == 'CONFIRMED' ? 'bg-primary-subtle text-primary border border-primary-subtle' : (re.status != null and re.status.name() == 'CHECKED_IN' ? 'bg-info-subtle text-info border border-info-subtle' : 'bg-warning-subtle text-dark border border-warning')))}"
+                              th:text="${re.status != null ? (re.status.name() == 'COMPLETED' ? 'Đã khám' : (re.status.name() == 'CANCELLED' ? 'Đã hủy' : (re.status.name() == 'CONFIRMED' ? 'Đã xác nhận' : (re.status.name() == 'CHECKED_IN' ? 'Đã check-in' : 'Chờ khám')))) : 'Chờ khám'}">
                             Chờ khám
                         </span>
                     </td>
                     <td class="text-center">
-                        <button type="button" class="btn btn-sm btn-outline-primary" title="Chỉnh sửa hẹn" onclick="openReExamModal()">
+                        <button type="button" class="btn btn-sm btn-outline-primary" title="Chỉnh sửa hẹn"
+                                th:if="${re.status == null or (re.status.name() != 'COMPLETED' and re.status.name() != 'CANCELLED' and re.status.name() != 'CHECKED_IN')}"
+                                th:data-id="${re.appointmentId}"
+                                th:data-code="${re.appointmentCode}"
+                                th:data-date="${re.appointmentDate != null ? #temporals.format(re.appointmentDate, 'yyyy-MM-dd') : ''}"
+                                th:data-time="${re.expectedTime != null ? #temporals.format(re.expectedTime, 'HH:mm') : ''}"
+                                th:data-session="${re.preferredSession != null ? re.preferredSession.name() : 'MORNING'}"
+                                th:data-doctor-id="${re.doctorId}"
+                                th:data-reason="${re.initialSymptoms}"
+                                onclick="openEditReExamModal(this)">
                             <i class="bi bi-pencil-square"></i>
                         </button>
                     </td>

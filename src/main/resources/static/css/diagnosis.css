@@ -4,18 +4,234 @@
 ===================================================================== */
 
 :root {
-    --df-purple: #7c5cfc;
-    --df-purple-hover: #6941eb;
-    --df-purple-light: #f5f3ff;
-    --df-purple-border: #ddd6fe;
-    --df-dark-header: #3c424a;
+    --df-primary: #0284c7;
+    --df-primary-dark: #0369a1;
+    --df-primary-soft: #e0f2fe;
+    --df-primary-subtle: #f0f9ff;
+    --df-purple: #0284c7;
+    --df-purple-hover: #0369a1;
+    --df-purple-light: #e0f2fe;
+    --df-purple-border: #bae6fd;
+    --df-dark-header: #f8fafc;
     --df-border: #e2e8f0;
+    --df-border-subtle: #f1f5f9;
+    --df-border-dark: #cbd5e1;
+    --df-bg-page: #f8fafc;
     --df-bg-gray: #f8fafc;
-    --df-text-dark: #1e293b;
+    --df-text-dark: #0f172a;
+    --df-text-secondary: #475569;
     --df-text-muted: #64748b;
     --df-success: #10b981;
     --df-warning: #f59e0b;
     --df-danger: #ef4444;
+}
+
+/* Shared Design System Utilities (synced with treatment-plan-create.html) */
+.df-exam-bound {
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.df-title-primary {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--df-text-dark);
+    letter-spacing: -0.01em;
+    text-transform: none !important;
+}
+
+.df-subtitle-secondary {
+    font-size: 13px;
+    color: var(--df-text-secondary);
+    margin-top: 2px;
+}
+
+.df-meta-tertiary {
+    font-size: 12px;
+    color: var(--df-text-muted);
+}
+
+.df-num,
+.df-clean-table td,
+.df-steps-table td {
+    font-variant-numeric: tabular-nums;
+}
+
+.df-soft-panel {
+    background: #f8fafc;
+    border: 1px solid var(--df-border);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.df-clean-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13.5px;
+}
+
+.df-clean-table th {
+    background: #f8fafc;
+    color: var(--df-text-secondary);
+    font-weight: 600;
+    font-size: 12.5px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--df-border);
+    white-space: nowrap;
+}
+
+.df-clean-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--df-border-subtle);
+    vertical-align: middle;
+    color: var(--df-text-dark);
+    background: #ffffff;
+    transition: background-color 0.12s ease;
+}
+
+.df-clean-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.df-clean-table tbody tr:hover td {
+    background-color: #f8fafc;
+}
+
+.df-btn-tonal-primary {
+    background: var(--df-primary-soft);
+    color: var(--df-primary-dark);
+    border: 1px solid #bae6fd;
+    font-weight: 600;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.df-btn-tonal-primary:hover {
+    background: #bae6fd;
+    color: #075985;
+    border-color: #7dd3fc;
+}
+
+.df-btn-icon-muted {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.df-btn-icon-muted:hover:not(:disabled) {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.df-btn-icon-muted:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.chip-tooth {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 12.5px;
+    color: #334155;
+    font-variant-numeric: tabular-nums;
+}
+
+.chip-surface {
+    background: #e2e8f0;
+    color: #334155;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.df-step-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 12.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.df-foldable-bar.is-expanded .df-step-num {
+    background: var(--df-primary-soft);
+    color: var(--df-primary-dark);
+}
+
+.roadmap-diag-box {
+    border: 1px solid var(--df-border);
+    border-radius: 12px;
+    background: #f8fafc;
+    margin-bottom: 16px;
+    overflow: visible;
+}
+
+.roadmap-diag-header {
+    padding: 12px 18px;
+    background: transparent;
+    border-bottom: 1px solid var(--df-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.df-stage-panel {
+    background: #ffffff;
+    border: 1px solid var(--df-border-subtle);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.df-stage-panel:last-child {
+    margin-bottom: 0;
+}
+
+/* Sync enhanced-table.css controls */
+.enhanced-custom-toggle-btn {
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    background: #ffffff !important;
+    color: #475569 !important;
+}
+
+.enhanced-custom-toggle-btn:hover {
+    background: #f8fafc !important;
+    color: #0f172a !important;
+}
+
+.enhanced-customizer-popover {
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1) !important;
+}
+
+.df-tab-count {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 999px;
 }
 
 /* =====================================================================
@@ -1234,20 +1450,113 @@
     text-align: center;
 }
 
+@page {
+    size: A5;
+    margin: 10mm;
+}
+
 @media print {
-    body * {
-        visibility: hidden;
+    html,
+    body {
+        width: auto !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        background: #ffffff !important;
     }
-    #printablePrescriptionArea, #printablePrescriptionArea * {
-        visibility: visible;
+
+    body.modal-open {
+        overflow: visible !important;
+        padding-right: 0 !important;
     }
+
+    body > *:not(:has(#printPrescriptionModal)),
+    .modal-backdrop,
+    .modal:not(#printPrescriptionModal) {
+        display: none !important;
+    }
+
+    #printPrescriptionModal,
+    #printPrescriptionModal.modal {
+        position: static !important;
+        inset: auto !important;
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    #printPrescriptionModal .modal-dialog {
+        position: static !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        transform: none !important;
+        display: block !important;
+    }
+
+    #printPrescriptionModal .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+    }
+
+    #printPrescriptionModal .modal-header,
+    #printPrescriptionModal .modal-footer {
+        display: none !important;
+    }
+
+    #printPrescriptionModal .modal-body {
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: visible !important;
+    }
+
     #printablePrescriptionArea {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        padding: 20px;
+        position: static !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: 12px !important;
+    }
+
+    #printablePrescriptionArea .print-clinic-header {
+        padding-bottom: 10px;
+        margin-bottom: 12px;
+    }
+
+    #printablePrescriptionArea .print-title {
+        font-size: 18px;
+        margin: 10px 0 12px 0;
+    }
+
+    #printablePrescriptionArea .print-info-grid {
+        font-size: 12px;
+        gap: 4px 12px;
+        margin-bottom: 12px;
+    }
+
+    #printablePrescriptionArea .print-drugs-list {
+        margin-bottom: 14px;
+    }
+
+    #printablePrescriptionArea .print-drug-row {
+        font-size: 12px;
+        margin-bottom: 8px;
+        break-inside: avoid;
+    }
+
+    #printablePrescriptionArea .print-footer-grid {
+        margin-top: 16px;
+        font-size: 12px;
+        break-inside: avoid;
     }
 }
 

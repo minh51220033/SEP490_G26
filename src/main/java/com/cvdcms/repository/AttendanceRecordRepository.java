@@ -31,4 +31,11 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
     List<AttendanceRecord> findByBranchAndRange(@Param("branchId") Long branchId,
                                                 @Param("from") LocalDate from,
                                                 @Param("to") LocalDate to);
+
+    // Lịch sử chấm công toàn hệ thống (tất cả chi nhánh) trong khoảng ngày.
+    @Query("SELECT a FROM AttendanceRecord a JOIN FETCH a.staff LEFT JOIN FETCH a.branch "
+            + "WHERE a.workDate BETWEEN :from AND :to "
+            + "ORDER BY a.workDate DESC, a.staff.fullName ASC")
+    List<AttendanceRecord> findAllByRange(@Param("from") LocalDate from,
+                                          @Param("to") LocalDate to);
 }

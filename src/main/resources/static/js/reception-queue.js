@@ -35,9 +35,9 @@ function initialiseQueue() {
             ]
         },
         'EMERGENCY': {
-            title: '🚨 Kích hoạt ca cấp cứu',
-            subtitle: 'Chuyển lượt khám sang trạng thái Cấp cứu để ưu tiên gọi vào phòng khám ngay lập tức.',
-            btnText: 'Xác nhận cấp cứu',
+            title: '🚨 Báo cấp cứu tới bàn bác sĩ',
+            subtitle: 'Đánh dấu ca cấp cứu ưu tiên hàng đầu và gửi cảnh báo ngay tới bàn phụ trách (không tự ngắt ca bác sĩ đang khám).',
+            btnText: 'Xác nhận báo cấp cứu',
             btnClass: 'btn-danger',
             options: [
                 'Ca cấp cứu đau răng cấp tính cần xử lý ngay',
@@ -45,37 +45,13 @@ function initialiseQueue() {
                 'Đau nhức dữ dội không thể chờ đợi',
                 'Viêm tủy cấp tính sưng đau hàm'
             ]
-        },
-        'PRIORITIZE': {
-            title: '⭐ Áp dụng ưu tiên phục vụ',
-            subtitle: 'Nâng điểm ưu tiên để hệ thống tự động xếp lên đầu danh sách chờ của bác sĩ.',
-            btnText: 'Xác nhận ưu tiên',
-            btnClass: 'btn-warning text-dark',
-            options: [
-                'Bệnh nhân cao tuổi (trên 65 tuổi) cần hỗ trợ',
-                'Trẻ nhỏ quấy khóc cần ưu tiên khám trước',
-                'Phụ nữ mang thai hoặc người khuyết tật',
-                'Bệnh nhân có hẹn đặc biệt cần hỗ trợ sớm'
-            ]
-        },
-        'CALL': {
-            title: 'Gọi vượt thứ tự hàng chờ',
-            subtitle: 'Bác sĩ hoặc lễ tân gọi ca này trước các số khác trong hàng; cần lưu lý do điều phối.',
-            btnText: 'Xác nhận gọi vượt',
-            btnClass: 'btn-primary',
-            options: [
-                'Bác sĩ yêu cầu gọi trước ca khám này',
-                'Bệnh nhân có lịch bận đột xuất đã trao đổi',
-                'Ca tái khám kiểm tra nhanh theo hẹn BS',
-                'Đã chuẩn bị sẵn ghế và dụng cụ chuyên khoa'
-            ]
         }
     };
 
     function showRecallToast(msg) {
         const toastEl = document.getElementById('queueRecallToast');
         const msgEl = document.getElementById('queueRecallToastMsg');
-        if (msgEl) msgEl.innerHTML = `<i class="bi bi-megaphone-fill me-1.5"></i> <span>${msg}</span>`;
+        if (msgEl) msgEl.innerHTML = `<i class="bi bi-megaphone-fill me-2"></i> <span>${msg}</span>`;
         if (toastEl && window.bootstrap?.Toast) {
             const toast = window.bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3500 });
             toast.show();
@@ -83,51 +59,6 @@ function initialiseQueue() {
     }
 
     function bindRecallActions() {
-        document.querySelectorAll('form[action*="/CALL"]').forEach(form => {
-            if (form.dataset.boundRecall === 'true') return;
-            form.dataset.boundRecall = 'true';
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const btn = form.querySelector('button[type="submit"]');
-                const origHtml = btn ? btn.innerHTML : '';
-                if (btn) {
-                    btn.disabled = true;
-                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang gọi...';
-                }
-                const headers = {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                };
-                const csrfMeta = document.querySelector('meta[name="_csrf"]');
-                const csrfHeaderMeta = document.querySelector('meta[name="_csrf_header"]');
-                if (csrfMeta && csrfHeaderMeta && csrfMeta.content && csrfHeaderMeta.content) {
-                    headers[csrfHeaderMeta.content] = csrfMeta.content;
-                }
-                try {
-                    const res = await fetch(form.action, {
-                        method: 'POST',
-                        credentials: 'same-origin',
-                        headers,
-                        body: new URLSearchParams(new FormData(form))
-                    });
-                    if (!res.ok) {
-                        throw new Error('HTTP ' + res.status);
-                    }
-                    const card = form.closest('.queue-card');
-                    const patientName = card ? card.querySelector('.queue-patient')?.textContent.trim() : '';
-                    const ticketNum = card ? card.querySelector('.ticket-num')?.textContent.trim() : '';
-                    await refresh();
-                    showRecallToast(`Đã phát tín hiệu gọi số ${ticketNum || ''} cho bệnh nhân ${patientName || ''}.`);
-                } catch (_) {
-                    showRecallToast('Không thể phát tín hiệu gọi số. Vui lòng thử lại.');
-                } finally {
-                    if (btn && btn.isConnected) {
-                        btn.disabled = false;
-                        btn.innerHTML = origHtml;
-                    }
-                }
-            });
-        });
     }
 
     function bindQueueActions() {
@@ -263,7 +194,17 @@ function initialiseQueue() {
         }
     }
 
-    refreshTimer = window.setInterval(refresh, 10000);
+    refreshTimer = window.setInterval(refresh, 5000);
+    if (window.SockJS && window.Stomp && branch) {
+        try {
+            const sock = new window.SockJS('/ws-chat');
+            const stomp = window.Stomp.over(sock);
+            stomp.debug = null;
+            stomp.connect({}, () => {
+                stomp.subscribe(`/topic/queue/branch/${branch}`, () => refresh());
+            }, () => {});
+        } catch (_) {}
+    }
 }
 
 function cleanupQueue() {

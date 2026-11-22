@@ -6,24 +6,26 @@
 <!-- TAB: ĐẶT XƯỞNG / LABO PHỤC HÌNH & MẪU XÉT NGHIỆM GỬI NGOÀI (SCR-15.3, 13.1) -->
 <!-- Frontend Fragment: doctor/fragments/labo-tab.html                         -->
 <!-- ========================================================================= -->
-<div th:fragment="laboTab">
-    <div class="card border shadow-sm rounded-3 mb-4 overflow-hidden bg-white">
+<div th:fragment="laboTab"
+     th:with="isLaboLocked=${(isClinicalLocked == true) or (isReadOnlyView == true) or (visit != null and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED' or visit.status.name() == 'CANCELLED'))}">
+    <div class="df-unified-tab-card mb-4 overflow-hidden bg-white">
         <!-- HEADER -->
-        <div class="card-header df-tab-content-header bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 border-bottom">
-            <div class="df-tab-title-standard">
-                <i class="bi bi-box-seam"></i>
-                <span>ĐẶT XƯỞNG LABO &amp; MẪU XÉT NGHIỆM</span>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-0.5 small ms-1" id="laboOrdersCountBadge"
-                      th:text="${laboOrders != null ? #lists.size(laboOrders) : 0} + ' phiếu'" style="text-transform: none; letter-spacing: normal;">0 phiếu</span>
-                <span class="df-tab-subtitle-text d-none d-lg-inline">(Răng sứ, máng chỉnh nha &amp; xét nghiệm)</span>
+        <div class="df-tab-content-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3 border-bottom">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <i class="bi bi-box-seam text-primary fs-5"></i>
+                <h2 class="df-title-primary mb-0">Đặt xưởng labo &amp; mẫu xét nghiệm</h2>
+                <span class="df-tab-count df-num" id="laboOrdersCountBadge"
+                      th:text="${laboOrders != null ? #lists.size(laboOrders) : 0} + ' phiếu'">0 phiếu</span>
+                <span class="df-subtitle-secondary d-none d-lg-inline">· Răng sứ, máng chỉnh nha &amp; xét nghiệm</span>
             </div>
 
             <div class="d-flex align-items-center gap-2">
-                <a th:href="@{/doctor/labo}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center gap-1.5">
+                <a th:href="@{/doctor/labo}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-2 fw-semibold d-flex align-items-center gap-2">
                     <i class="bi bi-box-arrow-up-right"></i>
                     <span>Trang Quản lý Labo</span>
                 </a>
-                <button type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-sm text-white"
+                <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-white"
+                        th:unless="${isLaboLocked}"
                         onclick="openCreateLaboModal()">
                     <i class="bi bi-plus-circle-fill"></i>
                     <span>Lập phiếu đặt xưởng / Gửi mẫu</span>
@@ -31,93 +33,102 @@
             </div>
         </div>
 
-        <div class="card-body p-3 p-md-4 bg-white">
+        <div class="p-3 p-md-4 bg-white">
             <!-- 1. 4 STAT KPI CARDS -->
             <div class="row g-3 mb-4">
                 <div class="col-6 col-md-3">
-                    <div class="p-3 rounded-3 border bg-light-subtle d-flex align-items-center justify-content-between">
+                    <div class="df-soft-panel p-3 d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-secondary small fw-semibold text-uppercase" style="font-size: 11px;">Tổng phiếu gửi</span>
-                            <div class="h4 fw-bold text-dark mb-0 mt-1" id="statLaboTotal"
+                            <span class="df-meta-tertiary fw-semibold">Tổng phiếu gửi</span>
+                            <div class="h4 fw-bold text-dark mb-0 mt-1 df-num" id="statLaboTotal"
                                  th:text="${laboStats != null and laboStats.total != null ? laboStats.total : (laboOrders != null ? #lists.size(laboOrders) : 0)}">0</div>
                         </div>
                         <i class="bi bi-folder2-open text-primary fs-3 opacity-50"></i>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="p-3 rounded-3 border bg-warning-subtle d-flex align-items-center justify-content-between">
+                    <div class="df-soft-panel p-3 d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-warning-emphasis small fw-semibold text-uppercase" style="font-size: 11px;">Đang chế tác / Chờ KQ</span>
-                            <div class="h4 fw-bold text-warning-emphasis mb-0 mt-1" id="statLaboProcessing"
+                            <span class="df-meta-tertiary fw-semibold">Đang chế tác / Chờ KQ</span>
+                            <div class="h4 fw-bold text-warning-emphasis mb-0 mt-1 df-num" id="statLaboProcessing"
                                  th:text="${laboStats != null and laboStats.processing != null ? laboStats.processing : 0}">0</div>
                         </div>
-                        <i class="bi bi-hourglass-split text-warning fs-3 opacity-50"></i>
+                        <i class="bi bi-hourglass-split text-warning fs-3 opacity-75"></i>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="p-3 rounded-3 border bg-info-subtle d-flex align-items-center justify-content-between">
+                    <div class="df-soft-panel p-3 d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-info-emphasis small fw-semibold text-uppercase" style="font-size: 11px;">Đã nhận về / Có KQ</span>
-                            <div class="h4 fw-bold text-info-emphasis mb-0 mt-1" id="statLaboDelivered"
+                            <span class="df-meta-tertiary fw-semibold">Đã nhận về / Có KQ</span>
+                            <div class="h4 fw-bold text-info-emphasis mb-0 mt-1 df-num" id="statLaboDelivered"
                                  th:text="${laboStats != null and laboStats.delivered != null ? laboStats.delivered : 0}">0</div>
                         </div>
-                        <i class="bi bi-check2-circle text-info fs-3 opacity-50"></i>
+                        <i class="bi bi-check2-circle text-info fs-3 opacity-75"></i>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="p-3 rounded-3 border bg-success-subtle d-flex align-items-center justify-content-between">
+                    <div class="df-soft-panel p-3 d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-success-emphasis small fw-semibold text-uppercase" style="font-size: 11px;">Đã gắn lắp / Hoàn tất</span>
-                            <div class="h4 fw-bold text-success-emphasis mb-0 mt-1" id="statLaboFitted"
+                            <span class="df-meta-tertiary fw-semibold">Đã gắn lắp / Hoàn tất</span>
+                            <div class="h4 fw-bold text-success mb-0 mt-1 df-num" id="statLaboFitted"
                                  th:text="${laboStats != null and laboStats.fitted != null ? laboStats.fitted : 0}">0</div>
                         </div>
-                        <i class="bi bi-patch-check-fill text-success fs-3 opacity-50"></i>
+                        <i class="bi bi-patch-check-fill text-success fs-3 opacity-75"></i>
                     </div>
                 </div>
             </div>
 
             <!-- 2. BẢNG DANH SÁCH PHIẾU ĐẶT XƯỞNG & GỬI MẪU XÉT NGHIỆM -->
 
-            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2.5 px-1 gap-2">
-                <div class="text-secondary small fw-bold text-uppercase" style="letter-spacing: 0.3px;">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 px-1 gap-2">
+                <div class="df-subtitle-secondary fw-semibold">
                     <i class="bi bi-box-seam text-primary me-1"></i>
                     <span>Danh sách phiếu đặt xưởng &amp; gửi mẫu</span>
                 </div>
             </div>
 
-            <div class="rounded-3 border bg-white shadow-xs position-relative" style="overflow-x: auto;">
-                <table class="table table-hover align-middle mb-0 text-nowrap" style="min-width: 1100px; font-size: 13.5px;">
-                    <thead style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                    <tr style="text-transform: uppercase; font-size: 11.5px; font-weight: 700; color: #475569; letter-spacing: 0.3px;">
-                        <th style="width: 110px;" class="py-3">MÃ PHIẾU</th>
-                        <th style="min-width: 230px;" class="py-3">DỊCH VỤ</th>
-                        <th style="width: 80px;" class="text-center py-3">VỊ TRÍ</th>
-                        <th style="min-width: 200px;" class="py-3">XƯỞNG LABO</th>
-                        <th style="width: 145px;" class="py-3">NGÀY GỬI / HẸN</th>
-                        <th style="width: 125px;" class="text-end py-3">THÀNH TIỀN</th>
-                        <th style="width: 110px;" class="text-center py-3">ẢNH KẾT QUẢ</th>
-                        <th style="width: 125px;" class="text-center py-3">TRẠNG THÁI</th>
-                        <th style="width: 125px;" class="text-center py-3">THAO TÁC</th>
+            <div class="rounded-3 border bg-white position-relative" style="border-color: #e2e8f0 !important; overflow-x: auto;">
+                <table class="table df-clean-table table-hover align-middle mb-0 text-nowrap" data-disable-floating-actions="true" style="min-width: 1100px; font-size: 13.5px;">
+                    <thead>
+                    <tr>
+                        <th style="width: 110px;">Mã phiếu</th>
+                        <th style="min-width: 230px;">Dịch vụ</th>
+                        <th style="width: 80px;" class="text-center">Vị trí</th>
+                        <th style="min-width: 200px;">Xưởng labo</th>
+                        <th style="width: 145px;">Ngày gửi / Hẹn</th>
+                        <th style="width: 125px;" class="text-end">Thành tiền</th>
+                        <th style="width: 110px;" class="text-center">Ảnh kết quả</th>
+                        <th style="width: 125px;" class="text-center">Trạng thái</th>
+                        <th style="width: 125px;" class="text-center">Thao tác</th>
                     </tr>
                     </thead>
                     <tbody id="laboOrdersTableBody">
                     <!-- Hàng trống khi không có dữ liệu -->
                     <tr th:if="${laboOrders == null or #lists.isEmpty(laboOrders)}" id="emptyLaboRow">
-                        <td colspan="9" class="text-center py-5 text-muted">
-                            <i class="bi bi-box-seam fs-2 d-block mb-2 text-secondary opacity-50"></i>
-                            <span>Chưa có phiếu đặt xưởng hoặc mẫu gửi xét nghiệm nào cho ca khám này. Nhấn <strong>"+ Lập phiếu đặt xưởng / Gửi mẫu"</strong> để tạo phiếu mới.</span>
+                        <td colspan="9" class="text-center p-0 border-0">
+                            <div class="d-flex flex-column align-items-center justify-content-center py-4 px-3"
+                                 style="min-height: 125px; background: #f8fafc;">
+                                <i class="bi bi-box-seam fs-3 d-block mb-2 text-primary opacity-75"></i>
+                                <div class="fw-semibold text-dark mb-1">Chưa có phiếu đặt xưởng hoặc mẫu gửi xét nghiệm</div>
+                                <p class="df-meta-tertiary mb-3" th:unless="${isLaboLocked}">Tạo phiếu để gửi mẫu xét nghiệm hoặc đặt chế tác phục hình từ xưởng Labo.</p>
+                                <button type="button" class="btn btn-sm df-btn-tonal-primary px-3 py-2 rounded-pill fw-semibold"
+                                        th:unless="${isLaboLocked}"
+                                        onclick="openCreateLaboModal()">
+                                    <i class="bi bi-plus-circle-fill me-1"></i>Lập phiếu đặt xưởng / Gửi mẫu
+                                </button>
+                            </div>
                         </td>
                     </tr>
 
                     <!-- Vòng lặp hiển thị danh sách phiếu từ DB -->
                     <tr th:each="order : ${laboOrders}" th:id="'labo-row-' + ${order.laboId}">
                         <td>
-                            <span class="badge bg-light text-dark border fw-bold" th:text="${order.laboCode}">LAB-0021</span>
-                            <div class="small text-muted mt-0.5" style="font-size: 11px;" th:text="${order.orderTypeLabel}">Làm mới</div>
+                            <span class="badge bg-light text-dark border fw-bold df-num" th:text="${order.laboCode}">LAB-0021</span>
+                            <div class="small text-muted mt-1" style="font-size: 11px;" th:text="${order.orderTypeLabel}">Làm mới</div>
                         </td>
                         <td>
                             <strong class="text-dark d-block" th:text="${order.materialType}">Răng sứ Zirconia DDBio</strong>
-                            <div class="small text-secondary mt-0.5">
+                            <div class="small text-secondary mt-1">
                                 <span th:if="${order.shadeColor != null and !#strings.isEmpty(order.shadeColor)}"
                                       class="badge bg-light text-secondary border me-1" th:text="'Màu: ' + ${order.shadeColor}">Màu: A2</span>
                                 <span th:if="${order.crownInfo != null and !#strings.isEmpty(order.crownInfo)}"
@@ -130,25 +141,25 @@
                                  th:title="${order.notes}" th:text="'YC: ' + ${order.notes}"></div>
                         </td>
                         <td class="text-center">
-                            <span class="badge bg-primary-subtle text-primary border" th:text="${order.toothPositions != null ? order.toothPositions : '-'}">R26</span>
+                            <span class="chip-tooth df-num" th:text="${order.toothPositions != null ? order.toothPositions : '-'}">R26</span>
                         </td>
                         <td>
                             <strong class="text-dark" th:text="${order.supplierName}">Labo Nha khoa Sài Gòn</strong>
-                            <div class="small text-muted" th:if="${order.supplierPhone != null and !#strings.isEmpty(order.supplierPhone)}"
+                            <div class="small text-muted df-num" th:if="${order.supplierPhone != null and !#strings.isEmpty(order.supplierPhone)}"
                                  th:text="'Hotline: ' + ${order.supplierPhone}">02838001122</div>
                         </td>
                         <td>
-                            <div class="small text-secondary">
+                            <div class="small text-secondary df-num">
                                 <i class="bi bi-send text-primary me-1"></i>Gửi: <span th:text="${order.sentDateFormatted}">21/10/2026</span>
                             </div>
-                            <div class="small fw-semibold mt-0.5 text-warning-emphasis">
+                            <div class="small fw-semibold mt-1 text-warning-emphasis df-num">
                                 <i class="bi bi-clock-history text-warning me-1"></i>Trả: <span th:text="${order.expectedDateFormatted}">25/10/2026</span>
                                 <span class="text-muted" th:if="${order.tryInTime != null and !#strings.isEmpty(order.tryInTime)}" th:text="' ' + ${order.tryInTime}"></span>
                             </div>
                         </td>
                         <td class="text-end">
-                            <strong class="text-dark" th:text="${#numbers.formatDecimal(order.costToClinic, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.500.000 đ</strong>
-                            <div class="small text-muted" th:text="${order.quantity} + ' x ' + ${#numbers.formatDecimal(order.unitPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">1 x 1.500.000 đ</div>
+                            <strong class="text-dark df-num" th:text="${#numbers.formatDecimal(order.costToClinic, 0, 'COMMA', 0, 'POINT')} + ' đ'">1.500.000 đ</strong>
+                            <div class="small text-muted df-num" th:text="${order.quantity} + ' x ' + ${#numbers.formatDecimal(order.unitPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">1 x 1.500.000 đ</div>
                         </td>
                         <td class="text-center">
                             <!-- NẾU ĐÃ CÓ ẢNH GIẤY XÉT NGHIỆM / PHIẾU GỬI -->
@@ -158,7 +169,7 @@
                                    th:data-title="${order.laboCode + ' - ' + order.materialType}"
                                    th:data-patient="${order.patientName}"
                                    onclick="viewLaboImage(this.getAttribute('data-image'), this.getAttribute('data-title'), this.getAttribute('data-patient'))"
-                                   class="position-relative d-inline-block rounded border shadow-xs overflow-hidden"
+                                   class="position-relative d-inline-block rounded border overflow-hidden"
                                    style="width: 54px; height: 54px; cursor: pointer;"
                                    title="Bấm để xem ảnh phóng to">
                                     <img th:src="${order.imageUrl}" src="/images/fdi-chart-pure.png"
@@ -168,6 +179,7 @@
                                     </span>
                                 </a>
                                 <button type="button" class="btn btn-sm btn-link text-primary p-0 text-decoration-none" style="font-size: 11px;"
+                                        th:unless="${isLaboLocked}"
                                         th:data-id="${order.laboId}" th:data-code="${order.laboCode}"
                                         onclick="openQuickUploadImageModal(this.getAttribute('data-id'), this.getAttribute('data-code'))">
                                     Đổi ảnh
@@ -176,17 +188,19 @@
 
                             <!-- NẾU CHƯA CÓ ẢNH: NÚT ĐÍNH KÈM ẢNH -->
                             <div th:unless="${order.imageUrl != null and !#strings.isEmpty(order.imageUrl)}">
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1" style="font-size: 12px;"
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style="font-size: 12px;"
+                                        th:unless="${isLaboLocked}"
                                         th:data-id="${order.laboId}" th:data-code="${order.laboCode}"
                                         onclick="openQuickUploadImageModal(this.getAttribute('data-id'), this.getAttribute('data-code'))"
                                         title="Chụp ảnh giấy xét nghiệm hoặc phiếu gửi xưởng đính kèm">
                                     <i class="bi bi-camera-fill text-primary me-1"></i>+ Gắn ảnh KQ
                                 </button>
+                                <span th:if="${isLaboLocked}" class="text-muted small">—</span>
                             </div>
                         </td>
                         <td class="text-center">
                             <span class="badge" th:classappend="${order.statusBadgeClass}" th:text="${order.statusLabel}">Mới gửi</span>
-                            <div class="mt-1">
+                            <div class="mt-1" th:unless="${isLaboLocked}">
                                 <button type="button" class="btn btn-sm btn-link text-secondary p-0 text-decoration-none" style="font-size: 11.5px;"
                                         th:data-id="${order.laboId}" th:data-status="${order.status}"
                                         onclick="quickUpdateLaboStatus(this.getAttribute('data-id'), this.getAttribute('data-status'))"
@@ -197,20 +211,21 @@
                         </td>
                         <td class="text-center">
                             <div class="d-inline-flex align-items-center justify-content-center gap-1">
-                                <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center justify-content-center p-0"
+                                <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center p-0"
                                         style="width: 32px; height: 32px; border-radius: 8px;"
                                         title="In phiếu đặt xưởng"
                                         th:data-id="${order.laboId}" onclick="printLaboOrderModal(this.getAttribute('data-id'))">
-                                    <i class="bi bi-printer-fill" style="font-size: 14px;"></i>
+                                    <i class="bi bi-printer-fill text-primary" style="font-size: 14px;"></i>
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center p-0"
                                         style="width: 32px; height: 32px; border-radius: 8px;"
+                                        th:unless="${isLaboLocked}"
                                         title="Chỉnh sửa phiếu"
                                         th:data-id="${order.laboId}" onclick="openEditLaboModal(this.getAttribute('data-id'))">
                                     <i class="bi bi-pencil-square" style="font-size: 14px;"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center p-0"
-                                        style="width: 32px; height: 32px; border-radius: 8px;"
+                                <button type="button" class="df-btn-icon-muted"
+                                        th:unless="${isLaboLocked}"
                                         title="Xóa phiếu"
                                         th:data-id="${order.laboId}" onclick="deleteLaboOrder(this.getAttribute('data-id'))">
                                     <i class="bi bi-trash3-fill" style="font-size: 14px;"></i>
@@ -236,10 +251,10 @@
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-width: 1060px; width: 94%;">
             <div class="modal-content border-0 shadow-lg d-flex flex-column" style="border-radius: 16px; overflow: hidden; background: #ffffff; max-height: 90vh;">
                 <!-- Header chuẩn DentalSoft: nền trắng tinh, border phân cách rõ ràng, nút đóng [X] luôn hiển thị -->
-                <div class="modal-header py-3 px-4 bg-white border-bottom d-flex align-items-center justify-content-between flex-shrink-0" style="border-color: #e2e8f0 !important; z-index: 10;">
+                <div class="modal-header py-3 px-4 bg-white border-bottom text-dark d-flex align-items-center justify-content-between flex-shrink-0" style="border-color: #e2e8f0 !important; z-index: 10;">
                     <div>
                         <h5 class="modal-title fw-bold text-dark mb-0 fs-5" id="laboOrderModalLabel">Thêm phiếu đặt xưởng</h5>
-                        <p class="text-muted small mb-0 mt-0.5">Phiếu đặt xưởng labo &amp; gửi mẫu xét nghiệm</p>
+                        <p class="df-meta-tertiary mb-0 mt-1">Phiếu đặt xưởng labo &amp; gửi mẫu xét nghiệm</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.9rem;"></button>
                 </div>
@@ -306,14 +321,14 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
                                 <label class="form-label fw-bold text-dark small mb-1">Ngày gửi</label>
-                                <input type="date" class="form-control form-control-sm bg-white" id="laboSentDate">
+                                <input type="date" class="form-control form-control-sm bg-white df-num" id="laboSentDate">
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label fw-bold text-dark small mb-1">Ngày thử / Hẹn trả xưởng</label>
                                 <div class="input-group input-group-sm">
-                                    <input type="date" class="form-control" id="laboTryInDate">
+                                    <input type="date" class="form-control df-num" id="laboTryInDate">
                                     <span class="input-group-text bg-white small">Giờ</span>
-                                    <select class="form-select" id="laboTryInHour" style="max-width: 75px;">
+                                    <select class="form-select df-num" id="laboTryInHour" style="max-width: 75px;">
                                         <option value="08:00">08:00</option>
                                         <option value="09:00" selected>09:00</option>
                                         <option value="10:00">10:00</option>
@@ -341,15 +356,15 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-3">
                                 <label class="form-label fw-bold text-dark small mb-1">Số lượng</label>
-                                <input type="number" class="form-control form-control-sm" id="laboQuantity" min="1" value="1" oninput="calculateLaboTotal()">
+                                <input type="number" class="form-control form-control-sm df-num" id="laboQuantity" min="1" value="1" oninput="calculateLaboTotal()">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold text-dark small mb-1">Đơn giá (đ)</label>
-                                <input type="number" class="form-control form-control-sm" id="laboUnitPrice" min="0" value="0" oninput="calculateLaboTotal()">
+                                <input type="number" class="form-control form-control-sm df-num" id="laboUnitPrice" min="0" value="0" oninput="calculateLaboTotal()">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold text-dark small mb-1">Thành tiền (đ)</label>
-                                <input type="text" class="form-control form-control-sm bg-light fw-bold text-primary" id="laboCostDisplay" value="0 đ" readonly>
+                                <input type="text" class="form-control form-control-sm bg-light fw-bold text-primary df-num" id="laboCostDisplay" value="0 đ" readonly>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold text-dark small mb-1">Loại phiếu</label>
@@ -377,7 +392,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-bold text-dark small mb-1">Vị trí răng / Mẫu</label>
-                                <input type="text" class="form-control form-control-sm" id="laboToothPositions" placeholder="R16, R26, Toàn hàm, Máu...">
+                                <input type="text" class="form-control form-control-sm df-num" id="laboToothPositions" placeholder="R16, R26, Toàn hàm, Máu...">
                             </div>
                         </div>
 
@@ -388,8 +403,8 @@
                                       placeholder="VD: Lấy dấu cao su 2 thì, khớp cắn chuẩn giải phẫu, cùi răng hạ 1mm bờ vai, kiểm tra chỉ số đông máu..."></textarea>
                         </div>
 
-                        <!-- HÀNG 6: ĐÍNH KÈM ẢNH GIẤY XÉT NGHIỆM / PHIẾU GỬI LABO (THEO YÊU CẦU NGƯỜI DÙNG) -->
-                        <div class="p-3 rounded-3 border bg-white mb-2">
+                        <!-- HÀNG 6: ĐÍNH KÈM ẢNH GIẤY XÉT NGHIỆM / PHIẾU GỬI LABO -->
+                        <div class="p-3 df-soft-panel bg-white mb-2">
                             <div class="d-flex align-items-center justify-content-between mb-2">
                                 <span class="fw-bold text-dark small">
                                     <i class="bi bi-camera-fill text-primary me-1"></i>Ảnh chụp Giấy xét nghiệm / Phiếu gửi mẫu Labo:
@@ -428,11 +443,11 @@
                     </div>
 
                     <!-- FOOTER CỐ ĐỊNH Ở ĐÁY, KHÔNG BỊ TRÔI MẤT -->
-                    <div class="modal-footer py-2.5 px-4 bg-light border-top d-flex justify-content-end gap-2 flex-shrink-0" style="border-color: #e2e8f0 !important; z-index: 10;">
-                        <button type="button" class="btn btn-sm fw-medium px-3.5" data-bs-dismiss="modal" style="background-color: #ffffff; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 75px; height: 36px;">
+                    <div class="modal-footer py-2 px-4 bg-white border-top d-flex justify-content-end gap-2 flex-shrink-0" style="border-color: #e2e8f0 !important; z-index: 10;">
+                        <button type="button" class="btn btn-sm btn-outline-secondary fw-medium px-3" data-bs-dismiss="modal" style="border-radius: 8px; min-width: 75px; height: 36px;">
                             Đóng
                         </button>
-                        <button type="submit" class="btn btn-sm text-white fw-semibold px-4" id="btnSaveLaboOrder" style="background-color: #1d4ed8; border-color: #1d4ed8; border-radius: 8px; min-width: 85px; height: 36px;">
+                        <button type="submit" class="btn btn-sm btn-primary text-white fw-semibold px-4" id="btnSaveLaboOrder" style="border-radius: 8px; min-width: 85px; height: 36px;">
                             <i class="bi bi-check2-circle me-1"></i> Lưu
                         </button>
                     </div>
@@ -447,22 +462,22 @@
     <div class="modal fade" id="laboImageViewerModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-                <div class="modal-header py-2.5 px-3 bg-dark text-white">
+                <div class="modal-header py-3 px-4 bg-white border-bottom text-dark">
                     <div class="d-flex align-items-center gap-2">
-                        <i class="bi bi-file-earmark-image-fill text-info fs-5"></i>
+                        <i class="bi bi-file-earmark-image-fill text-primary fs-5"></i>
                         <div>
-                            <h6 class="modal-title mb-0 text-white fw-bold" id="viewerModalTitle">Ảnh giấy kết quả xét nghiệm / Phiếu xưởng</h6>
-                            <small class="text-white-50" id="viewerModalSubtitle">Bệnh nhân: ---</small>
+                            <h6 class="modal-title mb-0 text-dark fw-bold" id="viewerModalTitle">Ảnh giấy kết quả xét nghiệm / Phiếu xưởng</h6>
+                            <small class="df-meta-tertiary" id="viewerModalSubtitle">Bệnh nhân: ---</small>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-light py-0.5 px-2" onclick="rotateViewerImage()" title="Xoay ảnh 90 độ">
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2" onclick="rotateViewerImage()" title="Xoay ảnh 90 độ">
                             <i class="bi bi-arrow-clockwise"></i> Xoay
                         </button>
-                        <a id="viewerDownloadBtn" href="#" target="_blank" download="ket_qua_xet_nghiem.jpg" class="btn btn-sm btn-outline-light py-0.5 px-2" title="Tải ảnh gốc">
+                        <a id="viewerDownloadBtn" href="#" target="_blank" download="ket_qua_xet_nghiem.jpg" class="btn btn-sm btn-outline-secondary py-1 px-2" title="Tải ảnh gốc">
                             <i class="bi bi-download"></i> Tải về
                         </a>
-                        <button type="button" class="btn-close btn-close-white ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                 </div>
                 <div class="modal-body p-0 bg-dark text-center position-relative" style="min-height: 480px; max-height: 80vh; overflow: auto;">
@@ -479,17 +494,17 @@
     <div class="modal fade" id="quickUploadImageModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
-                <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
-                    <h6 class="modal-title fw-bold text-white mb-0">
-                        <i class="bi bi-camera-fill me-1"></i>Đính kèm ảnh Giấy xét nghiệm / Phiếu Labo
+                <div class="modal-header py-3 px-4 bg-white border-bottom text-dark">
+                    <h6 class="modal-title fw-bold text-dark mb-0">
+                        <i class="bi bi-camera-fill text-primary me-1"></i>Đính kèm ảnh giấy xét nghiệm / Phiếu Labo
                     </h6>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <form id="quickUploadImageForm" onsubmit="event.preventDefault(); submitQuickUploadImage();">
                         <input type="hidden" id="quickUploadLaboId" value="">
                         <div class="mb-3 text-center">
-                            <span class="badge bg-light text-dark border fw-bold fs-6" id="quickUploadCodeBadge">LAB-0021</span>
+                            <span class="badge bg-light text-dark border fw-bold fs-6 df-num" id="quickUploadCodeBadge">LAB-0021</span>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark small mb-1">Cách 1: Chọn ảnh từ máy tính / điện thoại</label>
@@ -500,8 +515,8 @@
                             <input type="url" class="form-control form-control-sm" id="quickUrlSelect" placeholder="https://...">
                         </div>
                         <div class="d-flex justify-content-end gap-2 pt-2 border-top">
-                            <button type="button" class="btn btn-sm btn-light border" data-bs-dismiss="modal">Hủy</button>
-                            <button type="submit" class="btn btn-sm btn-primary px-3 fw-bold" id="btnSubmitQuickImage">
+                            <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-sm btn-primary px-3 fw-semibold" id="btnSubmitQuickImage">
                                 <i class="bi bi-cloud-upload-fill me-1"></i>Lưu ảnh vào phiếu
                             </button>
                         </div>
@@ -518,7 +533,38 @@
 <script th:fragment="laboTabScript">
     let currentImageRotation = 0;
 
+    function isLaboClinicalLocked() {
+        return (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal)
+            || (typeof isReadOnlyViewVal !== 'undefined' && isReadOnlyViewVal);
+    }
+
+    function setLaboSelectValueWithFallback(selectEl, value) {
+        if (!selectEl) return;
+        selectEl.querySelectorAll('option[data-dynamic-fallback="true"]').forEach(opt => opt.remove());
+        if (!value) {
+            selectEl.value = '';
+            return;
+        }
+        selectEl.value = value;
+        if (selectEl.value !== value) {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = value;
+            opt.setAttribute('data-dynamic-fallback', 'true');
+            selectEl.appendChild(opt);
+            selectEl.value = value;
+        }
+    }
+
     function openCreateLaboModal() {
+        if (isLaboClinicalLocked()) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tạo phiếu đặt xưởng mới.');
+            return;
+        }
+        const matSelect = document.getElementById('laboMaterialType');
+        if (matSelect) {
+            matSelect.querySelectorAll('option[data-dynamic-fallback="true"]').forEach(opt => opt.remove());
+        }
         document.getElementById('laboOrderForm')?.reset();
         document.getElementById('laboFormId').value = '';
         document.getElementById('laboOrderModalLabel').innerText = 'Thêm phiếu đặt xưởng labo & Gửi mẫu';
@@ -547,6 +593,10 @@
     }
 
     async function openEditLaboModal(laboId) {
+        if (isLaboClinicalLocked()) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể chỉnh sửa phiếu đặt xưởng.');
+            return;
+        }
         try {
             const res = await fetch(`/api/doctor/labo-orders/${laboId}`);
             if (!res.ok) throw new Error('Không thể tải thông tin phiếu');
@@ -557,7 +607,7 @@
             document.getElementById('laboFormId').value = order.laboId;
             document.getElementById('laboOrderModalLabel').innerText = `Chỉnh sửa phiếu đặt xưởng: ${order.laboCode}`;
 
-            document.getElementById('laboMaterialType').value = order.materialType || '';
+            setLaboSelectValueWithFallback(document.getElementById('laboMaterialType'), order.materialType || '');
             if (order.supplierId) {
                 document.getElementById('laboSupplierSelect').value = order.supplierId;
             }
@@ -669,6 +719,10 @@
     }
 
     async function submitLaboOrderForm() {
+        if (isLaboClinicalLocked()) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể lưu phiếu đặt xưởng.');
+            return;
+        }
         const formId = document.getElementById('laboFormId').value;
         const isEdit = (formId && formId.trim().length > 0);
         let visitId = (typeof getCurrentVisitId === 'function') ? getCurrentVisitId() : null;
@@ -707,14 +761,15 @@
         formData.append('toothPositions', document.getElementById('laboToothPositions').value);
         formData.append('notes', document.getElementById('laboNotes').value);
 
-        const urlVal = document.getElementById('laboImageUrlInput').value;
-        if (urlVal && urlVal.trim().length > 0) {
-            formData.append('imageUrl', urlVal.trim());
+        const urlVal = (document.getElementById('laboImageUrlInput').value || '').trim();
+        if (urlVal.length > 0) {
+            formData.append('imageUrl', urlVal);
         }
 
         const fileInput = document.getElementById('laboImageFileInput');
-        if (fileInput && fileInput.files && fileInput.files[0]) {
-            formData.append('imageFile', fileInput.files[0]);
+        const selectedFile = (fileInput && fileInput.files && fileInput.files[0]) ? fileInput.files[0] : null;
+        if (selectedFile) {
+            formData.append('imageFile', selectedFile);
         }
 
         const submitBtn = document.getElementById('btnSaveLaboOrder');
@@ -725,28 +780,45 @@
 
         try {
             const url = isEdit ? `/api/doctor/labo-orders/${formId}` : '/api/doctor/labo-orders';
-            const method = isEdit ? 'PUT' : 'POST';
 
-            // If multipart on PUT, we can send as JSON or use specific upload
             let res;
             if (isEdit) {
+                let effectiveImageUrl = urlVal;
+                if (selectedFile) {
+                    const imgFormData = new FormData();
+                    imgFormData.append('file', selectedFile);
+                    const upRes = await fetch(`/api/doctor/labo-orders/${formId}/upload-image`, {
+                        method: 'POST',
+                        body: imgFormData
+                    });
+                    const upData = await upRes.json().catch(() => ({}));
+                    if (!upRes.ok || !upData.success) {
+                        alert('Không thể tải ảnh đính kèm: ' + (upData.message || 'Lỗi không xác định'));
+                        return;
+                    }
+                    if (upData.data && upData.data.imageUrl) {
+                        effectiveImageUrl = upData.data.imageUrl;
+                        document.getElementById('laboImageUrlInput').value = effectiveImageUrl;
+                    }
+                }
+
                 // Sửa bằng JSON
                 const payload = {
-                    supplierId: parseInt(supplierId),
+                    supplierId: parseInt(supplierId, 10),
                     materialType: materialType,
                     sentDate: document.getElementById('laboSentDate').value,
                     tryInDate: document.getElementById('laboTryInDate').value,
                     tryInTime: document.getElementById('laboTryInHour').value,
                     status: document.getElementById('laboStatusSelect').value,
                     orderType: document.getElementById('laboOrderType').value,
-                    quantity: parseInt(document.getElementById('laboQuantity').value || '1'),
+                    quantity: parseInt(document.getElementById('laboQuantity').value || '1', 10),
                     unitPrice: parseFloat(document.getElementById('laboUnitPrice').value || '0'),
                     shadeColor: document.getElementById('laboShadeColor').value,
                     bridgeInfo: document.getElementById('laboBridgeInfo').value,
                     crownInfo: document.getElementById('laboCrownInfo').value,
                     toothPositions: document.getElementById('laboToothPositions').value,
                     notes: document.getElementById('laboNotes').value,
-                    imageUrl: urlVal
+                    imageUrl: effectiveImageUrl
                 };
                 res = await fetch(url, {
                     method: 'PUT',
@@ -777,7 +849,7 @@
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Lưu phiếu';
+                submitBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Lưu';
             }
         }
     }
@@ -814,6 +886,10 @@
     }
 
     function openQuickUploadImageModal(laboId, laboCode) {
+        if (isLaboClinicalLocked()) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tải ảnh lên phiếu.');
+            return;
+        }
         document.getElementById('quickUploadImageForm')?.reset();
         document.getElementById('quickUploadLaboId').value = laboId;
         document.getElementById('quickUploadCodeBadge').innerText = laboCode || 'LAB-0021';
@@ -826,6 +902,10 @@
     }
 
     async function submitQuickUploadImage() {
+        if (isLaboClinicalLocked()) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tải ảnh lên phiếu.');
+            return;
+        }
         const laboId = document.getElementById('quickUploadLaboId').value;
         const fileInput = document.getElementById('quickFileSelect');
         const urlInput = document.getElementById('quickUrlSelect');
@@ -877,6 +957,10 @@
     }
 
     async function quickUpdateLaboStatus(laboId, currentStatus) {
+        if (isLaboClinicalLocked()) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể thay đổi trạng thái phiếu.');
+            return;
+        }
         const statuses = ['SENT', 'PROCESSING', 'DELIVERED', 'FITTED_SUCCESS'];
         const labels = ['Mới gửi', 'Đang chế tác / Chờ KQ', 'Đã nhận về phòng khám', 'Đã lắp hoàn tất'];
         let nextIndex = (statuses.indexOf(currentStatus) + 1);
@@ -909,6 +993,10 @@
     }
 
     async function deleteLaboOrder(laboId) {
+        if (isLaboClinicalLocked()) {
+            alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể xóa phiếu đặt xưởng.');
+            return;
+        }
         if (!confirm('Bạn có chắc chắn muốn xóa phiếu đặt xưởng / gửi mẫu này khỏi cơ sở dữ liệu?')) return;
         try {
             const res = await fetch(`/api/doctor/labo-orders/${laboId}`, { method: 'DELETE' });
@@ -955,12 +1043,14 @@
             const tbody = document.getElementById('laboOrdersTableBody');
             if (!tbody) return;
 
+            const isLocked = isLaboClinicalLocked();
+
             if (list.length === 0) {
                 tbody.innerHTML = `
                     <tr id="emptyLaboRow">
                         <td colspan="9" class="text-center py-5 text-muted">
                             <i class="bi bi-box-seam fs-2 d-block mb-2 text-secondary opacity-50"></i>
-                            <span>Chưa có phiếu đặt xưởng hoặc mẫu gửi xét nghiệm nào cho ca khám này. Nhấn <strong>"+ Lập phiếu đặt xưởng / Gửi mẫu"</strong> để tạo phiếu mới.</span>
+                            <span>Chưa có phiếu đặt xưởng hoặc mẫu gửi xét nghiệm nào cho ca khám này.${isLocked ? '' : ' Nhấn <strong>"+ Lập phiếu đặt xưởng / Gửi mẫu"</strong> để tạo phiếu mới.'}</span>
                         </td>
                     </tr>
                 `;
@@ -970,6 +1060,17 @@
             const esc = (typeof escapeHtml === 'function') ? escapeHtml : (s => s || '');
             let html = '';
             list.forEach(ord => {
+                const changeImgBtn = isLocked ? '' : `
+                        <button type="button" class="btn btn-sm btn-link text-primary p-0 text-decoration-none" style="font-size: 11px;"
+                                onclick="openQuickUploadImageModal(${ord.laboId}, '${esc(ord.laboCode)}')">
+                            Đổi ảnh
+                        </button>`;
+                const noImgAction = isLocked ? `<span class="text-muted small">—</span>` : `
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style="font-size: 12px;"
+                            onclick="openQuickUploadImageModal(${ord.laboId}, '${esc(ord.laboCode)}')"
+                            title="Chụp ảnh giấy xét nghiệm hoặc phiếu gửi xưởng đính kèm">
+                        <i class="bi bi-camera-fill text-primary me-1"></i>+ Gắn ảnh KQ
+                    </button>`;
                 const imgHtml = (ord.imageUrl && ord.imageUrl.trim().length > 0) ? `
                     <div class="d-flex flex-column align-items-center gap-1">
                         <a href="javascript:void(0)"
@@ -982,31 +1083,42 @@
                                 <i class="bi bi-zoom-in"></i> Xem
                             </span>
                         </a>
-                        <button type="button" class="btn btn-sm btn-link text-primary p-0 text-decoration-none" style="font-size: 11px;"
-                                onclick="openQuickUploadImageModal(${ord.laboId}, '${esc(ord.laboCode)}')">
-                            Đổi ảnh
-                        </button>
+                        ${changeImgBtn}
                     </div>
-                ` : `
-                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1" style="font-size: 12px;"
-                            onclick="openQuickUploadImageModal(${ord.laboId}, '${esc(ord.laboCode)}')"
-                            title="Chụp ảnh giấy xét nghiệm hoặc phiếu gửi xưởng đính kèm">
-                        <i class="bi bi-camera-fill text-primary me-1"></i>+ Gắn ảnh KQ
-                    </button>
-                `;
+                ` : noImgAction;
 
                 const formattedCost = (typeof formatVnd === 'function') ? formatVnd(ord.costToClinic) : (ord.costToClinic ? ord.costToClinic.toLocaleString('vi-VN') + ' đ' : '0 đ');
                 const formattedPrice = (typeof formatVnd === 'function') ? formatVnd(ord.unitPrice) : (ord.unitPrice ? ord.unitPrice.toLocaleString('vi-VN') + ' đ' : '0 đ');
+                const quickStatusHtml = isLocked ? '' : `
+                            <div class="mt-1">
+                                <button type="button" class="btn btn-sm btn-link text-secondary p-0 text-decoration-none" style="font-size: 11.5px;"
+                                        onclick="quickUpdateLaboStatus(${ord.laboId}, '${esc(ord.status)}')">
+                                    <i class="bi bi-arrow-repeat"></i> Đổi TT
+                                </button>
+                            </div>`;
+                const editDeleteBtnsHtml = isLocked ? '' : `
+                                <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center p-0"
+                                        style="width: 32px; height: 32px; border-radius: 8px;"
+                                        title="Chỉnh sửa phiếu"
+                                        onclick="openEditLaboModal(${ord.laboId})">
+                                    <i class="bi bi-pencil-square" style="font-size: 14px;"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center p-0"
+                                        style="width: 32px; height: 32px; border-radius: 8px;"
+                                        title="Xóa phiếu"
+                                        onclick="deleteLaboOrder(${ord.laboId})">
+                                    <i class="bi bi-trash3-fill" style="font-size: 14px;"></i>
+                                </button>`;
 
                 html += `
                     <tr id="labo-row-${ord.laboId}">
                         <td>
-                            <span class="badge bg-light text-dark border fw-bold">${esc(ord.laboCode)}</span>
-                            <div class="small text-muted mt-0.5" style="font-size: 11px;">${esc(ord.orderTypeLabel)}</div>
+                            <span class="badge bg-light text-dark border fw-bold df-num">${esc(ord.laboCode)}</span>
+                            <div class="small text-muted mt-1" style="font-size: 11px;">${esc(ord.orderTypeLabel)}</div>
                         </td>
                         <td>
                             <strong class="text-dark d-block">${esc(ord.materialType)}</strong>
-                            <div class="small text-secondary mt-0.5">
+                            <div class="small text-secondary mt-1">
                                 ${ord.shadeColor ? `<span class="badge bg-light text-secondary border me-1">Màu: ${esc(ord.shadeColor)}</span>` : ''}
                                 ${ord.crownInfo ? `<span class="badge bg-light text-secondary border me-1">${esc(ord.crownInfo)}</span>` : ''}
                                 ${ord.bridgeInfo ? `<span class="badge bg-light text-secondary border">${esc(ord.bridgeInfo)}</span>` : ''}
@@ -1014,17 +1126,17 @@
                             ${ord.notes ? `<div class="small text-muted fst-italic text-truncate mt-1" style="max-width: 280px;" title="${esc(ord.notes)}">YC: ${esc(ord.notes)}</div>` : ''}
                         </td>
                         <td class="text-center">
-                            <span class="badge bg-primary-subtle text-primary border">${esc(ord.toothPositions || '-')}</span>
+                            <span class="chip-tooth df-num">${esc(ord.toothPositions || '-')}</span>
                         </td>
                         <td>
                             <strong class="text-dark">${esc(ord.supplierName)}</strong>
-                            ${ord.supplierPhone ? `<div class="small text-muted">Hotline: ${esc(ord.supplierPhone)}</div>` : ''}
+                            ${ord.supplierPhone ? `<div class="small text-muted df-num">Hotline: ${esc(ord.supplierPhone)}</div>` : ''}
                         </td>
                         <td>
-                            <div class="small text-secondary">
+                            <div class="small text-secondary df-num">
                                 <i class="bi bi-send text-primary me-1"></i>Gửi: ${esc(ord.sentDateFormatted || '-')}
                             </div>
-                            <div class="small fw-semibold mt-0.5 text-warning-emphasis">
+                            <div class="small fw-semibold mt-1 text-warning-emphasis df-num">
                                 <i class="bi bi-clock-history text-warning me-1"></i>Trả: ${esc(ord.expectedDateFormatted || '-')} ${esc(ord.tryInTime || '')}
                             </div>
                         </td>
@@ -1037,12 +1149,7 @@
                         </td>
                         <td class="text-center">
                             <span class="badge ${esc(ord.statusBadgeClass)}">${esc(ord.statusLabel)}</span>
-                            <div class="mt-1">
-                                <button type="button" class="btn btn-sm btn-link text-secondary p-0 text-decoration-none" style="font-size: 11.5px;"
-                                        onclick="quickUpdateLaboStatus(${ord.laboId}, '${esc(ord.status)}')">
-                                    <i class="bi bi-arrow-repeat"></i> Đổi TT
-                                </button>
-                            </div>
+                            ${quickStatusHtml}
                         </td>
                         <td class="text-center">
                             <div class="d-inline-flex align-items-center justify-content-center gap-1">
@@ -1052,18 +1159,7 @@
                                         onclick="printLaboOrderModal(${ord.laboId})">
                                     <i class="bi bi-printer-fill" style="font-size: 14px;"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center p-0"
-                                        style="width: 32px; height: 32px; border-radius: 8px;"
-                                        title="Chỉnh sửa phiếu"
-                                        onclick="openEditLaboModal(${ord.laboId})">
-                                    <i class="bi bi-pencil-square" style="font-size: 14px;"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center p-0"
-                                        style="width: 32px; height: 32px; border-radius: 8px;"
-                                        title="Xóa phiếu"
-                                        onclick="deleteLaboOrder(${ord.laboId})">
-                                    <i class="bi bi-trash3-fill" style="font-size: 14px;"></i>
-                                </button>
+                                ${editDeleteBtnsHtml}
                             </div>
                         </td>
                     </tr>

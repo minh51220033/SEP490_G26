@@ -112,7 +112,7 @@ public class DoctorParaclinicalRestController {
             @PathVariable("visitId") Long visitId,
             @RequestBody ParaclinicalOrderCreateDTO dto, jakarta.servlet.http.HttpSession session
     ) {
-        doctorVisitAccess.require(session, visitId);
+        doctorVisitAccess.requireActiveClinicalExam(session, visitId);
         try {
             ParaclinicalOrderItemResponseDTO created = paraclinicalOrderService.createOrder(visitId, dto, null);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);

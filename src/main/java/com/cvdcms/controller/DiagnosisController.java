@@ -72,6 +72,8 @@ public class DiagnosisController {
     private NanopixXraySyncLogRepository nanopixXraySyncLogRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.security.UrlIdCodec urlIdCodec = new com.cvdcms.security.UrlIdCodec();
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public void setDoctorCoverGrantRepository(com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository) {
         this.doctorCoverGrantRepository = doctorCoverGrantRepository;
@@ -183,10 +185,20 @@ public class DiagnosisController {
                 session.setAttribute("doctorSelectedBranchId", branchId);
             }
         } else {
+            Object modelBranchId = model.getAttribute("currentBranchId");
             if (branchId != null && session != null) {
+                session.setAttribute("currentBranchId", branchId);
                 session.setAttribute("doctorSelectedBranchId", branchId);
-            } else if (session != null && session.getAttribute("doctorSelectedBranchId") != null) {
-                branchId = (Long) session.getAttribute("doctorSelectedBranchId");
+            } else if (modelBranchId instanceof Long mBranchId) {
+                branchId = mBranchId;
+                if (session != null) {
+                    session.setAttribute("doctorSelectedBranchId", branchId);
+                }
+            } else if (session != null && session.getAttribute("currentBranchId") instanceof Long sBranchId) {
+                branchId = sBranchId;
+                session.setAttribute("doctorSelectedBranchId", branchId);
+            } else if (session != null) {
+                session.removeAttribute("doctorSelectedBranchId");
             }
         }
 
@@ -269,10 +281,20 @@ public class DiagnosisController {
                 session.setAttribute("doctorSelectedBranchId", branchId);
             }
         } else {
+            Object modelBranchId = model.getAttribute("currentBranchId");
             if (branchId != null && session != null) {
+                session.setAttribute("currentBranchId", branchId);
                 session.setAttribute("doctorSelectedBranchId", branchId);
-            } else if (session != null && session.getAttribute("doctorSelectedBranchId") != null) {
-                branchId = (Long) session.getAttribute("doctorSelectedBranchId");
+            } else if (modelBranchId instanceof Long mBranchId) {
+                branchId = mBranchId;
+                if (session != null) {
+                    session.setAttribute("doctorSelectedBranchId", branchId);
+                }
+            } else if (session != null && session.getAttribute("currentBranchId") instanceof Long sBranchId) {
+                branchId = sBranchId;
+                session.setAttribute("doctorSelectedBranchId", branchId);
+            } else if (session != null) {
+                session.removeAttribute("doctorSelectedBranchId");
             }
         }
 
@@ -282,24 +304,26 @@ public class DiagnosisController {
                 java.util.Set<Long> coveredIds = doctorCoverGrantRepository != null
                         ? doctorCoverGrantRepository.findActiveCoveredVisitIds(docStaffId, java.time.LocalDateTime.now())
                         : java.util.Collections.<Long>emptySet();
-                List<Visit> myVisits = diagnosisService.getAvailableVisitsForDiagnosis(branchId).stream()
+                List<Visit> myActiveVisits = diagnosisService.getAvailableVisitsForDiagnosis(branchId).stream()
+                        .filter(v -> v.getStatus() == VisitStatus.IN_EXAM || v.getStatus() == VisitStatus.IN_TREATMENT)
                         .filter(v -> (v.getPrimaryDoctor() != null && docStaffId.equals(v.getPrimaryDoctor().getStaffId()))
                                 || coveredIds.contains(v.getVisitId()))
                         .toList();
-                if (!myVisits.isEmpty()) {
-                    visitId = myVisits.get(0).getVisitId();
+                if (!myActiveVisits.isEmpty()) {
+                    visitId = myActiveVisits.get(0).getVisitId();
+                } else {
+                    redirectAttributes.addFlashAttribute("infoMessage",
+                            "Chưa có ca đang khám. Vui lòng dùng nút 'Vào khám' trên danh sách chờ để tiếp nhận đúng lượt được gọi.");
+                    return branchId != null
+                            ? "redirect:/doctor/daily-visits?branchId=" + branchId
+                            : "redirect:/doctor/daily-visits";
                 }
             } else {
-                List<Visit> availableVisits = diagnosisService.getAvailableVisitsForDiagnosis(branchId);
-                if (!availableVisits.isEmpty()) {
-                    visitId = availableVisits.get(0).getVisitId();
-                } else {
-                    List<Visit> allVisits = (branchId != null)
-                            ? visitRepository.findRecentVisitsByStatusesAndBranch(List.of(VisitStatus.values()), branchId)
-                            : visitRepository.findAll();
-                    if (!allVisits.isEmpty()) {
-                        visitId = allVisits.get(0).getVisitId();
-                    }
+                List<Visit> activeVisits = diagnosisService.getAvailableVisitsForDiagnosis(branchId).stream()
+                        .filter(v -> v.getStatus() == VisitStatus.IN_EXAM || v.getStatus() == VisitStatus.IN_TREATMENT)
+                        .toList();
+                if (!activeVisits.isEmpty()) {
+                    visitId = activeVisits.get(0).getVisitId();
                 }
             }
         }
@@ -326,11 +350,27 @@ public class DiagnosisController {
         return renderEmptyDiagnosisPage(branchId, session, model);
     }
 
+    private boolean canDoctorAccessVisitForExam(boolean isAdmin, StaffProfile currentDoctor, Visit visit) {
+        if (isAdmin) {
+            return true;
+        }
+        if (currentDoctor == null || visit == null) {
+            return false;
+        }
+        if (visit.getPrimaryDoctor() != null && currentDoctor.getStaffId().equals(visit.getPrimaryDoctor().getStaffId())) {
+            return true;
+        }
+        return doctorCoverGrantRepository != null
+                && doctorCoverGrantRepository.existsByVisitVisitIdAndCoveringDoctorStaffIdAndRevokedAtIsNullAndExpiresAtAfter(
+                        visit.getVisitId(), currentDoctor.getStaffId(), LocalDateTime.now());
+    }
+
     @GetMapping("/doctor/examination/patient/{patientRef}")
     public String examinationByPatient(
             @PathVariable("patientRef") String patientRef,
             @RequestParam(value = "newVisit", defaultValue = "false") boolean forceNewVisit,
-            jakarta.servlet.http.HttpSession session
+            jakarta.servlet.http.HttpSession session,
+            RedirectAttributes redirectAttributes
     ) {
         Long patientId = decodePatientRef(patientRef);
         doctorVisitAccess.requirePatientWrite(session, patientId);
@@ -342,22 +382,41 @@ public class DiagnosisController {
                 ? staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null)
                 : null;
 
+        Optional<Visit> queuedVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(
+                patientId,
+                List.of(VisitStatus.WAITING, VisitStatus.WAITING_RESULT)
+        );
+        if (queuedVisitOpt.isPresent()) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Bệnh nhân đang có lượt chờ khám (" + queuedVisitOpt.get().getVisitCode()
+                            + "). Không thể mở khám hoặc tạo lượt mới bỏ qua hàng chờ; vui lòng dùng nút 'Vào khám' khi đến lượt.");
+            return "redirect:/doctor/daily-visits";
+        }
+
         if (!forceNewVisit) {
             Optional<Visit> activeVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(
                     patientId,
-                    List.of(VisitStatus.IN_EXAM, VisitStatus.WAITING, VisitStatus.IN_TREATMENT, VisitStatus.WAITING_PARACLINICAL, VisitStatus.WAITING_RESULT, VisitStatus.WAITING_PAYMENT)
+                    List.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT, VisitStatus.WAITING_PARACLINICAL, VisitStatus.WAITING_PAYMENT)
             );
             if (activeVisitOpt.isPresent()) {
                 Visit av = activeVisitOpt.get();
                 if (isAdmin || assignedBranch == null || (av.getBranch() != null && av.getBranch().getBranchId().equals(assignedBranch.getBranchId()))) {
-                    return "redirect:/doctor/examination/" + encodeVisit(av.getVisitId()) + "/diagnoses";
+                    if (canDoctorAccessVisitForExam(isAdmin, currentDoctor, av)) {
+                        return "redirect:/doctor/examination/" + encodeVisit(av.getVisitId()) + "/diagnoses";
+                    }
+                    String ownerName = av.getPrimaryDoctor() != null && av.getPrimaryDoctor().getFullName() != null
+                            ? av.getPrimaryDoctor().getFullName()
+                            : "bác sĩ khác";
+                    redirectAttributes.addFlashAttribute("errorMessage",
+                            "Bệnh nhân đang có ca khám hoạt động (" + av.getVisitCode() + ") do " + ownerName + " phụ trách và bạn chưa được ủy quyền khám thay.");
+                    return "redirect:/doctor/daily-visits";
                 }
             }
             Optional<Visit> latestVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdOrderByCheckInAtDesc(patientId);
             if (latestVisitOpt.isPresent()) {
                 Visit lv = latestVisitOpt.get();
                 if (isAdmin || assignedBranch == null || (lv.getBranch() != null && lv.getBranch().getBranchId().equals(assignedBranch.getBranchId()))) {
-                    return "redirect:/doctor/examination/" + encodeVisit(lv.getVisitId()) + "/diagnoses";
+                    return "redirect:/doctor/examination/" + encodeVisit(lv.getVisitId()) + "/diagnoses?readOnly=true&fromPatientRef=" + patientRef;
                 }
             }
         }
@@ -373,7 +432,9 @@ public class DiagnosisController {
 
         Visit newVisit = new Visit();
         newVisit.setPatientProfile(patient);
-        newVisit.setCheckInAt(LocalDateTime.now());
+        LocalDateTime nowStart = LocalDateTime.now();
+        newVisit.setCheckInAt(nowStart);
+        newVisit.setActualStartTime(nowStart);
         newVisit.setStatus(VisitStatus.IN_EXAM);
         newVisit.setVisitType(com.cvdcms.entity.enums.VisitType.WALK_IN);
         newVisit.setInitialSymptoms("Khám và điều trị tại ghế theo yêu cầu");
@@ -472,26 +533,14 @@ public class DiagnosisController {
                 return "redirect:/doctor/daily-visits";
             }
 
-            // Tự động chuyển vé từ CALLED/WAITING sang IN_SERVICE và lượt khám sang IN_EXAM khi Bác sĩ bắt đầu ca khám
-            boolean statusChanged = false;
-            if (visit.getStatus() == VisitStatus.WAITING || visit.getStatus() == VisitStatus.WAITING_RESULT) {
-                visit.setStatus(VisitStatus.IN_EXAM);
-                statusChanged = true;
-            }
-            if (clinicalQueueTicketRepository != null) {
-                List<QueueTicket> activeTickets = clinicalQueueTicketRepository.findByVisitVisitIdAndQueueType(visitId, QueueType.EXAM);
-                for (QueueTicket t : activeTickets) {
-                    if (t.getStatus() == QueueStatus.CALLED || t.getStatus() == QueueStatus.WAITING) {
-                        t.setStatus(QueueStatus.IN_SERVICE);
-                        if (t.getCalledAt() == null) {
-                            t.setCalledAt(LocalDateTime.now());
-                        }
-                        clinicalQueueTicketRepository.save(t);
-                    }
-                }
-            }
-            if (statusChanged) {
-                visitRepository.save(visit);
+            // Không tự động chuyển trạng thái trên GET và không cho phép mở bàn khám cho lượt còn Đang chờ / chưa bấm "Vào khám"
+            try {
+                doctorVisitAccess.requireActiveClinicalExam(session, visitId);
+            } catch (org.springframework.web.server.ResponseStatusException ex) {
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        ex.getReason() != null ? ex.getReason()
+                                : "Bệnh nhân còn đang chờ khám hoặc chưa bấm 'Vào khám'. Không thể mở bàn khám cho lượt chưa tiếp nhận.");
+                return "redirect:/doctor/daily-visits";
             }
         } else {
             doctorVisitAccess.requireVisitRead(session, visitId);
@@ -677,7 +726,7 @@ public class DiagnosisController {
             }
         }
         String patientRecordBackUrl = useReceptionPath
-                ? (resolvedFromPatientId != null ? "/reception/patients/" + resolvedFromPatientId : "/reception/patients") + "#tab-treatment"
+                ? (resolvedFromPatientId != null ? "/reception/patients/" + encodePatient(resolvedFromPatientId) : "/reception/patients") + "#tab-treatment"
                 : (resolvedFromPatientId != null ? "/doctor/patient-records/" + encodePatient(resolvedFromPatientId) : "/doctor/patient-records") + "#tab-treatment";
         model.addAttribute("patientRecordBackUrl", patientRecordBackUrl);
         model.addAttribute("readonlySidebarMenu", useReceptionPath ? "patients" : "doctor-records");
@@ -796,6 +845,24 @@ public class DiagnosisController {
 
         if (visit.getPrimaryDoctor() == null) {
             return "redirect:/doctor/daily-visits";
+        }
+
+        if (visit.getStatus() == VisitStatus.WAITING
+                || visit.getStatus() == VisitStatus.WAITING_RESULT
+                || visit.getStatus() == VisitStatus.CANCELLED) {
+            return "redirect:/doctor/daily-visits";
+        }
+        if (clinicalQueueTicketRepository != null && visit.getVisitId() != null) {
+            var ticketOpt = clinicalQueueTicketRepository.findByVisitIdAndTypeOrderByDesc(visit.getVisitId(), QueueType.EXAM)
+                    .stream()
+                    .filter(t -> t.getStatus() != QueueStatus.CANCELLED)
+                    .findFirst();
+            if (ticketOpt.isPresent()) {
+                QueueStatus qs = ticketOpt.get().getStatus();
+                if (qs == QueueStatus.WAITING || qs == QueueStatus.PAUSED || qs == QueueStatus.CALLED) {
+                    return "redirect:/doctor/daily-visits";
+                }
+            }
         }
 
         if (isDoctorRestricted && visit.getBranch() != null && !visit.getBranch().getBranchId().equals(assignedBranch.getBranchId())) {

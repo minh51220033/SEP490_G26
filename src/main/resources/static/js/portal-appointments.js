@@ -275,8 +275,8 @@
                 const actionTd = document.createElement('td');
                 actionTd.className = 'text-end pe-3';
                 actionTd.innerHTML = `
-                    <a href="/portal/appointments/${a.id}" class="btn btn-sm btn-outline-primary fw-semibold px-2.5 py-1.5 d-inline-flex align-items-center">
-                        <i class="bi bi-eye me-1.5"></i>Chi tiết
+                    <a href="/portal/appointments/${a.id}" class="btn btn-sm btn-outline-primary fw-semibold px-2 py-1 d-inline-flex align-items-center">
+                        <i class="bi bi-eye me-1"></i>Chi tiết
                     </a>
                 `;
                 tr.appendChild(actionTd);
@@ -295,8 +295,25 @@
         const form = $('appointmentForm');
         const id = form.dataset.appointmentId || '';
         const editing = Boolean(id);
-        const preSelectedProfileId = form.dataset.selectedProfileId || new URLSearchParams(location.search).get('profileId') || '';
+        const queryParams = new URLSearchParams(location.search);
+        const preSelectedProfileId = form.dataset.selectedProfileId || queryParams.get('profileId') || '';
+        const preSelectedBranchId = queryParams.get('branchId') || form.dataset.defaultBranchId || '';
+        const preSelectedServiceId = queryParams.get('serviceId') || '';
+        const preSelectedDoctorId = queryParams.get('doctorId') || '';
+        const preSelectedDate = queryParams.get('date') || '';
+        const preSelectedSession = queryParams.get('session') || '';
+        const preSelectedSlotTime = queryParams.get('slotTime') || '';
         const options = await request('/options');
+        const serviceDurations = new Map((options.services || []).map(s => [String(s.id), Number(s.durationMinutes || 30)]));
+
+        function addMinutesToTime(hhmm, mins) {
+            const parts = String(hhmm || '').slice(0, 5).split(':');
+            if (parts.length !== 2) return '';
+            const total = Number(parts[0]) * 60 + Number(parts[1]) + Number(mins || 30);
+            const h = Math.floor(total / 60) % 24;
+            const m = total % 60;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
 
         setSelect($('branchId'), options.branches, 'Chọn chi nhánh khám', b => b.name);
         setSelect($('serviceId'), options.services, 'Chưa chọn dịch vụ cụ thể · Khám tổng quát (30 phút)', s => `${s.name} · ${s.durationMinutes} phút`);
@@ -304,7 +321,10 @@
         $('appointmentDate').max = localDate(90);
 
         let current = null;
-        let selectedProfile = null;
+        let available = false;
+        let hasSessionConflict = false;
+        let appliedInitialDoctorPreselect = false;
+        let sequence = 0;
 
         // Render Profile Selection Cards (FT35)
         const cardsGrid = $('profileCardsGrid');
@@ -323,7 +343,8 @@
                 // Determine which profile to select
                 let targetId = preSelectedProfileId;
                 if (!targetId || !options.profiles.some(p => String(p.id) === String(targetId))) {
-                    targetId = String(options.profiles[0].id);
+                    const selfOrFirst = options.profiles.find(p => p.self) || options.profiles[0];
+                    targetId = String(selfOrFirst.id);
                 }
 
                 options.profiles.forEach(p => {
@@ -340,7 +361,7 @@
                         </div>
                         <div class="profile-card-info">
                             <h4>${escapeHtml(p.name)}</h4>
-                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <span class="badge ${p.self ? 'bg-primary' : ''}" style="${!p.self ? 'background-color: #7c3aed;' : ''}">${escapeHtml(p.relation || (p.self ? 'Bản thân' : 'Phụ thuộc'))}</span>
                                 <span class="patient-code-badge" style="font-size: 11px; padding: 2px 6px;">${escapeHtml(p.code)}</span>
                             </div>
@@ -352,6 +373,8 @@
                         cardsGrid.querySelectorAll('.profile-card-option').forEach(c => c.classList.remove('selected'));
                         card.classList.add('selected');
                         $('profileId').value = String(p.id);
+                        clearError();
+                        availability().catch(e => error(e.message));
                     });
 
                     cardsGrid.appendChild(card);
@@ -373,15 +396,24 @@
             $('symptomsSection').hidden = true;
             $('submitAppointment').innerHTML = '<i class="bi bi-check2-circle me-2"></i>Lưu ngày / buổi mới';
         } else {
-            if (options.branches && options.branches.length > 0 && !$('branchId').value) {
+            if (preSelectedBranchId && options.branches?.some(b => String(b.id) === String(preSelectedBranchId))) {
+                $('branchId').value = String(preSelectedBranchId);
+            } else if (options.branches && options.branches.length > 0 && !$('branchId').value) {
                 $('branchId').value = String(options.branches[0].id);
             }
-            if (!$('appointmentDate').value) {
+            if (preSelectedServiceId && options.services?.some(s => String(s.id) === String(preSelectedServiceId))) {
+                $('serviceId').value = String(preSelectedServiceId);
+            }
+            if (preSelectedDate && preSelectedDate >= localDate()) {
+                $('appointmentDate').value = preSelectedDate;
+            } else if (!$('appointmentDate').value) {
                 const now = new Date();
                 const offset = now.getHours() >= 17 ? 1 : 0;
                 $('appointmentDate').value = localDate(offset);
             }
-            if (!$('preferredSession').value) {
+            if (preSelectedSession) {
+                $('preferredSession').value = preSelectedSession;
+            } else if (!$('preferredSession').value) {
                 const hour = new Date().getHours();
                 if (hour < 11) $('preferredSession').value = 'MORNING';
                 else if (hour < 16) $('preferredSession').value = 'AFTERNOON';
@@ -389,12 +421,15 @@
             }
         }
 
-        let available = false;
-        let sequence = 0;
-
         async function loadSlots(token) {
             const select = $('slotTime');
-            const previous = select.value || (current?.expectedTime || '').slice(0, 5);
+            const previous = select.value || preSelectedSlotTime.slice(0, 5) || (current?.expectedTime || '').slice(0, 5);
+            const duration = (!editing && $('serviceId')?.value)
+                ? (serviceDurations.get(String($('serviceId').value)) || 30)
+                : (current?.durationMinutes || 30);
+            if ($('slotDurationNote')) {
+                $('slotDurationNote').textContent = `Thời lượng dự kiến: ${duration} phút`;
+            }
             select.disabled = true;
             select.replaceChildren(option('', 'Đang kiểm tra giờ khám…'));
             const params = new URLSearchParams({
@@ -402,7 +437,8 @@
                 date: $('appointmentDate').value,
                 sessionPeriod: $('preferredSession').value
             });
-            if ($('doctorId').value) params.set('doctorId', $('doctorId').value);
+            const chosenDoctorId = $('doctorId').value;
+            if (chosenDoctorId) params.set('doctorId', chosenDoctorId);
             if (!editing && $('serviceId').value) params.set('serviceId', $('serviceId').value);
             if (editing) params.set('excludeAppointmentId', id);
 
@@ -415,9 +451,11 @@
             if (token !== sequence) return;
             select.replaceChildren();
 
-            if (list && list.length > 0) {
-                select.appendChild(option('', 'Chọn giờ hẹn (hoặc linh hoạt theo buổi)'));
-                list.forEach(slot => select.appendChild(option(slot.time.slice(0, 5), `${slot.time.slice(0, 5)} · còn ${slot.remaining} chỗ`)));
+            if (list && list.length > 0 && !hasSessionConflict) {
+                list.forEach(slot => {
+                    const start = slot.time.slice(0, 5);
+                    select.appendChild(option(start, start));
+                });
                 if (previous && list.some(slot => slot.time.slice(0, 5) === previous)) {
                     select.value = previous;
                 } else {
@@ -425,18 +463,26 @@
                 }
                 select.disabled = false;
                 $('submitAppointment').disabled = false;
-            } else if (available) {
-                select.appendChild(option('', 'Linh hoạt trong buổi khám (Lễ tân sắp xếp khi đến)'));
-                select.value = '';
-                select.disabled = false;
-                $('submitAppointment').disabled = false;
-                $('availabilityMessage').innerHTML = '<i class="bi bi-check-circle-fill fs-5 me-2 text-success"></i><span>Buổi khám còn chỗ tiếp nhận. Giờ khám chính xác sẽ được lễ tân điều phối linh hoạt khi bạn đến phòng khám.</span>';
-                $('availabilityMessage').className = 'appointment-availability is-success d-flex align-items-center';
+                if (chosenDoctorId) {
+                    const selectedDocName = $('doctorId').selectedOptions[0]?.textContent || 'bác sĩ đã chọn';
+                    $('availabilityMessage').innerHTML = `<i class="bi bi-person-check-fill fs-5 me-2 text-primary"></i><span>Đang hiển thị <strong>${list.length} mốc giờ khả dụng</strong> của ${escapeHtml(selectedDocName)}.</span>`;
+                    $('availabilityMessage').className = 'appointment-availability is-success d-flex align-items-center';
+                }
+            } else if (hasSessionConflict) {
+                select.appendChild(option('', 'Hồ sơ đã có lịch hẹn trong buổi này'));
+                select.disabled = true;
+                $('submitAppointment').disabled = true;
+            } else if (chosenDoctorId) {
+                select.appendChild(option('', `Bác sĩ không còn giờ trống ${duration} phút trong buổi này`));
+                select.disabled = true;
+                $('submitAppointment').disabled = true;
+                $('availabilityMessage').innerHTML = `<i class="bi bi-calendar-x-fill fs-5 me-2 text-warning"></i><span>Bác sĩ đã chọn không còn sức chứa cho <strong>${duration} phút</strong> trong buổi này. Vui lòng chọn bác sĩ khác hoặc bỏ chọn bác sĩ.</span>`;
+                $('availabilityMessage').className = 'appointment-availability is-error d-flex align-items-center';
             } else {
                 select.appendChild(option('', 'Không còn giờ phù hợp'));
                 select.disabled = true;
                 $('submitAppointment').disabled = true;
-                $('availabilityMessage').innerHTML = '<i class="bi bi-x-circle-fill fs-5 me-2 text-danger"></i><span>Không còn giờ phù hợp trong buổi này. Vui lòng chọn buổi khám hoặc bác sĩ khác.</span>';
+                $('availabilityMessage').innerHTML = '<i class="bi bi-x-circle-fill fs-5 me-2 text-danger"></i><span>Không còn giờ phù hợp trong buổi này. Vui lòng chọn buổi khám hoặc ngày khác.</span>';
                 $('availabilityMessage').className = 'appointment-availability is-error d-flex align-items-center';
             }
         }
@@ -445,9 +491,9 @@
             const token = ++sequence;
             const branchId = $('branchId').value, date = $('appointmentDate').value, session = $('preferredSession').value;
             const doctor = $('doctorId'), message = $('availabilityMessage'), button = $('submitAppointment');
-            available = false; button.disabled = true; doctor.disabled = true;
+            available = false; hasSessionConflict = false; button.disabled = true; doctor.disabled = true;
             $('slotTime').disabled = true; $('slotTime').replaceChildren(option('', 'Chọn ngày và buổi trước'));
-            doctor.replaceChildren(option('', 'Không yêu cầu đích danh · Lễ tân điều phối'));
+            doctor.replaceChildren(option('', 'Không yêu cầu bác sĩ cụ thể · Hệ thống phân bổ phù hợp'));
             message.className = 'appointment-availability d-flex align-items-center gap-2';
 
             if (!branchId || !date || !session) {
@@ -456,8 +502,18 @@
             }
             message.innerHTML = '<div class="spinner-border spinner-border-sm text-primary me-2"></div><span>Đang kiểm tra khả năng tiếp nhận…</span>';
             const exclude = editing ? `&excludeAppointmentId=${encodeURIComponent(id)}` : '';
-            const result = await request(`/availability?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}&sessionPeriod=${encodeURIComponent(session)}${exclude}`);
+            const profParam = (!editing && $('profileId').value) ? `&profileId=${encodeURIComponent($('profileId').value)}` : '';
+            const result = await request(`/availability?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}&sessionPeriod=${encodeURIComponent(session)}${exclude}${profParam}`);
             if (token !== sequence) return;
+
+            if (result.patientHasSameSessionConflict) {
+                hasSessionConflict = true;
+                message.innerHTML = `<i class="bi bi-exclamation-octagon-fill fs-5 me-2 text-danger"></i><span>${escapeHtml(result.conflictMessage || 'Hồ sơ này đã có lịch hẹn trong cùng buổi.')} <a href="/portal/appointments" class="btn btn-sm btn-outline-danger ms-2 fw-semibold">Xem lịch hiện tại</a></span>`;
+                message.className = 'appointment-availability is-error d-flex align-items-center';
+                $('slotTime').replaceChildren(option('', 'Không thể đặt thêm lịch cùng buổi'));
+                $('slotTime').disabled = true;
+                return;
+            }
 
             if (!result.available) {
                 message.innerHTML = `<i class="bi bi-exclamation-octagon-fill fs-5 me-2 text-danger"></i><span>${escapeHtml(result.reason || 'Buổi này phòng khám đã kín chỗ.')}</span>`;
@@ -465,14 +521,16 @@
                 return;
             }
 
-            result.doctors.forEach(d => doctor.appendChild(option(d.id, `${d.name}${d.specialty ? ' · ' + d.specialty : ''} (${d.remaining} chỗ)`)));
-            if (current?.requestedDoctorId && result.doctors.some(d => d.id === current.requestedDoctorId)) {
-                doctor.value = String(current.requestedDoctorId);
+            result.doctors.forEach(d => doctor.appendChild(option(d.id, `${d.name}${d.specialty ? ' · ' + d.specialty : ''} (còn ${d.remaining} chỗ)`)));
+            const desiredDoc = current?.requestedDoctorId || (!appliedInitialDoctorPreselect ? preSelectedDoctorId : '');
+            if (desiredDoc && result.doctors.some(d => String(d.id) === String(desiredDoc))) {
+                doctor.value = String(desiredDoc);
             }
+            appliedInitialDoctorPreselect = true;
 
             doctor.disabled = false;
             available = true; button.disabled = false;
-            message.innerHTML = `<i class="bi bi-check-circle-fill fs-5 me-2 text-success"></i><span>Buổi khám còn <strong>${result.remainingBranch} chỗ</strong>. Bạn có thể chọn bác sĩ đích danh hoặc để lễ tân điều phối khi đến.</span>`;
+            message.innerHTML = `<i class="bi bi-check-circle-fill fs-5 me-2 text-success"></i><span>Buổi khám còn <strong>${result.remainingBranch} chỗ</strong>. Bạn có thể chọn bác sĩ chỉ định hoặc để hệ thống phân bổ phù hợp.</span>`;
             message.className = 'appointment-availability is-success d-flex align-items-center';
             await loadSlots(token);
         }
@@ -480,7 +538,7 @@
         async function loadPortalSessions(branchId) {
             const select = $('preferredSession');
             if (!select || !branchId) return;
-            const prev = select.value;
+            const prev = select.value || preSelectedSession;
             try {
                 const res = await fetch(`/api/public/booking/sessions?branchId=${encodeURIComponent(branchId)}`);
                 const list = await res.json().catch(() => []);
@@ -580,7 +638,13 @@
                     sessionStorage.removeItem('ft06-booking-key');
                 }
                 location.href = `/portal/appointments/${saved.id}?saved=${editing ? 'changed' : 'created'}`;
-            } catch (e) { error(e.message); button.disabled = !available; }
+            } catch (e) {
+                error(e.message);
+                button.disabled = !available;
+                if (available && /khung giờ|trùng|khe trống|đã được đặt|bác sĩ/i.test(e.message || '')) {
+                    availability().catch(() => {});
+                }
+            }
         });
     }
 
@@ -655,12 +719,12 @@
                     item.className = 'timeline-entry mb-3';
                     item.innerHTML = `
                         <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-primary-subtle text-primary border py-1 px-2.5 fw-semibold">
-                                <i class="bi bi-clock-history me-1.5"></i>${escapeHtml(h.action)}
+                            <span class="badge bg-primary-subtle text-primary border py-1 px-2 fw-semibold">
+                                <i class="bi bi-clock-history me-1"></i>${escapeHtml(h.action)}
                             </span>
                             <span class="text-muted small">${h.createdAt ? escapeHtml(h.createdAt.replace('T', ' ').slice(0, 16)) : `#${idx + 1}`}</span>
                         </div>
-                        ${h.reason ? `<div class="small text-muted fst-italic mt-1.5 ps-2 border-start border-2 border-primary-subtle">${escapeHtml(h.reason)}</div>` : ''}
+                        ${h.reason ? `<div class="small text-muted fst-italic mt-1 ps-2 border-start border-2 border-primary-subtle">${escapeHtml(h.reason)}</div>` : ''}
                     `;
                     history.appendChild(item);
                 });

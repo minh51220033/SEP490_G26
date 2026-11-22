@@ -82,4 +82,28 @@ public interface SystemAuditLogRepository extends JpaRepository<SystemAuditLog, 
 
     @Query("SELECT COUNT(l) FROM SystemAuditLog l WHERE l.action LIKE 'DELETE%' OR l.action LIKE '%CANCEL%' OR l.action LIKE '%REFUND%' OR l.action LIKE '%BAN%' OR l.action LIKE '%REJECT%'")
     long countSensitiveActions();
+
+    @Query("""
+        SELECT l FROM SystemAuditLog l
+        LEFT JOIN FETCH l.user u
+        WHERE l.branch.branchId = :branchId
+          AND l.action = :action
+          AND l.createdAt >= :since
+        ORDER BY l.createdAt DESC, l.logId DESC
+    """)
+    List<SystemAuditLog> findRecentBranchActions(@Param("branchId") Long branchId,
+                                                 @Param("action") String action,
+                                                 @Param("since") LocalDateTime since);
+
+    @Query("""
+        SELECT l FROM SystemAuditLog l
+        LEFT JOIN FETCH l.user u
+        WHERE l.entityTable = :entityTable
+          AND l.entityId IN :entityIds
+          AND l.action = :action
+        ORDER BY l.createdAt DESC, l.logId DESC
+    """)
+    List<SystemAuditLog> findLatestForEntities(@Param("entityTable") String entityTable,
+                                               @Param("entityIds") java.util.Collection<Long> entityIds,
+                                               @Param("action") String action);
 }

@@ -31,6 +31,10 @@ public record PatientView(
         return phoneNumber;
     }
 
+    public String getPatientToken() {
+        return com.cvdcms.security.UrlIdCodec.shared().encodePatient(id);
+    }
+
     public String getGenderShort() {
         if (gender == null) return "?";
         String g = gender.trim().toLowerCase();

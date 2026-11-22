@@ -1095,9 +1095,10 @@
 
                 // 3. Mã KH
                 const tdCode = document.createElement('td');
+                const patientRef = a.patientToken || a.profileId;
                 if (a.profileId) {
                     const codeLink = document.createElement('a');
-                    codeLink.setAttribute('href', `/reception/patients/${a.profileId}`);
+                    codeLink.setAttribute('href', `/reception/patients/${patientRef}`);
                     codeLink.className = 'customer-code-badge';
                     codeLink.textContent = a.patientCode || `BN#${a.profileId}`;
                     tdCode.appendChild(codeLink);
@@ -1113,7 +1114,7 @@
                 const tdPatient = document.createElement('td');
                 if (a.profileId) {
                     const nameLink = document.createElement('a');
-                    nameLink.setAttribute('href', `/reception/patients/${a.profileId}`);
+                    nameLink.setAttribute('href', `/reception/patients/${patientRef}`);
                     nameLink.className = 'customer-name-link';
                     nameLink.textContent = a.patientName || 'Khách hàng';
                     tdPatient.appendChild(nameLink);
@@ -1637,6 +1638,7 @@
             const help = $('modalDoctorHelp');
             const submitBtn = $('saveAppointmentBtn');
             if (!select) return;
+            const canAssign = select.dataset.canAssignDoctor === 'true';
             select.disabled = true;
             select.replaceChildren(option('', 'Đang tải bác sĩ trực…'));
             const branchId = modalBranch?.value;
@@ -1657,13 +1659,19 @@
                     return;
                 }
                 const list = Array.isArray(res.doctors) ? res.doctors : [];
-                select.replaceChildren(option('', list.length ? '-- Chọn bác sĩ phụ trách --' : '-- Không có bác sĩ trực ca này --'));
-                list.forEach(d => select.appendChild(option(d.id, `BS. ${d.name}${d.specialty ? ` · ${d.specialty}` : ''}`)));
-                select.disabled = false;
+                if (!canAssign) {
+                    select.replaceChildren(option('', 'Tự động phân bổ bác sĩ theo lịch trống'));
+                    select.value = '';
+                    select.disabled = true;
+                } else {
+                    select.replaceChildren(option('', list.length ? '-- Tự động phân bổ bác sĩ --' : '-- Không có bác sĩ trực ca này --'));
+                    list.forEach(d => select.appendChild(option(d.id, `BS. ${d.name}${d.specialty ? ` · ${d.specialty}` : ''}`)));
+                    select.disabled = false;
+                }
                 if (submitBtn) submitBtn.disabled = false;
                 const sessNames = { MORNING: 'Ca Sáng', AFTERNOON: 'Ca Chiều', EVENING: 'Ca Tối' };
                 if (help) help.innerHTML = list.length
-                    ? `<span class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Có ${list.length} bác sĩ trực (${sessNames[session] || 'Ca Sáng'}) ngày ${dateLabel(date)}. Còn ${res.remainingBranch} ca tiếp nhận.</span>`
+                    ? `<span class="text-success fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Có ${list.length} bác sĩ trực (${sessNames[session] || 'Ca Sáng'}) ngày ${dateLabel(date)}. Còn ${res.remainingBranch} ca tiếp nhận.${!canAssign ? ' Hệ thống sẽ tự phân bổ bác sĩ.' : ''}</span>`
                     : `<span class="text-warning fw-semibold">Chưa có bác sĩ phân ca trực ngày ${dateLabel(date)}.</span>`;
             } catch (err) {
                 select.replaceChildren(option('', '-- Chưa có bác sĩ trực --'));
@@ -1860,7 +1868,8 @@
             const patientName = $('modalPatientName').value.trim();
             const date = $('modalAppointmentDate').value;
             const symptoms = $('modalSymptoms').value.trim();
-            const doctorId = $('modalDoctorId').value ? Number($('modalDoctorId').value) : null;
+            const canAssign = $('modalDoctorId')?.dataset.canAssignDoctor === 'true';
+            const doctorId = (canAssign && $('modalDoctorId')?.value) ? Number($('modalDoctorId').value) : null;
             const serviceId = $('modalServiceId').value ? Number($('modalServiceId').value) : null;
             const profileId = $('modalProfileId').value ? Number($('modalProfileId').value) : null;
             const modalBranchId = $('modalBranchId').value ? Number($('modalBranchId').value) : null;
@@ -1873,11 +1882,6 @@
             }
             if (!date) {
                 alert('Vui lòng chọn ngày hẹn.');
-                return;
-            }
-            if (!doctorId) {
-                alert('Vui lòng chọn bác sĩ trực.');
-                $('modalDoctorId').focus();
                 return;
             }
             if (!symptoms) {
@@ -2053,6 +2057,7 @@
             const help = $('editDoctorHelp');
             const submitBtn = $('saveEditAppointmentBtn');
             if (!select) return;
+            const canAssign = select.dataset.canAssignDoctor === 'true';
             const curSess = sessionPeriod || $('editSession')?.value || 'MORNING';
             select.disabled = true;
             if (submitBtn) submitBtn.disabled = false;
@@ -2087,7 +2092,7 @@
                     select.value = '';
                     prevMissing = hadPrevDoctor;
                 }
-                select.disabled = false;
+                select.disabled = !canAssign;
                 if (submitBtn) submitBtn.disabled = false;
                 const sessLabel = defaultSessionMeta[curSess]?.label || 'Ca Sáng';
                 if (help) {
@@ -2664,7 +2669,15 @@
         const form = $('appointmentForm');
         const id = form.dataset.appointmentId || '';
         const editing = Boolean(id);
+        const canAssignDoctor = form.dataset.canAssignDoctor === 'true';
         const options = await request('/options');
+        const serviceDurations = new Map((options.services || []).map(s => [String(s.id), Number(s.durationMinutes || 30)]));
+        function addMinutes(hhmm, mins) {
+            const parts = String(hhmm || '').slice(0, 5).split(':');
+            if (parts.length !== 2) return '';
+            const total = Number(parts[0]) * 60 + Number(parts[1]) + Number(mins || 30);
+            return `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+        }
         branches($('branchId'), options);
         setSelect($('serviceId'), options.services, 'Chưa chọn dịch vụ · 30 phút', s => `${s.name} · ${s.durationMinutes} phút`);
         $('appointmentDate').min = today();
@@ -2796,8 +2809,15 @@
                 list = [];
             }
             if (token !== availabilitySeq) return;
+            const duration = $('serviceId')?.value
+                ? (serviceDurations.get(String($('serviceId').value)) || 30)
+                : (current?.durationMinutes || 30);
             select.replaceChildren(option('', 'Linh động trong ca (Chưa chốt giờ)'));
-            list.forEach(slot => select.appendChild(option(slot.time.slice(0, 5), `${slot.time.slice(0, 5)} · còn ${slot.remaining} chỗ`)));
+            list.forEach(slot => {
+                const start = slot.time.slice(0, 5);
+                const end = addMinutes(start, duration);
+                select.appendChild(option(start, `${start} – ${end} · còn ${slot.remaining} chỗ (${duration}p)`));
+            });
             if (previous && list.some(slot => slot.time.slice(0, 5) === previous)) {
                 select.value = previous;
             } else if (previous) {
@@ -2846,10 +2866,21 @@
             const result = await request(`/availability?branchId=${encodeURIComponent(branchId)}&date=${date}&sessionPeriod=${session}${exclude}`);
             if (token !== availabilitySeq) return;
             if (!result.available) { message.textContent = result.reason || 'Buổi khám không còn chỗ.'; message.classList.add('is-error'); return; }
-            result.doctors.forEach(d => doctor.appendChild(option(d.id, `${d.name}${d.specialty ? ' · ' + d.specialty : ''} (${d.remaining} chỗ)`)));
-            if (current?.doctorId && result.doctors.some(d => d.id === current.doctorId)) doctor.value = String(current.doctorId);
-            doctor.disabled = false; available = true; button.disabled = false;
-            message.textContent = `Buổi khám còn ${result.remainingBranch} chỗ. Bác sĩ đích danh là yêu cầu; phân công thực tế sau check-in.`;
+            if (!canAssignDoctor) {
+                doctor.replaceChildren(option('', 'Tự động phân bổ bác sĩ theo lịch trống'));
+                if (current?.doctorId && result.doctors.some(d => d.id === current.doctorId)) {
+                    const matched = result.doctors.find(d => d.id === current.doctorId);
+                    doctor.appendChild(option(matched.id, `${matched.name} (Giữ bác sĩ đã hẹn)`));
+                    doctor.value = String(matched.id);
+                }
+                doctor.disabled = true;
+            } else {
+                result.doctors.forEach(d => doctor.appendChild(option(d.id, `${d.name}${d.specialty ? ' · ' + d.specialty : ''} (${d.remaining} chỗ)`)));
+                if (current?.doctorId && result.doctors.some(d => d.id === current.doctorId)) doctor.value = String(current.doctorId);
+                doctor.disabled = false;
+            }
+            available = true; button.disabled = false;
+            message.textContent = `Buổi khám còn ${result.remainingBranch} chỗ.${canAssignDoctor ? '' : ' Bác sĩ được hệ thống tự động phân bổ theo lịch trống.'}`;
             if (current?.doctorId && !result.doctors.some(d => d.id === current.doctorId))
                 message.textContent += ' Bác sĩ cũ không khả dụng, vui lòng chọn lại.';
             message.classList.add('is-success');
@@ -2899,7 +2930,13 @@
                     : await request('', {method: 'POST', body: JSON.stringify({...payload,
                         branchId: Number($('branchId').value), profileId: Number($('profileId').value)})});
                 location.href = `/reception/appointments/${saved.id}?saved=${editing ? 'updated' : 'created'}`;
-            } catch (e) { error(e.message); button.disabled = !available; }
+            } catch (e) {
+                error(e.message);
+                button.disabled = !available;
+                if (available && /khung giờ|trùng|khe trống|đã được đặt/i.test(e.message || '')) {
+                    availability().catch(() => {});
+                }
+            }
         });
     }
 

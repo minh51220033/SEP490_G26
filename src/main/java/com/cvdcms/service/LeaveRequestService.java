@@ -35,6 +35,9 @@ public class LeaveRequestService {
     @Autowired(required = false)
     private SystemAuditLogRepository systemAuditLogRepository;
 
+    @Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     public LeaveRequestService(LeaveRequestRepository leaveRequestRepository,
                                StaffScheduleRepository scheduleRepository,
                                AppointmentRepository appointmentRepository,
@@ -117,10 +120,13 @@ public class LeaveRequestService {
             }
         }
 
-        // KIỂM TRA TRÙNG LẶP ĐƠN NGHỈ
+        // KIỂM TRA TRÙNG LẶP ĐƠN NGHỈ (bao gồm trùng khoảng giờ giữa các ca khác nhau)
         boolean isOverlapping = leaveRequestRepository.existsOverlapping(
                 staff.getStaffId(), startDate, endDate, shift != null ? shift.getShiftId() : null,
                 List.of(LeaveStatus.PENDING, LeaveStatus.APPROVED)
+        ) || hasOverlappingLeave(
+                staff.getStaffId(), startDate, endDate, shift,
+                List.of(LeaveStatus.PENDING, LeaveStatus.APPROVED), null
         );
         if (isOverlapping) {
             throw new IllegalArgumentException("Bạn đã có đơn nghỉ phép trùng lặp trong khoảng thời gian/ca làm việc này đang chờ duyệt hoặc đã được phê duyệt.");
@@ -235,8 +241,19 @@ public class LeaveRequestService {
             throw new IllegalArgumentException("Đơn nghỉ này đã được xử lý từ trước (Trạng thái: " + leave.getStatus() + ").");
         }
 
+        if (leave.getStaff() != null && leave.getStaff().getUser() != null 
+                && leave.getStaff().getUser().getUserId().equals(reviewerUserId)) {
+            throw new IllegalArgumentException("Bạn không thể tự phê duyệt đơn xin nghỉ của chính mình.");
+        }
+
         User reviewer = userRepository.findById(reviewerUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Người duyệt không hợp lệ."));
+
+        if (leave.getStaff() != null && leave.getStaff().getStaffId() != null
+                && hasOverlappingLeave(leave.getStaff().getStaffId(), leave.getStartDate(), leave.getEndDate(),
+                leave.getShift(), List.of(LeaveStatus.APPROVED), leave.getLeaveId())) {
+            throw new IllegalStateException("Bác sĩ đã có đơn nghỉ phép được phê duyệt trùng khoảng thời gian/ca làm việc này.");
+        }
 
         leave.setStatus(LeaveStatus.APPROVED);
         leave.setReviewedBy(reviewer);
@@ -262,7 +279,8 @@ public class LeaveRequestService {
             } catch (Exception ignored) {}
         }
 
-        // 1. TỰ ĐỘNG KHÓA LỊCH TRỰC: Cập nhật các ca làm việc của bác sĩ trong khoảng ngày sang ON_LEAVE
+        // 1. TỰ ĐỘNG KHÓA LỊCH TRỰC: Cập nhật các ca làm việc của bác sĩ trong khoảng ngày sang ON_LEAVE (đúng chi nhánh xin nghỉ)
+        Long leaveBranchId = leave.getBranch() != null ? leave.getBranch().getBranchId() : null;
         List<StaffSchedule> schedules;
         if (leave.getShift() != null) {
             schedules = scheduleRepository.findByStaffStaffIdAndShiftShiftIdAndWorkDateBetween(
@@ -274,17 +292,28 @@ public class LeaveRequestService {
             );
         }
 
-        for (StaffSchedule s : schedules) {
-            if (s.getStatus() == ScheduleStatus.SCHEDULED) {
-                s.setStatus(ScheduleStatus.ON_LEAVE);
-                String note = "Nghỉ phép #LR-" + leave.getLeaveId();
-                if (reviewNote != null && !reviewNote.isBlank()) {
-                    note += ": " + reviewNote.trim();
+        List<StaffSchedule> schedulesToLock = new ArrayList<>();
+        if (schedules != null) {
+            for (StaffSchedule s : schedules) {
+                if (leave.getShift() == null && leaveBranchId != null
+                        && s.getBranch() != null && s.getBranch().getBranchId() != null
+                        && !leaveBranchId.equals(s.getBranch().getBranchId())) {
+                    continue;
                 }
-                s.setNote(note);
+                if (s.getStatus() == ScheduleStatus.SCHEDULED) {
+                    s.setStatus(ScheduleStatus.ON_LEAVE);
+                    String note = "Nghỉ phép #LR-" + leave.getLeaveId();
+                    if (reviewNote != null && !reviewNote.isBlank()) {
+                        note += ": " + reviewNote.trim();
+                    }
+                    s.setNote(note);
+                    schedulesToLock.add(s);
+                }
             }
         }
-        scheduleRepository.saveAll(schedules);
+        if (!schedulesToLock.isEmpty()) {
+            scheduleRepository.saveAll(schedulesToLock);
+        }
 
         // 2. TỰ ĐỘNG XỬ LÝ CÁC LỊCH HẸN BỊ ẢNH HƯỞNG (PENDING & CONFIRMED)
         List<Appointment> affectedAppointments = Collections.emptyList();
@@ -298,15 +327,9 @@ public class LeaveRequestService {
             if (potential != null && !potential.isEmpty()) {
                 affectedAppointments = new ArrayList<>();
                 for (Appointment app : potential) {
-                    // Nếu đơn nghỉ theo ca cụ thể: chỉ xử lý lịch hẹn thuộc khung giờ ca đó
-                    if (leave.getShift() != null && app.getExpectedTime() != null) {
-                        LocalTime sStart = leave.getShift().getStartTime();
-                        LocalTime sEnd = leave.getShift().getEndTime();
-                        if (app.getExpectedTime().isBefore(sStart) || app.getExpectedTime().isAfter(sEnd)) {
-                            continue;
-                        }
+                    if (isAppointmentAffectedByLeave(app, leave)) {
+                        affectedAppointments.add(app);
                     }
-                    affectedAppointments.add(app);
                 }
             }
         }
@@ -378,6 +401,16 @@ public class LeaveRequestService {
             notificationRepository.save(extra);
         }
 
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                    "DOCTOR_SCHEDULE_CHANGED",
+                    leave.getBranch() != null ? leave.getBranch().getBranchId() : null,
+                    leave.getStaff() != null ? leave.getStaff().getStaffId() : null,
+                    null, null, "LEAVE_APPROVED",
+                    "Bác sĩ " + doctorName + " nghỉ phép ngày " + leave.getStartDate() + " - " + leave.getEndDate(),
+                    LocalDateTime.now()));
+        }
+
         return affectedAppointments.size();
     }
 
@@ -388,6 +421,11 @@ public class LeaveRequestService {
 
         if (leave.getStatus() != LeaveStatus.PENDING) {
             throw new IllegalArgumentException("Đơn nghỉ này đã được xử lý từ trước.");
+        }
+
+        if (leave.getStaff() != null && leave.getStaff().getUser() != null 
+                && leave.getStaff().getUser().getUserId().equals(reviewerUserId)) {
+            throw new IllegalArgumentException("Bạn không thể tự từ chối đơn xin nghỉ của chính mình.");
         }
 
         if (reviewNote == null || reviewNote.trim().isBlank()) {
@@ -429,26 +467,80 @@ public class LeaveRequestService {
                 List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED)
         );
 
-        if (leave.getShift() == null) {
-            // Nghỉ cả ngày -> Toàn bộ lịch hẹn trong khoảng ngày đều bị ảnh hưởng
-            return allInDateRange;
-        }
-
-        // Nghỉ theo ca cụ thể -> Lọc các lịch hẹn có giờ hẹn nằm trong khung giờ của ca trực
-        LocalTime shiftStart = leave.getShift().getStartTime();
-        LocalTime shiftEnd = leave.getShift().getEndTime();
-
         List<Appointment> affected = new ArrayList<>();
-        for (Appointment a : allInDateRange) {
-            LocalTime apptTime = a.getExpectedTime();
-            if (apptTime == null) {
-                // Nếu không ghi giờ cụ thể thì mặc định tính là bị ảnh hưởng
-                affected.add(a);
-            } else if (!apptTime.isBefore(shiftStart) && apptTime.isBefore(shiftEnd)) {
-                affected.add(a);
+        if (allInDateRange != null) {
+            for (Appointment a : allInDateRange) {
+                if (isAppointmentAffectedByLeave(a, leave)) {
+                    affected.add(a);
+                }
             }
         }
         return affected;
+    }
+
+    /**
+     * Kiểm tra trùng lịch nghỉ phép theo khoảng ngày và khung giờ ca làm việc (hỗ trợ phát hiện trùng chéo ca).
+     */
+    private boolean hasOverlappingLeave(Long staffId, LocalDate startDate, LocalDate endDate,
+                                        WorkShift shift, Collection<LeaveStatus> statuses, Long excludeLeaveId) {
+        if (staffId == null || startDate == null || endDate == null || statuses == null || statuses.isEmpty()) {
+            return false;
+        }
+        List<LeaveRequest> existingLeaves = leaveRequestRepository.findByStaffStaffIdOrderBySubmittedAtDesc(staffId);
+        if (existingLeaves == null || existingLeaves.isEmpty()) {
+            return false;
+        }
+        for (LeaveRequest other : existingLeaves) {
+            if (other == null || (excludeLeaveId != null && excludeLeaveId.equals(other.getLeaveId()))) {
+                continue;
+            }
+            if (other.getStatus() == null || !statuses.contains(other.getStatus())) {
+                continue;
+            }
+            if (other.getStartDate() == null || other.getEndDate() == null) {
+                continue;
+            }
+            if (other.getStartDate().isAfter(endDate) || other.getEndDate().isBefore(startDate)) {
+                continue;
+            }
+            if (shift == null || other.getShift() == null) {
+                return true;
+            }
+            if (Objects.equals(shift.getShiftId(), other.getShift().getShiftId())) {
+                return true;
+            }
+            LocalTime s1 = shift.getStartTime();
+            LocalTime e1 = shift.getEndTime();
+            LocalTime s2 = other.getShift().getStartTime();
+            LocalTime e2 = other.getShift().getEndTime();
+            if (s1 != null && e1 != null && s2 != null && e2 != null && s1.isBefore(e2) && s2.isBefore(e1)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Kiểm tra lịch hẹn có nằm trong phạm vi chi nhánh và khung giờ [shiftStart, shiftEnd) của đơn nghỉ hay không.
+     */
+    private boolean isAppointmentAffectedByLeave(Appointment app, LeaveRequest leave) {
+        if (app == null || leave == null) {
+            return false;
+        }
+        Long leaveBranchId = leave.getBranch() != null ? leave.getBranch().getBranchId() : null;
+        if (leaveBranchId != null && app.getBranch() != null && app.getBranch().getBranchId() != null
+                && !leaveBranchId.equals(app.getBranch().getBranchId())) {
+            return false;
+        }
+        if (leave.getShift() != null && app.getExpectedTime() != null) {
+            LocalTime shiftStart = leave.getShift().getStartTime();
+            LocalTime shiftEnd = leave.getShift().getEndTime();
+            LocalTime apptTime = app.getExpectedTime();
+            if (shiftStart != null && shiftEnd != null) {
+                return !apptTime.isBefore(shiftStart) && apptTime.isBefore(shiftEnd);
+            }
+        }
+        return true;
     }
 
     // =========================================================================

@@ -15,69 +15,65 @@
             gap: 6px;
             padding: 7px 14px;
             background: #ffffff;
-            color: #0284c7;
-            border: 1.5px solid #0284c7;
+            color: #334155;
+            border: 1px solid #cbd5e1;
             border-radius: 8px;
             font-size: 13px;
             font-weight: 600;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
             cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
             text-decoration: none;
             white-space: nowrap;
         }
         .df-btn-white-plan:hover {
-            background: #f0f9ff;
-            color: #0369a1;
-            border-color: #0369a1;
-            transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(2, 132, 199, 0.18);
+            background: #f8fafc;
+            color: #0f172a;
+            border-color: #94a3b8;
         }
         .df-btn-white-plan i {
             font-size: 14px;
             color: #0284c7;
-        }
-        .df-btn-white-plan:hover i {
-            color: #0369a1;
         }
         .df-btn-white-plan .badge {
             font-size: 11px;
             font-weight: 700;
             padding: 2px 7px;
             border-radius: 10px;
-            background: #0284c7 !important;
-            color: #ffffff;
+            background: #e0f2fe !important;
+            color: #0369a1 !important;
         }
     </style>
-    <div class="card border shadow-sm rounded-3 mb-4 overflow-hidden bg-white" id="prescriptionsSection">
-        <div class="df-presc-header df-tab-content-header d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 bg-light border-bottom">
-            <div class="df-tab-title-standard">
-                <i class="bi bi-capsule"></i>
-                <span>ĐƠN THUỐC &amp; DẶN DÒ DÙNG THUỐC</span>
-                <span class="df-tab-subtitle-text d-none d-lg-inline">(Đồng bộ Kế toán &amp; hướng dẫn liều dùng)</span>
+    <div class="df-unified-tab-card mb-4 overflow-hidden bg-white" id="prescriptionsSection">
+        <div class="df-presc-header df-tab-content-header d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3 bg-white border-bottom">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <i class="bi bi-capsule text-primary fs-5"></i>
+                <h2 class="df-title-primary mb-0">Đơn thuốc &amp; dặn dò dùng thuốc</h2>
+                <span class="df-tab-count df-num" id="prescCountBadge"
+                      th:text="${prescriptions != null ? prescriptions.size() : 0} + ' đơn'">0 đơn</span>
+                <span class="df-subtitle-secondary d-none d-lg-inline">· Đồng bộ Kế toán &amp; hướng dẫn liều dùng</span>
             </div>
 
             <div class="d-flex align-items-center flex-wrap gap-2">
-                <button th:if="${!isClinicalLocked}" type="button" class="df-btn-add-plan text-decoration-none border-0 text-white" onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">
-                    <i class="bi bi-plus-lg me-1"></i>
-                    <span>Kê đơn thuốc mới</span>
-                </button>
                 <button type="button" class="df-btn-white-plan" onclick="openReExamModal()" title="Hẹn ngày tái khám sau điều trị (SCR-18.1)">
                     <i class="bi bi-calendar2-plus-fill"></i>
                     <span>Hẹn tái khám</span>
                 </button>
-                <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-1.5 rounded-pill fw-semibold">
+                <button th:if="${!isClinicalLocked}" type="button" class="btn btn-primary fw-semibold d-inline-flex align-items-center gap-2" onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>Kê đơn thuốc mới</span>
+                </button>
+                <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-2 rounded-pill fw-semibold">
                     <i class="bi bi-lock-fill me-1"></i>Đã khóa bệnh án (BR-EMR-02)
                 </span>
             </div>
         </div>
 
         <!-- Ghi chú nghiệp vụ kê đơn (Tách biệt chuyên môn & tài chính) -->
-        <div class="px-3 pt-3">
-            <div class="alert alert-info py-2 px-3 mb-0 small d-flex align-items-center">
-                <i class="bi bi-info-circle-fill text-info me-2 fs-6"></i>
+        <div class="px-4 pt-3">
+            <div class="df-soft-panel py-2 px-3 mb-0 df-subtitle-secondary d-flex align-items-center gap-2">
+                <i class="bi bi-info-circle-fill text-primary flex-shrink-0"></i>
                 <div>
-                    <strong>Lưu ý:</strong> Giá thuốc hiển thị là <em>Giá thuốc dự kiến / Tạm tính</em>.
+                    <strong class="text-dark">Lưu ý:</strong> Giá thuốc hiển thị là <em>Giá thuốc dự kiến / Tạm tính</em>.
                     <strong class="text-primary">Thanh toán tiền thuốc nếu bệnh nhân chọn mua tại phòng khám.</strong>
                     Kê đơn không tự tạo hóa đơn, công nợ, giao dịch thanh toán hoặc xuất kho.
                 </div>
@@ -85,14 +81,14 @@
         </div>
 
         <!-- BẢNG DANH SÁCH ĐƠN THUỐC ĐÃ KÊ THEO CA KHÁM -->
-        <div class="table-responsive p-3 bg-white">
-            <table class="table table-hover align-middle mb-0 border rounded-3" style="font-size: 13.5px;">
-                <thead class="table-light">
+        <div class="table-responsive p-4 bg-white">
+            <table class="table df-clean-table table-hover align-middle mb-0" data-disable-floating-actions="true" style="font-size: 13.5px;">
+                <thead>
                 <tr>
                     <th style="width: 110px;">Mã đơn</th>
-                    <th style="width: 130px;">Thời gian kê</th>
+                    <th style="width: 135px;">Thời gian kê</th>
                     <th style="width: 180px;">Bác sĩ kê đơn</th>
-                    <th>Chẩn đoán &amp; Thuốc kê chi tiết</th>
+                    <th>Chẩn đoán &amp; thuốc kê chi tiết</th>
                     <th style="width: 185px;" class="text-end">Giá thuốc dự kiến</th>
                     <th style="width: 120px;">Hẹn tái khám</th>
                     <th style="width: 120px;" class="text-center">Thao tác</th>
@@ -100,25 +96,25 @@
                 </thead>
                 <tbody id="prescriptionsTableBody">
                 <tr th:if="${prescriptions == null or prescriptions.isEmpty()}" id="emptyPrescRow">
-                    <td colspan="7" class="text-center" style="padding: 70px 24px 90px 24px !important; background: #ffffff;">
-                        <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 290px;">
-                            <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle"
-                                 style="width: 88px; height: 88px; background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%); border: 2px dashed #38bdf8; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.12);">
-                                <i class="bi bi-prescription2" style="font-size: 42px; color: #0284c7;"></i>
+                    <td colspan="7" class="text-center p-0 border-0">
+                        <div class="d-flex flex-column align-items-center justify-content-center py-4 px-3 rounded-3"
+                             style="min-height: 130px; background: #f8fafc; border: 1px dashed #cbd5e1;">
+                            <div class="mb-2 d-inline-flex align-items-center justify-content-center rounded-circle"
+                                 style="width: 44px; height: 44px; background: #e0f2fe; border: 1px dashed #38bdf8;">
+                                <i class="bi bi-prescription2 fs-5" style="color: #0284c7;"></i>
                             </div>
-                            <h4 class="fw-bold text-dark mb-2" style="font-size: 20px; letter-spacing: -0.3px;">
-                                Bệnh nhân chưa có Đơn thuốc nào cho ca khám này
-                            </h4>
-                            <p class="text-muted mb-4" style="font-size: 14.5px; max-width: 540px; line-height: 1.6;">
-                                Bác sĩ có thể kê đơn thuốc mới trực tiếp từ danh mục dược phẩm hoặc chọn nhanh từ các mẫu đơn thuốc đã thiết lập sẵn. Giá thuốc dự kiến sẽ tự động đồng bộ sang bộ phận Kế toán.
+                            <h5 class="fw-bold text-dark mb-1" style="font-size: 15px;">
+                                Bệnh nhân chưa có đơn thuốc trong ca khám này
+                            </h5>
+                            <p class="df-meta-tertiary mb-3" style="max-width: 480px;">
+                                Kê đơn từ danh mục dược phẩm hoặc mẫu đơn có sẵn; giá thuốc tạm tính sẽ tự đồng bộ sang Kế toán.
                             </p>
-                            <button th:if="${!isClinicalLocked}" type="button" class="btn btn-primary px-4 py-2.5 rounded-pill fw-bold shadow-sm d-inline-flex align-items-center gap-2"
-                                    style="background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%); border: none; font-size: 15px;"
+                            <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm df-btn-tonal-primary px-3 py-2 rounded-pill fw-semibold d-inline-flex align-items-center gap-2"
                                     onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">
-                                <i class="bi bi-plus-circle-fill fs-6"></i>
+                                <i class="bi bi-plus-circle-fill"></i>
                                 <span>Kê đơn thuốc mới</span>
                             </button>
-                            <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3.5 py-2 rounded-pill fw-semibold">
+                            <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-2 rounded-pill fw-semibold">
                                 <i class="bi bi-lock-fill me-1"></i>Bệnh án đã khóa (BR-EMR-02)
                             </span>
                         </div>
@@ -126,10 +122,10 @@
                 </tr>
                 <tr th:each="pr : ${prescriptions}" th:id="'pr-row-' + ${pr.prescriptionId}">
                     <td>
-                        <span class="badge bg-light text-dark border fw-bold" th:text="${pr.prescriptionCode}">TOA10001</span>
+                        <span class="badge bg-light text-dark border fw-bold df-num" th:text="${pr.prescriptionCode}">TOA10001</span>
                     </td>
                     <td>
-                        <span class="small text-muted" th:text="${pr.createdAt}">21/10/2026 10:30</span>
+                        <span class="small text-muted df-num" th:text="${pr.createdAt}">21/10/2026 10:30</span>
                     </td>
                     <td>
                         <div class="fw-semibold text-dark" th:text="${pr.doctorName}">BS. CK1 Lê Hoàng Nam</div>
@@ -141,9 +137,9 @@
                             <span th:text="${pr.diagnosisText}">Sâu ngà răng</span>
                         </div>
                         <div class="d-flex flex-wrap gap-1">
-                            <span th:each="it : ${pr.items}" class="badge bg-light text-dark border small"
-                                  th:text="${it.drugName + ' (' + it.quantity + ' ' + it.unit + (it.finalPrice != null ? ' • ' + #numbers.formatDecimal(it.finalPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '') + ')'}">
-                                Paracetamol 500mg (6 Viên • 15.000đ)
+                            <span th:each="it : ${pr.items}" class="badge bg-light text-dark border small df-num"
+                                  th:text="${it.drugName + ' (' + it.quantity + ' ' + it.unit + (it.finalPrice != null ? ' · ' + #numbers.formatDecimal(it.finalPrice, 0, 'COMMA', 0, 'POINT') + 'đ' : '') + ')'}">
+                                Paracetamol 500mg (6 Viên · 15.000đ)
                             </span>
                         </div>
                         <div class="small text-muted fst-italic mt-1" th:if="${pr.adviceNotes != null and !pr.adviceNotes.isEmpty()}">
@@ -151,16 +147,16 @@
                         </div>
                     </td>
                     <td class="text-end">
-                        <div class="fw-bold text-success fs-6 presc-row-amount"
+                        <div class="fw-bold text-success fs-6 presc-row-amount df-num"
                              th:data-amount="${pr.totalAmount != null ? pr.totalAmount : 0}"
                              th:text="${pr.totalAmount != null ? #numbers.formatDecimal(pr.totalAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</div>
-                        <small class="text-muted d-block" th:text="${pr.items != null ? pr.items.size() : 0} + ' loại thuốc'"></small>
-                        <span class="badge bg-light text-secondary border mt-0.5" style="font-size: 10px;">
-                            <i class="bi bi-send-check text-primary me-0.5"></i>Chuyển Kế toán (Tự chọn mua)
+                        <small class="text-muted d-block df-num" th:text="${pr.items != null ? pr.items.size() : 0} + ' loại thuốc'"></small>
+                        <span class="badge bg-light text-secondary border mt-1" style="font-size: 10px;">
+                            <i class="bi bi-send-check text-primary me-1"></i>Chuyển Kế toán (Tự chọn mua)
                         </span>
                     </td>
                     <td>
-                        <span class="badge bg-warning-subtle text-dark border border-warning"
+                        <span class="badge bg-warning-subtle text-dark border border-warning df-num"
                               th:if="${pr.followupDate != null}"
                               th:text="${pr.followupDate}">
                             28/10/2026
@@ -169,13 +165,13 @@
                     </td>
                     <td class="text-center">
                         <div class="d-flex align-items-center justify-content-center gap-2">
-                            <button type="button" class="btn btn-sm btn-outline-primary"
+                            <button type="button" class="btn btn-sm btn-outline-secondary"
                                     title="Xem &amp; In đơn thuốc"
                                     th:data-id="${pr.prescriptionId}"
                                     onclick="openPrintPrescriptionModal(this.getAttribute('data-id'))">
-                                <i class="bi bi-printer-fill"></i> In
+                                <i class="bi bi-printer-fill text-primary"></i> In
                             </button>
-                            <button th:if="${!isClinicalLocked}" type="button" class="btn btn-sm btn-link text-danger p-0 ms-1"
+                            <button th:if="${!isClinicalLocked}" type="button" class="df-btn-icon-muted"
                                     title="Xóa đơn thuốc này"
                                     th:data-id="${pr.prescriptionId}"
                                     onclick="deletePrescription(this.getAttribute('data-id'))">

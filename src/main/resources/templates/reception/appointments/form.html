@@ -9,7 +9,7 @@
                 <h1 th:text="${appointmentId == null ? 'Tạo lịch hẹn' : 'Sửa / đổi lịch hẹn'}">Tạo lịch hẹn</h1>
                 <p>Tiếp nhận lịch hẹn theo Ngày và Ca (Buổi: Sáng / Chiều / Tối). Giờ đến là dự kiến, thời gian khám thực tế linh hoạt theo thủ thuật nha khoa.</p></div></div>
             <div id="pageError" class="alert alert-danger" hidden role="alert"></div>
-            <form id="appointmentForm" class="panel patient-form appointment-form" th:attr="data-appointment-id=${appointmentId}">
+            <form id="appointmentForm" class="panel patient-form appointment-form" th:attr="data-appointment-id=${appointmentId},data-can-assign-doctor=${canAssignDoctor}">
                 <h2>Thông tin lịch hẹn</h2>
 
                 <!-- Thanh hiển thị tình trạng tiếp nhận & cân bằng tải giữa các ca -->
@@ -28,7 +28,7 @@
                     <div id="existingPatientBox" hidden><label>Bệnh nhân</label><strong id="existingPatientName"></strong></div>
                     <div><label for="appointmentDate">Ngày khám *</label><input id="appointmentDate" type="date" class="form-control" required></div>
                     <div><label for="preferredSession">Buổi khám *</label><select id="preferredSession" class="form-select" required><option value="">Chọn buổi</option><option value="MORNING">Buổi sáng</option><option value="AFTERNOON">Buổi chiều</option><option value="EVENING">Buổi tối</option></select></div>
-                    <div><label for="doctorId">Bác sĩ bệnh nhân yêu cầu</label><select id="doctorId" class="form-select" disabled><option value="">Không yêu cầu đích danh</option></select><small>Bác sĩ khám thực tế được phân công sau check-in.</small></div>
+                    <div><label for="doctorId">Bác sĩ phụ trách (Tùy chọn / Điều phối)</label><select id="doctorId" class="form-select" disabled><option value="">Tự động phân bổ bác sĩ</option></select><small>Hệ thống tự động phân bổ bác sĩ trống lịch nếu để trống hoặc không có quyền điều phối.</small></div>
                     <div><label for="serviceId">Dịch vụ quan tâm</label><select id="serviceId" class="form-select"></select></div>
                     <div><label for="slotTime">Giờ hẹn dự kiến (Tùy chọn)</label><select id="slotTime" class="form-select" disabled><option value="">Linh động trong ca</option></select><small>Có thể để trống để khám linh động trong ca, hoặc chọn giờ dự kiến đến.</small></div>
                 </div>

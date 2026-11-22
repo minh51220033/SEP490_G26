@@ -29,17 +29,11 @@
 
             <!-- Vùng nội dung tab Lịch sử thanh toán -->
             <div id="cashierTabContent" class="cashier-tab-content">
-                <!-- Page Sub Header -->
-                <div class="cashier-subhead">
-                    <div>
-                        <h2 class="cashier-subhead-title"><i class="bi bi-credit-card-2-front text-primary"></i> Lịch sử các đợt thanh toán</h2>
-                        <p class="cashier-subhead-desc">Theo dõi luồng tiền thu viện phí, nộp tiền tạm ứng, phương thức thanh toán tiền mặt, chuyển khoản QR và POS</p>
-                    </div>
-                </div>
-
             <!-- Filter Bar Chuẩn MISA / Daily-Visits -->
             <div class="fin-card fin-filter-container">
                 <form th:action="@{/payments}" method="get" class="fin-filter-bar">
+                    <input type="hidden" name="size" th:value="${pageSize}">
+                    <input type="hidden" name="page" value="0">
                     <!-- Ô tìm kiếm lớn có icon bên trái -->
                     <div class="fin-form-group fin-search-group">
                         <i class="bi bi-search search-lead-icon"></i>
@@ -179,29 +173,38 @@
                 </div>
 
                 <!-- Pagination MISA -->
-                <div th:if="${totalPages > 1}" class="misa-pagination-footer">
+                <div class="misa-pagination-footer">
                     <div class="misa-pagination-left">
-                        Tổng số: <strong th:text="${totalElements}">0</strong> phiếu thu
+                        Tổng số: <strong th:text="${totalItems != null ? totalItems : 0}">0</strong>
                     </div>
                     <div class="misa-pagination-right">
+                        <div class="misa-page-size-wrapper">
+                            <span>Số dòng/trang</span>
+                            <select id="pageSizeSelect" class="form-select form-select-sm misa-page-size-select" onchange="changePageSize(this.value)" aria-label="Số dòng trên mỗi trang">
+                                <option value="10" th:selected="${pageSize == 10}">10</option>
+                                <option value="25" th:selected="${pageSize == 25}">25</option>
+                                <option value="50" th:selected="${pageSize == 50}">50</option>
+                                <option value="100" th:selected="${pageSize == 100}">100</option>
+                            </select>
+                        </div>
                         <div class="misa-page-range">
-                            Trang <span th:text="${currentPage + 1}">1</span> / <span th:text="${totalPages}">1</span>
+                            <span th:text="${fromItem != null ? fromItem : 0}">0</span> - <span th:text="${toItem != null ? toItem : 0}">0</span>
                         </div>
                         <div class="d-flex align-items-center gap-1">
                             <a class="misa-nav-btn" th:classappend="${currentPage == 0} ? 'disabled' : ''"
-                               th:href="@{/payments(page=0, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang đầu">
+                               th:href="@{/payments(page=0, size=${pageSize}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang đầu">
                                 <i class="bi bi-chevron-bar-left"></i>
                             </a>
                             <a class="misa-nav-btn" th:classappend="${currentPage == 0} ? 'disabled' : ''"
-                               th:href="@{/payments(page=${currentPage - 1}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang trước">
+                               th:href="@{/payments(page=${currentPage - 1}, size=${pageSize}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang trước">
                                 <i class="bi bi-chevron-left"></i>
                             </a>
-                            <a class="misa-nav-btn" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''"
-                               th:href="@{/payments(page=${currentPage + 1}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang sau">
+                            <a class="misa-nav-btn" th:classappend="${currentPage >= (totalPages != null and totalPages > 0 ? totalPages - 1 : 0)} ? 'disabled' : ''"
+                               th:href="@{/payments(page=${currentPage + 1}, size=${pageSize}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang sau">
                                 <i class="bi bi-chevron-right"></i>
                             </a>
-                            <a class="misa-nav-btn" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''"
-                               th:href="@{/payments(page=${totalPages - 1}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang cuối">
+                            <a class="misa-nav-btn" th:classappend="${currentPage >= (totalPages != null and totalPages > 0 ? totalPages - 1 : 0)} ? 'disabled' : ''"
+                               th:href="@{/payments(page=${totalPages != null and totalPages > 0 ? totalPages - 1 : 0}, size=${pageSize}, branchId=${selectedBranchId}, paymentType=${selectedPaymentType}, paymentMethod=${selectedPaymentMethod}, startDate=${startDate}, endDate=${endDate}, keyword=${keyword})}" title="Trang cuối">
                                 <i class="bi bi-chevron-bar-right"></i>
                             </a>
                         </div>

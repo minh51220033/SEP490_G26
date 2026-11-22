@@ -183,13 +183,24 @@ public class PaymentPageController {
         LocalDateTime startDt = startDate != null ? startDate.atStartOfDay() : null;
         LocalDateTime endDt = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "paidAt"));
+        int safePage = Math.max(0, page);
+        int safeSize = size <= 0 ? 10 : Math.min(size, 100);
+
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "paidAt"));
         Page<Payment> paymentPage = paymentService.getPayments(effectiveBranchId, paymentType, paymentMethod, keyword, startDt, endDt, pageable);
 
+        long totalItems = paymentPage.getTotalElements();
+        long fromItem = paymentPage.getContent().isEmpty() ? 0 : (long) safePage * safeSize + 1;
+        long toItem = paymentPage.getContent().isEmpty() ? 0 : Math.min((long) (safePage + 1) * safeSize, totalItems);
+
         model.addAttribute("payments", paymentPage.getContent());
-        model.addAttribute("currentPage", page);
+        model.addAttribute("currentPage", safePage);
+        model.addAttribute("pageSize", safeSize);
         model.addAttribute("totalPages", paymentPage.getTotalPages());
-        model.addAttribute("totalElements", paymentPage.getTotalElements());
+        model.addAttribute("totalElements", totalItems);
+        model.addAttribute("totalItems", totalItems);
+        model.addAttribute("fromItem", fromItem);
+        model.addAttribute("toItem", toItem);
         model.addAttribute("branches", allowedBranches);
         model.addAttribute("selectedBranchId", effectiveBranchId);
         model.addAttribute("selectedPaymentType", paymentType);
@@ -837,13 +848,24 @@ public class PaymentPageController {
         LocalDateTime startDt = startDate != null ? startDate.atStartOfDay() : null;
         LocalDateTime endDt = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "refundedAt"));
+        int safePage = Math.max(0, page);
+        int safeSize = size <= 0 ? 10 : Math.min(size, 100);
+
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "refundedAt"));
         Page<Refund> refundPage = refundService.getRefunds(effectiveBranchId, refundMethod, keyword, startDt, endDt, pageable);
 
+        long totalItems = refundPage.getTotalElements();
+        long fromItem = refundPage.getContent().isEmpty() ? 0 : (long) safePage * safeSize + 1;
+        long toItem = refundPage.getContent().isEmpty() ? 0 : Math.min((long) (safePage + 1) * safeSize, totalItems);
+
         model.addAttribute("refunds", refundPage.getContent());
-        model.addAttribute("currentPage", page);
+        model.addAttribute("currentPage", safePage);
+        model.addAttribute("pageSize", safeSize);
         model.addAttribute("totalPages", refundPage.getTotalPages());
-        model.addAttribute("totalElements", refundPage.getTotalElements());
+        model.addAttribute("totalElements", totalItems);
+        model.addAttribute("totalItems", totalItems);
+        model.addAttribute("fromItem", fromItem);
+        model.addAttribute("toItem", toItem);
         model.addAttribute("branches", allowedBranches);
         model.addAttribute("selectedBranchId", effectiveBranchId);
         model.addAttribute("selectedRefundMethod", refundMethod);
@@ -939,13 +961,24 @@ public class PaymentPageController {
         LocalDateTime startDt = startDate != null ? startDate.atStartOfDay() : null;
         LocalDateTime endDt = endDate != null ? endDate.atTime(LocalTime.MAX) : null;
 
-        Pageable pageable = PageRequest.of(page, size);
+        int safePage = Math.max(0, page);
+        int safeSize = size <= 0 ? 10 : Math.min(size, 100);
+
+        Pageable pageable = PageRequest.of(safePage, safeSize);
         Page<PatientDebtSummaryDTO> debtPage = debtService.getPatientDebts(effectiveBranchId, allowedBranchIds, paymentStatus, keyword, startDt, endDt, pageable);
 
+        long totalItems = debtPage.getTotalElements();
+        long fromItem = debtPage.getContent().isEmpty() ? 0 : (long) safePage * safeSize + 1;
+        long toItem = debtPage.getContent().isEmpty() ? 0 : Math.min((long) (safePage + 1) * safeSize, totalItems);
+
         model.addAttribute("patientDebts", debtPage.getContent());
-        model.addAttribute("currentPage", page);
+        model.addAttribute("currentPage", safePage);
+        model.addAttribute("pageSize", safeSize);
         model.addAttribute("totalPages", debtPage.getTotalPages());
-        model.addAttribute("totalElements", debtPage.getTotalElements());
+        model.addAttribute("totalElements", totalItems);
+        model.addAttribute("totalItems", totalItems);
+        model.addAttribute("fromItem", fromItem);
+        model.addAttribute("toItem", toItem);
         model.addAttribute("branches", allowedBranches);
         model.addAttribute("selectedBranchId", effectiveBranchId);
         model.addAttribute("selectedPaymentStatus", paymentStatus);

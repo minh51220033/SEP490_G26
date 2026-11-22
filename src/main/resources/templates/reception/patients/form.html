@@ -9,7 +9,7 @@
         <header th:replace="~{fragments/header :: appTopbar('Hồ sơ bệnh nhân')}"></header>
         <main class="app-content">
             <link rel="stylesheet" th:href="@{/css/patients.css}">
-            <div class="patient-page-heading"><div><a th:href="${patient == null ? '/reception/patients' : ((recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + patient.id + '#info')}" th:text="${patient == null ? '← Danh sách hồ sơ' : '← Chi tiết hồ sơ'}">← Chi tiết hồ sơ</a><h1 th:text="${patient == null} ? 'Thêm bệnh nhân' : 'Cập nhật hồ sơ'">Thêm bệnh nhân</h1><p>Thông tin bắt buộc được đánh dấu *.</p></div></div>
+            <div class="patient-page-heading"><div><a th:href="${patient == null ? '/reception/patients' : ((recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + (patientRouteId != null ? patientRouteId : idCodec.encodePatient(patient.id)) + '#info')}" th:text="${patient == null ? '← Danh sách hồ sơ' : '← Chi tiết hồ sơ'}">← Chi tiết hồ sơ</a><h1 th:text="${patient == null} ? 'Thêm bệnh nhân' : 'Cập nhật hồ sơ'">Thêm bệnh nhân</h1><p>Thông tin bắt buộc được đánh dấu *.</p></div></div>
             <div id="formError" class="alert alert-danger" role="alert" hidden></div>
             <form id="patientForm" class="panel patient-form" th:attr="data-patient-id=${patient != null ? patient.id : ''}">
                 <h2>Thông tin cá nhân</h2>
@@ -36,7 +36,7 @@
                     <div><label for="allergyDetails">Dị ứng thuốc, vật liệu hoặc thức ăn</label><textarea id="allergyDetails" name="allergyDetails" class="form-control" maxlength="1000" rows="3" placeholder="Tác nhân và biểu hiện, nếu có" th:text="${patient != null ? patient.allergyDetails : ''}"></textarea></div>
                     <div><label for="underlyingDiseaseDetails">Bệnh nền và tình trạng cần lưu ý</label><textarea id="underlyingDiseaseDetails" name="underlyingDiseaseDetails" class="form-control" maxlength="1000" rows="3" placeholder="Tên bệnh và tình trạng hiện tại, nếu có" th:text="${patient != null ? patient.underlyingDiseaseDetails : ''}"></textarea></div>
                 </div>
-                <div class="patient-form-actions"><a class="btn btn-outline-secondary" th:href="${patient == null} ? @{/reception/patients} : @{/reception/patients/{id}(id=${patient.id})}">Hủy</a><button class="btn btn-primary" type="submit" id="saveButton">Lưu hồ sơ</button></div>
+                <div class="patient-form-actions"><a class="btn btn-outline-secondary" th:href="${patient == null ? '/reception/patients' : ((recordBasePath != null ? recordBasePath : '/reception/patients') + '/' + (patientRouteId != null ? patientRouteId : idCodec.encodePatient(patient.id)))}">Hủy</a><button class="btn btn-primary" type="submit" id="saveButton">Lưu hồ sơ</button></div>
             </form>
         </main>
     </div>

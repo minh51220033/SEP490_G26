@@ -18,8 +18,9 @@ public class ReceptionAppointmentPageController {
         this.access = access; this.appointments = appointments;
     }
     @ModelAttribute
-    public void validateAccess(HttpSession session) {
-        access.require(session);
+    public void validateAccess(HttpSession session, Model model) {
+        PatientAccess.Scope scope = access.require(session);
+        model.addAttribute("canAssignDoctor", access.canAssignDoctor(scope));
     }
     @GetMapping
     public String dashboard(@RequestParam(required = false) Long branchId,

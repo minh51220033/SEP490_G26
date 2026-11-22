@@ -32,6 +32,8 @@ public class UrlIdCodec {
     private static final Base64.Encoder URL_ENCODER = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder URL_DECODER = Base64.getUrlDecoder();
 
+    private static volatile UrlIdCodec sharedInstance = new UrlIdCodec();
+
     private final SecretKeySpec secretKeySpec;
 
     public UrlIdCodec() {
@@ -44,9 +46,14 @@ public class UrlIdCodec {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] keyBytes = Arrays.copyOf(digest.digest(secret.getBytes(StandardCharsets.UTF_8)), 16);
             this.secretKeySpec = new SecretKeySpec(keyBytes, "AES");
+            sharedInstance = this;
         } catch (Exception ex) {
             throw new IllegalStateException("Khong the khoi tao UrlIdCodec", ex);
         }
+    }
+
+    public static UrlIdCodec shared() {
+        return sharedInstance;
     }
 
     public String encodeVisit(Long visitId) {

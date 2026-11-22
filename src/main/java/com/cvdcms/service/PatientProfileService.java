@@ -38,4 +38,16 @@ public interface PatientProfileService {
             String underlyingDiseaseDetails,
             String avatarUrl
     );
+
+    record BranchSwitchResult(User user, com.cvdcms.entity.Branch branch,
+                              java.util.List<PatientProfile> syncedProfiles,
+                              PatientProfile defaultProfile) { }
+
+    /**
+     * Cập nhật cơ sở khám ưu tiên của tài khoản và đồng bộ sang toàn bộ hồ sơ bệnh nhân thuộc tài khoản
+     * trong cùng một transaction. Không thay đổi lịch hẹn hoặc lượt khám đã phát sinh trước đó.
+     */
+    default BranchSwitchResult switchUserPreferredBranch(Long userId, Long branchId) {
+        throw new UnsupportedOperationException("switchUserPreferredBranch is not implemented");
+    }
 }

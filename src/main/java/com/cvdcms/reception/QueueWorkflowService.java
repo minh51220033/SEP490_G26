@@ -28,6 +28,12 @@ public class QueueWorkflowService {
     private final ReceptionAuditRepository audits;
     private final ClinicalExaminationBootstrapService examinations;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ClinicQueueCoordinatorService queueCoordinator;
+
     public QueueWorkflowService(ReceptionAccess access, DispatchBranchRepository branches,
             QueueWorkflowRepository tickets, DispatchVisitRepository visits, DispatchRoomRepository rooms,
             DispatchChairRepository chairs, DispatchDoctorRepository doctors, ReceptionAuditRepository audits,
@@ -124,6 +130,7 @@ public class QueueWorkflowService {
             lanesMap.put(QueueStatus.WAITING, new ArrayList<>());
             lanesMap.put(QueueStatus.CALLED, new ArrayList<>());
             lanesMap.put(QueueStatus.IN_SERVICE, new ArrayList<>());
+            lanesMap.put(QueueStatus.PAUSED, new ArrayList<>());
             lanesMap.put(QueueStatus.DONE, new ArrayList<>());
 
             for (QueueTicket t : rows) {
@@ -146,6 +153,7 @@ public class QueueWorkflowService {
             unassignedLanes.put(QueueStatus.WAITING, new ArrayList<>());
             unassignedLanes.put(QueueStatus.CALLED, new ArrayList<>());
             unassignedLanes.put(QueueStatus.IN_SERVICE, new ArrayList<>());
+            unassignedLanes.put(QueueStatus.PAUSED, new ArrayList<>());
             unassignedLanes.put(QueueStatus.DONE, new ArrayList<>());
             for (QueueTicket t : unassignedTickets) {
                 List<QueueTicket> list = unassignedLanes.get(t.getStatus());
@@ -283,36 +291,9 @@ public class QueueWorkflowService {
 
     @Transactional
     public QueueTicket callNext(HttpSession session, Long branchId, Long doctorId) {
-        requireBranch(session, branchId);
-        require(doctorId != null, "Cần chọn bác sĩ để gọi số.");
-        LocalDate today = LocalDate.now(ZONE);
-        require(tickets.countOtherForDoctor(branchId, today, QueueType.EXAM, doctorId,
-                QueueStatus.CALLED, -1L) == 0, "Bác sĩ này đã có số được gọi.");
-        QueueTicket next = tickets.forBoard(branchId, today, QueueType.EXAM).stream()
-                .filter(t -> t.getStatus() == QueueStatus.WAITING
-                        && isWaitingOrResult(t.getVisit())
-                        && t.getVisit().getPrimaryDoctor() != null
-                        && doctorId.equals(t.getVisit().getPrimaryDoctor().getStaffId()))
-                .min(waitingOrder())
-                .orElseThrow(() -> error(HttpStatus.CONFLICT, "Bác sĩ này không còn số đang chờ."));
-        QueueTicket locked = tickets.lock(next.getTicketId())
-                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy số khám."));
-        Visit lockedVisit = visits.lock(locked.getVisit().getVisitId())
-                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy lượt khám."));
-        require(locked.getBranch().getBranchId().equals(branchId)
-                && today.equals(locked.getQueueDate()) && locked.getQueueType() == QueueType.EXAM
-                && locked.getStatus() == QueueStatus.WAITING
-                && lockedVisit.getBranch().getBranchId().equals(branchId)
-                && isWaitingOrResult(lockedVisit)
-                && lockedVisit.getPrimaryDoctor() != null
-                && doctorId.equals(lockedVisit.getPrimaryDoctor().getStaffId()),
-                "Hàng chờ đã thay đổi. Vui lòng tải lại.");
-        QueueStatus before = locked.getStatus();
-        locked.setStatus(QueueStatus.CALLED);
-        locked.setCalledAt(LocalDateTime.now(ZONE));
-        tickets.save(locked);
-        audit(session, locked, "CALL_NEXT", before, "");
-        return locked;
+        access.require(session);
+        throw error(HttpStatus.FORBIDDEN,
+                "Hệ thống tự động gọi số theo thứ tự. Lễ tân không được phép gọi số thủ công.");
     }
 
     @Transactional
@@ -324,7 +305,7 @@ public class QueueWorkflowService {
     public void transition(HttpSession session, Long id, Action action, Long chairId, String reason) {
         QueueTicket snapshot = tickets.findById(id).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy số khám."));
         Long branchId = snapshot.getBranch().getBranchId();
-        requireBranch(session, branchId); // Serialize queue operations at this branch.
+        ReceptionAccess.Scope scope = requireBranch(session, branchId); // Serialize queue operations at this branch.
         QueueTicket ticket = tickets.lock(id).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy số khám."));
         LocalDate today = LocalDate.now(ZONE);
         if (!ticket.getBranch().getBranchId().equals(branchId) || !ticket.getQueueDate().equals(today)
@@ -336,29 +317,18 @@ public class QueueWorkflowService {
             throw error(HttpStatus.CONFLICT, "Số và lượt khám khác chi nhánh.");
         QueueStatus before = ticket.getStatus();
         switch (action) {
-            case CALL -> {
-                require((before == QueueStatus.WAITING || before == QueueStatus.CALLED) && isWaitingOrResult(visit), "Chỉ gọi số đang chờ hoặc đang gọi.");
-                require(visit.getPrimaryDoctor() != null, "Lượt khám chưa được phân bác sĩ.");
-                Long doctorId = visit.getPrimaryDoctor().getStaffId();
-                require(tickets.countOtherForDoctor(branchId, today, QueueType.EXAM, doctorId, QueueStatus.CALLED, id) == 0,
-                        "Bác sĩ này đã có số được gọi; hãy bắt đầu hoặc tạm dừng số đó.");
-                if (before != QueueStatus.CALLED) {
-                    Long nextId = tickets.forBoard(branchId, today, QueueType.EXAM).stream()
-                            .filter(t -> t.getStatus() == QueueStatus.WAITING
-                                    && isWaitingOrResult(t.getVisit())
-                                    && t.getVisit().getPrimaryDoctor() != null
-                                    && doctorId.equals(t.getVisit().getPrimaryDoctor().getStaffId()))
-                            .min(waitingOrder()).map(QueueTicket::getTicketId).orElse(null);
-                    if (!Objects.equals(nextId, id)) {
-                        var scope = access.require(session);
-                        require(scope.canManage(), "Chỉ quản lý hoặc nhân viên có quyền điều phối mới được gọi vượt thứ tự.");
-                        require(validReason(reason), "Gọi vượt thứ tự cần ghi lý do từ 10 đến 255 ký tự.");
-                    }
-                }
-                ticket.setStatus(QueueStatus.CALLED); ticket.setCalledAt(LocalDateTime.now(ZONE));
-            }
+            case CALL -> throw error(HttpStatus.FORBIDDEN,
+                    "Hệ thống tự động gọi số theo thứ tự. Lễ tân không được phép gọi số hoặc gọi vượt thủ công.");
             case PAUSE -> {
-                require(before == QueueStatus.WAITING || before == QueueStatus.CALLED, "Chỉ tạm dừng số đang chờ hoặc đang gọi.");
+                if (before == QueueStatus.CALLED) {
+                    throw error(HttpStatus.FORBIDDEN,
+                            "Không thể tạm dừng lượt đang Đang gọi để đẩy lượt khác lên. Chỉ bác sĩ phụ trách mới được ghi nhận Vắng mặt tại bàn khám.");
+                }
+                if (!isTrueAdminUser(scope)) {
+                    throw error(HttpStatus.FORBIDDEN,
+                            "Lễ tân không có quyền tạm dừng số khám hoặc thay đổi thứ tự hàng chờ.");
+                }
+                require(before == QueueStatus.WAITING, "Chỉ tạm dừng số đang chờ.");
                 require(isWaitingOrResult(visit), "Lượt khám đã bắt đầu.");
                 require(validReason(reason), "Cần ghi lý do tạm dừng từ 10 đến 255 ký tự.");
                 ticket.setStatus(QueueStatus.PAUSED);
@@ -375,24 +345,24 @@ public class QueueWorkflowService {
                 }
             }
             case EMERGENCY -> {
-                require((before == QueueStatus.WAITING || before == QueueStatus.PAUSED)
+                if (queueCoordinator != null) {
+                    queueCoordinator.reportEmergency(branchId, id, scope.user(), reason);
+                    return;
+                }
+                require((before == QueueStatus.WAITING || before == QueueStatus.PAUSED || before == QueueStatus.CALLED)
                         && isWaitingOrResult(visit), "Chỉ ưu tiên lượt chưa bắt đầu.");
                 require(validReason(reason), "Cần ghi lý do cấp cứu từ 10 đến 255 ký tự.");
                 ticket.setIsEmergency(true); ticket.setIsPriority(true); ticket.setPriorityScore(100); ticket.setPriorityReason(reason.trim());
                 visit.setVisitType(VisitType.EMERGENCY);
+                visit.setIsEmergency(true);
                 visits.save(visit);
-                // Ca cấp cứu chuyển thẳng sang ĐANG GỌI (bàn giao cấp cứu) để Bác sĩ tiếp nhận ngay lập tức
-                ticket.setStatus(QueueStatus.CALLED);
-                ticket.setCalledAt(LocalDateTime.now(ZONE));
-                if (before == QueueStatus.PAUSED) ticket.setResumedAt(LocalDateTime.now(ZONE));
+                if (before == QueueStatus.PAUSED) {
+                    ticket.setStatus(QueueStatus.WAITING);
+                    ticket.setResumedAt(LocalDateTime.now(ZONE));
+                }
             }
-            case PRIORITIZE -> {
-                require((before == QueueStatus.WAITING || before == QueueStatus.PAUSED)
-                        && isWaitingOrResult(visit) && !Boolean.TRUE.equals(ticket.getIsEmergency()),
-                        "Chỉ ưu tiên số chưa bắt đầu và không phải cấp cứu.");
-                require(validReason(reason), "Cần ghi lý do ưu tiên từ 10 đến 255 ký tự.");
-                ticket.setPriorityScore(50); ticket.setPriorityReason(reason.trim());
-            }
+            case PRIORITIZE -> throw error(HttpStatus.FORBIDDEN,
+                    "Không được phép tự nâng mức ưu tiên thủ công. Hệ thống xếp hàng theo quy tắc tự động hoặc báo cấp cứu kèm lý do.");
             case START -> {
                 require(before == QueueStatus.CALLED && isWaitingOrResult(visit),
                         "Phải gọi số trước khi bắt đầu khám.");
@@ -429,7 +399,11 @@ public class QueueWorkflowService {
                             Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0, "Ghế đang có ca khám khác.");
                     chair.setStatus(ChairStatus.IN_USE); chairs.save(chair); visit.setChairId(effectiveChairId);
                 }
-                visit.setStatus(VisitStatus.IN_EXAM); visits.save(visit);
+                visit.setStatus(VisitStatus.IN_EXAM);
+                if (visit.getActualStartTime() == null) {
+                    visit.setActualStartTime(LocalDateTime.now(ZONE));
+                }
+                visits.save(visit);
                 ticket.setStatus(QueueStatus.IN_SERVICE);
             }
             case DONE -> {
@@ -438,23 +412,47 @@ public class QueueWorkflowService {
                                 VisitStatus.WAITING_PAYMENT, VisitStatus.COMPLETED)
                                 .contains(visit.getStatus()),
                         "Chỉ hoàn tất số sau khi bệnh nhân rời ghế khám hoặc hoàn thành lượt khám.");
+                LocalDateTime doneNow = LocalDateTime.now(ZONE);
+                if (visit.getActualEndTime() == null) {
+                    visit.setActualEndTime(doneNow);
+                }
                 if (visit.getStatus() == VisitStatus.IN_EXAM) {
                     visit.setStatus(VisitStatus.WAITING_PAYMENT);
-                    visits.save(visit);
+                    visits.saveAndFlush(visit);
+                } else {
+                    visits.saveAndFlush(visit);
                 }
                 if (visit.getChairId() != null) {
                     chairs.findById(visit.getChairId()).ifPresent(chair -> {
                         if (chair.getStatus() == ChairStatus.IN_USE) {
-                            chair.setStatus(ChairStatus.CLEANING);
+                            chair.setStatus(ChairStatus.AVAILABLE);
                             chairs.save(chair);
                         }
                     });
                 }
-                ticket.setStatus(QueueStatus.DONE); ticket.setCompletedAt(LocalDateTime.now(ZONE));
+                ticket.setStatus(QueueStatus.DONE); ticket.setCompletedAt(doneNow);
             }
         }
         tickets.save(ticket);
         audit(session, ticket, action.name(), before, reason);
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                    "QUEUE_" + action.name(),
+                    branchId,
+                    visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null,
+                    visit.getVisitId(),
+                    visit.getAppointmentId(),
+                    ticket.getStatus().name(),
+                    "Cập nhật hàng đợi phiếu " + ticket.getDisplayNumber() + " -> " + ticket.getStatus().name(),
+                    LocalDateTime.now(ZONE)));
+        }
+        if (queueCoordinator != null && visit.getPrimaryDoctor() != null
+                && (action == Action.RESUME || action == Action.DONE)) {
+            queueCoordinator.autoCallNextForDoctorIfIdle(
+                    branchId,
+                    visit.getPrimaryDoctor().getStaffId(),
+                    scope.user().getUserId());
+        }
     }
 
     private void audit(HttpSession session, QueueTicket ticket, String action, QueueStatus before, String reason) {
@@ -489,12 +487,49 @@ public class QueueWorkflowService {
     }
 
     private Comparator<QueueTicket> waitingOrder() {
-        return Comparator.comparingInt((QueueTicket t) -> t.getPriorityScore() == null ? 0 : t.getPriorityScore())
-                .reversed()
+        if (queueCoordinator != null) {
+            return queueCoordinator.waitingQueueComparator();
+        }
+        return Comparator.comparingInt((QueueTicket t) -> queueTierRank(t) == 1 ? 0 : 1)
                 .thenComparingInt((QueueTicket t) -> t.getVisit() != null && t.getVisit().getStatus() == VisitStatus.WAITING_RESULT ? 0 : 1)
-                .thenComparing((QueueTicket t) -> t.getResumedAt() == null ? t.getIssuedAt() : t.getResumedAt(),
+                .thenComparingInt(this::queueTierRank)
+                .thenComparing(t -> Boolean.TRUE.equals(t.getIsPriority()) ? 0 : 1)
+                .thenComparing(QueueTicket::getTicketNumber, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing((QueueTicket t) -> t.getIssuedAt() != null
+                                ? t.getIssuedAt()
+                                : (t.getVisit() != null ? t.getVisit().getCheckInAt() : t.getResumedAt()),
                         Comparator.nullsLast(Comparator.naturalOrder()))
-                .thenComparing(QueueTicket::getTicketNumber).thenComparing(QueueTicket::getTicketId);
+                .thenComparing(QueueTicket::getTicketId, Comparator.nullsLast(Comparator.naturalOrder()));
+    }
+
+    /**
+     * 4 cấp ưu tiên hàng đợi chuẩn:
+     * 1. Cấp cứu (isEmergency = true)
+     * 2. Appointment check-in đúng giờ trong Grace Period 15 phút (isBookedAndOnTime = true)
+     * 3. Walk-in
+     * 4. Appointment check-in trễ > 15 phút
+     */
+    private int queueTierRank(QueueTicket t) {
+        if (queueCoordinator != null) {
+            return queueCoordinator.queueTierRank(t);
+        }
+        if (t == null) return 4;
+        Visit v = t.getVisit();
+        if (Boolean.TRUE.equals(t.getIsEmergency())
+                || (v != null && (Boolean.TRUE.equals(v.getIsEmergency()) || v.getVisitType() == VisitType.EMERGENCY))) {
+            return 1;
+        }
+        if (v != null) {
+            if (Boolean.TRUE.equals(v.getIsBookedAndOnTime())
+                    && (v.getAppointmentId() != null || v.getVisitType() == VisitType.APPOINTMENT)) {
+                return 2;
+            }
+            if (v.getAppointmentId() == null && v.getVisitType() != VisitType.APPOINTMENT) {
+                return 3;
+            }
+            return 4;
+        }
+        return (t.getPriorityScore() != null && t.getPriorityScore() >= 75) ? 2 : 3;
     }
 
     private String doctorName(QueueTicket ticket) {
@@ -514,11 +549,22 @@ public class QueueWorkflowService {
                 .thenComparing(waitingOrder()));
         return rows;
     }
-    private void requireBranch(HttpSession session, Long id) {
+    private ReceptionAccess.Scope requireBranch(HttpSession session, Long id) {
         var scope = access.require(session);
         Branch branch = branches.lock(id).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy chi nhánh."));
         if (!scope.permits(id) || !Boolean.TRUE.equals(branch.getIsActive()))
             throw error(HttpStatus.FORBIDDEN, "Không được quản lý hàng chờ này.");
+        return scope;
+    }
+
+    private boolean isTrueAdminUser(ReceptionAccess.Scope scope) {
+        if (scope == null || !scope.admin() || scope.user() == null || scope.user().getRoles() == null) {
+            return false;
+        }
+        return scope.user().getRoles().stream().anyMatch(r -> r != null && Boolean.TRUE.equals(r.getIsActive())
+                && r.getRoleName() != null
+                && (r.getRoleName().equalsIgnoreCase("ADMIN")
+                        || r.getRoleName().equalsIgnoreCase("ROLE_ADMIN")));
     }
     private void require(boolean valid, String message) { if (!valid) throw error(HttpStatus.CONFLICT, message); }
     private ResponseStatusException error(HttpStatus code, String reason) { return new ResponseStatusException(code, reason); }

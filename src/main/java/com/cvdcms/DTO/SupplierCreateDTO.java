@@ -31,8 +31,8 @@ public class SupplierCreateDTO {
 
     @Size(max = 20, message = "Số điện thoại tối đa 20 ký tự.")
     @Pattern(
-            regexp = "^$|^0[0-9]{9,10}$",
-            message = "Số điện thoại phải bắt đầu bằng 0 và có 10 hoặc 11 chữ số."
+            regexp = "^$|^(0|\\+84)[0-9]{9,10}$",
+            message = "Số điện thoại phải bắt đầu bằng 0 hoặc +84, theo sau 9 hoặc 10 chữ số."
     )
     private String phoneNumber;
 

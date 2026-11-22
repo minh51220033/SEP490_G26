@@ -1,5 +1,6 @@
 package com.cvdcms.controller;
 
+import com.cvdcms.DTO.BranchOptionDTO;
 import com.cvdcms.DTO.NanopixReconciliationRequestDTO;
 import com.cvdcms.DTO.NanopixSyncRequestDTO;
 import com.cvdcms.DTO.NanopixSyncStatsDTO;
@@ -24,8 +25,13 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * REST API cho chức năng Quản lý kết quả phim X-quang NanoPix (FT12):
@@ -122,9 +128,81 @@ public class NanopixXrayRestController {
             @PathVariable("profileId") Long profileId,
             HttpSession session
     ) {
-        requireUser(session);
+        User user = requireUser(session);
+        Map<String, Object> accessInfo = nanopixXrayService.getAccessibleBranches(user.getUserId());
         Map<String, Object> lookups = nanopixXrayService.getReconciliationLookups(profileId);
+        if (lookups == null) {
+            return ResponseEntity.ok(Map.of("visits", List.of(), "orderItems", List.of()));
+        }
+
+        if (accessInfo != null && accessInfo.containsKey("isAdmin") && !Boolean.TRUE.equals(accessInfo.get("isAdmin"))) {
+            Set<Long> allowedBranchIds = extractAllowedBranchIds(accessInfo.get("branches"));
+            Map<String, Object> filtered = new HashMap<>(lookups);
+
+            List<?> rawVisits = lookups.get("visits") instanceof List<?> list ? list : List.of();
+            List<Map<?, ?>> filteredVisits = new java.util.ArrayList<>();
+            Set<Long> allowedVisitIds = new HashSet<>();
+            for (Object obj : rawVisits) {
+                if (obj instanceof Map<?, ?> m) {
+                    Long bId = toLong(m.get("branchId"));
+                    if (bId != null && allowedBranchIds.contains(bId)) {
+                        filteredVisits.add(m);
+                        Long vId = toLong(m.get("visitId"));
+                        if (vId != null) {
+                            allowedVisitIds.add(vId);
+                        }
+                    }
+                }
+            }
+            filtered.put("visits", filteredVisits);
+
+            Object rawItemsObj = lookups.get("orderItems") != null ? lookups.get("orderItems") : lookups.get("orders");
+            List<?> rawItems = rawItemsObj instanceof List<?> list ? list : List.of();
+            List<Map<?, ?>> filteredItems = rawItems.stream()
+                    .filter(obj -> obj instanceof Map<?, ?>)
+                    .map(obj -> (Map<?, ?>) obj)
+                    .filter(m -> {
+                        Long vId = toLong(m.get("visitId"));
+                        Long bId = toLong(m.get("branchId"));
+                        return (vId != null && allowedVisitIds.contains(vId))
+                                || (bId != null && allowedBranchIds.contains(bId));
+                    })
+                    .collect(Collectors.toList());
+            filtered.put("orderItems", filteredItems);
+            return ResponseEntity.ok(filtered);
+        }
+
         return ResponseEntity.ok(lookups);
+    }
+
+    private Set<Long> extractAllowedBranchIds(Object branchesObj) {
+        Set<Long> ids = new HashSet<>();
+        if (branchesObj instanceof Collection<?> col) {
+            for (Object item : col) {
+                if (item instanceof BranchOptionDTO dto && dto.getBranchId() != null) {
+                    ids.add(dto.getBranchId());
+                } else if (item instanceof Map<?, ?> m) {
+                    Long id = toLong(m.get("branchId"));
+                    if (id != null) {
+                        ids.add(id);
+                    }
+                }
+            }
+        }
+        return ids;
+    }
+
+    private Long toLong(Object val) {
+        if (val instanceof Number num) {
+            return num.longValue();
+        }
+        if (val != null) {
+            try {
+                return Long.valueOf(val.toString());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return null;
     }
 
     /**

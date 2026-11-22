@@ -8,7 +8,6 @@ import com.cvdcms.entity.enums.TreatmentPlanStageStatus;
 import com.cvdcms.entity.enums.TreatmentPlanStatus;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.TreatmentPlanService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +23,6 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class TreatmentPlanServiceImpl implements TreatmentPlanService {
 
     private final TreatmentPlanRepository treatmentPlanRepository;
@@ -38,6 +36,56 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     private final InvoiceItemRepository invoiceItemRepository;
     private final TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    public TreatmentPlanServiceImpl(
+            TreatmentPlanRepository treatmentPlanRepository,
+            TreatmentPlanStageRepository treatmentPlanStageRepository,
+            TreatmentPlanItemRepository treatmentPlanItemRepository,
+            PatientProfileRepository patientProfileRepository,
+            BranchRepository branchRepository,
+            StaffProfileRepository staffProfileRepository,
+            ServiceRepository serviceRepository,
+            PerformedServiceRepository performedServiceRepository,
+            InvoiceItemRepository invoiceItemRepository,
+            TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository) {
+        this.treatmentPlanRepository = treatmentPlanRepository;
+        this.treatmentPlanStageRepository = treatmentPlanStageRepository;
+        this.treatmentPlanItemRepository = treatmentPlanItemRepository;
+        this.patientProfileRepository = patientProfileRepository;
+        this.branchRepository = branchRepository;
+        this.staffProfileRepository = staffProfileRepository;
+        this.serviceRepository = serviceRepository;
+        this.performedServiceRepository = performedServiceRepository;
+        this.invoiceItemRepository = invoiceItemRepository;
+        this.treatmentPlanInstallmentRepository = treatmentPlanInstallmentRepository;
+    }
+
+    // Compatibility constructor preserved for unit tests passing GeminiAiService
+    public TreatmentPlanServiceImpl(
+            TreatmentPlanRepository treatmentPlanRepository,
+            TreatmentPlanStageRepository treatmentPlanStageRepository,
+            TreatmentPlanItemRepository treatmentPlanItemRepository,
+            PatientProfileRepository patientProfileRepository,
+            BranchRepository branchRepository,
+            StaffProfileRepository staffProfileRepository,
+            ServiceRepository serviceRepository,
+            com.cvdcms.service.GeminiAiService geminiAiService,
+            PerformedServiceRepository performedServiceRepository,
+            InvoiceItemRepository invoiceItemRepository,
+            TreatmentPlanInstallmentRepository treatmentPlanInstallmentRepository) {
+        this(
+                treatmentPlanRepository,
+                treatmentPlanStageRepository,
+                treatmentPlanItemRepository,
+                patientProfileRepository,
+                branchRepository,
+                staffProfileRepository,
+                serviceRepository,
+                performedServiceRepository,
+                invoiceItemRepository,
+                treatmentPlanInstallmentRepository);
+    }
+
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private PaymentRepository paymentRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -50,6 +98,11 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     private BranchBankAccountRepository branchBankAccountRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    @org.springframework.context.annotation.Lazy
+    private com.cvdcms.service.PerformedServiceService performedServiceService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private VisitRepository visitRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
@@ -78,6 +131,18 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
 
         PatientProfile patient = patientProfileRepository.findById(request.getPatientId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hồ sơ bệnh nhân."));
+
+        if (request.getVisitId() != null && visitRepository != null) {
+            Visit visit = visitRepository.findById(request.getVisitId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám phù hợp."));
+            com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                    visit,
+                    emrRecordRepository,
+                    "Ca khám đã khóa/hoàn tất lâm sàng, không thể lập kế hoạch điều trị");
+            if (visit.getPatientProfile() != null && !visit.getPatientProfile().getProfileId().equals(patient.getProfileId())) {
+                throw new IllegalArgumentException("Ca khám không khớp với hồ sơ bệnh nhân.");
+            }
+        }
 
         Branch branch = null;
         if (request.getBranchId() != null) {
@@ -162,14 +227,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             }
         }
 
-        BigDecimal overallCost = (request.getTotalEstimatedCost() != null && request.getTotalEstimatedCost().compareTo(BigDecimal.ZERO) > 0)
-                ? request.getTotalEstimatedCost()
-                : (request.getFinalEstimatedCost() != null && request.getFinalEstimatedCost().compareTo(BigDecimal.ZERO) > 0
-                    ? request.getFinalEstimatedCost()
-                    : totalEstimated);
-        plan.setTotalEstimatedCost(overallCost);
-        plan.setFinalEstimatedCost(request.getFinalEstimatedCost() != null && request.getFinalEstimatedCost().compareTo(BigDecimal.ZERO) > 0
-                ? request.getFinalEstimatedCost() : overallCost);
+        BigDecimal validatedDiscount = BigDecimal.ZERO;
+        BigDecimal finalCost = totalEstimated.subtract(validatedDiscount).max(BigDecimal.ZERO);
+        plan.setTotalEstimatedCost(totalEstimated);
+        plan.setFinalEstimatedCost(finalCost);
 
         plan.setIsInstallment(Boolean.TRUE.equals(request.getIsInstallment()));
         plan.setTotalPaidAmount(BigDecimal.ZERO);
@@ -197,6 +258,39 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             throw new IllegalStateException("Không thể chỉnh sửa kế hoạch điều trị đã hủy!");
         }
 
+        if (request.getVisitId() != null && visitRepository != null) {
+            Visit visit = visitRepository.findById(request.getVisitId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám phù hợp."));
+            com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                    visit,
+                    emrRecordRepository,
+                    "Ca khám đã khóa/hoàn tất lâm sàng, không thể chỉnh sửa kế hoạch điều trị");
+            if (visit.getPatientProfile() != null && plan.getPatientProfile() != null
+                    && !visit.getPatientProfile().getProfileId().equals(plan.getPatientProfile().getProfileId())) {
+                throw new IllegalArgumentException("Ca khám không khớp với hồ sơ bệnh nhân của kế hoạch điều trị.");
+            }
+        }
+
+        BigDecimal paidAmount = plan.getTotalPaidAmount() != null ? plan.getTotalPaidAmount() : BigDecimal.ZERO;
+        boolean scheduleLocked = paidAmount.compareTo(BigDecimal.ZERO) > 0 || plan.isFullyPaid();
+        boolean wasInstallment = Boolean.TRUE.equals(plan.getIsInstallment());
+        boolean wantsInstallment = request.getIsInstallment() != null
+                ? Boolean.TRUE.equals(request.getIsInstallment())
+                : wasInstallment;
+
+        if (scheduleLocked) {
+            if (wantsInstallment != wasInstallment) {
+                throw new IllegalStateException("Phác đồ đã ghi nhận thanh toán hoặc đã tất toán, không thể thay đổi hình thức thanh toán!");
+            }
+            if (request.getInstallments() != null && !isSameInstallmentSchedule(plan.getInstallments(), request.getInstallments())) {
+                throw new IllegalStateException("Kế hoạch điều trị đã phát sinh thanh toán hoặc đã tất toán, lộ trình chia đợt đã được khóa cứng!");
+            }
+        }
+
+        if (wantsInstallment != wasInstallment && hasLinkedPerformedServices(plan)) {
+            throw new IllegalStateException("Phác đồ đã có dịch vụ thực hiện trong ca khám, không thể chuyển đổi giữa thanh toán đơn lẻ và trả theo đợt!");
+        }
+
         if (request.getBranchId() != null) {
             branchRepository.findById(request.getBranchId()).ifPresent(plan::setBranch);
         }
@@ -207,14 +301,6 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         if (request.getPlanName() != null && !request.getPlanName().trim().isEmpty()) {
             plan.setPlanName(request.getPlanName().trim());
         }
-        if (request.getStatus() != null && !request.getStatus().isBlank()) {
-            try {
-                TreatmentPlanStatus newStatus = TreatmentPlanStatus.valueOf(request.getStatus().toUpperCase());
-                if (plan.getStatus() != TreatmentPlanStatus.COMPLETED || newStatus == TreatmentPlanStatus.COMPLETED) {
-                    plan.setStatus(newStatus);
-                }
-            } catch (Exception ignored) {}
-        }
 
         LocalDate startDate = parseLocalDateSafe(request.getStartDate(),
                 plan.getStartDate() != null ? plan.getStartDate() : LocalDate.now());
@@ -224,49 +310,26 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         }
         plan.setNotes(buildPlanNotesWithDiagnosis(request.getNotes(), request.getDiagnosisText()));
 
-        BigDecimal totalEstimated = reconcilePlanStagesForUpdate(plan, request.getStages(), startDate);
+        BigDecimal totalEstimated = request.getStages() != null
+                ? reconcilePlanStagesForUpdate(plan, request.getStages(), startDate)
+                : computePlanStagesTotal(plan);
 
-        BigDecimal overallCost = (request.getTotalEstimatedCost() != null && request.getTotalEstimatedCost().compareTo(BigDecimal.ZERO) > 0)
-                ? request.getTotalEstimatedCost()
-                : (request.getFinalEstimatedCost() != null && request.getFinalEstimatedCost().compareTo(BigDecimal.ZERO) > 0
-                    ? request.getFinalEstimatedCost()
-                    : totalEstimated);
-        BigDecimal finalCost = (request.getFinalEstimatedCost() != null && request.getFinalEstimatedCost().compareTo(BigDecimal.ZERO) > 0)
-                ? request.getFinalEstimatedCost()
-                : overallCost;
+        BigDecimal validatedDiscount = BigDecimal.ZERO;
+        BigDecimal finalCost = totalEstimated.subtract(validatedDiscount).max(BigDecimal.ZERO);
 
-        BigDecimal paidAmount = plan.getTotalPaidAmount() != null ? plan.getTotalPaidAmount() : BigDecimal.ZERO;
         if (finalCost.compareTo(paidAmount) < 0) {
             throw new IllegalArgumentException("Tổng chi phí phác đồ sau chỉnh sửa không được nhỏ hơn số tiền bệnh nhân đã thanh toán!");
         }
 
-        plan.setTotalEstimatedCost(overallCost);
+        plan.setTotalEstimatedCost(totalEstimated);
         plan.setFinalEstimatedCost(finalCost);
 
-        boolean wasInstallment = Boolean.TRUE.equals(plan.getIsInstallment());
-        boolean wantsInstallment = Boolean.TRUE.equals(request.getIsInstallment());
-        if (!wantsInstallment && paidAmount.compareTo(BigDecimal.ZERO) > 0 && wasInstallment) {
-            throw new IllegalStateException("Phác đồ đã ghi nhận thanh toán theo đợt, không thể chuyển sang thanh toán đơn lẻ!");
-        }
-        if (wantsInstallment && !wasInstallment && plan.getStages() != null) {
-            for (TreatmentPlanStage st : plan.getStages()) {
-                if (st.getItems() == null) continue;
-                for (TreatmentPlanItem it : st.getItems()) {
-                    if (it.getPlanItemId() == null) continue;
-                    List<PerformedService> linkedServices = performedServiceRepository
-                            .findByPlanItem_PlanItemIdAndStatusNot(it.getPlanItemId(), PerformedServiceStatus.CANCELLED);
-                    for (PerformedService ps : linkedServices) {
-                        if (invoiceItemRepository != null && ps.getPerformedId() != null
-                                && invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId())) {
-                            throw new IllegalStateException("Phác đồ đã có dịch vụ được lập hóa đơn lẻ, không thể chuyển sang thanh toán theo đợt!");
-                        }
-                    }
-                }
-            }
-        }
+        // Bảo toàn trạng thái IN_PROGRESS / COMPLETED dựa trên tiến độ thực tế của các giai đoạn & bước thủ thuật
+        syncPlanStatusFromStages(plan, request.getStatus());
+
         plan.setIsInstallment(wantsInstallment);
         if (wantsInstallment) {
-            if (request.getInstallments() != null) {
+            if (request.getInstallments() != null && !scheduleLocked) {
                 applyInstallmentSchedule(plan, request.getInstallments(), false);
             } else {
                 recalculateInstallmentsInternal(plan);
@@ -339,6 +402,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         TreatmentPlanStage stage = treatmentPlanStageRepository.findById(stageId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy giai đoạn với ID: " + stageId));
 
+        if (stage.getPlan() != null && stage.getPlan().getStatus() == TreatmentPlanStatus.CANCELLED) {
+            throw new IllegalStateException("Kế hoạch điều trị đã hủy, không thể cập nhật trạng thái giai đoạn.");
+        }
+
         TreatmentPlanStageStatus newStatus = TreatmentPlanStageStatus.valueOf(statusStr.toUpperCase());
         stage.setStatus(newStatus);
 
@@ -373,13 +440,17 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                                     ps.getVisit(),
                                     emrRecordRepository,
                                     "Bệnh án lâm sàng đã khóa/hủy, không thể đặt lại trạng thái giai đoạn phác đồ");
-                            if (invoiceItemRepository != null && ps.getPerformedId() != null
-                                    && invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId())) {
-                                throw new IllegalStateException(
-                                        "Giai đoạn này có bước thủ thuật đã được lập hóa đơn viện phí, không thể hoàn tác về Chưa thực hiện!");
+                            if (performedServiceService != null && ps.getPerformedId() != null) {
+                                performedServiceService.cancelPerformedService(ps.getPerformedId());
+                            } else {
+                                if (invoiceItemRepository != null && ps.getPerformedId() != null
+                                        && invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId())) {
+                                    throw new IllegalStateException(
+                                            "Giai đoạn này có bước thủ thuật đã được lập hóa đơn viện phí, không thể hoàn tác về Chưa thực hiện!");
+                                }
+                                ps.setStatus(PerformedServiceStatus.CANCELLED);
+                                performedServiceRepository.save(ps);
                             }
-                            ps.setStatus(PerformedServiceStatus.CANCELLED);
-                            performedServiceRepository.save(ps);
                         }
                     }
                 }
@@ -420,20 +491,36 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         TreatmentPlanItem item = treatmentPlanItemRepository.findById(planItemId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thủ thuật với ID: " + planItemId));
 
+        TreatmentPlan parentPlan = item.getPlan() != null
+                ? item.getPlan()
+                : (item.getStage() != null ? item.getStage().getPlan() : null);
+        if (parentPlan != null && parentPlan.getStatus() == TreatmentPlanStatus.CANCELLED) {
+            throw new IllegalStateException("Kế hoạch điều trị đã hủy, không thể cập nhật trạng thái bước thủ thuật.");
+        }
+
         TreatmentPlanItemStatus newStatus = TreatmentPlanItemStatus.valueOf(statusStr.toUpperCase());
-        item.setStatus(newStatus);
-        if (newStatus == TreatmentPlanItemStatus.PLANNED) {
+        if (newStatus == TreatmentPlanItemStatus.PLANNED || newStatus == TreatmentPlanItemStatus.CANCELLED) {
             List<PerformedService> activeServices = performedServiceRepository.findByPlanItem_PlanItemIdAndStatusNot(
                     planItemId, PerformedServiceStatus.CANCELLED);
             for (PerformedService ps : activeServices) {
-                boolean isBilled = invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId());
-                if (isBilled) {
-                    throw new IllegalStateException("Bước thủ thuật này đã được lập hóa đơn viện phí, không thể hoàn tác!");
+                com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                        ps.getVisit(),
+                        emrRecordRepository,
+                        "Bệnh án lâm sàng đã khóa/hủy, không thể hoàn tác bước thủ thuật phác đồ");
+                if (performedServiceService != null && ps.getPerformedId() != null) {
+                    performedServiceService.cancelPerformedService(ps.getPerformedId());
+                } else {
+                    boolean isBilled = invoiceItemRepository != null && ps.getPerformedId() != null
+                            && invoiceItemRepository.existsByPerformedIdAndInvoiceNotCancelled(ps.getPerformedId());
+                    if (isBilled) {
+                        throw new IllegalStateException("Bước thủ thuật này đã được lập hóa đơn viện phí, không thể hoàn tác!");
+                    }
+                    ps.setStatus(PerformedServiceStatus.CANCELLED);
+                    performedServiceRepository.save(ps);
                 }
-                ps.setStatus(PerformedServiceStatus.CANCELLED);
-                performedServiceRepository.save(ps);
             }
         }
+        item.setStatus(newStatus);
         LocalDateTime now = LocalDateTime.now();
         if (newStatus == TreatmentPlanItemStatus.COMPLETED) {
             item.setCompletedAt(now);
@@ -558,7 +645,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                             completedItems++;
                         }
                         com.cvdcms.entity.Service svc = it.getService();
-                        BigDecimal estPrice = (it.getEstimatedPrice() != null && it.getEstimatedPrice().compareTo(BigDecimal.ZERO) > 0)
+                        BigDecimal estPrice = it.getEstimatedPrice() != null
                                 ? it.getEstimatedPrice()
                                 : (svc != null && svc.getBasePrice() != null ? svc.getBasePrice() : BigDecimal.ZERO);
                         BigDecimal qtyVal = it.getQuantity() != null ? it.getQuantity() : BigDecimal.ONE;
@@ -1052,6 +1139,108 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         return cleanedNotes.isEmpty() ? null : cleanedNotes;
     }
 
+    private boolean hasLinkedPerformedServices(TreatmentPlan plan) {
+        if (plan == null || plan.getStages() == null || performedServiceRepository == null) {
+            return false;
+        }
+        for (TreatmentPlanStage st : plan.getStages()) {
+            if (st.getItems() == null) continue;
+            for (TreatmentPlanItem it : st.getItems()) {
+                if (it.getPlanItemId() != null
+                        && performedServiceRepository.existsByPlanItem_PlanItemIdAndStatusNot(
+                                it.getPlanItemId(), PerformedServiceStatus.CANCELLED)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isSameInstallmentSchedule(
+            List<TreatmentPlanInstallment> existing,
+            List<TreatmentPlanInstallmentDTO> incoming) {
+        if (existing == null) existing = Collections.emptyList();
+        if (incoming == null) return true;
+        if (existing.size() != incoming.size()) {
+            return false;
+        }
+        for (int i = 0; i < existing.size(); i++) {
+            TreatmentPlanInstallment oldInst = existing.get(i);
+            TreatmentPlanInstallmentDTO newDto = incoming.get(i);
+            BigDecimal oldAmt = oldInst.getExpectedAmount() != null ? oldInst.getExpectedAmount() : BigDecimal.ZERO;
+            BigDecimal newAmt = newDto.getExpectedAmount() != null ? newDto.getExpectedAmount() : BigDecimal.ZERO;
+            if (oldAmt.compareTo(newAmt) != 0) {
+                return false;
+            }
+            LocalDate newDate = parseLocalDateSafe(
+                    newDto.getExpectedDateRaw() != null && !newDto.getExpectedDateRaw().isBlank()
+                            ? newDto.getExpectedDateRaw()
+                            : newDto.getExpectedDate(),
+                    null);
+            if (!Objects.equals(oldInst.getExpectedDate(), newDate)) {
+                return false;
+            }
+            String oldPhase = oldInst.getPhaseName() != null ? oldInst.getPhaseName().trim() : "";
+            String newPhase = newDto.getPhaseName() != null ? newDto.getPhaseName().trim() : oldPhase;
+            if (!oldPhase.equals(newPhase)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private BigDecimal computePlanStagesTotal(TreatmentPlan plan) {
+        BigDecimal total = BigDecimal.ZERO;
+        if (plan == null || plan.getStages() == null) {
+            return total;
+        }
+        for (TreatmentPlanStage st : plan.getStages()) {
+            if (st.getItems() == null) continue;
+            for (TreatmentPlanItem it : st.getItems()) {
+                if (it.getStatus() == TreatmentPlanItemStatus.CANCELLED) continue;
+                BigDecimal qty = it.getQuantity() != null ? it.getQuantity() : BigDecimal.ONE;
+                BigDecimal price = it.getEstimatedPrice() != null ? it.getEstimatedPrice() : BigDecimal.ZERO;
+                total = total.add(price.multiply(qty));
+            }
+        }
+        return total;
+    }
+
+    private void syncPlanStatusFromStages(TreatmentPlan plan, String requestedStatus) {
+        List<TreatmentPlanStage> stages = plan.getStages() != null ? plan.getStages() : Collections.emptyList();
+        int totalStages = stages.size();
+        int completedStages = 0;
+        boolean anyStageActive = false;
+
+        for (TreatmentPlanStage st : stages) {
+            List<TreatmentPlanItem> items = st.getItems() != null ? st.getItems() : Collections.emptyList();
+            boolean allItemsDone = !items.isEmpty() && items.stream().allMatch(i -> i.getStatus() == TreatmentPlanItemStatus.COMPLETED);
+            boolean anyItemActive = items.stream().anyMatch(i ->
+                    i.getStatus() == TreatmentPlanItemStatus.COMPLETED || i.getStatus() == TreatmentPlanItemStatus.IN_PROGRESS);
+            if (allItemsDone || (items.isEmpty() && st.getStatus() == TreatmentPlanStageStatus.COMPLETED)) {
+                completedStages++;
+                anyStageActive = true;
+            } else if (anyItemActive || st.getStatus() == TreatmentPlanStageStatus.IN_PROGRESS || st.getStatus() == TreatmentPlanStageStatus.COMPLETED) {
+                anyStageActive = true;
+            }
+        }
+
+        if (totalStages > 0 && completedStages == totalStages) {
+            plan.setStatus(TreatmentPlanStatus.COMPLETED);
+        } else if (anyStageActive || completedStages > 0) {
+            plan.setStatus(TreatmentPlanStatus.IN_PROGRESS);
+        } else if (requestedStatus != null && !requestedStatus.isBlank()) {
+            try {
+                TreatmentPlanStatus newStatus = TreatmentPlanStatus.valueOf(requestedStatus.toUpperCase());
+                if (newStatus != TreatmentPlanStatus.COMPLETED && newStatus != TreatmentPlanStatus.IN_PROGRESS) {
+                    plan.setStatus(newStatus);
+                } else if (plan.getStatus() == TreatmentPlanStatus.COMPLETED || plan.getStatus() == TreatmentPlanStatus.IN_PROGRESS) {
+                    plan.setStatus(TreatmentPlanStatus.ACCEPTED);
+                }
+            } catch (Exception ignored) {}
+        }
+    }
+
     private boolean isPlanItemLockedForEdit(TreatmentPlanItem item) {
         if (item == null) return false;
         if (item.getStatus() == TreatmentPlanItemStatus.COMPLETED || item.getStatus() == TreatmentPlanItemStatus.IN_PROGRESS) {
@@ -1086,8 +1275,10 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         item.setQuantity(qty);
 
         BigDecimal price = itemReq.getEstimatedPrice();
-        if (price == null || price.compareTo(BigDecimal.ZERO) <= 0) {
+        if (price == null) {
             price = service.getBasePrice() != null ? service.getBasePrice() : BigDecimal.ZERO;
+        } else if (price.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Đơn giá bước thủ thuật không được nhỏ hơn 0.");
         }
         item.setEstimatedPrice(price);
 
@@ -1237,6 +1428,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
 
                 List<TreatmentPlanItem> updatedItems = new ArrayList<>();
                 boolean hasPendingItem = false;
+                boolean hasInProgressItem = false;
                 boolean hasCompletedItem = false;
                 if (stageReq.getItems() != null) {
                     for (TreatmentPlanItemRequestDTO itemReq : stageReq.getItems()) {
@@ -1251,9 +1443,13 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                         }
                         BigDecimal qty = item.getQuantity() != null ? item.getQuantity() : BigDecimal.ONE;
                         BigDecimal price = item.getEstimatedPrice() != null ? item.getEstimatedPrice() : BigDecimal.ZERO;
-                        totalEstimated = totalEstimated.add(price.multiply(qty));
+                        if (item.getStatus() != TreatmentPlanItemStatus.CANCELLED) {
+                            totalEstimated = totalEstimated.add(price.multiply(qty));
+                        }
                         if (item.getStatus() == TreatmentPlanItemStatus.COMPLETED) {
                             hasCompletedItem = true;
+                        } else if (item.getStatus() == TreatmentPlanItemStatus.IN_PROGRESS) {
+                            hasInProgressItem = true;
                         } else if (item.getStatus() != TreatmentPlanItemStatus.CANCELLED) {
                             hasPendingItem = true;
                         }
@@ -1265,10 +1461,17 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 }
                 stage.getItems().clear();
                 stage.getItems().addAll(updatedItems);
-                if (hasCompletedItem && !hasPendingItem) {
+                if (hasCompletedItem && !hasInProgressItem && !hasPendingItem) {
                     stage.setStatus(TreatmentPlanStageStatus.COMPLETED);
-                } else if (hasCompletedItem) {
+                    if (stage.getCompletedAt() == null) {
+                        stage.setCompletedAt(LocalDateTime.now());
+                    }
+                } else if (hasCompletedItem || hasInProgressItem) {
                     stage.setStatus(TreatmentPlanStageStatus.IN_PROGRESS);
+                    stage.setCompletedAt(null);
+                } else {
+                    stage.setStatus(TreatmentPlanStageStatus.PENDING);
+                    stage.setCompletedAt(null);
                 }
                 rebuiltStages.add(stage);
             }

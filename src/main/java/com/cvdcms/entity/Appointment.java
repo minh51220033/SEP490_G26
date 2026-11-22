@@ -20,7 +20,9 @@ import java.time.LocalTime;
                 @UniqueConstraint(name = "uk_appt_code", columnNames = "appointment_code")
         },
         indexes = {
-                @Index(name = "idx_appt_branch_date", columnList = "branch_id, appointment_date, status")
+                @Index(name = "idx_appt_branch_date", columnList = "branch_id, appointment_date, status"),
+                @Index(name = "idx_appt_doctor_date_status_time", columnList = "doctor_id, appointment_date, status, expected_time, expected_end_time"),
+                @Index(name = "idx_appt_noshow_scan", columnList = "status, appointment_date, expected_time")
         }
 )
 @Getter
@@ -61,6 +63,9 @@ public class Appointment {
 
     @Column(name = "expected_time")
     private LocalTime expectedTime;
+
+    @Column(name = "expected_end_time")
+    private LocalTime expectedEndTime;
 
     @Column(name = "duration_minutes", nullable = false)
     private Integer durationMinutes = 30;
@@ -124,6 +129,7 @@ public class Appointment {
         if (this.appointmentCode == null || this.appointmentCode.isEmpty()) {
             this.appointmentCode = "LH" + System.currentTimeMillis();
         }
+        syncExpectedEndTime();
         if (this.originalStatus == null) {
             this.originalStatus = this.status;
         }
@@ -133,6 +139,16 @@ public class Appointment {
     public void preUpdate() {
         if (this.originalStatus == AppointmentStatus.PENDING && this.status == AppointmentStatus.CHECKED_IN) {
             throw new IllegalStateException("Vi phạm quy tắc chuyển trạng thái: Không thể chuyển trực tiếp từ PENDING sang CHECKED_IN. Bắt buộc phải qua CONFIRMED.");
+        }
+        syncExpectedEndTime();
+    }
+
+    public void syncExpectedEndTime() {
+        if (this.expectedTime != null) {
+            int dur = (this.durationMinutes != null && this.durationMinutes > 0) ? this.durationMinutes : 30;
+            this.expectedEndTime = this.expectedTime.plusMinutes(dur);
+        } else {
+            this.expectedEndTime = null;
         }
     }
 }
