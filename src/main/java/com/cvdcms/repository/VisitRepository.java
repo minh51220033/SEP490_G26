@@ -282,6 +282,26 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
     );
 
     @Query("""
+        SELECT v FROM Visit v
+        LEFT JOIN FETCH v.patientProfile pp
+        LEFT JOIN FETCH v.branch b
+        LEFT JOIN FETCH v.primaryDoctor d
+        WHERE b.branchId = :branchId
+          AND d.staffId = :doctorId
+          AND v.status IN :statuses
+          AND v.checkInAt >= :startOfDay
+          AND v.checkInAt < :endOfDay
+        ORDER BY v.actualStartTime DESC, v.visitId DESC
+    """)
+    List<Visit> findActiveExamsForDoctorAtBranchOnDay(
+            @Param("branchId") Long branchId,
+            @Param("doctorId") Long doctorId,
+            @Param("statuses") Collection<VisitStatus> statuses,
+            @Param("startOfDay") java.time.LocalDateTime startOfDay,
+            @Param("endOfDay") java.time.LocalDateTime endOfDay
+    );
+
+    @Query("""
         SELECT COUNT(v) FROM Visit v
         WHERE v.chairId = :chairId
           AND v.visitId <> :excludeVisitId
@@ -290,4 +310,30 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
     long countOccupiedChair(@Param("chairId") Long chairId,
                             @Param("excludeVisitId") Long excludeVisitId,
                             @Param("statuses") java.util.Collection<VisitStatus> statuses);
+
+    @Query("""
+        SELECT COUNT(v) FROM Visit v
+        WHERE v.chairId = :chairId
+          AND v.visitId <> :excludeVisitId
+          AND v.status IN :statuses
+          AND v.checkInAt >= :startOfDay
+          AND v.checkInAt < :endOfDay
+    """)
+    long countOccupiedChairOnDay(@Param("chairId") Long chairId,
+                                 @Param("excludeVisitId") Long excludeVisitId,
+                                 @Param("statuses") java.util.Collection<VisitStatus> statuses,
+                                 @Param("startOfDay") java.time.LocalDateTime startOfDay,
+                                 @Param("endOfDay") java.time.LocalDateTime endOfDay);
+
+    @Query("""
+        SELECT COUNT(v) FROM Visit v
+        WHERE v.chairId = :chairId
+          AND v.visitId <> :excludeVisitId
+          AND v.status IN :statuses
+          AND v.checkInAt < :cutoff
+    """)
+    long countOccupiedChairBefore(@Param("chairId") Long chairId,
+                                  @Param("excludeVisitId") Long excludeVisitId,
+                                  @Param("statuses") java.util.Collection<VisitStatus> statuses,
+                                  @Param("cutoff") java.time.LocalDateTime cutoff);
 }

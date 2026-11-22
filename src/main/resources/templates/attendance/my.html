@@ -727,11 +727,6 @@
                                             <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-workedTime" checked>
                                             <label for="chk-col-workedTime" class="custom-col-name">Thời gian làm</label>
                                         </div>
-                                        <div class="custom-col-item" data-col-target="wifi">
-                                            <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
-                                            <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-wifi" checked>
-                                            <label for="chk-col-wifi" class="custom-col-name">Xác thực Wi-Fi</label>
-                                        </div>
                                         <div class="custom-col-item" data-col-target="status">
                                             <span class="custom-col-drag"><i class="bi bi-grip-vertical"></i></span>
                                             <input type="checkbox" class="form-check-input custom-col-check" id="chk-col-status" checked>
@@ -772,9 +767,6 @@
                                 <th data-col="workedTime" style="min-width: 170px;">
                                     <div class="dv-th-inner"><span>Thời gian làm</span></div>
                                 </th>
-                                <th data-col="wifi" style="min-width: 160px;" class="text-center">
-                                    <div class="dv-th-inner justify-content-center"><span>Xác thực Wi-Fi</span></div>
-                                </th>
                                 <th data-col="status" style="min-width: 150px;" class="text-center">
                                     <div class="dv-th-inner justify-content-center"><span>Trạng thái</span></div>
                                 </th>
@@ -782,14 +774,14 @@
                             </thead>
                             <tbody>
                             <tr th:if="${#lists.isEmpty(history)}">
-                                <td colspan="9" class="text-center text-muted empty-table-cell">
+                                <td colspan="8" class="text-center text-muted empty-table-cell">
                                     <i class="bi bi-calendar-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
                                     <div class="fw-semibold text-secondary" style="font-size: 14px;">Chưa có dữ liệu chấm công trong tháng này.</div>
                                     <div class="small text-muted mt-1">Dữ liệu sẽ tự động xuất hiện khi nhân sự thực hiện chấm công ca trực.</div>
                                 </td>
                             </tr>
                             <tr id="myAttNoMatchRow" style="display: none;">
-                                <td colspan="9" class="text-center text-muted empty-table-cell">
+                                <td colspan="8" class="text-center text-muted empty-table-cell">
                                     <i class="bi bi-search fs-1 d-block mb-2 text-secondary opacity-50"></i>
                                     <div class="fw-semibold text-secondary" style="font-size: 14px;">Không tìm thấy bản ghi chấm công nào khớp với điều kiện lọc.</div>
                                     <div class="small text-muted mt-1">Vui lòng thử tìm kiếm với từ khóa hoặc điều kiện lọc khác.</div>
@@ -843,14 +835,6 @@
                                 <td data-col="workedTime" style="min-width: 170px;">
                                     <span class="fw-bold text-dark" style="font-size: 14px;"
                                           th:text="${r.workedMinutes != null ? ((r.workedMinutes / 60 > 0 ? (r.workedMinutes / 60) + ' giờ ' : '') + (r.workedMinutes % 60) + ' phút') : '-'}">-</span>
-                                </td>
-                                <td data-col="wifi" class="text-center" style="min-width: 160px;">
-                                    <span th:if="${r.isValidNetwork}" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-bold" style="font-size: 12.5px;" title="Chấm công từ mạng Wi-Fi hợp lệ của cơ sở">
-                                        <i class="bi bi-wifi me-1"></i>Wi-Fi cơ sở
-                                    </span>
-                                    <span th:unless="${r.isValidNetwork}" class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 fw-bold" style="font-size: 12.5px;" title="Chấm công từ mạng ngoài (4G hoặc Wi-Fi lạ)">
-                                        <i class="bi bi-wifi-off me-1"></i>Khác mạng
-                                    </span>
                                 </td>
                                 <td data-col="status" class="text-center" style="min-width: 150px;">
                                     <span class="status-badge"

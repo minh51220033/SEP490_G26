@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="odontogramTab(patientId, visitId, visitCode, readOnly, patientDob, badgeElementId)">
+    <link rel="stylesheet" th:href="@{/css/odontogram.css(v=20261122a)}">
+
+    <div id="odontogramTabRoot"
+         th:data-patient-id="${patientId}"
+         th:data-visit-id="${visitId}"
+         th:data-visit-code="${visitCode}"
+         th:data-read-only="${readOnly == true}"
+         th:data-patient-dob="${patientDob}"
+         th:data-badge-id="${badgeElementId}">
+
+        <!-- ========================================================= -->
+        <!-- 1. LIST VIEW (LỊCH SỬ BẢN ĐỒ RĂNG THEO BỆNH NHÂN)         -->
+        <!-- ========================================================= -->
+        <div id="odonListView" class="df-odon-card">
+            <div class="df-odon-card-header">
+                <div>
+                    <h5 class="df-odon-title">
+                        <i class="bi bi-grid-3x3-gap text-primary"></i>
+                        <span>Tình trạng răng</span>
+                    </h5>
+                    <p class="df-odon-subtitle">Quản lý lịch sử sơ đồ tình trạng răng FDI (Hiện trạng &amp; Kế hoạch điều trị)</p>
+                </div>
+                <button type="button"
+                        id="btnOdonCreateTop"
+                        class="df-odon-primary-btn odon-write-only d-none">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>Thêm mới</span>
+                </button>
+            </div>
+
+            <div id="odonListError" class="alert alert-danger rounded-3 m-3 mb-0 py-2 px-3 small d-none" role="alert"></div>
+
+            <!-- Filter Toolbar (shown only when records exist) -->
+            <div id="odonFilterToolbar" class="df-odon-toolbar d-none">
+                <div class="df-odon-search-wrap">
+                    <i class="bi bi-search"></i>
+                    <input type="search" id="odonSearchInput" placeholder="Tìm theo ghi chú, mã ca, người tạo..." autocomplete="off">
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <select id="odonTypeFilter" class="form-select form-select-sm" style="width: 170px; height: 38px; border-radius: 10px;" aria-label="Lọc theo loại hàm">
+                        <option value="ALL">Tất cả loại hàm</option>
+                        <option value="ADULT">Người lớn (ADULT)</option>
+                        <option value="CHILD">Trẻ em (CHILD)</option>
+                    </select>
+                    <span id="odonResultCount" class="small text-secondary fw-medium text-nowrap">0 bản ghi</span>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="odonLoadingState" class="py-5 text-center text-secondary small">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                <span>Đang tải danh sách sơ đồ tình trạng răng...</span>
+            </div>
+
+            <!-- Empty State (Single centered CTA matching Content UX) -->
+            <div id="odonEmptyState" class="df-odon-empty d-none">
+                <div class="df-odon-empty-icon">
+                    <i class="bi bi-clipboard2-pulse"></i>
+                </div>
+                <h6 class="fw-bold text-dark mb-1">Chưa có sơ đồ tình trạng răng</h6>
+                <p class="text-secondary small mb-3" style="max-width: 420px; margin: 0 auto;">
+                    Bệnh nhân chưa có bản ghi sơ đồ răng FDI nào được lưu trên hệ thống.
+                </p>
+                <button type="button"
+                        id="btnOdonCreateEmpty"
+                        class="df-odon-primary-btn odon-write-only"
+                        th:if="${readOnly != true}">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>Tạo sơ đồ răng mới</span>
+                </button>
+            </div>
+
+            <!-- History Table -->
+            <div id="odonTableWrapper" class="table-responsive d-none">
+                <table class="df-odon-table" id="odonListTable">
+                    <thead>
+                        <tr>
+                            <th class="text-center" style="width: 52px;">#</th>
+                            <th style="width: 118px;">Ngày</th>
+                            <th style="width: 130px;">Bệnh án</th>
+                            <th>Ghi chú</th>
+                            <th class="text-center" style="width: 96px;">Loại</th>
+                            <th style="width: 165px;">Người tạo</th>
+                            <th style="width: 145px;">Ngày tạo</th>
+                            <th style="width: 165px;">Người sửa</th>
+                            <th class="text-center" style="width: 100px;">Xử lý</th>
+                        </tr>
+                    </thead>
+                    <tbody id="odonTableBody"></tbody>
+                </table>
+                <div id="odonFilterEmptyRow" class="py-4 text-center text-secondary small d-none">
+                    Không tìm thấy bản ghi sơ đồ răng phù hợp với từ khóa hoặc bộ lọc hiện tại.
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- 2. INTERACTIVE ODONTOGRAM EDITOR VIEW                     -->
+        <!-- ========================================================= -->
+        <div id="odonEditorView" class="d-none">
+            <!-- Top Action Bar (Secondary left, single Primary CTA right) -->
+            <div class="df-odon-editor-bar">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <button type="button" id="btnOdonBackToList" class="df-odon-secondary-btn">
+                        <i class="bi bi-arrow-left"></i>
+                        <span>Danh sách</span>
+                    </button>
+                    <h6 class="mb-0 fw-bold text-dark ms-1" id="odonEditorTitle">Thêm sơ đồ tình trạng răng</h6>
+                    <span id="odonEditorVisitBadge" class="dv-code-pill d-none"></span>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="odonChartDateInput" class="small fw-semibold text-secondary mb-0 text-nowrap">Ngày ghi nhận:</label>
+                        <input type="date" id="odonChartDateInput" class="form-control form-control-sm" style="width: 150px; height: 36px; border-radius: 8px;">
+                    </div>
+                    <button type="button" id="btnOdonCancelEdit" class="df-odon-secondary-btn">Hủy</button>
+                    <button type="button" id="btnSaveOdontogram" class="df-odon-primary-btn odon-write-only">
+                        <i class="bi bi-check2-circle"></i>
+                        <span>Lưu sơ đồ răng</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="odonEditorError" class="alert alert-danger rounded-3 py-2 px-3 small mb-3 d-none" role="alert"></div>
+
+            <!-- Scoped Interactive Odontogram Widget -->
+            <div class="df-odon-scope">
+                <div class="card vt-odon-card">
+                    <div class="card-header pb-0">
+                        <div class="d-lg-flex align-items-center justify-content-between gap-3">
+                            <div class="col-auto my-auto">
+                                <div class="h-100">
+                                    <h6 class="mb-0">Sơ đồ răng FDI</h6>
+                                    <p class="text-sm mb-0 text-secondary">Người trưởng thành (32 răng) &amp; Trẻ em (20 răng)</p>
+                                </div>
+                            </div>
+
+                            <!-- Compact Clinical Toolbar -->
+                            <div class="rao-inline-bar ms-auto mt-2 mt-lg-0">
+                                <div class="rao-seg" role="group" aria-label="Chế độ hàm răng">
+                                    <button type="button" class="active" data-chart-type="1">Người lớn (32)</button>
+                                    <button type="button" data-chart-type="2">Trẻ em (20)</button>
+                                </div>
+                                <div class="rao-seg" role="group" aria-label="Chế độ Hiện trạng hoặc Kế hoạch">
+                                    <button type="button" class="active" data-default-class="1" title="Ghi nhận tình trạng hiện có (nét liền)"><span class="mode-line-solid"></span>Hiện trạng</button>
+                                    <button type="button" data-default-class="2" title="Lập kế hoạch điều trị (nét đứt)"><span class="mode-line-dashed"></span>Kế hoạch</button>
+                                </div>
+                                <button type="button" class="rao-action-btn" id="btnSelectUpper">Hàm trên</button>
+                                <button type="button" class="rao-action-btn" id="btnSelectLower">Hàm dưới</button>
+                                <div class="rao-seg" role="group" aria-label="Chọn nhanh theo cung phần tư">
+                                    <button type="button" data-quad="1" title="Chọn cung phần tư 1 (Răng 11–18 / 51–55)">Q1</button>
+                                    <button type="button" data-quad="2" title="Chọn cung phần tư 2 (Răng 21–28 / 61–65)">Q2</button>
+                                    <button type="button" data-quad="3" title="Chọn cung phần tư 3 (Răng 31–38 / 71–75)">Q3</button>
+                                    <button type="button" data-quad="4" title="Chọn cung phần tư 4 (Răng 41–48 / 81–85)">Q4</button>
+                                </div>
+                                <button type="button" class="rao-action-btn text-danger" id="btnClearSel" title="Bỏ chọn tất cả (Esc)"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body pt-2 pb-3">
+                        <!-- Responsive Compact Icon Strip (<= 1299px) -->
+                        <div id="CandisArea_Short" class="p-1 mb-2">
+                            <div id="Candisease_Short" class="pt-2 px-1 row"></div>
+                        </div>
+
+                        <div class="d-lg-flex">
+                            <!-- Left Sidebar -->
+                            <div id="CandisArea_Large" class="p-1 col-w-300" style="width: 310px; flex-shrink: 0;">
+                                <div class="input-group flex-nowrap" id="Dissearch_Area">
+                                    <div class="input-group-text px-2">
+                                        <i class="bi bi-search" aria-hidden="true"></i>
+                                    </div>
+                                    <input id="Dissearch_Input" type="search" class="form-control" placeholder="Tìm tình trạng, thủ thuật..." aria-label="Tìm kiếm tình trạng răng">
+                                    <button type="button" class="input-group-text btn btn-light border" id="btnClearSearch" aria-label="Xóa tìm kiếm">
+                                        <i class="bi bi-x-circle opacity-50"></i>
+                                    </button>
+                                </div>
+                                <div class="overflow-auto mt-1" style="height: 490px;">
+                                    <div id="Candisease" class="pt-2 ps-0"></div>
+                                </div>
+                            </div>
+
+                            <!-- Right Main Area -->
+                            <div class="p-1 w-100" style="min-width: 0;">
+                                <div class="position-relative" style="min-height: 416px;">
+                                    <button type="button" id="btnCornerClear" class="chart-corner-clear-btn" title="Khi đang chọn răng: bỏ chọn • Khi chưa chọn răng: bật xóa nhanh (Esc để tắt)">
+                                        <i id="btnCornerClearIcon" class="bi bi-eraser"></i><span id="btnCornerClearText">Xóa nhanh</span>
+                                    </button>
+                                    <div class="overflow-auto position-relative d-xxl-flex justify-content-center" id="Canteeth_TeethArea">
+                                        <div id="Canteeth_UpDown" class="position-relative" style="width: 848px;">
+                                            <div id="Canteeth_Up" class="w-100 d-flex justify-content-center py-2 z-index-1 overflow-visible position-relative"></div>
+                                            <hr style="height: 2px;" class="horizontal dark my-1">
+                                            <div id="CanteethVR"></div>
+                                            <div id="Canteeth_Down" class="w-100 d-flex justify-content-center py-2 z-index-1 overflow-visible position-relative"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Bottom Section: RAO-style Tooth Information Summary Card -->
+                                <div class="rao-info-card" id="toothInfoCard">
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                                        <div class="d-flex flex-wrap align-items-center gap-2">
+                                            <h6 class="mb-0 fw-bold text-dark" style="font-size:0.98rem;">Thông tin răng</h6>
+                                            <div class="rao-info-tabs" role="tablist" aria-label="Chuyển đổi Hiện trạng và Kế hoạch">
+                                                <button type="button" id="infoTabStatus" class="active-status" data-info-tab="1" role="tab" aria-selected="true">
+                                                    <span>Hiện trạng</span>
+                                                    <span class="tab-cnt" id="infoTabStatusCount">0</span>
+                                                </button>
+                                                <button type="button" id="infoTabPlan" data-info-tab="2" role="tab" aria-selected="false">
+                                                    <span>Kế hoạch</span>
+                                                    <span class="tab-cnt" id="infoTabPlanCount">0</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex flex-wrap align-items-center gap-2">
+                                            <div class="btn-group btn-group-sm" role="group" aria-label="Hoàn tác và Làm lại">
+                                                <button type="button" class="btn btn-outline-secondary py-1 px-2" id="btnUndo" title="Hoàn tác (Ctrl+Z)" disabled>
+                                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary py-1 px-2" id="btnRedo" title="Làm lại (Ctrl+Y)" disabled>
+                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                </button>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" id="btnResetAll" title="Xóa toàn bộ tình trạng đang hiển thị" style="border-radius:8px;">
+                                                <i class="bi bi-arrow-repeat me-1"></i>Làm mới
+                                            </button>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle py-1 px-3 fw-semibold" type="button" id="btnActionsMenu" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius:8px;">
+                                                    <i class="bi bi-download me-1"></i>Xuất
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-light-subtle" aria-labelledby="btnActionsMenu" style="font-size:0.82rem;border-radius:10px;min-width:195px;">
+                                                    <li>
+                                                        <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2" id="btnExportPng">
+                                                            <i class="bi bi-file-earmark-image text-success"></i><span>Tải ảnh sơ đồ (PNG)</span>
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2" id="btnExportJsonTop">
+                                                            <i class="bi bi-code-slash text-primary"></i><span>Xem / Copy JSON</span>
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2" id="btnPrintChart" onclick="window.print()">
+                                                            <i class="bi bi-printer text-secondary"></i><span>In sơ đồ răng</span>
+                                                        </button>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div id="raoInfoHeadline" class="rao-info-headline"></div>
+
+                                    <table class="rao-jaw-table" aria-label="Tổng quan răng hàm trên và hàm dưới">
+                                        <thead>
+                                            <tr>
+                                                <th style="width:155px;"></th>
+                                                <th id="raoJawColTitle">Răng vĩnh viễn (FDI)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td class="jaw-label">Hàm trên</td>
+                                                <td id="raoUpperJawList"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="jaw-label">Hàm dưới</td>
+                                                <td id="raoLowerJawList"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                    <div class="rao-info-legend">
+                                        Chữ xanh đậm: răng đã điều trị hoặc có ghi nhận. Chữ đỏ in nghiêng đậm: răng có bệnh lý/vấn đề. Gạch ngang: răng mất/đã nhổ. (Click số răng để chọn nhanh trên sơ đồ)
+                                    </div>
+
+                                    <div id="raoSummaryList" class="rao-summary-list"></div>
+
+                                    <div class="mt-3 pt-2 border-top">
+                                        <label for="Canteeth_Note" class="fw-bold text-xs text-secondary mb-1">Ghi chú lâm sàng</label>
+                                        <textarea id="Canteeth_Note" class="form-control form-control-sm" rows="2" placeholder="Nhập ghi chú tổng quan bản đồ răng..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Drag-Select, Tooltip & Context Menu Overlays -->
+    <div id="dragSelectBox" aria-hidden="true"></div>
+    <div id="toothTooltip" role="tooltip" aria-hidden="true"></div>
+    <div id="toothContextMenu" role="menu" aria-hidden="true"></div>
+
+    <!-- Export JSON Modal -->
+    <div class="modal fade" id="jsonExportModal" tabindex="-1" aria-labelledby="jsonExportModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header py-2 px-3">
+                    <h6 class="modal-title fw-bold" id="jsonExportModalLabel"><i class="bi bi-code-slash text-primary me-2"></i>Dữ liệu JSON Sơ đồ răng (FDI)</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <pre id="jsonExportPre" class="bg-light border rounded-2 p-3 mb-0" style="font-size:0.78rem;max-height:420px;overflow:auto;"></pre>
+                </div>
+                <div class="modal-footer py-2 px-3">
+                    <span id="jsonCopyStatus" class="text-success text-xs fw-bold me-auto d-none"><i class="bi bi-check-lg me-1"></i>Đã sao chép JSON vào clipboard!</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="btnCopyJson"><i class="bi bi-clipboard me-1"></i>Copy JSON</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal (Secondary left / Danger right) -->
+    <div class="modal fade" id="odonDeleteConfirmModal" tabindex="-1" aria-labelledby="odonDeleteConfirmLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-white border-bottom px-4 py-3">
+                    <h6 class="modal-title fw-bold text-dark mb-0" id="odonDeleteConfirmLabel">Xác nhận xóa bản ghi</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body px-4 py-3 small text-secondary">
+                    Bạn có chắc chắn muốn xóa sơ đồ tình trạng răng này? Hành động này sẽ ẩn bản ghi khỏi danh sách hồ sơ bệnh nhân.
+                </div>
+                <div class="modal-footer bg-light border-top px-4 py-2 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-sm btn-danger px-3 fw-semibold" id="btnOdonConfirmDelete">Xóa bản ghi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fallback Toast for Host Pages without showToast() -->
+    <div id="odonToastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 2250;">
+        <div id="odonToast" class="toast align-items-center text-white bg-success border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="odonToastMsg">Thao tác thành công!</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Đóng"></button>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/js/odontogram/odontogram-engine.js(v=20261122a)}"></script>
+    <script th:src="@{/js/odontogram/odontogram-tab.js(v=20261122a)}"></script>
+</div>
+</body>
+</html>

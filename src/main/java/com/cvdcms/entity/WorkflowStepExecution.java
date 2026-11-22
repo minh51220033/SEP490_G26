@@ -33,6 +33,10 @@ public class WorkflowStepExecution {
     @JoinColumn(name = "step_id", nullable = false)
     private ClinicalWorkflowStep step;
 
+    /** Thứ tự hiển thị riêng của ca khám (giữ nguyên sequenceOrder của mẫu khi chèn bước phát sinh). */
+    @Column(name = "step_order")
+    private Integer stepOrder;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private WorkflowStepExecutionStatus status = WorkflowStepExecutionStatus.PENDING;

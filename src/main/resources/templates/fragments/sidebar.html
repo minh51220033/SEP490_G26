@@ -147,9 +147,9 @@
                         <a th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CLINICAL_WORKFLOWS'))}"
                             th:href="@{/doctor/workflows}" class="side-link side-sublink"
                             th:classappend="${activeMenu == 'workflows'} ? 'is-active' : ''"
-                            title="Quy trình kỹ thuật lâm sàng chuẩn Bộ Y tế (QĐ 3207/QĐ-BYT)">
+                            title="Quy trình điều trị">
                             <i class="bi bi-journal-medical" aria-hidden="true"></i><span class="side-link__label">Quy
-                                trình kỹ thuật</span>
+                                trình điều trị</span>
                         </a>
 
 

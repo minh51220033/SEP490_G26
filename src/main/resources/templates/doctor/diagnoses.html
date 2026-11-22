@@ -205,14 +205,15 @@
                 body.is-readonly-exam-view #mainTabContainer button[onclick*="FT43.quickAction"],
                 body.is-readonly-exam-view #mainTabContainer button[onclick*="FT43.openStepModal"],
                 body.is-readonly-exam-view #mainTabContainer button[onclick*="FT43.startService"],
-                body.is-readonly-exam-view #mainTabContainer button[onclick*="FT43.startSelectedService"] {
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="FT43.startSelectedService"],
+                body.is-readonly-exam-view #mainTabContainer .odon-write-only {
                     display: none !important;
                 }
                 body.is-readonly-exam-view #treatmentPlansTableBody .dropdown-toggle {
                     pointer-events: none !important;
                 }
                 body.is-readonly-exam-view #mainTabContainer input:not([type="search"]):not(#clinicalPhotoSearchInput),
-                body.is-readonly-exam-view #mainTabContainer select:not(#photoCategorySelect),
+                body.is-readonly-exam-view #mainTabContainer select:not(#photoCategorySelect):not(#odonTypeFilter),
                 body.is-readonly-exam-view #mainTabContainer textarea {
                     pointer-events: none !important;
                     background-color: #f8fafc !important;
@@ -366,7 +367,13 @@
                         </div>
 
                         <!-- THANH CÔNG CỤ KHI Ở CHẾ ĐỘ CHỈ XEM CHI TIẾT LƯỢT KHÁM -->
-                        <div class="d-flex align-items-center gap-2" th:if="${isReadOnlyView == true}">
+                        <div class="d-flex align-items-center gap-2 flex-wrap" th:if="${isReadOnlyView == true}">
+                            <a th:if="${canSwitchToEditMode == true and visit != null}"
+                               th:href="@{/doctor/examination/{id}/diagnoses(id=${visitToken != null ? visitToken : idCodec.encodeVisit(visit.visitId)})}"
+                               class="btn btn-primary btn-sm rounded-pill px-3 py-2 fw-bold d-inline-flex align-items-center gap-2 shadow-sm text-white"
+                               title="Chuyển sang chế độ Khám &amp; Cập nhật lượt khám này">
+                                <i class="bi bi-pencil-square"></i><span>Mở bàn khám</span>
+                            </a>
                             <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-2 rounded-pill fw-bold">
                                 <i class="bi bi-eye-fill me-1"></i>Chế độ Chỉ xem (Không chỉnh sửa)
                             </span>
@@ -529,10 +536,18 @@
                             <a href="javascript:void(0)" class="df-subnav-item active" data-tab="tab-examination" onclick="switchMainTab('tab-examination', this)">
                                 <i class="bi bi-heart-pulse-fill"></i> Khám &amp; Điều trị
                             </a>
+                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-odontogram" onclick="switchMainTab('tab-odontogram', this)">
+                                <i class="bi bi-grid-3x3-gap"></i> Tình trạng răng
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-odontogram">0</span>
+                            </a>
                             <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-treatment-plan" onclick="switchMainTab('tab-treatment-plan', this)">
                                 <i class="bi bi-diagram-3"></i> Kế hoạch điều trị
                                 <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-treatment-plan"
                                       th:text="${treatmentPlans != null ? #lists.size(treatmentPlans) : 0}">0</span>
+                            </a>
+                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-workflow-execution" onclick="switchMainTab('tab-workflow-execution', this)">
+                                <i class="bi bi-list-check"></i> Quy trình điều trị
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num d-none" id="ft43SubnavCount">0</span>
                             </a>
                             <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-prescriptions" onclick="switchMainTab('tab-prescriptions', this)">
                                 <i class="bi bi-capsule"></i> Đơn thuốc
@@ -553,10 +568,6 @@
                                 <i class="bi bi-tools"></i> Dịch vụ thực hiện
                                 <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-performed-services"
                                       th:text="${performedServices != null ? #lists.size(performedServices) : 0}">0</span>
-                            </a>
-                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-workflow-execution" onclick="switchMainTab('tab-workflow-execution', this)">
-                                <i class="bi bi-list-check"></i> Quy trình thực hiện
-                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num d-none" id="ft43SubnavCount">0</span>
                             </a>
                             <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-labo" onclick="switchMainTab('tab-labo', this)">
                                 <i class="bi bi-box-seam"></i> Đặt xưởng
@@ -647,6 +658,11 @@
                         <div th:replace="~{doctor/fragments/icd10-diagnosis :: icd10DiagnosisSection}"></div>
 
                     </div>
+                </div>
+
+                <!-- TAB: TÌNH TRẠNG RĂNG (ODONTOGRAM FDI) -->
+                <div class="df-tab-pane" id="tab-odontogram" style="display: none;">
+                    <div th:replace="~{doctor/fragments/odontogram-tab :: odontogramTab(${patient != null ? patient.profileId : null}, ${visit != null ? visit.visitId : null}, ${visit != null ? visit.visitCode : ''}, ${isClinicalLocked}, ${patient != null and patient.dob != null ? #temporals.format(patient.dob, 'yyyy-MM-dd') : ''}, 'tabBadge-tab-odontogram')}"></div>
                 </div>
 
                 <!-- TAB 3: KẾ HOẠCH ĐIỀU TRỊ (FT15) -->
@@ -958,7 +974,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('mainTabContainer');
             if (container) {
-                container.querySelectorAll('input:not([type="search"]):not(#clinicalPhotoSearchInput), select:not(#photoCategorySelect), textarea').forEach(el => {
+                container.querySelectorAll('input:not([type="search"]):not(#clinicalPhotoSearchInput), select:not(#photoCategorySelect):not(#odonTypeFilter), textarea').forEach(el => {
                     el.setAttribute('readonly', 'readonly');
                     el.setAttribute('disabled', 'disabled');
                 });
@@ -1040,6 +1056,9 @@
             if (tabId === 'tab-workflow-execution' && window.FT43 && typeof window.FT43.reload === 'function') {
                 window.FT43.reload();
             }
+            if (tabId === 'tab-odontogram' && window.OdontogramTab && typeof window.OdontogramTab.onTabShown === 'function') {
+                window.OdontogramTab.onTabShown();
+            }
         }
 
         // 3. Cập nhật hash trên URL để khi reload hoặc copy link giữ đúng tab đang xem
@@ -1058,12 +1077,13 @@
         const tabBreadcrumbTitles = {
             'tab-patient-info': 'Thông tin bệnh nhân',
             'tab-examination': 'Khám & Điều trị',
+            'tab-odontogram': 'Tình trạng răng',
             'tab-treatment-plan': 'Kế hoạch điều trị',
+            'tab-workflow-execution': 'Quy trình điều trị',
             'tab-prescriptions': 'Đơn thuốc',
             'tab-appointments': 'Lịch hẹn',
             'tab-customer-care': 'Chăm sóc',
             'tab-performed-services': 'Dịch vụ thực hiện',
-            'tab-workflow-execution': 'Quy trình thực hiện',
             'tab-labo': 'Đặt xưởng',
             'tab-clinical-photos': 'Film ảnh',
             'tab-instructions': 'Lời dặn'
@@ -1080,6 +1100,7 @@
         let hash = window.location.hash ? window.location.hash.replace(/^#/, '') : '';
         if (!hash) return;
         // Chuẩn hóa alias
+        if (hash === 'odontogram' || hash === 'dental-chart') hash = 'tab-odontogram';
         if (hash === 'treatmentPlanSection' || hash === 'treatment-plan') hash = 'tab-treatment-plan';
         if (hash === 'prescriptionsSection' || hash === 'prescriptions') hash = 'tab-prescriptions';
         if (hash === 'performedServicesSection' || hash === 'performed-services') hash = 'tab-performed-services';

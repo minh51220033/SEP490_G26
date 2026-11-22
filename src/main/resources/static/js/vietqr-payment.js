@@ -4,7 +4,7 @@
  * Tự động chọn tài khoản mặc định theo chi nhánh, cho phép đổi tài khoản cùng chi nhánh.
  * Chống race-condition: Dùng request sequence + AbortController + kiểm tra trạng thái trước khi render.
  */
-class VietQrPaymentBox {
+var VietQrPaymentBox = window.VietQrPaymentBox || (window.VietQrPaymentBox = class VietQrPaymentBox {
     constructor(options) {
         this.container = typeof options.container === 'string' ? document.getElementById(options.container) : options.container;
         this.methodSelect = typeof options.methodSelect === 'string' ? document.getElementById(options.methodSelect) : options.methodSelect;
@@ -420,6 +420,6 @@ class VietQrPaymentBox {
         if (this.errorEl) this.errorEl.style.display = 'none';
         if (this.contentEl) this.contentEl.style.display = 'none';
     }
-}
+});
 
 window.VietQrPaymentBox = VietQrPaymentBox;

@@ -44,6 +44,8 @@ public interface PerformedServiceRepository extends JpaRepository<PerformedServi
 
     List<PerformedService> findByPlanItem_PlanItemIdAndStatusNot(Long planItemId, PerformedServiceStatus status);
 
+    List<PerformedService> findByPlanItem_PlanItemId(Long planItemId);
+
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT ps FROM PerformedService ps WHERE ps.performedId = :id")
     java.util.Optional<PerformedService> findByIdForUpdate(@Param("id") Long id);

@@ -189,17 +189,25 @@ public class AttendanceService {
         }
 
         // LỖI 5: Giới hạn trần giờ làm việc (tránh tính khống 14-16 tiếng khi nhân viên quên check-out)
+        // Dùng LocalDateTime để tránh lỗi 23:30 + 30 phút bị vòng về 00:00 của LocalTime
         LocalTime shiftEnd = currentShift != null ? currentShift.getShift().getEndTime() : null;
-        LocalTime maxAllowedTime = shiftEnd != null ? shiftEnd.plusMinutes(30) : null;
         LocalDateTime effectiveEndTime = now;
 
-        if (shiftEnd != null && maxAllowedTime != null && now.toLocalTime().isAfter(maxAllowedTime)) {
-            effectiveEndTime = LocalDateTime.of(today, shiftEnd);
-            String capNote = "Tự động chốt theo giờ ca (" + shiftEnd + ")";
-            if (record.getNotes() == null || record.getNotes().isBlank()) {
-                record.setNotes(capNote);
-            } else if (!record.getNotes().contains("Tự động chốt")) {
-                record.setNotes(record.getNotes() + " | " + capNote);
+        if (shiftEnd != null) {
+            LocalDateTime shiftEndDateTime = LocalDateTime.of(today, shiftEnd);
+            if (currentShift.getShift().getStartTime() != null && shiftEnd.isBefore(currentShift.getShift().getStartTime())) {
+                shiftEndDateTime = shiftEndDateTime.plusDays(1); // Ca đêm qua ngày hôm sau
+            }
+            LocalDateTime maxAllowedDateTime = shiftEndDateTime.plusMinutes(30);
+
+            if (now.isAfter(maxAllowedDateTime)) {
+                effectiveEndTime = shiftEndDateTime;
+                String capNote = "Tự động chốt theo giờ ca (" + shiftEnd + ")";
+                if (record.getNotes() == null || record.getNotes().isBlank()) {
+                    record.setNotes(capNote);
+                } else if (!record.getNotes().contains("Tự động chốt")) {
+                    record.setNotes(record.getNotes() + " | " + capNote);
+                }
             }
         }
 

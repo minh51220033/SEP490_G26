@@ -58,6 +58,35 @@ public class AdminLeaveController {
 
         model.addAttribute("activeMenu", "admin-leaves");
 
+        // Danh mục lọc
+        List<Branch> branches = branchService.getActiveBranches();
+        model.addAttribute("branches", branches);
+
+        // Mặc định ban đầu của màn Duyệt nghỉ phép là Toàn hệ thống (trừ khi người dùng chủ động chọn chi nhánh trên URL)
+        if (branchId != null) {
+            Long checkId = branchId;
+            Branch chosen = branches.stream().filter(b -> b.getBranchId().equals(checkId)).findFirst().orElse(null);
+            if (chosen != null) {
+                model.addAttribute("selectedBranchId", branchId);
+                model.addAttribute("currentBranchId", branchId);
+                model.addAttribute("currentBranch", chosen);
+                model.addAttribute("selectedBranch", chosen);
+                model.addAttribute("currentBranchCode", chosen.getBranchCode());
+                model.addAttribute("currentBranchName", chosen.getBranchName());
+                session.setAttribute("currentBranchId", branchId);
+            } else {
+                branchId = null;
+            }
+        }
+        if (branchId == null) {
+            model.addAttribute("selectedBranchId", null);
+            model.addAttribute("currentBranchId", null);
+            model.addAttribute("currentBranch", null);
+            model.addAttribute("selectedBranch", null);
+            model.addAttribute("currentBranchCode", null);
+            model.addAttribute("currentBranchName", null);
+        }
+
         // Danh sách đơn xin nghỉ theo bộ lọc
         List<LeaveRequest> requests = leaveService.filterAdminLeaveRequests(
                 branchId, status, staffId, startDate, endDate, keyword
@@ -67,10 +96,6 @@ public class AdminLeaveController {
         // Số liệu tổng hợp (Badge counter)
         Map<String, Long> summary = leaveService.getAdminSummaryCounts();
         model.addAttribute("summary", summary);
-
-        // Danh mục lọc
-        List<Branch> branches = branchService.getActiveBranches();
-        model.addAttribute("branches", branches);
 
         List<StaffProfile> doctors = leaveService.getAllDoctors();
         model.addAttribute("doctors", doctors);
