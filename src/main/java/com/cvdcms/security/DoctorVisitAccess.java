@@ -93,8 +93,20 @@ public class DoctorVisitAccess {
     private com.cvdcms.repository.ClinicalQueueTicketRepository queueTickets;
 
     public void requireWorkflowExecution(HttpSession session, Long executionId) {
+        requireWorkflowExecution(session, executionId, null);
+    }
+
+    public void requireWorkflowExecution(HttpSession session, Long executionId, Long activeVisitId) {
         var execution = workflowExecutions.findById(executionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (activeVisitId != null) {
+            Visit activeVisit = requireActiveClinicalExam(session, activeVisitId);
+            if (execution.getPatientProfile() != null && activeVisit.getPatientProfile() != null
+                    && !execution.getPatientProfile().getProfileId().equals(activeVisit.getPatientProfile().getProfileId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Quy trình không thuộc hồ sơ bệnh nhân của lượt khám này.");
+            }
+            return;
+        }
         require(session, execution.getVisit().getVisitId());
     }
 
@@ -175,12 +187,12 @@ public class DoctorVisitAccess {
         require(session, visitId);
         Visit visit = visits.findById(visitId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy ca khám."));
-        if (visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.WAITING
-                || visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.WAITING_RESULT
-                || visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.CANCELLED) {
+        if (visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.CANCELLED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Bệnh nhân còn đang chờ khám hoặc chưa bấm nút 'Vào khám'. Chỉ được mở và ghi điều trị cho ca hệ thống đã gọi vào khám.");
+                    "Ca khám đã bị hủy, không thể thao tác.");
         }
+
+        boolean hasActiveDeskTicket = false;
         if (queueTickets != null) {
             var activeTicketOpt = queueTickets.findByVisitIdAndTypeOrderByDesc(visitId, com.cvdcms.entity.enums.QueueType.EXAM)
                     .stream()
@@ -194,7 +206,15 @@ public class DoctorVisitAccess {
                     throw new ResponseStatusException(HttpStatus.CONFLICT,
                             "Lượt khám chưa bắt đầu phục vụ trên hàng chờ. Vui lòng dùng nút 'Vào khám' cho đúng lượt Đang gọi.");
                 }
+                hasActiveDeskTicket = qStatus == com.cvdcms.entity.enums.QueueStatus.IN_SERVICE;
             }
+        }
+
+        // Nếu ticket đang IN_SERVICE tại ghế bác sĩ thì không bị khóa bởi trạng thái trung gian WAITING_PARACLINICAL / WAITING_RESULT
+        if (!hasActiveDeskTicket && (visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.WAITING
+                || visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.WAITING_RESULT)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Bệnh nhân còn đang chờ khám hoặc chưa bấm nút 'Vào khám'. Chỉ được mở và ghi điều trị cho ca hệ thống đã gọi vào khám.");
         }
         return visit;
     }

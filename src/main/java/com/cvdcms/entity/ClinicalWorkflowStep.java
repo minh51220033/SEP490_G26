@@ -46,6 +46,10 @@ public class ClinicalWorkflowStep {
     @Column(name = "step_type", nullable = false, length = 30)
     private StepType stepType = StepType.CLINICAL;
 
+    /** Khung nhập liệu chuyên môn khi vào khám: CLINICAL_EXAM, XRAY, ENDODONTICS, PROCEDURE, PROSTHETICS_LABO. */
+    @Column(name = "frame_key", length = 40)
+    private String frameKey;
+
     @Column(name = "sequence_order", nullable = false)
     private Integer sequenceOrder;
 
@@ -54,6 +58,14 @@ public class ClinicalWorkflowStep {
 
     @Column(name = "completion_criteria", columnDefinition = "TEXT")
     private String completionCriteria;
+
+    /** Danh sách trường cấu hình riêng cho bước (JSON array). */
+    @Column(name = "custom_fields_json", columnDefinition = "TEXT")
+    private String customFieldsJson;
+
+    /** Khác null nếu là bước phát sinh riêng cho 1 WorkflowExecution cụ thể, không thuộc template chuẩn. */
+    @Column(name = "adhoc_execution_id")
+    private Long adhocExecutionId;
 
     @Column(name = "requires_clinical_approval", nullable = false)
     private Boolean requiresClinicalApproval = false;

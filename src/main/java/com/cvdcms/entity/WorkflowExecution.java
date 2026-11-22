@@ -37,6 +37,16 @@ public class WorkflowExecution {
     @JoinColumn(name = "branch_id", nullable = false)
     private Branch branch;
 
+    /** Liên kết tùy chọn tới hạng mục trong Kế hoạch điều trị để đồng bộ tiến độ & giữ continuity nhiều buổi khám. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plan_item_id")
+    private TreatmentPlanItem planItem;
+
+    /** Liên kết tùy chọn tới cả Giai đoạn (1 dịch vụ nhiều bước) trong Kế hoạch điều trị để đồng bộ từng bước 1-1. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plan_stage_id")
+    private TreatmentPlanStage planStage;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "current_step_id")
     private ClinicalWorkflowStep currentStep;

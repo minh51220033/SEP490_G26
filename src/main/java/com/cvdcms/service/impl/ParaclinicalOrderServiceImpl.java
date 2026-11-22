@@ -40,6 +40,9 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private ServiceCommissionRepository serviceCommissionRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.ClinicalQueueTicketRepository clinicalQueueTicketRepository;
+
     public void setServiceCommissionService(com.cvdcms.service.ServiceCommissionService serviceCommissionService) {
         this.serviceCommissionService = serviceCommissionService;
     }
@@ -356,7 +359,12 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             paraclinicalOrderRepository.save(parentOrder);
             Visit v = parentOrder.getVisit();
             if (v != null && v.getStatus() == VisitStatus.WAITING_PARACLINICAL) {
-                v.setStatus(VisitStatus.WAITING_RESULT);
+                boolean hasInServiceTicket = clinicalQueueTicketRepository != null
+                        && clinicalQueueTicketRepository.findByVisitIdAndTypeOrderByDesc(
+                                        v.getVisitId(), com.cvdcms.entity.enums.QueueType.EXAM)
+                                .stream()
+                                .anyMatch(t -> t.getStatus() == com.cvdcms.entity.enums.QueueStatus.IN_SERVICE);
+                v.setStatus(hasInServiceTicket ? VisitStatus.IN_EXAM : VisitStatus.WAITING_RESULT);
                 visitRepository.save(v);
             }
         }

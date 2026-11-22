@@ -770,15 +770,22 @@ public class ClinicQueueCoordinatorService {
 
         List<QueueTicket> doctorTickets = tickets.findForDoctorOnDay(branchId, today, QueueType.EXAM, doctorId);
 
-        // 1. Idempotency: nếu đang có ca IN_SERVICE của bàn này, mở lại chính ca đó
+        // 1. Idempotency: nếu đang có ca IN_SERVICE của bàn này, mở lại chính ca đó (kể cả khi vừa xong CLS)
         Optional<QueueTicket> existingInService = doctorTickets.stream()
                 .filter(t -> t.getStatus() == QueueStatus.IN_SERVICE
                         && t.getVisit() != null
-                        && ACTIVE_EXAM_VISIT_STATUSES.contains(t.getVisit().getStatus()))
+                        && (ACTIVE_EXAM_VISIT_STATUSES.contains(t.getVisit().getStatus())
+                                || t.getVisit().getStatus() == VisitStatus.WAITING_PARACLINICAL
+                                || t.getVisit().getStatus() == VisitStatus.WAITING_RESULT))
                 .findFirst();
         if (existingInService.isPresent()) {
             QueueTicket activeTicket = existingInService.get();
             Visit activeVisit = activeTicket.getVisit();
+            if (activeVisit.getStatus() == VisitStatus.WAITING_PARACLINICAL
+                    || activeVisit.getStatus() == VisitStatus.WAITING_RESULT) {
+                activeVisit.setStatus(VisitStatus.IN_EXAM);
+                visits.saveAndFlush(activeVisit);
+            }
             examinations.ensureForAssignedVisit(activeVisit.getVisitId());
             return new EnterExamResult(activeVisit, activeTicket, urlIdCodec.encodeVisit(activeVisit.getVisitId()), true);
         }
