@@ -205,14 +205,15 @@
                 body.is-readonly-exam-view #mainTabContainer button[onclick*="FT43.quickAction"],
                 body.is-readonly-exam-view #mainTabContainer button[onclick*="FT43.openStepModal"],
                 body.is-readonly-exam-view #mainTabContainer button[onclick*="FT43.startService"],
-                body.is-readonly-exam-view #mainTabContainer button[onclick*="FT43.startSelectedService"] {
+                body.is-readonly-exam-view #mainTabContainer button[onclick*="FT43.startSelectedService"],
+                body.is-readonly-exam-view #mainTabContainer .odon-write-only {
                     display: none !important;
                 }
                 body.is-readonly-exam-view #treatmentPlansTableBody .dropdown-toggle {
                     pointer-events: none !important;
                 }
                 body.is-readonly-exam-view #mainTabContainer input:not([type="search"]):not(#clinicalPhotoSearchInput),
-                body.is-readonly-exam-view #mainTabContainer select:not(#photoCategorySelect),
+                body.is-readonly-exam-view #mainTabContainer select:not(#photoCategorySelect):not(#odonTypeFilter),
                 body.is-readonly-exam-view #mainTabContainer textarea {
                     pointer-events: none !important;
                     background-color: #f8fafc !important;
@@ -535,6 +536,10 @@
                             <a href="javascript:void(0)" class="df-subnav-item active" data-tab="tab-examination" onclick="switchMainTab('tab-examination', this)">
                                 <i class="bi bi-heart-pulse-fill"></i> Khám &amp; Điều trị
                             </a>
+                            <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-odontogram" onclick="switchMainTab('tab-odontogram', this)">
+                                <i class="bi bi-grid-3x3-gap"></i> Tình trạng răng
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-odontogram">0</span>
+                            </a>
                             <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-treatment-plan" onclick="switchMainTab('tab-treatment-plan', this)">
                                 <i class="bi bi-diagram-3"></i> Kế hoạch điều trị
                                 <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num" id="tabBadge-tab-treatment-plan"
@@ -653,6 +658,11 @@
                         <div th:replace="~{doctor/fragments/icd10-diagnosis :: icd10DiagnosisSection}"></div>
 
                     </div>
+                </div>
+
+                <!-- TAB: TÌNH TRẠNG RĂNG (ODONTOGRAM FDI) -->
+                <div class="df-tab-pane" id="tab-odontogram" style="display: none;">
+                    <div th:replace="~{doctor/fragments/odontogram-tab :: odontogramTab(${patient != null ? patient.profileId : null}, ${visit != null ? visit.visitId : null}, ${visit != null ? visit.visitCode : ''}, ${isClinicalLocked}, ${patient != null and patient.dob != null ? #temporals.format(patient.dob, 'yyyy-MM-dd') : ''}, 'tabBadge-tab-odontogram')}"></div>
                 </div>
 
                 <!-- TAB 3: KẾ HOẠCH ĐIỀU TRỊ (FT15) -->
@@ -964,7 +974,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('mainTabContainer');
             if (container) {
-                container.querySelectorAll('input:not([type="search"]):not(#clinicalPhotoSearchInput), select:not(#photoCategorySelect), textarea').forEach(el => {
+                container.querySelectorAll('input:not([type="search"]):not(#clinicalPhotoSearchInput), select:not(#photoCategorySelect):not(#odonTypeFilter), textarea').forEach(el => {
                     el.setAttribute('readonly', 'readonly');
                     el.setAttribute('disabled', 'disabled');
                 });
@@ -1046,6 +1056,9 @@
             if (tabId === 'tab-workflow-execution' && window.FT43 && typeof window.FT43.reload === 'function') {
                 window.FT43.reload();
             }
+            if (tabId === 'tab-odontogram' && window.OdontogramTab && typeof window.OdontogramTab.onTabShown === 'function') {
+                window.OdontogramTab.onTabShown();
+            }
         }
 
         // 3. Cập nhật hash trên URL để khi reload hoặc copy link giữ đúng tab đang xem
@@ -1064,6 +1077,7 @@
         const tabBreadcrumbTitles = {
             'tab-patient-info': 'Thông tin bệnh nhân',
             'tab-examination': 'Khám & Điều trị',
+            'tab-odontogram': 'Tình trạng răng',
             'tab-treatment-plan': 'Kế hoạch điều trị',
             'tab-workflow-execution': 'Quy trình điều trị',
             'tab-prescriptions': 'Đơn thuốc',
@@ -1086,6 +1100,7 @@
         let hash = window.location.hash ? window.location.hash.replace(/^#/, '') : '';
         if (!hash) return;
         // Chuẩn hóa alias
+        if (hash === 'odontogram' || hash === 'dental-chart') hash = 'tab-odontogram';
         if (hash === 'treatmentPlanSection' || hash === 'treatment-plan') hash = 'tab-treatment-plan';
         if (hash === 'prescriptionsSection' || hash === 'prescriptions') hash = 'tab-prescriptions';
         if (hash === 'performedServicesSection' || hash === 'performed-services') hash = 'tab-performed-services';

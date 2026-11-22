@@ -1,0 +1,1178 @@
+/* =========================================================================
+ * DENTALFLOW ODONTOGRAM MODULE STYLES
+ * Scoped cleanly under .df-odon-* and .df-odon-scope to prevent CSS leakage
+ * ========================================================================= */
+
+.df-odon-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+.df-odon-card-header {
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 14px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.df-odon-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.df-odon-subtitle {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.df-odon-toolbar {
+  padding: 14px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.df-odon-search-wrap {
+  position: relative;
+  flex: 1 1 260px;
+  max-width: 360px;
+  min-width: 220px;
+}
+
+.df-odon-search-wrap i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.df-odon-search-wrap input {
+  width: 100%;
+  height: 38px;
+  padding: 6px 12px 6px 36px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  font-size: 13.5px;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.df-odon-search-wrap input:focus {
+  background: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
+}
+
+.df-odon-primary-btn {
+  background: #0284c7;
+  border: 1px solid #0284c7;
+  color: #ffffff !important;
+  font-size: 13.5px;
+  font-weight: 600;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.df-odon-primary-btn:hover {
+  background: #0369a1;
+  border-color: #0369a1;
+}
+
+.df-odon-secondary-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155 !important;
+  font-size: 13.5px;
+  font-weight: 600;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.df-odon-secondary-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a !important;
+}
+
+.df-odon-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-bottom: 0;
+}
+
+.df-odon-table thead th {
+  background: #f8fafc;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 12px 14px;
+  border-bottom: 1.5px solid #e2e8f0;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.df-odon-table tbody td {
+  padding: 13px 14px;
+  font-size: 13.5px;
+  color: #1e293b;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  transition: background-color 0.12s ease;
+}
+
+.df-odon-table tbody tr:hover td {
+  background: #f0f9ff;
+}
+
+.df-odon-date-link {
+  color: #0284c7;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.df-odon-date-link:hover {
+  color: #0369a1;
+  text-decoration: underline;
+}
+
+.df-odon-type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.df-odon-type-badge.adult {
+  background: #0ea5e9;
+  color: #ffffff;
+}
+
+.df-odon-type-badge.child {
+  background: #0d9488;
+  color: #ffffff;
+}
+
+.df-odon-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.df-odon-meta-pill.status {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.df-odon-meta-pill.plan {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.df-odon-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+
+.df-odon-icon-btn:hover {
+  background: #f1f5f9;
+  color: #0284c7;
+  border-color: #cbd5e1;
+}
+
+.df-odon-icon-btn.delete {
+  color: #94a3b8;
+}
+
+.df-odon-icon-btn.delete:hover {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.df-odon-empty {
+  padding: 44px 20px;
+  text-align: center;
+}
+
+.df-odon-empty-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin-bottom: 12px;
+}
+
+.df-odon-editor-bar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 18px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+/* =========================================================================
+ * SCOPED ODONTOGRAM EDITOR STYLES (.df-odon-scope)
+ * ========================================================================= */
+.df-odon-scope {
+  --vt-primary: #0c82e8;
+  --vt-primary-dark: #0969c3;
+  --vt-navy: #1e293b;
+  --vt-muted: #64748b;
+  --vt-bg: #f1f5f9;
+  --vt-card-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  --vt-border: #e2e8f0;
+  color: var(--vt-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.df-odon-scope .cursor-pointer {
+  cursor: pointer;
+}
+
+.df-odon-scope .text-sm {
+  font-size: 0.875rem !important;
+}
+
+.df-odon-scope .text-xs {
+  font-size: 0.75rem !important;
+}
+
+.df-odon-scope .border-radius-lg {
+  border-radius: 0.75rem;
+}
+
+.df-odon-scope hr.horizontal {
+  background-color: transparent;
+  border: 0;
+  height: 1px;
+  opacity: 0.25;
+}
+
+.df-odon-scope hr.horizontal.dark {
+  background-image: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.4), transparent);
+  opacity: 0.65;
+}
+
+.df-odon-scope .card.vt-odon-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: var(--vt-card-shadow);
+}
+
+.df-odon-scope .card.vt-odon-card .card-header {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #f1f5f9;
+  border-radius: 16px 16px 0 0;
+  padding: 0.95rem 1.25rem 0.8rem;
+}
+
+.df-odon-scope .card.vt-odon-card h6 {
+  color: var(--vt-navy);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.df-odon-scope #CandisArea_Large {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 10px !important;
+  margin-right: 12px;
+}
+
+.df-odon-scope #Canteeth_TeethArea {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #ffffff 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 10px 6px;
+}
+
+.df-odon-scope .badge-new-cond {
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: #dcfce7;
+  color: #15803d;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.df-odon-scope .rao-inline-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.df-odon-scope .rao-seg {
+  display: inline-flex;
+  background: #f1f5f9;
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.df-odon-scope .rao-seg button {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 6px;
+  outline: none;
+  box-sizing: border-box;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.df-odon-scope .rao-seg button:focus-visible {
+  box-shadow: 0 0 0 2px rgba(12, 130, 232, 0.28);
+}
+
+.df-odon-scope .rao-seg button.active {
+  background: #0c82e8;
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 1px 3px rgba(12, 130, 232, 0.25);
+}
+
+.df-odon-scope .rao-seg button.active-plan {
+  background: #ffffff;
+  color: #d97706;
+  border-color: transparent;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.df-odon-scope .diseaseitem.paint-armed {
+  background-color: #ecfeff !important;
+  outline: 1.5px solid #0891b2;
+  border-radius: 8px;
+}
+
+.df-odon-scope #Canteeth_UpDown.paint-cursor .canvasTeethFace,
+.df-odon-scope #Canteeth_UpDown.paint-cursor .canvasTeethCircle,
+.df-odon-scope #Canteeth_UpDown.paint-cursor .teeth_nameTeeth {
+  cursor: crosshair !important;
+}
+
+.df-odon-scope .rao-action-btn {
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 7px;
+}
+
+.df-odon-scope .rao-action-btn:hover {
+  background: #f8fafc;
+  color: var(--vt-primary);
+  border-color: #bae6fd;
+}
+
+@media (max-width: 1299px) {
+  .df-odon-scope #CandisArea_Large {
+    display: none !important;
+  }
+  .df-odon-scope #CandisArea_Short {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 1300px) {
+  .df-odon-scope #CandisArea_Large {
+    display: block !important;
+  }
+  .df-odon-scope #CandisArea_Short {
+    display: none !important;
+  }
+}
+
+.df-odon-scope .shortitem:hover {
+  background: var(--vt-primary) !important;
+}
+
+.df-odon-scope #CandisArea_Short {
+  overflow-y: auto;
+  max-height: 130px;
+  overflow-x: hidden;
+}
+
+.df-odon-scope #Dissearch_Area .input-group-text {
+  background: #fff;
+  border-color: #d2d6da;
+  color: #67748e;
+}
+
+.df-odon-scope #Dissearch_Area .form-control {
+  border-color: #d2d6da;
+  font-size: 0.85rem;
+  box-shadow: none;
+}
+
+.df-odon-scope #Candisease .accordion-item {
+  border: none;
+  background: transparent;
+}
+
+.df-odon-scope #Candisease .accordion-button {
+  background: #ffffff;
+  box-shadow: none !important;
+  color: var(--vt-primary) !important;
+  font-weight: 500;
+}
+
+.df-odon-scope #Candisease .accordion-button:not(.collapsed) {
+  background: #ffffff;
+  color: var(--vt-primary) !important;
+}
+
+.df-odon-scope .avatar-sm {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.df-odon-scope .bg-gray-300 {
+  background-color: #dee2e6 !important;
+}
+
+.df-odon-scope .diseaseitem {
+  transition: background-color 0.14s ease, transform 0.1s ease;
+}
+
+.df-odon-scope .diseaseitem:hover {
+  background-color: #f0f9ff !important;
+}
+
+.df-odon-scope .diseaseitem:focus-visible {
+  outline: 2px solid var(--vt-primary);
+  outline-offset: -2px;
+}
+
+.df-odon-scope .teethElement {
+  width: 46px;
+  margin-left: 3px !important;
+  margin-right: 3px !important;
+  padding: 3px 2px 4px;
+  flex-shrink: 0;
+  user-select: none;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: background-color 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.df-odon-scope .teethElement:hover {
+  border-color: #93c5fd;
+  background-color: #f8fbff;
+  box-shadow: 0 2px 8px rgba(12, 130, 232, 0.08);
+}
+
+.df-odon-scope .teethElement .teeth_part_root_face,
+.df-odon-scope .teethElement .teeth_part_circle {
+  position: relative;
+  z-index: 1;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  transition: background-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.df-odon-scope .teethElement .teeth_text {
+  position: relative;
+  z-index: 1;
+  height: 22px;
+  font-size: 0.7rem !important;
+  letter-spacing: 0.2px;
+  margin-bottom: 2px;
+}
+
+.df-odon-scope .teethElement .teeth_nameTeeth {
+  position: relative;
+  z-index: 1;
+  height: 21px;
+  line-height: 21px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.df-odon-scope .teethElement .teeth_nameTeeth:hover {
+  background-color: #e0f2fe;
+}
+
+.df-odon-scope .teethElement.tooth-has-selected {
+  background-color: #eff6ff;
+  border-color: #0c82e8;
+  box-shadow: inset 0 0 0 1px #0c82e8, 0 0 0 2px rgba(12, 130, 232, 0.14);
+  z-index: 6;
+}
+
+.df-odon-scope .teethElement.tooth-has-selected .teeth_nameTeeth {
+  background-color: #0c82e8;
+  color: #ffffff !important;
+}
+
+.df-odon-scope .teethElement.tooth-sel-circle .teeth_part_circle {
+  background-color: rgba(12, 130, 232, 0.12);
+  box-shadow: inset 0 0 0 1.5px #0c82e8;
+}
+
+.df-odon-scope #Canteeth_UpDown.mode-plan .teethElement.tooth-has-selected {
+  background-color: #fffbeb;
+  border: 1px dashed #d97706;
+  box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.16);
+  outline: none;
+}
+
+.df-odon-scope #Canteeth_UpDown.mode-plan .teethElement.tooth-has-selected .teeth_nameTeeth {
+  background-color: #d97706;
+  color: #ffffff !important;
+}
+
+.df-odon-scope #Canteeth_UpDown.mode-plan .teethElement.tooth-sel-circle .teeth_part_circle {
+  background-color: rgba(245, 158, 11, 0.16);
+  box-shadow: inset 0 0 0 1.5px #d97706;
+}
+
+.df-odon-scope .teethElement.tooth-has-plan .teeth_nameTeeth {
+  box-shadow: inset 0 -2px 0 0 #d97706;
+}
+
+.df-odon-scope #Canteeth_UpDown.mode-plan .teethElement.tooth-has-plan:not(.tooth-has-selected) {
+  background-color: #fffbeb;
+  border: 1px dashed #d97706;
+  outline: none;
+}
+
+/* Drag-to-Select Light Ocean-Blue Marquee Box */
+#dragSelectBox {
+  position: fixed;
+  z-index: 2150;
+  pointer-events: none;
+  background: rgba(56, 189, 248, 0.22);
+  border: 1.5px solid rgba(14, 165, 233, 0.85);
+  border-radius: 6px;
+  opacity: 0;
+  display: none;
+  transition: opacity 110ms ease-out;
+}
+
+.df-odon-scope .chart-corner-clear-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 15;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 4px 11px;
+  border-radius: 8px;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  transition: all 0.14s ease;
+}
+
+.df-odon-scope .chart-corner-clear-btn:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.df-odon-scope .chart-corner-clear-btn.eraser-active {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #dc2626;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.16);
+}
+
+.df-odon-scope #Canteeth_UpDown.eraser-cursor .canvasTeethFace,
+.df-odon-scope #Canteeth_UpDown.eraser-cursor .canvasTeethCircle,
+.df-odon-scope #Canteeth_UpDown.eraser-cursor .teeth_nameTeeth {
+  cursor: pointer !important;
+}
+
+/* Smart Right-Click Context Menu */
+#toothContextMenu {
+  position: fixed;
+  z-index: 2200;
+  min-width: 235px;
+  max-width: 290px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.16);
+  padding: 6px;
+  display: none;
+  font-size: 0.78rem;
+  color: #1e293b;
+}
+
+#toothContextMenu .ctx-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px 6px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 4px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+#toothContextMenu .ctx-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  transition: background-color 0.12s ease;
+}
+
+#toothContextMenu .ctx-row:hover {
+  background: #f8fafc;
+}
+
+#toothContextMenu .ctx-dot-solid {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #0c82e8;
+  flex-shrink: 0;
+}
+
+#toothContextMenu .ctx-dot-plan {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d97706;
+  flex-shrink: 0;
+}
+
+#toothContextMenu .ctx-icon-btn {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  padding: 2px 5px;
+  border-radius: 5px;
+  line-height: 1;
+  transition: color 0.12s ease, background-color 0.12s ease;
+}
+
+#toothContextMenu .ctx-icon-btn.ctx-del:hover {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+#toothContextMenu .ctx-icon-btn.ctx-done {
+  color: #16a34a;
+}
+
+#toothContextMenu .ctx-icon-btn.ctx-done:hover {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+#toothContextMenu .ctx-clear-all {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #dc2626;
+  font-weight: 600;
+  text-align: left;
+  padding: 6px 8px;
+  margin-top: 4px;
+  border-top: 1px solid #f1f5f9;
+  border-radius: 0 0 7px 7px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.12s ease;
+}
+
+#toothContextMenu .ctx-clear-all:hover {
+  background: #fef2f2;
+}
+
+/* Floating Clinical Tooltip */
+#toothTooltip {
+  position: fixed;
+  z-index: 2190;
+  pointer-events: none;
+  background: rgba(15, 23, 42, 0.95);
+  color: #f8fafc;
+  border-radius: 8px;
+  padding: 8px 11px;
+  font-size: 0.76rem;
+  line-height: 1.4;
+  max-width: 260px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
+  display: none;
+}
+
+#toothTooltip .tt-head {
+  font-weight: 700;
+  color: #38bdf8;
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#toothTooltip .tt-surface {
+  font-size: 0.7rem;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+#toothTooltip .tt-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+#toothTooltip .tt-badge-solid {
+  font-size: 0.64rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(12, 130, 232, 0.28);
+  border: 1px solid #38bdf8;
+  color: #e0f2fe;
+  white-space: nowrap;
+}
+
+#toothTooltip .tt-badge-plan {
+  font-size: 0.64rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(217, 119, 6, 0.26);
+  border: 1px dashed #fbbf24;
+  color: #fef3c7;
+  white-space: nowrap;
+}
+
+#toothTooltip .tt-hint {
+  margin-top: 5px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
+  font-size: 0.68rem;
+  color: #94a3b8;
+}
+
+.df-odon-scope .mode-line-solid {
+  display: inline-block;
+  width: 14px;
+  border-top: 2px solid currentColor;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.df-odon-scope .mode-line-dashed {
+  display: inline-block;
+  width: 14px;
+  border-top: 2px dashed currentColor;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.df-odon-scope .teethElement .canvasTeethFace {
+  display: block;
+  width: 40px;
+  height: 90px;
+  cursor: pointer;
+}
+
+.df-odon-scope .teethElement .canvasTeethCircle {
+  display: block;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+}
+
+.df-odon-scope #CanteethVR {
+  position: absolute;
+  height: 97px;
+  width: 2px;
+  background: #eeeff0;
+  left: 50%;
+  top: 39%;
+  margin-left: -1px;
+  pointer-events: none;
+}
+
+.df-odon-scope #Canteeth_UpDown {
+  z-index: 10;
+}
+
+.df-odon-scope .teethElement .gum {
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1NiIgaGVpZ2h0PSI2MCIgdmlld0JveD0iMCAwIDU2IDYwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjZjdiN2M2IiBzdG9wLW9wYWNpdHk9IjAuMDUiLz48c3RvcCBvZmZzZXQ9IjQ1JSIgc3RvcC1jb2xvcj0iI2Y3YjdjNiIgc3RvcC1vcGFjaXR5PSIwLjU1Ii8+PHN0b3Agb2Zmc2V0PSI4NSUiIHN0b3AtY29sb3I9IiNmNWEzYjgiIHN0b3Atb3BhY2l0eT0iMC43MiIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iI2Y1YTNiOCIgc3RvcC1vcGFjaXR5PSIwLjAiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cGF0aCBkPSJNMCwxNiBRMTQsNCAyOCwxNiBRNDIsNCA1NiwxNiBMNTYsNTIgUTQyLDQwIDI4LDUyIFExNCw0MCAwLDUyIFoiIGZpbGw9InVybCgjZykiLz48L3N2Zz4=');
+  position: absolute;
+  height: 60px;
+  width: 52px;
+  opacity: 0.55;
+  z-index: 0;
+  background-repeat: repeat-x;
+  pointer-events: none;
+}
+
+.df-odon-scope #Canteeth_Up .teethElement .gum {
+  left: -6px;
+  top: 50px;
+}
+
+.df-odon-scope #Canteeth_Down .teethElement .gum {
+  left: -6px;
+  top: 87px;
+  transform: rotate(180deg);
+}
+
+.df-odon-scope #Canteeth_Up .teethElement.tooth-first .gum {
+  left: 0;
+  width: 46px;
+}
+
+.df-odon-scope .bridge-overlay-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* RAO-style Tooth Information Summary Card */
+.df-odon-scope .rao-info-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-top: 14px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+}
+
+.df-odon-scope .rao-info-headline {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 10px;
+}
+
+.df-odon-scope .rao-jaw-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.82rem;
+  margin-bottom: 6px;
+}
+
+.df-odon-scope .rao-jaw-table th {
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-bottom: 1px solid #dbeafe;
+  text-align: left;
+}
+
+.df-odon-scope .rao-jaw-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.df-odon-scope .rao-jaw-table tr:last-child td {
+  border-bottom: none;
+}
+
+.df-odon-scope .rao-jaw-table td.jaw-label {
+  width: 155px;
+  font-weight: 700;
+  color: #334155;
+  background: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.df-odon-scope .rao-tooth-num {
+  display: inline-block;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: 4px;
+  transition: background-color 0.12s ease;
+}
+
+.df-odon-scope .rao-tooth-num:hover {
+  background: #e0f2fe;
+  text-decoration: underline;
+}
+
+.df-odon-scope .rao-tooth-num.has-treatment {
+  color: #0c82e8;
+  font-weight: 700;
+}
+
+.df-odon-scope .rao-tooth-num.has-problem {
+  color: #dc2626;
+  font-weight: 700;
+  font-style: italic;
+}
+
+.df-odon-scope .rao-tooth-num.is-missing {
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
+.df-odon-scope .rao-info-legend {
+  font-size: 0.74rem;
+  font-style: italic;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.df-odon-scope .rao-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.83rem;
+  color: #1e293b;
+}
+
+.df-odon-scope .rao-summary-row {
+  line-height: 1.5;
+}
+
+.df-odon-scope .rao-summary-row .cat-lbl {
+  font-weight: 700;
+  color: #0f172a;
+  margin-right: 5px;
+}
+
+.df-odon-scope .rao-summary-row .cat-empty {
+  color: #64748b;
+  font-style: italic;
+}
+
+.df-odon-scope .rao-info-tabs {
+  display: inline-flex;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 9px;
+  border: 1px solid #e2e8f0;
+  gap: 2px;
+}
+
+.df-odon-scope .rao-info-tabs button {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 11px;
+  height: 28px;
+  line-height: 1;
+  border-radius: 7px;
+  outline: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.14s ease, color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.df-odon-scope .rao-info-tabs button:focus-visible {
+  box-shadow: 0 0 0 2px rgba(12, 130, 232, 0.25);
+}
+
+.df-odon-scope .rao-info-tabs button.active-status {
+  background: #ffffff;
+  color: #0c82e8;
+  border-color: transparent;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.df-odon-scope .rao-info-tabs button.active-plan {
+  background: #ffffff;
+  color: #d97706;
+  border-color: transparent;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.df-odon-scope .rao-info-tabs .tab-cnt {
+  font-size: 0.68rem;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.df-odon-scope .rao-info-tabs button.active-status .tab-cnt {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.df-odon-scope .rao-info-tabs button.active-plan .tab-cnt {
+  background: #f1f5f9;
+  color: #b45309;
+}
+
+.df-odon-scope .rao-item-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 1px 8px;
+  margin: 2px 4px 2px 0;
+  font-size: 0.78rem;
+}
+
+.df-odon-scope .rao-swap-btn {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  padding: 0 2px;
+  font-size: 0.72rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.12s ease, transform 0.12s ease;
+}
+
+.df-odon-scope .rao-swap-btn:hover {
+  color: #0c82e8;
+  transform: scale(1.15);
+}
+
+.df-odon-scope .rao-swap-btn.to-status:hover {
+  color: #16a34a;
+}
+
+.df-odon-scope .rao-swap-btn.to-plan:hover {
+  color: #d97706;
+}
+
+.df-odon-scope .rao-swap-btn.del-item:hover {
+  color: #dc2626;
+}
+
+/* Read-only editor adjustments */
+.df-odon-scope.is-readonly #btnCornerClear,
+.df-odon-scope.is-readonly #btnResetAll,
+.df-odon-scope.is-readonly #btnUndo,
+.df-odon-scope.is-readonly #btnRedo,
+.df-odon-scope.is-readonly #btnSelectUpper,
+.df-odon-scope.is-readonly #btnSelectLower,
+.df-odon-scope.is-readonly [data-quad],
+.df-odon-scope.is-readonly #btnClearSel,
+.df-odon-scope.is-readonly .rao-swap-btn,
+.df-odon-scope.is-readonly #btnCompleteAllInline {
+  display: none !important;
+}
+
+.df-odon-scope.is-readonly .diseaseitem {
+  opacity: 0.7;
+  cursor: default;
+}
+
+@media print {
+  .df-odon-editor-bar,
+  .df-odon-scope #CandisArea_Large,
+  .df-odon-scope #CandisArea_Short,
+  .df-odon-scope .rao-inline-bar,
+  .df-odon-scope .chart-corner-clear-btn {
+    display: none !important;
+  }
+  .df-odon-scope .card.vt-odon-card {
+    box-shadow: none;
+    border: none;
+  }
+}
