@@ -287,16 +287,17 @@ public class ServiceCatalogServiceImpl
         service.setBasePrice(dto.getBasePrice());
         service.setSurchargeAmount(dto.getSurchargeAmount());
 
-        service.setRequiresTooth(dto.getRequiresTooth());
+        boolean isProduct = dto.getServiceType() == ServiceType.PRODUCT;
+        service.setRequiresTooth(!isProduct && Boolean.TRUE.equals(dto.getRequiresTooth()));
         service.setIsParaclinical(
-                isParaclinicalType(dto.getServiceType())
+                !isProduct && isParaclinicalType(dto.getServiceType())
         );
 
         String validatedImageUrl = validateAndNormalizeImageUrl(dto.getImageUrl());
 
-        service.setIsBookableOnline(dto.getIsBookableOnline());
+        service.setIsBookableOnline(!isProduct && Boolean.TRUE.equals(dto.getIsBookableOnline()));
         service.setWarrantyMonths(dto.getWarrantyMonths());
-        service.setEstimatedDurationMinutes(validDuration(dto.getEstimatedDurationMinutes(), 30));
+        service.setEstimatedDurationMinutes(isProduct ? 15 : validDuration(dto.getEstimatedDurationMinutes(), 30));
         service.setDescription(sanitizeDescription(dto.getDescription()));
         service.setImageUrl(validatedImageUrl);
         service.setStatus(dto.getStatus());
@@ -363,15 +364,16 @@ public class ServiceCatalogServiceImpl
         service.setBasePrice(dto.getBasePrice());
         service.setSurchargeAmount(dto.getSurchargeAmount());
 
-        service.setRequiresTooth(dto.getRequiresTooth());
-        service.setIsParaclinical(paraclinical);
-        service.setIsBookableOnline(dto.getIsBookableOnline());
+        boolean isProduct = dto.getServiceType() == ServiceType.PRODUCT;
+        service.setRequiresTooth(!isProduct && Boolean.TRUE.equals(dto.getRequiresTooth()));
+        service.setIsParaclinical(!isProduct && paraclinical);
+        service.setIsBookableOnline(!isProduct && Boolean.TRUE.equals(dto.getIsBookableOnline()));
 
         String oldImageUrl = service.getImageUrl();
         String newImageUrl = validateAndNormalizeImageUrl(dto.getImageUrl());
 
         service.setWarrantyMonths(dto.getWarrantyMonths());
-        service.setEstimatedDurationMinutes(validDuration(dto.getEstimatedDurationMinutes(), service.getEstimatedDurationMinutes()));
+        service.setEstimatedDurationMinutes(isProduct ? 15 : validDuration(dto.getEstimatedDurationMinutes(), service.getEstimatedDurationMinutes()));
         service.setDescription(sanitizeDescription(dto.getDescription()));
         service.setImageUrl(newImageUrl);
         service.setStatus(dto.getStatus());
@@ -838,9 +840,25 @@ public class ServiceCatalogServiceImpl
     }
 
     @Override
+    public List<ServiceCategory> searchCategories(String keyword, ServiceType categoryType, Boolean isActive) {
+        String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        return categoryRepository.searchAdminCategoriesByType(cleanKeyword, categoryType, isActive);
+    }
+
+    @Override
     public List<Service> searchServices(String keyword, Long categoryId, ServiceStatus status) {
         String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
         return serviceRepository.searchAdminServices(cleanKeyword, categoryId, status);
+    }
+
+    @Override
+    public List<Service> searchServices(String keyword, Long categoryId, ServiceStatus status, ServiceType serviceType, String itemKind) {
+        String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        String cleanKind = null;
+        if ("PRODUCT".equalsIgnoreCase(itemKind) || "SERVICE".equalsIgnoreCase(itemKind)) {
+            cleanKind = itemKind.toUpperCase(Locale.ROOT);
+        }
+        return serviceRepository.searchAdminServicesWithFilters(cleanKeyword, categoryId, status, serviceType, cleanKind);
     }
 
     @Override

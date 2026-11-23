@@ -43,6 +43,12 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.ClinicalQueueTicketRepository clinicalQueueTicketRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private WorkflowExecutionRepository workflowExecutionRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private TreatmentPlanItemRepository treatmentPlanItemRepository;
+
     public void setServiceCommissionService(com.cvdcms.service.ServiceCommissionService serviceCommissionService) {
         this.serviceCommissionService = serviceCommissionService;
     }
@@ -352,20 +358,44 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     private void checkAndUpdateVisitParaclinicalStatus(ParaclinicalOrder parentOrder) {
         if (parentOrder == null) return;
         List<ParaclinicalOrderItem> allItems = paraclinicalOrderItemRepository.findByOrder_OrderId(parentOrder.getOrderId());
-        boolean allCompleted = !allItems.isEmpty() && allItems.stream().allMatch(i -> i.getStatus() == ParaclinicalOrderItemStatus.COMPLETED);
+        List<ParaclinicalOrderItem> activeItems = allItems.stream()
+                .filter(i -> i.getStatus() != ParaclinicalOrderItemStatus.CANCELLED)
+                .toList();
+        boolean allCompleted = !activeItems.isEmpty()
+                && activeItems.stream().allMatch(i -> i.getStatus() == ParaclinicalOrderItemStatus.COMPLETED);
+        boolean allCancelled = !allItems.isEmpty() && activeItems.isEmpty();
+
         if (allCompleted) {
             parentOrder.setStatus(ParaclinicalOrderStatus.COMPLETED);
             parentOrder.setCompletedAt(LocalDateTime.now());
             paraclinicalOrderRepository.save(parentOrder);
+        } else if (allCancelled) {
+            parentOrder.setStatus(ParaclinicalOrderStatus.CANCELLED);
+            parentOrder.setCompletedAt(null);
+            paraclinicalOrderRepository.save(parentOrder);
+        }
+
+        if (allCompleted || allCancelled) {
             Visit v = parentOrder.getVisit();
             if (v != null && v.getStatus() == VisitStatus.WAITING_PARACLINICAL) {
-                boolean hasInServiceTicket = clinicalQueueTicketRepository != null
-                        && clinicalQueueTicketRepository.findByVisitIdAndTypeOrderByDesc(
-                                        v.getVisitId(), com.cvdcms.entity.enums.QueueType.EXAM)
-                                .stream()
-                                .anyMatch(t -> t.getStatus() == com.cvdcms.entity.enums.QueueStatus.IN_SERVICE);
-                v.setStatus(hasInServiceTicket ? VisitStatus.IN_EXAM : VisitStatus.WAITING_RESULT);
-                visitRepository.save(v);
+                boolean hasOtherPendingInVisit = paraclinicalOrderItemRepository
+                        .findByOrder_Visit_VisitIdOrderByOrder_OrderIdDescOrderItemIdDesc(v.getVisitId())
+                        .stream()
+                        .anyMatch(i -> i.getStatus() != ParaclinicalOrderItemStatus.CANCELLED
+                                && i.getStatus() != ParaclinicalOrderItemStatus.COMPLETED);
+                if (!hasOtherPendingInVisit) {
+                    boolean hasInServiceTicket = clinicalQueueTicketRepository != null
+                            && clinicalQueueTicketRepository.findByVisitIdAndTypeOrderByDesc(
+                                            v.getVisitId(), com.cvdcms.entity.enums.QueueType.EXAM)
+                                    .stream()
+                                    .anyMatch(t -> t.getStatus() == com.cvdcms.entity.enums.QueueStatus.IN_SERVICE);
+                    if (allCompleted) {
+                        v.setStatus(hasInServiceTicket ? VisitStatus.IN_EXAM : VisitStatus.WAITING_RESULT);
+                    } else {
+                        v.setStatus(hasInServiceTicket ? VisitStatus.IN_EXAM : VisitStatus.WAITING);
+                    }
+                    visitRepository.save(v);
+                }
             }
         }
     }
@@ -377,7 +407,8 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 .or(() -> paraclinicalOrderItemRepository.findById(orderItemId))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chỉ định ID: " + orderItemId));
 
-        Visit visit = item.getOrder().getVisit();
+        ParaclinicalOrder parentOrder = item.getOrder();
+        Visit visit = parentOrder.getVisit();
         com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
                 visit,
                 emrRecordRepository,
@@ -416,6 +447,7 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             }
             item.setStatus(ParaclinicalOrderItemStatus.CANCELLED);
             paraclinicalOrderItemRepository.save(item);
+            checkAndUpdateVisitParaclinicalStatus(parentOrder);
             log.info("Đã hủy mềm chỉ định cận lâm sàng có lịch sử liên kết ID: {}, ExternalRefId={}", orderItemId, item.getExternalRefId());
             return;
         }
@@ -427,6 +459,8 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         }
 
         paraclinicalOrderItemRepository.delete(item);
+        paraclinicalOrderItemRepository.flush();
+        checkAndUpdateVisitParaclinicalStatus(parentOrder);
         log.info("Đã xóa chỉ định cận lâm sàng nháp ID: {}", orderItemId);
     }
 
@@ -462,15 +496,29 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                             + item.getOrderItemId() + " do thiếu thông tin bệnh nhân, chi nhánh hoặc bác sĩ.");
                 }
 
+                TreatmentPlanItem matchedPlanItem = resolveActivePlanItemForOrder(visit, item.getService().getServiceId());
+                BigDecimal price = item.getService().getBasePrice() != null ? item.getService().getBasePrice() : BigDecimal.ZERO;
+                if (matchedPlanItem != null) {
+                    TreatmentPlan parentPlan = matchedPlanItem.getPlan() != null
+                            ? matchedPlanItem.getPlan()
+                            : (matchedPlanItem.getStage() != null ? matchedPlanItem.getStage().getPlan() : null);
+                    boolean isInstallment = parentPlan != null && Boolean.TRUE.equals(parentPlan.getIsInstallment());
+                    if (isInstallment) {
+                        price = BigDecimal.ZERO;
+                    } else if (matchedPlanItem.getEstimatedPrice() != null) {
+                        price = matchedPlanItem.getEstimatedPrice();
+                    }
+                }
+
                 ps = new PerformedService();
                 ps.setVisit(visit);
+                ps.setPlanItem(matchedPlanItem);
                 ps.setPatientProfile(patient);
                 ps.setBranch(branch);
                 ps.setDoctor(doctor);
                 ps.setService(item.getService());
                 ps.setToothNumbers(teeth);
                 ps.setQuantity(BigDecimal.ONE);
-                BigDecimal price = item.getService().getBasePrice() != null ? item.getService().getBasePrice() : BigDecimal.ZERO;
                 ps.setUnitPrice(price);
                 ps.setDiscountAmount(BigDecimal.ZERO);
                 ps.setFinalPrice(price);
@@ -734,5 +782,59 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 .primaryImageUrl(primaryImageUrl)
                 .attachments(attachmentDTOs)
                 .build();
+    }
+
+    /**
+     * Chỉ gắn TreatmentPlanItem cho dịch vụ cận lâm sàng khi ca khám hoặc bệnh nhân
+     * đang có WorkflowExecution kích hoạt gắn với hạng mục/giai đoạn phác đồ đó;
+     * tránh tự động ghép nhầm vào phác đồ cũ khi chụp X-quang phát sinh ngoài phác đồ.
+     */
+    private TreatmentPlanItem resolveActivePlanItemForOrder(Visit visit, Long serviceId) {
+        if (visit == null || visit.getVisitId() == null || serviceId == null || workflowExecutionRepository == null) {
+            return null;
+        }
+        List<WorkflowExecution> candidates = new ArrayList<>(workflowExecutionRepository.findByVisit_VisitId(visit.getVisitId()));
+        if (visit.getPatientProfile() != null && visit.getPatientProfile().getProfileId() != null) {
+            for (WorkflowExecution pe : workflowExecutionRepository.findByPatientProfile_ProfileIdOrderByStartedAtDesc(visit.getPatientProfile().getProfileId())) {
+                if (candidates.stream().noneMatch(c -> Objects.equals(c.getExecutionId(), pe.getExecutionId()))) {
+                    candidates.add(pe);
+                }
+            }
+        }
+        for (WorkflowExecution ex : candidates) {
+            if (ex == null || (ex.getStatus() != WorkflowExecutionStatus.IN_PROGRESS && ex.getStatus() != WorkflowExecutionStatus.PAUSED)) {
+                continue;
+            }
+            TreatmentPlanItem directItem = ex.getPlanItem();
+            if (isOpenPlanItemForService(directItem, serviceId)) {
+                return directItem;
+            }
+            if (ex.getPlanStage() != null && treatmentPlanItemRepository != null) {
+                List<TreatmentPlanItem> stageItems = treatmentPlanItemRepository.findByStage_StageId(ex.getPlanStage().getStageId());
+                for (TreatmentPlanItem stageItem : stageItems) {
+                    if (isOpenPlanItemForService(stageItem, serviceId)) {
+                        return stageItem;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean isOpenPlanItemForService(TreatmentPlanItem item, Long serviceId) {
+        if (item == null || item.getService() == null || !Objects.equals(item.getService().getServiceId(), serviceId)) {
+            return false;
+        }
+        if (item.getStatus() == TreatmentPlanItemStatus.COMPLETED || item.getStatus() == TreatmentPlanItemStatus.CANCELLED) {
+            return false;
+        }
+        TreatmentPlan parentPlan = item.getPlan() != null
+                ? item.getPlan()
+                : (item.getStage() != null ? item.getStage().getPlan() : null);
+        if (parentPlan != null && parentPlan.getStatus() == TreatmentPlanStatus.CANCELLED) {
+            return false;
+        }
+        return performedServiceRepository.findByPlanItem_PlanItemId(item.getPlanItemId()).stream()
+                .noneMatch(ps -> ps.getStatus() != PerformedServiceStatus.CANCELLED);
     }
 }

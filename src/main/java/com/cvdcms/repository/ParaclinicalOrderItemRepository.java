@@ -15,6 +15,7 @@ import java.util.Optional;
 @Repository
 public interface ParaclinicalOrderItemRepository extends JpaRepository<ParaclinicalOrderItem, Long> {
     List<ParaclinicalOrderItem> findByOrder_Visit_VisitIdOrderByOrder_OrderIdDescOrderItemIdDesc(Long visitId);
+    List<ParaclinicalOrderItem> findByOrder_PatientProfile_ProfileIdOrderByOrder_OrderIdDescOrderItemIdDesc(Long profileId);
     List<ParaclinicalOrderItem> findByOrder_OrderId(Long orderId);
     long countByOrder_Visit_VisitIdAndStatus(Long visitId, ParaclinicalOrderItemStatus status);
     Optional<ParaclinicalOrderItem> findByExternalRefIdIgnoreCase(String externalRefId);

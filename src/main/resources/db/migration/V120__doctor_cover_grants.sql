@@ -1,4 +1,4 @@
-CREATE TABLE doctor_cover_grants (
+CREATE TABLE IF NOT EXISTS doctor_cover_grants (
     id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     visit_id BIGINT NOT NULL,
     covering_doctor_id BIGINT NOT NULL,

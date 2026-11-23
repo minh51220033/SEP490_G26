@@ -81,6 +81,7 @@
                         <option value="PROCEDURE" th:selected="${selectedServiceType != null and selectedServiceType.name() == 'PROCEDURE'}">Thủ thuật điều trị</option>
                         <option value="LAB" th:selected="${selectedServiceType != null and selectedServiceType.name() == 'LAB'}">Cận lâm sàng Labo</option>
                         <option value="XRAY" th:selected="${selectedServiceType != null and selectedServiceType.name() == 'XRAY'}">Chẩn đoán hình ảnh X-quang</option>
+                        <option value="PRODUCT" th:selected="${selectedServiceType != null and selectedServiceType.name() == 'PRODUCT'}">Sản phẩm chăm sóc</option>
                     </select>
                 </div>
 
@@ -127,7 +128,7 @@
                          loading="lazy">
                     <div th:if="${svc.imageUrl == null or #strings.isEmpty(svc.imageUrl)}"
                          class="cp-service-card__placeholder">
-                        <i class="bi bi-heart-pulse"></i>
+                        <i class="bi" th:classappend="${svc.serviceType != null and svc.serviceType.name() == 'PRODUCT'} ? 'bi-bag-heart' : 'bi-heart-pulse'"></i>
                         <span class="small fw-semibold" th:text="${svc.serviceCode}">DV</span>
                     </div>
 
@@ -159,7 +160,9 @@
                     <p class="cp-service-card__desc"
                        th:text="${!#strings.isEmpty(@customerPortalServiceImpl.plainTextSummary(svc.description, 140))
                                ? @customerPortalServiceImpl.plainTextSummary(svc.description, 140)
-                               : 'Dịch vụ thăm khám và điều trị chuyên sâu theo tiêu chuẩn lâm sàng tại Nha khoa Cường Việt.'}">
+                               : (svc.serviceType != null and svc.serviceType.name() == 'PRODUCT'
+                                   ? 'Sản phẩm chăm sóc răng miệng chính hãng được khuyên dùng tại Nha khoa Cường Việt.'
+                                   : 'Dịch vụ thăm khám và điều trị chuyên sâu theo tiêu chuẩn lâm sàng tại Nha khoa Cường Việt.')}">
                         Mô tả ngắn của dịch vụ.
                     </p>
 

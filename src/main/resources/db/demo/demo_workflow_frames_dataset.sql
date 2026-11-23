@@ -1,4 +1,4 @@
--- ====================================================================================================
+﻿-- ====================================================================================================
 -- FLYWAY MIGRATION V119: BO DU LIEU DEMO DAY DU GIONG DEMO_WORKFLOW_FRAMES.HTML
 -- Muc dich: Tao san tai khoan, bac si, benh nhan, luot kham hom nay, phim X-quang (SVG), phieu Labo,
 --           quy trinh 5 khung (co truong tuy chinh Do khit), Combo VTTech va 4 ca kham mau de demo ngay.
@@ -146,7 +146,8 @@ UPDATE clinical_workflow_versions v
 JOIN clinical_workflow_templates t ON t.template_id = v.template_id
 SET v.flow_mode = 'INTERRUPTIBLE'
 WHERE v.version_id > 0
-  AND t.template_code IN ('QTKT-TUY-RH', 'QT-NHO-RKHON', 'QT-PHUCHINH', 'QTKT-NIENG-RANG');
+  AND t.template_code IN ('QTKT-TUY-RH', 'QT-NHO-RKHON', 'QT-PHUCHINH', 'QTKT-NIENG-RANG')
+  AND NOT EXISTS (SELECT 1 FROM workflow_executions we WHERE we.version_id = v.version_id);
 
 -- Cap nhat Combo CB-TUY-SU tro ve mao Zirconia 4 buoc de test tron ven Buoc 3 Thu mao + Do khit + Labo
 UPDATE service_combo_items sci
@@ -546,3 +547,4 @@ JOIN visits v ON v.visit_id = we.visit_id AND v.visit_code IN ('VIS-DEMO-1601', 
 JOIN clinical_workflow_versions ver ON ver.version_id = we.version_id
 JOIN clinical_workflow_templates tpl ON tpl.template_id = ver.template_id
 JOIN clinical_workflow_steps cws ON cws.version_id = ver.version_id AND cws.adhoc_execution_id IS NULL;
+
