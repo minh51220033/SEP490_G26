@@ -16,20 +16,15 @@
         <!-- 1. LIST VIEW (LỊCH SỬ BẢN ĐỒ RĂNG THEO BỆNH NHÂN)         -->
         <!-- ========================================================= -->
         <div id="odonListView" class="df-odon-card">
-            <div class="df-odon-card-header">
-                <div>
-                    <h5 class="df-odon-title">
-                        <i class="bi bi-grid-3x3-gap text-primary"></i>
-                        <span>Tình trạng răng</span>
-                    </h5>
-                    <p class="df-odon-subtitle">Quản lý lịch sử sơ đồ tình trạng răng FDI (Hiện trạng &amp; Kế hoạch điều trị)</p>
+            <div class="df-tab-actionbar is-right-only">
+                <div class="df-tab-actions">
+                    <button type="button"
+                            id="btnOdonCreateTop"
+                            class="df-tab-btn df-tab-btn-primary odon-write-only d-none">
+                        <i class="bi bi-plus-lg"></i>
+                        <span>Thêm mới</span>
+                    </button>
                 </div>
-                <button type="button"
-                        id="btnOdonCreateTop"
-                        class="df-odon-primary-btn odon-write-only d-none">
-                    <i class="bi bi-plus-lg"></i>
-                    <span>Thêm mới</span>
-                </button>
             </div>
 
             <div id="odonListError" class="alert alert-danger rounded-3 m-3 mb-0 py-2 px-3 small d-none" role="alert"></div>
@@ -105,9 +100,9 @@
             <!-- Top Action Bar (Secondary left, single Primary CTA right) -->
             <div class="df-odon-editor-bar">
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <button type="button" id="btnOdonBackToList" class="df-odon-secondary-btn">
+                    <button type="button" id="btnOdonBackToList" class="df-tab-btn df-tab-btn-secondary">
                         <i class="bi bi-arrow-left"></i>
-                        <span>Danh sách</span>
+                        <span>Quay lại danh sách</span>
                     </button>
                     <h6 class="mb-0 fw-bold text-dark ms-1" id="odonEditorTitle">Thêm sơ đồ tình trạng răng</h6>
                     <span id="odonEditorVisitBadge" class="dv-code-pill d-none"></span>

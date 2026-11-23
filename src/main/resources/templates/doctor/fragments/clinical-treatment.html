@@ -1213,6 +1213,9 @@
 
     // 1. Quản lý tương tác chọn răng FDI (Chiêu 1: Click trên sơ đồ)
     function toggleTooth(toothNumber) {
+        if (typeof window.toggleDiagnosisInputBlock === 'function' && !(typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal)) {
+            window.toggleDiagnosisInputBlock(true);
+        }
         const tid = String(toothNumber).trim();
         if (selectedTeeth.has(tid)) {
             selectedTeeth.delete(tid);
@@ -1738,6 +1741,9 @@
         }
 
         // 5. Chuyển form sang chế độ xem / sửa
+        if (typeof window.toggleDiagnosisInputBlock === 'function') {
+            window.toggleDiagnosisInputBlock(true);
+        }
         const formTitle = document.getElementById('formTitleText');
         if (formTitle) formTitle.innerText = `Chỉnh sửa chẩn đoán #${icd}`;
         const formModeBadge = document.getElementById('formModeBadge');
@@ -2028,8 +2034,13 @@
 
         const tableBadge = document.getElementById('tableCountBadge');
         const summaryBadge = document.getElementById('treatmentSummaryBadge');
+        const diagnosesTabBadge = document.getElementById('tabBadge-tab-diagnoses');
         if (tableBadge) tableBadge.innerText = `${count} chẩn đoán`;
         if (summaryBadge) summaryBadge.innerText = `${count} chẩn đoán`;
+        if (diagnosesTabBadge) {
+            diagnosesTabBadge.innerText = `${count}`;
+            diagnosesTabBadge.classList.toggle('d-none', count === 0);
+        }
 
         if (count === 0) {
             const tbody = document.getElementById('diagnosisTableBody');
@@ -2040,7 +2051,7 @@
                             <div class="df-no-data">
                                 <div class="df-no-data-icon"><i class="bi bi-inbox"></i></div>
                                 <div class="fw-bold text-dark mb-1">Chưa có dữ liệu chẩn đoán</div>
-                                <div class="small text-muted">Vui lòng chọn từ "Bệnh lý thường gặp" hoặc nhập mã ICD-10 ở form phía trên để thêm chẩn đoán.</div>
+                                <div class="small text-muted">Nhấn nút "Tạo thêm" ở góc phải để mở sơ đồ răng và thêm chẩn đoán ICD-10.</div>
                             </div>
                         </td>
                     </tr>

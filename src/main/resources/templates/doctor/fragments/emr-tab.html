@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<body>
+
+    <!-- ========================================================================= -->
+    <!-- TAB: BỆNH ÁN ĐIỆN TỬ (EMR) RIÊNG TRONG MÀN KHÁM LÂM SÀNG                 -->
+    <!-- ========================================================================= -->
+    <div th:fragment="emrTab">
+        <div class="bg-white border rounded-4 shadow-sm overflow-hidden">
+            <!-- HEADER BAR -->
+            <div class="df-tab-actionbar is-right-only" th:if="${visit != null}">
+                <div class="df-tab-actions">
+                    <a th:if="${visitEmrRecord != null}" th:href="@{/emr/records/{id}(id=${visitEmrRecord.recordId})}"
+                        class="df-tab-btn df-tab-btn-primary">
+                        <i class="bi bi-file-earmark-medical"></i>
+                        <span>Mở bệnh án ca này</span>
+                    </a>
+                    <a th:if="${visitEmrRecord == null}"
+                        th:href="@{/emr/records/from-visit/{visitId}(visitId=${visit.visitId})}"
+                        class="df-tab-btn df-tab-btn-primary">
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Tạo / Mở bệnh án ca này</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- CURRENT VISIT EMR SUMMARY -->
+            <div class="px-4 py-3 border-bottom" style="background: #ffffff;">
+                <div th:if="${visitEmrRecord != null}"
+                    class="d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 rounded-3 border"
+                    style="background: #f0f9ff; border-color: #bae6fd !important;">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <div>
+                            <div class="small text-secondary">Bệnh án ca khám hiện tại</div>
+                            <div class="fw-bold text-dark df-num" th:text="${visitEmrRecord.recordCode}">EMR-0001</div>
+                        </div>
+                        <span class="badge rounded-pill px-3 py-2 fw-semibold"
+                            th:classappend="${visitEmrRecord.status != null and visitEmrRecord.status.name() == 'SIGNED'} ? 'bg-success-subtle text-success border border-success-subtle' : (${visitEmrRecord.status != null and visitEmrRecord.status.name() == 'READY_TO_LOCK'} ? 'bg-info-subtle text-info-emphasis border border-info-subtle' : 'bg-warning-subtle text-warning-emphasis border border-warning-subtle')"
+                            th:text="${visitEmrRecord.status != null ? visitEmrRecord.status.displayName : 'Bản nháp'}">
+                            Bản nháp
+                        </span>
+                        <span class="badge bg-white text-dark border rounded-pill px-3 py-2 df-num"
+                            th:text="${'Phiên bản v' + (visitEmrRecord.currentVersionNumber != null ? visitEmrRecord.currentVersionNumber : 1)}">
+                            Phiên bản v1
+                        </span>
+                        <span class="small text-secondary df-num" th:if="${visitEmrRecord.updatedAt != null}">
+                            Cập nhật:
+                            <strong class="text-dark"
+                                th:text="${#temporals.format(visitEmrRecord.updatedAt, 'dd/MM/yyyy HH:mm')}">23/11/2026
+                                10:00</strong>
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <a th:href="@{/emr/records/{id}/export.json(id=${visitEmrRecord.recordId})}" target="_blank"
+                            class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-2 fw-semibold">
+                            <i class="bi bi-filetype-json me-1"></i>Xuất JSON
+                        </a>
+                        <a th:href="@{/emr/records/{id}(id=${visitEmrRecord.recordId})}"
+                            class="btn btn-sm btn-outline-primary rounded-pill px-3 py-2 fw-semibold">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Xem chi tiết &amp; Ký số
+                        </a>
+                    </div>
+                </div>
+
+                <div th:if="${visitEmrRecord == null}"
+                    class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 py-2 rounded-3 border"
+                    style="background: #f8fafc;">
+                    <div class="small text-secondary d-flex align-items-center gap-2">
+                        <i class="bi bi-info-circle text-primary"></i>
+                        <span>Ca khám hiện tại (<strong class="text-dark df-num"
+                                th:text="${visit != null ? visit.visitCode : '---'}">---</strong>) chưa khởi tạo hồ sơ
+                            bệnh án điện tử. Bấm <strong>Tạo / Mở bệnh án ca này</strong> ở góc phải để khởi tạo từ dữ
+                            liệu khám.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PATIENT EMR HISTORY TABLE -->
+            <div class="p-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h6 class="mb-0 fw-bold text-dark">
+                        Lịch sử bệnh án của bệnh nhân
+                        <span class="badge bg-light text-secondary border ms-1 df-num"
+                            th:text="${patientEmrRecords != null ? #lists.size(patientEmrRecords) : 0}">0</span>
+                    </h6>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="df-clean-table" data-disable-floating-actions="true">
+                        <thead>
+                            <tr>
+                                <th style="width: 150px;">Mã bệnh án</th>
+                                <th style="width: 170px;">Ca khám</th>
+                                <th>Cơ sở / Bác sĩ phụ trách</th>
+                                <th style="width: 100px;" class="text-center">Phiên bản</th>
+                                <th style="width: 160px;" class="text-center">Trạng thái</th>
+                                <th style="width: 130px;" class="text-center">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${patientEmrRecords == null or #lists.isEmpty(patientEmrRecords)}">
+                                <td colspan="6" class="text-center py-4 text-muted small">
+                                    Bệnh nhân chưa có hồ sơ bệnh án điện tử nào được lưu.
+                                </td>
+                            </tr>
+                            <tr th:each="emr : ${patientEmrRecords}">
+                                <td class="df-num">
+                                    <a th:href="@{/emr/records/{id}(id=${emr.recordId})}"
+                                        class="fw-bold text-primary text-decoration-none"
+                                        th:text="${emr.recordCode}">EMR-001</a>
+                                </td>
+                                <td class="df-num">
+                                    <div class="fw-semibold text-dark"
+                                        th:text="${emr.visit != null ? emr.visit.visitCode : '---'}">VIS-001</div>
+                                    <div class="small text-muted"
+                                        th:if="${emr.visit != null and emr.visit.checkInAt != null}"
+                                        th:text="${#temporals.format(emr.visit.checkInAt, 'dd/MM/yyyy HH:mm')}">
+                                        23/11/2026</div>
+                                </td>
+                                <td>
+                                    <div class="small fw-semibold text-dark"
+                                        th:text="${emr.branch != null ? emr.branch.branchName : '---'}">Cơ sở</div>
+                                    <div class="small text-muted"
+                                        th:text="${emr.doctorName != null ? emr.doctorName : 'Chưa gán bác sĩ'}">BS
+                                    </div>
+                                </td>
+                                <td class="text-center df-num">
+                                    <span class="badge bg-light text-dark border"
+                                        th:text="${'v' + (emr.currentVersionNumber != null ? emr.currentVersionNumber : 1)}">v1</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge rounded-pill px-2 py-1"
+                                        th:classappend="${emr.status != null and emr.status.name() == 'SIGNED'} ? 'bg-success-subtle text-success border border-success-subtle' : (${emr.status != null and emr.status.name() == 'READY_TO_LOCK'} ? 'bg-info-subtle text-info-emphasis border border-info-subtle' : 'bg-warning-subtle text-warning-emphasis border border-warning-subtle')"
+                                        th:text="${emr.status != null ? emr.status.displayName : 'Bản nháp'}">
+                                        Bản nháp
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <a th:href="@{/emr/records/{id}(id=${emr.recordId})}"
+                                        class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold">
+                                        Xem / Mở
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

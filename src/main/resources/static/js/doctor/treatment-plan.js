@@ -180,8 +180,9 @@ function groupStagesIntoCourses(stages, plan) {
 /**
  * Render HTML lộ trình chi tiết tách thành nhiều quá trình điều trị gập mở
  */
-function renderPlanInlineRoadmapHtml(plan) {
+function renderPlanInlineRoadmapHtml(plan, options = {}) {
     if (!plan) return '';
+    const omitHeader = options && options.omitHeader === true;
 
     const courses = groupStagesIntoCourses(plan.stages || [], plan);
     let coursesHtml = '';
@@ -215,35 +216,12 @@ function renderPlanInlineRoadmapHtml(plan) {
 
             let stagesInsideCourseHtml = '';
             course.stages.forEach(st => {
-                let cardClass = 'df-stage-panel mb-3';
+                let cardClass = 'tp-flat-stage';
                 if (st.status === 'COMPLETED') cardClass += ' is-completed';
                 else if (st.status === 'IN_PROGRESS') cardClass += ' is-in-progress';
-                else cardClass += ' is-pending';
 
                 const totalItemsInStage = (st.items && st.items.length) || 0;
                 const doneItemsInStage = (st.items && st.items.filter(i => i.status === 'COMPLETED').length) || 0;
-
-                let completedBadgeHtml = '';
-                if (st.status === 'COMPLETED' || (totalItemsInStage > 0 && doneItemsInStage === totalItemsInStage)) {
-                    completedBadgeHtml = `
-                        <span class="badge px-2 py-1 rounded-pill bg-success-subtle text-success border border-success df-num" id="stage-completed-badge-${st.stageId}">
-                            <i class="bi bi-check2-circle me-1"></i><span>${st.completedAt ? 'Hoàn thành: ' + st.completedAt : 'Đã hoàn thành'}</span>
-                        </span>
-                    `;
-                } else if (doneItemsInStage > 0 || st.status === 'IN_PROGRESS') {
-                    completedBadgeHtml = `
-                        <span class="badge px-2 py-1 rounded-pill bg-primary-subtle text-primary border border-primary df-num" id="stage-completed-badge-${st.stageId}">
-                            <i class="bi bi-arrow-repeat me-1"></i><span>Tiến độ: ${doneItemsInStage}/${totalItemsInStage} bước</span>
-                        </span>
-                    `;
-                } else {
-                    completedBadgeHtml = `
-                        <span class="badge px-2 py-1 rounded-pill bg-light text-secondary border" id="stage-completed-badge-${st.stageId}">
-                            <i class="bi bi-clock-history me-1"></i><span>Chưa thực hiện</span>
-                        </span>
-                    `;
-                }
-
                 const expectedEnd = st.expectedEndDate || plan.expectedEndDate || '---';
 
                 let itemsRows = '';
@@ -343,30 +321,32 @@ function renderPlanInlineRoadmapHtml(plan) {
 
                 const stageStatusClass = st.status === 'COMPLETED' ? 'bg-success-subtle text-success border border-success fw-bold' : (st.status === 'IN_PROGRESS' ? 'bg-primary-subtle text-primary border border-primary fw-bold' : 'bg-light text-secondary border');
                 const stageStatusIcon = st.status === 'COMPLETED' ? 'bi-check-circle-fill' : (st.status === 'IN_PROGRESS' ? 'bi-arrow-repeat' : 'bi-clock');
-                const stageStatusText = st.status === 'COMPLETED' ? 'Hoàn thành giai đoạn' : (st.status === 'IN_PROGRESS' ? 'Đang điều trị' : 'Chưa thực hiện');
+                const stageProgressSuffix = totalItemsInStage > 0 && (st.status === 'COMPLETED' || st.status === 'IN_PROGRESS' || doneItemsInStage > 0)
+                    ? ` (${doneItemsInStage}/${totalItemsInStage})`
+                    : '';
+                const stageStatusText = (st.status === 'COMPLETED' ? 'Hoàn thành' : (st.status === 'IN_PROGRESS' ? 'Đang thực hiện' : 'Chưa thực hiện')) + stageProgressSuffix;
 
                 stagesInsideCourseHtml += `
                     <div class="${cardClass}" id="stage-card-${st.stageId}">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-2 mb-2 border-bottom">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 mb-2 border-bottom">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="badge bg-light text-dark border px-2 py-1 rounded-pill fw-semibold df-num" style="font-size: 11.5px;">Giai đoạn ${st.internalOrder}</span>
                                 <strong class="text-dark" style="font-size: 14px;">${st.cleanStageName}</strong>
                             </div>
                             <div class="d-flex flex-wrap align-items-center gap-2">
-                                ${completedBadgeHtml}
                                 <span class="badge bg-white text-dark border px-2 py-1 rounded-pill df-num">
                                     <i class="bi bi-calendar-check text-primary me-1"></i>
                                     <span>Dự kiến xong: </span>
                                     <strong>${expectedEnd}</strong>
                                 </span>
-                                <span class="badge px-3 py-1 rounded-pill d-inline-flex align-items-center gap-1 ${stageStatusClass}" id="stage-status-badge-${st.stageId}">
+                                <span class="badge px-3 py-1 rounded-pill d-inline-flex align-items-center gap-1 df-num ${stageStatusClass}" id="stage-status-badge-${st.stageId}">
                                     <i class="bi ${stageStatusIcon}"></i>
                                     <span>${stageStatusText}</span>
                                 </span>
                             </div>
                         </div>
                         ${st.description ? `<div class="small text-secondary mb-2 fst-italic"><i class="bi bi-info-circle me-1"></i>${st.description}</div>` : ''}
-                        <div class="table-responsive bg-white rounded-3 border" style="border-color: #e2e8f0 !important;">
+                        <div class="table-responsive bg-white">
                             <table class="table df-clean-table align-middle mb-0" data-disable-floating-actions="true" style="font-size: 13px;">
                                 <thead>
                                     <tr>
@@ -389,8 +369,8 @@ function renderPlanInlineRoadmapHtml(plan) {
             });
 
             coursesHtml += `
-                <div class="roadmap-diag-box mb-3" id="${course.courseId}-wrapper">
-                    <div class="roadmap-diag-header p-3 d-flex flex-wrap align-items-center justify-content-between gap-2"
+                <div class="tp-flat-course" id="${course.courseId}-wrapper">
+                    <div class="py-2 d-flex flex-wrap align-items-center justify-content-between gap-2"
                          style="cursor: pointer; user-select: none;"
                          onclick="toggleCourseAccordion('${course.courseId}')"
                          title="Nhấn để gập / mở quá trình điều trị này">
@@ -422,7 +402,7 @@ function renderPlanInlineRoadmapHtml(plan) {
                         </div>
                     </div>
 
-                    <div class="df-course-body p-3" id="${course.courseId}-body" style="background: #ffffff; display: ${bodyDisplayStyle};">
+                    <div class="pt-2" id="${course.courseId}-body" style="display: ${bodyDisplayStyle};">
                         ${stagesInsideCourseHtml}
                     </div>
                 </div>
@@ -430,14 +410,13 @@ function renderPlanInlineRoadmapHtml(plan) {
         });
     }
 
-    return `
-        <div class="df-inline-roadmap-container p-3 p-md-4" style="width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden;">
+    const headerHtml = omitHeader ? '' : `
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
                 <div class="d-flex align-items-center gap-2">
                     <span class="badge rounded-pill px-2 py-1 fw-semibold" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;">
                         <i class="bi bi-diagram-3-fill me-1"></i>Lộ trình điều trị
                     </span>
-                    <strong class="text-dark" style="font-size: 15px;">${plan.planName}</strong>
+                    <strong class="text-dark" style="font-size: 15px;">${escapePlanHtml(plan.planName)}</strong>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2 small">
                     <span class="badge bg-white text-dark border px-2 py-1 rounded-pill df-num">
@@ -461,7 +440,11 @@ function renderPlanInlineRoadmapHtml(plan) {
                         <span id="text-toggle-all-${plan.planId}">Thu gọn tất cả</span>
                     </button>
                 </div>
-            </div>
+            </div>`;
+
+    return `
+        <div class="${omitHeader ? 'df-inline-roadmap-container' : 'df-inline-roadmap-container p-3 p-md-4'}" style="width: 100%; max-width: 100%; box-sizing: border-box; overflow-x: hidden;">
+            ${headerHtml}
             <div id="stages-container-${plan.planId}">
                 ${coursesHtml}
             </div>
@@ -692,19 +675,88 @@ function renderDiagnosisProgressTables() {
 }
 window.renderDiagnosisProgressTables = renderDiagnosisProgressTables;
 
+window._activeTreatmentPlanId = null;
+
 /**
- * Khởi tạo render tất cả các khối lộ trình từ cache window.INITIAL_TREATMENT_PLANS
+ * Render giao diện Chi tiết Kế hoạch điều trị (Master-Detail View)
+ */
+function renderTreatmentPlanDetailHtml(plan) {
+    if (!plan) return '';
+
+    const sectionEl = document.getElementById('treatmentPlanSection');
+    const visitToken = sectionEl ? (sectionEl.getAttribute('data-visit-token') || '') : '';
+    const isClinicalLocked = sectionEl && sectionEl.getAttribute('data-clinical-locked') === 'true';
+
+    const courses = groupStagesIntoCourses(plan.stages || [], plan);
+    const pct = Number(plan.progressPercent || 0);
+    const progressText = (plan.totalItems && plan.totalItems > 0)
+        ? `${plan.completedItems || 0}/${plan.totalItems} bước (${pct}%)`
+        : `${plan.completedStages || 0}/${plan.totalStages || 0} giai đoạn (${pct}%)`;
+
+    const statusBadgeClass = plan.statusBadgeClass || 'bg-light text-secondary border';
+    const statusDisplayName = plan.statusDisplayName || 'Đang xử lý';
+    const installmentCount = Array.isArray(plan.installments) ? plan.installments.length : 0;
+
+    const editLinkHtml = (visitToken && !isClinicalLocked)
+        ? `<a href="/doctor/examination/${encodeURIComponent(visitToken)}/treatment-plans/create?planId=${plan.planId}"
+              class="df-btn-plan-detail text-decoration-none"
+              title="Chỉnh sửa kế hoạch điều trị">
+               <i class="bi bi-pencil-square"></i>
+               <span>Chỉnh sửa</span>
+           </a>`
+        : '';
+
+    const notesSectionHtml = (plan.diagnosisText || plan.notes)
+        ? `<div class="tp-detail-notes">
+               ${plan.diagnosisText ? `<div class="small mb-1"><span class="fw-semibold text-secondary">Chẩn đoán liên quan:</span> <span class="text-dark">${escapePlanHtml(plan.diagnosisText)}</span></div>` : ''}
+               ${plan.notes ? `<div class="small mb-0"><span class="fw-semibold text-secondary">Ghi chú:</span> <span class="text-dark">${escapePlanHtml(plan.notes)}</span></div>` : ''}
+           </div>`
+        : '';
+
+    const roadmapBodyHtml = renderPlanInlineRoadmapHtml(plan, { omitHeader: true });
+
+    return `
+        <div class="tp-detail-summary-grid">
+            <div>
+                <div class="df-meta-tertiary mb-1"><i class="bi bi-calendar-event text-primary me-1"></i>Thời gian thực hiện</div>
+                <div class="fw-semibold text-dark df-num" style="font-size: 13.5px;">
+                    ${escapePlanHtml(plan.startDate || '---')} &rarr; ${escapePlanHtml(plan.expectedEndDate || '---')}
+                </div>
+                <div class="df-meta-tertiary mt-1 df-num">${courses.length} quá trình điều trị</div>
+            </div>
+            <div>
+                <div class="df-meta-tertiary mb-1"><i class="bi bi-graph-up-arrow text-primary me-1"></i>Tiến độ điều trị</div>
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="fw-bold text-primary df-num" style="font-size: 13.5px;" id="plan-progress-badge-${plan.planId}">${progressText}</span>
+                </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: ${pct}%" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+            <div>
+                <div class="df-meta-tertiary mb-1"><i class="bi bi-cash-coin text-primary me-1"></i>Chi phí dự kiến</div>
+                <div class="fw-bold text-primary df-num" style="font-size: 15px;">${window.formatVnd(plan.finalEstimatedCost || 0)}</div>
+                <div class="d-flex flex-wrap align-items-center gap-1 mt-1">
+                    <span class="badge bg-success-subtle text-success border border-success d-inline-flex align-items-center gap-1 py-1 px-2" style="font-size: 11px;">
+                        <i class="bi bi-check2-all text-success"></i>Đã lưu Kế toán
+                    </span>
+                    ${plan.isInstallment ? `<span class="badge bg-info-subtle text-info border border-info d-inline-flex align-items-center gap-1 py-1 px-2 df-num" style="font-size: 11px;"><i class="bi bi-calendar2-range"></i>Trả theo đợt (${installmentCount} đợt)</span>` : ''}
+                </div>
+            </div>
+        </div>
+
+        ${notesSectionHtml}
+
+        <div id="plan-roadmap-row-${plan.planId}">
+            ${roadmapBodyHtml}
+        </div>
+    `;
+}
+
+/**
+ * Khởi tạo render bảng tiến độ tab Dịch vụ thực hiện từ cache window.INITIAL_TREATMENT_PLANS
  */
 function initAllPlanRoadmaps() {
-    if (window.INITIAL_TREATMENT_PLANS && Array.isArray(window.INITIAL_TREATMENT_PLANS)) {
-        window.INITIAL_TREATMENT_PLANS.forEach(plan => {
-            const row = document.getElementById(`plan-roadmap-row-${plan.planId}`);
-            if (row) {
-                row.innerHTML = renderPlanInlineRoadmapHtml(plan);
-                row.dataset.rendered = "true";
-            }
-        });
-    }
     renderDiagnosisProgressTables();
 }
 
@@ -714,79 +766,110 @@ if (document.readyState === 'loading') {
     initAllPlanRoadmaps();
 }
 
+function syncTpDetailTopbar(isOpen, plan) {
+    const countBadge = document.getElementById('planCountBadge');
+    const backWrap = document.getElementById('tpDetailBackWrap');
+    const codeEl = document.getElementById('tpDetailHeaderCode');
+    const nameEl = document.getElementById('tpDetailHeaderName');
+    if (countBadge) countBadge.classList.toggle('d-none', !!isOpen);
+    if (backWrap) backWrap.classList.toggle('d-none', !isOpen);
+    if (codeEl) codeEl.textContent = isOpen && plan ? (plan.planCode || '') : '';
+    if (nameEl) nameEl.textContent = isOpen && plan ? (plan.planName || '') : '';
+}
+
 /**
- * Bật / tắt hiển thị khối lộ trình chi tiết từng bước
+ * Mở chi tiết kế hoạch điều trị & ẩn danh sách
  */
-function togglePlanInlineRoadmap(planId) {
+function openTreatmentPlanDetail(planId) {
     if (!planId) return;
-    const roadmapRow = document.getElementById(`plan-roadmap-row-${planId}`);
-    const chevron = document.getElementById(`chevron-plan-${planId}`);
-    if (!roadmapRow) {
-        console.warn(`Không tìm thấy khối lộ trình #plan-roadmap-row-${planId}`);
+    const listView = document.getElementById('tpListView');
+    const detailView = document.getElementById('tpDetailView');
+    const detailContent = document.getElementById('tpDetailContent');
+    if (!detailView || !detailContent) return;
+
+    window._activeTreatmentPlanId = String(planId);
+    if (listView) listView.style.display = 'none';
+    detailView.style.display = 'block';
+
+    const scrollToSectionTop = () => {
+        const sectionEl = document.getElementById('treatmentPlanSection');
+        if (!sectionEl) return;
+        setTimeout(() => {
+            const targetTop = sectionEl.getBoundingClientRect().top + window.pageYOffset - 90;
+            window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+        }, 40);
+    };
+
+    const planData = (window.INITIAL_TREATMENT_PLANS || []).find(p => String(p.planId) === String(planId));
+    if (planData) {
+        syncTpDetailTopbar(true, planData);
+        detailContent.innerHTML = renderTreatmentPlanDetailHtml(planData);
+        scrollToSectionTop();
         return;
     }
 
-    if (!roadmapRow.dataset.rendered || roadmapRow.dataset.rendered !== "true") {
-        let planData = (window.INITIAL_TREATMENT_PLANS || []).find(p => String(p.planId) === String(planId));
-        if (planData) {
-            roadmapRow.innerHTML = renderPlanInlineRoadmapHtml(planData);
-            roadmapRow.dataset.rendered = "true";
-        } else {
-            fetch(`/api/doctor/treatment-plans/${planId}`)
-                .then(r => {
-                    if (!r.ok) {
-                        throw new Error('Không thể tải chi tiết lộ trình kế hoạch điều trị');
-                    }
-                    return r.json();
-                })
-                .then(dto => {
-                    roadmapRow.innerHTML = renderPlanInlineRoadmapHtml(dto);
-                    roadmapRow.dataset.rendered = "true";
-                    roadmapRow.style.display = 'block';
-                    if (chevron) {
-                        chevron.classList.remove('bi-chevron-down');
-                        chevron.classList.add('bi-chevron-up');
-                    }
-                    setTimeout(() => {
-                        const targetTop = roadmapRow.getBoundingClientRect().top + window.pageYOffset - 90;
-                        window.scrollTo({ top: targetTop, behavior: 'smooth' });
-                    }, 50);
-                })
-                .catch(e => {
-                    console.error(e);
-                    if (typeof showToast === 'function') {
-                        showToast(e.message || 'Lỗi tải lộ trình điều trị', true);
-                    }
-                });
-            return;
-        }
-    }
+    syncTpDetailTopbar(true, null);
+    detailContent.innerHTML = `
+        <div class="text-center py-5 text-muted">
+            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+            <span>Đang tải chi tiết kế hoạch điều trị...</span>
+        </div>
+    `;
 
-    const isHidden = window.getComputedStyle(roadmapRow).display === 'none';
-    if (isHidden) {
-        document.querySelectorAll('.df-plan-roadmap-row').forEach(el => el.style.display = 'none');
-        document.querySelectorAll('[id^="chevron-plan-"]').forEach(el => {
-            el.classList.remove('bi-chevron-up');
-            el.classList.add('bi-chevron-down');
+    fetch(`/api/doctor/treatment-plans/${planId}`)
+        .then(r => {
+            if (!r.ok) {
+                throw new Error('Không thể tải chi tiết kế hoạch điều trị');
+            }
+            return r.json();
+        })
+        .then(dto => {
+            if (!Array.isArray(window.INITIAL_TREATMENT_PLANS)) {
+                window.INITIAL_TREATMENT_PLANS = [];
+            }
+            const idx = window.INITIAL_TREATMENT_PLANS.findIndex(p => String(p.planId) === String(dto.planId));
+            if (idx !== -1) window.INITIAL_TREATMENT_PLANS[idx] = dto;
+            else window.INITIAL_TREATMENT_PLANS.push(dto);
+
+            if (String(window._activeTreatmentPlanId) === String(planId)) {
+                syncTpDetailTopbar(true, dto);
+                detailContent.innerHTML = renderTreatmentPlanDetailHtml(dto);
+                scrollToSectionTop();
+            }
+        })
+        .catch(e => {
+            console.error(e);
+            if (typeof showToast === 'function') {
+                showToast(e.message || 'Lỗi tải chi tiết kế hoạch điều trị', true);
+            }
+            closeTreatmentPlanDetail();
         });
+}
+window.openTreatmentPlanDetail = openTreatmentPlanDetail;
 
-        roadmapRow.style.display = 'block';
-        if (chevron) {
-            chevron.classList.remove('bi-chevron-down');
-            chevron.classList.add('bi-chevron-up');
-        }
-        // Cuộn màn hình mượt mà xuống ngay vị trí khối lộ trình
-        setTimeout(() => {
-            const targetTop = roadmapRow.getBoundingClientRect().top + window.pageYOffset - 90;
-            window.scrollTo({ top: targetTop, behavior: 'smooth' });
-        }, 50);
-    } else {
-        roadmapRow.style.display = 'none';
-        if (chevron) {
-            chevron.classList.remove('bi-chevron-up');
-            chevron.classList.add('bi-chevron-down');
-        }
+/**
+ * Đóng chi tiết và quay lại danh sách kế hoạch điều trị
+ */
+function closeTreatmentPlanDetail() {
+    window._activeTreatmentPlanId = null;
+    const listView = document.getElementById('tpListView');
+    const detailView = document.getElementById('tpDetailView');
+    const detailContent = document.getElementById('tpDetailContent');
+    syncTpDetailTopbar(false, null);
+    if (detailView) detailView.style.display = 'none';
+    if (detailContent) detailContent.innerHTML = '';
+    if (listView) listView.style.display = 'block';
+    if (typeof window.refreshTpGrid === 'function') {
+        window.refreshTpGrid();
     }
+}
+window.closeTreatmentPlanDetail = closeTreatmentPlanDetail;
+
+/**
+ * Alias giữ tương thích cho các lời gọi cũ
+ */
+function togglePlanInlineRoadmap(planId) {
+    openTreatmentPlanDetail(planId);
 }
 window.togglePlanInlineRoadmap = togglePlanInlineRoadmap;
 
@@ -805,10 +888,12 @@ function updatePlanInlineView(plan) {
         }
     }
 
-    const roadmapRow = document.getElementById(`plan-roadmap-row-${plan.planId}`);
-    if (roadmapRow) {
-        roadmapRow.innerHTML = renderPlanInlineRoadmapHtml(plan);
-        roadmapRow.dataset.rendered = "true";
+    if (window._activeTreatmentPlanId && String(window._activeTreatmentPlanId) === String(plan.planId)) {
+        syncTpDetailTopbar(true, plan);
+        const detailContent = document.getElementById('tpDetailContent');
+        if (detailContent) {
+            detailContent.innerHTML = renderTreatmentPlanDetailHtml(plan);
+        }
     }
 
     const parentRow = document.getElementById(`plan-row-${plan.planId}`);
@@ -1059,8 +1144,9 @@ function deleteTreatmentPlan(planId) {
         showToast('Đã xóa kế hoạch điều trị thành công!');
         const row = document.getElementById(`plan-row-${planId}`);
         if (row) row.remove();
-        const roadmapRow = document.getElementById(`plan-roadmap-row-${planId}`);
-        if (roadmapRow) roadmapRow.remove();
+        if (window._activeTreatmentPlanId && String(window._activeTreatmentPlanId) === String(planId)) {
+            closeTreatmentPlanDetail();
+        }
         if (Array.isArray(window.INITIAL_TREATMENT_PLANS)) {
             window.INITIAL_TREATMENT_PLANS = window.INITIAL_TREATMENT_PLANS.filter(p => String(p.planId) !== String(planId));
         }

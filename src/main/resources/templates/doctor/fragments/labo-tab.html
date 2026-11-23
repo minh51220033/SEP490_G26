@@ -10,21 +10,16 @@
      th:with="isLaboLocked=${(isClinicalLocked == true) or (isReadOnlyView == true) or (visit != null and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED' or visit.status.name() == 'CANCELLED'))}">
     <div class="df-unified-tab-card mb-4 overflow-hidden bg-white">
         <!-- HEADER -->
-        <div class="df-tab-content-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3 border-bottom">
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                <i class="bi bi-box-seam text-primary fs-5"></i>
-                <h2 class="df-title-primary mb-0">Đặt xưởng labo &amp; mẫu xét nghiệm</h2>
-                <span class="df-tab-count df-num" id="laboOrdersCountBadge"
-                      th:text="${laboOrders != null ? #lists.size(laboOrders) : 0} + ' phiếu'">0 phiếu</span>
-                <span class="df-subtitle-secondary d-none d-lg-inline">· Răng sứ, máng chỉnh nha &amp; xét nghiệm</span>
-            </div>
+        <div class="df-tab-actionbar">
+            <span class="df-tab-count-pill" id="laboOrdersCountBadge"
+                  th:text="${laboOrders != null ? #lists.size(laboOrders) : 0} + ' phiếu'">0 phiếu</span>
 
-            <div class="d-flex align-items-center gap-2">
-                <a th:href="@{/doctor/labo}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-2 fw-semibold d-flex align-items-center gap-2">
+            <div class="df-tab-actions">
+                <a th:href="@{/doctor/labo}" target="_blank" class="df-tab-btn df-tab-btn-secondary">
                     <i class="bi bi-box-arrow-up-right"></i>
                     <span>Trang Quản lý Labo</span>
                 </a>
-                <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-white"
+                <button type="button" class="df-tab-btn df-tab-btn-primary"
                         th:unless="${isLaboLocked}"
                         onclick="openCreateLaboModal()">
                     <i class="bi bi-plus-circle-fill"></i>
