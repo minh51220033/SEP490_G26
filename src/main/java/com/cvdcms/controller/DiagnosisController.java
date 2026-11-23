@@ -864,17 +864,27 @@ public class DiagnosisController {
             @PathVariable("visitRef") String visitRef,
             @RequestParam(value = "diagId", required = false) Long preselectedDiagId,
             jakarta.servlet.http.HttpSession session,
+            RedirectAttributes redirectAttributes,
             Model model
     ) {
         Long visitId = decodeVisitRef(visitRef);
         doctorVisitAccess.require(session, visitId);
-        return showCreateTreatmentPlanPage(visitId, preselectedDiagId, model);
+        return showCreateTreatmentPlanPage(visitId, preselectedDiagId, model, redirectAttributes);
     }
 
     public String showCreateTreatmentPlanPage(
             Long visitId,
             Long preselectedDiagId,
             Model model
+    ) {
+        return showCreateTreatmentPlanPage(visitId, preselectedDiagId, model, null);
+    }
+
+    public String showCreateTreatmentPlanPage(
+            Long visitId,
+            Long preselectedDiagId,
+            Model model,
+            RedirectAttributes redirectAttributes
     ) {
         jakarta.servlet.http.HttpServletRequest request = null;
         try {
@@ -909,12 +919,21 @@ public class DiagnosisController {
         }
 
         if (visit.getPrimaryDoctor() == null) {
+            if (redirectAttributes != null) {
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "Ca khám " + visit.getVisitCode() + " chưa được phân công bác sĩ phụ trách, không thể lập phác đồ điều trị.");
+            }
             return "redirect:/doctor/daily-visits";
         }
 
         try {
             doctorVisitAccess.requireActiveClinicalExam(session, visitId);
         } catch (org.springframework.web.server.ResponseStatusException ex) {
+            if (redirectAttributes != null) {
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "Không thể lập phác đồ điều trị khi chưa gọi bệnh nhân vào khám. "
+                                + (ex.getReason() != null ? ex.getReason() : "Vui lòng bấm 'Vào khám' cho đúng lượt Đang gọi."));
+            }
             return "redirect:/doctor/daily-visits";
         }
 
