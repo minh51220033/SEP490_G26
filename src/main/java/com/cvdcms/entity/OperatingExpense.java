@@ -74,6 +74,9 @@ public class OperatingExpense {
     @Column(name = "description", nullable = false, columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "signature_url", length = 500)
+    private String signatureUrl;
+
     @Column(name = "is_cancelled", nullable = false)
     private Boolean isCancelled = false;
 

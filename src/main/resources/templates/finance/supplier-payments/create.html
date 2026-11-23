@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <th:block th:replace="~{fragments/head :: head('Lập Phiếu Thanh Toán Nhà Cung Cấp')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <style>
+        .spv-shell {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+            padding: 24px 28px;
+        }
+        .spv-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            padding-bottom: 18px;
+            margin-bottom: 22px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .spv-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+            line-height: 1.3;
+        }
+        .spv-sub {
+            font-size: 13px;
+            color: #64748b;
+            margin: 3px 0 0;
+        }
+        .spv-debt-banner {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 18px;
+        }
+        @media (max-width: 767px) {
+            .spv-debt-banner {
+                grid-template-columns: 1fr;
+            }
+        }
+        .spv-debt-item span {
+            display: block;
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 2px;
+        }
+        .spv-debt-item strong {
+            font-size: 16px;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .spv-field-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .spv-control {
+            border: 1px solid #dbe2ea;
+            border-radius: 8px;
+            font-size: 13.5px;
+            color: #0f172a;
+            padding: 8px 12px;
+            min-height: 40px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .spv-control:focus {
+            border-color: #0284c7;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+            outline: none;
+        }
+        textarea.spv-control {
+            min-height: 92px;
+            resize: vertical;
+        }
+        .spv-receipts-box {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 16px;
+            background: #ffffff;
+        }
+        .spv-receipts-head {
+            background: #f8fafc;
+            padding: 10px 14px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 700;
+            color: #334155;
+        }
+        .spv-receipts-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+        }
+        .spv-receipts-table th {
+            background: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
+            padding: 8px 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .spv-receipts-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+        .spv-receipts-table tr:last-child td {
+            border-bottom: none;
+        }
+        .spv-receipts-table tr.is-active {
+            background: #eff6ff;
+        }
+        .spv-preview-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 24px 22px;
+            position: sticky;
+            top: 84px;
+        }
+        .spv-preview-header {
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .spv-preview-header h3 {
+            font-size: 17px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 4px;
+        }
+        .spv-preview-date {
+            font-size: 12.5px;
+            color: #64748b;
+        }
+        .spv-preview-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 6px 0;
+            font-size: 13.5px;
+        }
+        .spv-preview-label {
+            color: #475569;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+        .spv-preview-val {
+            color: #0f172a;
+            font-weight: 600;
+            text-align: right;
+            word-break: break-word;
+        }
+        .spv-preview-divider {
+            border-top: 1px solid #e2e8f0;
+            margin: 16px 0;
+        }
+        .exp-signature-block {
+            text-align: right;
+            margin-bottom: 16px;
+        }
+        .exp-signature-title {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .exp-signature-hint {
+            font-size: 11.5px;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+        .exp-signature-user {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #334155;
+        }
+        .spv-preview-notes {
+            font-size: 13px;
+            color: #475569;
+            border-top: 1px solid #eef2f6;
+            padding-top: 12px;
+        }
+        .spv-preview-notes-text {
+            margin-top: 4px;
+            color: #334155;
+            white-space: pre-wrap;
+            word-break: break-word;
+            min-height: 20px;
+        }
+        .spv-footer-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid #f1f5f9;
+        }
+        .spv-btn-close {
+            background: #94a3b8;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 9px 20px;
+            font-size: 13.5px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .spv-btn-close:hover {
+            background: #64748b;
+            color: #ffffff;
+        }
+        .spv-btn-tonal {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 9px 18px;
+            font-size: 13.5px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .spv-btn-tonal:hover {
+            background: #bae6fd;
+            color: #0c4a6e;
+        }
+        .spv-btn-primary {
+            background: #0284c7;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 9px 24px;
+            font-size: 13.5px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+        }
+        .spv-btn-primary:hover {
+            background: #0369a1;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body class="app-body fin-brand-theme">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('supplier-payments')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Lập Phiếu Thanh Toán NCC')}"></header>
+
+        <main class="app-content finance-page">
+            <div id="spvToast" class="alert alert-success alert-dismissible fade show mb-3" role="alert" style="display: none;">
+                <i class="bi bi-check-circle-fill me-2"></i><span id="spvToastText"></span>
+                <button type="button" class="btn-close" onclick="document.getElementById('spvToast').style.display='none'"></button>
+            </div>
+
+            <div class="spv-shell">
+                <div class="spv-head">
+                    <div>
+                        <h1 class="spv-title">Phiếu thanh toán Nhà cung cấp</h1>
+                        <p class="spv-sub">Đối soát công nợ nhập kho vật tư theo chi nhánh và xác nhận chữ ký kế toán</p>
+                    </div>
+                    <a th:href="${returnUrl}" class="btn btn-sm btn-light border text-secondary rounded-pill px-3 d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-arrow-left"></i><span>Quay lại</span>
+                    </a>
+                </div>
+
+                <form id="spVoucherForm" novalidate>
+                    <div id="spvInlineError" class="alert alert-danger py-2 px-3 small mb-3" style="display: none;">
+                        <i class="bi bi-exclamation-circle me-1"></i><span id="spvInlineErrorText"></span>
+                    </div>
+
+                    <div class="row g-4 align-items-start">
+                        <!-- Cột trái: Thông tin công nợ + Biểu mẫu nhập + Chữ ký xác nhận -->
+                        <div class="col-12 col-xl-8">
+                            <!-- Khối 1: Tóm tắt công nợ giống Quản lý kho -->
+                            <div id="spvDebtBanner" class="spv-debt-banner" style="display: none;">
+                                <div class="spv-debt-item">
+                                    <span>Tổng tiền đã nhập kho</span>
+                                    <strong id="spvBannerImport" class="text-dark">0 đ</strong>
+                                </div>
+                                <div class="spv-debt-item">
+                                    <span>Đã thanh toán trước đó</span>
+                                    <strong id="spvBannerPaid" class="text-success">0 đ</strong>
+                                </div>
+                                <div class="spv-debt-item">
+                                    <span>Công nợ còn lại tối đa</span>
+                                    <strong id="spvBannerRemaining" class="text-danger">0 đ</strong>
+                                </div>
+                            </div>
+
+                            <div class="row g-3">
+                                <!-- Hàng 1: Ngày thanh toán & Chi nhánh -->
+                                <div class="col-md-6">
+                                    <label for="spvPaymentDate" class="spv-field-label">Ngày thanh toán <span class="text-danger">*</span></label>
+                                    <input type="date" id="spvPaymentDate" class="form-control spv-control"
+                                           th:value="${todayDate}" th:max="${todayDate}" required>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="spvBranchId" class="spv-field-label">Chi nhánh chi trả <span class="text-danger">*</span></label>
+                                    <select id="spvBranchId" class="form-select spv-control" required>
+                                        <option th:each="b : ${branches}"
+                                                th:value="${b.branchId}"
+                                                th:text="${b.branchName}"
+                                                th:selected="${b.branchId == selectedBranchId}"></option>
+                                    </select>
+                                </div>
+
+                                <!-- Hàng 2: Nhà cung cấp & Phiếu nhập đối ứng -->
+                                <div class="col-md-6">
+                                    <label for="spvSupplierId" class="spv-field-label">Nhà cung cấp <span class="text-danger">*</span></label>
+                                    <select id="spvSupplierId" class="form-select spv-control" required autofocus>
+                                        <option value="">-- Chọn nhà cung cấp đang có công nợ --</option>
+                                        <option th:each="s : ${payableSuppliers}"
+                                                th:value="${s.supplierId}"
+                                                th:data-name="${s.supplierName}"
+                                                th:data-code="${s.supplierCode}"
+                                                th:data-import="${s.totalImportAmount}"
+                                                th:data-paid="${s.totalPaidAmount}"
+                                                th:data-debt="${s.remainingDebt}"
+                                                th:selected="${selectedSupplierId != null and s.supplierId == selectedSupplierId}"
+                                                th:text="${s.supplierName + ' (Nợ: ' + #numbers.formatDecimal(s.remainingDebt, 0, 'COMMA', 0, 'POINT') + ' đ)'}">
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="spvReceiptId" class="spv-field-label">Phiếu nhập đối ứng (tùy chọn)</label>
+                                    <select id="spvReceiptId" class="form-select spv-control">
+                                        <option value="">-- Thanh toán công nợ chung --</option>
+                                        <option th:each="r : ${unpaidReceipts}"
+                                                th:value="${r.receiptId}"
+                                                th:data-code="${r.receiptCode}"
+                                                th:data-debt="${r.remainingDebt}"
+                                                th:selected="${selectedReceiptId != null and r.receiptId == selectedReceiptId}"
+                                                th:text="${r.receiptCode + ' (' + #temporals.format(r.receiptDate, 'dd/MM/yyyy') + ') - Còn nợ: ' + #numbers.formatDecimal(r.remainingDebt, 0, 'COMMA', 0, 'POINT') + ' đ'}">
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <!-- Hàng 3: Số tiền & Hình thức -->
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label for="spvAmount" class="spv-field-label m-0">Số tiền thanh toán (VNĐ) <span class="text-danger">*</span></label>
+                                        <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none fw-semibold" onclick="fillSpvMaxDebt()">
+                                            Trả hết nợ
+                                        </button>
+                                    </div>
+                                    <input type="text" id="spvAmount" class="form-control spv-control fw-bold text-primary"
+                                           data-cashier-money="true" min="1" required placeholder="VD: 1,000,000">
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="spvMethod" class="spv-field-label">Hình thức thanh toán <span class="text-danger">*</span></label>
+                                    <select id="spvMethod" class="form-select spv-control" required>
+                                        <option value="BANK_TRANSFER">Chuyển khoản ngân hàng (UNC)</option>
+                                        <option value="CASH">Tiền mặt tại quầy</option>
+                                    </select>
+                                </div>
+
+                                <!-- Hàng 4: Số chứng từ / UNC -->
+                                <div class="col-12">
+                                    <label for="spvRefNo" class="spv-field-label">Số chứng từ / Mã giao dịch (UNC)</label>
+                                    <input type="text" id="spvRefNo" class="form-control spv-control" maxlength="100"
+                                           placeholder="VD: UNC-20261124-01 hoặc Số phiếu chi kho...">
+                                </div>
+
+                                <!-- Bảng đối chiếu nhanh các phiếu nhập kho chưa tất toán của NCC (giống Kho vật tư) -->
+                                <div class="col-12" id="spvUnpaidReceiptsWrap" style="display: none;">
+                                    <div class="spv-receipts-box">
+                                        <div class="spv-receipts-head">
+                                            <span><i class="bi bi-box-seam text-primary me-1"></i>Phiếu nhập kho chưa tất toán của nhà cung cấp</span>
+                                            <span id="spvReceiptCountBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle">0 phiếu</span>
+                                        </div>
+                                        <div class="table-responsive" style="max-height: 220px;">
+                                            <table class="spv-receipts-table">
+                                                <thead>
+                                                <tr>
+                                                    <th>Mã phiếu nhập</th>
+                                                    <th>Ngày nhập</th>
+                                                    <th>Số HĐ NCC</th>
+                                                    <th class="text-end">Tổng nhập</th>
+                                                    <th class="text-end">Đã trả</th>
+                                                    <th class="text-end">Còn nợ</th>
+                                                    <th class="text-center">Chọn</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody id="spvUnpaidReceiptsBody"></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Hàng 5: Ghi chú thanh toán -->
+                                <div class="col-12">
+                                    <label for="spvNotes" class="spv-field-label">Ghi chú thanh toán</label>
+                                    <textarea id="spvNotes" class="form-control spv-control" rows="3" maxlength="255"
+                                              placeholder="Ghi rõ nội dung chi trả công nợ cho nhà cung cấp, số hóa đơn VAT đính kèm..."></textarea>
+                                </div>
+
+                                <!-- Hàng 6: Chữ ký xác nhận kế toán (bên trái) -->
+                                <div class="col-12 d-flex justify-content-end mt-2">
+                                    <div class="text-center">
+                                        <div class="spv-field-label mb-1">
+                                            Xác nhận kế toán
+                                            <span id="spvSignStatusBadge" class="badge bg-secondary-subtle text-secondary border ms-1">Chưa ký</span>
+                                        </div>
+                                        <th:block th:replace="~{fragments/finance-signature :: sigField('spVoucher', null)}"></th:block>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cột phải: Bản xem trước Phiếu thanh toán NCC theo thời gian thực -->
+                        <div class="col-12 col-xl-4">
+                            <aside class="spv-preview-card" aria-label="Xem trước phiếu thanh toán nhà cung cấp">
+                                <div class="spv-preview-header">
+                                    <h3>Phiếu thanh toán NCC</h3>
+                                    <div class="spv-preview-date" id="spvPreviewDate">Ngày --</div>
+                                    <div class="mt-2">
+                                        <span id="spvPreviewSignBadge" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                            <i class="bi bi-pen me-1"></i>Chờ kế toán ký xác nhận
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="spv-preview-row">
+                                    <span class="spv-preview-label">Nhà cung cấp:</span>
+                                    <span class="spv-preview-val" id="spvPreviewSupplier">--</span>
+                                </div>
+                                <div class="spv-preview-row">
+                                    <span class="spv-preview-label">Chi nhánh:</span>
+                                    <span class="spv-preview-val" id="spvPreviewBranch">--</span>
+                                </div>
+                                <div class="spv-preview-row">
+                                    <span class="spv-preview-label">Phiếu đối ứng:</span>
+                                    <span class="spv-preview-val" id="spvPreviewReceipt">Công nợ chung</span>
+                                </div>
+                                <div class="spv-preview-row">
+                                    <span class="spv-preview-label">Số tiền chi:</span>
+                                    <span class="spv-preview-val text-primary" id="spvPreviewAmount">0 đ</span>
+                                </div>
+                                <div class="spv-preview-row">
+                                    <span class="spv-preview-label">Hình thức:</span>
+                                    <span class="spv-preview-val" id="spvPreviewMethod">--</span>
+                                </div>
+                                <div class="spv-preview-row">
+                                    <span class="spv-preview-label">Số chứng từ / UNC:</span>
+                                    <span class="spv-preview-val" id="spvPreviewRef">--</span>
+                                </div>
+
+                                <div class="spv-preview-divider"></div>
+
+                                <th:block th:replace="~{fragments/finance-signature :: sigMirror('spVoucher', null, 'Kế toán lập phiếu', '(Chữ Ký, Họ Và Tên)', ${displayName != null and !displayName.isBlank() ? displayName : (loggedInUser != null ? loggedInUser.username : 'Kế toán')})}"></th:block>
+
+                                <div class="spv-preview-notes">
+                                    <strong class="text-dark">Ghi chú:</strong>
+                                    <div class="spv-preview-notes-text" id="spvPreviewNotes">--</div>
+                                </div>
+                            </aside>
+                        </div>
+                    </div>
+
+                    <!-- Footer buttons: Secondary trái -> Tonal -> Primary phải -->
+                    <div class="spv-footer-actions">
+                        <a th:href="${returnUrl}" class="spv-btn-close">Đóng</a>
+                        <button type="button" id="spvSaveAndContinueBtn" class="spv-btn-tonal">
+                            Lưu và tiếp tục
+                        </button>
+                        <button type="submit" id="spvSaveBtn" class="spv-btn-primary">
+                            <i class="bi bi-check2-circle"></i> Lưu phiếu thanh toán
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/expense-income-tabs.js}"></script>
+<script th:inline="javascript">
+    (function () {
+        const INITIAL_RECEIPT_ID = /*[[${selectedReceiptId}]]*/ null;
+        const RETURN_URL = /*[[${returnUrl}]]*/ '/supplier-payments';
+
+        const form = document.getElementById('spVoucherForm');
+        const dateEl = document.getElementById('spvPaymentDate');
+        const branchEl = document.getElementById('spvBranchId');
+        const supplierEl = document.getElementById('spvSupplierId');
+        const receiptEl = document.getElementById('spvReceiptId');
+        const amountEl = document.getElementById('spvAmount');
+        const methodEl = document.getElementById('spvMethod');
+        const refEl = document.getElementById('spvRefNo');
+        const notesEl = document.getElementById('spvNotes');
+
+        const errBox = document.getElementById('spvInlineError');
+        const errText = document.getElementById('spvInlineErrorText');
+        let currentMaxDebt = 0;
+        let cachedReceipts = [];
+        let saveAndContinueMode = false;
+
+        function fmtMoney(val) {
+            const n = Number(val || 0);
+            return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(Number.isFinite(n) ? n : 0) + ' đ';
+        }
+
+        function fmtVnDate(iso) {
+            if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return 'Ngày --';
+            const [y, m, d] = iso.split('-');
+            return `Ngày ${d}-${m}-${y}`;
+        }
+
+        function fmtVnDateShort(dtStr) {
+            if (!dtStr) return '—';
+            const datePart = String(dtStr).slice(0, 10);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart;
+            const [y, m, d] = datePart.split('-');
+            return `${d}/${m}/${y}`;
+        }
+
+        function clearErr() {
+            if (errBox) errBox.style.display = 'none';
+        }
+
+        function showErr(msg) {
+            if (errText) errText.textContent = msg;
+            if (errBox) errBox.style.display = 'block';
+        }
+
+        function syncSignStatusBadge() {
+            const sigVal = form?.querySelector('[data-fin-sig-field="spVoucher"] input[name="signatureData"]')?.value?.trim();
+            const signed = Boolean(sigVal);
+            const leftBadge = document.getElementById('spvSignStatusBadge');
+            const rightBadge = document.getElementById('spvPreviewSignBadge');
+            if (leftBadge) {
+                leftBadge.className = signed
+                    ? 'badge bg-success-subtle text-success border border-success-subtle ms-1'
+                    : 'badge bg-secondary-subtle text-secondary border ms-1';
+                leftBadge.textContent = signed ? 'Kế toán đã ký ✓' : 'Chưa ký';
+            }
+            if (rightBadge) {
+                rightBadge.className = signed
+                    ? 'badge bg-success-subtle text-success border border-success-subtle'
+                    : 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle';
+                rightBadge.innerHTML = signed
+                    ? '<i class="bi bi-patch-check-fill me-1"></i>Kế toán đã ký xác nhận'
+                    : '<i class="bi bi-pen me-1"></i>Chờ kế toán ký xác nhận';
+            }
+        }
+
+        function updatePreview() {
+            document.getElementById('spvPreviewDate').textContent = fmtVnDate(dateEl?.value);
+            const supOpt = supplierEl?.options[supplierEl.selectedIndex];
+            document.getElementById('spvPreviewSupplier').textContent =
+                (supOpt && supOpt.value) ? (supOpt.getAttribute('data-name') || supOpt.text) : '--';
+            const brOpt = branchEl?.options[branchEl.selectedIndex];
+            document.getElementById('spvPreviewBranch').textContent = brOpt ? brOpt.text.trim() : '--';
+            const recOpt = receiptEl?.options[receiptEl.selectedIndex];
+            document.getElementById('spvPreviewReceipt').textContent =
+                (recOpt && recOpt.value) ? (recOpt.getAttribute('data-code') || recOpt.text) : 'Công nợ chung';
+
+            const parsedAmt = typeof window.parseCashierMoney === 'function'
+                ? window.parseCashierMoney(amountEl?.value)
+                : Number(String(amountEl?.value || '').replace(/,/g, ''));
+            document.getElementById('spvPreviewAmount').textContent =
+                (Number.isFinite(parsedAmt) && parsedAmt > 0) ? fmtMoney(parsedAmt) : '0 đ';
+
+            const mOpt = methodEl?.options[methodEl.selectedIndex];
+            document.getElementById('spvPreviewMethod').textContent = mOpt ? mOpt.text.trim() : '--';
+            document.getElementById('spvPreviewRef').textContent = refEl?.value?.trim() || '--';
+            document.getElementById('spvPreviewNotes').textContent = notesEl?.value?.trim() || '--';
+            syncSignStatusBadge();
+        }
+
+        function updateBanner(importAmt, paidAmt, maxDebt) {
+            const banner = document.getElementById('spvDebtBanner');
+            if (!banner) return;
+            if (maxDebt === null || maxDebt === undefined) {
+                banner.style.display = 'none';
+                currentMaxDebt = 0;
+                return;
+            }
+            currentMaxDebt = Math.max(0, Number(maxDebt || 0));
+            document.getElementById('spvBannerImport').textContent = fmtMoney(importAmt);
+            document.getElementById('spvBannerPaid').textContent = fmtMoney(paidAmt);
+            document.getElementById('spvBannerRemaining').textContent = fmtMoney(currentMaxDebt);
+            banner.style.display = 'grid';
+        }
+
+        function renderReceiptsTable(receipts) {
+            const wrap = document.getElementById('spvUnpaidReceiptsWrap');
+            const body = document.getElementById('spvUnpaidReceiptsBody');
+            const badge = document.getElementById('spvReceiptCountBadge');
+            if (!wrap || !body) return;
+
+            if (!receipts || receipts.length === 0) {
+                wrap.style.display = 'none';
+                body.innerHTML = '';
+                return;
+            }
+
+            if (badge) badge.textContent = receipts.length + ' phiếu';
+            const selectedRecId = receiptEl?.value ? String(receiptEl.value) : '';
+            body.innerHTML = '';
+            receipts.forEach(r => {
+                const tr = document.createElement('tr');
+                if (selectedRecId && String(r.receiptId) === selectedRecId) {
+                    tr.className = 'is-active';
+                }
+                tr.innerHTML = `
+                    <td class="fw-bold text-primary font-monospace">${r.receiptCode || ''}</td>
+                    <td>${fmtVnDateShort(r.receiptDate)}</td>
+                    <td>${r.supplierInvoiceNo || '—'}</td>
+                    <td class="text-end">${fmtMoney(r.totalAmount)}</td>
+                    <td class="text-end text-success">${fmtMoney(r.paidAmount)}</td>
+                    <td class="text-end fw-bold text-danger">${fmtMoney(r.remainingDebt)}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" data-pick-receipt="${r.receiptId}">Chọn</button>
+                    </td>
+                `;
+                tr.querySelector('button')?.addEventListener('click', () => {
+                    if (receiptEl) {
+                        receiptEl.value = String(r.receiptId);
+                        onReceiptChanged(true);
+                    }
+                });
+                body.appendChild(tr);
+            });
+            wrap.style.display = 'block';
+        }
+
+        async function loadReceiptsForSupplier(supplierId, initialReceiptId) {
+            if (!receiptEl) return;
+            receiptEl.innerHTML = '<option value="">-- Thanh toán công nợ chung --</option>';
+            cachedReceipts = [];
+            if (!supplierId || !branchEl?.value) {
+                renderReceiptsTable([]);
+                return;
+            }
+            try {
+                const resp = await fetch(`/supplier-payments/api/unpaid-receipts?branchId=${encodeURIComponent(branchEl.value)}&supplierId=${encodeURIComponent(supplierId)}`);
+                if (!resp.ok) return;
+                cachedReceipts = await resp.json() || [];
+                cachedReceipts.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.receiptId;
+                    opt.setAttribute('data-code', r.receiptCode);
+                    opt.setAttribute('data-debt', r.remainingDebt);
+                    opt.textContent = `${r.receiptCode} (${fmtVnDateShort(r.receiptDate)}) - Còn nợ: ${fmtMoney(r.remainingDebt)}`;
+                    receiptEl.appendChild(opt);
+                });
+                if (initialReceiptId) {
+                    receiptEl.value = String(initialReceiptId);
+                }
+                renderReceiptsTable(cachedReceipts);
+                onReceiptChanged(true);
+            } catch (e) {
+                console.warn('Không tải được danh sách phiếu nhập chưa tất toán:', e);
+            }
+        }
+
+        function onSupplierChanged(initialReceiptId) {
+            const supOpt = supplierEl?.options[supplierEl.selectedIndex];
+            if (!supOpt || !supOpt.value) {
+                updateBanner(0, 0, null);
+                loadReceiptsForSupplier(null, null);
+                if (amountEl) amountEl.value = '';
+                updatePreview();
+                return;
+            }
+            const imp = Number(supOpt.getAttribute('data-import') || 0);
+            const paid = Number(supOpt.getAttribute('data-paid') || 0);
+            const debt = Number(supOpt.getAttribute('data-debt') || 0);
+            updateBanner(imp, paid, debt);
+            if (!initialReceiptId && amountEl) {
+                amountEl.value = debt > 0 ? String(Math.round(debt)) : '';
+            }
+            loadReceiptsForSupplier(supOpt.value, initialReceiptId);
+            updatePreview();
+        }
+
+        function onReceiptChanged(fillAmount) {
+            const supOpt = supplierEl?.options[supplierEl.selectedIndex];
+            if (!supOpt || !supOpt.value) return;
+            const imp = Number(supOpt.getAttribute('data-import') || 0);
+            const paid = Number(supOpt.getAttribute('data-paid') || 0);
+            const supDebt = Number(supOpt.getAttribute('data-debt') || 0);
+            const recOpt = receiptEl?.options[receiptEl.selectedIndex];
+            const recDebt = recOpt?.getAttribute('data-debt') ? Number(recOpt.getAttribute('data-debt')) : null;
+            const effectiveMax = recDebt !== null ? Math.min(recDebt, supDebt) : supDebt;
+            updateBanner(imp, paid, effectiveMax);
+            if (fillAmount && amountEl && effectiveMax > 0) {
+                amountEl.value = String(Math.round(effectiveMax));
+            }
+            renderReceiptsTable(cachedReceipts);
+            updatePreview();
+        }
+
+        window.fillSpvMaxDebt = function () {
+            if (amountEl && currentMaxDebt > 0) {
+                amountEl.value = String(Math.round(currentMaxDebt));
+                clearErr();
+                updatePreview();
+            }
+        };
+
+        branchEl?.addEventListener('change', () => {
+            const supParam = supplierEl?.value ? `&supplierId=${encodeURIComponent(supplierEl.value)}` : '';
+            window.location.href = `/supplier-payments/create?branchId=${encodeURIComponent(branchEl.value)}${supParam}`;
+        });
+
+        supplierEl?.addEventListener('change', () => {
+            clearErr();
+            onSupplierChanged(null);
+        });
+
+        receiptEl?.addEventListener('change', () => {
+            clearErr();
+            onReceiptChanged(true);
+        });
+
+        [dateEl, amountEl, methodEl, refEl, notesEl].forEach(el => {
+            el?.addEventListener('input', () => { clearErr(); updatePreview(); });
+            el?.addEventListener('change', () => { clearErr(); updatePreview(); });
+        });
+
+        // Đồng bộ badge trạng thái ký khi chữ ký thay đổi
+        document.addEventListener('click', () => setTimeout(syncSignStatusBadge, 40));
+
+        document.getElementById('spvSaveAndContinueBtn')?.addEventListener('click', () => {
+            saveAndContinueMode = true;
+            form?.requestSubmit();
+        });
+        document.getElementById('spvSaveBtn')?.addEventListener('click', () => {
+            saveAndContinueMode = false;
+        });
+
+        form?.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            clearErr();
+
+            const branchId = Number(branchEl?.value || 0);
+            const supplierId = Number(supplierEl?.value || 0);
+            const receiptIdVal = receiptEl?.value;
+            const paymentDate = dateEl?.value;
+            const paymentMethod = methodEl?.value || 'BANK_TRANSFER';
+            const rawAmount = amountEl?.value;
+            const amount = typeof window.parseCashierMoney === 'function'
+                ? window.parseCashierMoney(rawAmount)
+                : Number(String(rawAmount || '').replace(/,/g, ''));
+            const referenceNo = refEl?.value?.trim() || null;
+            const notes = notesEl?.value?.trim() || null;
+            const signatureData = form.querySelector('[data-fin-sig-field="spVoucher"] input[name="signatureData"]')?.value?.trim() || null;
+
+            if (!supplierId) {
+                showErr('Vui lòng chọn nhà cung cấp cần thanh toán.');
+                supplierEl?.focus();
+                return;
+            }
+            if (!paymentDate) {
+                showErr('Vui lòng chọn ngày thanh toán.');
+                dateEl?.focus();
+                return;
+            }
+            if (!Number.isFinite(amount) || amount <= 0) {
+                showErr('Vui lòng nhập số tiền thanh toán lớn hơn 0.');
+                amountEl?.focus();
+                return;
+            }
+            if (currentMaxDebt > 0 && amount > currentMaxDebt) {
+                showErr(`Số tiền thanh toán không được vượt quá công nợ tối đa (${fmtMoney(currentMaxDebt)}).`);
+                amountEl?.focus();
+                return;
+            }
+            if (!signatureData) {
+                showErr('Vui lòng ký điện tử xác nhận ở ô "Xác nhận kế toán" trước khi lưu phiếu.');
+                form.querySelector('[data-fin-sig-open="spVoucher"]')?.focus();
+                return;
+            }
+
+            const saveBtn = document.getElementById('spvSaveBtn');
+            const contBtn = document.getElementById('spvSaveAndContinueBtn');
+            if (saveBtn) saveBtn.disabled = true;
+            if (contBtn) contBtn.disabled = true;
+
+            try {
+                const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+                const headers = { 'Content-Type': 'application/json' };
+                if (csrfToken && csrfHeader) headers[csrfHeader] = csrfToken;
+
+                const clientRequestId = (window.crypto && typeof window.crypto.randomUUID === 'function')
+                    ? window.crypto.randomUUID()
+                    : ('spv-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9));
+
+                const resp = await fetch('/supplier-payments/pay', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        branchId,
+                        supplierId,
+                        receiptId: receiptIdVal ? Number(receiptIdVal) : null,
+                        paymentDate,
+                        amount,
+                        paymentMethod,
+                        referenceNo,
+                        notes,
+                        clientRequestId,
+                        signatureData
+                    })
+                });
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok) {
+                    throw new Error(data.message || 'Không thể lưu phiếu thanh toán nhà cung cấp.');
+                }
+
+                if (saveAndContinueMode) {
+                    const toast = document.getElementById('spvToast');
+                    const toastTxt = document.getElementById('spvToastText');
+                    if (toast && toastTxt) {
+                        toastTxt.textContent = `Đã lưu phiếu thanh toán ${data.paymentCode || ''} (${fmtMoney(data.amount || amount)}) có chữ ký kế toán!`;
+                        toast.style.display = 'block';
+                    }
+                    setTimeout(() => {
+                        window.location.href = `/supplier-payments/create?branchId=${encodeURIComponent(branchId)}`;
+                    }, 900);
+                } else {
+                    window.location.href = RETURN_URL || `/supplier-payments?branchId=${encodeURIComponent(branchId)}`;
+                }
+            } catch (err) {
+                showErr(err.message || 'Có lỗi xảy ra khi lưu phiếu.');
+                if (saveBtn) saveBtn.disabled = false;
+                if (contBtn) contBtn.disabled = false;
+            }
+        });
+
+        // Khởi tạo ban đầu nếu có sẵn supplierId / receiptId trên URL
+        if (supplierEl?.value) {
+            onSupplierChanged(INITIAL_RECEIPT_ID);
+        } else {
+            updatePreview();
+        }
+    })();
+</script>
+</body>
+</html>

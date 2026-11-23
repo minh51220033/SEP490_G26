@@ -38,4 +38,6 @@ public class OperatingExpenseRequestDTO {
 
     @NotBlank(message = "Mô tả lý do chi không được để trống")
     private String description;
+
+    private String signatureData;
 }

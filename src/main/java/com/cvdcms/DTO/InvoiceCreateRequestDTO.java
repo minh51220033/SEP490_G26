@@ -24,4 +24,5 @@ public class InvoiceCreateRequestDTO {
     private Boolean buyMedicineAtClinic = false;
     private List<MedicineItemRequestDTO> medicineItems = new ArrayList<>();
     private String notes;
+    private String signatureData;
 }

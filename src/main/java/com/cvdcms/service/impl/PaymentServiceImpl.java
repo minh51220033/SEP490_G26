@@ -327,6 +327,10 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setTransactionRef(request.getTransactionRef());
         payment.setIdempotencyKey(idempotencyKey);
         payment.setNotes(request.getNotes());
+        if (request.getSignatureData() != null && !request.getSignatureData().isBlank()) {
+            payment.setSignatureUrl(com.cvdcms.util.InventoryFileStorageUtil.saveSignatureDataUrl(
+                    request.getSignatureData(), "payment"));
+        }
 
         attachBankTransferSnapshot(payment, request, branch,
                 (invoice != null ? invoice.getInvoiceCode() : "HD") + " TT");
@@ -626,6 +630,10 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setTransactionRef(request.getTransactionRef());
         payment.setIdempotencyKey(idempotencyKey);
         payment.setNotes(request.getNotes() != null ? request.getNotes() : "Nạp tiền tạm ứng điều trị");
+        if (request.getSignatureData() != null && !request.getSignatureData().isBlank()) {
+            payment.setSignatureUrl(com.cvdcms.util.InventoryFileStorageUtil.saveSignatureDataUrl(
+                    request.getSignatureData(), "deposit"));
+        }
 
         attachBankTransferSnapshot(payment, request, branch,
                 "TU" + patient.getProfileId() + " REF");

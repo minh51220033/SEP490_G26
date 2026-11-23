@@ -521,7 +521,7 @@
                                              th:with="dep=${invoice.patientProfile.depositBalance != null ? invoice.patientProfile.depositBalance : 0}"
                                              th:text="${#numbers.formatDecimal(dep, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</div>
                                     </div>
-                                    <a th:href="@{/payments/deposits(profileId=${invoice.patientProfile.profileId})}"
+                                    <a th:href="@{/payments/deposits/create(profileId=${invoice.patientProfile.profileId})}"
                                        class="inv-btn inv-btn-sm inv-btn-tonal">
                                         <i class="bi bi-wallet2"></i> Nạp tạm ứng
                                     </a>
@@ -636,8 +636,9 @@
 
                             <div class="mb-3">
                                 <label for="modalPayAmount" class="form-label fw-bold">Số tiền thanh toán đợt này (VNĐ):</label>
-                                <input type="number" id="modalPayAmount" name="amount" class="form-control" required
-                                       min="1000" step="1000"
+                                <input type="text" id="modalPayAmount" name="amount" class="form-control" required
+                                       data-cashier-money="true"
+                                       min="1000"
                                        th:value="${invoice.remainingDebt}"
                                        th:max="${invoice.remainingDebt}"
                                        oninput="triggerInvoiceAllocationPreview()">
@@ -695,10 +696,18 @@
                                        placeholder="Mã giao dịch ngân hàng / hóa đơn đối soát...">
                             </div>
 
-                            <div class="mb-3 mb-lg-0">
+                            <div class="mb-3">
                                 <label for="modalPayNotes" class="form-label">Ghi chú thanh toán:</label>
                                 <textarea id="modalPayNotes" name="notes" class="form-control" rows="2"
                                           placeholder="Ghi chú đợt thanh toán..."></textarea>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 p-3 bg-light rounded border mb-3 mb-lg-0">
+                                <div>
+                                    <div class="form-label fw-bold mb-1">Xác nhận</div>
+                                    <th:block th:replace="~{fragments/finance-signature :: sigField('invoicePay', null)}"></th:block>
+                                </div>
+                                <th:block th:replace="~{fragments/finance-signature :: sigMirror('invoicePay', null, 'Người lập phiếu', '(Chữ Ký, Họ Và Tên)', ${displayName != null and !displayName.isBlank() ? displayName : (loggedInUser != null ? loggedInUser.username : 'Thu ngân')})}"></th:block>
                             </div>
                         </div>
 
@@ -748,7 +757,9 @@
 
         if (!box || !tbody || !select || !amtInput) return;
         const invoiceId = select.value;
-        const amount = parseFloat(amtInput.value) || 0;
+        const amount = (typeof window.parseCashierMoney === 'function'
+            ? window.parseCashierMoney(amtInput.value)
+            : parseFloat(String(amtInput.value || '').replace(/,/g, ''))) || 0;
         if (!invoiceId || amount <= 0) {
             box.style.display = 'none';
             return;

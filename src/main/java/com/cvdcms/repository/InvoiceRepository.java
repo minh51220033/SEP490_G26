@@ -115,6 +115,35 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     );
 
     @Query("""
+        SELECT COALESCE(SUM(i.totalAmount), 0),
+               COALESCE(SUM(i.paidAmount), 0),
+               COALESCE(SUM(i.remainingDebt), 0)
+        FROM Invoice i
+        JOIN i.patientProfile pp
+        JOIN i.branch b
+        WHERE (:branchId IS NULL OR b.branchId = :branchId)
+          AND (:paymentStatus IS NULL OR i.paymentStatus = :paymentStatus)
+          AND ((:status IS NULL AND i.status != 'CANCELLED') OR i.status = :status)
+          AND (:startDate IS NULL OR i.issuedAt >= :startDate)
+          AND (:endDate IS NULL OR i.issuedAt <= :endDate)
+          AND (
+              :keyword IS NULL OR :keyword = ''
+              OR LOWER(i.invoiceCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(pp.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(pp.patientCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR pp.phoneNumber LIKE CONCAT('%', :keyword, '%')
+          )
+    """)
+    List<Object[]> sumFilteredInvoices(
+            @Param("branchId") Long branchId,
+            @Param("paymentStatus") InvoicePaymentStatus paymentStatus,
+            @Param("status") InvoiceStatus status,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("keyword") String keyword
+    );
+
+    @Query("""
         SELECT COALESCE(SUM(i.totalAmount), 0) FROM Invoice i
         WHERE (:branchId IS NULL OR i.branch.branchId = :branchId)
           AND i.status != 'CANCELLED'

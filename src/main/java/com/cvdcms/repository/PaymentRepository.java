@@ -69,6 +69,34 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             Pageable pageable
     );
 
+    @Query("""
+        SELECT COALESCE(SUM(p.amount), 0) FROM Payment p
+        JOIN p.patientProfile pp
+        JOIN p.branch b
+        LEFT JOIN p.invoice inv
+        WHERE (:branchId IS NULL OR b.branchId = :branchId)
+          AND (:paymentType IS NULL OR p.paymentType = :paymentType)
+          AND (:paymentMethod IS NULL OR p.paymentMethod = :paymentMethod)
+          AND (:startDate IS NULL OR p.paidAt >= :startDate)
+          AND (:endDate IS NULL OR p.paidAt <= :endDate)
+          AND (
+              :keyword IS NULL OR :keyword = ''
+              OR LOWER(p.paymentCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(pp.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(pp.patientCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR pp.phoneNumber LIKE CONCAT('%', :keyword, '%')
+              OR (inv IS NOT NULL AND LOWER(inv.invoiceCode) LIKE LOWER(CONCAT('%', :keyword, '%')))
+          )
+    """)
+    BigDecimal sumFilteredPayments(
+            @Param("branchId") Long branchId,
+            @Param("paymentType") PaymentType paymentType,
+            @Param("paymentMethod") PaymentMethod paymentMethod,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("keyword") String keyword
+    );
+
     Optional<Payment> findByTransactionRef(String transactionRef);
 
     Optional<Payment> findByIdempotencyKey(String idempotencyKey);

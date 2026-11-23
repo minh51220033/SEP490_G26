@@ -533,6 +533,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         if (paymentAllocationService != null) {
             paymentAllocationService.initializeItemizedDebtOnInvoiceCreation(invoice);
         }
+        if (request.getSignatureData() != null && !request.getSignatureData().isBlank()) {
+            invoice.setSignatureUrl(com.cvdcms.util.InventoryFileStorageUtil.saveSignatureDataUrl(
+                    request.getSignatureData(), "invoice"));
+        }
 
         Invoice saved = invoiceRepository.save(invoice);
 
@@ -1742,6 +1746,10 @@ public class InvoiceServiceImpl implements InvoiceService {
         invoice.setItems(invoiceItems);
         if (paymentAllocationService != null) {
             paymentAllocationService.initializeItemizedDebtOnInvoiceCreation(invoice);
+        }
+        if (request.getSignatureData() != null && !request.getSignatureData().isBlank()) {
+            invoice.setSignatureUrl(com.cvdcms.util.InventoryFileStorageUtil.saveSignatureDataUrl(
+                    request.getSignatureData(), "invoice"));
         }
 
         Invoice saved = invoiceRepository.save(invoice);

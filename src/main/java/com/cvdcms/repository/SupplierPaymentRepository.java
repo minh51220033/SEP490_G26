@@ -66,6 +66,19 @@ public interface SupplierPaymentRepository extends JpaRepository<SupplierPayment
     @Query("""
         SELECT COALESCE(SUM(sp.amount), 0)
         FROM SupplierPayment sp
+        WHERE (:branchIds IS NULL OR sp.branch.branchId IN :branchIds)
+          AND (:startDate IS NULL OR sp.paymentDate >= :startDate)
+          AND (:endDate IS NULL OR sp.paymentDate <= :endDate)
+        """)
+    BigDecimal sumPaidAmountByBranchesAndDates(
+            @Param("branchIds") Collection<Long> branchIds,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(sp.amount), 0)
+        FROM SupplierPayment sp
         WHERE sp.branch.branchId = :branchId
           AND sp.supplier.supplierId = :supplierId
         """)

@@ -61,6 +61,7 @@
 
                     <!-- Khoảng ngày -->
                     <div class="fin-form-group fin-date-group">
+                        <select th:replace="~{fragments/cashier-tabs :: quickDateSelect('startDate', 'endDate')}"></select>
                         <input type="date" id="startDate" name="startDate" class="fin-input" th:value="${startDate}" title="Từ ngày">
                         <span class="text-muted small fw-semibold mx-1">đến</span>
                         <input type="date" id="endDate" name="endDate" class="fin-input" th:value="${endDate}" title="Đến ngày">
@@ -72,7 +73,43 @@
                         <a th:href="@{/payments/refunds}" class="fin-btn fin-btn-outline" title="Đặt lại bộ lọc"><i class="bi bi-arrow-clockwise"></i> Đặt lại</a>
                     </div>
                 </form>
-                <div th:replace="~{fragments/cashier-tabs :: quickDateBar('startDate', 'endDate')}"></div>
+            </div>
+
+            <!-- Thanh tóm tắt tổng chi hoàn tiền theo bộ lọc (kiểu VTTech) -->
+            <div class="fin-vt-summary-grid">
+                <div class="fin-vt-summary-card">
+                    <div class="fin-vt-summary-head">
+                        <span class="fin-vt-summary-label">Tổng chi hoàn theo bộ lọc</span>
+                        <button type="button" class="fin-vt-quick-btn is-expense border-0" onclick="toggleRefundModal()" title="Lập phiếu hoàn tiền">+</button>
+                    </div>
+                    <p class="fin-vt-summary-value is-danger"
+                       th:text="${#numbers.formatDecimal(filteredTotalAmount ?: 0, 1, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
+                    <div class="fin-vt-summary-sub">
+                        <span th:text="${filterBranchLabel ?: 'Tất cả cơ sở'}">Tất cả cơ sở</span>
+                        <span>•</span>
+                        <span th:text="${filterPeriodLabel ?: 'Toàn thời gian'}">Toàn thời gian</span>
+                    </div>
+                </div>
+                <div class="fin-vt-summary-card">
+                    <div class="fin-vt-summary-head">
+                        <span class="fin-vt-summary-label">Số phiếu hoàn tiền khớp bộ lọc</span>
+                        <i class="bi bi-arrow-counterclockwise text-secondary"></i>
+                    </div>
+                    <p class="fin-vt-summary-value is-dark" th:text="${totalElements ?: 0} + ' phiếu'">0 phiếu</p>
+                    <div class="fin-vt-summary-sub">
+                        <span>Tổng số giao dịch hoàn trả bệnh nhân theo bộ lọc</span>
+                    </div>
+                </div>
+                <div class="fin-vt-summary-card">
+                    <div class="fin-vt-summary-head">
+                        <span class="fin-vt-summary-label">Phạm vi lọc hiện tại</span>
+                        <i class="bi bi-funnel text-primary"></i>
+                    </div>
+                    <p class="fin-vt-summary-value" style="font-size: 16px;" th:text="${filterPeriodLabel ?: 'Toàn thời gian'}">Toàn thời gian</p>
+                    <div class="fin-vt-summary-sub">
+                        <span th:text="${selectedRefundMethod?.name() == 'CASH' ? 'Tiền mặt' : (selectedRefundMethod?.name() == 'BANK_TRANSFER' ? 'Chuyển khoản' : 'Tất cả hình thức hoàn')}">Tất cả hình thức hoàn</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Table Card -->
@@ -206,7 +243,7 @@
             <h5 class="m-0 fw-bold text-danger"><i class="bi bi-arrow-counterclockwise me-2"></i>Lập Phiếu Hoàn Tiền (SCR-24.3)</h5>
             <button type="button" class="btn-close" onclick="toggleRefundModal()"></button>
         </div>
-        <form th:action="@{/payments/refunds}" method="post" class="p-4" onsubmit="generateRefundKey()">
+        <form th:action="@{/payments/refunds}" method="post" class="p-4" onsubmit="return validateRefundModalSubmit()">
             <input type="hidden" id="refundIdempotencyKey" name="idempotencyKey">
             <div class="mb-3">
                 <label for="refundPatientSearch" class="form-label fw-bold">Tìm Bệnh nhân nhận tiền hoàn <span class="text-danger">*</span></label>
@@ -215,16 +252,22 @@
                        class="form-control"
                        placeholder="Nhập tên, ID hồ sơ, mã bệnh nhân hoặc SĐT..."
                        oninput="searchPatientForRefund(this.value)">
-                <input type="hidden" name="profileId" id="refundProfileId" required>
+                <input type="hidden" name="profileId" id="refundProfileId">
                 <div id="selectedRefundPatientName" class="mt-2 fw-bold text-primary" style="display: none;"></div>
+                <div id="refundPatientError" class="text-danger small mt-1" style="display: none;">
+                    Vui lòng tìm và chọn bệnh nhân nhận tiền hoàn.
+                </div>
                 <div id="refundPatientList" class="list-group mt-2" style="max-height: 160px; overflow-y: auto; display: none;"></div>
             </div>
 
             <div class="mb-3">
-                <label for="refundInvoiceIdInput" class="form-label fw-bold">Mã ID Hóa đơn hoàn (Để trống nếu hoàn từ Ví tạm ứng)</label>
-                <input type="number" id="refundInvoiceIdInput" name="invoiceId" class="form-control"
-                       placeholder="Nhập Invoice ID nếu hoàn cho hóa đơn cụ thể..." oninput="toggleReduceInvoiceTotal(this.value)">
-                <small class="text-muted d-block mt-1">Để trống trường này nếu hoàn trả từ số dư Ví tạm ứng của bệnh nhân.</small>
+                <label for="refundInvoiceSelect" class="form-label fw-bold">Nguồn tiền hoàn (Ví tạm ứng / Hóa đơn đã thu)</label>
+                <select id="refundInvoiceSelect" name="invoiceId" class="form-select" onchange="onModalRefundSourceChange(this)">
+                    <option value="">-- Hoàn từ Ví tạm ứng (chọn bệnh nhân để tải hóa đơn) --</option>
+                </select>
+                <small id="refundSourceHint" class="text-muted d-block mt-1">
+                    Chỉ những hóa đơn đã có thanh toán (hoàn 1 phần hoặc toàn phần) mới có thể hoàn tiền. Để trống nếu hoàn từ Ví tạm ứng.
+                </small>
             </div>
 
             <div class="mb-3 form-check" id="modalReduceInvoiceTotalGroup" style="display: none;">
@@ -246,7 +289,8 @@
 
             <div class="mb-3">
                 <label for="refundAmount" class="form-label fw-bold">Số tiền hoàn trả (VNĐ) <span class="text-danger">*</span></label>
-                <input type="number" id="refundAmount" name="amount" class="form-control form-control-lg fw-bold text-danger" step="1000" min="1000" required>
+                <input type="text" id="refundAmount" name="amount" class="form-control form-control-lg fw-bold text-danger text-start"
+                       data-cashier-money="true" min="1000" required>
             </div>
 
             <div class="mb-3">
@@ -261,6 +305,14 @@
                 <label for="refundReasonInput" class="form-label fw-bold text-danger">Lý do hoàn tiền <span class="text-danger">*</span></label>
                 <textarea id="refundReasonInput" name="reason" class="form-control" rows="2"
                           placeholder="VD: Khách hàng hủy điều trị trám răng, hoàn trả số tiền tạm ứng thừa..." required></textarea>
+            </div>
+
+            <div class="mb-3 d-flex justify-content-between align-items-end flex-wrap gap-3 p-3 bg-light rounded border">
+                <div>
+                    <div class="form-label fw-bold mb-1">Xác nhận</div>
+                    <th:block th:replace="~{fragments/finance-signature :: sigField('refund', null)}"></th:block>
+                </div>
+                <th:block th:replace="~{fragments/finance-signature :: sigMirror('refund', null, 'Người lập phiếu', '(Chữ Ký, Họ Và Tên)', ${displayName != null and !displayName.isBlank() ? displayName : (loggedInUser != null ? loggedInUser.username : 'Kế toán')})}"></th:block>
             </div>
 
             <div class="d-flex justify-content-end gap-2 pt-2 border-top">
@@ -285,19 +337,83 @@
         ensureRefundKey();
     }
 
+    function validateRefundModalSubmit() {
+        ensureRefundKey();
+        const profileInput = document.getElementById('refundProfileId');
+        const errEl = document.getElementById('refundPatientError');
+        if (!profileInput || !profileInput.value) {
+            if (errEl) errEl.style.display = 'block';
+            const searchEl = document.getElementById('refundPatientSearch');
+            if (searchEl) searchEl.focus();
+            return false;
+        }
+        if (errEl) errEl.style.display = 'none';
+        return true;
+    }
+
     function toggleRefundModal() {
         const m = document.getElementById('refundModal');
         const isOpening = (m.style.display === 'none' || m.style.display === '');
         m.style.display = isOpening ? 'flex' : 'none';
         if (isOpening) {
             ensureRefundKey();
+            const searchEl = document.getElementById('refundPatientSearch');
+            if (searchEl) searchEl.focus();
+            if (typeof window.initFinanceSignatures === 'function') {
+                window.initFinanceSignatures(m);
+            }
         } else {
             const keyInput = document.getElementById('refundIdempotencyKey');
             if (keyInput) keyInput.value = '';
+            if (typeof window.resetFinanceSignature === 'function') {
+                window.resetFinanceSignature('refund', '');
+            }
         }
     }
 
-    let searchTimer = null;
+    function toggleReduceInvoiceTotal(val) {
+        const group = document.getElementById('modalReduceInvoiceTotalGroup');
+        const chk = document.getElementById('modalReduceInvoiceTotal');
+        if (!group) return;
+        const hasInvoice = Boolean(val && String(val).trim() !== '');
+        group.style.display = hasInvoice ? 'block' : 'none';
+        if (!hasInvoice && chk) {
+            chk.checked = false;
+        }
+    }
+
+    function onModalRefundSourceChange(selectEl) {
+        if (!selectEl) return;
+        const val = selectEl.value;
+        toggleReduceInvoiceTotal(val);
+        const opt = selectEl.options[selectEl.selectedIndex];
+        if (!opt) return;
+        const hintEl = document.getElementById('refundSourceHint');
+        const branchSel = document.getElementById('refundBranchId');
+        if (val) {
+            const invBranchId = opt.dataset.branchId;
+            if (invBranchId && branchSel) {
+                const match = Array.from(branchSel.options).find(o => o.value === invBranchId);
+                if (match) branchSel.value = invBranchId;
+            }
+            const paidFmt = opt.dataset.paidFormatted || '0 đ';
+            if (hintEl) {
+                hintEl.textContent = `Số tiền hoàn tối đa theo hóa đơn này là ${paidFmt}.`;
+            }
+        } else {
+            const depFmt = opt.dataset.depositFormatted || '0 đ';
+            if (hintEl) {
+                hintEl.textContent = `Hoàn từ Ví tạm ứng của bệnh nhân (Số dư khả dụng: ${depFmt}).`;
+            }
+        }
+    }
+
+    function formatVndSimple(val) {
+        const n = Number(val || 0);
+        return Number.isFinite(n) ? Math.round(n).toLocaleString('en-US') + ' đ' : '0 đ';
+    }
+
+    var searchTimer = null;
     function searchPatientForRefund(query) {
         clearTimeout(searchTimer);
         const listEl = document.getElementById('refundPatientList');
@@ -311,14 +427,23 @@
                 const resp = await fetch(`/api/doctor/patients/search?q=${encodeURIComponent(query.trim())}`);
                 const data = await resp.json();
                 if (data && data.length > 0) {
-                    listEl.innerHTML = data.map(p => `
-                        <button type="button" class="list-group-item list-group-item-action" onclick="selectPatientForRefund('${p.profileId}', '${p.fullName}', '${p.patientCode}')">
-                            <strong>${p.fullName}</strong> (${p.patientCode}) - SĐT: ${p.phoneNumber || 'N/A'}
-                        </button>
-                    `).join('');
+                    listEl.innerHTML = '';
+                    data.forEach(p => {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'list-group-item list-group-item-action refund-patient-item';
+                        const title = document.createElement('strong');
+                        title.textContent = p.fullName || '';
+                        const sub = document.createElement('small');
+                        sub.textContent = ` (${p.patientCode || ''}) - SĐT: ${p.phoneNumber || 'N/A'}`;
+                        btn.appendChild(title);
+                        btn.appendChild(sub);
+                        btn.addEventListener('click', () => selectPatientForRefund(p.profileId, p.fullName || '', p.patientCode || ''));
+                        listEl.appendChild(btn);
+                    });
                     listEl.style.display = 'block';
                 } else {
-                    listEl.innerHTML = '<div class="p-2 text-muted small">Không tìm thấy bệnh nhân.</div>';
+                    listEl.innerHTML = '<div class="p-2 text-muted small refund-search-message">Không tìm thấy bệnh nhân.</div>';
                     listEl.style.display = 'block';
                 }
             } catch (e) {
@@ -327,11 +452,58 @@
         }, 300);
     }
 
-    function selectPatientForRefund(id, name, code) {
+    async function selectPatientForRefund(id, name, code) {
         document.getElementById('refundProfileId').value = id;
-        document.getElementById('selectedRefundPatientName').textContent = `Đã chọn: ${name} (${code})`;
-        document.getElementById('selectedRefundPatientName').style.display = 'block';
+        const errEl = document.getElementById('refundPatientError');
+        if (errEl) errEl.style.display = 'none';
+        const selectedEl = document.getElementById('selectedRefundPatientName');
+        selectedEl.textContent = `Đã chọn: ${name} (${code})`;
+        selectedEl.style.display = 'block';
         document.getElementById('refundPatientList').style.display = 'none';
+
+        const selectEl = document.getElementById('refundInvoiceSelect');
+        const hintEl = document.getElementById('refundSourceHint');
+        if (!selectEl) return;
+
+        selectEl.innerHTML = '<option value="">Đang tải ví tạm ứng &amp; hóa đơn đã thu...</option>';
+        toggleReduceInvoiceTotal('');
+
+        try {
+            const resp = await fetch(`/payments/api/patients/${encodeURIComponent(id)}/refund-sources`);
+            if (!resp.ok) throw new Error('Không thể tải danh sách hóa đơn.');
+            const payload = await resp.json();
+            const depFmt = formatVndSimple(payload.depositBalance);
+
+            selectEl.innerHTML = '';
+            const walletOpt = document.createElement('option');
+            walletOpt.value = '';
+            walletOpt.dataset.depositFormatted = depFmt;
+            walletOpt.textContent = `Hoàn từ Ví tạm ứng — Số dư: ${depFmt}`;
+            selectEl.appendChild(walletOpt);
+
+            const invoices = Array.isArray(payload.invoices) ? payload.invoices : [];
+            invoices.forEach(inv => {
+                const paidFmt = formatVndSimple(inv.paidAmount);
+                const totalFmt = formatVndSimple(inv.totalAmount);
+                const statusTxt = inv.paymentStatus === 'PARTIAL' ? 'Thu 1 phần' : 'Đã thu đủ';
+                const branchTxt = inv.branchName ? ` • ${inv.branchName}` : '';
+                const opt = document.createElement('option');
+                opt.value = inv.invoiceId;
+                opt.dataset.branchId = inv.branchId || '';
+                opt.dataset.paidFormatted = paidFmt;
+                opt.textContent = `${inv.invoiceCode} — Đã thu: ${paidFmt} / ${totalFmt} (${statusTxt}${branchTxt})`;
+                selectEl.appendChild(opt);
+            });
+
+            if (hintEl) {
+                hintEl.textContent = invoices.length > 0
+                    ? `Có ${invoices.length} hóa đơn đã thu tiền có thể hoàn, hoặc chọn hoàn từ Ví tạm ứng (${depFmt}).`
+                    : `Bệnh nhân chưa có hóa đơn đã thanh toán; có thể hoàn từ Ví tạm ứng (Số dư: ${depFmt}).`;
+            }
+        } catch (e) {
+            selectEl.innerHTML = '<option value="">-- Hoàn từ Ví tạm ứng --</option>';
+            if (hintEl) hintEl.textContent = 'Không tải được danh sách hóa đơn: ' + e.message;
+        }
     }
 </script>
             </div> <!-- end #cashierTabContent -->

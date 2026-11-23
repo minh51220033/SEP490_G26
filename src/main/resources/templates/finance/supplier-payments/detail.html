@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <th:block th:replace="~{fragments/head :: head('Chi tiết Công nợ Nhà cung cấp')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <link rel="stylesheet" th:href="@{/css/expense-income.css}">
+    <link rel="stylesheet" th:href="@{/css/misa-pagination.css}">
+    <style>
+        .sp-detail-shell {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .sp-top-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 20px 24px;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+        }
+        .sp-info-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 6px 0;
+            font-size: 13.5px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .sp-info-row:last-child {
+            border-bottom: none;
+        }
+        .sp-info-label {
+            color: #64748b;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+        .sp-info-val {
+            color: #0f172a;
+            font-weight: 600;
+            text-align: right;
+            word-break: break-word;
+        }
+        .sp-summary-panel {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px 20px;
+        }
+        .sp-summary-panel-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .sp-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px 24px;
+        }
+        @media (max-width: 767px) {
+            .sp-summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .sp-summary-item {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 13.5px;
+            padding: 4px 0;
+        }
+        .sp-section-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+        }
+        .sp-section-toggle {
+            width: 100%;
+            background: #ffffff;
+            border: none;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-align: left;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .sp-section-toggle:hover {
+            background: #f8fafc;
+        }
+        .sp-section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+        }
+        .sp-section-sub {
+            font-size: 12.5px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        .sp-ledger-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .sp-ledger-table th {
+            background: #f8fafc;
+            color: #475569;
+            font-size: 12.5px;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .sp-ledger-table td {
+            padding: 12px 20px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13.5px;
+            vertical-align: middle;
+        }
+        .sp-ledger-table tr:last-child td {
+            border-bottom: none;
+            background: #f8fafc;
+        }
+        .sp-subtab-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #475569;
+            transition: all 0.15s ease;
+        }
+        .sp-subtab-pill:hover {
+            border-color: #94a3b8;
+            color: #0f172a;
+            background: #f8fafc;
+        }
+        .sp-subtab-pill.active {
+            border-color: #0284c7;
+            background: #eff6ff;
+            color: #0284c7;
+        }
+        .sp-quick-date-btn {
+            font-size: 12px;
+            padding: 3px 10px;
+            border-radius: 999px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .sp-quick-date-btn:hover {
+            border-color: #0284c7;
+            color: #0284c7;
+            background: #f0f9ff;
+        }
+    </style>
+</head>
+
+<body class="app-body fin-brand-theme">
+<div class="app-shell">
+    <aside th:replace="~{fragments/sidebar :: sidebar('supplier-payments')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <header th:replace="~{fragments/header :: appTopbar('Tài chính')}"></header>
+
+        <main class="app-content finance-page expense-income-page">
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div id="spDetailToast" class="alert alert-success alert-dismissible fade show mb-3" role="alert" style="display: none;">
+                <i class="bi bi-check-circle-fill me-2"></i><span id="spDetailToastText"></span>
+                <button type="button" class="btn-close" onclick="document.getElementById('spDetailToast').style.display='none'" aria-label="Close"></button>
+            </div>
+
+            <!-- Thanh tab Tài chính -> Phòng khám -->
+            <div th:replace="~{fragments/expense-income-tabs :: expenseIncomeTabs('supplier-payments')}"></div>
+
+            <div class="expense-income-tab-content sp-detail-shell" id="expenseIncomeTabContent">
+                <!-- Thanh điều hướng quay lại + Chọn chi nhánh + 1 Primary CTA -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <a th:href="@{/supplier-payments(branchId=${selectedBranchId})}"
+                           class="fin-btn fin-btn-outline fin-btn-sm">
+                            <i class="bi bi-arrow-left"></i> Danh sách NCC
+                        </a>
+                        <span class="text-muted small">
+                            Thanh toán NCC <span class="mx-1">/</span>
+                            <strong class="text-dark" th:text="${supplier.supplierName}">Nhà cung cấp</strong>
+                        </span>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <form th:action="@{/supplier-payments/{id}(id=${supplier.supplierId})}" method="get" class="d-flex align-items-center gap-2 m-0">
+                            <input type="hidden" name="tab" th:value="${activeSubTab}">
+                            <select name="branchId" class="form-select form-select-sm" style="min-width: 190px;"
+                                    onchange="this.form.submit()" aria-label="Chi nhánh xem công nợ">
+                                <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"
+                                        th:selected="${b.branchId == selectedBranchId}"></option>
+                            </select>
+                        </form>
+
+                        <a th:if="${debtSummary.remainingDebt > 0}"
+                           th:href="@{/supplier-payments/create(branchId=${selectedBranchId}, supplierId=${supplier.supplierId}, returnUrl='/supplier-payments/' + ${supplier.supplierId} + '?branchId=' + ${selectedBranchId})}"
+                           class="fin-btn fin-btn-primary fin-btn-sm">
+                            <i class="bi bi-cash-coin"></i> Lập phiếu thanh toán
+                        </a>
+                        <span th:if="${debtSummary.remainingDebt <= 0}"
+                              class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+                            <i class="bi bi-check2-circle me-1"></i>Đã tất toán công nợ
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Khối 1: Thông tin Nhà cung cấp & Tóm tắt thanh toán -->
+                <section class="sp-top-card">
+                    <div class="row g-4 align-items-start">
+                        <div class="col-12 col-lg-5">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div>
+                                    <h2 class="h6 fw-bold text-dark m-0">Nhà cung cấp</h2>
+                                    <span class="text-muted small">Thông tin chung &amp; liên hệ</span>
+                                </div>
+                                <span th:if="${supplier.isActive}" class="fin-badge fin-badge-paid">Hoạt động</span>
+                                <span th:if="${!supplier.isActive}" class="fin-badge fin-badge-cancelled">Ngừng</span>
+                            </div>
+
+                            <div class="sp-info-row">
+                                <span class="sp-info-label">Mã NCC</span>
+                                <span class="sp-info-val font-monospace text-primary" th:text="${supplier.supplierCode}">DKSH</span>
+                            </div>
+                            <div class="sp-info-row">
+                                <span class="sp-info-label">Tên NCC</span>
+                                <span class="sp-info-val" th:text="${supplier.supplierName}">DKSH Vietnam</span>
+                            </div>
+                            <div class="sp-info-row">
+                                <span class="sp-info-label">Mã số thuế</span>
+                                <span class="sp-info-val" th:text="${supplier.taxCode != null and !supplier.taxCode.isBlank() ? supplier.taxCode : '—'}">—</span>
+                            </div>
+                            <div class="sp-info-row">
+                                <span class="sp-info-label">Số điện thoại</span>
+                                <span class="sp-info-val" th:text="${supplier.phoneNumber != null and !supplier.phoneNumber.isBlank() ? supplier.phoneNumber : '—'}">—</span>
+                            </div>
+                            <div class="sp-info-row">
+                                <span class="sp-info-label">Địa chỉ</span>
+                                <span class="sp-info-val" th:text="${supplier.address != null and !supplier.address.isBlank() ? supplier.address : '—'}">—</span>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-7">
+                            <div class="sp-summary-panel">
+                                <div class="sp-summary-panel-title">Thông tin thanh toán</div>
+                                <div class="sp-summary-grid">
+                                    <div class="sp-summary-item">
+                                        <span class="text-muted">Tổng tiền nhập</span>
+                                        <strong class="text-dark"
+                                                th:text="${#numbers.formatDecimal(debtSummary.totalImportAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                    </div>
+                                    <div class="sp-summary-item">
+                                        <span class="text-muted">Số phiếu nhập</span>
+                                        <strong class="text-dark" th:text="${debtSummary.receiptCount} + ' phiếu'">0 phiếu</strong>
+                                    </div>
+                                    <div class="sp-summary-item">
+                                        <span class="text-muted">Đã thanh toán</span>
+                                        <strong class="text-success"
+                                                th:text="${#numbers.formatDecimal(debtSummary.totalPaidAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                    </div>
+                                    <div class="sp-summary-item">
+                                        <span class="text-muted">Phiếu chưa trả hết</span>
+                                        <strong class="text-warning-emphasis"
+                                                th:text="${unpaidReceipts != null ? unpaidReceipts.size() : 0} + ' phiếu'">0 phiếu</strong>
+                                    </div>
+                                    <div class="sp-summary-item">
+                                        <span class="text-muted fw-semibold">Công nợ còn lại</span>
+                                        <strong class="fs-6"
+                                                th:classappend="${debtSummary.remainingDebt > 0} ? 'text-danger' : 'text-success'"
+                                                th:text="${#numbers.formatDecimal(debtSummary.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Khối 2: Chi tiết công nợ (Bảng đối chiếu Phát sinh / Thanh toán / Công nợ) -->
+                <section class="sp-section-card">
+                    <button type="button" class="sp-section-toggle" data-bs-toggle="collapse"
+                            data-bs-target="#debtLedgerCollapse" aria-expanded="true">
+                        <div>
+                            <h3 class="sp-section-title">Công nợ</h3>
+                            <div class="sp-section-sub">Chi tiết công nợ phát sinh &amp; thanh toán tại chi nhánh</div>
+                        </div>
+                        <i class="bi bi-chevron-down text-secondary"></i>
+                    </button>
+                    <div id="debtLedgerCollapse" class="collapse show">
+                        <div class="table-responsive">
+                            <table class="sp-ledger-table">
+                                <thead>
+                                <tr>
+                                    <th>Diễn giải</th>
+                                    <th class="text-end" style="width: 170px;">Phát sinh</th>
+                                    <th class="text-end" style="width: 170px;">Thanh toán</th>
+                                    <th class="text-end" style="width: 170px;">Công nợ</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold text-dark">Công nợ phải trả</div>
+                                        <div class="small text-muted">Khoản tiền phải trả khi nhập hàng hóa, vật tư chưa thanh toán</div>
+                                    </td>
+                                    <td class="text-end fw-semibold text-dark"
+                                        th:text="${#numbers.formatDecimal(debtSummary.totalImportAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="text-end fw-semibold text-success"
+                                        th:text="${#numbers.formatDecimal(debtSummary.totalPaidAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="text-end fw-bold"
+                                        th:classappend="${debtSummary.remainingDebt > 0} ? 'text-danger' : 'text-success'"
+                                        th:text="${#numbers.formatDecimal(debtSummary.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="fw-bold text-dark">Còn lại phải thanh toán</td>
+                                    <td class="text-end fw-bold fs-6"
+                                        th:classappend="${debtSummary.remainingDebt > 0} ? 'text-danger' : 'text-success'"
+                                        th:text="${#numbers.formatDecimal(debtSummary.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Khối 3: Lịch sử thanh toán & Phiếu nhập kho -->
+                <section class="sp-section-card">
+                    <div class="p-3 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div>
+                            <h3 class="sp-section-title">Lịch sử</h3>
+                            <div class="sp-section-sub">Lịch sử thanh toán và phiếu nhập kho của nhà cung cấp</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <a th:href="@{/supplier-payments/{id}(id=${supplier.supplierId}, branchId=${selectedBranchId}, tab='payments', keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, size=${pageSize})}"
+                               class="sp-subtab-pill" th:classappend="${activeSubTab == 'payments'} ? 'active' : ''">
+                                <i class="bi bi-credit-card-2-front"></i>
+                                <span>Lịch sử thanh toán</span>
+                                <span class="badge bg-light text-dark border" th:text="${paymentPage.totalElements}">0</span>
+                            </a>
+                            <a th:href="@{/supplier-payments/{id}(id=${supplier.supplierId}, branchId=${selectedBranchId}, tab='receipts', keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, size=${pageSize})}"
+                               class="sp-subtab-pill" th:classappend="${activeSubTab == 'receipts'} ? 'active' : ''">
+                                <i class="bi bi-box-seam"></i>
+                                <span>Phiếu nhập kho</span>
+                                <span class="badge bg-light text-dark border" th:text="${receiptPage.totalElements}">0</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Bộ lọc cho tab đang xem -->
+                    <div class="p-3 bg-light border-bottom">
+                        <form th:action="@{/supplier-payments/{id}(id=${supplier.supplierId})}" method="get" class="fin-filter-bar mb-0">
+                            <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                            <input type="hidden" name="tab" th:value="${activeSubTab}">
+                            <input type="hidden" name="size" th:value="${pageSize}">
+                            <input type="hidden" name="page" value="0">
+
+                            <div class="fin-form-group fin-search-group">
+                                <i class="bi bi-search search-lead-icon"></i>
+                                <input type="text" name="keyword" class="fin-input bg-white"
+                                       th:value="${keyword}"
+                                       th:placeholder="${activeSubTab == 'receipts' ? 'Tìm mã phiếu nhập, số hóa đơn NCC...' : 'Tìm mã phiếu chi, mã phiếu nhập, số UNC...'}">
+                            </div>
+
+                            <div class="fin-form-group fin-date-group">
+                                <input type="date" id="detailStartDate" name="startDate" class="fin-input bg-white" th:value="${startDate}">
+                                <span class="text-muted small fw-semibold mx-1">đến</span>
+                                <input type="date" id="detailEndDate" name="endDate" class="fin-input bg-white" th:value="${endDate}">
+                            </div>
+
+                            <div class="d-flex gap-2 align-items-center ms-auto">
+                                <button type="submit" class="fin-btn fin-btn-primary fin-btn-sm">
+                                    <i class="bi bi-search"></i> Lọc
+                                </button>
+                                <a th:href="@{/supplier-payments/{id}(id=${supplier.supplierId}, branchId=${selectedBranchId}, tab=${activeSubTab})}"
+                                   class="fin-btn fin-btn-outline fin-btn-sm">
+                                    <i class="bi bi-arrow-clockwise"></i> Đặt lại
+                                </a>
+                            </div>
+                        </form>
+
+                        <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+                            <span class="small text-muted fw-semibold">Chọn nhanh:</span>
+                            <button type="button" class="sp-quick-date-btn" onclick="window.setFinanceQuickDate && window.setFinanceQuickDate('detailStartDate','detailEndDate','today')">Hôm nay</button>
+                            <button type="button" class="sp-quick-date-btn" onclick="window.setFinanceQuickDate && window.setFinanceQuickDate('detailStartDate','detailEndDate','week')">7 ngày qua</button>
+                            <button type="button" class="sp-quick-date-btn" onclick="window.setFinanceQuickDate && window.setFinanceQuickDate('detailStartDate','detailEndDate','month')">Tháng này</button>
+                            <button type="button" class="sp-quick-date-btn" onclick="window.setFinanceQuickDate && window.setFinanceQuickDate('detailStartDate','detailEndDate','clear')">Xóa ngày</button>
+                        </div>
+                    </div>
+
+                    <!-- TAB 1: LỊCH SỬ THANH TOÁN -->
+                    <div th:if="${activeSubTab == 'payments'}">
+                        <div class="fin-table-wrapper">
+                            <table class="fin-table" data-enhanced-table="ft-supplier-detail-payments">
+                                <thead>
+                                <tr>
+                                    <th class="text-center" style="width: 50px;">#</th>
+                                    <th data-column-key="date">Ngày chi</th>
+                                    <th data-column-key="code" data-column-pinned="true">Mã phiếu chi</th>
+                                    <th data-column-key="receipt">Phiếu nhập đối ứng</th>
+                                    <th class="text-end" data-column-key="amount">Tiền thanh toán</th>
+                                    <th data-column-key="method">Hình thức</th>
+                                    <th data-column-key="ref">Số chứng từ / UNC</th>
+                                    <th data-column-key="paid_by">Người lập</th>
+                                    <th data-column-key="notes">Ghi chú</th>
+                                    <th class="text-center" data-column-key="actions" data-column-action="true">Thao tác</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:if="${#lists.isEmpty(payments)}">
+                                    <td colspan="10" class="text-center py-4 text-muted">
+                                        Chưa có phiếu thanh toán nào cho nhà cung cấp này trong khoảng thời gian đã chọn.
+                                    </td>
+                                </tr>
+                                <tr th:each="p, stat : ${payments}">
+                                    <td class="text-center text-muted" th:text="${(paymentPage.number * paymentPage.size) + stat.count}">1</td>
+                                    <td th:text="${p.paymentDate != null ? #temporals.format(p.paymentDate, 'dd-MM-yyyy') : '-'}">24-11-2026</td>
+                                    <td class="fw-bold text-primary font-monospace" th:text="${p.paymentCode}">PC001</td>
+                                    <td>
+                                        <span th:if="${p.receiptCode != null}" class="badge bg-info-subtle text-info border" th:text="${p.receiptCode}">PN001</span>
+                                        <span th:if="${p.receiptCode == null}" class="text-muted small">Công nợ chung</span>
+                                    </td>
+                                    <td class="text-end fw-bold text-success"
+                                        th:text="${#numbers.formatDecimal(p.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td>
+                                        <span class="fin-badge fin-badge-method"
+                                              th:text="${p.paymentMethod == 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}">Chuyển khoản</span>
+                                    </td>
+                                    <td th:text="${p.referenceNo != null and !p.referenceNo.isBlank() ? p.referenceNo : '—'}">—</td>
+                                    <td>
+                                        <span th:text="${p.paidByName != null ? p.paidByName : '—'}">—</span>
+                                        <span th:if="${p.signatureUrl != null and !p.signatureUrl.isBlank()}"
+                                              class="badge bg-success-subtle text-success border border-success-subtle ms-1"
+                                              title="Kế toán đã ký xác nhận">
+                                            <i class="bi bi-patch-check-fill"></i> Đã ký
+                                        </span>
+                                    </td>
+                                    <td class="small text-muted" th:text="${p.notes != null and !p.notes.isBlank() ? p.notes : '—'}">—</td>
+                                    <td class="text-center">
+                                        <button type="button"
+                                                class="fin-table-btn fin-table-btn-view fin-table-btn-icon"
+                                                th:data-code="${p.paymentCode}"
+                                                th:data-branch="${p.branchName}"
+                                                th:data-date="${p.paymentDate != null ? #temporals.format(p.paymentDate, 'dd/MM/yyyy') : '-'}"
+                                                th:data-supplier="${p.supplierName + ' (' + p.supplierCode + ')'}"
+                                                th:data-receipt="${p.receiptCode != null ? p.receiptCode : 'Thanh toán công nợ chung'}"
+                                                th:data-method="${p.paymentMethod == 'CASH' ? 'Tiền mặt' : 'Chuyển khoản ngân hàng'}"
+                                                th:data-amount="${#numbers.formatDecimal(p.amount, 0, 'COMMA', 0, 'POINT')} + ' đ'"
+                                                th:data-ref="${p.referenceNo != null ? p.referenceNo : '—'}"
+                                                th:data-paid-by="${p.paidByName != null ? p.paidByName : '—'}"
+                                                th:data-signature-url="${p.signatureUrl != null ? p.signatureUrl : ''}"
+                                                th:data-notes="${p.notes != null ? p.notes : ''}"
+                                                onclick="openDetailVoucherModal(this)"
+                                                title="Xem chi tiết phiếu thanh toán">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="misa-pagination-footer" th:if="${paymentPage.totalElements > 0}">
+                            <div class="misa-pagination-left">
+                                Tổng số: <strong th:text="${paymentPage.totalElements}">0</strong>
+                            </div>
+                            <div class="misa-pagination-right">
+                                <div class="misa-page-size-wrapper">
+                                    <span>Số dòng/trang</span>
+                                    <select class="form-select form-select-sm misa-page-size-select" onchange="changeDetailPageSize(this.value)">
+                                        <option value="10" th:selected="${pageSize == 10}">10</option>
+                                        <option value="25" th:selected="${pageSize == 25}">25</option>
+                                        <option value="50" th:selected="${pageSize == 50}">50</option>
+                                        <option value="100" th:selected="${pageSize == 100}">100</option>
+                                    </select>
+                                </div>
+                                <div class="misa-page-range">
+                                    <span th:text="${(paymentPage.number * paymentPage.size) + 1}">1</span> -
+                                    <span th:text="${(paymentPage.number + 1) * paymentPage.size > paymentPage.totalElements ? paymentPage.totalElements : (paymentPage.number + 1) * paymentPage.size}">10</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1" th:if="${paymentPage.totalPages > 1}">
+                                    <a th:href="@{/supplier-payments/{id}(id=${supplier.supplierId}, branchId=${selectedBranchId}, tab='payments', keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, size=${pageSize}, page=0)}"
+                                       class="misa-nav-btn" th:classappend="${paymentPage.first} ? 'disabled'"><i class="bi bi-chevron-bar-left"></i></a>
+                                    <a th:href="@{/supplier-payments/{id}(id=${supplier.supplierId}, branchId=${selectedBranchId}, tab='payments', keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, size=${pageSize}, page=${paymentPage.number - 1})}"
+                                       class="misa-nav-btn" th:classappend="${paymentPage.first} ? 'disabled'"><i class="bi bi-chevron-left"></i></a>
+                                    <a th:href="@{/supplier-payments/{id}(id=${supplier.supplierId}, branchId=${selectedBranchId}, tab='payments', keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, size=${pageSize}, page=${paymentPage.number + 1})}"
+                                       class="misa-nav-btn" th:classappend="${paymentPage.last} ? 'disabled'"><i class="bi bi-chevron-right"></i></a>
+                                    <a th:href="@{/supplier-payments/{id}(id=${supplier.supplierId}, branchId=${selectedBranchId}, tab='payments', keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, size=${pageSize}, page=${paymentPage.totalPages - 1})}"
+                                       class="misa-nav-btn" th:classappend="${paymentPage.last} ? 'disabled'"><i class="bi bi-chevron-bar-right"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: PHIẾU NHẬP KHO (Phát sinh / Tiền thanh toán / Công nợ từng phiếu) -->
+                    <div th:if="${activeSubTab == 'receipts'}">
+                        <div class="fin-table-wrapper">
+                            <table class="fin-table" data-enhanced-table="ft-supplier-detail-receipts">
+                                <thead>
+                                <tr>
+                                    <th class="text-center" style="width: 50px;">#</th>
+                                    <th data-column-key="receipt_date">Ngày</th>
+                                    <th data-column-key="receipt_code" data-column-pinned="true">Mã phiếu</th>
+                                    <th data-column-key="invoice_no">Số HĐ NCC</th>
+                                    <th class="text-end" data-column-key="total_amount">Phát sinh</th>
+                                    <th class="text-end" data-column-key="paid_amount">Tiền thanh toán</th>
+                                    <th class="text-end" data-column-key="remaining_debt">Công nợ</th>
+                                    <th data-column-key="branch">Kho / Cơ sở</th>
+                                    <th data-column-key="receiver">Người tạo</th>
+                                    <th data-column-key="notes">Ghi chú</th>
+                                    <th class="text-center" data-column-key="actions" data-column-action="true">Thao tác</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:if="${#lists.isEmpty(receipts)}">
+                                    <td colspan="11" class="text-center py-4 text-muted">
+                                        Chưa có phiếu nhập kho nào của nhà cung cấp này trong khoảng thời gian đã chọn.
+                                    </td>
+                                </tr>
+                                <tr th:each="r, stat : ${receipts}">
+                                    <td class="text-center text-muted" th:text="${(receiptPage.number * receiptPage.size) + stat.count}">1</td>
+                                    <td th:text="${r.receiptDate != null ? #temporals.format(r.receiptDate, 'dd-MM-yyyy') : '-'}">29-10-2026</td>
+                                    <td class="fw-bold text-primary font-monospace" th:text="${r.receiptCode}">PN001</td>
+                                    <td th:text="${r.supplierInvoiceNo != null and !r.supplierInvoiceNo.isBlank() ? r.supplierInvoiceNo : '—'}">—</td>
+                                    <td class="text-end fw-semibold"
+                                        th:text="${#numbers.formatDecimal(r.totalAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="text-end text-success fw-semibold"
+                                        th:text="${#numbers.formatDecimal(r.paidAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td class="text-end fw-bold"
+                                        th:classappend="${r.remainingDebt > 0} ? 'text-danger' : 'text-success'"
+                                        th:text="${#numbers.formatDecimal(r.remainingDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</td>
+                                    <td th:text="${r.branchName != null ? r.branchName : '—'}">Cơ sở 1</td>
+                                    <td th:text="${r.receiverName != null ? r.receiverName : '—'}">—</td>
+                                    <td class="small text-muted" th:text="${r.notes != null and !r.notes.isBlank() ? r.notes : '—'}">—</td>
+                                    <td class="text-center">
+                                        <a th:if="${r.remainingDebt > 0}"
+                                           th:href="@{/supplier-payments/create(branchId=${selectedBranchId}, supplierId=${supplier.supplierId}, receiptId=${r.receiptId}, returnUrl='/supplier-payments/' + ${supplier.supplierId} + '?branchId=' + ${selectedBranchId} + '&tab=receipts')}"
+                                           class="fin-table-btn fin-table-btn-pay">
+                                            <i class="bi bi-cash-coin"></i> <span>Thanh toán</span>
+                                        </a>
+                                        <span th:if="${r.remainingDebt <= 0}" class="fin-badge fin-badge-paid">Đã trả đủ</span>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="misa-pagination-footer" th:if="${receiptPage.totalElements > 0}">
+                            <div class="misa-pagination-left">
+                                Tổng số: <strong th:text="${receiptPage.totalElements}">0</strong>
+                            </div>
+                            <div class="misa-pagination-right">
+                                <div class="misa-page-size-wrapper">
+                                    <span>Số dòng/trang</span>
+                                    <select class="form-select form-select-sm misa-page-size-select" onchange="changeDetailPageSize(this.value)">
+                                        <option value="10" th:selected="${pageSize == 10}">10</option>
+                                        <option value="25" th:selected="${pageSize == 25}">25</option>
+                                        <option value="50" th:selected="${pageSize == 50}">50</option>
+                                        <option value="100" th:selected="${pageSize == 100}">100</option>
+                                    </select>
+                                </div>
+                                <div class="misa-page-range">
+                                    <span th:text="${(receiptPage.number * receiptPage.size) + 1}">1</span> -
+                                    <span th:text="${(receiptPage.number + 1) * receiptPage.size > receiptPage.totalElements ? receiptPage.totalElements : (receiptPage.number + 1) * receiptPage.size}">10</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1" th:if="${receiptPage.totalPages > 1}">
+                                    <a th:href="@{/supplier-payments/{id}(id=${supplier.supplierId}, branchId=${selectedBranchId}, tab='receipts', keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, size=${pageSize}, page=0)}"
+                                       class="misa-nav-btn" th:classappend="${receiptPage.first} ? 'disabled'"><i class="bi bi-chevron-bar-left"></i></a>
+                                    <a th:href="@{/supplier-payments/{id}(id=${supplier.supplierId}, branchId=${selectedBranchId}, tab='receipts', keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, size=${pageSize}, page=${receiptPage.number - 1})}"
+                                       class="misa-nav-btn" th:classappend="${receiptPage.first} ? 'disabled'"><i class="bi bi-chevron-left"></i></a>
+                                    <a th:href="@{/supplier-payments/{id}(id=${supplier.supplierId}, branchId=${selectedBranchId}, tab='receipts', keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, size=${pageSize}, page=${receiptPage.number + 1})}"
+                                       class="misa-nav-btn" th:classappend="${receiptPage.last} ? 'disabled'"><i class="bi bi-chevron-right"></i></a>
+                                    <a th:href="@{/supplier-payments/{id}(id=${supplier.supplierId}, branchId=${selectedBranchId}, tab='receipts', keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, size=${pageSize}, page=${receiptPage.totalPages - 1})}"
+                                       class="misa-nav-btn" th:classappend="${receiptPage.last} ? 'disabled'"><i class="bi bi-chevron-bar-right"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- MODAL THANH TOÁN CÔNG NỢ NCC -->
+<div class="modal fade" id="detailPayModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow border-0 rounded-3">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-cash-coin me-2"></i>Thanh toán cho <span th:text="${supplier.supplierName}">NCC</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <form id="detailPayForm" novalidate>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="dpBranchId" th:value="${selectedBranchId}">
+                    <input type="hidden" id="dpSupplierId" th:value="${supplier.supplierId}">
+
+                    <div class="p-3 mb-3 rounded-3 border bg-light">
+                        <div class="row g-2 text-center">
+                            <div class="col-4">
+                                <small class="text-muted d-block">Tổng tiền đã nhập</small>
+                                <strong th:text="${#numbers.formatDecimal(debtSummary.totalImportAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Đã thanh toán</small>
+                                <strong class="text-success" th:text="${#numbers.formatDecimal(debtSummary.totalPaidAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Công nợ tối đa được trả</small>
+                                <strong class="text-danger fs-6" id="dpMaxDebtDisplay">0 đ</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="dpFormError" class="alert alert-danger py-2 px-3 small mb-3" style="display: none;">
+                        <i class="bi bi-exclamation-circle me-1"></i><span id="dpFormErrorText"></span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="dpReceiptSelect" class="form-label fw-semibold">Phiếu nhập đối ứng</label>
+                            <select id="dpReceiptSelect" class="form-select">
+                                <option value="">-- Thanh toán công nợ chung --</option>
+                                <option th:each="r : ${unpaidReceipts}"
+                                        th:value="${r.receiptId}"
+                                        th:data-debt="${r.remainingDebt}"
+                                        th:text="${r.receiptCode + ' (' + #temporals.format(r.receiptDate, 'dd/MM/yyyy') + ') - Còn nợ: ' + #numbers.formatDecimal(r.remainingDebt, 0, 'COMMA', 0, 'POINT') + ' đ'}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="dpPaymentDate" class="form-label fw-semibold">Ngày thanh toán <span class="text-danger">*</span></label>
+                            <input type="date" id="dpPaymentDate" class="form-control" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label for="dpAmountInput" class="form-label fw-semibold m-0">Số tiền thanh toán (VNĐ) <span class="text-danger">*</span></label>
+                                <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none fw-semibold" onclick="fillDetailMaxDebt()">Trả hết</button>
+                            </div>
+                            <input type="text" id="dpAmountInput" class="form-control form-control-lg fw-bold text-primary"
+                                   data-cashier-money="true" min="1" required placeholder="VD: 1,000,000">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="dpMethodSelect" class="form-label fw-semibold">Hình thức thanh toán <span class="text-danger">*</span></label>
+                            <select id="dpMethodSelect" class="form-select form-select-lg" required>
+                                <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
+                                <option value="CASH">Tiền mặt tại quầy</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="dpRefInput" class="form-label fw-semibold">Số chứng từ / Mã giao dịch (UNC)</label>
+                            <input type="text" id="dpRefInput" class="form-control" maxlength="100" placeholder="VD: UNC-2026-01">
+                        </div>
+
+                        <div class="col-12">
+                            <label for="dpNotesInput" class="form-label fw-semibold">Ghi chú thanh toán</label>
+                            <textarea id="dpNotesInput" class="form-control" rows="2" maxlength="255" placeholder="Nội dung thanh toán công nợ..."></textarea>
+                        </div>
+
+                        <div class="col-12 d-flex justify-content-between align-items-end flex-wrap gap-3 p-3 bg-light rounded border">
+                            <div>
+                                <div class="form-label fw-semibold mb-1">Xác nhận</div>
+                                <th:block th:replace="~{fragments/finance-signature :: sigField('spDetail', null)}"></th:block>
+                            </div>
+                            <th:block th:replace="~{fragments/finance-signature :: sigMirror('spDetail', null, 'Người lập phiếu', '(Chữ Ký, Họ Và Tên)', ${displayName != null and !displayName.isBlank() ? displayName : (loggedInUser != null ? loggedInUser.username : 'Kế toán')})}"></th:block>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="fin-btn fin-btn-outline" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" id="dpSubmitBtn" class="fin-btn fin-btn-primary">
+                        <i class="bi bi-check2-circle"></i> Xác nhận thanh toán
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL XEM CHI TIẾT PHIẾU THANH TOÁN -->
+<div class="modal fade" id="detailVoucherModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow border-0 rounded-3">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-receipt text-primary me-2"></i>Phiếu thanh toán <span id="dvCode" class="text-primary"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 small">
+                    <div class="col-6"><span class="text-muted d-block">Chi nhánh</span><strong id="dvBranch"></strong></div>
+                    <div class="col-6"><span class="text-muted d-block">Ngày thanh toán</span><strong id="dvDate"></strong></div>
+                    <div class="col-12"><span class="text-muted d-block">Nhà cung cấp</span><strong id="dvSupplier"></strong></div>
+                    <div class="col-6"><span class="text-muted d-block">Phiếu nhập đối ứng</span><strong id="dvReceipt"></strong></div>
+                    <div class="col-6"><span class="text-muted d-block">Hình thức</span><strong id="dvMethod"></strong></div>
+                    <div class="col-6"><span class="text-muted d-block">Số tiền chi</span><strong id="dvAmount" class="text-success fs-6"></strong></div>
+                    <div class="col-6"><span class="text-muted d-block">Số chứng từ / UNC</span><strong id="dvRef"></strong></div>
+                    <div class="col-6"><span class="text-muted d-block">Người lập phiếu</span><strong id="dvPaidBy"></strong></div>
+                    <div class="col-6" id="dvSignatureWrap" style="display: none;">
+                        <span class="text-muted d-block">Chữ ký xác nhận</span>
+                        <img id="dvSignatureImg" src="" alt="Chữ ký xác nhận" class="mt-1 border rounded p-1 bg-white" style="max-height: 54px; max-width: 170px; object-fit: contain;">
+                    </div>
+                    <div class="col-12 pt-2 border-top">
+                        <span class="text-muted d-block">Ghi chú</span>
+                        <div id="dvNotes" class="p-2 bg-light rounded border mt-1" style="white-space: pre-wrap;">—</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/cashier-tabs.js}"></script>
+<script th:src="@{/js/expense-income-tabs.js}"></script>
+<script th:inline="javascript">
+    const TOTAL_SUPPLIER_DEBT = /*[[${debtSummary.remainingDebt}]]*/ 0;
+    let currentAllowedMaxDebt = Number(TOTAL_SUPPLIER_DEBT || 0);
+    let dpModalInstance = null;
+
+    function formatDpMoney(val) {
+        return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(Number(val || 0)) + ' đ';
+    }
+
+    function clearDpError() {
+        const box = document.getElementById('dpFormError');
+        if (box) box.style.display = 'none';
+    }
+
+    function showDpError(msg) {
+        const box = document.getElementById('dpFormError');
+        const txt = document.getElementById('dpFormErrorText');
+        if (txt) txt.textContent = msg;
+        if (box) box.style.display = 'block';
+    }
+
+    function syncDetailMaxDebt(receiptDebt) {
+        const supDebt = Number(TOTAL_SUPPLIER_DEBT || 0);
+        currentAllowedMaxDebt = receiptDebt != null ? Math.min(Number(receiptDebt), supDebt) : supDebt;
+        const maxDisp = document.getElementById('dpMaxDebtDisplay');
+        if (maxDisp) maxDisp.textContent = formatDpMoney(currentAllowedMaxDebt);
+        const amtInput = document.getElementById('dpAmountInput');
+        if (amtInput) {
+            amtInput.max = currentAllowedMaxDebt > 0 ? String(currentAllowedMaxDebt) : '';
+        }
+    }
+
+    function fillDetailMaxDebt() {
+        const amtInput = document.getElementById('dpAmountInput');
+        if (amtInput && currentAllowedMaxDebt > 0) {
+            amtInput.value = String(Math.round(currentAllowedMaxDebt));
+            clearDpError();
+        }
+    }
+
+    function openDetailPayModal(receiptId, receiptDebt) {
+        clearDpError();
+        const form = document.getElementById('detailPayForm');
+        if (form) form.reset();
+        if (typeof window.resetFinanceSignature === 'function') {
+            window.resetFinanceSignature('spDetail', '');
+        }
+
+        const dateEl = document.getElementById('dpPaymentDate');
+        if (dateEl) {
+            const today = new Date().toISOString().slice(0, 10);
+            dateEl.value = today;
+            dateEl.max = today;
+        }
+
+        const receiptSel = document.getElementById('dpReceiptSelect');
+        if (receiptSel) {
+            receiptSel.value = receiptId ? String(receiptId) : '';
+        }
+        syncDetailMaxDebt(receiptDebt != null ? receiptDebt : null);
+
+        const amtInput = document.getElementById('dpAmountInput');
+        if (amtInput && currentAllowedMaxDebt > 0) {
+            amtInput.value = String(Math.round(currentAllowedMaxDebt));
+        }
+
+        const modalEl = document.getElementById('detailPayModal');
+        if (modalEl && window.bootstrap) {
+            dpModalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+            dpModalInstance.show();
+        }
+        if (typeof window.initCashierMoneyInputs === 'function') {
+            window.initCashierMoneyInputs(modalEl);
+        }
+        if (typeof window.initFinanceSignatures === 'function') {
+            window.initFinanceSignatures(modalEl);
+        }
+    }
+
+    function openDetailPayModalForReceipt(btn) {
+        if (!btn) return;
+        const receiptId = btn.getAttribute('data-receipt-id');
+        const receiptDebt = Number(btn.getAttribute('data-receipt-debt') || 0);
+        openDetailPayModal(receiptId, receiptDebt);
+    }
+
+    function openDetailVoucherModal(btn) {
+        if (!btn || !btn.dataset) return;
+        const d = btn.dataset;
+        document.getElementById('dvCode').textContent = d.code || '';
+        document.getElementById('dvBranch').textContent = d.branch || '—';
+        document.getElementById('dvDate').textContent = d.date || '—';
+        document.getElementById('dvSupplier').textContent = d.supplier || '—';
+        document.getElementById('dvReceipt').textContent = d.receipt || '—';
+        document.getElementById('dvMethod').textContent = d.method || '—';
+        document.getElementById('dvAmount').textContent = d.amount || '0 đ';
+        document.getElementById('dvRef').textContent = d.ref || '—';
+        document.getElementById('dvPaidBy').textContent = d.paidBy || '—';
+        const sigWrap = document.getElementById('dvSignatureWrap');
+        const sigImg = document.getElementById('dvSignatureImg');
+        if (sigWrap && sigImg) {
+            if (d.signatureUrl && d.signatureUrl.trim() !== '') {
+                sigImg.src = d.signatureUrl.trim();
+                sigWrap.style.display = 'block';
+            } else {
+                sigImg.src = '';
+                sigWrap.style.display = 'none';
+            }
+        }
+        document.getElementById('dvNotes').textContent = d.notes && d.notes.trim() ? d.notes : 'Không có ghi chú';
+
+        const modalEl = document.getElementById('detailVoucherModal');
+        if (modalEl && window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    }
+
+    function changeDetailPageSize(newSize) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('size', newSize);
+        url.searchParams.set('page', '0');
+        window.location.href = url.toString();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const receiptSel = document.getElementById('dpReceiptSelect');
+        if (receiptSel) {
+            receiptSel.addEventListener('change', function () {
+                clearDpError();
+                const opt = this.options[this.selectedIndex];
+                const rDebt = opt && opt.getAttribute('data-debt') ? Number(opt.getAttribute('data-debt')) : null;
+                syncDetailMaxDebt(rDebt);
+                const amtInput = document.getElementById('dpAmountInput');
+                if (amtInput && currentAllowedMaxDebt > 0) {
+                    amtInput.value = String(Math.round(currentAllowedMaxDebt));
+                }
+            });
+        }
+
+        const dpForm = document.getElementById('detailPayForm');
+        if (dpForm) {
+            dpForm.querySelectorAll('input, select, textarea').forEach(el => {
+                el.addEventListener('input', clearDpError);
+                el.addEventListener('change', clearDpError);
+            });
+
+            dpForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                clearDpError();
+
+                const branchId = Number(document.getElementById('dpBranchId')?.value || 0);
+                const supplierId = Number(document.getElementById('dpSupplierId')?.value || 0);
+                const receiptIdVal = document.getElementById('dpReceiptSelect')?.value;
+                const paymentDate = document.getElementById('dpPaymentDate')?.value;
+                const paymentMethod = document.getElementById('dpMethodSelect')?.value || 'BANK_TRANSFER';
+                const rawAmount = document.getElementById('dpAmountInput')?.value;
+                const amount = typeof window.parseCashierMoney === 'function'
+                    ? window.parseCashierMoney(rawAmount)
+                    : Number(String(rawAmount || '').replace(/,/g, ''));
+                const referenceNo = document.getElementById('dpRefInput')?.value?.trim() || null;
+                const notes = document.getElementById('dpNotesInput')?.value?.trim() || null;
+                const signatureData = dpForm.querySelector('[data-fin-sig-field="spDetail"] input[name="signatureData"]')?.value?.trim() || null;
+
+                if (!paymentDate) {
+                    showDpError('Vui lòng chọn ngày thanh toán.');
+                    document.getElementById('dpPaymentDate')?.focus();
+                    return;
+                }
+                if (!Number.isFinite(amount) || amount <= 0) {
+                    showDpError('Vui lòng nhập số tiền thanh toán lớn hơn 0.');
+                    document.getElementById('dpAmountInput')?.focus();
+                    return;
+                }
+                if (currentAllowedMaxDebt > 0 && amount > currentAllowedMaxDebt) {
+                    showDpError(`Số tiền thanh toán không được vượt quá công nợ tối đa (${formatDpMoney(currentAllowedMaxDebt)}).`);
+                    document.getElementById('dpAmountInput')?.focus();
+                    return;
+                }
+
+                const btn = document.getElementById('dpSubmitBtn');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang xử lý...';
+                }
+
+                try {
+                    const csrfToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+                    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+                    const headers = { 'Content-Type': 'application/json' };
+                    if (csrfToken && csrfHeader) {
+                        headers[csrfHeader] = csrfToken;
+                    }
+                    const clientRequestId = (window.crypto && typeof window.crypto.randomUUID === 'function')
+                        ? window.crypto.randomUUID()
+                        : ('spd-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9));
+
+                    const resp = await fetch('/supplier-payments/pay', {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({
+                            branchId,
+                            supplierId,
+                            receiptId: receiptIdVal ? Number(receiptIdVal) : null,
+                            paymentDate,
+                            amount,
+                            paymentMethod,
+                            referenceNo,
+                            notes,
+                            clientRequestId,
+                            signatureData
+                        })
+                    });
+
+                    const data = await resp.json().catch(() => ({}));
+                    if (!resp.ok) {
+                        throw new Error(data.message || 'Không thể ghi nhận thanh toán.');
+                    }
+
+                    if (dpModalInstance) dpModalInstance.hide();
+                    const toast = document.getElementById('spDetailToast');
+                    const toastText = document.getElementById('spDetailToastText');
+                    if (toast && toastText) {
+                        toastText.textContent = `Đã lập phiếu thanh toán ${data.paymentCode || ''} (${formatDpMoney(data.amount || amount)}) thành công!`;
+                        toast.style.display = 'block';
+                    }
+                    setTimeout(() => window.location.reload(), 800);
+                } catch (err) {
+                    showDpError(err.message || 'Có lỗi xảy ra khi thanh toán.');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="bi bi-check2-circle"></i> Xác nhận thanh toán';
+                    }
+                }
+            });
+        }
+    });
+</script>
+</body>
+
+</html>
