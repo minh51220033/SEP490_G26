@@ -74,6 +74,8 @@ public class DiagnosisController {
     private com.cvdcms.security.UrlIdCodec urlIdCodec = new com.cvdcms.security.UrlIdCodec();
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
 
     public void setDoctorCoverGrantRepository(com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository) {
         this.doctorCoverGrantRepository = doctorCoverGrantRepository;
@@ -760,6 +762,15 @@ public class DiagnosisController {
                 : Collections.emptyList();
         model.addAttribute("careInteractions", careInteractions);
         model.addAttribute("careTasks", careTasks);
+
+        com.cvdcms.emr.EmrRecord visitEmrRecord = (emrRecordRepository != null && visitId != null)
+                ? emrRecordRepository.findByVisit_VisitId(visitId).orElse(null)
+                : null;
+        List<com.cvdcms.emr.EmrRecord> patientEmrRecords = (emrRecordRepository != null && profileId != null)
+                ? emrRecordRepository.findAllByPatientProfileId(profileId)
+                : Collections.emptyList();
+        model.addAttribute("visitEmrRecord", visitEmrRecord);
+        model.addAttribute("patientEmrRecords", patientEmrRecords);
 
         boolean isClinicalLocked = readOnly || (visit.getStatus() != null &&
                 (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED));
