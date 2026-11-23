@@ -144,6 +144,9 @@ public class Invoice {
     @Column(name = "signature_hash", columnDefinition = "TEXT")
     private String signatureHash;
 
+    @Column(name = "signature_url", length = 500)
+    private String signatureUrl;
+
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InvoiceItem> items = new ArrayList<>();
 

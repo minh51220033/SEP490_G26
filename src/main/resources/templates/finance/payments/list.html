@@ -72,6 +72,7 @@
 
                     <!-- Khoảng ngày -->
                     <div class="fin-form-group fin-date-group">
+                        <select th:replace="~{fragments/cashier-tabs :: quickDateSelect('startDate', 'endDate')}"></select>
                         <input type="date" id="startDate" name="startDate" class="fin-input" th:value="${startDate}" title="Từ ngày">
                         <span class="text-muted small fw-semibold mx-1">đến</span>
                         <input type="date" id="endDate" name="endDate" class="fin-input" th:value="${endDate}" title="Đến ngày">
@@ -83,7 +84,45 @@
                         <a th:href="@{/payments}" class="fin-btn fin-btn-outline" title="Đặt lại bộ lọc"><i class="bi bi-arrow-clockwise"></i> Đặt lại</a>
                     </div>
                 </form>
-                <div th:replace="~{fragments/cashier-tabs :: quickDateBar('startDate', 'endDate')}"></div>
+            </div>
+
+            <!-- Thanh tóm tắt tổng thu theo bộ lọc (kiểu VTTech) -->
+            <div class="fin-vt-summary-grid">
+                <div class="fin-vt-summary-card">
+                    <div class="fin-vt-summary-head">
+                        <span class="fin-vt-summary-label">Tổng thu theo bộ lọc</span>
+                        <a th:href="@{/invoices/create(branchId=${selectedBranchId}, returnUrl='/payments')}" class="fin-vt-quick-btn is-income" title="Lập hóa đơn mới">+</a>
+                    </div>
+                    <p class="fin-vt-summary-value"
+                       th:text="${#numbers.formatDecimal(filteredTotalAmount ?: 0, 1, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
+                    <div class="fin-vt-summary-sub">
+                        <span th:text="${filterBranchLabel ?: 'Tất cả cơ sở'}">Tất cả cơ sở</span>
+                        <span>•</span>
+                        <span th:text="${filterPeriodLabel ?: 'Toàn thời gian'}">Toàn thời gian</span>
+                    </div>
+                </div>
+                <div class="fin-vt-summary-card">
+                    <div class="fin-vt-summary-head">
+                        <span class="fin-vt-summary-label">Số phiếu thu khớp bộ lọc</span>
+                        <i class="bi bi-receipt text-secondary"></i>
+                    </div>
+                    <p class="fin-vt-summary-value is-dark" th:text="${totalElements ?: 0} + ' phiếu'">0 phiếu</p>
+                    <div class="fin-vt-summary-sub">
+                        <span>Tổng số giao dịch thanh toán theo điều kiện đã lọc</span>
+                    </div>
+                </div>
+                <div class="fin-vt-summary-card">
+                    <div class="fin-vt-summary-head">
+                        <span class="fin-vt-summary-label">Phạm vi lọc hiện tại</span>
+                        <i class="bi bi-funnel text-primary"></i>
+                    </div>
+                    <p class="fin-vt-summary-value" style="font-size: 16px;" th:text="${filterPeriodLabel ?: 'Toàn thời gian'}">Toàn thời gian</p>
+                    <div class="fin-vt-summary-sub">
+                        <span th:text="${selectedPaymentType?.name() == 'PAYMENT' ? 'Thanh toán hóa đơn' : (selectedPaymentType?.name() == 'ADVANCE_DEPOSIT' ? 'Nộp tiền tạm ứng' : 'Tất cả loại phiếu')}">Tất cả loại phiếu</span>
+                        <span>•</span>
+                        <span th:text="${selectedPaymentMethod?.name() == 'CASH' ? 'Tiền mặt' : (selectedPaymentMethod?.name() == 'BANK_TRANSFER' ? 'Chuyển khoản QR' : (selectedPaymentMethod?.name() == 'POS_CARD' ? 'Quẹt thẻ POS' : (selectedPaymentMethod?.name() == 'DEPOSIT_WALLET' ? 'Ví tạm ứng' : 'Tất cả phương thức')))}">Tất cả phương thức</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Table Card -->
@@ -122,8 +161,8 @@
                                     <i class="bi bi-cash-stack empty-icon"></i>
                                     <h6>Ch&#432;a c&#243; phi&#7871;u thu n&#224;o</h6>
                                     <p>Ch&#432;a c&#243; phi&#7871;u thu vi&#7879;n ph&#237; ho&#7863;c n&#7895;p t&#7841;m &#7913;ng n&#224;o ph&#249; h&#7887;p v&#7899;i &#273;i&#7873;u ki&#7879;n l&#7885;c.</p>
-                                    <a th:href="@{/payments/create}" class="btn btn-sm btn-success">
-                                        <i class="bi bi-plus-lg me-1"></i>Thu ti&#7873;n vi&#7879;n ph&#237;
+                                    <a th:href="@{/invoices/create(branchId=${selectedBranchId}, returnUrl='/payments')}" class="btn btn-sm btn-success">
+                                        <i class="bi bi-plus-lg me-1"></i>L&#7853;p h&#243;a &#273;&#417;n m&#7899;i
                                     </a>
                                 </div>
                             </td>

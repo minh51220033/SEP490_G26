@@ -204,7 +204,12 @@
             </div>
             <div class="col-6">
                 <h6 class="fw-bold m-0">NGƯỜI THU TIỀN (THU NGÂN)</h6>
-                <p class="small text-muted fst-italic mb-5">(Ký, ghi rõ họ tên)</p>
+                <p class="small text-muted fst-italic mb-2">(Ký, ghi rõ họ tên)</p>
+                <div class="my-2 d-flex justify-content-center align-items-center" style="min-height: 54px;">
+                    <img th:if="${payment.signatureUrl != null and !payment.signatureUrl.isEmpty()}"
+                         th:src="${payment.signatureUrl}" alt="Chữ ký người thu tiền"
+                         style="max-height: 54px; max-width: 180px; object-fit: contain;">
+                </div>
                 <div class="fw-bold" th:text="${payment.cashier != null ? payment.cashier.fullName : ''}">Nguyễn Thu Ngân</div>
             </div>
         </div>

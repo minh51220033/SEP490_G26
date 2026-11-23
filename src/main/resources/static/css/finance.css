@@ -108,6 +108,29 @@
     color: #7c3aed;
 }
 
+.fin-kpi-red .fin-kpi-icon {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.fin-kpi-grid.is-expenses-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+@media (max-width: 1200px) {
+    .fin-kpi-grid.is-expenses-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .fin-kpi-grid.is-expenses-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
 .fin-kpi-info h4 {
     margin: 0 0 6px;
     font-size: 12.5px;
@@ -122,6 +145,323 @@
     font-weight: 700;
     color: #0f172a;
     margin: 0;
+}
+
+/* VTTech-style Filtered Summary Strip */
+.fin-vt-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+@media (max-width: 900px) {
+    .fin-vt-summary-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.fin-vt-summary-card {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.fin-vt-summary-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.fin-vt-summary-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.fin-vt-summary-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+    margin: 0;
+}
+
+.fin-vt-summary-value {
+    font-size: 23px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #0284c7;
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+}
+
+.fin-vt-summary-value.is-danger {
+    color: #dc2626;
+}
+
+.fin-vt-summary-value.is-dark {
+    color: #0f172a;
+}
+
+.fin-vt-summary-value.is-success {
+    color: #059669;
+}
+
+.fin-vt-summary-sub {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.fin-vt-quick-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 700;
+    transition: background-color 0.15s, transform 0.15s;
+}
+
+.fin-vt-quick-btn:hover {
+    transform: scale(1.06);
+}
+
+.fin-vt-quick-btn.is-income {
+    color: #16a34a;
+    background: #dcfce7;
+}
+
+.fin-vt-quick-btn.is-income:hover {
+    background: #bbf7d0;
+    color: #15803d;
+}
+
+.fin-vt-quick-btn.is-expense {
+    color: #dc2626;
+    background: #fee2e2;
+}
+
+.fin-vt-quick-btn.is-expense:hover {
+    background: #fecaca;
+    color: #b91c1c;
+}
+
+.fin-vt-summary-value.is-amber {
+    color: #d97706;
+}
+
+.fin-vt-icon-chip {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+}
+
+.fin-vt-icon-chip.is-blue {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.fin-vt-icon-chip.is-amber {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.fin-vt-icon-chip.is-slate {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.fin-vt-summary-grid.is-overview-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.fin-vt-summary-grid.is-overview-4 .fin-vt-summary-card {
+    padding: 15px 18px;
+}
+
+.fin-vt-summary-grid.is-overview-4 .fin-vt-summary-value {
+    font-size: clamp(18px, 1.45vw, 22px);
+    white-space: nowrap;
+}
+
+@media (max-width: 1180px) {
+    .fin-vt-summary-grid.is-overview-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .fin-vt-summary-grid.is-overview-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Shared Accounting / Cashier Digital Signature Pad & Preview Boxes */
+.fin-sig-field {
+    position: relative;
+    display: inline-block;
+    width: 190px;
+    max-width: 100%;
+}
+
+.fin-sig-box {
+    width: 100%;
+    height: 76px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fin-sig-box:hover {
+    border-color: #0284c7;
+    background: #f8fafc;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.08);
+}
+
+.fin-sig-placeholder {
+    font-size: 12px;
+    font-weight: 500;
+    color: #94a3b8;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fin-sig-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.fin-sig-clear {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.1);
+}
+
+.fin-sig-clear:hover {
+    color: #dc2626;
+    border-color: #fca5a5;
+    background: #fef2f2;
+}
+
+.fin-sig-preview-box {
+    width: 140px;
+    height: 58px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    overflow: hidden;
+}
+
+.fin-sig-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: 2050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.fin-sig-modal-backdrop[hidden] {
+    display: none !important;
+}
+
+.fin-sig-modal-card {
+    width: 100%;
+    max-width: 580px;
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+    overflow: hidden;
+}
+
+.fin-sig-modal-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.fin-sig-modal-body {
+    padding: 18px 20px;
+}
+
+.fin-sig-canvas-wrap {
+    border: 2px dashed #94a3b8;
+    border-radius: 10px;
+    background: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 4px;
+}
+
+.fin-sig-canvas-wrap canvas {
+    max-width: 100%;
+    height: auto;
+    cursor: crosshair;
+    touch-action: none;
+    display: block;
+}
+
+.fin-sig-modal-foot {
+    padding: 14px 20px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
 }
 
 /* Filter Card */
@@ -623,7 +963,7 @@
 }
 
 #refundModal #refundAmount {
-    text-align: right;
+    text-align: left;
     font-size: 16px;
     font-weight: 600 !important;
     font-variant-numeric: tabular-nums;
@@ -1917,24 +2257,368 @@
 }
 
 /* ============================================================================
-   CV-DCMS UNIFIED FINANCE TABLE & FILTER STYLES (ĐỒNG BỘ CHUẨN DAILY-VISITS)
-   Phạm vi: .finance-page, .cashier-page, .fin-brand-theme
+   CV-DCMS UNIFIED FINANCE THEME (HARMONIZED WITH INVENTORY / QUẢN LÝ KHO VẬT TƯ)
+   Phạm vi: .finance-page, .cashier-page, .expense-income-page, .fin-brand-theme
    ============================================================================ */
 
-/* 1. KHUNG BỘ LỌC (FILTER CARD) */
+/* 0. NỀN KHÔNG GIAN LÀM VIỆC & NHỊP KHOẢNG CÁCH LIỀN MẠCH */
+.app-content.finance-page {
+    background: #f1f5f9;
+    padding: 14px 20px 28px !important;
+}
+
+@media (max-width: 575.98px) {
+    .app-content.finance-page {
+        padding: 10px !important;
+    }
+}
+
+/* 0B. HEADER & HAI HÀNG TAB TÀI CHÍNH CHUẨN SEGMENTED BAR NHƯ QUẢN LÝ KHO */
+.finance-page #financeTabsWrapper.finance-nav-wrapper {
+    margin-bottom: 10px !important;
+}
+
+.finance-page #financeTabsWrapper > div:first-of-type {
+    margin-bottom: 10px !important;
+}
+
+.finance-page #financeTabsWrapper .dv-header-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+    flex-shrink: 0;
+}
+
+.finance-page #financeTabsWrapper .btn {
+    height: 38px !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    padding: 0 14px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+.finance-page #financeTabsWrapper .btn-primary {
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25) !important;
+}
+
+.finance-page #financeTabsWrapper .btn-outline-secondary {
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    color: #334155 !important;
+    font-weight: 600 !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+}
+
+.finance-page #financeTabsWrapper .btn-outline-secondary:hover {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+/* Hàng 1: Bộ chuyển nhóm [ Khách hàng | Phòng khám ] dạng segmented capsule mượt */
+.finance-page #financeTabsWrapper .finance-group-switch-container {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 4px !important;
+    margin-bottom: 10px !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+}
+
+.finance-page #financeTabsWrapper .finance-group-btn {
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 7px 16px !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    color: #64748b !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.finance-page #financeTabsWrapper .finance-group-btn:hover {
+    color: #0f172a !important;
+    background: #f1f5f9 !important;
+}
+
+.finance-page #financeTabsWrapper .finance-group-btn.active {
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    border-color: transparent !important;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25) !important;
+}
+
+/* Hàng 2: Thanh sub-tabs 1 khối liền mạch như .tabs của Quản lý kho vật tư */
+.finance-page #financeTabsWrapper .finance-subtabs-nav {
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 4px !important;
+    margin-bottom: 0 !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+}
+
+.finance-page #financeTabsWrapper .finance-subtabs-list {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    flex-wrap: nowrap !important;
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.finance-page #financeTabsWrapper .finance-subtab-item {
+    flex-shrink: 0 !important;
+}
+
+.finance-page #financeTabsWrapper .finance-subtab-btn {
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #64748b !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    white-space: nowrap !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.finance-page #financeTabsWrapper .finance-subtab-btn:hover {
+    color: #0f172a !important;
+    background: #f1f5f9 !important;
+    border-color: transparent !important;
+}
+
+.finance-page #financeTabsWrapper .finance-subtab-btn.active {
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    border-color: transparent !important;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25) !important;
+}
+
+/* 0C. THẺ KPI PHÒNG KHÁM / TỔNG QUAN (.fin-kpi-grid CHUẨN .stat-card KHO VẬT TƯ) */
+.finance-page .fin-kpi-grid,
+.cashier-page .fin-kpi-grid,
+.expense-income-page .fin-kpi-grid {
+    gap: 12px !important;
+    margin-bottom: 10px !important;
+}
+
+.finance-page .fin-kpi-card,
+.cashier-page .fin-kpi-card,
+.expense-income-page .fin-kpi-card {
+    position: relative !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: row-reverse !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 14px !important;
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 14px 18px !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+
+.finance-page .fin-kpi-card::before,
+.cashier-page .fin-kpi-card::before,
+.expense-income-page .fin-kpi-card::before {
+    content: "" !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 4px !important;
+    background: linear-gradient(180deg, #0284c7, #2563eb) !important;
+}
+
+.finance-page .fin-kpi-card.fin-kpi-green::before { background: #10b981 !important; }
+.finance-page .fin-kpi-card.fin-kpi-amber::before,
+.finance-page .fin-kpi-card.fin-kpi-gold::before { background: #f59e0b !important; }
+.finance-page .fin-kpi-card.fin-kpi-purple::before { background: #8b5cf6 !important; }
+.finance-page .fin-kpi-card.fin-kpi-red::before { background: #ef4444 !important; }
+
+.finance-page .fin-kpi-card:hover {
+    transform: translateY(-2px) !important;
+    border-color: #bae6fd !important;
+    box-shadow: 0 6px 16px rgba(2, 132, 199, 0.08) !important;
+}
+
+.finance-page .fin-kpi-info {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.finance-page .fin-kpi-info h4 {
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+    color: #475569 !important;
+    margin: 0 0 4px !important;
+}
+
+.finance-page .fin-kpi-info .fin-kpi-val {
+    font-size: clamp(1.1rem, 1.35vw, 1.35rem) !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.3px !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+.finance-page .fin-kpi-card.fin-kpi-red .fin-kpi-val {
+    color: #dc2626 !important;
+}
+
+.finance-page .fin-kpi-icon {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 12px !important;
+    font-size: 19px !important;
+    flex-shrink: 0 !important;
+}
+
+.finance-page .fin-kpi-gold .fin-kpi-icon {
+    background: #fef3c7 !important;
+    color: #d97706 !important;
+}
+
+/* 0D. THANH TỔNG HỢP VTTECH (.fin-vt-summary-grid) -> GỘP THÀNH 1 THANH TRẮNG LIỀN MẠCH */
+.finance-page .fin-vt-summary-grid,
+.cashier-page .fin-vt-summary-grid {
+    gap: 0 !important;
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+    margin-bottom: 10px !important;
+}
+
+.finance-page .fin-vt-summary-card,
+.cashier-page .fin-vt-summary-card {
+    background: transparent !important;
+    border: none !important;
+    border-right: 1px solid #e2e8f0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 13px 18px !important;
+    transition: background-color 0.15s ease !important;
+}
+
+.finance-page .fin-vt-summary-card:last-child,
+.cashier-page .fin-vt-summary-card:last-child {
+    border-right: none !important;
+}
+
+.finance-page .fin-vt-summary-card:hover,
+.cashier-page .fin-vt-summary-card:hover {
+    background: #f8fafc !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.finance-page .fin-vt-summary-head {
+    margin-bottom: 4px !important;
+}
+
+.finance-page .fin-vt-summary-label {
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+    color: #475569 !important;
+}
+
+.finance-page .fin-vt-summary-value {
+    font-size: clamp(1.12rem, 1.4vw, 1.38rem) !important;
+    font-weight: 800 !important;
+    font-variant-numeric: tabular-nums !important;
+    margin-bottom: 2px !important;
+}
+
+.finance-page .fin-vt-summary-sub {
+    font-size: 11.5px !important;
+    color: #64748b !important;
+}
+
+@media (max-width: 1199.98px) {
+    .finance-page .fin-vt-summary-grid.is-overview-4,
+    .cashier-page .fin-vt-summary-grid.is-overview-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    .finance-page .fin-vt-summary-grid.is-overview-4 .fin-vt-summary-card:nth-child(2n),
+    .cashier-page .fin-vt-summary-grid.is-overview-4 .fin-vt-summary-card:nth-child(2n) {
+        border-right: none !important;
+    }
+    .finance-page .fin-vt-summary-grid.is-overview-4 .fin-vt-summary-card:nth-child(-n+2),
+    .cashier-page .fin-vt-summary-grid.is-overview-4 .fin-vt-summary-card:nth-child(-n+2) {
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .finance-page .fin-vt-summary-grid,
+    .cashier-page .fin-vt-summary-grid,
+    .finance-page .fin-vt-summary-grid.is-overview-4,
+    .cashier-page .fin-vt-summary-grid.is-overview-4 {
+        grid-template-columns: 1fr !important;
+    }
+    .finance-page .fin-vt-summary-grid .fin-vt-summary-card,
+    .cashier-page .fin-vt-summary-grid .fin-vt-summary-card {
+        border-right: none !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+    .finance-page .fin-vt-summary-grid .fin-vt-summary-card:last-child,
+    .cashier-page .fin-vt-summary-grid .fin-vt-summary-card:last-child {
+        border-bottom: none !important;
+    }
+}
+
+/* 1. KHUNG BỘ LỌC (FILTER TOOLBAR CHUẨN .dv-toolbar-card) */
 .finance-page .fin-filter-container,
 .cashier-page .fin-filter-container,
+.expense-income-page .fin-filter-container,
 .finance-page .fin-card:has(form.fin-filter-bar),
 .cashier-page .fin-card:has(form.fin-filter-bar),
 .finance-page .fin-card:has(form#patientSearchFilterForm),
 .cashier-page .fin-card:has(form#patientSearchFilterForm),
 .finance-page .deposit-filter-card {
     background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 12px !important;
-    padding: 14px 18px !important;
-    margin-bottom: 14px !important;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 12px 16px !important;
+    margin-bottom: 10px !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
 }
 
 .finance-page .fin-filter-bar,
@@ -1944,7 +2628,7 @@
     flex-wrap: wrap !important;
     flex-direction: row !important;
     align-items: center !important;
-    gap: 10px !important;
+    gap: 8px !important;
 }
 
 /* Form group bên trong filter bar: luôn nằm ngang 1 hàng, không xếp dọc */
@@ -1970,7 +2654,7 @@
     white-space: nowrap !important;
 }
 
-/* Khoảng ngày (Từ ngày - Đến ngày) luôn nằm ngang cùng hàng, không bao giờ bị xếp dọc */
+/* Khoảng ngày (Từ ngày - Đến ngày) luôn nằm ngang cùng hàng */
 .finance-page .fin-filter-bar .fin-date-group,
 .cashier-page .fin-filter-bar .fin-date-group,
 .fin-brand-theme .fin-filter-bar .fin-date-group,
@@ -1985,7 +2669,7 @@
     flex-wrap: nowrap !important;
 }
 
-/* Ô tìm kiếm có icon bên trái */
+/* Ô tìm kiếm có icon bên trái chuẩn .dv-search-box */
 .finance-page .fin-filter-bar .fin-form-group.fin-search-group,
 .cashier-page .fin-filter-bar .fin-form-group.fin-search-group,
 .fin-brand-theme .fin-filter-bar .fin-form-group.fin-search-group {
@@ -2002,7 +2686,7 @@
     left: 12px !important;
     top: 50% !important;
     transform: translateY(-50%) !important;
-    color: #64748b !important;
+    color: #94a3b8 !important;
     font-size: 14px !important;
     pointer-events: none !important;
     z-index: 2 !important;
@@ -2014,35 +2698,76 @@
     width: 100% !important;
     height: 38px !important;
     padding: 6px 14px 6px 36px !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 8px !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 10px !important;
     font-size: 13px !important;
+    color: #0f172a !important;
     outline: none !important;
-    transition: all 0.15s ease !important;
-    background: #ffffff !important;
+    transition: all 0.2s ease !important;
+    background: #f8fafc !important;
 }
 
 .finance-page .fin-filter-bar .fin-search-group input.fin-input:focus,
 .cashier-page .fin-filter-bar .fin-search-group input.fin-input:focus,
 .fin-brand-theme .fin-filter-bar .fin-search-group input.fin-input:focus {
+    background: #ffffff !important;
     border-color: #0284c7 !important;
     box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12) !important;
 }
 
-/* Các trường chọn, date và button đồng đều chiều cao 38px */
+/* Các trường chọn, date và button đồng đều chiều cao 38px & bo góc 10px */
 .finance-page .fin-filter-bar select.fin-select,
 .cashier-page .fin-filter-bar select.fin-select,
 .fin-brand-theme .fin-filter-bar select.fin-select {
     height: 38px !important;
     padding: 5px 10px !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 8px !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 10px !important;
     font-size: 13px !important;
     color: #334155 !important;
-    background-color: #ffffff !important;
+    background-color: #f8fafc !important;
     outline: none !important;
     min-width: 130px !important;
-    transition: all 0.15s ease !important;
+    transition: all 0.2s ease !important;
+}
+
+.finance-page .fin-filter-bar select.fin-select:focus,
+.cashier-page .fin-filter-bar select.fin-select:focus,
+.fin-brand-theme .fin-filter-bar select.fin-select:focus {
+    background-color: #ffffff !important;
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12) !important;
+}
+
+.finance-page .fin-filter-bar select.fin-quick-date-select,
+.cashier-page .fin-filter-bar select.fin-quick-date-select,
+.fin-brand-theme .fin-filter-bar select.fin-quick-date-select {
+    min-width: 118px !important;
+    width: auto !important;
+    cursor: pointer !important;
+}
+
+.finance-page .fin-filter-bar select.fin-quick-date-select.is-placeholder,
+.cashier-page .fin-filter-bar select.fin-quick-date-select.is-placeholder,
+.fin-brand-theme .fin-filter-bar select.fin-quick-date-select.is-placeholder {
+    color: #64748b !important;
+}
+
+.finance-page .fin-filter-bar select.fin-quick-date-select.has-value,
+.cashier-page .fin-filter-bar select.fin-quick-date-select.has-value,
+.fin-brand-theme .fin-filter-bar select.fin-quick-date-select.has-value {
+    color: #0369a1 !important;
+    border-color: #38bdf8 !important;
+    background-color: #eff6ff !important;
+    font-weight: 600 !important;
+}
+
+.finance-page .fin-filter-bar select.fin-quick-date-select:focus,
+.cashier-page .fin-filter-bar select.fin-quick-date-select:focus,
+.fin-brand-theme .fin-filter-bar select.fin-quick-date-select:focus {
+    background-color: #ffffff !important;
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12) !important;
 }
 
 .finance-page .fin-filter-bar input[type="date"].fin-input,
@@ -2053,14 +2778,22 @@
     min-width: 130px !important;
     max-width: 150px !important;
     padding: 5px 8px !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 8px !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 10px !important;
     font-size: 13px !important;
     color: #334155 !important;
-    background-color: #ffffff !important;
+    background-color: #f8fafc !important;
     outline: none !important;
     display: inline-block !important;
-    transition: all 0.15s ease !important;
+    transition: all 0.2s ease !important;
+}
+
+.finance-page .fin-filter-bar input[type="date"].fin-input:focus,
+.cashier-page .fin-filter-bar input[type="date"].fin-input:focus,
+.fin-brand-theme .fin-filter-bar input[type="date"].fin-input:focus {
+    background-color: #ffffff !important;
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12) !important;
 }
 
 .finance-page .fin-filter-bar input[type="number"].fin-input,
@@ -2068,11 +2801,11 @@
 .fin-brand-theme .fin-filter-bar input[type="number"].fin-input {
     height: 38px !important;
     padding: 5px 10px !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 8px !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 10px !important;
     font-size: 13px !important;
     color: #334155 !important;
-    background-color: #ffffff !important;
+    background-color: #f8fafc !important;
 }
 
 .finance-page .fin-filter-bar .fin-btn-primary,
@@ -2080,79 +2813,85 @@
 .fin-brand-theme .fin-filter-bar .fin-btn-primary {
     height: 38px !important;
     padding: 0 16px !important;
-    border-radius: 8px !important;
+    border-radius: 10px !important;
     font-size: 13px !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     color: #ffffff !important;
-    background: linear-gradient(135deg, #0284c7, #1d4ed8) !important;
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
     border: none !important;
     display: inline-flex !important;
     align-items: center !important;
     gap: 6px !important;
-    box-shadow: 0 1px 2px rgba(2, 132, 199, 0.15) !important;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25) !important;
     cursor: pointer !important;
     white-space: nowrap !important;
+    transition: all 0.2s ease !important;
 }
 
 .finance-page .fin-filter-bar .fin-btn-primary:hover,
 .cashier-page .fin-filter-bar .fin-btn-primary:hover,
 .fin-brand-theme .fin-filter-bar .fin-btn-primary:hover {
-    background: linear-gradient(135deg, #0369a1, #1e40af) !important;
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3) !important;
 }
 
 .finance-page .fin-filter-bar .fin-btn-outline,
 .cashier-page .fin-filter-bar .fin-btn-outline,
 .fin-brand-theme .fin-filter-bar .fin-btn-outline {
     height: 38px !important;
-    padding: 0 12px !important;
-    border-radius: 8px !important;
+    padding: 0 14px !important;
+    border-radius: 10px !important;
     font-size: 13px !important;
     font-weight: 600 !important;
-    color: #64748b !important;
+    color: #475569 !important;
     background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
+    border: 1.5px solid #cbd5e1 !important;
     display: inline-flex !important;
     align-items: center !important;
     gap: 5px !important;
     text-decoration: none !important;
     white-space: nowrap !important;
+    transition: all 0.15s ease !important;
 }
 
 .finance-page .fin-filter-bar .fin-btn-outline:hover,
 .cashier-page .fin-filter-bar .fin-btn-outline:hover,
 .fin-brand-theme .fin-filter-bar .fin-btn-outline:hover {
-    background: #f1f5f9 !important;
+    background: #f8fafc !important;
     color: #0f172a !important;
     border-color: #94a3b8 !important;
 }
 
-/* 2. KHUNG BẢNG VÀ TOOLBAR TRÊN BẢNG (TABLE CARD & TOPBAR) */
+/* 2. KHUNG BẢNG VÀ TOOLBAR TRÊN BẢNG (TABLE CARD & TOPBAR CHUẨN KHO VẬT TƯ) */
 .finance-page .fin-card.fin-table-card,
 .cashier-page .fin-card.fin-table-card,
 .finance-page .fin-card.p-0,
 .cashier-page .fin-card.p-0,
 .finance-page .enhanced-table-container,
 .cashier-page .enhanced-table-container,
-.fin-brand-theme .enhanced-table-container {
+.fin-brand-theme .enhanced-table-container,
+.finance-page .staff-table-card,
+.cashier-page .staff-table-card {
     background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 12px !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 14px !important;
     overflow: hidden !important;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
-    margin-bottom: 24px !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+    margin-bottom: 12px !important;
     padding: 0 !important;
 }
 
-/* Các thẻ fin-card thông thường (như trong trang chi tiết bệnh nhân): giữ padding 20px 24px thoáng đãng */
+/* Các thẻ fin-card thông thường: đồng nhất border 1.5px & bo góc 14px */
 .finance-page .fin-card:not(.fin-table-card):not(.p-0),
 .cashier-page .fin-card:not(.fin-table-card):not(.p-0),
 .fin-brand-theme .fin-card:not(.fin-table-card):not(.p-0) {
     background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 12px !important;
-    padding: 20px 24px !important;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04) !important;
-    margin-bottom: 24px !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 18px 20px !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+    margin-bottom: 12px !important;
 }
 
 /* Khoảng cách thoáng cho tiêu đề thẻ và icon không bao giờ bị dính sát mép */
@@ -2162,7 +2901,7 @@
     display: inline-flex !important;
     align-items: center !important;
     gap: 8px !important;
-    font-size: 16px !important;
+    font-size: 15.5px !important;
 }
 
 .finance-page .fin-card h4 i,
@@ -2172,23 +2911,23 @@
     margin-right: 4px !important;
 }
 
-/* Đảm bảo khoảng cách tách biệt rõ ràng giữa các bảng (tránh dính vào nhau, bỏ qua thẻ đang ẩn) */
+/* Nhịp tách giữa các thẻ liên tiếp đồng đều 10px */
 .finance-page .fin-card:not([style*="display: none"]):not([style*="display:none"])+.fin-card,
 .cashier-page .fin-card:not([style*="display: none"]):not([style*="display:none"])+.fin-card,
 .fin-brand-theme .fin-card:not([style*="display: none"]):not([style*="display:none"])+.fin-card,
 .finance-page .fin-card.mt-4,
 .cashier-page .fin-card.mt-4,
 .fin-brand-theme .fin-card.mt-4 {
-    margin-top: 24px !important;
+    margin-top: 10px !important;
 }
 
-/* Thanh thông tin & tùy biến cột phía trên bảng: Nút tùy biến luôn ở góc trên bên phải */
+/* Thanh thông tin & tùy biến cột phía trên bảng */
 .finance-page .fin-grid-topbar,
 .cashier-page .fin-grid-topbar,
 .fin-brand-theme .fin-grid-topbar {
     background: #f8fafc !important;
-    border-bottom: 1.5px solid #e2e8f0 !important;
-    padding: 10px 16px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding: 11px 16px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
@@ -2200,7 +2939,7 @@
 .cashier-page .enhanced-table-toolbar,
 .fin-brand-theme .enhanced-table-toolbar {
     background: #f8fafc !important;
-    border-bottom: 1.5px solid #e2e8f0 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
     padding: 8px 16px !important;
     display: flex !important;
     align-items: center !important;
@@ -2214,6 +2953,7 @@
 .fin-brand-theme .enhanced-custom-toggle-btn {
     margin-left: auto !important;
     white-space: nowrap !important;
+    border-radius: 8px !important;
 }
 
 .finance-page .fin-topbar-right,
@@ -2239,7 +2979,7 @@
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;
-    font-size: 14px !important;
+    font-size: 13.5px !important;
     font-weight: 700 !important;
     color: #0f172a !important;
 }
@@ -2275,7 +3015,7 @@ table#cashier-pending-patients td a:hover {
     text-decoration: underline !important;
 }
 
-/* Header bảng: căn giữa toàn bộ tiêu đề bảng */
+/* Header bảng sạch gọn, đồng bộ căn lề với dữ liệu như .cv-table */
 .finance-page table thead th,
 .cashier-page table thead th,
 .fin-brand-theme table thead th,
@@ -2283,32 +3023,56 @@ table#cashier-pending-patients td a:hover {
 .cashier-page table.fin-table thead th,
 .finance-page table[data-enhanced-table] thead th,
 .cashier-page table[data-enhanced-table] thead th {
-    background: #f1f5f9 !important;
-    color: #334155 !important;
-    font-size: 13px !important;
-    font-weight: 700 !important;
+    background: #f8fafc !important;
+    color: #475569 !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.3px !important;
-    padding: 13px 16px !important;
-    border-bottom: 2px solid #cbd5e1 !important;
-    border-right: 1px solid #e2e8f0 !important;
+    letter-spacing: 0.4px !important;
+    padding: 11px 14px !important;
+    border-bottom: 1.5px solid #e2e8f0 !important;
+    border-right: none !important;
     white-space: nowrap !important;
-    text-align: center !important;
+    text-align: left !important;
     vertical-align: middle !important;
+}
+
+.finance-page table thead th.text-end,
+.cashier-page table thead th.text-end,
+.finance-page table[data-enhanced-table] thead th.text-end {
+    text-align: right !important;
+}
+
+.finance-page table thead th.text-center,
+.cashier-page table thead th.text-center,
+.finance-page table[data-enhanced-table] thead th.text-center,
+.finance-page table thead th[data-column-action="true"] {
+    text-align: center !important;
 }
 
 .finance-page table thead th .enhanced-th-content,
 .cashier-page table thead th .enhanced-th-content,
 .fin-brand-theme table thead th .enhanced-th-content,
 table[data-enhanced-table] thead th .enhanced-th-content {
-    justify-content: center !important;
-    text-align: center !important;
-    margin: 0 auto !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    margin: 0 !important;
     display: inline-flex !important;
     width: auto !important;
 }
 
-/* Hàng dữ liệu: căn trái toàn bộ nội dung bên dưới */
+.finance-page table thead th.text-end .enhanced-th-content {
+    justify-content: flex-end !important;
+    text-align: right !important;
+}
+
+.finance-page table thead th.text-center .enhanced-th-content,
+.finance-page table thead th[data-column-action="true"] .enhanced-th-content {
+    justify-content: center !important;
+    text-align: center !important;
+}
+
+/* Hàng dữ liệu mượt, không chia ô dọc gắt */
 .finance-page table tbody td,
 .cashier-page table tbody td,
 .fin-brand-theme table tbody td,
@@ -2316,13 +3080,23 @@ table[data-enhanced-table] thead th .enhanced-th-content {
 .cashier-page table.fin-table tbody td,
 .finance-page table[data-enhanced-table] tbody td,
 .cashier-page table[data-enhanced-table] tbody td {
-    padding: 11px 16px !important;
+    padding: 11px 14px !important;
     border-bottom: 1px solid #f1f5f9 !important;
-    border-right: 1px solid #f8fafc !important;
-    font-size: 13.5px !important;
+    border-right: none !important;
+    font-size: 13px !important;
     vertical-align: middle !important;
-    color: #334155 !important;
+    color: #1e293b !important;
     text-align: left !important;
+}
+
+.finance-page table tbody td.text-end,
+.cashier-page table tbody td.text-end {
+    text-align: right !important;
+}
+
+.finance-page table tbody td.text-center,
+.cashier-page table tbody td.text-center {
+    text-align: center !important;
 }
 
 .finance-page table tbody td .d-flex,
@@ -2400,7 +3174,7 @@ table[data-enhanced-table] thead th .enhanced-th-content {
 /* Nút thao tác kích thước đồng đều */
 .finance-page .fin-table-btn,
 .cashier-page .fin-table-btn {
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     height: 30px !important;
     padding: 0 10px !important;
     font-size: 12.5px !important;
@@ -2434,6 +3208,75 @@ table[data-enhanced-table] thead th .enhanced-th-content {
     border-top: 1px solid #e2e8f0 !important;
     font-size: 0.85rem !important;
     color: #334155 !important;
+}
+
+/* Đồng bộ nút hành động & thẻ thông báo / subpage theo ngôn ngữ Quản lý kho */
+.finance-page .fin-btn {
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+
+.finance-page .fin-btn-primary {
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25) !important;
+}
+
+.finance-page .fin-btn-primary:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3) !important;
+}
+
+.finance-page .fin-btn-outline {
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    color: #475569 !important;
+}
+
+.finance-page .fin-btn-outline:hover {
+    background: #f8fafc !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+}
+
+.finance-page .fin-btn-sm {
+    height: 34px !important;
+    padding: 0 12px !important;
+    font-size: 12.5px !important;
+    border-radius: 8px !important;
+}
+
+.finance-page .expense-income-tab-content > .alert,
+.finance-page .cashier-tab-content > .alert {
+    border-radius: 12px !important;
+    margin-bottom: 10px !important;
+}
+
+.finance-page .sp-section-card {
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+}
+
+.finance-page .sp-subtab-pill {
+    border-radius: 10px !important;
+    border-color: #e2e8f0 !important;
+}
+
+.finance-page .sp-subtab-pill.active {
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.22) !important;
+}
+
+.finance-page .fin-pjax-loading {
+    opacity: 0.6;
+    pointer-events: none;
+    transition: opacity 0.14s ease;
 }
 
 /* ════════════════════════════════════════════════════════════════════════════

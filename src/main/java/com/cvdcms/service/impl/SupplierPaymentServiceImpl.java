@@ -1,13 +1,16 @@
 package com.cvdcms.service.impl;
 
+import com.cvdcms.DTO.StockReceiptResponseDTO;
 import com.cvdcms.DTO.SupplierDebtSummaryDTO;
 import com.cvdcms.DTO.SupplierPaymentCreateDTO;
 import com.cvdcms.DTO.SupplierPaymentResponseDTO;
 import com.cvdcms.entity.*;
+import com.cvdcms.entity.enums.AssignmentStatus;
 import com.cvdcms.entity.enums.StaffStatus;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.BranchAccessService;
 import com.cvdcms.service.SupplierPaymentService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -56,6 +59,8 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
     private final StaffProfileRepository staffRepository;
     private final UserRepository userRepository;
     private final BranchAccessService accessService;
+    @Autowired(required = false)
+    private StaffBranchAssignmentRepository staffBranchAssignmentRepository;
 
     public SupplierPaymentServiceImpl(
             SupplierRepository supplierRepository,
@@ -83,6 +88,22 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         if (!accessService.canAccessBranch(userId, branchId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem công nợ nhà cung cấp của chi nhánh này.");
         }
+        return getDebtSummariesInternal(branchId, keyword);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SupplierDebtSummaryDTO> getDebtSummariesForFinance(Long branchId, String keyword, Long userId) {
+        if (branchId == null || branchId <= 0) {
+            bad("Chi nhánh không hợp lệ.");
+        }
+        if (!canAccessBranchForFinance(userId, branchId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem công nợ nhà cung cấp của chi nhánh này.");
+        }
+        return getDebtSummariesInternal(branchId, keyword);
+    }
+
+    private List<SupplierDebtSummaryDTO> getDebtSummariesInternal(Long branchId, String keyword) {
 
         Page<Supplier> suppliers = supplierRepository.searchSuppliers(
                 trimToNull(keyword),
@@ -194,6 +215,36 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         if (!accessService.canAccessBranch(userId, branchId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền truy cập chi nhánh này.");
         }
+        return searchPaymentsInternal(branchId, supplierId, keyword, fromDate, toDate, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<SupplierPaymentResponseDTO> searchPaymentsForFinance(
+            Long branchId,
+            Long supplierId,
+            String keyword,
+            LocalDate fromDate,
+            LocalDate toDate,
+            Pageable pageable,
+            Long userId) {
+
+        if (branchId == null || branchId <= 0) {
+            bad("Chi nhánh không hợp lệ.");
+        }
+        if (!canAccessBranchForFinance(userId, branchId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền truy cập chi nhánh này.");
+        }
+        return searchPaymentsInternal(branchId, supplierId, keyword, fromDate, toDate, pageable);
+    }
+
+    private Page<SupplierPaymentResponseDTO> searchPaymentsInternal(
+            Long branchId,
+            Long supplierId,
+            String keyword,
+            LocalDate fromDate,
+            LocalDate toDate,
+            Pageable pageable) {
         if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
             bad("Từ ngày không được sau đến ngày.");
         }
@@ -213,6 +264,200 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         if (!accessService.canAccessBranch(userId, dto.getBranchId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền tạo thanh toán tại chi nhánh này.");
         }
+        return createPaymentInternal(dto, userId);
+    }
+
+    @Override
+    @Transactional
+    public SupplierPaymentResponseDTO createPaymentForFinance(SupplierPaymentCreateDTO dto, Long userId) {
+        if (dto == null || dto.getBranchId() == null || dto.getBranchId() <= 0) {
+            bad("Chi nhánh không hợp lệ.");
+        }
+        if (!canAccessBranchForFinance(userId, dto.getBranchId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền tạo thanh toán tại chi nhánh này.");
+        }
+        return createPaymentInternal(dto, userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StockReceiptResponseDTO> getUnpaidReceiptsForFinance(Long branchId, Long supplierId, Long userId) {
+        if (branchId == null || branchId <= 0 || supplierId == null || supplierId <= 0) {
+            return List.of();
+        }
+        if (!canAccessBranchForFinance(userId, branchId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem phiếu nhập của chi nhánh này.");
+        }
+        List<StockReceipt> receipts = receiptRepository.findByBranchAndSupplierOrderByReceiptDateDesc(branchId, supplierId);
+        if (receipts == null || receipts.isEmpty()) {
+            return List.of();
+        }
+        List<Long> receiptIds = receipts.stream()
+                .map(StockReceipt::getReceiptId)
+                .filter(id -> id != null)
+                .toList();
+        Map<Long, BigDecimal> paidMap = new HashMap<>();
+        if (!receiptIds.isEmpty()) {
+            List<Object[]> rows = paymentRepository.sumPaidAmountByReceipts(receiptIds);
+            if (rows != null) {
+                for (Object[] row : rows) {
+                    if (row != null && row.length >= 2 && row[0] instanceof Number rid) {
+                        BigDecimal sum = row[1] instanceof BigDecimal bd ? bd : BigDecimal.ZERO;
+                        paidMap.put(rid.longValue(), sum);
+                    }
+                }
+            }
+        }
+        List<StockReceiptResponseDTO> result = new ArrayList<>();
+        for (StockReceipt r : receipts) {
+            BigDecimal total = r.getTotalAmount() != null ? r.getTotalAmount() : BigDecimal.ZERO;
+            BigDecimal paid = paidMap.getOrDefault(r.getReceiptId(), BigDecimal.ZERO);
+            BigDecimal remaining = total.subtract(paid);
+            if (remaining.compareTo(BigDecimal.ZERO) > 0) {
+                StockReceiptResponseDTO dto = new StockReceiptResponseDTO(
+                        r.getReceiptId(),
+                        r.getReceiptCode(),
+                        branchId,
+                        supplierId,
+                        r.getReceiptDate(),
+                        total
+                );
+                dto.setSupplierInvoiceNo(r.getSupplierInvoiceNo());
+                dto.setPaidAmount(paid);
+                dto.setRemainingDebt(remaining);
+                result.add(dto);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SupplierDebtSummaryDTO getSupplierDebtDetailForFinance(Long branchId, Long supplierId, Long userId) {
+        if (branchId == null || branchId <= 0 || supplierId == null || supplierId <= 0) {
+            bad("Thông tin chi nhánh hoặc nhà cung cấp không hợp lệ.");
+        }
+        if (!canAccessBranchForFinance(userId, branchId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem công nợ nhà cung cấp của chi nhánh này.");
+        }
+        Supplier s = supplierRepository.findById(supplierId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy nhà cung cấp."));
+
+        long receiptCount = receiptRepository.countReceiptsByBranchAndSupplier(branchId, supplierId);
+        BigDecimal totalImport = receiptRepository.sumTotalAmountByBranchAndSupplier(branchId, supplierId);
+        if (totalImport == null) totalImport = BigDecimal.ZERO;
+        BigDecimal totalPaid = paymentRepository.sumPaidAmountByBranchAndSupplier(branchId, supplierId);
+        if (totalPaid == null) totalPaid = BigDecimal.ZERO;
+        BigDecimal remaining = totalImport.subtract(totalPaid);
+        if (remaining.compareTo(BigDecimal.ZERO) < 0) {
+            remaining = BigDecimal.ZERO;
+        }
+
+        return new SupplierDebtSummaryDTO(
+                s.getSupplierId(),
+                s.getSupplierCode(),
+                s.getSupplierName(),
+                s.getTaxCode(),
+                s.getPhoneNumber(),
+                s.getIsActive(),
+                (int) receiptCount,
+                totalImport,
+                totalPaid,
+                remaining
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<StockReceiptResponseDTO> getReceiptsForFinance(
+            Long branchId,
+            Long supplierId,
+            String keyword,
+            LocalDate fromDate,
+            LocalDate toDate,
+            Pageable pageable,
+            Long userId) {
+        if (branchId == null || branchId <= 0) {
+            bad("Chi nhánh không hợp lệ.");
+        }
+        if (!canAccessBranchForFinance(userId, branchId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem phiếu nhập của chi nhánh này.");
+        }
+        if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+            bad("Từ ngày không được sau đến ngày.");
+        }
+        Page<StockReceipt> page = receiptRepository.searchReceipts(
+                branchId, supplierId, trimToNull(keyword), fromDate, toDate, pageable);
+        List<Long> receiptIds = page.getContent().stream()
+                .map(StockReceipt::getReceiptId)
+                .filter(id -> id != null)
+                .toList();
+        Map<Long, BigDecimal> paidMap = new HashMap<>();
+        if (!receiptIds.isEmpty()) {
+            List<Object[]> rows = paymentRepository.sumPaidAmountByReceipts(receiptIds);
+            if (rows != null) {
+                for (Object[] row : rows) {
+                    if (row != null && row.length >= 2 && row[0] instanceof Number rid) {
+                        BigDecimal sum = row[1] instanceof BigDecimal bd ? bd : BigDecimal.ZERO;
+                        paidMap.put(rid.longValue(), sum);
+                    }
+                }
+            }
+        }
+        return page.map(r -> {
+            BigDecimal total = r.getTotalAmount() != null ? r.getTotalAmount() : BigDecimal.ZERO;
+            BigDecimal paid = paidMap.getOrDefault(r.getReceiptId(), BigDecimal.ZERO);
+            BigDecimal remaining = total.subtract(paid);
+            if (remaining.compareTo(BigDecimal.ZERO) < 0) {
+                remaining = BigDecimal.ZERO;
+            }
+            StockReceiptResponseDTO dto = new StockReceiptResponseDTO(
+                    r.getReceiptId(),
+                    r.getReceiptCode(),
+                    r.getBranch() != null ? r.getBranch().getBranchId() : branchId,
+                    r.getSupplier() != null ? r.getSupplier().getSupplierId() : supplierId,
+                    r.getReceiptDate(),
+                    total
+            );
+            dto.setBranchName(r.getBranch() != null ? r.getBranch().getBranchName() : null);
+            dto.setSupplierCode(r.getSupplier() != null ? r.getSupplier().getSupplierCode() : null);
+            dto.setSupplierName(r.getSupplier() != null ? r.getSupplier().getSupplierName() : null);
+            dto.setSupplierInvoiceNo(r.getSupplierInvoiceNo());
+            dto.setPaidAmount(paid);
+            dto.setRemainingDebt(remaining);
+            dto.setReceiverName(r.getReceiver() != null ? r.getReceiver().getFullName() : null);
+            dto.setNotes(r.getNotes());
+            return dto;
+        });
+    }
+
+    private boolean canAccessBranchForFinance(Long userId, Long branchId) {
+        if (accessService.canAccessBranch(userId, branchId)) {
+            return true;
+        }
+        if (userId == null || userId <= 0 || branchId == null || branchId <= 0) {
+            return false;
+        }
+        boolean hasFinancePerm = userRepository.hasActivePermission(userId, "FINANCE_EXPENSES")
+                || userRepository.hasActivePermission(userId, "FINANCE_DASHBOARD")
+                || userRepository.hasActivePermission(userId, "SUPPLIER_MANAGE");
+        if (!hasFinancePerm) {
+            return false;
+        }
+        if (staffBranchAssignmentRepository != null
+                && staffBranchAssignmentRepository.hasActiveUserAssignment(userId, branchId, AssignmentStatus.ACTIVE)) {
+            return true;
+        }
+        if (staffBranchAssignmentRepository != null
+                && !staffBranchAssignmentRepository.findActiveBranchIdsByUserId(userId, AssignmentStatus.ACTIVE).isEmpty()) {
+            return false;
+        }
+        return userRepository.findById(userId)
+                .map(u -> u.getBranch() != null && branchId.equals(u.getBranch().getBranchId()))
+                .orElse(false);
+    }
+
+    private SupplierPaymentResponseDTO createPaymentInternal(SupplierPaymentCreateDTO dto, Long userId) {
         if (dto.getSupplierId() == null || dto.getSupplierId() <= 0) {
             bad("Vui lòng chọn nhà cung cấp.");
         }
@@ -328,6 +573,11 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         payment.setReferenceNo(refNo);
         payment.setPaidBy(paidBy);
         payment.setNotes(notes);
+        String rawSig = trimToNull(dto.getSignatureData());
+        if (rawSig != null) {
+            payment.setSignatureUrl(com.cvdcms.util.InventoryFileStorageUtil.saveSignatureDataUrl(
+                    rawSig, "supplier-payment"));
+        }
 
         SupplierPayment saved = paymentRepository.save(payment);
         return toDTO(saved != null ? saved : payment);
@@ -382,6 +632,7 @@ public class SupplierPaymentServiceImpl implements SupplierPaymentService {
         dto.setReferenceNo(sp.getReferenceNo());
         dto.setPaidByName(sp.getPaidBy() != null ? sp.getPaidBy().getFullName() : null);
         dto.setNotes(sp.getNotes());
+        dto.setSignatureUrl(sp.getSignatureUrl());
         dto.setCreatedAt(sp.getCreatedAt());
         return dto;
     }

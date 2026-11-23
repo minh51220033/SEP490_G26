@@ -144,6 +144,10 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
         expense.setPaymentMethod(dto.getPaymentMethod() != null ? dto.getPaymentMethod() : RefundMethod.BANK_TRANSFER);
         expense.setSourceType(ExpenseSourceType.MANUAL);
         expense.setDescription(dto.getDescription().trim());
+        if (dto.getSignatureData() != null && !dto.getSignatureData().isBlank()) {
+            expense.setSignatureUrl(com.cvdcms.util.InventoryFileStorageUtil.saveSignatureDataUrl(
+                    dto.getSignatureData(), "expense"));
+        }
         expense.setCreatedBy(currentUser);
         expense.setIsCancelled(false);
 
@@ -249,6 +253,10 @@ public class OperatingExpenseServiceImpl implements OperatingExpenseService {
         expense.setRecipientName(dto.getRecipientName() != null ? dto.getRecipientName().trim() : null);
         expense.setPaymentMethod(dto.getPaymentMethod() != null ? dto.getPaymentMethod() : RefundMethod.BANK_TRANSFER);
         expense.setDescription(dto.getDescription() != null ? dto.getDescription().trim() : "");
+        if (dto.getSignatureData() != null && !dto.getSignatureData().isBlank()) {
+            expense.setSignatureUrl(com.cvdcms.util.InventoryFileStorageUtil.saveSignatureDataUrl(
+                    dto.getSignatureData(), "expense"));
+        }
 
         OperatingExpense saved = operatingExpenseRepository.save(expense);
 

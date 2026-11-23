@@ -1,6 +1,5 @@
 package com.cvdcms.controller;
 
-import com.cvdcms.DTO.FinancialMetricsDTO;
 import com.cvdcms.DTO.InvoiceAdjustmentRequestDTO;
 import com.cvdcms.DTO.InvoiceCreateRequestDTO;
 import com.cvdcms.entity.*;
@@ -55,6 +54,8 @@ public class InvoicePageController {
     private final TreatmentPlanRepository treatmentPlanRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.PaymentAllocationService paymentAllocationService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private InvoiceRepository invoiceRepository;
 
     public InvoicePageController(
             InvoiceService invoiceService,
@@ -179,9 +180,6 @@ public class InvoicePageController {
         long fromItem = invoicePage.getContent().isEmpty() ? 0 : (long) safePage * safeSize + 1;
         long toItem = invoicePage.getContent().isEmpty() ? 0 : Math.min((long) (safePage + 1) * safeSize, totalItems);
 
-        LocalDate today = LocalDate.now();
-        FinancialMetricsDTO todayMetrics = invoiceService.getFinancialMetrics(effectiveBranchId, today.atStartOfDay(), today.atTime(LocalTime.MAX));
-
         model.addAttribute("invoices", invoicePage.getContent());
         model.addAttribute("currentPage", safePage);
         model.addAttribute("pageSize", safeSize);
@@ -197,7 +195,55 @@ public class InvoicePageController {
         model.addAttribute("keyword", keyword);
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
-        model.addAttribute("metrics", todayMetrics);
+
+        java.math.BigDecimal filteredTotalAmount = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal filteredPaidAmount = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal filteredRemainingDebt = java.math.BigDecimal.ZERO;
+        if (invoiceRepository != null) {
+            List<Object[]> sums = invoiceRepository.sumFilteredInvoices(effectiveBranchId, paymentStatus, status, startDt, endDt, keyword);
+            if (sums != null && !sums.isEmpty() && sums.get(0) != null) {
+                Object[] row = sums.get(0);
+                if (row.length >= 1 && row[0] instanceof java.math.BigDecimal b0) {
+                    filteredTotalAmount = b0;
+                }
+                if (row.length >= 2 && row[1] instanceof java.math.BigDecimal b1) {
+                    filteredPaidAmount = b1;
+                }
+                if (row.length >= 3 && row[2] instanceof java.math.BigDecimal b2) {
+                    filteredRemainingDebt = b2;
+                }
+            }
+        }
+        String filterBranchLabel = "Tất cả cơ sở";
+        if (effectiveBranchId != null && allowedBranches != null) {
+            for (Branch b : allowedBranches) {
+                if (effectiveBranchId.equals(b.getBranchId()) && b.getBranchName() != null) {
+                    filterBranchLabel = b.getBranchName();
+                    break;
+                }
+            }
+        }
+        java.time.format.DateTimeFormatter vnDateFmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        LocalDate today = LocalDate.now();
+        String filterPeriodLabel = "Toàn thời gian";
+        if (startDate != null && endDate != null) {
+            if (startDate.equals(today) && endDate.equals(today)) {
+                filterPeriodLabel = "Hôm nay";
+            } else if (startDate.equals(endDate)) {
+                filterPeriodLabel = "Ngày " + startDate.format(vnDateFmt);
+            } else {
+                filterPeriodLabel = startDate.format(vnDateFmt) + " - " + endDate.format(vnDateFmt);
+            }
+        } else if (startDate != null) {
+            filterPeriodLabel = "Từ " + startDate.format(vnDateFmt);
+        } else if (endDate != null) {
+            filterPeriodLabel = "Đến " + endDate.format(vnDateFmt);
+        }
+        model.addAttribute("filteredTotalAmount", filteredTotalAmount);
+        model.addAttribute("filteredPaidAmount", filteredPaidAmount);
+        model.addAttribute("filteredRemainingDebt", filteredRemainingDebt);
+        model.addAttribute("filterBranchLabel", filterBranchLabel);
+        model.addAttribute("filterPeriodLabel", filterPeriodLabel);
 
         return "finance/invoices/list";
     }
@@ -330,6 +376,7 @@ public class InvoicePageController {
                 MedicineInvoiceCreateRequestDTO medReq = new MedicineInvoiceCreateRequestDTO();
                 medReq.setPrescriptionId(request.getPrescriptionId());
                 medReq.setNotes(request.getNotes());
+                medReq.setSignatureData(request.getSignatureData());
                 List<MedicineInvoiceCreateRequestDTO.Item> medItems = request.getMedicineItems().stream()
                         .filter(m -> m != null && m.getPrescriptionItemId() != null)
                         .map(m -> new MedicineInvoiceCreateRequestDTO.Item(m.getPrescriptionItemId(), m.getQuantity()))

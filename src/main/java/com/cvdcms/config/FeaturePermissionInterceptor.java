@@ -268,6 +268,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
         if (uri.startsWith("/expenses") || uri.startsWith("/api/expenses")) {
             return List.of("FINANCE_EXPENSES");
         }
+        if (uri.startsWith("/supplier-payments")) {
+            return List.of("FINANCE_EXPENSES", "SUPPLIER_MANAGE", "FINANCE_DASHBOARD");
+        }
         if (uri.startsWith("/payroll/advances")) {
             return List.of("FINANCE_PAYROLL_ADVANCES", "FINANCE_PAYROLL");
         }

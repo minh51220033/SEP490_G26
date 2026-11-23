@@ -16,6 +16,13 @@ import java.util.List;
 public class MedicineInvoiceCreateRequestDTO {
     private Long prescriptionId;
     private String notes;
+    private String signatureData;
+
+    public MedicineInvoiceCreateRequestDTO(Long prescriptionId, String notes, List<Item> items) {
+        this.prescriptionId = prescriptionId;
+        this.notes = notes;
+        this.items = items != null ? items : new ArrayList<>();
+    }
 
     @Builder.Default
     private List<Item> items = new ArrayList<>();

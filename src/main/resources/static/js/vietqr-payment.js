@@ -237,7 +237,11 @@ var VietQrPaymentBox = window.VietQrPaymentBox || (window.VietQrPaymentBox = cla
         const branchId = this.getBranchId ? this.getBranchId() : null;
         const invoiceId = this.getInvoiceId ? this.getInvoiceId() : null;
         const profileId = this.getProfileId ? this.getProfileId() : null;
-        const amount = this.amountInput ? parseFloat(this.amountInput.value) || 0 : 0;
+        const amount = this.amountInput
+            ? ((typeof window.parseCashierMoney === 'function'
+                ? window.parseCashierMoney(this.amountInput.value)
+                : parseFloat(String(this.amountInput.value || '').replace(/,/g, ''))) || 0)
+            : 0;
 
         // Nếu chuyển sang hóa đơn hoặc chi nhánh khác, xóa selectedAccountId cũ để nhận tài khoản mặc định của chi nhánh mới
         if (this.lastBranchId !== branchId || this.lastInvoiceId !== invoiceId) {

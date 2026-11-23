@@ -3,12 +3,17 @@ package com.cvdcms.controller;
 import com.cvdcms.DTO.OperatingExpenseRequestDTO;
 import com.cvdcms.entity.Branch;
 import com.cvdcms.entity.OperatingExpense;
+import com.cvdcms.entity.StaffBranchAssignment;
+import com.cvdcms.entity.StaffProfile;
 import com.cvdcms.entity.User;
 import com.cvdcms.entity.enums.AssignmentStatus;
 import com.cvdcms.entity.enums.ExpenseSourceType;
 import com.cvdcms.entity.enums.RefundMethod;
 import com.cvdcms.repository.BranchRepository;
+import com.cvdcms.repository.OperatingExpenseRepository;
+import com.cvdcms.repository.RefundRepository;
 import com.cvdcms.repository.StaffBranchAssignmentRepository;
+import com.cvdcms.repository.SupplierPaymentRepository;
 import com.cvdcms.repository.UserRepository;
 import com.cvdcms.service.OperatingExpenseService;
 import jakarta.servlet.http.HttpSession;
@@ -27,16 +32,33 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Controller
 @RequestMapping("/expenses")
 public class ExpensePageController {
 
+    private static final DateTimeFormatter VN_DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
     private final OperatingExpenseService operatingExpenseService;
     private final BranchRepository branchRepository;
     private final UserRepository userRepository;
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private OperatingExpenseRepository operatingExpenseRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private SupplierPaymentRepository supplierPaymentRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private RefundRepository refundRepository;
 
     public ExpensePageController(
             OperatingExpenseService operatingExpenseService,
@@ -140,8 +162,71 @@ public class ExpensePageController {
                 keyword
         );
 
+        BigDecimal safeActiveOperating = totalActiveAmount != null ? totalActiveAmount : BigDecimal.ZERO;
+        boolean invalidDateRange = startDate != null && endDate != null && startDate.isAfter(endDate);
+        List<Long> scopeBranchIds = branchId != null ? List.of(branchId) : allowedBranchIds;
+
+        BigDecimal totalClinicOperatingAmount = safeActiveOperating;
+        if (!invalidDateRange && operatingExpenseRepository != null) {
+            BigDecimal sumOp = operatingExpenseRepository.sumActiveExpenses(scopeBranchIds, startDate, endDate);
+            if (sumOp != null) {
+                totalClinicOperatingAmount = sumOp;
+            }
+        }
+        BigDecimal totalSupplierPaymentAmount = BigDecimal.ZERO;
+        if (!invalidDateRange && supplierPaymentRepository != null) {
+            BigDecimal sumSp = supplierPaymentRepository.sumPaidAmountByBranchesAndDates(scopeBranchIds, startDate, endDate);
+            if (sumSp != null) {
+                totalSupplierPaymentAmount = sumSp;
+            }
+        }
+        BigDecimal totalRefundAmount = BigDecimal.ZERO;
+        if (!invalidDateRange && refundRepository != null) {
+            LocalDateTime startDt = startDate != null ? startDate.atStartOfDay() : null;
+            LocalDateTime endExclusive = endDate != null ? endDate.plusDays(1).atStartOfDay() : null;
+            BigDecimal sumRef = refundRepository.sumRefundAmountByBranches(scopeBranchIds, startDt, endExclusive);
+            if (sumRef != null) {
+                totalRefundAmount = sumRef;
+            }
+        }
+        BigDecimal clinicTotalExpense = totalClinicOperatingAmount
+                .add(totalSupplierPaymentAmount)
+                .add(totalRefundAmount);
+
+        String filterPeriodLabel = "Toàn thời gian";
+        LocalDate today = LocalDate.now();
+        if (startDate != null && endDate != null) {
+            if (startDate.equals(today) && endDate.equals(today)) {
+                filterPeriodLabel = "Hôm nay";
+            } else if (startDate.equals(endDate)) {
+                filterPeriodLabel = "Ngày " + startDate.format(VN_DATE_FMT);
+            } else {
+                filterPeriodLabel = startDate.format(VN_DATE_FMT) + " - " + endDate.format(VN_DATE_FMT);
+            }
+        } else if (startDate != null) {
+            filterPeriodLabel = "Từ " + startDate.format(VN_DATE_FMT);
+        } else if (endDate != null) {
+            filterPeriodLabel = "Đến " + endDate.format(VN_DATE_FMT);
+        }
+
+        String filterBranchLabel = "Tất cả cơ sở";
+        if (branchId != null && allowedBranches != null) {
+            for (Branch b : allowedBranches) {
+                if (branchId.equals(b.getBranchId()) && b.getBranchName() != null) {
+                    filterBranchLabel = b.getBranchName();
+                    break;
+                }
+            }
+        }
+
         model.addAttribute("expenses", expenses);
-        model.addAttribute("totalActiveAmount", totalActiveAmount);
+        model.addAttribute("totalActiveAmount", safeActiveOperating);
+        model.addAttribute("totalClinicOperatingAmount", totalClinicOperatingAmount);
+        model.addAttribute("totalSupplierPaymentAmount", totalSupplierPaymentAmount);
+        model.addAttribute("totalRefundAmount", totalRefundAmount);
+        model.addAttribute("clinicTotalExpense", clinicTotalExpense);
+        model.addAttribute("filterPeriodLabel", filterPeriodLabel);
+        model.addAttribute("filterBranchLabel", filterBranchLabel);
         model.addAttribute("branches", allowedBranches);
         model.addAttribute("categories", operatingExpenseService.getCommonExpenseCategories());
         model.addAttribute("sourceTypes", ExpenseSourceType.values());
@@ -157,6 +242,52 @@ public class ExpensePageController {
         model.addAttribute("keyword", keyword);
 
         return "finance/expenses/list";
+    }
+
+    public record StaffRecipientOption(Long staffId, String staffCode, String fullName, String branchIdsCsv) {}
+
+    private List<StaffRecipientOption> resolveStaffOptions(List<Branch> allowedBranches) {
+        if (allowedBranches == null || allowedBranches.isEmpty()) {
+            return List.of();
+        }
+        Set<Long> allowedBranchIdSet = new LinkedHashSet<>();
+        for (Branch b : allowedBranches) {
+            if (b != null && b.getBranchId() != null) {
+                allowedBranchIdSet.add(b.getBranchId());
+            }
+        }
+        List<StaffBranchAssignment> activeAssignments = staffBranchAssignmentRepository.findAllByStatus(AssignmentStatus.ACTIVE);
+        Map<Long, StaffProfile> staffMap = new LinkedHashMap<>();
+        Map<Long, Set<Long>> staffBranchesMap = new LinkedHashMap<>();
+        for (StaffBranchAssignment a : activeAssignments) {
+            if (a.getStaff() == null || a.getBranch() == null || a.getBranch().getBranchId() == null) {
+                continue;
+            }
+            Long branchId = a.getBranch().getBranchId();
+            if (!allowedBranchIdSet.contains(branchId)) {
+                continue;
+            }
+            Long staffId = a.getStaff().getStaffId();
+            staffMap.putIfAbsent(staffId, a.getStaff());
+            staffBranchesMap.computeIfAbsent(staffId, k -> new LinkedHashSet<>()).add(branchId);
+        }
+        List<StaffRecipientOption> options = new ArrayList<>();
+        for (Map.Entry<Long, StaffProfile> entry : staffMap.entrySet()) {
+            StaffProfile sp = entry.getValue();
+            Set<Long> bIds = staffBranchesMap.getOrDefault(entry.getKey(), Set.of());
+            String csv = bIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+            options.add(new StaffRecipientOption(sp.getStaffId(), sp.getStaffCode(), sp.getFullName(), csv));
+        }
+        options.sort(Comparator.comparing(StaffRecipientOption::fullName, String.CASE_INSENSITIVE_ORDER));
+        return options;
+    }
+
+    private void populateFormOptions(Model model, Long currentUserId) {
+        List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
+        model.addAttribute("branches", allowedBranches);
+        model.addAttribute("categories", operatingExpenseService.getCommonExpenseCategories());
+        model.addAttribute("paymentMethods", RefundMethod.values());
+        model.addAttribute("staffOptions", resolveStaffOptions(allowedBranches));
     }
 
     @GetMapping("/create")
@@ -177,9 +308,7 @@ public class ExpensePageController {
         }
 
         model.addAttribute("expenseDTO", dto);
-        model.addAttribute("branches", allowedBranches);
-        model.addAttribute("categories", operatingExpenseService.getCommonExpenseCategories());
-        model.addAttribute("paymentMethods", RefundMethod.values());
+        populateFormOptions(model, currentUserId);
 
         return "finance/expenses/form";
     }
@@ -188,6 +317,7 @@ public class ExpensePageController {
     public String createExpense(
             @Valid @ModelAttribute("expenseDTO") OperatingExpenseRequestDTO dto,
             BindingResult bindingResult,
+            @RequestParam(name = "saveAndContinue", defaultValue = "false") boolean saveAndContinue,
             Model model,
             HttpSession session,
             RedirectAttributes redirectAttributes
@@ -196,9 +326,7 @@ public class ExpensePageController {
 
         if (bindingResult.hasErrors()) {
             populateUserAndSidebar(model, session, "expenses");
-            model.addAttribute("branches", resolveAllowedBranches(currentUserId));
-            model.addAttribute("categories", operatingExpenseService.getCommonExpenseCategories());
-            model.addAttribute("paymentMethods", RefundMethod.values());
+            populateFormOptions(model, currentUserId);
             return "finance/expenses/form";
         }
 
@@ -206,13 +334,14 @@ public class ExpensePageController {
             OperatingExpense created = operatingExpenseService.createManualExpense(dto, currentUserId);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Lập phiếu chi thành công! Mã phiếu: " + created.getExpenseCode());
+            if (saveAndContinue) {
+                return "redirect:/expenses/create" + (dto.getBranchId() != null ? "?branchId=" + dto.getBranchId() : "");
+            }
             return "redirect:/expenses";
         } catch (Exception e) {
             populateUserAndSidebar(model, session, "expenses");
             model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("branches", resolveAllowedBranches(currentUserId));
-            model.addAttribute("categories", operatingExpenseService.getCommonExpenseCategories());
-            model.addAttribute("paymentMethods", RefundMethod.values());
+            populateFormOptions(model, currentUserId);
             return "finance/expenses/form";
         }
     }
@@ -250,9 +379,7 @@ public class ExpensePageController {
 
             model.addAttribute("expense", expense);
             model.addAttribute("expenseDTO", dto);
-            model.addAttribute("branches", resolveAllowedBranches(currentUserId));
-            model.addAttribute("categories", operatingExpenseService.getCommonExpenseCategories());
-            model.addAttribute("paymentMethods", RefundMethod.values());
+            populateFormOptions(model, currentUserId);
 
             return "finance/expenses/edit";
         } catch (Exception e) {
@@ -281,9 +408,7 @@ public class ExpensePageController {
             populateUserAndSidebar(model, session, "expenses");
             OperatingExpense expense = operatingExpenseService.getExpenseDetail(id, currentUserId);
             model.addAttribute("expense", expense);
-            model.addAttribute("branches", resolveAllowedBranches(currentUserId));
-            model.addAttribute("categories", operatingExpenseService.getCommonExpenseCategories());
-            model.addAttribute("paymentMethods", RefundMethod.values());
+            populateFormOptions(model, currentUserId);
             return "finance/expenses/edit";
         }
 
@@ -297,9 +422,7 @@ public class ExpensePageController {
             OperatingExpense expense = operatingExpenseService.getExpenseDetail(id, currentUserId);
             model.addAttribute("expense", expense);
             model.addAttribute("errorMessage", e.getMessage());
-            model.addAttribute("branches", resolveAllowedBranches(currentUserId));
-            model.addAttribute("categories", operatingExpenseService.getCommonExpenseCategories());
-            model.addAttribute("paymentMethods", RefundMethod.values());
+            populateFormOptions(model, currentUserId);
             return "finance/expenses/edit";
         }
     }

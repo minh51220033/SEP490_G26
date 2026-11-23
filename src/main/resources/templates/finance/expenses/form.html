@@ -3,6 +3,215 @@
 <head>
     <th:block th:replace="~{fragments/head :: head('Lập Phiếu Chi Vận Hành')}"></th:block>
     <link rel="stylesheet" th:href="@{/css/finance.css}">
+    <style>
+        .exp-voucher-shell {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+            padding: 24px 28px;
+        }
+        .exp-voucher-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            padding-bottom: 18px;
+            margin-bottom: 22px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .exp-voucher-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0;
+            line-height: 1.3;
+        }
+        .exp-voucher-sub {
+            font-size: 13px;
+            color: #64748b;
+            margin: 3px 0 0;
+        }
+        .exp-field-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .exp-control {
+            border: 1px solid #dbe2ea;
+            border-radius: 8px;
+            font-size: 13.5px;
+            color: #0f172a;
+            padding: 8px 12px;
+            min-height: 40px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+        }
+        .exp-control:focus {
+            border-color: #0284c7;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+            outline: none;
+        }
+        .exp-control:disabled,
+        .exp-control[readonly] {
+            background-color: #f1f5f9;
+            color: #64748b;
+            cursor: not-allowed;
+        }
+        textarea.exp-control {
+            min-height: 110px;
+            resize: vertical;
+        }
+        .exp-preview-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 24px 22px;
+            position: sticky;
+            top: 84px;
+        }
+        .exp-preview-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .exp-preview-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 4px;
+        }
+        .exp-preview-date {
+            font-size: 12.5px;
+            color: #64748b;
+        }
+        .exp-preview-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 6px 0;
+            font-size: 13.5px;
+        }
+        .exp-preview-label {
+            color: #475569;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+        .exp-preview-val {
+            color: #0f172a;
+            font-weight: 600;
+            text-align: right;
+            word-break: break-word;
+        }
+        .exp-preview-divider {
+            border-top: 1px solid #e2e8f0;
+            margin: 18px 0 16px;
+        }
+        .exp-signature-block {
+            text-align: right;
+            margin-bottom: 18px;
+        }
+        .exp-signature-title {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .exp-signature-hint {
+            font-size: 11.5px;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+        .exp-signature-box {
+            width: 120px;
+            height: 54px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            background: #ffffff;
+            margin-left: auto;
+            margin-bottom: 8px;
+        }
+        .exp-signature-user {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #334155;
+        }
+        .exp-preview-notes {
+            font-size: 13px;
+            color: #475569;
+            border-top: 1px solid #eef2f6;
+            padding-top: 12px;
+        }
+        .exp-preview-notes-text {
+            margin-top: 4px;
+            color: #334155;
+            white-space: pre-wrap;
+            word-break: break-word;
+            min-height: 20px;
+        }
+        .exp-footer-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid #f1f5f9;
+        }
+        .exp-btn-close {
+            background: #94a3b8;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 9px 20px;
+            font-size: 13.5px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.15s ease;
+        }
+        .exp-btn-close:hover {
+            background: #64748b;
+            color: #ffffff;
+        }
+        .exp-btn-tonal {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 9px 18px;
+            font-size: 13.5px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+        .exp-btn-tonal:hover {
+            background: #bae6fd;
+            color: #0c4a6e;
+        }
+        .exp-btn-primary {
+            background: #0284c7;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 9px 24px;
+            font-size: 13.5px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+            transition: background-color 0.15s ease;
+        }
+        .exp-btn-primary:hover {
+            background: #0369a1;
+            color: #ffffff;
+        }
+    </style>
 </head>
 <body class="app-body fin-brand-theme">
 <div class="app-shell">
@@ -13,89 +222,422 @@
         <header th:replace="~{fragments/header :: appTopbar('Lập Phiếu Chi Vận Hành')}"></header>
 
         <main class="app-content finance-page">
-            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+            <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <div class="fin-header">
-                <div>
-                    <h1><i class="bi bi-plus-circle-dotted text-primary me-2"></i>Lập Phiếu Chi Vận Hành Thủ Công (SCR-25.2)</h1>
-                    <p>Khai báo các chi phí mua ngoài, tiện ích, mặt bằng hoặc các khoản chi phát sinh tại cơ sở.</p>
+            <div class="exp-voucher-shell">
+                <div class="exp-voucher-head">
+                    <div>
+                        <h1 class="exp-voucher-title">Phiếu chi</h1>
+                        <p class="exp-voucher-sub">Chi tiết phiếu chi vận hành phòng khám</p>
+                    </div>
+                    <a th:href="@{/expenses}" class="btn btn-sm btn-light border text-secondary rounded-pill px-3 d-inline-flex align-items-center gap-1" title="Quay lại danh sách phiếu chi">
+                        <i class="bi bi-arrow-left"></i><span>Danh sách phiếu chi</span>
+                    </a>
                 </div>
-                <div class="d-flex gap-2">
-                    <a th:href="@{/expenses}" class="fin-btn fin-btn-outline"><i class="bi bi-arrow-left"></i> Quay lại danh sách</a>
-                </div>
-            </div>
 
-            <div class="row justify-content-center">
-                <div class="col-lg-8">
-                    <div class="fin-card shadow-sm border-0">
-                        <form th:action="@{/expenses/create}" th:object="${expenseDTO}" method="post">
+                <form id="expenseVoucherForm" th:action="@{/expenses/create}" th:object="${expenseDTO}" method="post" novalidate>
+                    <input type="hidden" id="category" th:field="*{category}">
+
+                    <div id="expenseInlineError" class="alert alert-danger py-2 px-3 small mb-3" style="display: none;">
+                        <i class="bi bi-exclamation-circle me-1"></i><span id="expenseInlineErrorText"></span>
+                    </div>
+
+                    <div class="row g-4 align-items-start">
+                        <!-- Cột trái: Form nhập phiếu chi -->
+                        <div class="col-12 col-xl-8">
                             <div class="row g-3">
+                                <!-- Hàng 1: Ngày & Chi nhánh -->
                                 <div class="col-md-6">
-                                    <label for="branchId" class="form-label fw-semibold">Cơ sở chi nhánh <span class="text-danger">*</span></label>
-                                    <select id="branchId" th:field="*{branchId}" class="fin-select" required>
+                                    <label for="expenseDate" class="exp-field-label">Ngày <span class="text-danger">*</span></label>
+                                    <input type="date" id="expenseDate" th:field="*{expenseDate}" class="form-control exp-control" required autofocus>
+                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('expenseDate')}" th:errors="*{expenseDate}"></div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="branchId" class="exp-field-label">Chi nhánh <span class="text-danger">*</span></label>
+                                    <select id="branchId" th:field="*{branchId}" class="form-select exp-control" required>
                                         <option th:each="b : ${branches}" th:value="${b.branchId}" th:text="${b.branchName}"></option>
                                     </select>
                                     <div class="text-danger small mt-1" th:if="${#fields.hasErrors('branchId')}" th:errors="*{branchId}"></div>
                                 </div>
 
+                                <!-- Hàng 2: Loại chi & Loại chi tiết -->
                                 <div class="col-md-6">
-                                    <label for="category" class="form-label fw-semibold">Danh mục chi phí <span class="text-danger">*</span></label>
-                                    <input type="text" id="category" th:field="*{category}" class="fin-input" list="categoryOptions" required placeholder="Chọn hoặc nhập danh mục">
-                                    <datalist id="categoryOptions">
-                                        <option th:each="c : ${categories}" th:value="${c}"></option>
-                                    </datalist>
+                                    <label for="categorySelect" class="exp-field-label">Loại chi <span class="text-danger">*</span></label>
+                                    <select id="categorySelect" class="form-select exp-control">
+                                        <option value="">-- Chọn loại chi phí --</option>
+                                        <option th:each="c : ${categories}" th:value="${c}" th:text="${c}"></option>
+                                        <option value="__CUSTOM__">Khác (Tự nhập tên loại chi...)</option>
+                                    </select>
                                     <div class="text-danger small mt-1" th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></div>
                                 </div>
 
                                 <div class="col-md-6">
-                                    <label for="amount" class="form-label fw-semibold">Số tiền chi (VNĐ) <span class="text-danger">*</span></label>
-                                    <input type="number" id="amount" th:field="*{amount}" class="fin-input" min="1000" step="1000" required placeholder="Nhập số tiền...">
+                                    <label for="customCategoryInput" class="exp-field-label">Loại chi tiết (khi chọn Khác)</label>
+                                    <input type="text" id="customCategoryInput" class="form-control exp-control"
+                                           placeholder="Nhập tên loại chi cụ thể..." disabled>
+                                </div>
+
+                                <!-- Hàng 3: Số tiền & Hình thức -->
+                                <div class="col-md-6">
+                                    <label for="amount" class="exp-field-label">Số tiền (VNĐ) <span class="text-danger">*</span></label>
+                                    <input type="text" id="amount" th:field="*{amount}" class="form-control exp-control fw-semibold"
+                                           data-cashier-money="true" min="1000" required placeholder="VD: 1,000,000">
                                     <div class="text-danger small mt-1" th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></div>
                                 </div>
 
                                 <div class="col-md-6">
-                                    <label for="expenseDate" class="form-label fw-semibold">Ngày thực chi <span class="text-danger">*</span></label>
-                                    <input type="date" id="expenseDate" th:field="*{expenseDate}" class="fin-input" required>
-                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('expenseDate')}" th:errors="*{expenseDate}"></div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <label for="recipientName" class="form-label fw-semibold">Người nhận / Đơn vị thụ hưởng</label>
-                                    <input type="text" id="recipientName" th:field="*{recipientName}" class="fin-input" placeholder="Tên cá nhân hoặc công ty nhận tiền...">
-                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('recipientName')}" th:errors="*{recipientName}"></div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <label for="paymentMethod" class="form-label fw-semibold">Hình thức thanh toán <span class="text-danger">*</span></label>
-                                    <select id="paymentMethod" th:field="*{paymentMethod}" class="fin-select" required>
+                                    <label for="paymentMethod" class="exp-field-label">Hình thức <span class="text-danger">*</span></label>
+                                    <select id="paymentMethod" th:field="*{paymentMethod}" class="form-select exp-control" required>
                                         <option th:each="m : ${paymentMethods}" th:value="${m}"
                                                 th:text="${m.name() == 'CASH' ? 'Tiền mặt' : (m.name() == 'BANK_TRANSFER' ? 'Chuyển khoản ngân hàng' : 'Thẻ')}"></option>
                                     </select>
                                     <div class="text-danger small mt-1" th:if="${#fields.hasErrors('paymentMethod')}" th:errors="*{paymentMethod}"></div>
                                 </div>
 
+                                <!-- Hàng 4: Người nhận (Nhân viên) & Người nhận (Khác) -->
+                                <div class="col-md-6">
+                                    <label for="recipientStaffSelect" class="exp-field-label">Người nhận (Nhân viên)</label>
+                                    <select id="recipientStaffSelect" class="form-select exp-control">
+                                        <option value="">-- Chọn nhân viên (nếu có) --</option>
+                                        <option th:each="st : ${staffOptions}"
+                                                th:value="${st.fullName}"
+                                                th:data-branch-ids="${st.branchIdsCsv}"
+                                                th:text="${st.fullName + (st.staffCode != null ? ' (' + st.staffCode + ')' : '')}"></option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="recipientName" class="exp-field-label">Người nhận (Khác)</label>
+                                    <input type="text" id="recipientName" th:field="*{recipientName}" class="form-control exp-control"
+                                           placeholder="Tên cá nhân hoặc đơn vị thụ hưởng...">
+                                    <div class="text-danger small mt-1" th:if="${#fields.hasErrors('recipientName')}" th:errors="*{recipientName}"></div>
+                                </div>
+
+                                <!-- Hàng 5: Ghi chú -->
                                 <div class="col-12">
-                                    <label for="description" class="form-label fw-semibold">Lý do & Diễn giải chi tiết <span class="text-danger">*</span></label>
-                                    <textarea id="description" th:field="*{description}" class="fin-input" rows="4" required placeholder="Ghi rõ nội dung chi phí, hóa đơn/chứng từ đính kèm (nếu có)..."></textarea>
+                                    <label for="description" class="exp-field-label">Ghi chú <span class="text-danger">*</span></label>
+                                    <textarea id="description" th:field="*{description}" class="form-control exp-control" rows="4" required
+                                              placeholder="Ghi rõ lý do chi, nội dung chi phí hoặc số hóa đơn/chứng từ đính kèm..."></textarea>
                                     <div class="text-danger small mt-1" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></div>
                                 </div>
 
-                                <div class="col-12 mt-4 d-flex justify-content-end gap-2">
-                                    <a th:href="@{/expenses}" class="fin-btn fin-btn-outline">Hủy bỏ</a>
-                                    <button type="submit" class="fin-btn fin-btn-primary">
-                                        <i class="bi bi-check-lg"></i> Lưu phiếu chi
-                                    </button>
+                                <!-- Hàng 6: Chữ ký xác nhận (bên trái) -->
+                                <div class="col-12 d-flex justify-content-end mt-2">
+                                    <div class="text-center">
+                                        <div class="exp-field-label mb-1">Xác nhận</div>
+                                        <th:block th:replace="~{fragments/finance-signature :: sigField('expense', null)}"></th:block>
+                                    </div>
                                 </div>
                             </div>
-                        </form>
+                        </div>
+
+                        <!-- Cột phải: Bản xem trước Phiếu chi theo thời gian thực -->
+                        <div class="col-12 col-xl-4">
+                            <aside class="exp-preview-card" aria-label="Xem trước phiếu chi">
+                                <div class="exp-preview-header">
+                                    <h3>Phiếu chi</h3>
+                                    <div class="exp-preview-date" id="previewDate">Ngày --</div>
+                                </div>
+
+                                <div class="exp-preview-row">
+                                    <span class="exp-preview-label">Người nhận</span>
+                                    <span class="exp-preview-val" id="previewRecipient">--</span>
+                                </div>
+                                <div class="exp-preview-row">
+                                    <span class="exp-preview-label">Chi nhánh:</span>
+                                    <span class="exp-preview-val" id="previewBranch">--</span>
+                                </div>
+                                <div class="exp-preview-row">
+                                    <span class="exp-preview-label">Loại:</span>
+                                    <span class="exp-preview-val" id="previewCategory">--</span>
+                                </div>
+                                <div class="exp-preview-row">
+                                    <span class="exp-preview-label">Số tiền:</span>
+                                    <span class="exp-preview-val text-primary" id="previewAmount">0 đ</span>
+                                </div>
+                                <div class="exp-preview-row">
+                                    <span class="exp-preview-label">Hình thức:</span>
+                                    <span class="exp-preview-val" id="previewMethod">--</span>
+                                </div>
+
+                                <div class="exp-preview-divider"></div>
+
+                                <th:block th:replace="~{fragments/finance-signature :: sigMirror('expense', null, 'Người lập phiếu', '(Chữ Ký, Họ Và Tên)', ${displayName != null and !displayName.isBlank() ? displayName : (loggedInUser != null ? loggedInUser.username : 'Nhân viên')})}"></th:block>
+
+                                <div class="exp-preview-notes">
+                                    <strong class="text-dark">Ghi chú:</strong>
+                                    <div class="exp-preview-notes-text" id="previewDescription">--</div>
+                                </div>
+                            </aside>
+                        </div>
                     </div>
-                </div>
+
+                    <!-- Thanh nút hành động: Secondary trái -> Tonal -> Primary phải -->
+                    <div class="exp-footer-actions">
+                        <a th:href="@{/expenses}" class="exp-btn-close">Đóng</a>
+                        <button type="submit" name="saveAndContinue" value="true" class="exp-btn-tonal">
+                            Lưu và tiếp tục
+                        </button>
+                        <button type="submit" class="exp-btn-primary">
+                            Lưu
+                        </button>
+                    </div>
+                </form>
             </div>
         </main>
     </div>
 </div>
+
+<script>
+    (function () {
+        const form = document.getElementById('expenseVoucherForm');
+        if (!form) return;
+
+        const dateInput = document.getElementById('expenseDate');
+        const branchSelect = document.getElementById('branchId');
+        const categoryHidden = document.getElementById('category');
+        const categorySelect = document.getElementById('categorySelect');
+        const customCategoryInput = document.getElementById('customCategoryInput');
+        const amountInput = document.getElementById('amount');
+        const methodSelect = document.getElementById('paymentMethod');
+        const staffSelect = document.getElementById('recipientStaffSelect');
+        const recipientInput = document.getElementById('recipientName');
+        const descInput = document.getElementById('description');
+        const inlineErr = document.getElementById('expenseInlineError');
+        const inlineErrText = document.getElementById('expenseInlineErrorText');
+
+        const pvDate = document.getElementById('previewDate');
+        const pvRecipient = document.getElementById('previewRecipient');
+        const pvBranch = document.getElementById('previewBranch');
+        const pvCategory = document.getElementById('previewCategory');
+        const pvAmount = document.getElementById('previewAmount');
+        const pvMethod = document.getElementById('previewMethod');
+        const pvDesc = document.getElementById('previewDescription');
+
+        function formatVnDate(isoDate) {
+            if (!isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return 'Ngày --';
+            const [y, m, d] = isoDate.split('-');
+            return `Ngày ${d}-${m}-${y}`;
+        }
+
+        function syncCategoryFromValue(initialCat) {
+            const val = (initialCat || '').trim();
+            if (!val) {
+                if (categorySelect.options.length > 1) {
+                    categorySelect.selectedIndex = 1;
+                    categoryHidden.value = categorySelect.value;
+                }
+                customCategoryInput.disabled = true;
+                customCategoryInput.value = '';
+                return;
+            }
+            let matched = false;
+            for (const opt of categorySelect.options) {
+                if (opt.value && opt.value !== '__CUSTOM__' && opt.value === val) {
+                    categorySelect.value = val;
+                    matched = true;
+                    break;
+                }
+            }
+            if (matched) {
+                customCategoryInput.disabled = true;
+                customCategoryInput.value = '';
+                categoryHidden.value = val;
+            } else {
+                categorySelect.value = '__CUSTOM__';
+                customCategoryInput.disabled = false;
+                customCategoryInput.value = val;
+                categoryHidden.value = val;
+            }
+        }
+
+        function syncStaffOptionsForBranch() {
+            if (!staffSelect || !branchSelect) return;
+            const selectedBranch = branchSelect.value;
+            for (const opt of staffSelect.options) {
+                if (!opt.value) continue;
+                const bCsv = opt.getAttribute('data-branch-ids') || '';
+                const bList = bCsv ? bCsv.split(',') : [];
+                const visible = !selectedBranch || bList.length === 0 || bList.includes(selectedBranch);
+                opt.hidden = !visible;
+            }
+        }
+
+        function syncStaffFromRecipient() {
+            if (!staffSelect || !recipientInput) return;
+            const nameVal = (recipientInput.value || '').trim();
+            let matched = false;
+            for (const opt of staffSelect.options) {
+                if (opt.value && opt.value === nameVal) {
+                    staffSelect.value = opt.value;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                staffSelect.value = '';
+            }
+        }
+
+        function updatePreview() {
+            if (pvDate) pvDate.textContent = formatVnDate(dateInput?.value);
+            if (pvBranch && branchSelect) {
+                const opt = branchSelect.options[branchSelect.selectedIndex];
+                pvBranch.textContent = opt && opt.value ? opt.text : '--';
+            }
+            if (pvCategory) {
+                pvCategory.textContent = (categoryHidden.value || '').trim() || '--';
+            }
+            if (pvAmount && amountInput) {
+                const rawDisplay = (amountInput.value || '').trim();
+                const parsed = typeof window.parseCashierMoney === 'function'
+                    ? window.parseCashierMoney(rawDisplay)
+                    : Number(rawDisplay.replace(/,/g, ''));
+                if (Number.isFinite(parsed) && parsed > 0) {
+                    const formatted = typeof window.formatCashierMoney === 'function'
+                        ? window.formatCashierMoney(parsed, false)
+                        : parsed.toLocaleString('en-US');
+                    pvAmount.textContent = `${formatted} đ`;
+                } else {
+                    pvAmount.textContent = '0 đ';
+                }
+            }
+            if (pvMethod && methodSelect) {
+                const opt = methodSelect.options[methodSelect.selectedIndex];
+                pvMethod.textContent = opt ? opt.text : '--';
+            }
+            if (pvRecipient) {
+                pvRecipient.textContent = (recipientInput?.value || '').trim() || '--';
+            }
+            if (pvDesc) {
+                pvDesc.textContent = (descInput?.value || '').trim() || '--';
+            }
+        }
+
+        function clearInlineError() {
+            if (inlineErr) inlineErr.style.display = 'none';
+        }
+
+        function showInlineError(msg) {
+            if (inlineErrText) inlineErrText.textContent = msg;
+            if (inlineErr) {
+                inlineErr.style.display = 'block';
+                inlineErr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        if (categorySelect) {
+            categorySelect.addEventListener('change', function () {
+                if (this.value === '__CUSTOM__') {
+                    customCategoryInput.disabled = false;
+                    categoryHidden.value = (customCategoryInput.value || '').trim();
+                    customCategoryInput.focus();
+                } else {
+                    customCategoryInput.disabled = true;
+                    customCategoryInput.value = '';
+                    categoryHidden.value = this.value;
+                }
+                clearInlineError();
+                updatePreview();
+            });
+        }
+
+        if (customCategoryInput) {
+            customCategoryInput.addEventListener('input', function () {
+                if (categorySelect.value === '__CUSTOM__') {
+                    categoryHidden.value = this.value.trim();
+                }
+                clearInlineError();
+                updatePreview();
+            });
+        }
+
+        if (staffSelect) {
+            staffSelect.addEventListener('change', function () {
+                if (this.value) {
+                    recipientInput.value = this.value;
+                }
+                updatePreview();
+            });
+        }
+
+        if (recipientInput) {
+            recipientInput.addEventListener('input', function () {
+                syncStaffFromRecipient();
+                updatePreview();
+            });
+        }
+
+        if (branchSelect) {
+            branchSelect.addEventListener('change', function () {
+                syncStaffOptionsForBranch();
+                updatePreview();
+            });
+        }
+
+        [dateInput, amountInput, methodSelect, descInput].forEach(el => {
+            if (!el) return;
+            el.addEventListener('input', () => { clearInlineError(); updatePreview(); });
+            el.addEventListener('change', () => { clearInlineError(); updatePreview(); });
+        });
+
+        form.addEventListener('submit', function (e) {
+            clearInlineError();
+            if (categorySelect.value === '__CUSTOM__') {
+                categoryHidden.value = (customCategoryInput.value || '').trim();
+            } else {
+                categoryHidden.value = (categorySelect.value || '').trim();
+            }
+
+            if (!dateInput.value) {
+                e.preventDefault();
+                showInlineError('Vui lòng chọn ngày lập phiếu chi.');
+                dateInput.focus();
+                return;
+            }
+            if (!branchSelect.value) {
+                e.preventDefault();
+                showInlineError('Vui lòng chọn chi nhánh.');
+                branchSelect.focus();
+                return;
+            }
+            if (!categoryHidden.value) {
+                e.preventDefault();
+                showInlineError('Vui lòng chọn hoặc nhập loại chi phí.');
+                (categorySelect.value === '__CUSTOM__' ? customCategoryInput : categorySelect).focus();
+                return;
+            }
+            const parsedAmt = typeof window.parseCashierMoney === 'function'
+                ? window.parseCashierMoney(amountInput.value)
+                : Number(String(amountInput.value || '').replace(/,/g, ''));
+            if (!Number.isFinite(parsedAmt) || parsedAmt < 1000) {
+                e.preventDefault();
+                showInlineError('Số tiền chi phí tối thiểu là 1,000 đ.');
+                amountInput.focus();
+                return;
+            }
+            if (!descInput.value || !descInput.value.trim()) {
+                e.preventDefault();
+                showInlineError('Vui lòng nhập ghi chú / lý do chi.');
+                descInput.focus();
+                return;
+            }
+        });
+
+        // Khởi tạo trạng thái ban đầu
+        syncCategoryFromValue(categoryHidden.value);
+        syncStaffOptionsForBranch();
+        syncStaffFromRecipient();
+        updatePreview();
+    })();
+</script>
 </body>
 </html>

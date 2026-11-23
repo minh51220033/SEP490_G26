@@ -49,14 +49,16 @@
                             </div>
                             <div class="mb-3">
                                 <label for="newDiscountAmount" class="form-label fw-bold">Giảm giá sau điều chỉnh (VNĐ)</label>
-                                <input type="number" id="newDiscountAmount" name="newDiscountAmount" class="form-control"
-                                       th:value="${invoice.discountAmount}" step="0.01" min="0" max="9999999999999.99" required>
+                                <input type="text" id="newDiscountAmount" name="newDiscountAmount" class="form-control"
+                                       data-cashier-money="true" data-money-decimal="true"
+                                       th:value="${invoice.discountAmount}" min="0" max="9999999999999.99" required>
                             </div>
                             <div class="mb-3">
                                 <label for="newSurchargeAmount" class="form-label fw-bold">Phụ thu sau điều chỉnh (VNĐ)</label>
-                                <input type="number" id="newSurchargeAmount" name="newSurchargeAmount" class="form-control"
+                                <input type="text" id="newSurchargeAmount" name="newSurchargeAmount" class="form-control"
+                                       data-cashier-money="true" data-money-decimal="true"
                                        th:value="${invoice.surchargeAmount != null ? invoice.surchargeAmount : 0}"
-                                       step="0.01" min="0" max="9999999999999.99" required>
+                                       min="0" max="9999999999999.99" required>
                                 <small class="text-muted">Nhập tổng phụ thu của hóa đơn; giữ nguyên nếu không thay đổi phụ thu.</small>
                             </div>
                             <div class="mb-3">
@@ -148,14 +150,20 @@
         const surcharge = document.getElementById('newSurchargeAmount');
         const description = document.getElementById('newSurchargeDescription');
         const total = document.getElementById('newTotalAmount');
-        const cents = value => Math.round(Number(value || 0) * 100);
+        const parseAmountValue = value => {
+            const parsed = typeof window.parseCashierMoney === 'function'
+                ? window.parseCashierMoney(value)
+                : Number(String(value || '').replace(/,/g, ''));
+            return Number.isFinite(parsed) ? parsed : 0;
+        };
+        const cents = value => Math.round(parseAmountValue(value) * 100);
         function refreshAdjustmentPreview() {
             const amount = Math.max(0, cents(form.dataset.serviceTotal)
                 + cents(form.dataset.medicineTotal)
                 + cents(surcharge.value) - cents(discount.value)
                 - cents(form.dataset.promoDiscount) - cents(form.dataset.pointDiscount));
             total.value = new Intl.NumberFormat('vi-VN', {maximumFractionDigits: 2}).format(amount / 100) + ' đ';
-            description.required = Number(surcharge.value) > 0;
+            description.required = parseAmountValue(surcharge.value) > 0;
             description.setCustomValidity(description.required && !description.value.trim()
                 ? 'Vui lòng ghi rõ nội dung phụ thu.' : '');
         }
