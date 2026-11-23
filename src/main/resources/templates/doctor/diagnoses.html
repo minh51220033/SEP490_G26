@@ -543,6 +543,7 @@
                                                 class="btn btn-primary rounded-pill px-4 py-2 fw-bold d-inline-flex align-items-center gap-2 shadow-sm text-white text-nowrap"
                                                 style="background: #0284c7; border-color: #0284c7;"
                                                 th:data-visit-id="${visit.visitId}"
+                                                th:data-visit-token="${visitToken != null ? visitToken : idCodec.encodeVisit(visit.visitId)}"
                                                 onclick="openCompleteExaminationModal(this.getAttribute('data-visit-id'))"
                                                 title="Hoàn tất ca khám lâm sàng và khóa hồ sơ bệnh án (BR-EMR-02)">
                                                 <i class="bi bi-check2-circle fs-5"></i>
@@ -1044,6 +1045,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                 </div>
                 <div class="modal-body p-4">
+                    <div id="completeExamReadinessBox" class="mb-3"></div>
                     <div class="alert alert-light border rounded-3 small text-secondary mb-3"
                         style="background: #f8fafc;">
                         <div class="d-flex align-items-start gap-2 mb-1">
@@ -1901,7 +1903,27 @@
         // NÚT HOÀN TẤT CA KHÁM & CHUYỂN THANH TOÁN (NGƯỜI 3 -> NGƯỜI 4)
         // Quy tắc BR-EMR-02 (Khóa bệnh án lâm sàng) & BR-SVC-01 (Bàn giao dịch vụ COMPLETED)
         // =====================================================================
-        function openCompleteExaminationModal(visitId) {
+        function resolveCurrentVisitTokenForExam() {
+            const btn = document.getElementById('btnDirectHandover');
+            const attrToken = btn ? btn.getAttribute('data-visit-token') : '';
+            if (attrToken) return attrToken;
+            const match = window.location.pathname.match(/\/doctor\/examination\/([^\/]+)/);
+            return match ? decodeURIComponent(match[1]) : '';
+        }
+
+        function buildCreatePlanShortcutHtml(visitToken) {
+            if (!visitToken) return '';
+            return `<div class="mt-2">
+                <a href="/doctor/examination/${encodeURIComponent(visitToken)}/treatment-plans/create?mode=create"
+                   class="btn btn-sm btn-primary rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-1 text-white"
+                   style="background-color: #0284c7; border-color: #0284c7;">
+                    <i class="bi bi-file-earmark-plus"></i>
+                    <span>Lập phác đồ điều trị ngay</span>
+                </a>
+            </div>`;
+        }
+
+        async function openCompleteExaminationModal(visitId) {
             const targetVisitId = visitId || getCurrentExamVisitId() || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null);
             if (!targetVisitId) {
                 if (typeof showToast === 'function') showToast('Không tìm thấy thông tin ca khám.', true);
@@ -1910,10 +1932,57 @@
             }
             const modalEl = document.getElementById('completeExaminationModal');
             const confirmBtn = document.getElementById('btnConfirmCompleteExamModal');
+            const readinessBox = document.getElementById('completeExamReadinessBox');
+            const visitToken = resolveCurrentVisitTokenForExam();
+
             if (modalEl && confirmBtn && typeof bootstrap !== 'undefined') {
                 confirmBtn.setAttribute('data-visit-id', String(targetVisitId));
+                if (readinessBox) {
+                    readinessBox.innerHTML = `<div class="alert alert-light border rounded-3 py-2 px-3 small text-secondary mb-0 d-flex align-items-center gap-2">
+                        <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+                        <span>Đang kiểm tra điều kiện kết thúc khám...</span>
+                    </div>`;
+                }
                 const modalObj = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                 modalObj.show();
+
+                if (readinessBox) {
+                    try {
+                        const res = await fetch(`/api/doctor/visits/${targetVisitId}/completion-check`);
+                        if (!res.ok) {
+                            readinessBox.innerHTML = '';
+                            return;
+                        }
+                        const data = await res.json();
+                        const missing = Array.isArray(data.missingRequirements) ? data.missingRequirements : [];
+                        const warnings = Array.isArray(data.warnings) ? data.warnings : [];
+                        if (!data.ready) {
+                            const itemsHtml = missing.map(m => `<li>${escapeHtml(m)}</li>`).join('');
+                            const planShortcut = (!data.hasTreatmentPlan) ? buildCreatePlanShortcutHtml(visitToken) : '';
+                            readinessBox.innerHTML = `<div class="alert alert-danger border-danger-subtle rounded-3 small mb-0" role="alert">
+                                <div class="fw-bold d-flex align-items-center gap-2 mb-1">
+                                    <i class="bi bi-exclamation-triangle-fill"></i>
+                                    <span>Chưa đủ điều kiện kết thúc khám</span>
+                                </div>
+                                <ul class="mb-0 ps-3">${itemsHtml}</ul>
+                                ${planShortcut}
+                            </div>`;
+                        } else {
+                            const warnHtml = warnings.length > 0
+                                ? `<ul class="mb-0 mt-1 ps-3 text-secondary" style="font-size: 12px;">${warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul>`
+                                : '';
+                            readinessBox.innerHTML = `<div class="alert alert-success border-success-subtle rounded-3 py-2 px-3 small mb-0" role="status">
+                                <div class="fw-semibold d-flex align-items-center gap-2">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    <span>Đã có ${Number(data.treatmentPlanCount || 0)} phác đồ điều trị — đủ điều kiện kết thúc ca khám.</span>
+                                </div>
+                                ${warnHtml}
+                            </div>`;
+                        }
+                    } catch (err) {
+                        readinessBox.innerHTML = '';
+                    }
+                }
                 return;
             }
             confirmDirectHandover(targetVisitId);
@@ -2035,7 +2104,21 @@
                         }
                     }
                 } else {
-                    const msg = 'Không thể hoàn tất khám: ' + (result.message || 'Vui lòng kiểm tra lại điều kiện lâm sàng.');
+                    const serverErr = result.message || 'Vui lòng kiểm tra lại điều kiện lâm sàng.';
+                    const msg = 'Không thể hoàn tất khám: ' + serverErr;
+                    const readinessBox = document.getElementById('completeExamReadinessBox');
+                    if (readinessBox) {
+                        const needsPlan = serverErr.toLowerCase().includes('phác đồ') || serverErr.toLowerCase().includes('kế hoạch điều trị');
+                        const shortcut = needsPlan ? buildCreatePlanShortcutHtml(resolveCurrentVisitTokenForExam()) : '';
+                        readinessBox.innerHTML = `<div class="alert alert-danger border-danger-subtle rounded-3 small mb-0" role="alert">
+                            <div class="fw-bold d-flex align-items-center gap-2 mb-1">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                <span>Không thể hoàn tất khám</span>
+                            </div>
+                            <div>${escapeHtml(serverErr)}</div>
+                            ${shortcut}
+                        </div>`;
+                    }
                     if (typeof showToast === 'function') showToast(msg, true);
                     else alert(msg);
                     if (btn) {
