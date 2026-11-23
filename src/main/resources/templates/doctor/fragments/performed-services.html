@@ -121,22 +121,18 @@
         .ps-step-todo .ps-step-name { color: #475569; }
     </style>
     <div class="dv-grid-card df-unified-tab-card mb-4" id="planProgressSection" th:if="${treatmentPlans != null and !treatmentPlans.isEmpty()}">
-        <div class="dv-grid-topbar df-tab-content-header">
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                <i class="bi bi-list-check text-primary fs-5"></i>
-                <h2 class="df-title-primary mb-0">Tiến độ thực hiện theo kế hoạch điều trị</h2>
-                <span class="df-tab-count df-num"
-                      id="psTotalServicesDoneBadge"
-                      th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ đã làm'">
-                    0 dịch vụ đã làm
-                </span>
-            </div>
-            <div class="d-flex align-items-center flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary px-3 py-2 rounded-2 fw-semibold" onclick="switchMainTab('tab-treatment-plan')"
+        <div class="df-tab-actionbar">
+            <span class="df-tab-count-pill"
+                  id="psTotalServicesDoneBadge"
+                  th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ đã làm'">
+                0 dịch vụ đã làm
+            </span>
+            <div class="df-tab-actions">
+                <button type="button" class="df-tab-btn df-tab-btn-secondary" onclick="switchMainTab('tab-treatment-plan')"
                         title="Chuyển sang Kế hoạch điều trị để thao tác">
-                    Kế hoạch điều trị
+                    <i class="bi bi-diagram-3"></i><span>Kế hoạch điều trị</span>
                 </button>
-                <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-2 rounded-2 fw-semibold">
+                <span th:if="${isClinicalLocked}" class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-2 rounded-pill fw-semibold">
                     Đã khóa bệnh án
                 </span>
             </div>
@@ -153,18 +149,13 @@
     <!-- ================================================================= -->
     <div class="dv-grid-card df-unified-tab-card mb-4" id="performedServicesSection">
         <!-- Topbar danh sách dịch vụ đã thực hiện theo style daily-visits -->
-        <div class="dv-grid-topbar df-tab-content-header">
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                <i class="bi bi-tools text-primary fs-5"></i>
-                <h2 class="df-title-primary mb-0">Dịch vụ &amp; thủ thuật đã thực hiện tại ghế</h2>
-                <span class="df-tab-count df-num" id="performedCountBadge"
-                      th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ'">
-                    0 dịch vụ
-                </span>
-                <span class="df-subtitle-secondary d-none d-lg-inline">· Đã đồng bộ sang Kế toán</span>
-            </div>
+        <div class="df-tab-actionbar">
+            <span class="df-tab-count-pill" id="performedCountBadge"
+                  th:text="${performedServices != null ? performedServices.size() : 0} + ' dịch vụ'">
+                0 dịch vụ
+            </span>
 
-            <div class="d-flex align-items-center gap-2">
+            <div class="df-tab-actions">
                 <span class="df-soft-panel py-1 px-3 fw-semibold df-subtitle-secondary d-inline-flex align-items-center gap-2">
                     <span>Tổng tiền:</span>
                     <strong class="text-primary fs-6 df-num" id="totalPerformedText"

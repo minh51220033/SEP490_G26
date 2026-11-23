@@ -294,22 +294,50 @@
     text-decoration: underline;
 }
 
-/* SUBNAV CONTAINER — HIỂN THỊ ĐỦ TAB WRAP 2 HÀNG KHÔNG CUỘN NGANG */
+/* SUBNAV CONTAINER — HIỂN THỊ 1 DÒNG CUỘN NGANG TRÁI/PHẢI GỌN DIỆN TÍCH */
 .df-subnav-container {
     background: #ffffff;
     display: block;
     position: relative;
     padding: 6px 16px;
     border-top: 1px solid #f1f5f9;
+    overflow: hidden;
+}
+
+.df-subnav-container.has-overflow-right .df-subnav {
+    padding-right: 28px;
+    -webkit-mask-image: linear-gradient(to right, #000000 0%, #000000 calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to right, #000000 0%, #000000 calc(100% - 28px), transparent 100%);
 }
 
 .df-subnav {
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px 6px;
-    padding: 2px 0;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 2px 0 4px;
     background: #ffffff;
-    overflow: visible !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.df-subnav::-webkit-scrollbar {
+    height: 4px;
+}
+
+.df-subnav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.df-subnav::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+
+.df-subnav::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 
 .df-subnav-item {
@@ -3053,4 +3081,103 @@ body.modal-open .modal-backdrop {
     color: #ef4444 !important;
     background: #fef2f2 !important;
     border-color: #fecaca !important;
+}
+
+/* =====================================================================
+   QUY CHUẨN CHUNG THANH THAO TÁC & NÚT BẤM CHO TOÀN BỘ TAB CON BÀN KHÁM
+   ===================================================================== */
+.df-tab-actionbar {
+    background: #f8fafc !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding: 10px 20px !important;
+    min-height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    box-sizing: border-box;
+}
+.df-tab-actionbar.is-right-only {
+    justify-content: flex-end;
+}
+.df-tab-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-left: auto;
+}
+.df-tab-count-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.df-tab-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    height: 34px !important;
+    padding: 0 14px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    text-decoration: none !important;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    box-shadow: none !important;
+}
+.df-tab-btn i {
+    font-size: 14px;
+    line-height: 1;
+}
+.df-tab-btn-primary {
+    background: #0284c7 !important;
+    border: 1px solid #0284c7 !important;
+    color: #ffffff !important;
+}
+.df-tab-btn-primary:hover:not(:disabled) {
+    background: #0369a1 !important;
+    border-color: #0369a1 !important;
+    color: #ffffff !important;
+}
+.df-tab-btn-secondary {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+}
+.df-tab-btn-secondary:hover:not(:disabled) {
+    background: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+}
+.df-tab-btn-secondary i {
+    color: #0284c7;
+}
+.df-tab-btn .df-btn-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 11px;
+    font-weight: 700;
 }

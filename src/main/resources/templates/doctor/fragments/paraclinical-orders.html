@@ -9,39 +9,28 @@
 <div th:fragment="paraclinicalOrdersSection">
     <div class="bg-white border rounded-4 shadow-sm overflow-hidden">
         <!-- HEADER BAR -->
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-4 py-3 border-bottom"
-             style="background: #f8fafc;">
-            <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-film text-primary fs-5"></i>
-                <div>
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <h5 class="mb-0 fw-bold text-dark fs-6">Chỉ định cận lâm sàng &amp; hình ảnh</h5>
-                        <span class="badge small df-num border" id="ordersCountBadge"
-                              th:classappend="${paraclinicalOrders == null or #lists.isEmpty(paraclinicalOrders)} ? 'bg-light text-secondary' : 'bg-primary-subtle text-primary border-primary-subtle'"
-                              th:text="${paraclinicalOrders != null ? #lists.size(paraclinicalOrders) : 0} + ' chỉ định'">0 chỉ định</span>
-                    </div>
-                    <div class="small text-secondary">Chụp X-Quang NanoPix, CT ConeBeam 3D, Xét nghiệm máu</div>
-                </div>
-            </div>
-            <div class="d-flex flex-wrap align-items-center gap-2" th:unless="${isReadOnlyView == true}">
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-2 fw-semibold"
+        <div class="df-tab-actionbar">
+            <span class="df-tab-count-pill" id="ordersCountBadge"
+                  th:text="${paraclinicalOrders != null ? #lists.size(paraclinicalOrders) : 0} + ' chỉ định'">0 chỉ định</span>
+            <div class="df-tab-actions" th:unless="${isReadOnlyView == true}">
+                <button type="button" class="df-tab-btn df-tab-btn-secondary"
                         onclick="loadParaclinicalOrders()"
                         title="Làm mới danh sách kết quả đồng bộ từ máy X-quang">
-                    <i class="bi bi-arrow-clockwise me-1"></i>Làm mới kết quả
+                    <i class="bi bi-arrow-clockwise"></i><span>Làm mới kết quả</span>
                 </button>
-                <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 py-2 fw-semibold"
+                <button type="button" class="df-tab-btn df-tab-btn-primary"
                         th:if="${isClinicalLocked != true}"
                         onclick="openAddParaclinicalModal()">
-                    <i class="bi bi-plus-lg me-1"></i>Thêm chỉ định
+                    <i class="bi bi-plus-lg"></i><span>Thêm chỉ định</span>
                 </button>
             </div>
         </div>
 
         <!-- BẢNG DANH SÁCH CHỈ ĐỊNH CẬN LÂM SÀNG (HIỂN THỊ TRỰC TIẾP, KHÔNG GẬP) -->
-        <div class="p-3 p-md-4 bg-white">
+        <div class="bg-white">
 
             <!-- BẢNG DANH SÁCH CHỈ ĐỊNH CẬN LÂM SÀNG (SCR-11.3 LƯU DATABASE) -->
-            <div class="table-responsive rounded-3 border">
+            <div class="table-responsive">
                 <table class="df-clean-table" data-disable-floating-actions="true">
                     <thead>
                         <tr>

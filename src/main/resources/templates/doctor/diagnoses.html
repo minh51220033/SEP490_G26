@@ -16,7 +16,7 @@
 
             <main class="app-content p-0"
                 style="padding: 0 !important; gap: 0 !important; background: #ffffff !important;">
-                <link rel="stylesheet" th:href="@{/css/diagnosis.css(v=20261123a)}">
+                <link rel="stylesheet" th:href="@{/css/diagnosis.css(v=20261123d)}">
                 <style>
                     /* GLOBAL MODAL & BACKDROP Z-INDEX FIX: CƯỠNG CHẾ TẤT CẢ MODAL NỔI TRÊN BACKDROP */
                     .modal {
@@ -600,6 +600,13 @@
                                             class="badge bg-light text-secondary border ms-1 df-tab-count df-num d-none"
                                             id="tabBadge-tab-odontogram">0</span>
                                     </a>
+                                    <a th:href="@{'/doctor/examination/' + ${visitToken != null ? visitToken : idCodec.encodeVisit(visit.visitId)} + '/treatment-plans/create'}"
+                                        class="df-subnav-item" data-tab="tab-treatment-plan-create">
+                                        <i class="bi bi-file-earmark-plus"></i> Lập kế hoạch
+                                        <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num"
+                                            th:classappend="${treatmentPlans == null or #lists.isEmpty(treatmentPlans)} ? 'd-none' : ''"
+                                            th:text="${treatmentPlans != null ? #lists.size(treatmentPlans) : 0}">0</span>
+                                    </a>
                                     <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-treatment-plan"
                                         onclick="switchMainTab('tab-treatment-plan', this)">
                                         <i class="bi bi-diagram-3"></i> Kế hoạch điều trị
@@ -698,13 +705,34 @@
                             <div class="df-session-card" id="diagnosisSection"
                                 th:with="isClinicalLocked=${(isReadOnlyView != null and isReadOnlyView) or (visit != null and visit.status != null and (visit.status.name() == 'WAITING_PAYMENT' or visit.status.name() == 'COMPLETED'))}">
 
-                                <!-- Header ca khám (Ngày khám: dd-MM-yyyy) -->
-                                <div class="df-session-bar">
+                                <!-- Header ca khám (Ngày khám: dd-MM-yyyy + Nút Chỉnh sửa / Lưu cùng 1 hàng) -->
+                                <div class="df-tab-actionbar">
                                     <div class="df-session-title">
                                         <i class="bi bi-calendar2-event"></i>
                                         <span>Ngày khám: </span>
                                         <span
                                             th:text="${visit.checkInAt != null ? #temporals.format(visit.checkInAt, 'dd-MM-yyyy') : 'Chưa có thông tin'}">21-10-2026</span>
+                                    </div>
+                                    <div class="df-tab-actions"
+                                         th:if="${isClinicalLocked != true and isReadOnlyView != true}">
+                                        <span class="small fw-semibold text-success" id="generalExamSavedNotice"></span>
+                                        <button type="button" id="btnOpenGeneralExamEdit" class="df-tab-btn df-tab-btn-primary"
+                                                onclick="toggleGeneralExamEdit(true)">
+                                            <i class="bi bi-pencil-square"></i>
+                                            <span th:text="${generalExam != null or (visit.initialSymptoms != null and !#strings.isEmpty(#strings.trim(visit.initialSymptoms)))} ? 'Chỉnh sửa' : 'Tạo mới'">Chỉnh sửa</span>
+                                        </button>
+                                        <div id="generalExamEditActions" class="d-none d-inline-flex align-items-center gap-2">
+                                            <button type="button" class="df-tab-btn df-tab-btn-secondary"
+                                                    onclick="toggleGeneralExamEdit(false)">
+                                                <i class="bi bi-x-lg"></i>
+                                                <span>Đóng</span>
+                                            </button>
+                                            <button type="button" id="btnSaveGeneralExamBottom" class="df-tab-btn df-tab-btn-primary"
+                                                    onclick="saveGeneralExamination()">
+                                                <i class="bi bi-check-lg" id="btnSaveGeneralExamIcon"></i>
+                                                <span id="btnSaveGeneralExamText">Lưu</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -2229,6 +2257,39 @@
                     }, () => { });
                 } catch (_) { }
             });
+        })();
+    </script>
+    <script>
+        (function () {
+            function initMainSubnavScroll() {
+                var nav = document.getElementById('mainSubnav');
+                if (!nav) return;
+                var container = nav.closest('.df-subnav-container');
+                var updateFade = function () {
+                    if (!container) return;
+                    var hasMoreRight = (nav.scrollWidth - nav.clientWidth - nav.scrollLeft) > 4;
+                    container.classList.toggle('has-overflow-right', hasMoreRight);
+                };
+                nav.addEventListener('wheel', function (e) {
+                    if (nav.scrollWidth > nav.clientWidth && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) {
+                        nav.scrollLeft += e.deltaY;
+                        e.preventDefault();
+                        updateFade();
+                    }
+                }, { passive: false });
+                nav.addEventListener('scroll', updateFade, { passive: true });
+                window.addEventListener('resize', updateFade);
+                var activeTab = nav.querySelector('.df-subnav-item.active');
+                if (activeTab && typeof activeTab.scrollIntoView === 'function') {
+                    activeTab.scrollIntoView({ behavior: 'auto', inline: 'nearest', block: 'nearest' });
+                }
+                updateFade();
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initMainSubnavScroll);
+            } else {
+                initMainSubnavScroll();
+            }
         })();
     </script>
 
