@@ -82,6 +82,8 @@ public class AdminServiceCatalogController {
             @RequestParam(value = "q", required = false) String keyword,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) ServiceStatus status,
+            @RequestParam(value = "kind", required = false) String kind,
+            @RequestParam(value = "type", required = false) ServiceType serviceType,
             @RequestParam(value = "tab", required = false) String tab,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
@@ -92,7 +94,7 @@ public class AdminServiceCatalogController {
             return REDIRECT_LIST;
         }
         try {
-            prepareListPage(model, session, keyword, categoryId, status, page, size);
+            prepareListPage(model, session, keyword, categoryId, status, kind, serviceType, page, size);
             return LIST_VIEW;
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute(
@@ -110,10 +112,11 @@ public class AdminServiceCatalogController {
     @GetMapping("/categories")
     public String listCategories(
             @RequestParam(value = "q", required = false) String keyword,
+            @RequestParam(value = "type", required = false) ServiceType categoryType,
             @RequestParam(value = "active", required = false) Boolean active,
             Model model,
             HttpSession session) {
-        prepareCategoryListPage(model, session, keyword, active);
+        prepareCategoryListPage(model, session, keyword, categoryType, active);
         return CATEGORY_LIST_VIEW;
     }
 
@@ -356,7 +359,9 @@ public class AdminServiceCatalogController {
 
             redirectAttributes.addFlashAttribute(
                     "successMessage",
-                    "Th\u00EAm d\u1ECBch v\u1EE5 th\u00E0nh c\u00F4ng.");
+                    dto.getServiceType() == ServiceType.PRODUCT
+                            ? "Thêm sản phẩm thành công."
+                            : "Thêm dịch vụ thành công.");
 
             return REDIRECT_LIST;
         } catch (IllegalArgumentException ex) {
@@ -445,7 +450,9 @@ public class AdminServiceCatalogController {
 
                 redirectAttributes.addFlashAttribute(
                         "successMessage",
-                        "C\u1EADp nh\u1EADt d\u1ECBch v\u1EE5 th\u00E0nh c\u00F4ng.");
+                        dto.getServiceType() == ServiceType.PRODUCT
+                                ? "Cập nhật sản phẩm thành công."
+                                : "Cập nhật dịch vụ thành công.");
 
                 return REDIRECT_LIST;
             } catch (IllegalArgumentException ex) {
@@ -749,6 +756,8 @@ public class AdminServiceCatalogController {
             String keyword,
             Long categoryId,
             ServiceStatus status,
+            String kind,
+            ServiceType serviceType,
             int page,
             int size) {
         addLayoutAttributes(session, model);
@@ -766,15 +775,24 @@ public class AdminServiceCatalogController {
 
         List<Service> allServices = serviceCatalogService.getAllServices();
         long totalServicesCount = allServices.size();
+        long serviceOnlyCount = allServices.stream().filter(s -> s.getServiceType() != ServiceType.PRODUCT).count();
+        long productOnlyCount = allServices.stream().filter(s -> s.getServiceType() == ServiceType.PRODUCT).count();
         long activeServicesCount = allServices.stream().filter(s -> s.getStatus() == ServiceStatus.ACTIVE).count();
         long inactiveServicesCount = allServices.stream().filter(s -> s.getStatus() == ServiceStatus.INACTIVE).count();
         model.addAttribute("totalServicesCount", totalServicesCount);
+        model.addAttribute("serviceOnlyCount", serviceOnlyCount);
+        model.addAttribute("productOnlyCount", productOnlyCount);
         model.addAttribute("activeServicesCount", activeServicesCount);
         model.addAttribute("inactiveServicesCount", inactiveServicesCount);
         model.addAttribute("totalCategoriesCount", (long) allCategories.size());
 
+        String normalizedKind = ("PRODUCT".equalsIgnoreCase(kind) || "SERVICE".equalsIgnoreCase(kind))
+                ? kind.toUpperCase(Locale.ROOT)
+                : "";
+
         // Dùng API tìm kiếm trả về List đang có; chia trang sau khi lọc.
-        List<Service> filteredServices = serviceCatalogService.searchServices(keyword, categoryId, status);
+        List<Service> filteredServices = serviceCatalogService.searchServices(
+                keyword, categoryId, status, serviceType, normalizedKind.isEmpty() ? null : normalizedKind);
         int pageSize = size > 0 ? Math.min(size, 100) : 10;
         int lastPage = filteredServices.isEmpty() ? 0 : (filteredServices.size() - 1) / pageSize;
         int currentPage = Math.min(Math.max(page, 0), lastPage);
@@ -792,9 +810,13 @@ public class AdminServiceCatalogController {
         model.addAttribute("pageSize", servicePage.getSize());
         model.addAttribute("totalPages", servicePage.getTotalPages());
         model.addAttribute("totalItems", servicePage.getTotalElements());
+        model.addAttribute("fromItem", filteredServices.isEmpty() ? 0 : fromIndex + 1);
+        model.addAttribute("toItem", toIndex);
         model.addAttribute("keyword", keyword != null ? keyword.trim() : "");
         model.addAttribute("selectedCategoryId", categoryId);
         model.addAttribute("selectedStatus", status);
+        model.addAttribute("selectedKind", normalizedKind);
+        model.addAttribute("selectedServiceType", serviceType);
         model.addAttribute("serviceTypes", ServiceType.values());
         model.addAttribute("serviceStatuses", ServiceStatus.values());
 
@@ -806,13 +828,14 @@ public class AdminServiceCatalogController {
         }
         model.addAttribute("activeTab", "services");
         model.addAttribute("activeMenu", "catalogs");
-        model.addAttribute("pageTitle", "Quản lý danh mục - Danh mục dịch vụ");
+        model.addAttribute("pageTitle", "Quản lý danh mục - Danh mục dịch vụ & sản phẩm");
     }
 
     private void prepareCategoryListPage(
             Model model,
             HttpSession session,
             String keyword,
+            ServiceType categoryType,
             Boolean active) {
         addLayoutAttributes(session, model);
 
@@ -832,9 +855,11 @@ public class AdminServiceCatalogController {
         model.addAttribute("inactiveCategoriesCount", inactiveCategoriesCount);
         model.addAttribute("totalServicesCount", (long) serviceCatalogService.getAllServices().size());
 
-        model.addAttribute("categories", serviceCatalogService.searchCategories(keyword, active));
+        model.addAttribute("categories", serviceCatalogService.searchCategories(keyword, categoryType, active));
         model.addAttribute("keyword", keyword != null ? keyword.trim() : "");
+        model.addAttribute("selectedType", categoryType);
         model.addAttribute("selectedActive", active);
+        model.addAttribute("serviceTypes", ServiceType.values());
         if (!model.containsAttribute("categoryForm")) {
             model.addAttribute("categoryForm", new ServiceCategoryDTO());
         }

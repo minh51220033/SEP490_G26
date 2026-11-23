@@ -162,4 +162,32 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
             @Param("status") ServiceStatus status,
             org.springframework.data.domain.Pageable pageable
     );
+
+    @EntityGraph(attributePaths = "category")
+    @Query("""
+        SELECT s
+        FROM Service s
+        LEFT JOIN s.category c
+        WHERE (:categoryId IS NULL OR c.categoryId = :categoryId)
+          AND (:status IS NULL OR s.status = :status)
+          AND (:serviceType IS NULL OR s.serviceType = :serviceType)
+          AND (
+              :itemKind IS NULL
+              OR (:itemKind = 'PRODUCT' AND s.serviceType = com.cvdcms.entity.enums.ServiceType.PRODUCT)
+              OR (:itemKind = 'SERVICE' AND s.serviceType <> com.cvdcms.entity.enums.ServiceType.PRODUCT)
+          )
+          AND (
+              :keyword IS NULL OR :keyword = ''
+              OR LOWER(s.serviceName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(s.serviceCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          )
+        ORDER BY s.serviceName ASC
+        """)
+    List<Service> searchAdminServicesWithFilters(
+            @Param("keyword") String keyword,
+            @Param("categoryId") Long categoryId,
+            @Param("status") ServiceStatus status,
+            @Param("serviceType") ServiceType serviceType,
+            @Param("itemKind") String itemKind
+    );
 }

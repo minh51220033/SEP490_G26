@@ -104,6 +104,7 @@ public class PortalAppointmentService {
         access.requireUser(httpSession);
         return services.findByStatusOrderByCategory_DisplayOrderAscServiceNameAsc(ServiceStatus.ACTIVE)
                 .stream().filter(s -> Boolean.TRUE.equals(s.getIsBookableOnline())
+                        && s.getServiceType() != com.cvdcms.entity.enums.ServiceType.PRODUCT
                         && Boolean.TRUE.equals(s.getCategory().getIsActive())).toList();
     }
 

@@ -1749,8 +1749,6 @@
             const activeExact = SERVER_WORKFLOW_TEMPLATES.find(w =>
                 Number(w.serviceId) === numId && (!w.status || w.status === 'ACTIVE'));
             if (activeExact) return activeExact;
-            const anyExact = SERVER_WORKFLOW_TEMPLATES.find(w => Number(w.serviceId) === numId);
-            if (anyExact) return anyExact;
         }
         return null;
     }
@@ -2228,7 +2226,7 @@
                     isLocked: false,
                     name: st.stepName || 'Thủ thuật kỹ thuật',
                     activeTeeth: [...activeTeethNums],
-                    qty: isPackage ? d.qty : (activeTeethNums.length || 1),
+                    qty: (!isPackage && activeTeethNums.length > 0) ? activeTeethNums.length : Math.max(1, Number(d.qty || 1)),
                     price: hasAdminStepPrices ? Number(st.stepPrice || 0) : distributed[idx],
                     notes: st.stepDescription || 'Thực hiện chuẩn Bộ Y Tế (QĐ 3207/QĐ-BYT)'
                 }))
@@ -2261,7 +2259,7 @@
                     isLocked: false,
                     name: sp.name,
                     activeTeeth: [...activeTeethNums],
-                    qty: isPackage ? d.qty : (activeTeethNums.length || 1),
+                    qty: (!isPackage && activeTeethNums.length > 0) ? activeTeethNums.length : Math.max(1, Number(d.qty || 1)),
                     price: (sp.price !== undefined && sp.price !== null) ? sp.price : autoP,
                     notes: sp.notes || ''
                 };

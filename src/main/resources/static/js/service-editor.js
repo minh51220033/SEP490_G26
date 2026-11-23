@@ -11,17 +11,53 @@ document.addEventListener("DOMContentLoaded", function () {
     const ALLOWED_EXT_REGEX = /\.(jpe?g|png|webp)$/i;
 
     // =========================================================================
-    // 1. ĐỒNG BỘ LOẠI DỊCH VỤ THEO NHÓM DỊCH VỤ
+    // 1. ĐỒNG BỘ LOẠI DỊCH VỤ THEO NHÓM DỊCH VỤ & CHẾ ĐỘ SẢN PHẨM
     // =========================================================================
     const categorySelect = document.getElementById("categoryId");
     const serviceTypeSelect = document.getElementById("serviceType");
+    const serviceCodeInput = document.getElementById("serviceCode");
+    const unitInput = document.getElementById("unit");
+    const requiresToothGroup = document.getElementById("requiresToothGroup");
+    const requiresToothInput = document.getElementById("requiresTooth");
+    const isBookableOnlineGroup = document.getElementById("isBookableOnlineGroup");
+    const isBookableOnlineInput = document.getElementById("isBookableOnline");
+    const estimatedDurationGroup = document.getElementById("estimatedDurationGroup");
+    const estimatedDurationInput = document.getElementById("estimatedDurationMinutes");
+
+    function syncServiceTypeBehavior() {
+        if (!serviceTypeSelect) return;
+        const isProduct = serviceTypeSelect.value === "PRODUCT";
+
+        if (requiresToothGroup) requiresToothGroup.hidden = isProduct;
+        if (isBookableOnlineGroup) isBookableOnlineGroup.hidden = isProduct;
+        if (estimatedDurationGroup) estimatedDurationGroup.hidden = isProduct;
+
+        if (isProduct) {
+            if (requiresToothInput) requiresToothInput.checked = false;
+            if (isBookableOnlineInput) isBookableOnlineInput.checked = false;
+            if (estimatedDurationInput && (!estimatedDurationInput.value || Number(estimatedDurationInput.value) < 15)) {
+                estimatedDurationInput.value = "15";
+            }
+            if (serviceCodeInput) serviceCodeInput.placeholder = "Ví dụ: SP_CHINHA_ORALB";
+            if (unitInput) unitInput.placeholder = "Ví dụ: Hộp, Chai, Tuýp, Cái";
+        } else {
+            if (serviceCodeInput) serviceCodeInput.placeholder = "Ví dụ: DV_CAO_VOI";
+            if (unitInput) unitInput.placeholder = "Ví dụ: Lần, Răng, Phim";
+        }
+    }
+
     if (categorySelect && serviceTypeSelect) {
         categorySelect.addEventListener("change", function () {
             const selectedOption = categorySelect.options[categorySelect.selectedIndex];
             if (selectedOption && selectedOption.dataset.categoryType) {
                 serviceTypeSelect.value = selectedOption.dataset.categoryType;
+                syncServiceTypeBehavior();
             }
         });
+    }
+    if (serviceTypeSelect) {
+        serviceTypeSelect.addEventListener("change", syncServiceTypeBehavior);
+        syncServiceTypeBehavior();
     }
 
     // =========================================================================

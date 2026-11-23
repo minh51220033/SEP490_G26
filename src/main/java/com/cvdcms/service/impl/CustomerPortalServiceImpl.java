@@ -86,7 +86,9 @@ public class CustomerPortalServiceImpl implements CustomerPortalService {
 
     @Override
     public List<Service> getFeaturedServices(int limit) {
-        List<Service> all = new ArrayList<>(serviceCatalogService.getPublicServices());
+        List<Service> all = serviceCatalogService.getPublicServices().stream()
+                .filter(s -> s.getServiceType() != com.cvdcms.entity.enums.ServiceType.PRODUCT)
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         // Ưu tiên hiển thị dịch vụ điều trị lâm sàng & khám tư vấn trước dịch vụ cận lâm sàng (X-quang/Labo)
         all.sort(Comparator.comparingInt(s -> {
             if (Boolean.TRUE.equals(s.getIsParaclinical())) {

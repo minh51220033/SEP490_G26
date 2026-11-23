@@ -206,6 +206,7 @@
                                     <option value="LAB">Xét nghiệm</option>
                                     <option value="XRAY">X-Ray</option>
                                     <option value="CONSULTATION">Khám / Tư vấn</option>
+                                    <option value="PRODUCT">Sản phẩm</option>
                                 </select>
 
                                 <div class="invalid-feedback"
@@ -453,7 +454,7 @@
                     <div class="p-3">
                         <div class="row g-3">
 
-                            <div class="col-md-6">
+                            <div class="col-md-6" id="requiresToothGroup">
                                 <div class="form-check">
                                     <input id="requiresTooth"
                                            type="checkbox"
@@ -477,7 +478,7 @@
                                 </p>
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-6" id="isBookableOnlineGroup">
                                 <div class="form-check">
                                     <input id="isBookableOnline"
                                            type="checkbox"
@@ -524,7 +525,7 @@
                                     Có thể để trống nếu chưa thiết lập thời hạn bảo hành.
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6" id="estimatedDurationGroup">
                                 <label for="estimatedDurationMinutes" class="form-label">Thời lượng lịch hẹn dự kiến (phút)</label>
                                 <input id="estimatedDurationMinutes" type="number" th:field="*{estimatedDurationMinutes}"
                                        class="form-control" min="15" max="240" step="15" required>

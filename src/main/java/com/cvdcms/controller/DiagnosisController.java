@@ -973,7 +973,9 @@ public class DiagnosisController {
         model.addAttribute("allVisits", allVisits);
 
         List<com.cvdcms.DTO.WorkflowTemplateResponseDTO> workflowTemplates = (clinicalWorkflowService != null)
-                ? clinicalWorkflowService.getAllTemplates()
+                ? clinicalWorkflowService.getAllTemplates().stream()
+                        .filter(w -> w.getStatus() == null || "ACTIVE".equalsIgnoreCase(w.getStatus()))
+                        .toList()
                 : List.of();
         model.addAttribute("workflowTemplates", workflowTemplates);
         List<com.cvdcms.DTO.ServiceComboDTO> workflowCombos = (clinicalWorkflowService != null)

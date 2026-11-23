@@ -157,7 +157,10 @@ public class SecurityConfig {
                                     return path.startsWith("/api/");
                                 }
                         )
-                        .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
+                        .defaultAuthenticationEntryPointFor(
+                                new LoginUrlAuthenticationEntryPoint("/login"),
+                                req -> true
+                        )
                 );
 
         return http.build();

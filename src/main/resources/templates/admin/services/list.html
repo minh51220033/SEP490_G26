@@ -42,31 +42,32 @@
         <div class="alert alert-danger" role="alert" th:if="${errorMessage}" th:text="${errorMessage}">
         </div>
 
-        <!-- DANH SÁCH DỊCH VỤ -->
+        <!-- DANH SÁCH DỊCH VỤ & SẢN PHẨM -->
         <section class="panel catalog-filter-panel p-0 mb-3">
           <!-- LỌC THEO NHÓM -->
           <form id="filterForm" th:action="@{/admin/services}" method="get" class="p-3 border-bottom">
             <input type="hidden" id="pageSizeInput" name="size" th:value="${pageSize}">
             <input type="hidden" id="pageIndexInput" name="page" th:value="${currentPage}">
+            <input type="hidden" id="kindInput" name="kind" th:value="${selectedKind}">
 
             <div class="row g-2 align-items-end">
 
-              <!-- 1. Ô tìm kiếm theo mã dịch vụ hoặc tên dịch vụ -->
+              <!-- 1. Ô tìm kiếm theo mã hoặc tên -->
               <div class="col-12 col-md-4 col-lg-3">
                 <label for="serviceKeyword" class="form-label small text-muted mb-1">
-                  Tìm kiếm dịch vụ
+                  Tìm kiếm dịch vụ / sản phẩm
                 </label>
                 <div class="input-group">
                   <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
                   <input id="serviceKeyword" type="text" name="q" class="form-control"
-                    placeholder="Mã hoặc tên dịch vụ..." th:value="${keyword}">
+                    placeholder="Mã hoặc tên..." th:value="${keyword}">
                 </div>
               </div>
 
               <!-- 2. Bộ lọc theo nhóm dịch vụ -->
               <div class="col-12 col-sm-6 col-md-3 col-lg-2">
                 <label for="categoryFilter" class="form-label small text-muted mb-1">
-                  Nhóm dịch vụ
+                  Nhóm danh mục
                 </label>
                 <select id="categoryFilter" name="categoryId" class="form-select">
                   <option value="">Tất cả nhóm</option>
@@ -77,7 +78,21 @@
                 </select>
               </div>
 
-              <!-- 3. Bộ lọc theo trạng thái -->
+              <!-- 3. Bộ lọc theo loại chi tiết -->
+              <div class="col-12 col-sm-6 col-md-3 col-lg-2">
+                <label for="typeFilter" class="form-label small text-muted mb-1">
+                  Loại
+                </label>
+                <select id="typeFilter" name="type" class="form-select">
+                  <option value="">Tất cả loại</option>
+                  <option th:each="stype : ${serviceTypes}" th:value="${stype.name()}"
+                    th:selected="${selectedServiceType != null and selectedServiceType == stype}"
+                    th:text="${stype.label}">
+                  </option>
+                </select>
+              </div>
+
+              <!-- 4. Bộ lọc theo trạng thái -->
               <div class="col-12 col-sm-6 col-md-3 col-lg-2">
                 <label for="statusFilter" class="form-label small text-muted mb-1">
                   Trạng thái
@@ -92,7 +107,7 @@
                 </select>
               </div>
 
-              <!-- 4. Nút Lọc và Bỏ lọc -->
+              <!-- 5. Nút Lọc và Bỏ lọc -->
               <div class="col-auto ms-auto d-flex gap-2">
                 <button type="submit" class="btn btn-primary">
                   <i class="bi bi-funnel" aria-hidden="true"></i>
@@ -108,19 +123,46 @@
           </form>
         </section>
 
-        <!-- BẢNG DỮ LIỆU DỊCH VỤ (ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS) -->
+        <!-- BẢNG DỮ LIỆU DỊCH VỤ & SẢN PHẨM (ĐỒNG BỘ CHUẨN DOCTOR/DAILY-VISITS) -->
         <div class="dv-grid-card">
           <div class="dv-grid-topbar">
-            <div class="d-flex align-items-center gap-2">
-              <span class="fw-bold text-dark fs-6">Danh sách dịch vụ</span>
-              <span class="badge bg-primary-subtle text-primary rounded-pill fw-bold"
-                th:text="|Tổng ${totalItems ?: #lists.size(services)}|">Tổng 0</span>
+            <div class="d-flex align-items-center flex-wrap gap-3">
+              <div class="d-flex align-items-center gap-2">
+                <span class="fw-bold text-dark fs-6">Danh sách</span>
+                <span class="badge bg-primary-subtle text-primary rounded-pill fw-bold"
+                  th:text="|Tổng ${totalItems ?: #lists.size(services)}|">Tổng 0</span>
+              </div>
+
+              <div class="dv-quick-segment" role="tablist" aria-label="Phân loại Dịch vụ và Sản phẩm">
+                <a th:href="@{/admin/services(q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus}, size=${pageSize})}"
+                   class="dv-seg-btn"
+                   th:classappend="${(selectedKind == null or selectedKind == '') and selectedServiceType == null} ? 'active' : ''">
+                  <span>Tất cả</span>
+                  <span class="dv-seg-count" th:text="${totalServicesCount ?: 0}">0</span>
+                </a>
+                <a th:href="@{/admin/services(kind='SERVICE', q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus}, size=${pageSize})}"
+                   class="dv-seg-btn"
+                   th:classappend="${selectedKind == 'SERVICE'} ? 'active' : ''">
+                  <i class="bi bi-heart-pulse" aria-hidden="true"></i>
+                  <span>Dịch vụ</span>
+                  <span class="dv-seg-count" th:text="${serviceOnlyCount ?: 0}">0</span>
+                </a>
+                <a th:href="@{/admin/services(kind='PRODUCT', q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus}, size=${pageSize})}"
+                   class="dv-seg-btn"
+                   th:classappend="${selectedKind == 'PRODUCT' or (selectedServiceType != null and selectedServiceType.name() == 'PRODUCT')} ? 'active' : ''">
+                  <i class="bi bi-bag-check" aria-hidden="true"></i>
+                  <span>Sản phẩm</span>
+                  <span class="dv-seg-count" th:text="${productOnlyCount ?: 0}">0</span>
+                </a>
+              </div>
             </div>
+
             <div class="fin-topbar-right">
               <button type="button" class="btn btn-primary btn-sm fw-semibold d-inline-flex align-items-center gap-1"
+                id="openCreateServiceModalBtn"
                 data-bs-toggle="modal" data-bs-target="#createServiceModal">
                 <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                Thêm mới dịch vụ
+                <span th:text="${selectedKind == 'PRODUCT'} ? 'Thêm mới sản phẩm' : 'Thêm mới dịch vụ / sản phẩm'">Thêm mới dịch vụ / sản phẩm</span>
               </button>
             </div>
           </div>
@@ -167,7 +209,7 @@
                           onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                         <div class="svc-list-thumb__placeholder"
                           th:style="${service.imageUrl != null and !#strings.isEmpty(service.imageUrl)} ? 'display:none;' : 'display:flex;'">
-                          <i class="bi bi-image text-muted" aria-hidden="true"></i>
+                          <i class="bi" th:classappend="${service.serviceType != null and service.serviceType.name() == 'PRODUCT'} ? 'bi-bag text-info' : 'bi-image text-muted'" aria-hidden="true"></i>
                         </div>
                       </div>
                       <div>
@@ -196,6 +238,9 @@
                     <span th:case="'LAB'">Xét nghiệm</span>
                     <span th:case="'XRAY'">X-Ray</span>
                     <span th:case="'CONSULTATION'">Khám / Tư vấn</span>
+                    <span th:case="'PRODUCT'" class="badge bg-info-subtle text-info-emphasis border border-info-subtle text-nowrap">
+                      <i class="bi bi-bag-check me-1" aria-hidden="true"></i>Sản phẩm
+                    </span>
                     <span th:case="*" th:text="${service.serviceType}"></span>
                   </td>
 
@@ -269,7 +314,9 @@
                   <td colspan="7" class="text-center py-4">
                     <div class="empty-state-box" th:with="hasFilter=${(keyword != null and keyword != '')
                        or selectedCategoryId != null
-                       or selectedStatus != null}">
+                       or selectedStatus != null
+                       or (selectedKind != null and selectedKind != '')
+                       or selectedServiceType != null}">
 
                       <i th:if="${hasFilter}" class="bi bi-search empty-icon"></i>
                       <i th:unless="${hasFilter}" class="bi bi-tools empty-icon"></i>
@@ -336,24 +383,24 @@
               <!-- Cụm 4 nút phân trang (|< < > >|) -->
               <div class="d-flex align-items-center gap-1">
                 <!-- 1. Về trang đầu -->
-                <a th:href="@{/admin/services(page=0, size=${pageSize}, q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus})}"
+                <a th:href="@{/admin/services(page=0, size=${pageSize}, q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus}, kind=${selectedKind}, type=${selectedServiceType})}"
                   class="misa-nav-btn" th:classappend="${currentPage == 0} ? 'disabled' : ''" title="Trang đầu">
                   <i class="bi bi-chevron-bar-left"></i>
                 </a>
                 <!-- 2. Trang trước -->
-                <a th:href="@{/admin/services(page=${currentPage - 1}, size=${pageSize}, q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus})}"
+                <a th:href="@{/admin/services(page=${currentPage - 1}, size=${pageSize}, q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus}, kind=${selectedKind}, type=${selectedServiceType})}"
                   class="misa-nav-btn" th:classappend="${currentPage == 0} ? 'disabled' : ''" title="Trang trước">
                   <i class="bi bi-chevron-left"></i>
                 </a>
                 <!-- 3. Trang sau -->
-                <a th:href="@{/admin/services(page=${currentPage + 1}, size=${pageSize}, q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus})}"
+                <a th:href="@{/admin/services(page=${currentPage + 1}, size=${pageSize}, q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus}, kind=${selectedKind}, type=${selectedServiceType})}"
                   class="misa-nav-btn"
                   th:classappend="${currentPage >= totalPages - 1 or totalPages == 0} ? 'disabled' : ''"
                   title="Trang sau">
                   <i class="bi bi-chevron-right"></i>
                 </a>
                 <!-- 4. Đến trang cuối -->
-                <a th:href="@{/admin/services(page=${totalPages > 0 ? totalPages - 1 : 0}, size=${pageSize}, q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus})}"
+                <a th:href="@{/admin/services(page=${totalPages > 0 ? totalPages - 1 : 0}, size=${pageSize}, q=${keyword}, categoryId=${selectedCategoryId}, status=${selectedStatus}, kind=${selectedKind}, type=${selectedServiceType})}"
                   class="misa-nav-btn"
                   th:classappend="${currentPage >= totalPages - 1 or totalPages == 0} ? 'disabled' : ''"
                   title="Trang cuối">
@@ -415,42 +462,55 @@
           id="createServiceForm">
           <div class="modal-header border-bottom py-3 px-4">
             <h5 class="modal-title fw-bold text-dark d-flex align-items-center" id="createServiceModalLabel">
-              <i class="bi bi-tools text-primary me-2 fs-5"></i>
-              <span>Th&#234;m d&#7883;ch v&#7909; m&#7899;i</span>
+              <i id="createModalIcon" class="bi bi-tools text-primary me-2 fs-5"></i>
+              <span id="createModalTitleText">Thêm dịch vụ mới</span>
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body p-4">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2 mb-3 rounded-3 bg-light border">
+              <span class="small fw-semibold text-secondary px-2">Phân loại danh mục:</span>
+              <div class="dv-quick-segment" role="group" aria-label="Chọn thêm Dịch vụ hoặc Sản phẩm">
+                <button type="button" class="dv-seg-btn active" id="modalKindServiceBtn" data-modal-kind="SERVICE">
+                  <i class="bi bi-heart-pulse" aria-hidden="true"></i>
+                  <span>Dịch vụ</span>
+                </button>
+                <button type="button" class="dv-seg-btn" id="modalKindProductBtn" data-modal-kind="PRODUCT">
+                  <i class="bi bi-bag-check" aria-hidden="true"></i>
+                  <span>Sản phẩm</span>
+                </button>
+              </div>
+            </div>
             <div class="row g-3">
-              <!-- Ma dich vu -->
+              <!-- Ma dich vu / san pham -->
               <div class="col-md-4">
-                <label for="modalServiceCode" class="form-label fw-semibold text-dark small">
-                  M&#227; d&#7883;ch v&#7909; <span class="text-danger">*</span>
+                <label for="modalServiceCode" id="modalServiceCodeLabel" class="form-label fw-semibold text-dark small">
+                  Mã dịch vụ <span class="text-danger">*</span>
                 </label>
                 <input id="modalServiceCode" type="text" name="serviceCode" class="form-control"
                   th:value="${serviceForm?.serviceCode}" minlength="2" maxlength="30" pattern="[A-Za-z0-9_\-]{2,30}"
-                  title="Nh&#7853;p 2&#8211;30 k&#253; t&#7921;: ch&#7919; kh&#244;ng d&#7845;u, s&#7889;, d&#7845;u - ho&#7863;c _."
+                  title="Nhập 2–30 ký tự: chữ không dấu, số, dấu - hoặc _."
                   placeholder="VD: DV_CAO_VOI" required>
-                <div class="form-text text-muted small">2&#8211;30 k&#253; t&#7921; (ch&#7919;, s&#7889;, -, _)</div>
+                <div class="form-text text-muted small">2–30 ký tự (chữ, số, -, _)</div>
               </div>
 
-              <!-- Ten dich vu -->
+              <!-- Ten dich vu / san pham -->
               <div class="col-md-8">
-                <label for="modalServiceName" class="form-label fw-semibold text-dark small">
-                  T&#234;n d&#7883;ch v&#7909; <span class="text-danger">*</span>
+                <label for="modalServiceName" id="modalServiceNameLabel" class="form-label fw-semibold text-dark small">
+                  Tên dịch vụ <span class="text-danger">*</span>
                 </label>
                 <input id="modalServiceName" type="text" name="serviceName" class="form-control"
                   th:value="${serviceForm?.serviceName}" maxlength="200"
-                  placeholder="VD: C&#7841;o v&#244;i r&#259;ng &amp; &#272;&#225;nh b&#243;ng" required>
+                  placeholder="VD: Cạo vôi răng &amp; Đánh bóng" required>
               </div>
 
               <!-- Nhom dich vu -->
               <div class="col-md-6">
                 <label for="modalServiceCategory" class="form-label fw-semibold text-dark small">
-                  Nh&#243;m d&#7883;ch v&#7909; <span class="text-danger">*</span>
+                  Nhóm danh mục <span class="text-danger">*</span>
                 </label>
                 <select id="modalServiceCategory" name="categoryId" class="form-select" required>
-                  <option value="">-- Ch&#7885;n nh&#243;m d&#7883;ch v&#7909; --</option>
+                  <option value="">-- Chọn nhóm --</option>
                   <option th:each="category : ${categories}" th:if="${category.isActive == true}"
                     th:value="${category.categoryId}" th:data-type="${category.categoryType.name()}"
                     th:selected="${serviceForm != null and serviceForm.categoryId == category.categoryId}"
@@ -462,36 +522,33 @@
               <!-- Loai dich vu -->
               <div class="col-md-6">
                 <label for="modalServiceType" class="form-label fw-semibold text-dark small">
-                  Lo&#7841;i d&#7883;ch v&#7909; <span class="text-danger">*</span>
+                  Loại <span class="text-danger">*</span>
                 </label>
                 <select id="modalServiceType" name="serviceType" class="form-select" required>
-                  <option value="">-- Ch&#7885;n lo&#7841;i --</option>
-                  <option value="PROCEDURE" th:selected="${serviceForm?.serviceType?.name() == 'PROCEDURE'}">Th&#7911;
-                    thu&#7853;t nha khoa</option>
-                  <option value="LAB" th:selected="${serviceForm?.serviceType?.name() == 'LAB'}">X&#233;t nghi&#7879;m
-                  </option>
+                  <option value="">-- Chọn loại --</option>
+                  <option value="PROCEDURE" th:selected="${serviceForm?.serviceType?.name() == 'PROCEDURE'}">Thủ thuật nha khoa</option>
+                  <option value="LAB" th:selected="${serviceForm?.serviceType?.name() == 'LAB'}">Xét nghiệm</option>
                   <option value="XRAY" th:selected="${serviceForm?.serviceType?.name() == 'XRAY'}">X-Ray</option>
-                  <option value="CONSULTATION" th:selected="${serviceForm?.serviceType?.name() == 'CONSULTATION'}">
-                    Kh&#225;m / T&#432; v&#7845;n</option>
+                  <option value="CONSULTATION" th:selected="${serviceForm?.serviceType?.name() == 'CONSULTATION'}">Khám / Tư vấn</option>
+                  <option value="PRODUCT" th:selected="${serviceForm?.serviceType?.name() == 'PRODUCT'}">Sản phẩm</option>
                 </select>
-                <div class="form-text text-muted small">T&#7921; &#273;&#7897;ng ch&#7885;n theo nh&#243;m d&#7883;ch
-                  v&#7909;</div>
+                <div class="form-text text-muted small">Tự động đồng bộ theo nhóm danh mục</div>
               </div>
 
               <!-- Don vi tinh -->
               <div class="col-md-4">
                 <label for="modalServiceUnit" class="form-label fw-semibold text-dark small">
-                  &#272;&#417;n v&#7883; t&#237;nh <span class="text-danger">*</span>
+                  Đơn vị tính <span class="text-danger">*</span>
                 </label>
                 <input id="modalServiceUnit" type="text" name="unit" class="form-control"
-                  th:value="${serviceForm?.unit != null ? serviceForm.unit : 'L&#7847;n'}" maxlength="30"
-                  placeholder="VD: L&#7847;n, R&#259;ng, Phim" required>
+                  th:value="${serviceForm?.unit != null ? serviceForm.unit : 'Lần'}" maxlength="30"
+                  placeholder="VD: Lần, Răng, Phim" required>
               </div>
 
               <!-- Don gia chuan -->
               <div class="col-md-4">
                 <label for="modalServiceBasePrice" class="form-label fw-semibold text-dark small">
-                  &#272;&#417;n gi&#225; chu&#7849;n (VN&#272;) <span class="text-danger">*</span>
+                  Đơn giá chuẩn (VNĐ) <span class="text-danger">*</span>
                 </label>
                 <input id="modalServiceBasePrice" type="number" name="basePrice" class="form-control"
                   th:value="${serviceForm?.basePrice != null ? serviceForm.basePrice : 0}" min="0" step="0.01" required>
@@ -500,7 +557,7 @@
               <!-- Phu phi -->
               <div class="col-md-4">
                 <label for="modalServiceSurcharge" class="form-label fw-semibold text-dark small">
-                  Ph&#7909; ph&#237; (VN&#272;) <span class="text-danger">*</span>
+                  Phụ phí (VNĐ) <span class="text-danger">*</span>
                 </label>
                 <input id="modalServiceSurcharge" type="number" name="surchargeAmount" class="form-control"
                   th:value="${serviceForm?.surchargeAmount != null ? serviceForm.surchargeAmount : 0}" min="0"
@@ -510,25 +567,23 @@
               <!-- Trang thai -->
               <div class="col-md-6">
                 <label for="modalServiceStatus" class="form-label fw-semibold text-dark small">
-                  Tr&#7841;ng th&#225;i <span class="text-danger">*</span>
+                  Trạng thái <span class="text-danger">*</span>
                 </label>
                 <select id="modalServiceStatus" name="status" class="form-select" required>
-                  <option value="ACTIVE" th:selected="${serviceForm?.status?.name() == 'ACTIVE'}">&#272;ang s&#7911;
-                    d&#7909;ng</option>
-                  <option value="INACTIVE" th:selected="${serviceForm?.status?.name() == 'INACTIVE'}">Ng&#7915;ng
-                    s&#7911; d&#7909;ng</option>
+                  <option value="ACTIVE" th:selected="${serviceForm?.status?.name() == 'ACTIVE'}">Đang sử dụng</option>
+                  <option value="INACTIVE" th:selected="${serviceForm?.status?.name() == 'INACTIVE'}">Ngừng sử dụng</option>
                 </select>
               </div>
 
               <!-- Thoi han bao hanh -->
               <div class="col-md-6">
                 <label for="modalServiceWarranty" class="form-label fw-semibold text-dark small">
-                  Th&#7901;i h&#7841;n b&#7843;o h&#224;nh (th&#225;ng)
+                  Thời hạn bảo hành (tháng)
                 </label>
                 <input id="modalServiceWarranty" type="number" name="warrantyMonths" class="form-control"
-                  th:value="${serviceForm?.warrantyMonths}" min="0" placeholder="VD: 12 (th&#225;ng)">
+                  th:value="${serviceForm?.warrantyMonths}" min="0" placeholder="VD: 12 (tháng)">
               </div>
-              <div class="col-md-6">
+              <div class="col-md-6" id="modalDurationGroup">
                 <label for="modalServiceDuration" class="form-label fw-semibold text-dark small">Thời lượng lịch hẹn
                   (phút)</label>
                 <input id="modalServiceDuration" type="number" name="estimatedDurationMinutes" class="form-control"
@@ -537,14 +592,14 @@
               </div>
 
               <!-- Checkbox dieu kien su dung -->
-              <div class="col-12">
+              <div class="col-12" id="modalClinicalFlagsGroup">
                 <div class="p-3 bg-light rounded border d-flex flex-wrap gap-4">
                   <div class="form-check mb-0">
                     <input type="hidden" name="_requiresTooth" value="on">
                     <input id="modalRequiresTooth" type="checkbox" name="requiresTooth" value="true"
                       class="form-check-input" th:checked="${serviceForm?.requiresTooth == true}">
                     <label for="modalRequiresTooth" class="form-check-label text-dark small fw-semibold">
-                      B&#7855;t bu&#7897;c ch&#7885;n v&#7883; tr&#237; r&#259;ng
+                      Bắt buộc chọn vị trí răng
                     </label>
                   </div>
                   <div class="form-check mb-0">
@@ -552,7 +607,7 @@
                     <input id="modalIsBookableOnline" type="checkbox" name="isBookableOnline" value="true"
                       class="form-check-input" th:checked="${serviceForm?.isBookableOnline == true}">
                     <label for="modalIsBookableOnline" class="form-check-label text-dark small fw-semibold">
-                      Cho ph&#233;p &#273;&#7863;t l&#7883;ch tr&#7921;c tuy&#7871;n
+                      Cho phép đặt lịch trực tuyến
                     </label>
                   </div>
                 </div>
@@ -633,9 +688,9 @@
             </div>
           </div>
           <div class="modal-footer border-top py-2 px-4 bg-light">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">&#272;&#243;ng</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
             <button type="submit" class="btn btn-primary">
-              <i class="bi bi-check-lg me-1"></i>Th&#234;m d&#7883;ch v&#7909;
+              <i class="bi bi-check-lg me-1"></i><span id="createModalSubmitText">Thêm dịch vụ</span>
             </button>
           </div>
         </form>
@@ -649,14 +704,132 @@
   <script th:src="@{/js/service-editor.js}"></script>
   <script th:inline="javascript">
     document.addEventListener("DOMContentLoaded", function () {
-      // Tu dong dong bo Loai dich vu theo Nhom dich vu duoc chon
       var catSelect = document.getElementById("modalServiceCategory");
       var typeSelect = document.getElementById("modalServiceType");
+      var kindServiceBtn = document.getElementById("modalKindServiceBtn");
+      var kindProductBtn = document.getElementById("modalKindProductBtn");
+      var modalTitleText = document.getElementById("createModalTitleText");
+      var modalSubmitText = document.getElementById("createModalSubmitText");
+      var modalIcon = document.getElementById("createModalIcon");
+      var modalCodeLabel = document.getElementById("modalServiceCodeLabel");
+      var modalNameLabel = document.getElementById("modalServiceNameLabel");
+      var modalCodeInput = document.getElementById("modalServiceCode");
+      var modalNameInput = document.getElementById("modalServiceName");
+      var modalUnitInput = document.getElementById("modalServiceUnit");
+      var modalDurationGroup = document.getElementById("modalDurationGroup");
+      var modalDurationInput = document.getElementById("modalServiceDuration");
+      var modalClinicalFlagsGroup = document.getElementById("modalClinicalFlagsGroup");
+      var modalRequiresTooth = document.getElementById("modalRequiresTooth");
+      var modalIsBookableOnline = document.getElementById("modalIsBookableOnline");
+      var selectedKind = /*[[${selectedKind}]]*/ '';
+      var selectedServiceType = /*[[${selectedServiceType != null ? selectedServiceType.name() : ''}]]*/ '';
+
+      function applyModalMode(isProduct) {
+        if (kindServiceBtn) kindServiceBtn.classList.toggle("active", !isProduct);
+        if (kindProductBtn) kindProductBtn.classList.toggle("active", isProduct);
+
+        if (modalDurationGroup) modalDurationGroup.hidden = isProduct;
+        if (modalClinicalFlagsGroup) modalClinicalFlagsGroup.hidden = isProduct;
+        if (modalIcon) {
+          modalIcon.className = isProduct
+            ? "bi bi-bag-check text-primary me-2 fs-5"
+            : "bi bi-tools text-primary me-2 fs-5";
+        }
+        if (modalTitleText) modalTitleText.textContent = isProduct ? "Thêm sản phẩm mới" : "Thêm dịch vụ mới";
+        if (modalSubmitText) modalSubmitText.textContent = isProduct ? "Thêm sản phẩm" : "Thêm dịch vụ";
+
+        if (isProduct) {
+          if (modalCodeLabel) modalCodeLabel.innerHTML = 'Mã sản phẩm <span class="text-danger">*</span>';
+          if (modalNameLabel) modalNameLabel.innerHTML = 'Tên sản phẩm <span class="text-danger">*</span>';
+          if (modalCodeInput) modalCodeInput.placeholder = "VD: SP_CHI_ORALB";
+          if (modalNameInput) modalNameInput.placeholder = "VD: Chỉ nha khoa Oral-B";
+          if (modalUnitInput) {
+            modalUnitInput.placeholder = "VD: Hộp, Chai, Tuýp, Cái";
+            if (!modalUnitInput.value || modalUnitInput.value === "Lần") {
+              modalUnitInput.value = "Hộp";
+            }
+          }
+          if (modalRequiresTooth) modalRequiresTooth.checked = false;
+          if (modalIsBookableOnline) modalIsBookableOnline.checked = false;
+          if (modalDurationInput) modalDurationInput.value = "15";
+        } else {
+          if (modalCodeLabel) modalCodeLabel.innerHTML = 'Mã dịch vụ <span class="text-danger">*</span>';
+          if (modalNameLabel) modalNameLabel.innerHTML = 'Tên dịch vụ <span class="text-danger">*</span>';
+          if (modalCodeInput) modalCodeInput.placeholder = "VD: DV_CAO_VOI";
+          if (modalNameInput) modalNameInput.placeholder = "VD: Cạo vôi răng & Đánh bóng";
+          if (modalUnitInput) {
+            modalUnitInput.placeholder = "VD: Lần, Răng, Phim";
+            if (!modalUnitInput.value || modalUnitInput.value === "Hộp") {
+              modalUnitInput.value = "Lần";
+            }
+          }
+          if (modalDurationInput && modalDurationInput.value === "15") {
+            modalDurationInput.value = "30";
+          }
+        }
+      }
+
+      function selectFirstCategoryMatching(isProduct) {
+        if (!catSelect) return;
+        var currentOpt = catSelect.options[catSelect.selectedIndex];
+        var currentType = currentOpt && currentOpt.dataset ? currentOpt.dataset.type : "";
+        if ((isProduct && currentType === "PRODUCT") || (!isProduct && currentType && currentType !== "PRODUCT")) {
+          if (typeSelect && currentType) typeSelect.value = currentType;
+          return;
+        }
+        for (var i = 0; i < catSelect.options.length; i++) {
+          var opt = catSelect.options[i];
+          var optType = opt.dataset ? opt.dataset.type : "";
+          if (!optType) continue;
+          if ((isProduct && optType === "PRODUCT") || (!isProduct && optType !== "PRODUCT")) {
+            catSelect.value = opt.value;
+            if (typeSelect) typeSelect.value = optType;
+            break;
+          }
+        }
+      }
+
+      if (kindServiceBtn) {
+        kindServiceBtn.addEventListener("click", function () {
+          selectFirstCategoryMatching(false);
+          applyModalMode(false);
+        });
+      }
+      if (kindProductBtn) {
+        kindProductBtn.addEventListener("click", function () {
+          selectFirstCategoryMatching(true);
+          if (typeSelect) typeSelect.value = "PRODUCT";
+          applyModalMode(true);
+        });
+      }
+
       if (catSelect && typeSelect) {
         catSelect.addEventListener("change", function () {
           var opt = catSelect.options[catSelect.selectedIndex];
           if (opt && opt.dataset.type) {
             typeSelect.value = opt.dataset.type;
+            applyModalMode(opt.dataset.type === "PRODUCT");
+          }
+        });
+      }
+      if (typeSelect) {
+        typeSelect.addEventListener("change", function () {
+          applyModalMode(typeSelect.value === "PRODUCT");
+        });
+      }
+
+      var svcModalEl = document.getElementById("createServiceModal");
+      if (svcModalEl) {
+        svcModalEl.addEventListener("show.bs.modal", function () {
+          var shouldDefaultProduct = (typeSelect && typeSelect.value === "PRODUCT")
+            || selectedKind === "PRODUCT"
+            || selectedServiceType === "PRODUCT";
+          if (shouldDefaultProduct) {
+            selectFirstCategoryMatching(true);
+            if (typeSelect) typeSelect.value = "PRODUCT";
+            applyModalMode(true);
+          } else {
+            applyModalMode(false);
           }
         });
       }
