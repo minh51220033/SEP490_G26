@@ -753,17 +753,18 @@
                             <div class="d-flex align-items-center gap-2 justify-content-end flex-wrap">
                                 <span id="deskQueueWaitingBadge"
                                       th:with="initWait=${deskWaitingCount != null ? deskWaitingCount : 0}"
-                                      th:class="${'badge rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1 border df-num text-nowrap ' + (initWait > 0 ? 'bg-warning-subtle text-warning-emphasis border-warning-subtle' : 'bg-success-subtle text-success border-success-subtle')}"
+                                      th:class="${'rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-2 border df-num text-nowrap ' + (initWait > 0 ? 'bg-warning-subtle text-warning-emphasis border-warning-subtle' : 'bg-success-subtle text-success border-success-subtle')}"
+                                      style="height: 36px; font-size: 13px;"
                                       th:title="${initWait > 0 ? 'Đang có bệnh nhân chờ trong hàng đợi — ca này chỉ khóa làm dịch vụ đã đặt lịch, dịch vụ phát sinh hẹn ca sau' : 'Hàng đợi đang trống — có thể làm thêm dịch vụ phát sinh nếu bệnh nhân đồng ý'}">
                                     <i th:class="${initWait > 0 ? 'bi bi-people-fill' : 'bi bi-people'}"></i>
                                     <span id="deskQueueWaitingText" th:text="${initWait > 0 ? ('Hàng đợi: ' + initWait + ' đang chờ') : 'Hàng đợi: 0 chờ'}">Hàng đợi: 0 chờ</span>
                                 </span>
                                 <a th:if="${visit.status == null or visit.status.name() != 'WAITING_PAYMENT'}"
                                     th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-examination'}"
-                                    class="btn btn-primary rounded-pill px-4 py-2 fw-bold d-inline-flex align-items-center gap-2 shadow-sm text-white text-nowrap text-decoration-none"
-                                    style="background: #0284c7; border-color: #0284c7;"
+                                    class="btn btn-primary rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm text-white text-nowrap text-decoration-none"
+                                    style="background: #0284c7; border-color: #0284c7; height: 36px; font-size: 13px;"
                                     title="Quay lại Bàn khám bệnh để hoàn tất ca khám">
-                                    <i class="bi bi-check2-circle fs-5"></i>
+                                    <i class="bi bi-check2-circle"></i>
                                     <span>Hoàn tất khám</span>
                                 </a>
                             </div>
@@ -4609,7 +4610,7 @@
                     var textEl = document.getElementById('deskQueueWaitingText');
                     if (!badge || !textEl) return;
                     var icon = badge.querySelector('i');
-                    badge.className = 'badge rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1 border df-num text-nowrap '
+                    badge.className = 'rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-2 border df-num text-nowrap '
                         + (count > 0 ? 'bg-warning-subtle text-warning-emphasis border-warning-subtle' : 'bg-success-subtle text-success border-success-subtle');
                     badge.title = count > 0
                         ? 'Đang có bệnh nhân chờ trong hàng đợi — ca này chỉ khóa làm dịch vụ đã đặt lịch, dịch vụ phát sinh hẹn ca sau'

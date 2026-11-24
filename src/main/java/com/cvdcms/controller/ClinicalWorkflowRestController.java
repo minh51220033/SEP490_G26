@@ -167,6 +167,9 @@ public class ClinicalWorkflowRestController {
         Long visitId = longOf(body, "visitId");
         Long comboId = longOf(body, "comboId");
         doctorVisitAccess.requireActiveClinicalExam(session, visitId);
+        boolean patientConfirmed = Boolean.TRUE.equals(body.get("patientConfirmed"))
+                || "true".equalsIgnoreCase(String.valueOf(body.get("patientConfirmed")));
+        doctorVisitAccess.assertComboExecutionAllowed(visitId, comboId, patientConfirmed);
         return ResponseEntity.ok(workflowService.startComboExecution(visitId, comboId, requireUserId(session)));
     }
 

@@ -95,6 +95,9 @@ public class DoctorVisitAccess {
     @Autowired(required = false)
     private com.cvdcms.repository.ServiceRepository serviceRepository;
 
+    @Autowired(required = false)
+    private com.cvdcms.repository.ServiceComboRepository serviceComboRepository;
+
     public void requireWorkflowExecution(HttpSession session, Long executionId) {
         requireWorkflowExecution(session, executionId, null);
     }
@@ -766,6 +769,21 @@ public class DoctorVisitAccess {
             if (!performedIds.isEmpty() && !performedIds.contains(targetServiceId)) {
                 throw new IllegalStateException(
                         "Hiện đang có " + waitingCount + " bệnh nhân chờ trong hàng đợi. Không thể làm gộp thêm dịch vụ mới phát sinh trong cùng ca khám — vui lòng lưu trong Kế hoạch điều trị để hẹn ca khám sau!");
+            }
+        }
+    }
+
+    public void assertComboExecutionAllowed(Long visitId, Long comboId, boolean patientConfirmed) {
+        if (visitId == null || comboId == null || serviceComboRepository == null) {
+            return;
+        }
+        var combo = serviceComboRepository.findByIdWithItems(comboId).orElse(null);
+        if (combo == null || combo.getItems() == null || combo.getItems().isEmpty()) {
+            return;
+        }
+        for (var item : combo.getItems()) {
+            if (item != null && item.getService() != null) {
+                assertVisitServiceExecutionAllowed(visitId, item.getService().getServiceId(), null, patientConfirmed);
             }
         }
     }
