@@ -198,16 +198,28 @@
                   data-doctor-id=${defaultActingDoctor != null ? defaultActingDoctor.staffId : (visit != null and visit.primaryDoctor != null ? visit.primaryDoctor.staffId : '')},
                   data-locked=${isClinicalLocked}">
 
-        <!-- 1. HEADER CHÍNH -->
+        <!-- 1. HEADER CHÍNH (LIST-FIRST MASTER-DETAIL CHUẨN LẬP KẾ HOẠCH) -->
         <div class="df-tab-actionbar">
             <span class="df-tab-count-pill" id="ft43ExecCountBadge">0 quy trình</span>
 
-            <div class="df-tab-actions">
+            <div id="ft43DetailHeaderLeft" class="d-none d-inline-flex align-items-center gap-2 flex-wrap">
                 <button type="button" class="df-tab-btn df-tab-btn-secondary"
-                        onclick="switchMainTab('tab-treatment-plan')">
-                    <i class="bi bi-diagram-3"></i><span>Kế hoạch điều trị</span>
+                        onclick="window.FT43 && window.FT43.backToList()">
+                    <i class="bi bi-arrow-left"></i>
+                    <span>Quay lại danh sách</span>
                 </button>
-                <a th:href="@{/doctor/workflows}" target="_blank" class="df-tab-btn df-tab-btn-secondary">
+                <span class="badge bg-light text-primary border font-monospace fw-bold px-2 py-1"
+                      id="ft43DetailCodeBadge"></span>
+                <strong class="text-dark" style="font-size: 14.5px;" id="ft43DetailTitle"></strong>
+                <span id="ft43DetailToothWrap"></span>
+            </div>
+
+            <div class="df-tab-actions">
+                <button type="button" id="ft43DetailHistoryBtn" class="df-tab-btn df-tab-btn-secondary d-none"
+                        onclick="window.FT43 && window.FT43.openActiveHistory()">
+                    <i class="bi bi-clock-history"></i><span>Nhật ký</span>
+                </button>
+                <a th:href="@{/doctor/workflows}" id="ft43TemplatesLink" target="_blank" class="df-tab-btn df-tab-btn-secondary">
                     <i class="bi bi-sliders"></i><span>Mẫu quy trình</span>
                 </a>
                 <button type="button" class="df-tab-btn df-tab-btn-secondary"
@@ -217,43 +229,40 @@
             </div>
         </div>
 
-        <!-- 2. THANH CHUYỂN ĐỔI DỊCH VỤ TRONG CA & KHỞI TẠO MỚI -->
-        <div class="wf-service-bar" id="ft43ServiceToolbar">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                <div class="d-flex flex-wrap align-items-center gap-2" id="ft43ExecutionTabs">
-                    <span class="text-muted small">Đang tải danh sách quy trình...</span>
-                </div>
+        <!-- Thông báo trạng thái chung -->
+        <div id="ft43AlertBox" class="alert d-none mx-3 mt-2 mb-0 py-2 px-3 small d-flex align-items-center justify-content-between" role="alert">
+            <span id="ft43AlertText"></span>
+            <button type="button" class="btn-close btn-sm" onclick="document.getElementById('ft43AlertBox').classList.add('d-none')"></button>
+        </div>
 
-                <div class="d-flex flex-wrap align-items-center gap-2" th:if="${!isClinicalLocked}">
-                    <select id="ft43ServiceSelect" class="form-select form-select-sm rounded-3" style="max-width: 310px;">
-                        <option value="">-- Chọn hạng mục KHDT / Dịch vụ --</option>
-                    </select>
-                    <button type="button" id="ft43StartBtn" class="btn btn-sm df-btn-tonal-primary rounded-pill px-3 py-1 fw-semibold text-nowrap"
-                            onclick="window.FT43 && window.FT43.startSelectedService()">
-                        <i class="bi bi-plus-circle me-1"></i>Mở quy trình bước
-                    </button>
-
-                    <div id="ft43ComboGroup" class="d-none d-flex align-items-center gap-2 ms-md-1">
-                        <select id="ft43ComboSelect" class="form-select form-select-sm rounded-3" style="max-width: 240px;">
-                            <option value="">-- Chọn gói Combo --</option>
-                        </select>
-                        <button type="button" id="ft43ComboStartBtn" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold text-nowrap"
-                                onclick="window.FT43 && window.FT43.startSelectedCombo()">
-                            <i class="bi bi-collection-fill me-1"></i>Áp dụng Combo
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Thông báo trạng thái chung -->
-            <div id="ft43AlertBox" class="alert d-none mt-2 mb-0 py-2 px-3 small d-flex align-items-center justify-content-between" role="alert">
-                <span id="ft43AlertText"></span>
-                <button type="button" class="btn-close btn-sm" onclick="document.getElementById('ft43AlertBox').classList.add('d-none')"></button>
+        <!-- 3A. DANH SÁCH QUY TRÌNH ĐIỀU TRỊ TRONG CA (LIST-FIRST GIỐNG LẬP KẾ HOẠCH) -->
+        <div id="ft43ListView">
+            <div class="table-responsive">
+                <table class="df-clean-table mb-0" data-disable-floating-actions="true">
+                    <thead>
+                        <tr>
+                            <th style="width: 130px;">Mã QT</th>
+                            <th>Quy trình &amp; Dịch vụ điều trị</th>
+                            <th style="width: 135px;" class="text-center">Vị trí răng</th>
+                            <th style="width: 175px;">Tiến độ</th>
+                            <th style="width: 145px;" class="text-center">Trạng thái</th>
+                            <th style="width: 180px;" class="text-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ft43ListTableBody">
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-5">
+                                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                Đang tải danh sách quy trình của ca khám...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <!-- 3. KHÔNG GIAN LÀM VIỆC 2 CỘT (STEPPER TRÁI - KHUNG BƯỚC PHẢI) -->
-        <div id="ft43ExecutionsContainer">
+        <!-- 3B. KHÔNG GIAN LÀM VIỆC 2 CỘT (STEPPER TRÁI - KHUNG BƯỚC PHẢI) -->
+        <div id="ft43ExecutionsContainer" class="d-none">
             <div class="text-center text-muted py-5" id="ft43LoadingState">
                 <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
                 Đang tải tiến độ quy trình của ca khám...
@@ -432,6 +441,7 @@
                 availableCombos: [],
                 selectedExecutionId: null,
                 selectedStepId: null,
+                viewMode: 'LIST',
                 paraclinicalOrders: [],
                 paraclinicalServices: [],
                 laboOrders: [],
@@ -644,28 +654,219 @@
                 return Promise.all([p1, p2]);
             }
 
+            var EXEC_STATUS_META = {
+                IN_PROGRESS: ['Đang thực hiện', 'bg-primary-subtle text-primary border-primary-subtle'],
+                PAUSED: ['Tạm dừng', 'bg-warning-subtle text-warning-emphasis border-warning-subtle'],
+                COMPLETED: ['Hoàn tất', 'bg-success-subtle text-success border-success-subtle'],
+                CANCELLED: ['Đã hủy', 'bg-danger-subtle text-danger border-danger-subtle']
+            };
+
+            function getPendingWorkflowItems() {
+                var bookedId = window.BOOKED_SERVICE && window.BOOKED_SERVICE.serviceId
+                    ? Number(window.BOOKED_SERVICE.serviceId)
+                    : null;
+                var activePlanItemIds = {};
+                var activeServiceIds = {};
+                state.executions.forEach(function (ex) {
+                    if (ex.planItemId) activePlanItemIds[Number(ex.planItemId)] = true;
+                    if (ex.serviceId) activeServiceIds[Number(ex.serviceId)] = true;
+                });
+
+                return (state.availableServices || []).filter(function (s) {
+                    var isPlanItem = Boolean(s.planItemId || s.planStageId);
+                    var isBooked = Boolean(bookedId && s.serviceId && Number(s.serviceId) === bookedId);
+                    if (!isPlanItem && !s.suggested && !isBooked) return false;
+                    if (s.planItemId && activePlanItemIds[Number(s.planItemId)]) return false;
+                    if (!s.planItemId && s.serviceId && activeServiceIds[Number(s.serviceId)]) return false;
+                    return true;
+                });
+            }
+
+            function renderListView() {
+                var tbody = document.getElementById('ft43ListTableBody');
+                if (!tbody) return [];
+                var pending = getPendingWorkflowItems();
+                var bookedId = window.BOOKED_SERVICE && window.BOOKED_SERVICE.serviceId
+                    ? Number(window.BOOKED_SERVICE.serviceId)
+                    : null;
+                var waitingCount = Number(window.DESK_WAITING_COUNT || 0);
+
+                if (state.executions.length === 0 && pending.length === 0) {
+                    tbody.innerHTML = '<tr>'
+                        + '<td colspan="6" class="text-center py-5">'
+                        + '  <div class="text-secondary mb-2" style="font-size: 28px;"><i class="bi bi-inbox"></i></div>'
+                        + '  <div class="fw-bold text-dark mb-1">Chưa có quy trình điều trị nào cần thực hiện</div>'
+                        + '  <div class="small text-muted">'
+                        + (state.locked
+                            ? 'Ca khám chưa phát sinh quy trình bước.'
+                            : 'Vui lòng lập kế hoạch điều trị trước để hiển thị các quy trình cần thực hiện.')
+                        + '  </div>'
+                        + '</td>'
+                        + '</tr>';
+                    return pending;
+                }
+
+                var html = '';
+
+                state.executions.forEach(function (ex) {
+                    var done = (ex.completedSteps || 0) + (ex.skippedSteps || 0);
+                    var total = ex.totalSteps || 0;
+                    var pct = ex.progressPercent || 0;
+                    var stMeta = EXEC_STATUS_META[ex.status] || ['Đang mở', 'bg-light text-secondary border'];
+                    var isBooked = Boolean(bookedId && ex.serviceId && Number(ex.serviceId) === bookedId);
+                    var toothHtml = ex.toothNumbers
+                        ? '<span class="badge bg-light text-dark border df-num">R-' + esc(ex.toothNumbers) + '</span>'
+                        : '<span class="text-muted small">Toàn hàm</span>';
+
+                    var metaParts = [];
+                    if (ex.planCode) metaParts.push('Phác đồ: ' + ex.planCode);
+                    else if (ex.templateName) metaParts.push(ex.templateName);
+                    if (ex.currentStepName && ex.status !== 'COMPLETED') {
+                        metaParts.push('Đang ở: ' + ex.currentStepName);
+                    }
+
+                    var extraBadges = '';
+                    if (isBooked) {
+                        extraBadges += '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size:11px;"><i class="bi bi-lock-fill me-1"></i>Đã đặt lịch</span>';
+                    }
+                    if (ex.continuedFromOtherVisit) {
+                        extraBadges += '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size:11px;">Buổi trước</span>';
+                    }
+
+                    var delBtn = (ex.canDelete && !state.locked)
+                        ? '<button type="button" class="df-btn-icon-muted" title="Xóa quy trình chưa làm bước nào" '
+                          + 'onclick="window.FT43.deleteExecution(' + Number(ex.executionId) + ')"><i class="bi bi-trash3-fill"></i></button>'
+                        : '';
+
+                    var ctaLabel = (ex.status === 'COMPLETED' || state.locked) ? 'Chi tiết' : 'Thực hiện';
+                    var ctaIcon = (ex.status === 'COMPLETED' || state.locked) ? 'bi-eye' : 'bi-list-check';
+
+                    html += '<tr style="cursor: pointer;" onclick="window.FT43.selectExecution(' + Number(ex.executionId) + ')">'
+                        + '<td class="df-num"><span class="badge bg-light text-primary border font-monospace fw-bold px-2 py-1">' + esc(ex.templateCode || 'QT') + '</span></td>'
+                        + '<td>'
+                        + '  <div class="fw-bold text-dark">' + esc(ex.serviceName || ex.templateName) + extraBadges + '</div>'
+                        + (metaParts.length > 0 ? '<div class="df-meta-tertiary mt-1">' + esc(metaParts.join(' · ')) + '</div>' : '')
+                        + '</td>'
+                        + '<td class="text-center df-num">' + toothHtml + '</td>'
+                        + '<td class="df-num">'
+                        + '  <div class="d-flex align-items-center justify-content-between small mb-1">'
+                        + '    <span class="text-secondary fw-semibold">' + done + '/' + total + ' bước</span>'
+                        + '    <strong class="text-primary">' + pct + '%</strong>'
+                        + '  </div>'
+                        + '  <div class="progress" style="height: 6px;">'
+                        + '    <div class="progress-bar bg-success" role="progressbar" style="width: ' + pct + '%;"></div>'
+                        + '  </div>'
+                        + '</td>'
+                        + '<td class="text-center"><span class="badge rounded-pill px-2 py-1 border fw-semibold ' + stMeta[1] + '">' + esc(stMeta[0]) + '</span></td>'
+                        + '<td class="text-center" onclick="event.stopPropagation()">'
+                        + '  <div class="d-inline-flex align-items-center justify-content-center gap-2">'
+                        + '    <button type="button" class="btn df-btn-tonal-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size:12.5px;" '
+                        + '            onclick="window.FT43.selectExecution(' + Number(ex.executionId) + ')">'
+                        + '      <i class="bi ' + ctaIcon + '"></i><span>' + ctaLabel + '</span>'
+                        + '    </button>'
+                        + delBtn
+                        + '  </div>'
+                        + '</td>'
+                        + '</tr>';
+                });
+
+                pending.forEach(function (s) {
+                    var total = s.stepCount || 0;
+                    var isBooked = Boolean(bookedId && s.serviceId && Number(s.serviceId) === bookedId);
+                    var isDeferred = Boolean(bookedId && s.serviceId && Number(s.serviceId) !== bookedId && waitingCount > 0);
+                    var toothHtml = s.toothNumbers
+                        ? '<span class="badge bg-light text-dark border df-num">R-' + esc(s.toothNumbers) + '</span>'
+                        : '<span class="text-muted small">Toàn hàm</span>';
+
+                    var badges = '';
+                    if (isBooked) {
+                        badges += '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size:11px;"><i class="bi bi-lock-fill me-1"></i>Đã đặt lịch</span>';
+                    } else if (isDeferred) {
+                        badges += '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size:11px;" title="Đang có bệnh nhân chờ — dịch vụ phát sinh hẹn ca sau"><i class="bi bi-calendar2-week me-1"></i>Hẹn ca sau</span>';
+                    }
+
+                    var subLabel = s.planCode
+                        ? ('Từ KHDT: ' + s.planCode + (s.planName ? ' · ' + s.planName : ''))
+                        : (s.templateName || 'Quy trình chuẩn');
+                    var startCall = 'window.FT43.startService(' + Number(s.serviceId) + ',' + (s.planItemId ? Number(s.planItemId) : 'null') + ',' + (s.planStageId ? Number(s.planStageId) : 'null') + ')';
+
+                    html += '<tr' + (state.locked ? '' : ' style="cursor: pointer;" onclick="' + startCall + '"') + '>'
+                        + '<td class="df-num"><span class="badge bg-light text-secondary border font-monospace fw-bold px-2 py-1">' + esc(s.serviceCode || 'QT') + '</span></td>'
+                        + '<td>'
+                        + '  <div class="fw-bold text-dark">' + esc(s.stepName || s.serviceName) + badges + '</div>'
+                        + '  <div class="df-meta-tertiary mt-1">' + esc(subLabel) + '</div>'
+                        + '</td>'
+                        + '<td class="text-center df-num">' + toothHtml + '</td>'
+                        + '<td class="df-num">'
+                        + '  <div class="d-flex align-items-center justify-content-between small mb-1">'
+                        + '    <span class="text-secondary fw-semibold">0/' + total + ' bước</span>'
+                        + '    <strong class="text-secondary">0%</strong>'
+                        + '  </div>'
+                        + '  <div class="progress" style="height: 6px;"><div class="progress-bar bg-success" role="progressbar" style="width: 0%;"></div></div>'
+                        + '</td>'
+                        + '<td class="text-center"><span class="badge rounded-pill px-2 py-1 border fw-semibold bg-light text-secondary">Chưa bắt đầu</span></td>'
+                        + '<td class="text-center" onclick="event.stopPropagation()">'
+                        + (state.locked
+                            ? '<span class="small text-muted">Đã khóa</span>'
+                            : '<button type="button" class="btn df-btn-tonal-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size:12.5px;" onclick="' + startCall + '">'
+                              + '<i class="bi bi-play-fill"></i><span>Bắt đầu</span></button>')
+                        + '</td>'
+                        + '</tr>';
+                });
+
+                tbody.innerHTML = html;
+                return pending;
+            }
+
             function renderAll() {
                 var execs = state.executions;
+                renderServiceSelector();
+                renderComboSelector();
+                var pending = renderListView();
+                var totalCount = execs.length + pending.length;
+
                 var badge = document.getElementById('ft43ExecCountBadge');
-                if (badge) badge.textContent = execs.length + ' quy trình';
+                if (badge) badge.textContent = totalCount + ' quy trình';
 
                 var subnavBadge = document.getElementById('ft43SubnavCount');
                 if (subnavBadge) {
-                    subnavBadge.textContent = execs.length;
-                    subnavBadge.classList.toggle('d-none', execs.length === 0);
+                    subnavBadge.textContent = totalCount;
+                    subnavBadge.classList.toggle('d-none', totalCount === 0);
                 }
 
-                renderServiceSelector();
-                renderComboSelector();
-                renderExecutionPills();
-
-                var container = document.getElementById('ft43ExecutionsContainer');
-                if (!container) return;
-
                 var activeExec = execs.find(function (e) { return Number(e.executionId) === Number(state.selectedExecutionId); });
-                if (!activeExec) {
-                    renderEmptyState(container);
+                var isDetail = (state.viewMode === 'DETAIL' && !!activeExec);
+                if (state.viewMode === 'DETAIL' && !activeExec) {
+                    state.viewMode = 'LIST';
+                }
+
+                var listLeft = document.getElementById('ft43ListHeaderLeft') || document.getElementById('ft43ExecCountBadge');
+                var detailLeft = document.getElementById('ft43DetailHeaderLeft');
+                var histBtn = document.getElementById('ft43DetailHistoryBtn');
+                var tplLink = document.getElementById('ft43TemplatesLink');
+                var listView = document.getElementById('ft43ListView');
+                var container = document.getElementById('ft43ExecutionsContainer');
+
+                if (listLeft) listLeft.classList.toggle('d-none', isDetail);
+                if (detailLeft) detailLeft.classList.toggle('d-none', !isDetail);
+                if (histBtn) histBtn.classList.toggle('d-none', !isDetail);
+                if (tplLink) tplLink.classList.toggle('d-none', isDetail);
+                if (listView) listView.classList.toggle('d-none', isDetail);
+                if (container) container.classList.toggle('d-none', !isDetail);
+
+                if (!isDetail || !container) {
                     return;
+                }
+
+                var codeEl = document.getElementById('ft43DetailCodeBadge');
+                var titleEl = document.getElementById('ft43DetailTitle');
+                var toothEl = document.getElementById('ft43DetailToothWrap');
+                if (codeEl) codeEl.textContent = activeExec.templateCode || 'QT';
+                if (titleEl) titleEl.textContent = activeExec.serviceName || activeExec.templateName || '';
+                if (toothEl) {
+                    toothEl.innerHTML = activeExec.toothNumbers
+                        ? '<span class="badge bg-light text-dark border df-num">R-' + esc(activeExec.toothNumbers) + '</span>'
+                        : '';
                 }
 
                 var activeStep = (activeExec.steps || []).find(function (s) { return Number(s.stepId) === Number(state.selectedStepId); })
@@ -724,53 +925,6 @@
                 if (btn) btn.disabled = state.locked;
             }
 
-            function renderExecutionPills() {
-                var tabsEl = document.getElementById('ft43ExecutionTabs');
-                if (!tabsEl) return;
-                if (state.executions.length === 0) {
-                    tabsEl.innerHTML = '<span class="text-secondary small fw-semibold"><i class="bi bi-diagram-3 me-1 text-primary"></i>Chưa khởi tạo quy trình điều trị trong ca</span>';
-                    return;
-                }
-                tabsEl.innerHTML = state.executions.map(function (ex, idx) {
-                    var isActive = Number(ex.executionId) === Number(state.selectedExecutionId);
-                    var done = (ex.completedSteps || 0) + (ex.skippedSteps || 0);
-                    var total = ex.totalSteps || 0;
-                    var toothBadge = ex.toothNumbers ? '<span class="badge bg-white text-dark border df-num">R' + esc(ex.toothNumbers) + '</span>' : '';
-                    var kBadge = ex.planCode ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" style="font-size:10.5px;">KHDT</span>' : '';
-                    var contBadge = ex.continuedFromOtherVisit ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:10.5px;">Buổi trước</span>' : '';
-                    var delBtn = ex.canDelete
-                        ? '<button type="button" class="wf-btn-icon-muted ms-1" title="Hủy quy trình vừa chọn nhầm (chưa làm bước nào)" onclick="event.stopPropagation(); window.FT43.deleteExecution(' + Number(ex.executionId) + ')"><i class="bi bi-trash3"></i></button>'
-                        : '';
-                    return '<div class="wf-exec-pill ' + (isActive ? 'active' : '') + '" onclick="window.FT43.selectExecution(' + Number(ex.executionId) + ')">'
-                        + '<span>' + (idx + 1) + '. ' + esc(ex.serviceName || ex.templateName) + '</span>'
-                        + toothBadge + kBadge + contBadge
-                        + '<span class="small text-secondary df-num">(' + done + '/' + total + ')</span>'
-                        + delBtn
-                        + '</div>';
-                }).join('');
-            }
-
-            function renderEmptyState(container) {
-                var suggested = state.availableServices.filter(function (s) { return s.suggested || s.planItemId; }).slice(0, 6);
-                var btns = suggested.map(function (s) {
-                    var caption = (s.planItemId || s.planStageId)
-                        ? ('Từ KHDT: ' + (s.stepName || s.serviceName) + (s.toothNumbers ? ' (R' + s.toothNumbers + ')' : ''))
-                        : (s.serviceName + ' (' + s.stepCount + ' bước)');
-                    return '<button type="button" class="btn btn-sm df-btn-tonal-primary rounded-pill px-3 py-2 fw-semibold" '
-                        + 'onclick="window.FT43.startService(' + Number(s.serviceId) + ',' + (s.planItemId ? Number(s.planItemId) : 'null') + ',' + (s.planStageId ? Number(s.planStageId) : 'null') + ')">'
-                        + '<i class="bi bi-play-circle-fill me-1"></i>' + esc(caption) + '</button>';
-                }).join('');
-
-                container.innerHTML = '<div class="text-center py-5 px-3">'
-                    + '<div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3" style="width:52px;height:52px;background:#e0f2fe;color:#0284c7;">'
-                    + '  <i class="bi bi-list-check fs-4"></i>'
-                    + '</div>'
-                    + '<h5 class="fw-bold text-dark mb-1 fs-6">Chưa có quy trình khám &amp; điều trị nào được khởi tạo</h5>'
-                    + '<p class="text-secondary small mx-auto mb-3" style="max-width:480px;">Chọn hạng mục từ Kế hoạch điều trị hoặc Dịch vụ chuẩn ở trên để vào làm và lưu kết quả theo từng bước.</p>'
-                    + (btns ? '<div class="d-flex flex-wrap justify-content-center gap-2">' + btns + '</div>' : '')
-                    + '</div>';
-            }
-
             function renderLeftStepper(ex, activeStep) {
                 var done = (ex.completedSteps || 0) + (ex.skippedSteps || 0);
                 var total = ex.totalSteps || 0;
@@ -778,24 +932,18 @@
                 var isLockedExec = state.locked || !!ex.locked;
 
                 var headerHtml = '<div class="p-3 bg-white border-bottom">'
-                    + '<div class="d-flex align-items-start justify-content-between gap-2 mb-2">'
-                    + '  <div>'
-                    + '    <div class="fw-bold text-dark" style="font-size:14px;">' + esc(ex.serviceName || ex.templateName) + '</div>'
-                    + '    <div class="small text-secondary">' + esc(ex.templateCode) + (ex.planCode ? ' · ' + esc(ex.planCode) : '') + '</div>'
-                    + '  </div>'
-                    + '  <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 text-nowrap" style="font-size:12px;" onclick="window.FT43.openHistory(' + Number(ex.executionId) + ')">'
-                    + '    <i class="bi bi-clock-history me-1"></i>Nhật ký'
-                    + '  </button>'
-                    + '</div>'
                     + '<div class="d-flex justify-content-between small mb-1 df-num">'
                     + '  <span class="text-secondary">Tiến độ: <strong>' + done + '/' + total + '</strong> bước</span>'
                     + '  <strong class="text-primary">' + pct + '%</strong>'
                     + '</div>'
-                    + '<div class="progress' + (ex.continuedFromOtherVisit ? ' mb-2' : '') + '" style="height:6px;">'
+                    + '<div class="progress' + ((ex.continuedFromOtherVisit || ex.planCode) ? ' mb-2' : '') + '" style="height:6px;">'
                     + '  <div class="progress-bar bg-success" role="progressbar" style="width:' + pct + '%;"></div>'
                     + '</div>'
-                    + (ex.continuedFromOtherVisit
-                        ? '<div class="d-flex flex-wrap gap-1"><span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" style="font-size:11px;">Tiếp nối từ buổi trước</span></div>'
+                    + ((ex.continuedFromOtherVisit || ex.planCode)
+                        ? '<div class="d-flex flex-wrap gap-1">'
+                          + (ex.planCode ? '<span class="badge bg-light text-secondary border df-num" style="font-size:11px;">Phác đồ: ' + esc(ex.planCode) + '</span>' : '')
+                          + (ex.continuedFromOtherVisit ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" style="font-size:11px;">Tiếp nối từ buổi trước</span>' : '')
+                          + '</div>'
                         : '')
                     + '</div>';
 
@@ -1722,14 +1870,15 @@
                 startCombo(Number(sel.value));
             }
 
-            function startCombo(comboId) {
+            function startCombo(comboId, patientConfirmed) {
                 if (!state.visitId || !comboId) return;
                 fetch('/api/doctor/workflows/execution/start-combo', {
                     method: 'POST',
                     headers: csrfHeaders(true),
                     body: JSON.stringify({
                         visitId: Number(state.visitId),
-                        comboId: Number(comboId)
+                        comboId: Number(comboId),
+                        patientConfirmed: !!patientConfirmed
                     })
                 })
                     .then(function (res) {
@@ -1745,9 +1894,20 @@
                             msg += ' Dịch vụ chưa có quy trình bước: ' + data.skippedServices.join(', ') + '.';
                         }
                         notify(msg, false);
+                        state.viewMode = 'DETAIL';
                         return reload(firstId);
                     })
-                    .catch(function (err) { notify(err.message, true); });
+                    .catch(function (err) {
+                        var msg = err && err.message ? err.message : 'Không thể áp dụng Combo vào bàn quy trình.';
+                        if (msg.indexOf('PATIENT_CONFIRM_REQUIRED:') === 0 && !patientConfirmed) {
+                            var cleanMsg = msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, '');
+                            if (window.confirm(cleanMsg + '\n\nBấm OK để xác nhận bệnh nhân đồng ý và thực hiện luôn trong ca này.')) {
+                                startCombo(comboId, true);
+                            }
+                            return;
+                        }
+                        notify(msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, ''), true);
+                    });
             }
 
             function startService(serviceId, planItemId, planStageId, patientConfirmed) {
@@ -1772,6 +1932,7 @@
                     .then(function (dto) {
                         notify('Đã mở quy trình "' + (dto.templateName || dto.serviceName) + '" cho ca khám.', false);
                         syncParentTabs(dto);
+                        state.viewMode = 'DETAIL';
                         return reload(dto.executionId);
                     })
                     .catch(function (err) {
@@ -1797,7 +1958,10 @@
                     })
                     .then(function () {
                         notify('Đã hủy dịch vụ vừa chọn khỏi bàn quy trình.', false);
-                        if (Number(state.selectedExecutionId) === Number(execId)) state.selectedExecutionId = null;
+                        if (Number(state.selectedExecutionId) === Number(execId)) {
+                            state.selectedExecutionId = null;
+                            state.viewMode = 'LIST';
+                        }
                         return reload();
                     })
                     .catch(function (err) { notify(err.message, true); });
@@ -1987,13 +2151,22 @@
                 if (typeof window.switchMainTab === 'function') {
                     window.switchMainTab('tab-workflow-execution');
                 }
+                state.viewMode = 'DETAIL';
                 startService(serviceId, planItemId, planStageId, patientConfirmed);
             };
 
             window.FT43 = {
                 reload: reload,
+                backToList: function () {
+                    state.viewMode = 'LIST';
+                    renderAll();
+                },
+                openActiveHistory: function () {
+                    if (state.selectedExecutionId) openHistory(state.selectedExecutionId);
+                },
                 selectExecution: function (execId) {
                     state.selectedExecutionId = execId;
+                    state.viewMode = 'DETAIL';
                     var ex = state.executions.find(function (e) { return Number(e.executionId) === Number(execId); });
                     state.selectedStepId = ex ? (ex.currentStepId || (ex.steps && ex.steps[0] ? ex.steps[0].stepId : null)) : null;
                     renderAll();

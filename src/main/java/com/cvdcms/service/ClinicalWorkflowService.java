@@ -19,7 +19,6 @@ public interface ClinicalWorkflowService {
 
     void deleteTemplate(Long templateId);
 
-    WorkflowTemplateResponseDTO parseWorkflowAi(String text, String imageBase64, String mimeType);
 
     /** FT43: lấy quy trình đã khởi tạo cho lượt khám + dịch vụ, hoặc khởi tạo mới nếu dịch vụ có mẫu đang hoạt động. userId là tài khoản đăng nhập. */
     WorkflowExecutionDTO getOrCreateExecution(Long visitId, Long serviceId, Long userId);
