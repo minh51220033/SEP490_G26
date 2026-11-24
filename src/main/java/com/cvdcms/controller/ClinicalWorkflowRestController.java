@@ -73,16 +73,7 @@ public class ClinicalWorkflowRestController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/ai-extract")
-    public ResponseEntity<WorkflowTemplateResponseDTO> extractFromAi(@RequestBody Map<String, String> body) {
-        String text = body.get("text");
-        String imageBase64 = body.get("imageBase64");
-        String mimeType = body.get("mimeType");
-
-        WorkflowTemplateResponseDTO result = workflowService.parseWorkflowAi(text, imageBase64, mimeType);
-        return ResponseEntity.ok(result);
-    }
-
+    
     // =====================================================================
     // Tầng 1 · Combo dịch vụ mẫu (VTTech Dental)
     // =====================================================================
@@ -162,6 +153,9 @@ public class ClinicalWorkflowRestController {
             throw new IllegalArgumentException("Thiếu tham số: serviceId, planItemId hoặc planStageId");
         }
         doctorVisitAccess.requireActiveClinicalExam(session, visitId);
+        boolean patientConfirmed = Boolean.TRUE.equals(body.get("patientConfirmed"))
+                || "true".equalsIgnoreCase(String.valueOf(body.get("patientConfirmed")));
+        doctorVisitAccess.assertVisitServiceExecutionAllowed(visitId, serviceId, planItemId, patientConfirmed);
         return ResponseEntity.ok(workflowService.startExecution(visitId, serviceId, planItemId, planStageId, requireUserId(session)));
     }
 

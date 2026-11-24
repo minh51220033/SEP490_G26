@@ -344,6 +344,11 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             missingRequirements.add("Ca khám này đã hoàn tất toàn bộ quy trình và xuất hóa đơn.");
         }
 
+        // Bắt buộc lập phác đồ / kế hoạch điều trị (<<include>> trong Kết thúc khám)
+        if (treatmentPlanCount <= 0) {
+            missingRequirements.add("Bắt buộc phải lập phác đồ / kế hoạch điều trị trước khi kết thúc khám.");
+        }
+
         // Kiểm tra điều kiện 1: Chẩn đoán ICD-10 (tùy chọn, chỉ cảnh báo nếu chưa có)
         if (!hasDiagnosis) {
             warnings.add(

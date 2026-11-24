@@ -1,5 +1,6 @@
 package com.cvdcms.controller;
 
+import com.cvdcms.DTO.FinancialMetricsDTO;
 import com.cvdcms.DTO.PatientDebtSummaryDTO;
 import com.cvdcms.DTO.PaymentRequestDTO;
 import com.cvdcms.DTO.RefundRequestDTO;
@@ -12,9 +13,12 @@ import com.cvdcms.entity.enums.PaymentType;
 import com.cvdcms.entity.enums.RefundMethod;
 import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.InvoiceRepository;
+import com.cvdcms.repository.OperatingExpenseRepository;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.repository.PaymentRepository;
+import com.cvdcms.repository.RefundRepository;
 import com.cvdcms.repository.StaffBranchAssignmentRepository;
+import com.cvdcms.repository.SupplierPaymentRepository;
 import com.cvdcms.repository.UserRepository;
 import com.cvdcms.service.DebtService;
 import com.cvdcms.service.PaymentService;
@@ -31,14 +35,18 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Controller
 @RequestMapping("/payments")
 public class PaymentPageController {
+
+    private static final DateTimeFormatter VN_DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final PaymentService paymentService;
     private final RefundService refundService;
@@ -55,9 +63,21 @@ public class PaymentPageController {
     private com.cvdcms.service.PaymentAllocationService paymentAllocationService;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.CashierOverviewService cashierOverviewService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.InvoiceService invoiceService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private RefundRepository refundRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private OperatingExpenseRepository operatingExpenseRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private SupplierPaymentRepository supplierPaymentRepository;
 
     public void setCashierOverviewService(com.cvdcms.service.CashierOverviewService cashierOverviewService) {
         this.cashierOverviewService = cashierOverviewService;
+    }
+
+    public void setInvoiceService(com.cvdcms.service.InvoiceService invoiceService) {
+        this.invoiceService = invoiceService;
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -160,6 +180,41 @@ public class PaymentPageController {
         return requestedBranchId;
     }
 
+    private static BigDecimal safeMoney(BigDecimal val) {
+        return val != null ? val : BigDecimal.ZERO;
+    }
+
+    private static String formatFilterPeriodLabel(LocalDate from, LocalDate to) {
+        LocalDate today = LocalDate.now();
+        if (from != null && to != null) {
+            if (from.equals(today) && to.equals(today)) {
+                return "Hôm nay";
+            }
+            if (from.equals(to)) {
+                return "Ngày " + from.format(VN_DATE_FMT);
+            }
+            return from.format(VN_DATE_FMT) + " - " + to.format(VN_DATE_FMT);
+        }
+        if (from != null) {
+            return "Từ " + from.format(VN_DATE_FMT);
+        }
+        if (to != null) {
+            return "Đến " + to.format(VN_DATE_FMT);
+        }
+        return "Toàn thời gian";
+    }
+
+    private static String resolveFilterBranchLabel(Long branchId, List<Branch> allowedBranches) {
+        if (branchId != null && allowedBranches != null) {
+            for (Branch b : allowedBranches) {
+                if (branchId.equals(b.getBranchId()) && b.getBranchName() != null) {
+                    return b.getBranchName();
+                }
+            }
+        }
+        return "Tất cả cơ sở";
+    }
+
     // SCR-22.3: Lịch sử các đợt thanh toán
     @GetMapping
     public String listPayments(
@@ -193,6 +248,10 @@ public class PaymentPageController {
         long fromItem = paymentPage.getContent().isEmpty() ? 0 : (long) safePage * safeSize + 1;
         long toItem = paymentPage.getContent().isEmpty() ? 0 : Math.min((long) (safePage + 1) * safeSize, totalItems);
 
+        BigDecimal filteredTotalAmount = safeMoney(paymentRepository != null
+                ? paymentRepository.sumFilteredPayments(effectiveBranchId, paymentType, paymentMethod, startDt, endDt, keyword)
+                : null);
+
         model.addAttribute("payments", paymentPage.getContent());
         model.addAttribute("currentPage", safePage);
         model.addAttribute("pageSize", safeSize);
@@ -208,6 +267,9 @@ public class PaymentPageController {
         model.addAttribute("keyword", keyword);
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
+        model.addAttribute("filteredTotalAmount", filteredTotalAmount);
+        model.addAttribute("filterPeriodLabel", formatFilterPeriodLabel(startDate, endDate));
+        model.addAttribute("filterBranchLabel", resolveFilterBranchLabel(effectiveBranchId, allowedBranches));
 
         return "finance/payments/list";
     }
@@ -366,6 +428,85 @@ public class PaymentPageController {
         model.addAttribute("pendingToDate", effectivePendingToDate);
         model.addAttribute("pendingStatus", (effectivePendingStatus != null && !effectivePendingStatus.isBlank()) ? effectivePendingStatus.trim() : null);
         model.addAttribute("currentPendingPage", effectivePendingPage);
+
+        final boolean pendingDateRangeInvalid = effectivePendingFromDate != null
+                && effectivePendingToDate != null
+                && effectivePendingFromDate.isAfter(effectivePendingToDate);
+
+        FinancialMetricsDTO filteredMetrics = new FinancialMetricsDTO();
+        BigDecimal filteredTotalIncome = BigDecimal.ZERO;
+        BigDecimal filteredRefundExpense = BigDecimal.ZERO;
+        BigDecimal filteredCustomerNetIncome = BigDecimal.ZERO;
+        String filterPeriodLabel = formatFilterPeriodLabel(effectivePendingFromDate, effectivePendingToDate);
+        String filterBranchLabel = resolveFilterBranchLabel(effectivePendingBranchId, allowedBranches);
+
+        if (targetProfileId == null && !pendingDateRangeInvalid) {
+            LocalDateTime filterStartDt = effectivePendingFromDate != null ? effectivePendingFromDate.atStartOfDay() : null;
+            LocalDateTime filterEndDt = effectivePendingToDate != null ? effectivePendingToDate.atTime(LocalTime.MAX) : null;
+            LocalDateTime cashflowEndExclusive = effectivePendingToDate != null ? effectivePendingToDate.plusDays(1).atStartOfDay() : null;
+
+            List<Long> cashflowBranchIds = null;
+            boolean hasValidBranchScope = false;
+
+            if (effectivePendingBranchId != null) {
+                if (isAdmin || (allowedBranchIds != null && allowedBranchIds.contains(effectivePendingBranchId))) {
+                    cashflowBranchIds = List.of(effectivePendingBranchId);
+                    hasValidBranchScope = true;
+                    if (invoiceService != null) {
+                        FinancialMetricsDTO fetched = invoiceService.getFinancialMetrics(effectivePendingBranchId, filterStartDt, filterEndDt);
+                        if (fetched != null) {
+                            filteredMetrics = fetched;
+                        }
+                    }
+                }
+            } else if (isAdmin) {
+                hasValidBranchScope = true;
+                if (invoiceService != null) {
+                    FinancialMetricsDTO fetched = invoiceService.getFinancialMetrics(null, filterStartDt, filterEndDt);
+                    if (fetched != null) {
+                        filteredMetrics = fetched;
+                    }
+                }
+            } else if (allowedBranchIds != null && !allowedBranchIds.isEmpty()) {
+                cashflowBranchIds = allowedBranchIds;
+                hasValidBranchScope = true;
+                if (invoiceService != null) {
+                    if (allowedBranchIds.size() == 1) {
+                        FinancialMetricsDTO fetched = invoiceService.getFinancialMetrics(allowedBranchIds.get(0), filterStartDt, filterEndDt);
+                        if (fetched != null) {
+                            filteredMetrics = fetched;
+                        }
+                    } else {
+                        for (Long bId : allowedBranchIds) {
+                            FinancialMetricsDTO branchMetrics = invoiceService.getFinancialMetrics(bId, filterStartDt, filterEndDt);
+                            if (branchMetrics != null) {
+                                filteredMetrics.setTodayTotalBilled(safeMoney(filteredMetrics.getTodayTotalBilled()).add(safeMoney(branchMetrics.getTodayTotalBilled())));
+                                filteredMetrics.setTodayTotalCollected(safeMoney(filteredMetrics.getTodayTotalCollected()).add(safeMoney(branchMetrics.getTodayTotalCollected())));
+                                filteredMetrics.setTodayTotalDebt(safeMoney(filteredMetrics.getTodayTotalDebt()).add(safeMoney(branchMetrics.getTodayTotalDebt())));
+                                filteredMetrics.setTodayTotalRefunded(safeMoney(filteredMetrics.getTodayTotalRefunded()).add(safeMoney(branchMetrics.getTodayTotalRefunded())));
+                                filteredMetrics.setTodayTotalInvoices(filteredMetrics.getTodayTotalInvoices() + branchMetrics.getTodayTotalInvoices());
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (hasValidBranchScope) {
+                filteredTotalIncome = safeMoney(paymentRepository != null
+                        ? paymentRepository.sumRealRevenueByBranches(cashflowBranchIds, filterStartDt, cashflowEndExclusive)
+                        : null);
+                filteredRefundExpense = safeMoney(refundRepository != null
+                        ? refundRepository.sumRefundAmountByBranches(cashflowBranchIds, filterStartDt, cashflowEndExclusive)
+                        : null);
+                filteredCustomerNetIncome = filteredTotalIncome.subtract(filteredRefundExpense);
+            }
+        }
+        model.addAttribute("metrics", filteredMetrics);
+        model.addAttribute("filterPeriodLabel", filterPeriodLabel);
+        model.addAttribute("filterBranchLabel", filterBranchLabel);
+        model.addAttribute("filteredTotalIncome", filteredTotalIncome);
+        model.addAttribute("filteredRefundExpense", filteredRefundExpense);
+        model.addAttribute("filteredCustomerNetIncome", filteredCustomerNetIncome);
 
         // Kiểm tra hợp lệ khoảng ngày cho bộ lọc Hóa đơn
         final boolean invoiceDateRangeInvalid = (invoiceFromDate != null && invoiceToDate != null && invoiceFromDate.isAfter(invoiceToDate));
@@ -617,36 +758,18 @@ public class PaymentPageController {
         return "finance/payments/dashboard";
     }
 
-    // SCR-22.2: Form ghi nhận thanh toán
     @GetMapping("/create")
     public String createPaymentForm(
             @RequestParam(required = false) Long invoiceId,
-            @RequestParam(required = false) Long profileId,
-            Model model,
-            HttpSession session
+            @RequestParam(required = false) Long profileId
     ) {
-        Long currentUserId = getCurrentUserId(session);
-        populateUserAndSidebar(model, session, "payments");
-        List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
-        boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
-        List<Long> allowedBranchIds = isAdmin ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
-        model.addAttribute("branches", allowedBranches);
-
         if (invoiceId != null) {
-            invoiceRepository.findWithDetailsById(invoiceId).ifPresent(inv -> {
-                resolveBranchId(inv.getBranch().getBranchId(), currentUserId);
-                model.addAttribute("selectedInvoice", inv);
-                model.addAttribute("selectedPatient", inv.getPatientProfile());
-                model.addAttribute("selectedBranch", inv.getBranch());
-            });
-        } else if (profileId != null) {
-            patientProfileRepository.findById(profileId).ifPresent(p -> {
-                model.addAttribute("selectedPatient", p);
-                model.addAttribute("unpaidInvoices", debtService.getUnpaidInvoicesForPatient(profileId, allowedBranchIds));
-            });
+            return "redirect:/invoices/" + invoiceId;
         }
-
-        return "finance/payments/form";
+        if (profileId != null) {
+            return "redirect:/invoices/create?profileId=" + profileId;
+        }
+        return "redirect:/invoices/create";
     }
 
     @PostMapping("/create")
@@ -672,7 +795,7 @@ public class PaymentPageController {
             if (returnUrl != null && !returnUrl.isBlank()) {
                 return "redirect:" + returnUrl;
             }
-            return "redirect:/payments/create" + (request.getInvoiceId() != null ? "?invoiceId=" + request.getInvoiceId() : "");
+            return "redirect:" + (request.getInvoiceId() != null ? "/invoices/" + request.getInvoiceId() : "/invoices/create");
         }
     }
 
@@ -707,6 +830,55 @@ public class PaymentPageController {
                 return map;
             }).toList();
             return org.springframework.http.ResponseEntity.ok(data);
+        } catch (Exception e) {
+            return org.springframework.http.ResponseEntity.badRequest().body(java.util.Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/api/patients/{profileId}/refund-sources")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<?> getPatientRefundSources(
+            @PathVariable Long profileId,
+            HttpSession session
+    ) {
+        try {
+            Long currentUserId = getCurrentUserId(session);
+            boolean isAdmin = userRepository.hasActiveAdminRole(currentUserId);
+            List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
+            List<Long> allowedBranchIds = isAdmin ? null : allowedBranches.stream().map(Branch::getBranchId).toList();
+
+            BigDecimal depositBalance = BigDecimal.ZERO;
+            var patientOpt = patientProfileRepository.findById(profileId);
+            if (patientOpt.isPresent()) {
+                depositBalance = safeMoney(patientOpt.get().getDepositBalance());
+            }
+
+            List<Invoice> patientInvoices = (isAdmin || (allowedBranchIds != null && !allowedBranchIds.isEmpty()))
+                    ? invoiceRepository.findInvoicesByPatientAndBranches(profileId, allowedBranchIds)
+                    : java.util.Collections.emptyList();
+
+            List<java.util.Map<String, Object>> refundableInvoices = patientInvoices.stream()
+                    .filter(inv -> inv.getStatus() != InvoiceStatus.CANCELLED
+                            && inv.getPaidAmount() != null
+                            && inv.getPaidAmount().compareTo(BigDecimal.ZERO) > 0)
+                    .map(inv -> {
+                        java.util.Map<String, Object> map = new java.util.HashMap<>();
+                        map.put("invoiceId", inv.getInvoiceId());
+                        map.put("invoiceCode", inv.getInvoiceCode());
+                        map.put("totalAmount", safeMoney(inv.getTotalAmount()));
+                        map.put("paidAmount", safeMoney(inv.getPaidAmount()));
+                        map.put("remainingDebt", safeMoney(inv.getRemainingDebt()));
+                        map.put("paymentStatus", inv.getPaymentStatus() != null ? inv.getPaymentStatus().name() : "");
+                        map.put("branchId", inv.getBranch() != null ? inv.getBranch().getBranchId() : null);
+                        map.put("branchName", inv.getBranch() != null ? inv.getBranch().getBranchName() : "");
+                        return map;
+                    })
+                    .toList();
+
+            java.util.Map<String, Object> result = new java.util.HashMap<>();
+            result.put("depositBalance", depositBalance);
+            result.put("invoices", refundableInvoices);
+            return org.springframework.http.ResponseEntity.ok(result);
         } catch (Exception e) {
             return org.springframework.http.ResponseEntity.badRequest().body(java.util.Map.of("success", false, "error", e.getMessage()));
         }
@@ -778,10 +950,34 @@ public class PaymentPageController {
         model.addAttribute("fromItem", fromItem);
         model.addAttribute("toItem", toItem);
 
+        BigDecimal filteredTotalAmount = safeMoney(paymentRepository != null
+                ? paymentRepository.sumFilteredPayments(effectiveBranchId, PaymentType.ADVANCE_DEPOSIT, null, startDt, endDt, keyword)
+                : null);
+
         model.addAttribute("selectedBranchId", effectiveBranchId);
         model.addAttribute("keyword", keyword);
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
+        model.addAttribute("filteredTotalAmount", filteredTotalAmount);
+        model.addAttribute("filterPeriodLabel", formatFilterPeriodLabel(startDate, endDate));
+        model.addAttribute("filterBranchLabel", resolveFilterBranchLabel(effectiveBranchId, allowedBranches));
+
+        if (profileId != null) {
+            return "redirect:/payments/deposits/create?profileId=" + profileId;
+        }
+        return "finance/payments/deposits";
+    }
+
+    @GetMapping("/deposits/create")
+    public String createDepositForm(
+            @RequestParam(required = false) Long profileId,
+            Model model,
+            HttpSession session
+    ) {
+        Long currentUserId = getCurrentUserId(session);
+        populateUserAndSidebar(model, session, "deposits");
+        List<Branch> allowedBranches = resolveAllowedBranches(currentUserId);
+        model.addAttribute("branches", allowedBranches);
 
         if (profileId != null) {
             patientProfileRepository.findById(profileId).ifPresent(p -> {
@@ -789,19 +985,28 @@ public class PaymentPageController {
                 model.addAttribute("depositHistory", paymentService.getPatientDepositHistory(profileId));
             });
         }
-        return "finance/payments/deposits";
+        return "finance/payments/deposit-create";
     }
 
     @PostMapping("/deposits")
     public String saveAdvanceDeposit(
             @ModelAttribute PaymentRequestDTO request,
+            @RequestParam(name = "returnUrl", required = false) String returnUrl,
             RedirectAttributes redirectAttributes,
             HttpSession session
     ) {
-        String returnUrl = request.getProfileId() != null
-                ? "redirect:/payments/dashboard?patientId="
-                + request.getProfileId()
-                : "redirect:/payments/dashboard";
+        String safeReturnUrl = null;
+        if (returnUrl != null && !returnUrl.isBlank()) {
+            String trimmed = returnUrl.trim();
+            if (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.contains("\\")) {
+                safeReturnUrl = "redirect:" + trimmed;
+            }
+        }
+        String targetRedirect = safeReturnUrl != null
+                ? safeReturnUrl
+                : (request.getProfileId() != null
+                        ? "redirect:/payments/dashboard?patientId=" + request.getProfileId()
+                        : "redirect:/payments/dashboard");
 
         try {
             Long cashierUserId = getCurrentUserId(session);
@@ -824,7 +1029,7 @@ public class PaymentPageController {
             );
         }
 
-        return returnUrl;
+        return targetRedirect;
     }
 
     @GetMapping("/refunds")
@@ -868,10 +1073,17 @@ public class PaymentPageController {
         model.addAttribute("toItem", toItem);
         model.addAttribute("branches", allowedBranches);
         model.addAttribute("selectedBranchId", effectiveBranchId);
+        BigDecimal filteredTotalAmount = safeMoney(refundRepository != null
+                ? refundRepository.sumFilteredRefunds(effectiveBranchId, refundMethod, startDt, endDt, keyword)
+                : null);
+
         model.addAttribute("selectedRefundMethod", refundMethod);
         model.addAttribute("keyword", keyword);
         model.addAttribute("startDate", startDate);
         model.addAttribute("endDate", endDate);
+        model.addAttribute("filteredTotalAmount", filteredTotalAmount);
+        model.addAttribute("filterPeriodLabel", formatFilterPeriodLabel(startDate, endDate));
+        model.addAttribute("filterBranchLabel", resolveFilterBranchLabel(effectiveBranchId, allowedBranches));
 
         return "finance/payments/refunds";
     }

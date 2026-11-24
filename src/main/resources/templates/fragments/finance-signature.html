@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Khối ký xác nhận bên trái (Form input): nhấn vào khung nét đứt để mở bảng vẽ chữ ký điện tử -->
+<div th:fragment="sigField(sigKey, existingUrl)" class="fin-sig-field" th:attr="data-fin-sig-field=${sigKey}">
+    <input type="hidden" name="signatureData" value="">
+    <input type="hidden" data-fin-sig-existing="1" th:value="${existingUrl ?: ''}">
+    <button type="button" class="fin-sig-box" th:attr="data-fin-sig-open=${sigKey}" title="Nhấp để ký tên xác nhận">
+        <img class="fin-sig-img" th:attr="data-fin-sig-preview=${sigKey}" src="" alt="Chữ ký xác nhận" hidden>
+        <span class="fin-sig-placeholder" th:attr="data-fin-sig-placeholder=${sigKey}">
+            <i class="bi bi-pen"></i> Ký xác nhận
+        </span>
+    </button>
+    <button type="button" class="fin-sig-clear" th:attr="data-fin-sig-clear=${sigKey}" title="Xóa chữ ký vừa vẽ" hidden>&times;</button>
+</div>
+
+<!-- Khối hiển thị chữ ký người lập phiếu bên phải (Xem trước đồng bộ theo thời gian thực) -->
+<div th:fragment="sigMirror(sigKey, existingUrl, titleText, hintText, userName)" class="exp-signature-block">
+    <div class="exp-signature-title" th:text="${titleText ?: 'Người lập phiếu'}">Người lập phiếu</div>
+    <div class="exp-signature-hint" th:text="${hintText ?: '(Chữ Ký, Họ Và Tên)'}">(Chữ Ký, Họ Và Tên)</div>
+    <div class="fin-sig-preview-box ms-auto mb-2" th:attr="data-fin-sig-mirror=${sigKey}">
+        <img class="fin-sig-img"
+             th:src="${existingUrl ?: ''}"
+             th:hidden="${existingUrl == null or existingUrl.isEmpty()}"
+             alt="Chữ ký người lập phiếu">
+        <span class="fin-sig-mirror-placeholder text-muted"
+              style="font-size: 11px;"
+              th:hidden="${existingUrl != null and !existingUrl.isEmpty()}">Chưa ký</span>
+    </div>
+    <div class="exp-signature-user"
+         th:text="${userName ?: 'Nhân viên'}">Nhân viên</div>
+</div>
+
+</body>
+</html>

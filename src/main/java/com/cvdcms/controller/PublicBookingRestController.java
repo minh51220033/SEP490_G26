@@ -313,6 +313,7 @@ public class PublicBookingRestController {
         if (serviceId != null) {
             service = serviceRepository.findById(serviceId).orElse(null);
             if (service == null || !Boolean.TRUE.equals(service.getIsBookableOnline())
+                    || service.getServiceType() == com.cvdcms.entity.enums.ServiceType.PRODUCT
                     || service.getStatus() != ServiceStatus.ACTIVE
                     || (service.getCategory() != null && Boolean.FALSE.equals(service.getCategory().getIsActive()))) {
                 return ResponseEntity.ok(Collections.emptyList());
@@ -461,6 +462,7 @@ public class PublicBookingRestController {
             if (form.getServiceId() != null) {
                 service = serviceRepository.findWithCategoryByServiceId(form.getServiceId()).orElse(null);
                 if (service == null || !Boolean.TRUE.equals(service.getIsBookableOnline())
+                        || service.getServiceType() == com.cvdcms.entity.enums.ServiceType.PRODUCT
                         || service.getStatus() != ServiceStatus.ACTIVE
                         || (service.getCategory() != null && Boolean.FALSE.equals(service.getCategory().getIsActive()))) {
                     return errorResponse(HttpStatus.BAD_REQUEST, "Dịch vụ đã chọn hiện không nhận đặt trực tuyến.");

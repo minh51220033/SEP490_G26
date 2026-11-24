@@ -30,38 +30,6 @@
 
             <!-- Vùng nội dung tab Hóa đơn -->
             <div id="cashierTabContent" class="cashier-tab-content">
-            <!-- 4 KPI Summary Cards -->
-            <div class="fin-kpi-grid">
-                <div class="fin-kpi-card fin-kpi-blue">
-                    <div class="fin-kpi-icon"><i class="bi bi-currency-dollar"></i></div>
-                    <div class="fin-kpi-info">
-                        <h4>Doanh số hôm nay</h4>
-                        <p class="fin-kpi-val" th:text="${#numbers.formatDecimal(metrics.todayTotalBilled, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
-                    </div>
-                </div>
-                <div class="fin-kpi-card fin-kpi-green">
-                    <div class="fin-kpi-icon"><i class="bi bi-cash-stack"></i></div>
-                    <div class="fin-kpi-info">
-                        <h4>Thực thu hôm nay</h4>
-                        <p class="fin-kpi-val" th:text="${#numbers.formatDecimal(metrics.todayTotalCollected, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
-                    </div>
-                </div>
-                <div class="fin-kpi-card fin-kpi-amber">
-                    <div class="fin-kpi-icon"><i class="bi bi-exclamation-circle"></i></div>
-                    <div class="fin-kpi-info">
-                        <h4>Công nợ phát sinh</h4>
-                        <p class="fin-kpi-val" th:text="${#numbers.formatDecimal(metrics.todayTotalDebt, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
-                    </div>
-                </div>
-                <div class="fin-kpi-card fin-kpi-purple">
-                    <div class="fin-kpi-icon"><i class="bi bi-receipt-cutoff"></i></div>
-                    <div class="fin-kpi-info">
-                        <h4>Tổng số hóa đơn</h4>
-                        <p class="fin-kpi-val" th:text="${metrics.todayTotalInvoices} + ' đơn'">0 đơn</p>
-                    </div>
-                </div>
-            </div>
-
             <!-- Filter Card Chuẩn MISA / Daily-Visits -->
             <div class="fin-card fin-filter-container">
                 <form th:action="@{/invoices}" method="get" class="fin-filter-bar">
@@ -106,6 +74,7 @@
 
                     <!-- Khoảng ngày -->
                     <div class="fin-form-group fin-date-group">
+                        <select th:replace="~{fragments/cashier-tabs :: quickDateSelect('startDate', 'endDate')}"></select>
                         <input type="date" id="startDate" name="startDate" class="fin-input" th:value="${startDate}" title="Từ ngày">
                         <span class="text-muted small fw-semibold mx-1">đến</span>
                         <input type="date" id="endDate" name="endDate" class="fin-input" th:value="${endDate}" title="Đến ngày">
@@ -117,7 +86,48 @@
                         <a th:href="@{/invoices}" class="fin-btn fin-btn-outline" title="Đặt lại bộ lọc"><i class="bi bi-arrow-clockwise"></i> Đặt lại</a>
                     </div>
                 </form>
-                <div th:replace="~{fragments/cashier-tabs :: quickDateBar('startDate', 'endDate')}"></div>
+            </div>
+
+            <!-- Thanh tóm tắt hóa đơn theo bộ lọc (kiểu VTTech) -->
+            <div class="fin-vt-summary-grid">
+                <div class="fin-vt-summary-card">
+                    <div class="fin-vt-summary-head">
+                        <span class="fin-vt-summary-label">Tổng giá trị hóa đơn</span>
+                        <a th:href="@{/invoices/create}" class="fin-vt-quick-btn is-income" title="Tạo hóa đơn mới">+</a>
+                    </div>
+                    <p class="fin-vt-summary-value"
+                       th:text="${#numbers.formatDecimal(filteredTotalAmount ?: 0, 1, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
+                    <div class="fin-vt-summary-sub">
+                        <span th:text="${totalElements ?: 0} + ' hóa đơn'">0 hóa đơn</span>
+                        <span>•</span>
+                        <span th:text="${filterBranchLabel ?: 'Tất cả cơ sở'}">Tất cả cơ sở</span>
+                        <span>•</span>
+                        <span th:text="${filterPeriodLabel ?: 'Toàn thời gian'}">Toàn thời gian</span>
+                    </div>
+                </div>
+                <div class="fin-vt-summary-card">
+                    <div class="fin-vt-summary-head">
+                        <span class="fin-vt-summary-label">Đã thanh toán theo bộ lọc</span>
+                        <i class="bi bi-check-circle text-success"></i>
+                    </div>
+                    <p class="fin-vt-summary-value is-success"
+                       th:text="${#numbers.formatDecimal(filteredPaidAmount ?: 0, 1, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
+                    <div class="fin-vt-summary-sub">
+                        <span>Tổng số tiền đã thu trên nhóm hóa đơn đang lọc</span>
+                    </div>
+                </div>
+                <div class="fin-vt-summary-card">
+                    <div class="fin-vt-summary-head">
+                        <span class="fin-vt-summary-label">Còn nợ theo bộ lọc</span>
+                        <i class="bi bi-exclamation-circle text-danger"></i>
+                    </div>
+                    <p class="fin-vt-summary-value"
+                       th:classappend="${filteredRemainingDebt != null and filteredRemainingDebt.signum() > 0} ? ' is-danger' : ''"
+                       th:text="${#numbers.formatDecimal(filteredRemainingDebt ?: 0, 1, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
+                    <div class="fin-vt-summary-sub">
+                        <span>Công nợ còn lại chưa thu của nhóm hóa đơn đang lọc</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Table Card -->
@@ -319,7 +329,8 @@
                     </div>
                     <div class="mb-3">
                         <label for="qpAmount" class="form-label fw-bold">Số tiền khách thanh toán (VNĐ) <span class="text-danger">*</span></label>
-                        <input type="number" id="qpAmount" class="form-control form-control-lg fw-bold text-primary" required min="1000">
+                        <input type="text" id="qpAmount" class="form-control form-control-lg fw-bold text-primary"
+                               data-cashier-money="true" required min="1000">
                     </div>
                     <div class="mb-3">
                         <label for="qpMethod" class="form-label fw-bold">Phương thức thanh toán</label>
@@ -377,7 +388,7 @@
 
 <script th:src="@{/js/vietqr-payment.js}"></script>
 <script th:inline="javascript">
-    let qpQrBox = null;
+    var qpQrBox = null;
 
     function syncListQuickPayLayout() {
         const methodEl = document.getElementById('qpMethod');
@@ -458,7 +469,10 @@
 
     async function submitQuickPay() {
         const invId = document.getElementById('qpInvoiceId').value;
-        const amount = parseFloat(document.getElementById('qpAmount').value);
+        const qpAmtVal = document.getElementById('qpAmount').value;
+        const amount = typeof window.parseCashierMoney === 'function'
+            ? window.parseCashierMoney(qpAmtVal)
+            : parseFloat(String(qpAmtVal || '').replace(/,/g, ''));
         const method = document.getElementById('qpMethod').value;
         const ref = document.getElementById('qpRef').value;
         const notes = document.getElementById('qpNotes').value;

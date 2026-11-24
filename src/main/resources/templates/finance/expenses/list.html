@@ -31,29 +31,61 @@
 
                 <!-- Vùng nội dung tab hiển thị ngay bên dưới -->
                 <div class="expense-income-tab-content" id="expenseIncomeTabContent">
-                    <!-- 3 THẺ KPI ĐỒNG BỘ FORM KHÁCH HÀNG -->
-                    <div class="fin-kpi-grid">
-                        <div class="fin-kpi-card fin-kpi-amber">
-                            <div class="fin-kpi-icon"><i class="bi bi-cash-coin"></i></div>
+                    <!-- 4 THẺ TỔNG CHI PHÒNG KHÁM (VH + TRẢ NCC + HOÀN KHÁCH) -->
+                    <div class="fin-kpi-grid is-expenses-4">
+                        <div class="fin-kpi-card fin-kpi-red">
+                            <div class="fin-kpi-icon"><i class="bi bi-wallet2"></i></div>
                             <div class="fin-kpi-info">
-                                <h4>Tổng thực chi hợp lệ</h4>
-                                <p class="fin-kpi-val"
-                                    th:text="${#numbers.formatDecimal(totalActiveAmount, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                                <h4>Tổng chi phòng khám</h4>
+                                <p class="fin-kpi-val text-danger"
+                                    th:text="${#numbers.formatDecimal(clinicTotalExpense ?: 0, 1, 'COMMA', 0, 'POINT')} + ' đ'">
                                     0 đ</p>
+                                <small class="text-muted d-block mt-1" style="font-size: 11.5px;"
+                                    th:text="'VH: ' + ${#numbers.formatDecimal(totalClinicOperatingAmount ?: 0, 1, 'COMMA', 0, 'POINT')} + ' • NCC: ' + ${#numbers.formatDecimal(totalSupplierPaymentAmount ?: 0, 1, 'COMMA', 0, 'POINT')} + ' • Hoàn: ' + ${#numbers.formatDecimal(totalRefundAmount ?: 0, 1, 'COMMA', 0, 'POINT')}"></small>
                             </div>
                         </div>
                         <div class="fin-kpi-card fin-kpi-blue">
                             <div class="fin-kpi-icon"><i class="bi bi-receipt"></i></div>
                             <div class="fin-kpi-info">
-                                <h4>Số lượng phiếu chi</h4>
-                                <p class="fin-kpi-val" th:text="${expenses.totalElements} + ' phiếu'">0 phiếu</p>
+                                <h4>Chi phí vận hành (đang lọc)</h4>
+                                <p class="fin-kpi-val"
+                                    th:text="${#numbers.formatDecimal(totalActiveAmount ?: 0, 1, 'COMMA', 0, 'POINT')} + ' đ'">
+                                    0 đ</p>
+                                <small class="text-muted d-block mt-1" style="font-size: 11.5px;">
+                                    <span th:text="${expenses.totalElements} + ' phiếu chi'">0 phiếu chi</span>
+                                    <span>•</span>
+                                    <span th:text="${filterPeriodLabel ?: 'Toàn thời gian'}">Toàn thời gian</span>
+                                </small>
                             </div>
                         </div>
-                        <div class="fin-kpi-card fin-kpi-green">
-                            <div class="fin-kpi-icon"><i class="bi bi-shield-check"></i></div>
+                        <div class="fin-kpi-card fin-kpi-purple">
+                            <div class="fin-kpi-icon"><i class="bi bi-truck"></i></div>
                             <div class="fin-kpi-info">
-                                <h4>Liên kết dữ liệu</h4>
-                                <p class="fin-kpi-val">Đã kiểm soát</p>
+                                <h4>Thanh toán nhà cung cấp</h4>
+                                <p class="fin-kpi-val"
+                                    th:text="${#numbers.formatDecimal(totalSupplierPaymentAmount ?: 0, 1, 'COMMA', 0, 'POINT')} + ' đ'">
+                                    0 đ</p>
+                                <small class="text-muted d-block mt-1" style="font-size: 11.5px;">
+                                    <span th:text="${filterBranchLabel ?: 'Tất cả cơ sở'}">Tất cả cơ sở</span>
+                                    <span>•</span>
+                                    <a th:href="@{/supplier-payments}" class="text-decoration-none fw-semibold">Chi tiết
+                                        NCC</a>
+                                </small>
+                            </div>
+                        </div>
+                        <div class="fin-kpi-card fin-kpi-amber">
+                            <div class="fin-kpi-icon"><i class="bi bi-arrow-counterclockwise"></i></div>
+                            <div class="fin-kpi-info">
+                                <h4>Hoàn tiền khách hàng</h4>
+                                <p class="fin-kpi-val"
+                                    th:text="${#numbers.formatDecimal(totalRefundAmount ?: 0, 1, 'COMMA', 0, 'POINT')} + ' đ'">
+                                    0 đ</p>
+                                <small class="text-muted d-block mt-1" style="font-size: 11.5px;">
+                                    <span th:text="${filterPeriodLabel ?: 'Toàn thời gian'}">Toàn thời gian</span>
+                                    <span>•</span>
+                                    <a th:href="@{/payments/refunds}" class="text-decoration-none fw-semibold">Chi tiết
+                                        hoàn</a>
+                                </small>
                             </div>
                         </div>
                     </div>
@@ -199,6 +231,11 @@
                                             <span th:if="${exp.isCancelled}" class="fin-badge fin-badge-cancelled"
                                                 th:title="${exp.cancelledReason}"><i class="bi bi-x-circle"></i> Đã
                                                 hủy</span>
+                                            <span th:if="${exp.signatureUrl != null and !exp.signatureUrl.isBlank()}"
+                                                  class="badge bg-success-subtle text-success border border-success-subtle ms-1"
+                                                  title="Kế toán đã ký xác nhận">
+                                                <i class="bi bi-pen-fill"></i> Đã ký
+                                            </span>
                                         </td>
                                         <td data-column-key="actions" data-column-action="true" class="text-center">
                                             <div class="fin-table-actions">

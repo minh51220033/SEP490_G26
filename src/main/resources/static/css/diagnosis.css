@@ -294,99 +294,85 @@
     text-decoration: underline;
 }
 
-/* SUBNAV CONTAINER WITH HORIZONTAL SCROLL & CONTROLS */
+/* SUBNAV CONTAINER — HIỂN THỊ 1 DÒNG CUỘN NGANG TRÁI/PHẢI GỌN DIỆN TÍCH */
 .df-subnav-container {
     background: #ffffff;
-    display: flex;
-    align-items: center;
+    display: block;
     position: relative;
-    padding: 0 34px;
+    padding: 6px 16px;
     border-top: 1px solid #f1f5f9;
+    overflow: hidden;
 }
 
-.df-subnav-arrow {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 1px solid #cbd5e1;
-    background: #ffffff;
-    color: #475569;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 12px;
-    z-index: 5;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    padding: 0;
+.df-subnav-container.has-overflow-right .df-subnav {
+    padding-right: 28px;
+    -webkit-mask-image: linear-gradient(to right, #000000 0%, #000000 calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to right, #000000 0%, #000000 calc(100% - 28px), transparent 100%);
 }
-.df-subnav-arrow:hover {
-    background: #f1f5f9;
-    color: var(--df-purple);
-    border-color: var(--df-purple);
-}
-.df-subnav-arrow-left { left: 5px; }
-.df-subnav-arrow-right { right: 5px; }
 
-/* 2. DENTALFLOW SUB-NAVIGATION TABS (HỖ TRỢ CUỘN NGANG MƯỢT MÀ) */
 .df-subnav {
     display: flex;
-    gap: 16px;
-    padding: 0 4px;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 2px 0 4px;
     background: #ffffff;
-    overflow-x: auto;
+    overflow-x: auto !important;
     overflow-y: hidden !important;
+    scroll-behavior: smooth;
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 transparent;
-    scroll-behavior: smooth;
-    flex: 1;
 }
 
 .df-subnav::-webkit-scrollbar {
-    height: 3.5px;
+    height: 4px;
 }
+
 .df-subnav::-webkit-scrollbar-track {
     background: transparent;
 }
+
 .df-subnav::-webkit-scrollbar-thumb {
     background: #cbd5e1;
-    border-radius: 4px;
+    border-radius: 999px;
 }
+
 .df-subnav::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
 
 .df-subnav-item {
-    padding: 11px 8px;
-    font-size: 13.5px;
+    padding: 6px 11px;
+    font-size: 13px;
     font-weight: 600;
-    color: #64748b;
+    color: #475569;
     text-decoration: none;
-    border-bottom: 3px solid transparent;
+    border-bottom: none;
     margin-bottom: 0;
     white-space: nowrap;
-    transition: all 0.25s ease;
-    display: flex;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
     flex-shrink: 0;
-    border-radius: 6px 6px 0 0;
+    border-radius: 8px;
     cursor: pointer;
 }
 
 .df-subnav-item:hover {
-    color: var(--df-purple);
-    background: #f8fafc;
+    color: #0284c7;
+    background: #f1f5f9;
 }
 
 .df-subnav-item.active {
-    color: var(--df-purple);
+    color: #0369a1;
+    background: #e0f2fe;
     font-weight: 700;
-    border-bottom-color: var(--df-purple);
+}
+
+.df-subnav-item .df-tab-count {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 999px;
 }
 
 /* HIỆU ỨNG SÁNG MÀU ÊM DỊU KHI CLICK TAB (KHÔNG DÙNG SCALE ĐỂ TRÁNH GIẬT KHUNG) */
@@ -798,7 +784,7 @@
 }
 
 .df-list-body {
-    max-height: 420px;
+    max-height: 340px;
     overflow-y: auto;
     padding: 0;
 }
@@ -2900,37 +2886,38 @@ html {
     margin-top: 4px;
 }
 
-/* KHUNG PHIM X-QUANG PANORAMA 2D SỐ HÓA */
+/* KHUNG PHIM X-QUANG PANORAMA / CẬN LÂM SÀNG (NỀN SÁNG Y KHOA ĐỒNG BỘ) */
 .xray-card {
-    background: linear-gradient(145deg, #090d16 0%, #111827 100%);
-    border: 1px solid rgba(56, 189, 248, 0.2);
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 16px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
+    box-shadow: none;
 }
 
 .xray-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 11px;
+    gap: 8px;
+    font-size: 11.5px;
     font-weight: 700;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.4px;
     text-transform: uppercase;
-    color: #94a3b8;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: #475569;
+    border-bottom: 1px solid #e2e8f0;
     padding-bottom: 8px;
     margin-bottom: 10px;
 }
 
 .xray-badge {
-    color: #38bdf8;
+    color: #0369a1;
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
 }
 
 .pano-viewport {
@@ -2945,30 +2932,31 @@ html {
 .pano-teeth-svg {
     width: 100%;
     height: auto;
-    filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.35));
 }
 
 .xray-footer {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 10px;
     margin-top: 10px;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    font-size: 11.5px;
-    color: #cbd5e1;
+    gap: 8px;
+    font-size: 12px;
+    color: #475569;
 }
 
 .xray-btn {
-    background: rgba(56, 189, 248, 0.15);
-    border: 1px solid #38bdf8;
-    color: #38bdf8;
-    font-size: 11px;
-    font-weight: 700;
+    background: #e0f2fe;
+    border: 1px solid #bae6fd;
+    color: #0369a1;
+    font-size: 11.5px;
+    font-weight: 600;
     padding: 4px 10px;
     border-radius: 20px;
     cursor: pointer;
-    transition: background 0.2s ease, color 0.2s ease;
+    transition: background 0.15s ease, color 0.15s ease;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
@@ -2976,8 +2964,9 @@ html {
 }
 
 .xray-btn:hover {
-    background: #38bdf8;
-    color: #0f172a;
+    background: #0284c7;
+    border-color: #0284c7;
+    color: #ffffff;
 }
 
 
@@ -3092,4 +3081,103 @@ body.modal-open .modal-backdrop {
     color: #ef4444 !important;
     background: #fef2f2 !important;
     border-color: #fecaca !important;
+}
+
+/* =====================================================================
+   QUY CHUẨN CHUNG THANH THAO TÁC & NÚT BẤM CHO TOÀN BỘ TAB CON BÀN KHÁM
+   ===================================================================== */
+.df-tab-actionbar {
+    background: #f8fafc !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding: 10px 20px !important;
+    min-height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    box-sizing: border-box;
+}
+.df-tab-actionbar.is-right-only {
+    justify-content: flex-end;
+}
+.df-tab-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-left: auto;
+}
+.df-tab-count-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.df-tab-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    height: 34px !important;
+    padding: 0 14px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    text-decoration: none !important;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    box-shadow: none !important;
+}
+.df-tab-btn i {
+    font-size: 14px;
+    line-height: 1;
+}
+.df-tab-btn-primary {
+    background: #0284c7 !important;
+    border: 1px solid #0284c7 !important;
+    color: #ffffff !important;
+}
+.df-tab-btn-primary:hover:not(:disabled) {
+    background: #0369a1 !important;
+    border-color: #0369a1 !important;
+    color: #ffffff !important;
+}
+.df-tab-btn-secondary {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #334155 !important;
+}
+.df-tab-btn-secondary:hover:not(:disabled) {
+    background: #f1f5f9 !important;
+    border-color: #94a3b8 !important;
+    color: #0f172a !important;
+}
+.df-tab-btn-secondary i {
+    color: #0284c7;
+}
+.df-tab-btn .df-btn-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 11px;
+    font-weight: 700;
 }

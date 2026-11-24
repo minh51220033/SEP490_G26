@@ -668,7 +668,12 @@
                         window.location.reload();
                     }, 1000);
                 } else {
-                    alert('Không thể bàn giao ca khám:\n' + (result.message || 'Vui lòng kiểm tra lại điều kiện lâm sàng trước khi bàn giao.'));
+                    const errMsg = 'Không thể hoàn tất khám: ' + (result.message || 'Vui lòng kiểm tra lại điều kiện lâm sàng trước khi bàn giao.');
+                    if (typeof showToast === 'function') {
+                        showToast(errMsg, true);
+                    } else {
+                        alert(errMsg);
+                    }
                     if (btn) {
                         btn.disabled = false;
                         btn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i> <span>Xác nhận &amp; Bàn giao sang Kế toán thu ngân</span>';

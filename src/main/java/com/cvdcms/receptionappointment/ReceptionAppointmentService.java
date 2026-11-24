@@ -212,7 +212,8 @@ public class ReceptionAppointmentService {
                         : branches.findById(scope.branchId()).filter(b -> Boolean.TRUE.equals(b.getIsActive())).stream().toList());
         List<BranchOption> branchOptions = allowed.stream().map(b -> new BranchOption(b.getBranchId(), b.getBranchName())).toList();
         List<ServiceOption> serviceOptions = services.findByStatusOrderByCategory_DisplayOrderAscServiceNameAsc(ServiceStatus.ACTIVE)
-                .stream().filter(s -> Boolean.TRUE.equals(s.getCategory().getIsActive()))
+                .stream().filter(s -> Boolean.TRUE.equals(s.getCategory().getIsActive())
+                        && s.getServiceType() != com.cvdcms.entity.enums.ServiceType.PRODUCT)
                 .map(s -> new ServiceOption(s.getServiceId(), s.getServiceName(),
                         AppointmentSlotService.duration(s))).toList();
         return new Options(branchOptions, serviceOptions);

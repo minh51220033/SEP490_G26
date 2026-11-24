@@ -27,5 +27,6 @@ public class SupplierPaymentResponseDTO {
     private String referenceNo;
     private String paidByName;
     private String notes;
+    private String signatureUrl;
     private LocalDateTime createdAt;
 }

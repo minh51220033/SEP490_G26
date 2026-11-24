@@ -44,21 +44,16 @@
         }
     </style>
     <div class="df-unified-tab-card mb-4 overflow-hidden bg-white" id="prescriptionsSection">
-        <div class="df-presc-header df-tab-content-header d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3 bg-white border-bottom">
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                <i class="bi bi-capsule text-primary fs-5"></i>
-                <h2 class="df-title-primary mb-0">Đơn thuốc &amp; dặn dò dùng thuốc</h2>
-                <span class="df-tab-count df-num" id="prescCountBadge"
-                      th:text="${prescriptions != null ? prescriptions.size() : 0} + ' đơn'">0 đơn</span>
-                <span class="df-subtitle-secondary d-none d-lg-inline">· Đồng bộ Kế toán &amp; hướng dẫn liều dùng</span>
-            </div>
+        <div class="df-tab-actionbar">
+            <span class="df-tab-count-pill" id="prescCountBadge"
+                  th:text="${prescriptions != null ? prescriptions.size() : 0} + ' đơn'">0 đơn</span>
 
-            <div class="d-flex align-items-center flex-wrap gap-2">
-                <button type="button" class="df-btn-white-plan" onclick="openReExamModal()" title="Hẹn ngày tái khám sau điều trị (SCR-18.1)">
+            <div class="df-tab-actions">
+                <button type="button" class="df-tab-btn df-tab-btn-secondary" onclick="openReExamModal()" title="Hẹn ngày tái khám sau điều trị (SCR-18.1)">
                     <i class="bi bi-calendar2-plus-fill"></i>
                     <span>Hẹn tái khám</span>
                 </button>
-                <button th:if="${!isClinicalLocked}" type="button" class="btn btn-primary fw-semibold d-inline-flex align-items-center gap-2" onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">
+                <button th:if="${!isClinicalLocked}" type="button" class="df-tab-btn df-tab-btn-primary" onclick="openAddPrescriptionModal()" data-bs-toggle="modal" data-bs-target="#addPrescriptionModal">
                     <i class="bi bi-plus-lg"></i>
                     <span>Kê đơn thuốc mới</span>
                 </button>
@@ -81,7 +76,7 @@
         </div>
 
         <!-- BẢNG DANH SÁCH ĐƠN THUỐC ĐÃ KÊ THEO CA KHÁM -->
-        <div class="table-responsive p-4 bg-white">
+        <div class="table-responsive bg-white">
             <table class="table df-clean-table table-hover align-middle mb-0" data-disable-floating-actions="true" style="font-size: 13.5px;">
                 <thead>
                 <tr>

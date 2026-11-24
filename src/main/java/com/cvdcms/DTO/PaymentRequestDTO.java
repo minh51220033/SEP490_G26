@@ -23,4 +23,5 @@ public class PaymentRequestDTO {
     private String transactionRef;
     private String idempotencyKey;
     private String notes;
+    private String signatureData;
 }

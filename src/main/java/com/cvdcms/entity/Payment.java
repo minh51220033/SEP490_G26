@@ -82,6 +82,9 @@ public class Payment {
     @Column(name = "notes", length = 255)
     private String notes;
 
+    @Column(name = "signature_url", length = 500)
+    private String signatureUrl;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "cashier_id", nullable = false)
     private StaffProfile cashier;

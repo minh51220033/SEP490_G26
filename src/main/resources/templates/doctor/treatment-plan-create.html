@@ -12,8 +12,8 @@
 
     <div class="app-main">
 
-        <main class="app-content p-0" style="padding: 0 !important; gap: 0 !important; background: #f8fafc !important;">
-            <link rel="stylesheet" th:href="@{/css/diagnosis.css}">
+        <main class="app-content p-0" style="padding: 0 !important; gap: 0 !important; background: #ffffff !important;">
+            <link rel="stylesheet" th:href="@{/css/diagnosis.css(v=20261123d)}">
 
             <style>
                 :root {
@@ -54,19 +54,23 @@
                     width: 100%;
                 }
 
-                /* 1. HEADER BỆNH NHÂN ĐỒNG BỘ & GHIM CỐ ĐỊNH TRÊN ĐỈNH */
+                /* 1. HEADER BỆNH NHÂN ĐỒNG BỘ VỚI BÀN KHÁM */
                 .df-unified-header {
                     background: #ffffff;
                     border-bottom: 1px solid var(--df-border);
-                    position: sticky;
-                    top: 0;
+                    position: relative;
                     z-index: 25;
-                    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+                    box-shadow: none;
                     overflow: visible;
                 }
 
+                .df-clinic-toolbar {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
                 .df-unified-top-bar {
-                    padding: 10px 24px;
                     background: #ffffff;
                     border-bottom: 1px solid var(--df-border-subtle);
                     font-size: 13.5px;
@@ -258,12 +262,13 @@
                     display: block;
                 }
 
-                /* Khối bề mặt nhẹ thay viền cứng (M3 Filled container) */
+                /* Khối bề mặt nhẹ thay viền cứng (M3 Filled container - phẳng, không bo khung lồng) */
                 .df-soft-panel {
                     background: #f8fafc;
-                    border: 1px solid var(--df-border-subtle);
-                    border-radius: 12px;
-                    padding: 16px;
+                    border: none;
+                    border-bottom: 1px solid var(--df-border-subtle);
+                    border-radius: 0;
+                    padding: 14px 16px;
                 }
 
                 /* 4. BẢNG DỮ LIỆU TỐI GIẢN - BỎ KẺ DỌC DƯ THỪA */
@@ -449,19 +454,21 @@
                     color: var(--df-primary);
                 }
 
-                /* KHỐI LỘ TRÌNH & GIAI ĐOẠN (GIẢM CARD LỒNG CARD) */
+                /* KHỐI LỘ TRÌNH & GIAI ĐOẠN (PHẲNG, BỎ VIỀN BO TRÒN LỒNG NHAU) */
                 .roadmap-diag-box {
-                    border: 1px solid var(--df-border);
-                    border-radius: 12px;
-                    background: #f8fafc;
+                    border: none;
+                    border-bottom: 1px solid var(--df-border);
+                    border-radius: 0;
+                    background: transparent;
                     margin-bottom: 16px;
+                    padding-bottom: 12px;
                     overflow: visible;
                 }
 
                 .roadmap-diag-header {
-                    padding: 12px 18px;
+                    padding: 8px 0 10px;
                     background: transparent;
-                    border-bottom: 1px solid var(--df-border);
+                    border-bottom: 1px solid var(--df-border-subtle);
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
@@ -470,11 +477,13 @@
                 }
 
                 .df-stage-panel {
-                    background: #ffffff;
-                    border: 1px solid var(--df-border-subtle);
-                    border-radius: 10px;
+                    background: transparent;
+                    border: none;
+                    border-left: 2px solid #cbd5e1;
+                    border-radius: 0;
+                    padding-left: 14px;
                     margin-bottom: 12px;
-                    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+                    box-shadow: none;
                 }
                 .df-stage-panel:last-child {
                     margin-bottom: 0;
@@ -566,466 +575,794 @@
                     display: block;
                 }
 
-                /* 6. THANH TỔNG TIỀN & HÀNH ĐỘNG GHIM CỐ ĐỊNH Ở ĐÁY */
+                /* 6. THANH TỔNG TIỀN & HÀNH ĐỘNG NẰM PHẲNG CÙNG NỘI DUNG Ở ĐÁY CARD */
                 .df-sticky-bottom-bar {
-                    position: sticky;
-                    bottom: 0;
-                    z-index: 30;
-                    background: rgba(255, 255, 255, 0.96);
-                    backdrop-filter: blur(8px);
+                    position: static;
+                    bottom: auto;
+                    z-index: auto;
+                    background: #ffffff;
+                    backdrop-filter: none;
                     border-top: 1px solid var(--df-border);
                     border-radius: 0 0 16px 16px;
-                    padding: 14px 24px;
+                    padding: 16px 24px;
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
                     flex-wrap: wrap;
                     gap: 16px;
-                    box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.06);
+                    box-shadow: none;
                 }
 
                 /* Căn thẳng cột mọi con số tiền tệ, số lượng, mã răng */
                 .df-num, #footerGrandTotalDisplay, .df-clean-table td, .df-steps-table td {
                     font-variant-numeric: tabular-nums;
                 }
+
+                /* Bố cục phẳng 1 trang + sub-tabs gọn (không accordion lặp tiêu đề) */
+                .tp-flat-body {
+                    padding: 20px 24px;
+                }
+
+                .tp-flat-block {
+                    padding-bottom: 18px;
+                    margin-bottom: 18px;
+                    border-bottom: 1px solid var(--df-border-subtle);
+                }
+
+                .tp-flat-block:last-child {
+                    padding-bottom: 0;
+                    margin-bottom: 0;
+                    border-bottom: none;
+                }
+
+                .tp-mode-pills,
+                .tp-subtabs {
+                    display: inline-flex;
+                    flex-wrap: wrap;
+                    gap: 4px;
+                    padding: 3px;
+                    background: #f1f5f9;
+                    border-radius: 10px;
+                }
+
+                .tp-mode-btn,
+                .tp-subtab-btn {
+                    border: none;
+                    background: transparent;
+                    color: #475569;
+                    font-size: 13px;
+                    font-weight: 600;
+                    padding: 6px 12px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+
+                .tp-mode-btn:hover,
+                .tp-subtab-btn:hover {
+                    color: var(--df-primary-dark);
+                }
+
+                .tp-mode-btn.active,
+                .tp-subtab-btn.active {
+                    background: #ffffff;
+                    color: var(--df-primary);
+                    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+                }
+
+                .tp-selected-box {
+                    border: none;
+                    border-radius: 0;
+                    background: transparent;
+                    overflow: visible;
+                }
             </style>
 
-            <!-- 1. BREADCRUMB & PATIENT BAR -->
-            <header class="df-unified-header">
-                <div class="df-unified-top-bar">
-                    <div class="df-bound-container d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <div class="d-flex align-items-center flex-wrap gap-2">
-                            <button type="button" class="btn btn-sm btn-light border d-lg-none py-1 px-2 text-primary fw-bold"
-                                    data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống" title="Mở menu hệ thống">
+            <!-- 1. UNIFIED PATIENT & RECORD HEADER (ĐỒNG BỘ 100% VỚI BÀN KHÁM) -->
+            <div class="df-unified-header">
+                <div class="df-unified-top-bar px-3 py-2 border-bottom bg-white">
+                    <div class="df-exam-bound d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button"
+                                class="btn btn-sm btn-light border d-lg-none py-1 px-2 text-primary fw-bold"
+                                data-sidebar-toggle aria-controls="appSidebar" aria-label="Mở menu hệ thống"
+                                title="Mở menu hệ thống">
                                 <i class="bi bi-list fs-6"></i>
                             </button>
                             <nav aria-label="breadcrumb" class="df-exam-breadcrumb-nav mb-0">
                                 <ol class="breadcrumb mb-0">
                                     <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
                                     <li class="breadcrumb-item"><a th:href="@{/doctor/daily-visits}">DS Khám</a></li>
-                                    <li class="breadcrumb-item"><a th:href="${visit != null ? '/doctor/examination/' + idCodec.encodeVisit(visit.visitId) + '/diagnoses' : '/doctor/examination'}">Khám &amp; Điều trị</a></li>
-                                    <li class="breadcrumb-item active" aria-current="page">Lập kế hoạch điều trị</li>
+                                    <li class="breadcrumb-item">
+                                        <a th:href="${visitToken != null ? '/doctor/examination/' + visitToken + '/diagnoses' : (visit != null ? '/doctor/examination/' + idCodec.encodeVisit(visit.visitId) + '/diagnoses' : '/doctor/examination')}">Bàn khám bệnh</a>
+                                    </li>
+                                    <li class="breadcrumb-item active" aria-current="page">Lập kế hoạch</li>
                                 </ol>
                             </nav>
                         </div>
+
+                        <div class="df-clinic-toolbar d-flex align-items-center flex-wrap gap-2">
+                            <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="py-3 px-4">
-                    <div class="df-bound-container d-flex align-items-center justify-content-between flex-wrap gap-3">
-                        <div class="d-flex align-items-center gap-3">
+                <!-- HÀNG 2: THÔNG TIN HỒ SƠ BỆNH NHÂN -->
+                <div class="px-3 py-2" th:if="${visit != null}">
+                    <div class="df-exam-bound d-flex flex-wrap flex-lg-nowrap align-items-center justify-content-between gap-3">
+                        <div class="d-flex align-items-center gap-3" style="min-width: 0; flex: 1;">
                             <div class="df-avatar-circle"
-                                 th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? #strings.substring(patient.fullName, 0, 1) : 'BN'}">
+                                th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? #strings.substring(patient.fullName, 0, 1) : 'BN'}">
                                 NA
                             </div>
-                            <div>
-                                <div class="d-flex align-items-center flex-wrap gap-2">
-                                    <strong class="fs-6 text-dark" th:text="${patient != null ? patient.fullName : 'Bệnh nhân'}">Nguyễn Văn An</strong>
-                                    <span class="badge bg-light text-dark border" th:text="'Mã: ' + (${patient != null ? patient.patientCode : '---'})">Mã: BN-0008</span>
-                                    <span class="badge bg-light text-secondary border"
-                                          th:text="(${patient != null and patient.gender != null ? patient.gender : 'Nam'})">Nam</span>
+                            <div style="min-width: 0;">
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <h4 class="mb-0 fw-bold text-dark"
+                                        th:text="${patient != null and patient.fullName != null and !patient.fullName.isEmpty() ? patient.fullName : 'Bệnh nhân'}">
+                                        Nguyễn Văn An
+                                    </h4>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle df-num"
+                                        th:text="${'Mã KH: ' + (patient != null and patient.patientCode != null ? patient.patientCode : '---')}">---</span>
+                                    <span th:if="${visit.status != null and visit.status.name() == 'WAITING_PAYMENT'}"
+                                        class="badge bg-warning-subtle text-warning-emphasis border border-warning rounded-pill">
+                                        <i class="bi bi-hourglass-split me-1"></i>Chờ thanh toán (Khóa BR-EMR-02)
+                                    </span>
+                                    <span th:if="${visit.status != null and visit.status.name() == 'COMPLETED'}"
+                                        class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Đã hoàn tất ca khám
+                                    </span>
+                                    <span th:if="${visit.status != null and visit.status.name() == 'IN_EXAM'}"
+                                        class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill">
+                                        <i class="bi bi-stethoscope me-1"></i>Đang khám
+                                    </span>
                                 </div>
-                                <div class="df-meta-tertiary mt-1">
-                                    SĐT: <span class="fw-semibold text-dark" th:text="${patient != null and patient.phoneNumber != null ? patient.phoneNumber : '---'}">0901 234 567</span> •
-                                    Ca khám: <span class="fw-semibold text-dark" th:text="${visit.visitCode != null ? visit.visitCode : 'VIS-001'}">VIS-001</span> •
-                                    Cơ sở: <span class="fw-semibold text-dark" th:text="${visit.branch != null ? visit.branch.branchName : 'Phòng khám'}">SmileCare</span>
+                                <div class="d-flex flex-wrap align-items-center gap-2 mt-1 text-muted small df-num">
+                                    <span><i class="bi bi-telephone text-secondary"></i> <strong
+                                            th:text="${patient != null and patient.phoneNumber != null ? patient.phoneNumber : '---'}">0900000001</strong></span>
+                                    <span th:if="${patient != null and patient.gender != null}"><span
+                                            class="text-secondary opacity-50">•</span> Giới tính: <strong
+                                            class="text-dark" th:text="${patient.gender}">Nam</strong></span>
+                                    <span th:if="${patient != null and patient.dob != null}"><span
+                                            class="text-secondary opacity-50">•</span> Ngày sinh: <strong
+                                            class="text-dark"
+                                            th:text="${#temporals.format(patient.dob, 'dd/MM/yyyy')}">20/05/1995</strong></span>
+                                    <span th:if="${visit.primaryDoctor != null and visit.primaryDoctor.fullName != null}"><span
+                                            class="text-secondary opacity-50">•</span> Bác sĩ: <strong
+                                            class="text-primary" th:text="${visit.primaryDoctor.fullName}">Bác sĩ</strong></span>
+                                    <span th:if="${visit.visitCode != null}"><span
+                                            class="text-secondary opacity-50">•</span> Mã ca: <strong
+                                            class="text-dark" th:text="${visit.visitCode}">VIS-MAU-01</strong></span>
+                                    <span th:if="${visit.branch != null and visit.branch.branchName != null}"><span
+                                            class="text-secondary opacity-50">•</span> Cơ sở: <span
+                                            class="text-dark" th:text="${visit.branch.branchName}">Cơ sở</span></span>
+                                    <span th:if="${bookedService != null}">
+                                        <span class="text-secondary opacity-50">•</span> DV đặt lịch:
+                                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold">
+                                            <i class="bi bi-lock-fill me-1"></i><span th:text="${bookedService['serviceName']}">Dịch vụ</span>
+                                        </span>
+                                    </span>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0"
+                            th:if="${visit.status == null or visit.status.name() != 'COMPLETED'}">
+                            <div class="d-flex align-items-center gap-2 justify-content-end flex-wrap">
+                                <span id="deskQueueWaitingBadge"
+                                      th:with="initWait=${deskWaitingCount != null ? deskWaitingCount : 0}"
+                                      th:class="${'badge rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1 border df-num text-nowrap ' + (initWait > 0 ? 'bg-warning-subtle text-warning-emphasis border-warning-subtle' : 'bg-success-subtle text-success border-success-subtle')}"
+                                      th:title="${initWait > 0 ? 'Đang có bệnh nhân chờ trong hàng đợi — ca này chỉ khóa làm dịch vụ đã đặt lịch, dịch vụ phát sinh hẹn ca sau' : 'Hàng đợi đang trống — có thể làm thêm dịch vụ phát sinh nếu bệnh nhân đồng ý'}">
+                                    <i th:class="${initWait > 0 ? 'bi bi-people-fill' : 'bi bi-people'}"></i>
+                                    <span id="deskQueueWaitingText" th:text="${initWait > 0 ? ('Hàng đợi: ' + initWait + ' đang chờ') : 'Hàng đợi: 0 chờ'}">Hàng đợi: 0 chờ</span>
+                                </span>
+                                <a th:if="${visit.status == null or visit.status.name() != 'WAITING_PAYMENT'}"
+                                    th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-examination'}"
+                                    class="btn btn-primary rounded-pill px-4 py-2 fw-bold d-inline-flex align-items-center gap-2 shadow-sm text-white text-nowrap text-decoration-none"
+                                    style="background: #0284c7; border-color: #0284c7;"
+                                    title="Quay lại Bàn khám bệnh để hoàn tất ca khám">
+                                    <i class="bi bi-check2-circle fs-5"></i>
+                                    <span>Hoàn tất khám</span>
+                                </a>
                             </div>
                         </div>
                     </div>
                 </div>
-            </header>
 
-            <!-- 2. VÙNG NỘI DUNG CHÍNH -->
-            <section class="df-main-card">
-
-                <!-- TIÊU ĐỀ PHÂN HỆ + 1 NÚT TOGGLE GỘP -->
-                <div class="df-main-card-header">
-                    <div>
-                        <h5 class="mb-0 df-title-primary">Lập kế hoạch &amp; lộ trình điều trị</h5>
-                        <div class="df-subtitle-secondary">Chọn dịch vụ từ bảng giá, tùy chỉnh giai đoạn thực hiện và lộ trình thanh toán nếu cần.</div>
-                    </div>
-                    <button type="button" id="btnToggleAllSections" class="btn btn-sm btn-outline-secondary px-3 py-2"
-                            onclick="toggleAllSectionsSmart()">
-                        <i class="bi bi-arrows-angle-contract me-1"></i> Thu gọn tất cả
-                    </button>
-                </div>
-
-                <!-- INLINE FEEDBACK BANNER (Thay alert() thô) -->
-                <div id="planInlineBanner" class="df-inline-banner" role="alert">
-                    <div class="d-flex align-items-center gap-2">
-                        <i id="planInlineBannerIcon" class="bi bi-exclamation-circle-fill"></i>
-                        <span id="planInlineBannerText"></span>
-                    </div>
-                    <button type="button" class="btn-close btn-sm" aria-label="Đóng" onclick="hideInlineBanner()"></button>
-                </div>
-
-                <!-- CẢNH BÁO KHÓA BỆNH ÁN LÂM SÀNG (BR-EMR-02) -->
-                <div th:if="${isClinicalLocked}" class="df-inline-banner is-error" role="alert" style="display: flex;">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="bi bi-lock-fill"></i>
-                        <span>Ca khám đã hoàn tất lâm sàng hoặc đang chờ thanh toán (khóa bất biến BR-EMR-02). Chỉ được xem, không thể tạo mới hoặc chỉnh sửa kế hoạch điều trị.</span>
-                    </div>
-                </div>
-
-                <!-- ========================================================================= -->
-                <!-- BƯỚC 1: CHẨN ĐOÁN BỆNH LÝ / MÃ ICD-10 (TÙY CHỌN — THU GỌN KHI TRỐNG)       -->
-                <!-- ========================================================================= -->
-                <div class="df-foldable-bar" id="barSection1" onclick="toggleSection('1')">
-                    <div class="df-foldable-title">
-                        <i class="bi bi-chevron-right df-chevron" id="chevron1"></i>
-                        <span class="df-step-num">1</span>
-                        <span>Chẩn đoán bệnh lý / Mã ICD-10</span>
-                        <span class="badge bg-white text-muted border fw-normal">Tùy chọn</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
-                        <span class="badge bg-light text-dark border" id="diagSelectedSummary">0 đã chọn</span>
-                        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2"
-                                style="font-size: 12px;" onclick="selectAllDiagnoses()">
-                            Chọn tất cả
-                        </button>
-                    </div>
-                </div>
-
-                <div class="df-foldable-content" id="contentSection1" style="display: none;">
-                    <!-- Tìm & gắn mã ICD-10 ẩn gọn sau nút mở nhanh (Progressive Disclosure) -->
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                        <div class="df-meta-tertiary">Tick chọn chẩn đoán từ ca khám hiện tại để đính kèm vào hồ sơ kế hoạch.</div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnToggleIcdCatalogBox"
-                                onclick="toggleIcdCatalogBox()">
-                            <i class="bi bi-plus-circle me-1"></i> Gắn thêm mã ICD-10 từ danh mục
-                        </button>
-                    </div>
-
-                    <div id="icdCatalogPanel" class="df-soft-panel mb-3" style="display: none;">
-                        <div class="row g-3 align-items-start">
-                            <div class="col-md-5 position-relative">
-                                <label class="form-label small fw-semibold text-dark mb-1" for="icdCatalogSearchInput">
-                                    Tìm mã ICD-10 hệ thống
-                                </label>
-                                <input type="text" class="form-control form-control-sm" id="icdCatalogSearchInput"
-                                       placeholder="Gõ mã hoặc tên bệnh lý (VD: K02, sâu răng, nha chu...)"
-                                       oninput="searchIcd10CatalogForPlan(this.value)" autocomplete="off">
-                                <div id="icdCatalogDropdown" class="list-group position-absolute w-100 shadow-sm mt-1"
-                                     style="z-index: 1050; max-height: 220px; overflow-y: auto; display: none;"></div>
-                            </div>
-                            <div class="col-md-7">
-                                <div class="form-label small fw-semibold text-muted mb-1">Gắn nhanh bệnh lý thường gặp</div>
-                                <div class="d-flex flex-wrap gap-1" id="commonIcdQuickChips">
-                                    <!-- Rendered by JS from SERVER_COMMON_ICDS -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-2" id="customAttachedIcdChips">
-                        <!-- Các mã ICD gắn thêm từ danh mục -->
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="df-clean-table">
-                            <thead>
-                                <tr>
-                                    <th style="width: 52px;" class="text-center">Chọn</th>
-                                    <th style="width: 120px;">Chẩn đoán</th>
-                                    <th style="width: 220px;">Vị trí răng &amp; mặt răng</th>
-                                    <th style="width: 100px;">Mã ICD-10</th>
-                                    <th>Tên bệnh lý &amp; Phân loại</th>
-                                </tr>
-                            </thead>
-                            <tbody id="diagTableBody">
-                                <!-- Rendered by JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- ========================================================================= -->
-                <!-- BƯỚC 2: CHỌN DỊCH VỤ ĐIỀU TRỊ & MẪU PHÁC ĐỒ CHUẨN                       -->
-                <!-- ========================================================================= -->
-                <div class="df-foldable-bar is-expanded" id="barSection2" onclick="toggleSection('2')">
-                    <div class="df-foldable-title">
-                        <i class="bi bi-chevron-right df-chevron" id="chevron2"></i>
-                        <span class="df-step-num">2</span>
-                        <span>Dịch vụ điều trị &amp; phác đồ chuẩn</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
-                        <span class="badge bg-light text-primary border" id="servicesCountBadge">0 dịch vụ đã chọn</span>
+                <!-- HÀNG 3: THANH TAB ĐIỀU HƯỚNG THỐNG NHẤT VỚI BÀN KHÁM -->
+                <div class="df-subnav-container" th:if="${visit != null}">
+                    <div class="df-exam-bound">
+                        <nav class="df-subnav" id="mainSubnav">
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-patient-info'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-person-lines-fill"></i> Thông tin bệnh nhân
+                            </a>
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-examination'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-heart-pulse-fill"></i> Khám sơ bộ
+                            </a>
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-paraclinical'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-film"></i> Cận lâm sàng
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num"
+                                    th:classappend="${paraclinicalOrders == null or #lists.isEmpty(paraclinicalOrders)} ? 'd-none' : ''"
+                                    th:text="${paraclinicalOrders != null ? #lists.size(paraclinicalOrders) : 0}">0</span>
+                            </a>
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-diagnoses'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-clipboard2-pulse"></i> Chẩn đoán
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num"
+                                    th:classappend="${diagnoses == null or #lists.isEmpty(diagnoses)} ? 'd-none' : ''"
+                                    th:text="${diagnoses != null ? #lists.size(diagnoses) : 0}">0</span>
+                            </a>
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-odontogram'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-grid-3x3-gap"></i> Tình trạng răng
+                            </a>
+                            <a href="javascript:void(0)" class="df-subnav-item active"
+                                onclick="closePlanFormWorkspace()">
+                                <i class="bi bi-file-earmark-plus"></i> Lập kế hoạch
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num"
+                                    id="tpTabNavCountBadge"
+                                    th:classappend="${treatmentPlans == null or #lists.isEmpty(treatmentPlans)} ? 'd-none' : ''"
+                                    th:text="${treatmentPlans != null ? #lists.size(treatmentPlans) : 0}">0</span>
+                            </a>
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-treatment-plan'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-diagram-3"></i> Kế hoạch điều trị
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num"
+                                    th:classappend="${treatmentPlans == null or #lists.isEmpty(treatmentPlans)} ? 'd-none' : ''"
+                                    th:text="${treatmentPlans != null ? #lists.size(treatmentPlans) : 0}">0</span>
+                            </a>
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-workflow-execution'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-list-check"></i> Quy trình điều trị
+                            </a>
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-emr'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-file-earmark-medical"></i> Bệnh án
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num"
+                                    th:classappend="${patientEmrRecords == null or #lists.isEmpty(patientEmrRecords)} ? 'd-none' : ''"
+                                    th:text="${patientEmrRecords != null ? #lists.size(patientEmrRecords) : 0}">0</span>
+                            </a>
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-prescriptions'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-capsule"></i> Đơn thuốc
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num"
+                                    th:classappend="${prescriptions == null or #lists.isEmpty(prescriptions)} ? 'd-none' : ''"
+                                    th:text="${prescriptions != null ? #lists.size(prescriptions) : 0}">0</span>
+                            </a>
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-appointments'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-calendar-event"></i> Lịch hẹn
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num"
+                                    th:classappend="${reExaminations == null or #lists.isEmpty(reExaminations)} ? 'd-none' : ''"
+                                    th:text="${reExaminations != null ? #lists.size(reExaminations) : 0}">0</span>
+                            </a>
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-customer-care'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-chat-heart"></i> Chăm sóc
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num"
+                                    th:classappend="${(careTasks == null or #lists.isEmpty(careTasks)) and (careInteractions == null or #lists.isEmpty(careInteractions))} ? 'd-none' : ''"
+                                    th:text="${(careTasks != null ? #lists.size(careTasks) : 0) + (careInteractions != null ? #lists.size(careInteractions) : 0)}">0</span>
+                            </a>
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-performed-services'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-tools"></i> Dịch vụ thực hiện
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num"
+                                    th:classappend="${performedServices == null or #lists.isEmpty(performedServices)} ? 'd-none' : ''"
+                                    th:text="${performedServices != null ? #lists.size(performedServices) : 0}">0</span>
+                            </a>
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-labo'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-box-seam"></i> Đặt xưởng
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num"
+                                    th:classappend="${laboOrders == null or #lists.isEmpty(laboOrders)} ? 'd-none' : ''"
+                                    th:text="${laboOrders != null ? #lists.size(laboOrders) : 0}">0</span>
+                            </a>
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-clinical-photos'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-images"></i> Film ảnh
+                                <span class="badge bg-light text-secondary border ms-1 df-tab-count df-num"
+                                    th:classappend="${(clinicalPhotos == null or #lists.isEmpty(clinicalPhotos)) and (galleryXrayPhotos == null or #lists.isEmpty(galleryXrayPhotos))} ? 'd-none' : ''"
+                                    th:text="${(clinicalPhotos != null ? #lists.size(clinicalPhotos) : 0) + (galleryXrayPhotos != null ? #lists.size(galleryXrayPhotos) : 0)}">0</span>
+                            </a>
+                            <a th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-instructions'}"
+                                class="df-subnav-item">
+                                <i class="bi bi-card-checklist"></i> Lời dặn
+                            </a>
+                        </nav>
                     </div>
                 </div>
+            </div>
 
-                <div class="df-foldable-content" id="contentSection2">
-                    <!-- Khối thêm nhanh dịch vụ (1 hàng combobox hợp nhất) -->
-                    <div class="df-soft-panel mb-3">
-                        <div class="row g-2 align-items-end">
-                            <!-- 1 Control duy nhất: Gõ lọc + Xổ danh sách dịch vụ ngay bên dưới -->
-                            <div class="col-md-6">
-                                <label class="form-label small fw-semibold text-dark mb-1" for="serviceComboInput">
-                                    Tìm &amp; chọn dịch vụ điều trị <span class="text-danger">*</span>
-                                </label>
-                                <div class="combobox-box" id="servicePickerCombo">
-                                    <input type="text" class="combobox-input" id="serviceComboInput"
-                                           placeholder="Gõ mã hoặc tên dịch vụ (VD: Răng sứ, Trám, Nhổ răng khôn)..."
-                                           autocomplete="off"
-                                           onfocus="openServiceCombo()"
-                                           oninput="filterServiceCombo(this.value)"
-                                           onkeydown="handleServiceComboKey(event)">
-                                    <input type="hidden" id="selectedServiceIdHidden">
-                                    <button type="button" class="combobox-btn" onclick="toggleServiceCombo(event)" title="Mở danh sách dịch vụ">
-                                        <i class="bi bi-chevron-down"></i>
-                                    </button>
-                                    <div class="combobox-menu w-100" id="serviceComboMenu" style="min-width: 100%; max-height: 320px;"></div>
-                                </div>
-                            </div>
+            <!-- 2. VÙNG NỘI DUNG TAB LẬP KẾ HOẠCH (LIST-FIRST GIỐNG TAB CHẨN ĐOÁN) -->
+            <div class="p-3 p-md-4" style="background: #f8fafc;">
+                <div class="df-exam-bound">
 
-                            <!-- Vị trí răng: kích thước vừa đủ + nút mở Sơ đồ răng FDI -->
-                            <div class="col-md-3">
-                                <label class="form-label small fw-semibold text-dark mb-1" for="quickAddTeethInput">
-                                    Vị trí răng / phạm vi
-                                </label>
-                                <div class="input-group input-group-sm" style="height: 36px;">
-                                    <input type="text" class="form-control" id="quickAddTeethInput"
-                                           placeholder="VD: 16, 26..."
-                                           onkeydown="if(event.key==='Enter'){event.preventDefault(); addServiceFromPicker();}">
-                                    <button type="button" class="btn btn-outline-secondary px-2"
-                                            onclick="openFdiToothPopover(this, 'quickAddTeethInput')" title="Chọn trên sơ đồ răng">
-                                        <i class="bi bi-grid-3x3-gap"></i> Răng
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary px-2"
-                                            onclick="document.getElementById('quickAddTeethInput').value='Toàn hàm'"
-                                            title="Đặt phạm vi Toàn hàm">
-                                        Toàn hàm
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Số lượng: cố định độ rộng ngắn -->
-                            <div class="col-md-1">
-                                <label class="form-label small fw-semibold text-dark mb-1" for="quickAddQtyInput">SL</label>
-                                <input type="number" class="form-control form-control-sm text-center fw-semibold" id="quickAddQtyInput"
-                                       style="height: 36px;" value="1" min="1" max="32" step="1">
-                            </div>
-
-                            <!-- Nút thêm dịch vụ -->
-                            <div class="col-md-2">
-                                <button type="button" class="btn btn-sm df-btn-tonal-primary w-100 d-flex align-items-center justify-content-center gap-1"
-                                        style="height: 36px;" onclick="addServiceFromPicker()">
-                                    <i class="bi bi-plus-lg"></i>
-                                    <span>Thêm dịch vụ</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="mt-2 d-flex flex-wrap align-items-center gap-2" id="quickServiceSuggestionBar" style="display: none;"></div>
-                        <!-- Áp dụng Combo dịch vụ mẫu -->
-                        <div class="mt-2 pt-2 border-top d-flex flex-wrap align-items-center gap-2"
-                             th:if="${workflowCombos != null and !#lists.isEmpty(workflowCombos)}"
-                             id="comboQuickApplyBar">
-                            <span class="small fw-semibold text-primary text-nowrap">
-                                <i class="bi bi-collection-fill me-1"></i>Áp dụng nhanh Combo:
+                    <!-- KHỐI 1: DANH SÁCH CÁC KẾ HOẠCH ĐIỀU TRỊ (MẶC ĐỊNH HIỆN BÊN NGOÀI) -->
+                    <div id="tpPlanListCard" class="bg-white border rounded-4 shadow-sm overflow-hidden">
+                        <div class="df-tab-actionbar">
+                            <span id="tpListCountBadge"
+                                  class="df-tab-count-pill"
+                                  th:text="${treatmentPlans != null ? #lists.size(treatmentPlans) : 0} + ' kế hoạch'">
+                                0 kế hoạch
                             </span>
-                            <select id="planComboSelect" class="form-select form-select-sm" style="max-width: 440px;">
-                                <option value="">-- Chọn gói Combo dịch vụ --</option>
-                                <option th:each="c : ${workflowCombos}" th:value="${c.comboId}"
-                                        th:text="${c.comboCode + ' · ' + c.comboName + ' (' + c.serviceCount + ' dịch vụ · ' + (c.totalBasePrice != null ? #numbers.formatInteger(c.totalBasePrice, 1, 'POINT') + ' đ' : '0 đ') + ')'}">
-                                    Combo
-                                </option>
-                            </select>
-                            <button type="button" class="btn btn-sm btn-outline-primary rounded-3 px-3 py-1 fw-semibold text-nowrap"
-                                    onclick="applySelectedCombo()">
-                                <i class="bi bi-lightning-charge me-1"></i>Nạp Combo vào phác đồ
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="df-clean-table">
-                            <thead id="mappingTableHead">
-                                <tr>
-                                    <th style="width: 28%;">Dịch vụ điều trị</th>
-                                    <th style="width: 22%;">Vị trí răng &amp; phạm vi</th>
-                                    <th style="width: 26%;">Quy trình chuẩn áp dụng</th>
-                                    <th style="width: 18%;">Dự toán chi phí</th>
-                                    <th style="width: 6%;" class="text-center">Xóa</th>
-                                </tr>
-                            </thead>
-                            <tbody id="mappingTableBody">
-                                <!-- Rendered by JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- ========================================================================= -->
-                <!-- BƯỚC 3: THÔNG TIN CHUNG KẾ HOẠCH                                          -->
-                <!-- ========================================================================= -->
-                <div class="df-foldable-bar is-expanded" id="barSection3" onclick="toggleSection('3')">
-                    <div class="df-foldable-title">
-                        <i class="bi bi-chevron-right df-chevron" id="chevron3"></i>
-                        <span class="df-step-num">3</span>
-                        <span>Thông tin chung kế hoạch</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-light text-secondary border" id="planDoctorSummary"
-                              th:text="${defaultActingDoctor != null ? defaultActingDoctor.fullName : (visit != null and visit.primaryDoctor != null ? visit.primaryDoctor.fullName : 'Bác sĩ phụ trách')}">BS. Phụ trách</span>
-                    </div>
-                </div>
-
-                <div class="df-foldable-content" id="contentSection3">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold small text-dark mb-1" for="planNameInput">
-                                Tên kế hoạch điều trị <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control fw-semibold text-dark" id="planNameInput" maxlength="1000" style="height: 38px;"
-                                   placeholder="Tự động cập nhật khi chọn dịch vụ hoặc nhập tên riêng..."
-                                   oninput="userEditedPlanName = true; clearFieldError('planNameError')">
-                            <div id="planNameError" class="df-field-error">Vui lòng nhập tên kế hoạch điều trị trước khi lưu.</div>
-                        </div>
-                        <div class="col-md-3" th:with="activeDoc=${defaultActingDoctor != null ? defaultActingDoctor : (visit != null ? visit.primaryDoctor : null)}">
-                            <label class="form-label fw-semibold small text-dark mb-1" for="doctorSelect">
-                                Bác sĩ phụ trách <span class="text-danger">*</span>
-                            </label>
-                            <select id="doctorSelect" class="form-select fw-medium" style="height: 38px;" onchange="syncDoctorSummaryBadge()">
-                                <option th:each="doc : ${doctors}"
-                                        th:value="${doc.staffId}"
-                                        th:text="${doc.fullName + (doc.specialty != null ? ' (' + doc.specialty + ')' : '')}"
-                                        th:selected="${activeDoc != null and activeDoc.staffId == doc.staffId}">
-                                    Bác sĩ
-                                </option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold small text-dark mb-1" for="planStartDate">Thời gian dự kiến</label>
-                            <div class="input-group">
-                                <input type="date" class="form-control" id="planStartDate" style="height: 38px;" onchange="renderAll()">
-                                <span class="input-group-text bg-light text-muted">&rarr;</span>
-                                <input type="date" class="form-control" id="planEndDate" style="height: 38px;">
+                            <div class="df-tab-actions" th:if="${!isClinicalLocked}">
+                                <button type="button"
+                                        id="btnOpenCreatePlanWorkspace"
+                                        class="df-tab-btn df-tab-btn-primary"
+                                        onclick="openCreatePlanWorkspace()">
+                                    <i class="bi bi-plus-lg"></i>
+                                    <span>Tạo thêm</span>
+                                </button>
                             </div>
                         </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold small text-dark mb-1" for="planNotesInput">Ghi chú chuyên môn (tùy chọn)</label>
-                            <input type="text" class="form-control" id="planNotesInput" maxlength="1000"
-                                   placeholder="Ghi chú tổng quát cho bệnh nhân hoặc bộ phận lễ tân / kế toán..." style="height: 38px;">
-                        </div>
-                    </div>
-                </div>
 
-                <!-- ========================================================================= -->
-                <!-- BƯỚC 4: LỘ TRÌNH CÁC GIAI ĐOẠN & THỦ THUẬT                                -->
-                <!-- ========================================================================= -->
-                <div class="df-foldable-bar is-expanded" id="barSection4" onclick="toggleSection('4')">
-                    <div class="df-foldable-title">
-                        <i class="bi bi-chevron-right df-chevron" id="chevron4"></i>
-                        <span class="df-step-num">4</span>
-                        <span>Lộ trình các giai đoạn &amp; thủ thuật</span>
+                        <div class="table-responsive">
+                            <table class="df-clean-table mb-0" data-disable-floating-actions="true">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 130px;">Mã KHĐT</th>
+                                            <th>Tên kế hoạch điều trị</th>
+                                            <th style="width: 195px;">Thời gian dự kiến</th>
+                                            <th style="width: 165px;">Tiến độ</th>
+                                            <th style="width: 155px;" class="text-end">Giá dự kiến</th>
+                                            <th style="width: 140px;" class="text-center">Trạng thái</th>
+                                            <th style="width: 190px;" class="text-center">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tpPlanListTableBody">
+                                        <tr th:if="${treatmentPlans == null or #lists.isEmpty(treatmentPlans)}" id="tpListEmptyRow">
+                                            <td colspan="7" class="text-center py-5">
+                                                <div class="text-secondary mb-2" style="font-size: 28px;"><i class="bi bi-inbox"></i></div>
+                                                <div class="fw-bold text-dark mb-1">Chưa có kế hoạch điều trị nào</div>
+                                                <div class="small text-muted">Nhấn nút &quot;Tạo thêm&quot; ở góc phải để lập kế hoạch &amp; lộ trình điều trị mới.</div>
+                                            </td>
+                                        </tr>
+                                        <tr th:each="plan : ${treatmentPlans}"
+                                            th:id="'tp-list-row-' + ${plan.planId}"
+                                            th:data-plan-id="${plan.planId}"
+                                            style="cursor: pointer;"
+                                            onclick="openEditPlanWorkspace(this.getAttribute('data-plan-id'))">
+                                            <td class="df-num">
+                                                <span class="badge bg-light text-primary border font-monospace fw-bold px-2 py-1"
+                                                      th:text="${plan.planCode}">KHDT1001</span>
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold text-dark" th:text="${plan.planName}">Kế hoạch điều trị</div>
+                                                <div class="df-meta-tertiary mt-1" th:if="${plan.diagnosisText != null and !#strings.isEmpty(plan.diagnosisText)}"
+                                                     th:text="${#strings.abbreviate(plan.diagnosisText, 90)}">Chẩn đoán</div>
+                                            </td>
+                                            <td class="small text-dark fw-semibold df-num text-nowrap">
+                                                <i class="bi bi-calendar-event me-1 text-primary"></i>
+                                                <span th:text="${plan.startDate != null ? plan.startDate : '---'}">---</span>
+                                                <span class="text-muted"> &rarr; </span>
+                                                <span th:text="${plan.expectedEndDate != null ? plan.expectedEndDate : '---'}">---</span>
+                                            </td>
+                                            <td class="df-num">
+                                                <div class="d-flex align-items-center justify-content-between small mb-1">
+                                                    <span class="text-secondary fw-semibold"
+                                                          th:text="(${plan.totalItems != null and plan.totalItems > 0} ? (${plan.completedItems} + '/' + ${plan.totalItems} + ' bước') : (${plan.completedStages} + '/' + ${plan.totalStages} + ' GĐ'))">0/0 bước</span>
+                                                    <strong class="text-primary" th:text="${plan.progressPercent} + '%'">0%</strong>
+                                                </div>
+                                                <div class="progress" style="height: 6px;">
+                                                    <div class="progress-bar bg-success" role="progressbar"
+                                                         th:style="'width: ' + ${plan.progressPercent} + '%'"></div>
+                                                </div>
+                                            </td>
+                                            <td class="text-end df-num">
+                                                <strong class="text-primary"
+                                                        th:text="${plan.finalEstimatedCost != null ? #numbers.formatDecimal(plan.finalEstimatedCost, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</strong>
+                                                <div th:if="${plan.isInstallment}" class="small text-info fw-semibold mt-1">
+                                                    <i class="bi bi-calendar2-range me-1"></i>Trả theo đợt
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge rounded-pill px-2 py-1 border fw-semibold"
+                                                      th:classappend="${plan.statusBadgeClass}"
+                                                      th:text="${plan.statusDisplayName}">BN đã đồng ý</span>
+                                            </td>
+                                            <td class="text-center" onclick="event.stopPropagation()">
+                                                <div class="d-inline-flex align-items-center justify-content-center gap-2">
+                                                    <button type="button"
+                                                            class="btn df-btn-tonal-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1"
+                                                            style="font-size: 12.5px;"
+                                                            th:data-plan-id="${plan.planId}"
+                                                            onclick="openEditPlanWorkspace(this.getAttribute('data-plan-id'))"
+                                                            title="Mở &amp; chỉnh sửa kế hoạch điều trị này">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                        <span>Chi tiết</span>
+                                                    </button>
+                                                    <button type="button"
+                                                            th:if="${!isClinicalLocked}"
+                                                            class="df-btn-icon-muted"
+                                                            th:data-plan-id="${plan.planId}"
+                                                            onclick="deletePlanFromList(this.getAttribute('data-plan-id'))"
+                                                            title="Xóa kế hoạch điều trị">
+                                                        <i class="bi bi-trash3-fill"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-light text-secondary border" id="stagesTotalBadge">0 giai đoạn</span>
-                    </div>
-                </div>
 
-                <div class="df-foldable-content" id="contentSection4">
-                    <div id="roadmapsContainer">
-                        <!-- Rendered by JS -->
-                    </div>
-                </div>
-
-                <!-- ========================================================================= -->
-                <!-- MỤC 5 (TÙY CHỌN): HÌNH THỨC THANH TOÁN & CHIA ĐỢT                        -->
-                <!-- ========================================================================= -->
-                <div class="df-foldable-bar" id="barSection5" onclick="toggleSection('5')">
-                    <div class="df-foldable-title">
-                        <i class="bi bi-chevron-right df-chevron" id="chevron5"></i>
-                        <span class="df-step-num">5</span>
-                        <span>Lộ trình thanh toán theo đợt</span>
-                        <span class="badge bg-white text-muted border fw-normal">Tùy chọn</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
-                        <span class="badge bg-light text-secondary border" id="installmentBadgeSummary">1 lần</span>
-                        <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
-                            <input class="form-check-input" type="checkbox" role="switch" id="isInstallmentSwitch"
-                                   style="width: 38px; height: 20px; cursor: pointer;" onchange="toggleInstallmentSection()">
-                            <label class="form-check-label fw-semibold text-dark small" for="isInstallmentSwitch" style="cursor: pointer;">
-                                Trả theo đợt
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="df-foldable-content" id="contentSection5" style="display: none;">
-                    <div id="installmentLockedNotice" class="alert alert-info py-2 px-3 small mb-3 d-none">
-                        <i class="bi bi-lock-fill me-1"></i>
-                        <span id="installmentLockedNoticeText">Phác đồ đã phát sinh thanh toán, lộ trình chia đợt đã được khóa cứng.</span>
-                    </div>
-                    <div class="df-soft-panel mb-3">
-                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-                            <span class="fw-semibold text-dark">Phân bổ đợt thanh toán dự kiến</span>
-                            <span class="badge bg-white text-secondary border">Tổng chi phí phác đồ: <strong class="text-primary" id="instPlanTotalDisplay">0 đ</strong></span>
-                        </div>
-                        <div class="row g-2 align-items-end">
-                            <div class="col-md-3">
-                                <label class="form-label small fw-medium text-secondary mb-1" for="instDownPayment">Đợt 1 đóng ban đầu</label>
-                                <div class="input-group input-group-sm">
-                                    <input type="number" class="form-control" id="instDownPayment" placeholder="VD: 5000000" value="5000000" min="0" step="500000">
-                                    <span class="input-group-text">đ</span>
+                    <!-- KHỐI 2: FORM LẬP / CẬP NHẬT KẾ HOẠCH (PHẲNG TỪ TRÊN XUỐNG DƯỚI, KHÔNG ACCORDION) -->
+                    <div id="tpPlanFormWorkspace" style="display: none;">
+                        <section class="df-main-card" style="margin: 0 auto 24px;">
+                            <div class="df-tab-actionbar">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <button type="button" class="df-tab-btn df-tab-btn-secondary" onclick="closePlanFormWorkspace()">
+                                        <i class="bi bi-arrow-left"></i>
+                                        <span>Quay lại danh sách</span>
+                                    </button>
+                                    <span id="tpEditModeBar" style="display: none;">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-semibold"
+                                              id="tpFormTitleHeading">Đang chỉnh sửa kế hoạch</span>
+                                    </span>
                                 </div>
                             </div>
-                            <div class="col-md-2">
-                                <label class="form-label small fw-medium text-secondary mb-1" for="instRemainingCount">Số đợt còn lại</label>
-                                <input type="number" class="form-control form-control-sm" id="instRemainingCount" value="9" min="1" max="36">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label small fw-medium text-secondary mb-1" for="instInterval">Khoảng cách đợt</label>
-                                <select class="form-select form-select-sm" id="instInterval">
-                                    <option value="1">1 tháng / đợt</option>
-                                    <option value="2">2 tháng / đợt</option>
-                                    <option value="0.5">2 tuần / đợt</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4 d-flex gap-2">
-                                <button type="button" id="btnAutoGenInstallments" class="btn btn-sm df-btn-tonal-primary flex-grow-1" onclick="autoGenerateInstallments()">
-                                    <i class="bi bi-calculator me-1"></i> Chia đều tự động
-                                </button>
-                                <button type="button" id="btnStageGenInstallments" class="btn btn-sm btn-outline-secondary fw-semibold" onclick="generateInstallmentsFromStages()" title="Chia đợt theo các giai đoạn điều trị">
-                                    Theo giai đoạn
-                                </button>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="table-responsive">
-                        <table class="df-clean-table" id="tableInstallments">
-                            <thead>
-                                <tr>
-                                    <th style="width: 64px;" class="text-center">Đợt</th>
-                                    <th style="min-width: 220px;">Nội dung đợt</th>
-                                    <th style="width: 155px;">Ngày dự kiến</th>
-                                    <th style="width: 175px;" class="text-end">Dự kiến thu (VNĐ)</th>
-                                    <th>Ghi chú</th>
-                                    <th style="width: 56px;" class="text-center">Xóa</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbodyInstallments">
-                                <!-- Dynamic rows -->
-                            </tbody>
-                            <tfoot>
-                                <tr style="background: #f8fafc; font-weight: 600;">
-                                    <td colspan="3" class="text-end">Tổng các đợt dự kiến:</td>
-                                    <td class="text-end fw-bold text-primary" id="instSumDisplay">0 đ</td>
-                                    <td colspan="2" id="instDiffNotice" class="small text-muted">Chênh lệch: 0 đ</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
-                        <button type="button" id="btnAddCustomInstallment" class="btn btn-sm btn-outline-secondary" onclick="addCustomInstallmentRow()">
-                            <i class="bi bi-plus-circle me-1"></i> Thêm đợt thủ công
-                        </button>
-                        <div class="df-meta-tertiary">
-                            Số tiền các đợt mang tính chất dự kiến để nhắc thu theo tiến độ.
-                        </div>
-                    </div>
-                </div>
+                            <!-- INLINE FEEDBACK BANNER (Thay alert() thô) -->
+                            <div id="planInlineBanner" class="df-inline-banner" role="alert">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i id="planInlineBannerIcon" class="bi bi-exclamation-circle-fill"></i>
+                                    <span id="planInlineBannerText"></span>
+                                </div>
+                                <button type="button" class="btn-close btn-sm" aria-label="Đóng" onclick="hideInlineBanner()"></button>
+                            </div>
+
+                            <!-- CẢNH BÁO KHÓA BỆNH ÁN LÂM SÀNG (BR-EMR-02) -->
+                            <div th:if="${isClinicalLocked}" class="df-inline-banner is-error" role="alert" style="display: flex;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-lock-fill"></i>
+                                    <span>Ca khám đã hoàn tất lâm sàng hoặc đang chờ thanh toán (khóa bất biến BR-EMR-02). Chỉ được xem, không thể tạo mới hoặc chỉnh sửa kế hoạch điều trị.</span>
+                                </div>
+                            </div>
+
+                            <div class="tp-flat-body">
+
+                                <!-- KHỐI A: THÔNG TIN CHUNG KẾ HOẠCH -->
+                                <div class="tp-flat-block">
+                                    <div class="row g-3">
+                                        <div class="col-md-5">
+                                            <label class="form-label fw-semibold small text-dark mb-1" for="planNameInput">
+                                                Tên kế hoạch điều trị <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control fw-semibold text-dark" id="planNameInput" maxlength="1000" style="height: 38px;"
+                                                   placeholder="Tự động cập nhật khi chọn dịch vụ hoặc nhập tên riêng..."
+                                                   oninput="userEditedPlanName = true; clearFieldError('planNameError')">
+                                            <div id="planNameError" class="df-field-error">Vui lòng nhập tên kế hoạch điều trị trước khi lưu.</div>
+                                        </div>
+                                        <div class="col-md-3" th:with="activeDoc=${defaultActingDoctor != null ? defaultActingDoctor : (visit != null ? visit.primaryDoctor : null)}">
+                                            <label class="form-label fw-semibold small text-dark mb-1" for="doctorSelect">
+                                                Bác sĩ phụ trách <span class="text-danger">*</span>
+                                            </label>
+                                            <select id="doctorSelect" class="form-select fw-medium" style="height: 38px;" onchange="syncDoctorSummaryBadge()">
+                                                <option th:each="doc : ${doctors}"
+                                                        th:value="${doc.staffId}"
+                                                        th:text="${doc.fullName + (doc.specialty != null ? ' (' + doc.specialty + ')' : '')}"
+                                                        th:selected="${activeDoc != null and activeDoc.staffId == doc.staffId}">
+                                                    Bác sĩ
+                                                </option>
+                                            </select>
+                                            <span class="d-none" id="planDoctorSummary"
+                                                  th:text="${activeDoc != null ? activeDoc.fullName : 'Bác sĩ phụ trách'}">BS. Phụ trách</span>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-semibold small text-dark mb-1" for="planStartDate">Thời gian dự kiến</label>
+                                            <div class="input-group">
+                                                <input type="date" class="form-control" id="planStartDate" style="height: 38px;" onchange="renderAll()">
+                                                <span class="input-group-text bg-light text-muted">&rarr;</span>
+                                                <input type="date" class="form-control" id="planEndDate" style="height: 38px;">
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label fw-semibold small text-dark mb-1" for="planNotesInput">Ghi chú chuyên môn (tùy chọn)</label>
+                                            <input type="text" class="form-control" id="planNotesInput" maxlength="1000"
+                                                   placeholder="Ghi chú tổng quát cho bệnh nhân hoặc bộ phận lễ tân / kế toán..." style="height: 38px;">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- KHỐI B: CHỌN DỊCH VỤ / COMBO & DANH SÁCH DỊCH VỤ CHỌN -->
+                                <div class="tp-flat-block">
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="fw-bold text-dark small">Dịch vụ điều trị</span>
+                                            <span class="badge bg-light text-primary border rounded-pill df-num" id="servicesCountBadge">0 dịch vụ đã chọn</span>
+                                        </div>
+                                        <div class="tp-mode-pills" th:if="${workflowCombos != null and !#lists.isEmpty(workflowCombos)}">
+                                            <button type="button" class="tp-mode-btn active" id="tpModeSingleBtn" onclick="switchServiceInputMode('single')">
+                                                Dịch vụ
+                                            </button>
+                                            <button type="button" class="tp-mode-btn" id="tpModeComboBtn" onclick="switchServiceInputMode('combo')">
+                                                Combo dịch vụ
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div id="tpSingleServicePanel" class="df-soft-panel">
+                                        <div class="row g-2 align-items-end">
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-semibold text-dark mb-1" for="serviceComboInput">
+                                                    Tìm &amp; chọn dịch vụ điều trị <span class="text-danger">*</span>
+                                                </label>
+                                                <div class="combobox-box" id="servicePickerCombo">
+                                                    <input type="text" class="combobox-input" id="serviceComboInput"
+                                                           placeholder="Gõ mã hoặc tên dịch vụ (VD: Răng sứ, Trám, Nhổ răng khôn)..."
+                                                           autocomplete="off"
+                                                           onclick="openServiceCombo()"
+                                                           oninput="filterServiceCombo(this.value)"
+                                                           onkeydown="handleServiceComboKey(event)">
+                                                    <input type="hidden" id="selectedServiceIdHidden">
+                                                    <button type="button" class="combobox-btn" onclick="toggleServiceCombo(event)" title="Mở danh sách dịch vụ">
+                                                        <i class="bi bi-chevron-down"></i>
+                                                    </button>
+                                                    <div class="combobox-menu w-100" id="serviceComboMenu" style="min-width: 100%; max-height: 320px;"></div>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-3">
+                                                <label class="form-label small fw-semibold text-dark mb-1" for="quickAddTeethInput">
+                                                    Vị trí răng / phạm vi
+                                                </label>
+                                                <div class="input-group input-group-sm" style="height: 36px;">
+                                                    <input type="text" class="form-control" id="quickAddTeethInput"
+                                                           placeholder="VD: 16, 26..."
+                                                           onkeydown="if(event.key==='Enter'){event.preventDefault(); addServiceFromPicker();}">
+                                                    <button type="button" class="btn btn-outline-secondary px-2"
+                                                            onclick="openFdiToothPopover(this, 'quickAddTeethInput')" title="Chọn trên sơ đồ răng">
+                                                        <i class="bi bi-grid-3x3-gap"></i> Răng
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-secondary px-2"
+                                                            onclick="document.getElementById('quickAddTeethInput').value='Toàn hàm'"
+                                                            title="Đặt phạm vi Toàn hàm">
+                                                        Toàn hàm
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-1">
+                                                <label class="form-label small fw-semibold text-dark mb-1" for="quickAddQtyInput">SL</label>
+                                                <input type="number" class="form-control form-control-sm text-center fw-semibold" id="quickAddQtyInput"
+                                                       style="height: 36px;" value="1" min="1" max="32" step="1">
+                                            </div>
+
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-sm df-btn-tonal-primary w-100 d-flex align-items-center justify-content-center gap-1"
+                                                        style="height: 36px;" onclick="addServiceFromPicker()">
+                                                    <i class="bi bi-plus-lg"></i>
+                                                    <span>Thêm dịch vụ</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2 d-flex flex-wrap align-items-center gap-2" id="quickServiceSuggestionBar" style="display: none;"></div>
+                                    </div>
+
+                                    <div id="tpComboServicePanel" class="df-soft-panel"
+                                         th:if="${workflowCombos != null and !#lists.isEmpty(workflowCombos)}"
+                                         style="display: none;">
+                                        <div class="d-flex flex-wrap align-items-center gap-2">
+                                            <span class="small fw-semibold text-primary text-nowrap">
+                                                <i class="bi bi-collection-fill me-1"></i>Chọn gói Combo dịch vụ:
+                                            </span>
+                                            <select id="planComboSelect" class="form-select form-select-sm" style="max-width: 460px;">
+                                                <option value="">-- Chọn gói Combo dịch vụ --</option>
+                                                <option th:each="c : ${workflowCombos}" th:value="${c.comboId}"
+                                                        th:text="${c.comboCode + ' · ' + c.comboName + ' (' + c.serviceCount + ' dịch vụ · ' + (c.totalBasePrice != null ? #numbers.formatInteger(c.totalBasePrice, 1, 'POINT') + ' đ' : '0 đ') + ')'}">
+                                                    Combo
+                                                </option>
+                                            </select>
+                                            <button type="button" class="btn btn-sm df-btn-tonal-primary rounded-3 px-3 py-1 fw-semibold text-nowrap"
+                                                    onclick="applySelectedCombo()">
+                                                <i class="bi bi-lightning-charge me-1"></i>Nạp Combo vào kế hoạch
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="tp-selected-box mt-3" id="tpSelectedServicesBox" style="display: none;">
+                                        <div class="table-responsive">
+                                            <table class="df-clean-table mb-0">
+                                                <thead id="mappingTableHead">
+                                                    <tr>
+                                                        <th style="width: 28%;">Dịch vụ điều trị</th>
+                                                        <th style="width: 22%;">Vị trí răng &amp; phạm vi</th>
+                                                        <th style="width: 26%;">Quy trình chuẩn áp dụng</th>
+                                                        <th style="width: 18%;">Dự toán chi phí</th>
+                                                        <th style="width: 6%;" class="text-center">Xóa</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="mappingTableBody">
+                                                    <!-- Rendered by JS -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- KHỐI C: 3 SUB-TAB GỌN (LỘ TRÌNH | CHẨN ĐOÁN | TRẢ THEO ĐỢT) -->
+                                <div class="tp-flat-block" id="tpSubTabsSection">
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2" id="tpSubTabsHeader">
+                                        <div class="tp-subtabs" role="tablist">
+                                            <button type="button" class="tp-subtab-btn" id="tpSubTabBtn-roadmap"
+                                                    onclick="switchPlanSubTab('roadmap')">
+                                                <i class="bi bi-diagram-3"></i>
+                                                <span>Lộ trình thủ thuật</span>
+                                                <span class="badge bg-light text-secondary border rounded-pill df-num" id="stagesTotalBadge">0 giai đoạn</span>
+                                            </button>
+                                            <button type="button" class="tp-subtab-btn" id="tpSubTabBtn-diagnosis"
+                                                    onclick="switchPlanSubTab('diagnosis')">
+                                                <i class="bi bi-clipboard2-pulse"></i>
+                                                <span>Chẩn đoán đính kèm (ICD-10)</span>
+                                                <span class="badge bg-light text-secondary border rounded-pill df-num" id="diagSelectedSummary">0 đã chọn</span>
+                                            </button>
+                                            <button type="button" class="tp-subtab-btn" id="tpSubTabBtn-installment"
+                                                    onclick="switchPlanSubTab('installment')">
+                                                <i class="bi bi-calendar2-range"></i>
+                                                <span>Thanh toán theo đợt</span>
+                                                <span class="badge bg-light text-secondary border rounded-pill df-num" id="installmentBadgeSummary">1 lần</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Sub-tab 1: Lộ trình các giai đoạn & thủ thuật -->
+                                    <div id="tpSubTabPane-roadmap" style="display: none;">
+                                        <div id="roadmapsContainer">
+                                            <!-- Rendered by JS -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Sub-tab 2: Chẩn đoán bệnh lý / Mã ICD-10 đính kèm -->
+                                    <div id="tpSubTabPane-diagnosis" style="display: none;">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                            <div class="df-meta-tertiary">Tick chọn chẩn đoán từ ca khám hiện tại để đính kèm vào hồ sơ kế hoạch.</div>
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllDiagnoses()">
+                                                    Chọn tất cả
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnToggleIcdCatalogBox"
+                                                        onclick="toggleIcdCatalogBox()">
+                                                    <i class="bi bi-plus-circle me-1"></i> Gắn thêm mã ICD-10 từ danh mục
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div id="icdCatalogPanel" class="df-soft-panel mb-3" style="display: none;">
+                                            <div class="row g-3 align-items-start">
+                                                <div class="col-md-5 position-relative">
+                                                    <label class="form-label small fw-semibold text-dark mb-1" for="icdCatalogSearchInput">
+                                                        Tìm mã ICD-10 hệ thống
+                                                    </label>
+                                                    <input type="text" class="form-control form-control-sm" id="icdCatalogSearchInput"
+                                                           placeholder="Gõ mã hoặc tên bệnh lý (VD: K02, sâu răng, nha chu...)"
+                                                           oninput="searchIcd10CatalogForPlan(this.value)" autocomplete="off">
+                                                    <div id="icdCatalogDropdown" class="list-group position-absolute w-100 shadow-sm mt-1"
+                                                         style="z-index: 1050; max-height: 220px; overflow-y: auto; display: none;"></div>
+                                                </div>
+                                                <div class="col-md-7">
+                                                    <div class="form-label small fw-semibold text-muted mb-1">Gắn nhanh bệnh lý thường gặp</div>
+                                                    <div class="d-flex flex-wrap gap-1" id="commonIcdQuickChips">
+                                                        <!-- Rendered by JS from SERVER_COMMON_ICDS -->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-2" id="customAttachedIcdChips"></div>
+
+                                        <div class="table-responsive">
+                                            <table class="df-clean-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width: 52px;" class="text-center">Chọn</th>
+                                                        <th style="width: 145px;" class="text-nowrap">Chẩn đoán</th>
+                                                        <th style="width: 220px;">Vị trí răng &amp; mặt răng</th>
+                                                        <th style="width: 100px;">Mã ICD-10</th>
+                                                        <th>Tên bệnh lý &amp; Phân loại</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="diagTableBody">
+                                                    <!-- Rendered by JS -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <!-- Sub-tab 3: Lộ trình thanh toán theo đợt -->
+                                    <div id="tpSubTabPane-installment" style="display: none;">
+                                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                                            <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                                <input class="form-check-input" type="checkbox" role="switch" id="isInstallmentSwitch"
+                                                       style="width: 38px; height: 20px; cursor: pointer;" onchange="toggleInstallmentSection()">
+                                                <label class="form-check-label fw-semibold text-dark small" for="isInstallmentSwitch" style="cursor: pointer;">
+                                                    Chia lộ trình thanh toán theo nhiều đợt
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div id="contentSection5" style="display: none;">
+                                            <div id="installmentLockedNotice" class="alert alert-info py-2 px-3 small mb-3 d-none">
+                                                <i class="bi bi-lock-fill me-1"></i>
+                                                <span id="installmentLockedNoticeText">Phác đồ đã phát sinh thanh toán, lộ trình chia đợt đã được khóa cứng.</span>
+                                            </div>
+                                            <div class="df-soft-panel mb-3">
+                                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                                                    <span class="fw-semibold text-dark">Phân bổ đợt thanh toán dự kiến</span>
+                                                    <span class="badge bg-white text-secondary border">Tổng chi phí phác đồ: <strong class="text-primary" id="instPlanTotalDisplay">0 đ</strong></span>
+                                                </div>
+                                                <div class="row g-2 align-items-end">
+                                                    <div class="col-md-3">
+                                                        <label class="form-label small fw-medium text-secondary mb-1" for="instDownPayment">Đợt 1 đóng ban đầu</label>
+                                                        <div class="input-group input-group-sm">
+                                                            <input type="number" class="form-control" id="instDownPayment" placeholder="VD: 5000000" value="5000000" min="0" step="500000">
+                                                            <span class="input-group-text">đ</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <label class="form-label small fw-medium text-secondary mb-1" for="instRemainingCount">Số đợt còn lại</label>
+                                                        <input type="number" class="form-control form-control-sm" id="instRemainingCount" value="9" min="1" max="36">
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label small fw-medium text-secondary mb-1" for="instInterval">Khoảng cách đợt</label>
+                                                        <select class="form-select form-select-sm" id="instInterval">
+                                                            <option value="1">1 tháng / đợt</option>
+                                                            <option value="2">2 tháng / đợt</option>
+                                                            <option value="0.5">2 tuần / đợt</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-4 d-flex gap-2">
+                                                        <button type="button" id="btnAutoGenInstallments" class="btn btn-sm df-btn-tonal-primary flex-grow-1" onclick="autoGenerateInstallments()">
+                                                            <i class="bi bi-calculator me-1"></i> Chia đều tự động
+                                                        </button>
+                                                        <button type="button" id="btnStageGenInstallments" class="btn btn-sm btn-outline-secondary fw-semibold" onclick="generateInstallmentsFromStages()" title="Chia đợt theo các giai đoạn điều trị">
+                                                            Theo giai đoạn
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="table-responsive">
+                                                <table class="df-clean-table" id="tableInstallments">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="width: 64px;" class="text-center">Đợt</th>
+                                                            <th style="min-width: 220px;">Nội dung đợt</th>
+                                                            <th style="width: 155px;">Ngày dự kiến</th>
+                                                            <th style="width: 175px;" class="text-end">Dự kiến thu (VNĐ)</th>
+                                                            <th>Ghi chú</th>
+                                                            <th style="width: 56px;" class="text-center">Xóa</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="tbodyInstallments">
+                                                        <!-- Dynamic rows -->
+                                                    </tbody>
+                                                    <tfoot>
+                                                        <tr style="background: #f8fafc; font-weight: 600;">
+                                                            <td colspan="3" class="text-end">Tổng các đợt dự kiến:</td>
+                                                            <td class="text-end fw-bold text-primary" id="instSumDisplay">0 đ</td>
+                                                            <td colspan="2" id="instDiffNotice" class="small text-muted">Chênh lệch: 0 đ</td>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+                                                <button type="button" id="btnAddCustomInstallment" class="btn btn-sm btn-outline-secondary" onclick="addCustomInstallmentRow()">
+                                                    <i class="bi bi-plus-circle me-1"></i> Thêm đợt thủ công
+                                                </button>
+                                                <div class="df-meta-tertiary">
+                                                    Số tiền các đợt mang tính chất dự kiến để nhắc thu theo tiến độ.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                 <!-- ========================================================================= -->
                 <!-- THANH TỔNG KẾT & HÀNH ĐỘNG GHIM CỐ ĐỊNH Ở ĐÁY (SECONDARY TRÁI - PRIMARY PHẢI) -->
@@ -1040,16 +1377,12 @@
                         <div id="footerBreakdownBadges" class="d-flex flex-wrap align-items-center gap-1 mt-1"></div>
                     </div>
 
-                    <!-- Bên phải: Tổng tiền nổi bật + Nút Hủy + 1 Primary CTA duy nhất -->
+                    <!-- Bên phải: Tổng tiền nổi bật + 1 Primary CTA duy nhất -->
                     <div class="d-flex align-items-center gap-3 ms-auto">
                         <div class="text-end me-2">
                             <div class="fw-bold text-primary" style="font-size: 24px; line-height: 1.1;" id="footerGrandTotalDisplay">0 đ</div>
                             <div class="df-meta-tertiary" style="font-size: 11.5px;">Đồng bộ trực tiếp vào hồ sơ</div>
                         </div>
-                        <a th:href="@{'/doctor/examination/' + ${idCodec.encodeVisit(visit.visitId)} + '/diagnoses#tab-treatment-plan'}"
-                           class="btn btn-outline-secondary px-3 py-2 fw-semibold">
-                            Hủy
-                        </a>
                         <button type="button" id="btnSaveTreatmentPlan" class="btn btn-primary px-4 py-2 fw-bold d-flex align-items-center gap-2"
                                 th:disabled="${isClinicalLocked}"
                                 onclick="submitTreatmentPlan()">
@@ -1059,7 +1392,11 @@
                     </div>
                 </div>
 
-            </section>
+                        </section>
+                    </div>
+
+                </div>
+            </div>
 
         </main>
     </div>
@@ -1108,6 +1445,8 @@
     const SERVER_COMMON_ICDS = /*[[${commonIcds}]]*/ [];
     const SERVER_WORKFLOW_TEMPLATES = /*[[${workflowTemplates}]]*/ [];
     const SERVER_WORKFLOW_COMBOS = /*[[${workflowCombos}]]*/ [];
+    const SERVER_BOOKED_SERVICE = /*[[${bookedService}]]*/ null;
+    let DESK_WAITING_COUNT = /*[[${deskWaitingCount != null ? deskWaitingCount : 0}]]*/ 0;
     /*]]>*/
 </script>
 <script th:inline="none">
@@ -1425,8 +1764,6 @@
             const activeExact = SERVER_WORKFLOW_TEMPLATES.find(w =>
                 Number(w.serviceId) === numId && (!w.status || w.status === 'ACTIVE'));
             if (activeExact) return activeExact;
-            const anyExact = SERVER_WORKFLOW_TEMPLATES.find(w => Number(w.serviceId) === numId);
-            if (anyExact) return anyExact;
         }
         return null;
     }
@@ -1580,20 +1917,8 @@
         }
     }
 
-    function toggleAllSectionsSmart() {
-        const mainIds = ['2', '3', '4'];
-        const anyExpanded = mainIds.some(id => document.getElementById(`barSection${id}`)?.classList.contains('is-expanded'));
-        toggleAllSections(!anyExpanded);
-    }
-
-    function updateToggleAllBtnLabel() {
-        const btn = document.getElementById('btnToggleAllSections');
-        if (!btn) return;
-        const anyExpanded = ['1', '2', '3', '4', '5'].some(id => document.getElementById(`barSection${id}`)?.classList.contains('is-expanded'));
-        btn.innerHTML = anyExpanded
-            ? '<i class="bi bi-arrows-angle-contract me-1"></i> Thu gọn tất cả'
-            : '<i class="bi bi-arrows-angle-expand me-1"></i> Mở rộng tất cả';
-    }
+    function toggleAllSectionsSmart() {}
+    function updateToggleAllBtnLabel() {}
 
     function renderServiceComboItems(filterQuery = '') {
         const menu = document.getElementById('serviceComboMenu');
@@ -1725,6 +2050,17 @@
         };
 
         initServiceStagesFromCatalog(serviceEntry);
+        const isBookedMatch = Boolean(SERVER_BOOKED_SERVICE && String(SERVER_BOOKED_SERVICE.serviceId) === String(srvId));
+        if (isBookedMatch) {
+            serviceEntry.isBookedLocked = true;
+        } else if (SERVER_BOOKED_SERVICE && SERVER_BOOKED_SERVICE.serviceId && Number(DESK_WAITING_COUNT || 0) > 0) {
+            if (Array.isArray(serviceEntry.stages) && serviceEntry.stages.length > 0 && Number(serviceEntry.stages[0].days || 0) === 0) {
+                serviceEntry.stages[0].days = 7;
+            }
+            if (!skipRender) {
+                showToast(`Đang có ${DESK_WAITING_COUNT} bệnh nhân chờ: Dịch vụ tư vấn phát sinh được xếp lịch dự kiến cho ca khám sau (+7 ngày).`, 'warning');
+            }
+        }
         PLAN_SERVICES.push(serviceEntry);
 
         if (overrideSrvId === undefined) {
@@ -1828,6 +2164,10 @@
     function removePlanService(id) {
         const idx = PLAN_SERVICES.findIndex(x => x.id === id);
         if (idx < 0) return;
+        if (PLAN_SERVICES[idx].isBookedLocked) {
+            showToast('Dịch vụ này bệnh nhân đã đăng ký từ lịch hẹn, đã khóa cố định cho ca khám.', 'warning');
+            return;
+        }
         if (hasServiceLockedSteps(PLAN_SERVICES[idx])) {
             showToast('Không thể xóa dịch vụ đã có bước thủ thuật đang thực hiện hoặc đã hoàn thành trong ca khám!', 'warning');
             return;
@@ -1846,7 +2186,7 @@
         }
         const isPkg = isPackageService(d.serviceId);
         const initialTeeth = d.teeth.map(t => t.num);
-        openFdiToothPopover(anchorEl || document.getElementById('barSection2'), (selectedArr) => {
+        openFdiToothPopover(anchorEl || document.getElementById('tpPlanFormWorkspace'), (selectedArr) => {
             const rawStr = selectedArr.length === 0 ? '' : (selectedArr[0] === 'Toàn hàm' ? 'Toàn hàm' : selectedArr.join(', '));
             d.teeth = parseTeethInput(rawStr, d.serviceId);
             if (!isPkg && !d.teeth.some(t => t.isFullJaw)) {
@@ -1916,7 +2256,7 @@
                     isLocked: false,
                     name: st.stepName || 'Thủ thuật kỹ thuật',
                     activeTeeth: [...activeTeethNums],
-                    qty: isPackage ? d.qty : (activeTeethNums.length || 1),
+                    qty: (!isPackage && activeTeethNums.length > 0) ? activeTeethNums.length : Math.max(1, Number(d.qty || 1)),
                     price: hasAdminStepPrices ? Number(st.stepPrice || 0) : distributed[idx],
                     notes: st.stepDescription || 'Thực hiện chuẩn Bộ Y Tế (QĐ 3207/QĐ-BYT)'
                 }))
@@ -1949,7 +2289,7 @@
                     isLocked: false,
                     name: sp.name,
                     activeTeeth: [...activeTeethNums],
-                    qty: isPackage ? d.qty : (activeTeethNums.length || 1),
+                    qty: (!isPackage && activeTeethNums.length > 0) ? activeTeethNums.length : Math.max(1, Number(d.qty || 1)),
                     price: (sp.price !== undefined && sp.price !== null) ? sp.price : autoP,
                     notes: sp.notes || ''
                 };
@@ -2142,53 +2482,67 @@
     }
 
     // =========================================================================
-    // TOGGLE SECTION ACCORDION (PROGRESSIVE DISCLOSURE)
+    // CHUYỂN ĐỔI SUB-TAB & CHẾ ĐỘ CHỌN DỊCH VỤ / COMBO
     // =========================================================================
-    function toggleSection(secId) {
-        const bar = document.getElementById(`barSection${secId}`);
-        const content = document.getElementById(`contentSection${secId}`);
-        if (!bar || !content) return;
+    let activePlanSubTab = null;
 
-        const isExpanded = bar.classList.contains('is-expanded');
-        if (isExpanded) {
-            bar.classList.remove('is-expanded');
-            content.style.display = 'none';
+    function switchPlanSubTab(key, forceOpen = false) {
+        const keys = ['roadmap', 'diagnosis', 'installment'];
+        if (!key || !keys.includes(key)) {
+            activePlanSubTab = null;
+        } else if (!forceOpen && activePlanSubTab === key) {
+            activePlanSubTab = null;
         } else {
-            bar.classList.add('is-expanded');
-            content.style.display = 'block';
-            if (secId === '5') {
-                const switchEl = document.getElementById('isInstallmentSwitch');
-                if (switchEl && !switchEl.checked) {
-                    switchEl.checked = true;
-                    toggleInstallmentSection();
-                } else {
-                    renderInstallmentsTable();
-                }
-            }
+            activePlanSubTab = key;
         }
-        updateToggleAllBtnLabel();
+        keys.forEach(k => {
+            const btn = document.getElementById(`tpSubTabBtn-${k}`);
+            const pane = document.getElementById(`tpSubTabPane-${k}`);
+            const isOpen = (k === activePlanSubTab);
+            if (btn) btn.classList.toggle('active', isOpen);
+            if (pane) pane.style.display = isOpen ? 'block' : 'none';
+        });
+        const header = document.getElementById('tpSubTabsHeader');
+        if (header) header.classList.toggle('mb-3', activePlanSubTab !== null);
     }
 
-    function toggleAllSections(expand) {
-        ['1', '2', '3', '4', '5'].forEach(id => {
-            const bar = document.getElementById(`barSection${id}`);
-            const content = document.getElementById(`contentSection${id}`);
-            if (!bar || !content) return;
-            if (expand) {
-                bar.classList.add('is-expanded');
-                content.style.display = 'block';
-            } else {
-                bar.classList.remove('is-expanded');
-                content.style.display = 'none';
-            }
-        });
-        updateToggleAllBtnLabel();
+    document.addEventListener('click', function (ev) {
+        if (!activePlanSubTab) return;
+        if (!ev.target || !ev.target.isConnected) return;
+        if (ev.target.closest('#tpSubTabsSection')
+            || ev.target.closest('#fdiToothPopover')
+            || ev.target.closest('.modal')
+            || ev.target.closest('.combobox-menu')) {
+            return;
+        }
+        switchPlanSubTab(null);
+    });
+
+    function switchServiceInputMode(mode) {
+        const singlePanel = document.getElementById('tpSingleServicePanel');
+        const comboPanel = document.getElementById('tpComboServicePanel');
+        const singleBtn = document.getElementById('tpModeSingleBtn');
+        const comboBtn = document.getElementById('tpModeComboBtn');
+        const useCombo = (mode === 'combo' && comboPanel);
+        if (singlePanel) singlePanel.style.display = useCombo ? 'none' : 'block';
+        if (comboPanel) comboPanel.style.display = useCombo ? 'block' : 'none';
+        if (singleBtn) singleBtn.classList.toggle('active', !useCombo);
+        if (comboBtn) comboBtn.classList.toggle('active', useCombo);
     }
+
+    function toggleSection(secId) {
+        if (secId === '1') switchPlanSubTab('diagnosis', true);
+        else if (secId === '4') switchPlanSubTab('roadmap', true);
+        else if (secId === '5') switchPlanSubTab('installment', true);
+    }
+
+    function toggleAllSections() {}
 
     // =========================================================================
     // 1. RENDER BƯỚC 1: DỊCH VỤ ĐIỀU TRỊ ĐÃ CHỌN & PHÁC ĐỒ CHUẨN
     // =========================================================================
     function renderMappingTable() {
+        const selectedBox = document.getElementById('tpSelectedServicesBox');
         const thead = document.getElementById('mappingTableHead');
         if (thead) thead.style.display = PLAN_SERVICES.length === 0 ? 'none' : '';
         const tbody = document.getElementById('mappingTableBody');
@@ -2199,16 +2553,11 @@
         if (!tbody) return;
 
         if (PLAN_SERVICES.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" class="text-center text-muted py-4">
-                        <div class="fw-semibold text-dark">Chưa có dịch vụ nào trong kế hoạch</div>
-                        <div class="small mt-1">Chọn dịch vụ từ danh sách phía trên rồi bấm <strong>+ Thêm dịch vụ</strong> để khởi tạo lộ trình.</div>
-                    </td>
-                </tr>
-            `;
+            if (selectedBox) selectedBox.style.display = 'none';
+            tbody.innerHTML = '';
             return;
         }
+        if (selectedBox) selectedBox.style.display = 'block';
 
         let html = '';
         PLAN_SERVICES.forEach(d => {
@@ -2260,15 +2609,20 @@
                 });
             }
 
+            const isLockedRow = hasLocked || Boolean(d.isBookedLocked);
+
             html += `
                 <tr>
                     <td>
                         <div class="d-flex align-items-center justify-content-between mb-1">
                             <span class="badge bg-light text-primary border fw-semibold">DV #${d.order}</span>
-                            ${hasLocked ? '<span class="badge bg-success-subtle text-success border">Có bước đã làm</span>' : ''}
+                            <div class="d-flex align-items-center gap-1">
+                                ${d.isBookedLocked ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold"><i class="bi bi-lock-fill me-1"></i>Đã đặt lịch</span>' : ''}
+                                ${hasLocked ? '<span class="badge bg-success-subtle text-success border">Có bước đã làm</span>' : ''}
+                            </div>
                         </div>
                         <select class="form-select form-select-sm fw-semibold text-dark" style="height: 36px; font-size: 13.5px;"
-                                ${hasLocked ? 'disabled title="Không thể đổi dịch vụ vì đã có bước thực hiện"' : `onchange="changeService('${escapeJsAttr(d.id)}', this.value)" title="Đổi dịch vụ điều trị"`}>
+                                ${isLockedRow ? `disabled title="${d.isBookedLocked ? 'Dịch vụ bệnh nhân đã đăng ký từ lịch hẹn (đã khóa)' : 'Không thể đổi dịch vụ vì đã có bước thực hiện'}"` : `onchange="changeService('${escapeJsAttr(d.id)}', this.value)" title="Đổi dịch vụ điều trị"`}>
                             ${srvOpts}
                         </select>
                     </td>
@@ -2305,7 +2659,7 @@
                     </td>
                     <td class="text-center">
                         <button type="button" class="df-btn-icon-muted"
-                                ${hasLocked ? 'disabled title="Không thể xóa vì đã có bước thực hiện"' : `onclick="removePlanService('${escapeJsAttr(d.id)}')" title="Xóa dịch vụ"`}>
+                                ${isLockedRow ? `disabled title="${d.isBookedLocked ? 'Dịch vụ đã đặt lịch (đã khóa)' : 'Không thể xóa vì đã có bước thực hiện'}"` : `onclick="removePlanService('${escapeJsAttr(d.id)}')" title="Xóa dịch vụ"`}>
                             <i class="bi bi-trash3"></i>
                         </button>
                     </td>
@@ -2449,6 +2803,10 @@
     function changeService(id, srvId) {
         const d = PLAN_SERVICES.find(x => x.id === id);
         if (!d || hasServiceLockedSteps(d)) return;
+        if (d.isBookedLocked) {
+            showToast('Dịch vụ này bệnh nhân đã đăng ký từ lịch hẹn, đã khóa cố định cho ca khám.', 'warning');
+            return;
+        }
         d.serviceId = String(srvId);
         initServiceStagesFromCatalog(d);
         recalculateStepPrices(d);
@@ -2584,7 +2942,7 @@
             tbody.innerHTML = `
                 <tr>
                     <td colspan="5" class="text-center py-3 text-muted small">
-                        Ca khám hiện chưa ghi nhận chẩn đoán ICD-10. Bác sĩ có thể chọn dịch vụ ở <strong>Bước 2</strong> hoặc bấm nút gắn mã ICD-10 phía trên nếu cần.
+                        Ca khám hiện chưa ghi nhận chẩn đoán ICD-10. Bác sĩ có thể chọn dịch vụ ở <strong>phía trên</strong> hoặc bấm nút gắn mã ICD-10 nếu cần.
                     </td>
                 </tr>
             `;
@@ -2612,7 +2970,7 @@
                         <input type="checkbox" class="form-check-input m-0" style="cursor: pointer; width: 18px; height: 18px;"
                                ${d.selected ? 'checked' : ''} onchange="toggleDiag('${escapeJsAttr(d.id)}')">
                     </td>
-                    <td>
+                    <td class="text-nowrap">
                         <strong class="text-dark">Chẩn đoán #${d.order}</strong>
                     </td>
                     <td>
@@ -2682,7 +3040,7 @@
 
         if (PLAN_SERVICES.length === 0) {
             if (container) {
-                container.innerHTML = `<div class="text-center text-muted py-4 small">Chưa có dịch vụ nào. Chọn dịch vụ ở <strong>Bước 2</strong> để hiển thị các giai đoạn và thủ thuật.</div>`;
+                container.innerHTML = `<div class="text-center text-muted py-4 small">Chưa có dịch vụ nào. Chọn dịch vụ ở <strong>phía trên</strong> để hiển thị các giai đoạn và thủ thuật.</div>`;
             }
             if (stagesBadge) stagesBadge.innerText = '0 giai đoạn';
             return;
@@ -2811,7 +3169,7 @@
 
                 stagesHtml += `
                     <div class="df-stage-panel">
-                        <div class="py-2 px-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="py-2 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
                             <div class="d-flex align-items-center gap-2 flex-grow-1">
                                 <span class="badge bg-light text-secondary border fw-semibold px-2 py-1">Giai đoạn ${sIdx + 1}</span>
                                 <input type="text" class="form-control form-control-sm fw-semibold text-dark border-0 bg-light" style="max-width: 440px; font-size: 13.5px;"
@@ -2830,7 +3188,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="p-3">
+                        <div class="pt-2 pb-1">
                             <table class="df-steps-table mb-2">
                                 <thead>
                                     <tr>
@@ -2881,7 +3239,7 @@
                             <i class="bi bi-plus me-1"></i>Thêm giai đoạn
                         </button>
                     </div>
-                    <div class="p-3">
+                    <div class="pt-2">
                         ${stagesHtml}
                     </div>
                 </div>
@@ -3010,7 +3368,7 @@
         const sp = d.stages[sIdx].steps[spIdx];
         if (sp.isLocked) return;
 
-        openFdiToothPopover(anchorEl || document.getElementById('barSection4'), (selectedArr) => {
+        openFdiToothPopover(anchorEl || document.getElementById('tpPlanFormWorkspace'), (selectedArr) => {
             if (!Array.isArray(selectedArr) || selectedArr.length === 0) {
                 showToast('Mỗi bước phải áp dụng cho ít nhất 1 răng/phạm vi.', 'warning');
                 return;
@@ -3287,253 +3645,412 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded', async function() {
-        const today = new Date();
-        const startStr = today.toISOString().split('T')[0];
+    function resetPlanFormState() {
+        EDIT_PLAN_ID = null;
+        EDIT_PLAN_STATUS = null;
+        EDIT_IS_INSTALLMENT = false;
+        IS_INSTALLMENT_LOCKED = false;
+        userEditedPlanName = false;
+        PLAN_SERVICES.length = 0;
+        CUSTOM_ICDS.length = 0;
+        window.CURRENT_INSTALLMENTS = [];
+
+        DIAGNOSES.forEach(d => {
+            d.selected = (PRESELECTED_DIAG_ID && Number(PRESELECTED_DIAG_ID) > 0)
+                ? (String(d.id) === String(PRESELECTED_DIAG_ID))
+                : true;
+        });
+
+        const editBar = document.getElementById('tpEditModeBar');
+        if (editBar) editBar.style.display = 'none';
+        const headingEl = document.getElementById('tpFormTitleHeading');
+        if (headingEl) {
+            headingEl.innerHTML = 'Đang chỉnh sửa kế hoạch';
+        }
+        const btnSave = document.getElementById('btnSaveTreatmentPlan');
+        if (btnSave) {
+            btnSave.disabled = IS_CLINICAL_LOCKED;
+            btnSave.classList.remove('btn-success');
+            btnSave.classList.add('btn-primary');
+            btnSave.innerHTML = IS_CLINICAL_LOCKED
+                ? '<i class="bi bi-lock-fill me-1"></i> Bệnh án đã khóa'
+                : '<i class="bi bi-check-lg"></i> Lưu kế hoạch điều trị';
+        }
+
+        const nameInp = document.getElementById('planNameInput');
+        if (nameInp) nameInp.value = '';
+        const notesInp = document.getElementById('planNotesInput');
+        if (notesInp) notesInp.value = '';
+
+        const startInp = document.getElementById('planStartDate');
+        if (startInp) startInp.value = new Date().toISOString().split('T')[0];
+        const endInp = document.getElementById('planEndDate');
+        if (endInp) endInp.value = '';
+
+        const switchEl = document.getElementById('isInstallmentSwitch');
+        if (switchEl) {
+            switchEl.disabled = false;
+            switchEl.checked = false;
+        }
+        ['instDownPayment', 'instRemainingCount', 'instInterval',
+         'btnAutoGenInstallments', 'btnStageGenInstallments', 'btnAddCustomInstallment'].forEach(elId => {
+            const el = document.getElementById(elId);
+            if (el) el.disabled = false;
+        });
+        document.getElementById('installmentLockedNotice')?.classList.add('d-none');
+        toggleInstallmentSection();
+        if (typeof hideInlineBanner === 'function') hideInlineBanner();
+        if (typeof clearFieldError === 'function') clearFieldError('planNameError');
+
+        ensureBookedServiceInPlan();
+        recalculatePlanEndDate();
+        renderAll();
+        if (typeof renderInstallmentsTable === 'function') {
+            renderInstallmentsTable();
+        }
+        switchServiceInputMode('single');
+        switchPlanSubTab(null);
+    }
+
+    function ensureBookedServiceInPlan() {
+        if (!SERVER_BOOKED_SERVICE || !SERVER_BOOKED_SERVICE.serviceId) return;
+        const bookedId = String(SERVER_BOOKED_SERVICE.serviceId);
+        if (!SERVICES_DICT[bookedId]) return;
+        const existing = PLAN_SERVICES.find(x => String(x.serviceId) === bookedId);
+        if (existing) {
+            existing.isBookedLocked = true;
+            return;
+        }
+        const defaultScope = isPackageService(bookedId) ? 'Toàn hàm' : '';
+        addServiceFromPicker(bookedId, defaultScope, 1, true);
+        const added = PLAN_SERVICES.find(x => String(x.serviceId) === bookedId);
+        if (added) added.isBookedLocked = true;
+        const nameInp = document.getElementById('planNameInput');
+        if (nameInp && !nameInp.value.trim()) {
+            nameInp.value = 'Kế hoạch điều trị: ' + (SERVER_BOOKED_SERVICE.serviceName || SERVICES_DICT[bookedId].name || '');
+        }
+    }
+
+    async function loadPlanIntoForm(editPlanId) {
+        resetPlanFormState();
+        EDIT_PLAN_ID = Number(editPlanId);
+        userEditedPlanName = true;
+
+        const editBar = document.getElementById('tpEditModeBar');
+        if (editBar) editBar.style.display = 'block';
+        const headingEl = document.getElementById('tpFormTitleHeading');
+        if (headingEl) {
+            headingEl.innerHTML = 'Đang chỉnh sửa kế hoạch';
+        }
 
         const startInp = document.getElementById('planStartDate');
         const endInp = document.getElementById('planEndDate');
-        if (startInp) startInp.value = startStr;
 
-        recalculatePlanEndDate();
-        renderServiceComboItems('');
-        renderCommonIcdChips();
-        renderServiceSuggestionsBar();
+        try {
+            const resp = await fetch(`/api/doctor/treatment-plans/${editPlanId}`);
+            if (resp.ok) {
+                const plan = await resp.json();
+                if (plan) {
+                    EDIT_PLAN_STATUS = plan.status || 'ACCEPTED';
+                    EDIT_IS_INSTALLMENT = Boolean(plan.isInstallment);
+                    IS_INSTALLMENT_LOCKED = Number(plan.totalPaidAmount || 0) > 0
+                        || (Number(plan.finalEstimatedCost || 0) > 0 && Number(plan.remainingCost || 0) <= 0);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const editPlanId = urlParams.get('planId');
+                    const nameInp = document.getElementById('planNameInput');
+                    if (nameInp && plan.planName) nameInp.value = plan.planName;
 
-        if (editPlanId) {
-            EDIT_PLAN_ID = Number(editPlanId);
-            userEditedPlanName = true;
-            try {
-                const resp = await fetch(`/api/doctor/treatment-plans/${editPlanId}`);
-                if (resp.ok) {
-                    const plan = await resp.json();
-                    if (plan) {
-                        EDIT_PLAN_STATUS = plan.status || 'ACCEPTED';
-                        EDIT_IS_INSTALLMENT = Boolean(plan.isInstallment);
-                        IS_INSTALLMENT_LOCKED = Number(plan.totalPaidAmount || 0) > 0
-                            || (Number(plan.finalEstimatedCost || 0) > 0 && Number(plan.remainingCost || 0) <= 0);
+                    const docSelect = document.getElementById('doctorSelect');
+                    if (docSelect && plan.doctorId) docSelect.value = plan.doctorId;
+                    const docSummary = document.getElementById('planDoctorSummary');
+                    if (docSummary && plan.doctorName) docSummary.innerText = plan.doctorName;
 
-                        const nameInp = document.getElementById('planNameInput');
-                        if (nameInp && plan.planName) nameInp.value = plan.planName;
+                    if (plan.startDate && startInp) {
+                        const p = plan.startDate.split('/');
+                        if (p.length === 3) startInp.value = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+                    }
+                    if (plan.expectedEndDate && endInp) {
+                        const p = plan.expectedEndDate.split('/');
+                        if (p.length === 3) endInp.value = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+                    }
 
-                        const docSelect = document.getElementById('doctorSelect');
-                        if (docSelect && plan.doctorId) docSelect.value = plan.doctorId;
-                        const docSummary = document.getElementById('planDoctorSummary');
-                        if (docSummary && plan.doctorName) docSummary.innerText = plan.doctorName;
+                    const notesInp = document.getElementById('planNotesInput');
+                    if (notesInp && plan.notes) {
+                        const cleanNotes = plan.notes
+                            .replace(/\[Chẩn đoán:\s*[^\]]*\]\s*(\|\s*)?/g, '')
+                            .replace(/^\|\s*|\s*\|$/g, '')
+                            .trim();
+                        notesInp.value = cleanNotes;
+                    }
 
-                        if (plan.startDate && startInp) {
-                            const p = plan.startDate.split('/');
-                            if (p.length === 3) startInp.value = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
-                        }
-                        if (plan.expectedEndDate && endInp) {
-                            const p = plan.expectedEndDate.split('/');
-                            if (p.length === 3) endInp.value = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
-                        }
-
-                        const notesInp = document.getElementById('planNotesInput');
-                        if (notesInp && plan.notes) {
-                            const cleanNotes = plan.notes
-                                .replace(/\[Chẩn đoán:\s*[^\]]*\]\s*(\|\s*)?/g, '')
-                                .replace(/^\|\s*|\s*\|$/g, '')
-                                .trim();
-                            notesInp.value = cleanNotes;
-                        }
-
-                        // Khôi phục thông tin chẩn đoán ICD-10 tùy chọn đã lưu (nếu có)
-                        if (plan.diagnosisText) {
-                            DIAGNOSES.forEach(d => { d.selected = false; });
-                            const tokens = plan.diagnosisText.split('|').map(t => t.trim()).filter(Boolean);
-                            tokens.forEach(tok => {
-                                const m = tok.match(new RegExp('^\\[([^\\]]+)\\]\\s*(.*)$'));
-                                if (m) {
-                                    const code = m[1].trim().toUpperCase();
-                                    const label = m[2].replace(new RegExp('\\s*\\([^)]*\\)\\s*$'), '').trim();
-                                    const matchedDiag = DIAGNOSES.find(d => (d.icd || '').toUpperCase() === code);
-                                    if (matchedDiag) {
-                                        matchedDiag.selected = true;
-                                    } else if (code && code !== 'DT' && !CUSTOM_ICDS.some(c => c.code === code)) {
-                                        CUSTOM_ICDS.push({ code, name: label || code });
-                                    }
+                    // Khôi phục thông tin chẩn đoán ICD-10 tùy chọn đã lưu (nếu có)
+                    if (plan.diagnosisText) {
+                        DIAGNOSES.forEach(d => { d.selected = false; });
+                        const tokens = plan.diagnosisText.split('|').map(t => t.trim()).filter(Boolean);
+                        tokens.forEach(tok => {
+                            const m = tok.match(new RegExp('^\\[([^\\]]+)\\]\\s*(.*)$'));
+                            if (m) {
+                                const code = m[1].trim().toUpperCase();
+                                const label = m[2].replace(new RegExp('\\s*\\([^)]*\\)\\s*$'), '').trim();
+                                const matchedDiag = DIAGNOSES.find(d => (d.icd || '').toUpperCase() === code);
+                                if (matchedDiag) {
+                                    matchedDiag.selected = true;
+                                } else if (code && code !== 'DT' && !CUSTOM_ICDS.some(c => c.code === code)) {
+                                    CUSTOM_ICDS.push({ code, name: label || code });
                                 }
-                            });
-                        }
-
-                        const cardHeader = document.querySelector('.df-main-card-header');
-                        if (cardHeader) {
-                            const titleEl = cardHeader.querySelector('h5');
-                            if (titleEl) {
-                                titleEl.innerHTML = `<span class="badge bg-primary text-white me-2 px-2 py-1 rounded-pill" style="font-size: 13px;">${escapeHtml(plan.planCode || 'KHDT')}</span>Chi tiết &amp; Cập nhật Kế hoạch điều trị`;
                             }
-                        }
+                        });
+                    }
 
-                        // Nạp lại các giai đoạn & bước điều trị thật của phác đồ đang lưu
-                        if (plan.stages && plan.stages.length > 0) {
-                            PLAN_SERVICES.length = 0;
-                            const groupMap = new Map();
-                            plan.stages.forEach((st, sIdx) => {
-                                let groupKey = 'SRV_1';
-                                let cleanStageName = (st.stageName || '').trim();
-                                const prefixMatch = cleanStageName.match(new RegExp('^\\[((?:SV|CĐ)\\s*#?\\d+)\\]\\s*(.*)$', 'i'));
-                                if (prefixMatch) {
-                                    groupKey = prefixMatch[1].toUpperCase().replace(/\s+/g, '');
-                                    cleanStageName = prefixMatch[2].trim();
-                                } else if (st.description && st.description.trim()) {
-                                    groupKey = 'DESC_' + st.description.trim();
-                                }
+                    if (headingEl) {
+                        headingEl.innerHTML = `Đang chỉnh sửa: ${escapeHtml(plan.planCode || 'KHDT')}`;
+                    }
 
-                                const firstItem = (st.items && st.items.length > 0) ? st.items[0] : null;
-                                const rawSrvId = firstItem && firstItem.serviceId ? String(firstItem.serviceId) : (Object.keys(SERVICES_DICT)[0] || '');
-                                const srvObj = SERVICES_DICT[rawSrvId];
+                    // Nạp lại các giai đoạn & bước điều trị thật của phác đồ đang lưu
+                    if (plan.stages && plan.stages.length > 0) {
+                        PLAN_SERVICES.length = 0;
+                        const groupMap = new Map();
+                        plan.stages.forEach((st, sIdx) => {
+                            let groupKey = 'SRV_1';
+                            let cleanStageName = (st.stageName || '').trim();
+                            const prefixMatch = cleanStageName.match(new RegExp('^\\[((?:SV|CĐ)\\s*#?\\d+)\\]\\s*(.*)$', 'i'));
+                            if (prefixMatch) {
+                                groupKey = prefixMatch[1].toUpperCase().replace(/\s+/g, '');
+                                cleanStageName = prefixMatch[2].trim();
+                            } else if (st.description && st.description.trim()) {
+                                groupKey = 'DESC_' + st.description.trim();
+                            }
 
-                                if (!groupMap.has(groupKey)) {
-                                    let descName = srvObj ? srvObj.name : ((firstItem && firstItem.serviceName) || plan.planName || 'Dịch vụ điều trị');
-                                    const teethRaw = firstItem && firstItem.toothNumbers ? firstItem.toothNumbers : 'Toàn hàm';
-                                    groupMap.set(groupKey, {
-                                        id: 'srv-plan-' + (groupMap.size + 1),
-                                        order: groupMap.size + 1,
-                                        serviceId: rawSrvId,
-                                        serviceName: descName,
-                                        teeth: parseTeethInput(teethRaw, rawSrvId),
-                                        qty: Number(firstItem?.quantity || 1),
-                                        presetKey: 'CUSTOM',
-                                        workflowTemplateId: null,
-                                        workflowTemplateName: '',
-                                        stepsPool: [],
-                                        stages: []
-                                    });
-                                }
+                            const firstItem = (st.items && st.items.length > 0) ? st.items[0] : null;
+                            const rawSrvId = firstItem && firstItem.serviceId ? String(firstItem.serviceId) : (Object.keys(SERVICES_DICT)[0] || '');
+                            const srvObj = SERVICES_DICT[rawSrvId];
 
-                                const srvGroup = groupMap.get(groupKey);
-                                const steps = (st.items && st.items.length > 0) ? st.items.map(it => {
-                                    const teethList = it.toothNumbers ? it.toothNumbers.split(',').map(s => s.trim()).filter(Boolean) : ['Toàn hàm'];
-                                    const itemStatus = (it.status || 'PLANNED').toUpperCase();
-                                    return {
-                                        planItemId: it.planItemId || null,
-                                        status: itemStatus,
-                                        isLocked: (itemStatus === 'COMPLETED' || itemStatus === 'IN_PROGRESS'),
-                                        name: it.stepName || it.serviceName || 'Thủ thuật',
-                                        activeTeeth: teethList,
-                                        qty: Number(it.quantity || 1),
-                                        price: Number(it.estimatedPrice != null ? it.estimatedPrice : (it.totalPrice != null ? it.totalPrice : 0)),
-                                        notes: it.notes || ''
-                                    };
-                                }) : [{
-                                    planItemId: null,
-                                    status: 'PLANNED',
-                                    isLocked: false,
-                                    name: cleanStageName || 'Bước điều trị',
-                                    activeTeeth: ['Toàn hàm'],
-                                    qty: 1,
-                                    price: Number(st.stageTotalCost || 0),
-                                    notes: ''
-                                }];
-
-                                let daysVal = Number(st.estimatedDaysFromStart != null ? st.estimatedDaysFromStart : (sIdx * 3));
-                                if (st.expectedEndDate && plan.startDate) {
-                                    const parseVn = (str) => {
-                                        const parts = String(str).split('/');
-                                        return parts.length === 3 ? new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`) : null;
-                                    };
-                                    const sd = parseVn(plan.startDate);
-                                    const ed = parseVn(st.expectedEndDate);
-                                    if (sd && ed && !isNaN(sd) && !isNaN(ed)) {
-                                        daysVal = Math.max(0, Math.round((ed - sd) / 86400000));
-                                    }
-                                }
-                                srvGroup.stages.push({
-                                    stageId: st.stageId || null,
-                                    status: st.status || 'PENDING',
-                                    name: cleanStageName || st.stageName,
-                                    days: daysVal,
-                                    steps: steps
+                            if (!groupMap.has(groupKey)) {
+                                let descName = srvObj ? srvObj.name : ((firstItem && firstItem.serviceName) || plan.planName || 'Dịch vụ điều trị');
+                                const teethRaw = firstItem && firstItem.toothNumbers ? firstItem.toothNumbers : 'Toàn hàm';
+                                groupMap.set(groupKey, {
+                                    id: 'srv-plan-' + (groupMap.size + 1),
+                                    order: groupMap.size + 1,
+                                    serviceId: rawSrvId,
+                                    serviceName: descName,
+                                    teeth: parseTeethInput(teethRaw, rawSrvId),
+                                    qty: Number(firstItem?.quantity || 1),
+                                    presetKey: 'CUSTOM',
+                                    workflowTemplateId: null,
+                                    workflowTemplateName: '',
+                                    isBookedLocked: Boolean(SERVER_BOOKED_SERVICE && String(SERVER_BOOKED_SERVICE.serviceId) === String(rawSrvId)),
+                                    stepsPool: [],
+                                    stages: []
                                 });
-                            });
+                            }
 
-                            groupMap.forEach(srvGroup => {
-                                const collectedTeeth = [];
-                                const seenTeeth = new Set();
-                                (srvGroup.stages || []).forEach(st => {
-                                    (st.steps || []).forEach(sp => {
-                                        (sp.activeTeeth || []).forEach(t => {
-                                            const cleanT = String(t || '').trim();
-                                            if (cleanT && cleanT.toLowerCase() !== 'toàn hàm' && !seenTeeth.has(cleanT)) {
-                                                seenTeeth.add(cleanT);
-                                                collectedTeeth.push(cleanT);
-                                            }
-                                        });
-                                    });
-                                });
-                                if (collectedTeeth.length > 0) {
-                                    srvGroup.teeth = parseTeethInput(collectedTeeth.join(', '), srvGroup.serviceId);
-                                    if (!isPackageService(srvGroup.serviceId) && !srvGroup.teeth.some(t => t.isFullJaw)) {
-                                        const stepQtys = (srvGroup.stages || []).flatMap(st => (st.steps || []).map(sp => Number(sp.qty || 1)));
-                                        const maxStepQty = stepQtys.length > 0 ? Math.max(...stepQtys) : 1;
-                                        srvGroup.qty = Math.max(srvGroup.teeth.length, maxStepQty);
-                                    }
-                                } else {
-                                    srvGroup.teeth = parseTeethInput('Toàn hàm', srvGroup.serviceId);
-                                }
-                            });
-
-                            PLAN_SERVICES.push(...groupMap.values());
-                        }
-
-                        // Nạp lại danh sách đợt thanh toán (Chuẩn DentalSoft)
-                        if (plan.isInstallment || (plan.installments && plan.installments.length > 0)) {
-                            window.CURRENT_INSTALLMENTS = (plan.installments || []).map((inst, idx) => {
-                                let dt = inst.expectedDateRaw || inst.expectedDate || '';
-                                if (dt && /^\d{2}\/\d{2}\/\d{4}$/.test(dt)) {
-                                    const parts = dt.split('/');
-                                    dt = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                                }
+                            const srvGroup = groupMap.get(groupKey);
+                            const steps = (st.items && st.items.length > 0) ? st.items.map(it => {
+                                const teethList = it.toothNumbers ? it.toothNumbers.split(',').map(s => s.trim()).filter(Boolean) : ['Toàn hàm'];
+                                const itemStatus = (it.status || 'PLANNED').toUpperCase();
                                 return {
-                                    installmentId: inst.installmentId || null,
-                                    phaseName: inst.phaseName || `Đợt ${idx + 1}`,
-                                    expectedDate: dt,
-                                    expectedAmount: Number(inst.expectedAmount || 0),
-                                    paidAmount: Number(inst.paidAmount || 0),
-                                    status: inst.status || 'PENDING',
-                                    notes: inst.notes || ''
+                                    planItemId: it.planItemId || null,
+                                    status: itemStatus,
+                                    isLocked: (itemStatus === 'COMPLETED' || itemStatus === 'IN_PROGRESS'),
+                                    name: it.stepName || it.serviceName || 'Thủ thuật',
+                                    activeTeeth: teethList,
+                                    qty: Number(it.quantity || 1),
+                                    price: Number(it.estimatedPrice != null ? it.estimatedPrice : (it.totalPrice != null ? it.totalPrice : 0)),
+                                    notes: it.notes || ''
                                 };
-                            });
-                            const switchEl = document.getElementById('isInstallmentSwitch');
-                            if (switchEl) {
-                                switchEl.checked = true;
-                                toggleInstallmentSection();
-                                renderInstallmentsTable();
+                            }) : [{
+                                planItemId: null,
+                                status: 'PLANNED',
+                                isLocked: false,
+                                name: cleanStageName || 'Bước điều trị',
+                                activeTeeth: ['Toàn hàm'],
+                                qty: 1,
+                                price: Number(st.stageTotalCost || 0),
+                                notes: ''
+                            }];
+
+                            let daysVal = Number(st.estimatedDaysFromStart != null ? st.estimatedDaysFromStart : (sIdx * 3));
+                            if (st.expectedEndDate && plan.startDate) {
+                                const parseVn = (str) => {
+                                    const parts = String(str).split('/');
+                                    return parts.length === 3 ? new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`) : null;
+                                };
+                                const sd = parseVn(plan.startDate);
+                                const ed = parseVn(st.expectedEndDate);
+                                if (sd && ed && !isNaN(sd) && !isNaN(ed)) {
+                                    daysVal = Math.max(0, Math.round((ed - sd) / 86400000));
+                                }
                             }
-                        }
+                            srvGroup.stages.push({
+                                stageId: st.stageId || null,
+                                status: st.status || 'PENDING',
+                                name: cleanStageName || st.stageName,
+                                days: daysVal,
+                                steps: steps
+                            });
+                        });
 
-                        if (IS_INSTALLMENT_LOCKED) {
-                            applyInstallmentLockUI(plan.totalPaidAmount || 0);
-                        }
+                        groupMap.forEach(srvGroup => {
+                            const collectedTeeth = [];
+                            const seenTeeth = new Set();
+                            (srvGroup.stages || []).forEach(st => {
+                                (st.steps || []).forEach(sp => {
+                                    (sp.activeTeeth || []).forEach(t => {
+                                        const cleanT = String(t || '').trim();
+                                        if (cleanT && cleanT.toLowerCase() !== 'toàn hàm' && !seenTeeth.has(cleanT)) {
+                                            seenTeeth.add(cleanT);
+                                            collectedTeeth.push(cleanT);
+                                        }
+                                    });
+                                });
+                            });
+                            if (collectedTeeth.length > 0) {
+                                srvGroup.teeth = parseTeethInput(collectedTeeth.join(', '), srvGroup.serviceId);
+                                if (!isPackageService(srvGroup.serviceId) && !srvGroup.teeth.some(t => t.isFullJaw)) {
+                                    const stepQtys = (srvGroup.stages || []).flatMap(st => (st.steps || []).map(sp => Number(sp.qty || 1)));
+                                    const maxStepQty = stepQtys.length > 0 ? Math.max(...stepQtys) : 1;
+                                    srvGroup.qty = Math.max(srvGroup.teeth.length, maxStepQty);
+                                }
+                            } else {
+                                srvGroup.teeth = parseTeethInput('Toàn hàm', srvGroup.serviceId);
+                            }
+                        });
 
-                        const btnSave = document.getElementById('btnSaveTreatmentPlan');
-                        if (btnSave && !IS_CLINICAL_LOCKED) {
-                            btnSave.innerHTML = `<i class="bi bi-save-fill me-1"></i> Lưu cập nhật Kế hoạch`;
+                        PLAN_SERVICES.push(...groupMap.values());
+                    }
+
+                    // Nạp lại danh sách đợt thanh toán (Chuẩn DentalSoft)
+                    if (plan.isInstallment || (plan.installments && plan.installments.length > 0)) {
+                        window.CURRENT_INSTALLMENTS = (plan.installments || []).map((inst, idx) => {
+                            let dt = inst.expectedDateRaw || inst.expectedDate || '';
+                            if (dt && /^\d{2}\/\d{2}\/\d{4}$/.test(dt)) {
+                                const parts = dt.split('/');
+                                dt = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                            }
+                            return {
+                                installmentId: inst.installmentId || null,
+                                phaseName: inst.phaseName || `Đợt ${idx + 1}`,
+                                expectedDate: dt,
+                                expectedAmount: Number(inst.expectedAmount || 0),
+                                paidAmount: Number(inst.paidAmount || 0),
+                                status: inst.status || 'PENDING',
+                                notes: inst.notes || ''
+                            };
+                        });
+                        const switchEl = document.getElementById('isInstallmentSwitch');
+                        if (switchEl) {
+                            switchEl.checked = true;
+                            toggleInstallmentSection();
+                            renderInstallmentsTable();
                         }
                     }
+
+                    if (IS_INSTALLMENT_LOCKED) {
+                        applyInstallmentLockUI(plan.totalPaidAmount || 0);
+                    }
+
+                    const btnSave = document.getElementById('btnSaveTreatmentPlan');
+                    if (btnSave && !IS_CLINICAL_LOCKED) {
+                        btnSave.innerHTML = `<i class="bi bi-save-fill me-1"></i> Lưu cập nhật Kế hoạch`;
+                    }
                 }
-            } catch (err) {
-                console.warn('Lỗi tải chi tiết kế hoạch:', err);
             }
-        } else if (PRESELECTED_DIAG_ID && Number(PRESELECTED_DIAG_ID) > 0) {
-            addServiceFromDiagnosis(String(PRESELECTED_DIAG_ID));
+        } catch (err) {
+            console.warn('Lỗi tải chi tiết kế hoạch:', err);
         }
 
         renderAll();
         if (typeof renderInstallmentsTable === 'function') {
             renderInstallmentsTable();
         }
-        if (DIAGNOSES.length > 0 && !document.getElementById('barSection1')?.classList.contains('is-expanded')) {
-            toggleSection('1');
+        switchPlanSubTab(null);
+    }
+
+    function openCreatePlanWorkspace(preDiagId) {
+        resetPlanFormState();
+        if (preDiagId && Number(preDiagId) > 0) {
+            addServiceFromDiagnosis(String(preDiagId));
+            renderAll();
         }
-        updateToggleAllBtnLabel();
-        if (!editPlanId && PLAN_SERVICES.length === 0) {
-            document.getElementById('serviceComboInput')?.focus();
+        const listCard = document.getElementById('tpPlanListCard');
+        const formWrap = document.getElementById('tpPlanFormWorkspace');
+        if (listCard) listCard.style.display = 'none';
+        if (formWrap) formWrap.style.display = 'block';
+        try {
+            history.replaceState(null, '', window.location.pathname + '?mode=create');
+        } catch (e) {}
+        formWrap?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function openEditPlanWorkspace(planId) {
+        if (!planId) return;
+        const listCard = document.getElementById('tpPlanListCard');
+        const formWrap = document.getElementById('tpPlanFormWorkspace');
+        if (listCard) listCard.style.display = 'none';
+        if (formWrap) formWrap.style.display = 'block';
+        try {
+            history.replaceState(null, '', window.location.pathname + '?planId=' + encodeURIComponent(planId));
+        } catch (e) {}
+        await loadPlanIntoForm(planId);
+        formWrap?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function closePlanFormWorkspace() {
+        const listCard = document.getElementById('tpPlanListCard');
+        const formWrap = document.getElementById('tpPlanFormWorkspace');
+        if (formWrap) formWrap.style.display = 'none';
+        if (listCard) listCard.style.display = 'block';
+        try {
+            history.replaceState(null, '', window.location.pathname);
+        } catch (e) {}
+        listCard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function deletePlanFromList(planId) {
+        if (!planId) return;
+        if (!window.confirm('Bạn có chắc chắn muốn xóa kế hoạch điều trị này?')) return;
+        try {
+            const resp = await fetch(`/api/doctor/treatment-plans/${planId}`, { method: 'DELETE' });
+            const resData = await resp.json().catch(() => ({}));
+            if (!resp.ok || resData.success === false) {
+                showToast(resData.message || 'Không thể xóa kế hoạch điều trị này.', 'error');
+                return;
+            }
+            const row = document.getElementById(`tp-list-row-${planId}`);
+            if (row) row.remove();
+            const tbody = document.getElementById('tpPlanListTableBody');
+            const remaining = tbody ? tbody.querySelectorAll('tr[data-plan-id]').length : 0;
+            const listBadge = document.getElementById('tpListCountBadge');
+            if (listBadge) listBadge.textContent = `${remaining} kế hoạch`;
+            const navBadge = document.getElementById('tpTabNavCountBadge');
+            if (navBadge) {
+                navBadge.textContent = String(remaining);
+                navBadge.classList.toggle('d-none', remaining === 0);
+            }
+            if (remaining === 0 && tbody) {
+                tbody.innerHTML = `<tr id="tpListEmptyRow"><td colspan="7" class="text-center py-5"><div class="text-secondary mb-2" style="font-size: 28px;"><i class="bi bi-inbox"></i></div><div class="fw-bold text-dark mb-1">Chưa có kế hoạch điều trị nào</div><div class="small text-muted">Nhấn nút &quot;Tạo thêm&quot; ở góc phải để lập kế hoạch &amp; lộ trình điều trị mới.</div></td></tr>`;
+            }
+            showToast('Đã xóa kế hoạch điều trị.', 'warning');
+        } catch (e) {
+            showToast('Lỗi kết nối khi xóa kế hoạch điều trị.', 'error');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        renderServiceComboItems('');
+        renderCommonIcdChips();
+        renderServiceSuggestionsBar();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const editPlanId = urlParams.get('planId');
+        const mode = urlParams.get('mode');
+        const hasPreDiag = PRESELECTED_DIAG_ID && Number(PRESELECTED_DIAG_ID) > 0;
+
+        if (editPlanId) {
+            await openEditPlanWorkspace(editPlanId);
+        } else if (mode === 'create' || hasPreDiag) {
+            openCreatePlanWorkspace(hasPreDiag ? PRESELECTED_DIAG_ID : null);
+        } else {
+            resetPlanFormState();
         }
     });
 
@@ -3562,16 +4079,14 @@
     function toggleInstallmentSection() {
         const switchEl = document.getElementById('isInstallmentSwitch');
         const section = document.getElementById('contentSection5');
-        const bar = document.getElementById('barSection5');
         const badge = document.getElementById('installmentBadgeSummary');
         if (!switchEl || !section) return;
 
         if (switchEl.checked) {
             section.style.display = 'block';
-            if (bar) bar.classList.add('is-expanded');
             if (badge) {
                 badge.innerText = 'Trả theo đợt';
-                badge.className = 'badge bg-primary-subtle text-primary border';
+                badge.className = 'badge bg-primary-subtle text-primary border rounded-pill df-num';
             }
             if (!IS_INSTALLMENT_LOCKED && (!window.CURRENT_INSTALLMENTS || window.CURRENT_INSTALLMENTS.length === 0)) {
                 autoGenerateInstallments();
@@ -3580,10 +4095,9 @@
             }
         } else {
             section.style.display = 'none';
-            if (bar) bar.classList.remove('is-expanded');
             if (badge) {
                 badge.innerText = '1 lần';
-                badge.className = 'badge bg-light text-secondary border';
+                badge.className = 'badge bg-light text-secondary border rounded-pill df-num';
             }
         }
     }
@@ -3900,9 +4414,8 @@
         const planNotes = (document.getElementById('planNotesInput')?.value || '').trim();
 
         if (PLAN_SERVICES.length === 0) {
-            showInlineBanner('Vui lòng chọn ít nhất 1 dịch vụ ở Bước 2 trước khi lưu kế hoạch điều trị.', 'error');
-            const bar2 = document.getElementById('barSection2');
-            if (bar2 && !bar2.classList.contains('is-expanded')) toggleSection('2');
+            showInlineBanner('Vui lòng chọn ít nhất 1 dịch vụ điều trị trước khi lưu kế hoạch.', 'error');
+            switchServiceInputMode('single');
             document.getElementById('serviceComboInput')?.focus();
             openServiceCombo();
             return;
@@ -3910,10 +4423,8 @@
 
         if (!planName) {
             showFieldError('planNameError', 'Vui lòng nhập tên kế hoạch điều trị trước khi lưu.');
-            showInlineBanner('Vui lòng nhập Tên kế hoạch điều trị ở Bước 3.', 'error');
-            const bar3 = document.getElementById('barSection3');
-            if (bar3 && !bar3.classList.contains('is-expanded')) toggleSection('3');
-            document.getElementById('planNameInput').focus();
+            showInlineBanner('Vui lòng nhập Tên kế hoạch điều trị trước khi lưu.', 'error');
+            document.getElementById('planNameInput')?.focus();
             return;
         }
         clearFieldError('planNameError');
@@ -4042,7 +4553,7 @@
                 btnSave.innerHTML = '<i class="bi bi-check-lg me-1"></i> Đã lưu thành công!';
 
                 setTimeout(() => {
-                    window.location.href = `/doctor/examination/${CURRENT_VISIT_TOKEN}/diagnoses#tab-treatment-plan`;
+                    window.location.href = `/doctor/examination/${CURRENT_VISIT_TOKEN}/treatment-plans/create`;
                 }, 700);
             } else {
                 const errMsg = 'Lỗi lưu kế hoạch: ' + (result.message || 'Không thể lưu vào cơ sở dữ liệu!');
@@ -4060,6 +4571,64 @@
             btnSave.innerHTML = defaultBtnHtml;
         }
     }
+</script>
+<script>
+    (function () {
+        function initMainSubnavScroll() {
+            var nav = document.getElementById('mainSubnav');
+            if (!nav) return;
+            var container = nav.closest('.df-subnav-container');
+            var updateFade = function () {
+                if (!container) return;
+                var hasMoreRight = (nav.scrollWidth - nav.clientWidth - nav.scrollLeft) > 4;
+                container.classList.toggle('has-overflow-right', hasMoreRight);
+            };
+            nav.addEventListener('wheel', function (e) {
+                if (nav.scrollWidth > nav.clientWidth && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) {
+                    nav.scrollLeft += e.deltaY;
+                    e.preventDefault();
+                    updateFade();
+                }
+            }, { passive: false });
+            nav.addEventListener('scroll', updateFade, { passive: true });
+            window.addEventListener('resize', updateFade);
+            var activeTab = nav.querySelector('.df-subnav-item.active');
+            if (activeTab && typeof activeTab.scrollIntoView === 'function') {
+                activeTab.scrollIntoView({ behavior: 'auto', inline: 'nearest', block: 'nearest' });
+            }
+            updateFade();
+        }
+        function initDeskQueueBadgeRefresh() {
+            fetch('/api/doctor/visits/queue-status', { cache: 'no-store' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) {
+                    if (!data || data.waitingCount === undefined) return;
+                    var count = Math.max(0, Number(data.waitingCount || 0));
+                    DESK_WAITING_COUNT = count;
+                    var badge = document.getElementById('deskQueueWaitingBadge');
+                    var textEl = document.getElementById('deskQueueWaitingText');
+                    if (!badge || !textEl) return;
+                    var icon = badge.querySelector('i');
+                    badge.className = 'badge rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1 border df-num text-nowrap '
+                        + (count > 0 ? 'bg-warning-subtle text-warning-emphasis border-warning-subtle' : 'bg-success-subtle text-success border-success-subtle');
+                    badge.title = count > 0
+                        ? 'Đang có bệnh nhân chờ trong hàng đợi — ca này chỉ khóa làm dịch vụ đã đặt lịch, dịch vụ phát sinh hẹn ca sau'
+                        : 'Hàng đợi đang trống — có thể làm thêm dịch vụ phát sinh nếu bệnh nhân đồng ý';
+                    if (icon) icon.className = count > 0 ? 'bi bi-people-fill' : 'bi bi-people';
+                    textEl.textContent = count > 0 ? ('Hàng đợi: ' + count + ' đang chờ') : 'Hàng đợi: 0 chờ';
+                })
+                .catch(function () {});
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () {
+                initMainSubnavScroll();
+                initDeskQueueBadgeRefresh();
+            });
+        } else {
+            initMainSubnavScroll();
+            initDeskQueueBadgeRefresh();
+        }
+    })();
 </script>
 
 </body>

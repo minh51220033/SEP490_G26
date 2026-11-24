@@ -114,27 +114,21 @@
     </style>
 
     <div class="df-unified-tab-card" id="clinicalPhotosSection">
-        <div class="df-tab-content-header">
-            <div>
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <h6 class="df-title-primary mb-0">Kho film ảnh &amp; hình ảnh lâm sàng</h6>
-                    <span class="badge bg-light text-primary border rounded-pill px-2 py-1 small df-num" id="foldablePhotoCountBadge"
-                          th:with="clinicalCnt=${photoStats != null and photoStats.get('total') != null ? photoStats.get('total') : 0},
-                                   extraXrayCnt=${galleryXrayPhotos != null ? #lists.size(galleryXrayPhotos) : (xrayCount != null ? xrayCount : 0)},
-                                   totalImgs=${clinicalCnt + extraXrayCnt}"
-                          th:text="${totalImgs} + ' ảnh'">0 ảnh</span>
-                </div>
-                <div class="df-subtitle-secondary">Lưu trữ ảnh nụ cười, trong miệng theo từng giai đoạn điều trị và phim X-Quang cận lâm sàng.</div>
-            </div>
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-                <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 px-3 py-2"
+        <div class="df-tab-actionbar">
+            <span class="df-tab-count-pill" id="foldablePhotoCountBadge"
+                  th:with="clinicalCnt=${photoStats != null and photoStats.get('total') != null ? photoStats.get('total') : 0},
+                           extraXrayCnt=${galleryXrayPhotos != null ? #lists.size(galleryXrayPhotos) : (xrayCount != null ? xrayCount : 0)},
+                           totalImgs=${clinicalCnt + extraXrayCnt}"
+                  th:text="${totalImgs} + ' ảnh'">0 ảnh</span>
+            <div class="df-tab-actions">
+                <button type="button" class="df-tab-btn df-tab-btn-secondary"
                         id="btnToggleInlineCompare"
                         onclick="toggleInlinePhotoCompare()"
                         title="Đối chiếu Trước &amp; Sau điều trị (SCR-17.3)">
                     <i class="bi bi-intersect"></i>
                     <span>So sánh Before – After</span>
                 </button>
-                <button type="button" class="btn btn-sm btn-primary fw-semibold d-inline-flex align-items-center gap-1 px-3 py-2"
+                <button type="button" class="df-tab-btn df-tab-btn-primary"
                         th:if="${!isClinicalLocked}"
                         id="btnOpenUploadPhotoModal"
                         onclick="openUploadPhotoModal()">

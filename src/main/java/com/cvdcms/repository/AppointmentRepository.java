@@ -46,6 +46,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     """)
     Optional<AppointmentLockSnapshot> findLockSnapshotById(@Param("id") Long id);
 
+    @Query("SELECT a FROM Appointment a LEFT JOIN FETCH a.service srv WHERE a.appointmentId = :id")
+    Optional<Appointment> findByIdWithService(@Param("id") Long id);
+
     List<Appointment> findByPatientProfile_ProfileIdOrderByAppointmentDateDesc(Long profileId);
 
     List<Appointment> findByDoctor_StaffIdAndAppointmentDate(Long doctorId, LocalDate appointmentDate);

@@ -717,7 +717,9 @@ public class ClinicQueueCoordinatorService {
         QueueTicket inServiceTicket = doctorTickets.stream()
                 .filter(t -> t.getStatus() == QueueStatus.IN_SERVICE
                         && t.getVisit() != null
-                        && ACTIVE_EXAM_VISIT_STATUSES.contains(t.getVisit().getStatus()))
+                        && (ACTIVE_EXAM_VISIT_STATUSES.contains(t.getVisit().getStatus())
+                                || t.getVisit().getStatus() == VisitStatus.WAITING_PARACLINICAL
+                                || t.getVisit().getStatus() == VisitStatus.WAITING_RESULT))
                 .findFirst()
                 .orElse(null);
 
@@ -817,8 +819,7 @@ public class ClinicQueueCoordinatorService {
         if (existingInService.isPresent()) {
             QueueTicket activeTicket = existingInService.get();
             Visit activeVisit = activeTicket.getVisit();
-            if (activeVisit.getStatus() == VisitStatus.WAITING_PARACLINICAL
-                    || activeVisit.getStatus() == VisitStatus.WAITING_RESULT) {
+            if (activeVisit.getStatus() == VisitStatus.WAITING_RESULT) {
                 activeVisit.setStatus(VisitStatus.IN_EXAM);
                 visits.saveAndFlush(activeVisit);
             }
@@ -1526,7 +1527,10 @@ public class ClinicQueueCoordinatorService {
                 if (t.getStatus() == QueueStatus.CALLED && WAITING_VISIT_STATUSES.contains(t.getVisit().getStatus())) {
                     fallbackCalled = t;
                     break;
-                } else if (fallbackInService == null && t.getStatus() == QueueStatus.IN_SERVICE && ACTIVE_EXAM_VISIT_STATUSES.contains(t.getVisit().getStatus())) {
+                } else if (fallbackInService == null && t.getStatus() == QueueStatus.IN_SERVICE
+                        && (ACTIVE_EXAM_VISIT_STATUSES.contains(t.getVisit().getStatus())
+                                || t.getVisit().getStatus() == VisitStatus.WAITING_PARACLINICAL
+                                || t.getVisit().getStatus() == VisitStatus.WAITING_RESULT)) {
                     fallbackInService = t;
                 } else if (fallbackWaiting == null && t.getStatus() == QueueStatus.WAITING && WAITING_VISIT_STATUSES.contains(t.getVisit().getStatus())) {
                     fallbackWaiting = t;

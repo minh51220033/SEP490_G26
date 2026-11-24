@@ -392,6 +392,12 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                     if (ex.getExecutionId() != null && seenExecIds.add(ex.getExecutionId())) {
                         ex.setPlanStage(null);
                         ex.setPlanItem(null);
+                        if (ex.getStatus() != com.cvdcms.entity.enums.WorkflowExecutionStatus.COMPLETED
+                                && ex.getStatus() != com.cvdcms.entity.enums.WorkflowExecutionStatus.CANCELLED) {
+                            ex.setStatus(com.cvdcms.entity.enums.WorkflowExecutionStatus.CANCELLED);
+                            ex.setCurrentStep(null);
+                            ex.setCompletedAt(LocalDateTime.now());
+                        }
                         executionsToSave.add(ex);
                     }
                 }
@@ -425,6 +431,12 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                         if (ex.getExecutionId() != null && seenExecIds.add(ex.getExecutionId())) {
                             ex.setPlanItem(null);
                             ex.setPlanStage(null);
+                            if (ex.getStatus() != com.cvdcms.entity.enums.WorkflowExecutionStatus.COMPLETED
+                                    && ex.getStatus() != com.cvdcms.entity.enums.WorkflowExecutionStatus.CANCELLED) {
+                                ex.setStatus(com.cvdcms.entity.enums.WorkflowExecutionStatus.CANCELLED);
+                                ex.setCurrentStep(null);
+                                ex.setCompletedAt(LocalDateTime.now());
+                            }
                             executionsToSave.add(ex);
                         }
                     }

@@ -141,6 +141,11 @@
                     style="font-size: 13px;">
                     <i class="bi bi-arrow-clockwise"></i> Làm mới
                 </a>
+                <a th:if="${activeGroup == 'clinic' and activeTab == 'supplier-payments'}" th:href="@{/supplier-payments}"
+                    class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                    style="font-size: 13px;">
+                    <i class="bi bi-arrow-clockwise"></i> Làm mới
+                </a>
                 <a th:if="${activeGroup == 'clinic' and activeTab == 'payroll'}" th:href="@{/payroll}"
                     class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
                     style="font-size: 13px;">
@@ -221,7 +226,7 @@
                     <a th:href="@{/payments/deposits}" class="finance-subtab-btn"
                         th:classappend="${activeTab == 'deposits'} ? 'active' : ''">
                         <i class="bi bi-wallet2" aria-hidden="true"></i>
-                        <span>tiền tạm ứng</span>
+                        <span>Tiền tạm ứng</span>
                     </a>
                 </li>
 
@@ -256,6 +261,16 @@
                         th:classappend="${activeTab == 'expenses'} ? 'active' : ''">
                         <i class="bi bi-journal-arrow-down" aria-hidden="true"></i>
                         <span>Chi phí vận hành</span>
+                    </a>
+                </li>
+
+                <!-- 2. Thanh toán nhà cung cấp -->
+                <li class="finance-subtab-item"
+                    th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'ADMIN') or #lists.contains(roleNames, 'ROLE_ADMIN') or #lists.contains(roleNames, 'KE_TOAN') or #lists.contains(roleNames, 'ROLE_KE_TOAN'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'FINANCE_EXPENSES') or #lists.contains(permissionCodes, 'SUPPLIER_MANAGE') or #lists.contains(permissionCodes, 'FINANCE_DASHBOARD')))}">
+                    <a th:href="@{/supplier-payments}" class="finance-subtab-btn"
+                        th:classappend="${activeTab == 'supplier-payments'} ? 'active' : ''">
+                        <i class="bi bi-truck" aria-hidden="true"></i>
+                        <span>Thanh toán nhà cung cấp</span>
                     </a>
                 </li>
 
@@ -300,6 +315,7 @@
                 </li>
             </ul>
         </nav>
+        <script th:src="@{/js/finance-tabs.js}"></script>
     </div>
 
 </body>

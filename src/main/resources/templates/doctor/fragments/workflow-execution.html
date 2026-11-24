@@ -199,30 +199,20 @@
                   data-locked=${isClinicalLocked}">
 
         <!-- 1. HEADER CHÍNH -->
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3 bg-white border-bottom">
-            <div class="d-flex align-items-center gap-3">
-                <div class="rounded-3 bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
-                    <i class="bi bi-list-check fs-5"></i>
-                </div>
-                <div>
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <h4 class="mb-0 fw-bold text-dark fs-6">Thực hiện Quy trình Khám &amp; Điều trị</h4>
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1 df-num" id="ft43ExecCountBadge">0 quy trình</span>
-                    </div>
-                </div>
-            </div>
+        <div class="df-tab-actionbar">
+            <span class="df-tab-count-pill" id="ft43ExecCountBadge">0 quy trình</span>
 
-            <div class="d-flex align-items-center flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold"
+            <div class="df-tab-actions">
+                <button type="button" class="df-tab-btn df-tab-btn-secondary"
                         onclick="switchMainTab('tab-treatment-plan')">
-                    <i class="bi bi-diagram-3 text-primary me-1"></i>Kế hoạch điều trị
+                    <i class="bi bi-diagram-3"></i><span>Kế hoạch điều trị</span>
                 </button>
-                <a th:href="@{/doctor/workflows}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold text-decoration-none">
-                    <i class="bi bi-sliders text-secondary me-1"></i>Mẫu quy trình
+                <a th:href="@{/doctor/workflows}" target="_blank" class="df-tab-btn df-tab-btn-secondary">
+                    <i class="bi bi-sliders"></i><span>Mẫu quy trình</span>
                 </a>
-                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold"
+                <button type="button" class="df-tab-btn df-tab-btn-secondary"
                         onclick="window.FT43 && window.FT43.reload()">
-                    <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
+                    <i class="bi bi-arrow-clockwise"></i><span>Làm mới</span>
                 </button>
             </div>
         </div>
@@ -447,6 +437,7 @@
                 laboOrders: [],
                 laboSuppliers: [],
                 draftCache: {},
+                domLocked: false,
                 adhocManualFrame: false,
                 reloadSeq: 0
             };
@@ -492,7 +483,8 @@
                 state.patientId = root.getAttribute('data-patient-id') || null;
                 state.branchId = root.getAttribute('data-branch-id') || null;
                 state.doctorId = root.getAttribute('data-doctor-id') || null;
-                state.locked = root.getAttribute('data-locked') === 'true';
+                state.domLocked = root.getAttribute('data-locked') === 'true';
+                state.locked = state.domLocked;
                 return !!state.visitId;
             }
 
@@ -518,9 +510,20 @@
 
             function parseToothList(str) {
                 if (!str) return [];
-                return String(str).split(/[,;\s]+/)
-                    .map(function (s) { return s.trim().replace(/^R-?/i, ''); })
-                    .filter(Boolean);
+                var out = [];
+                String(str).split(/[,;]+/).forEach(function (chunk) {
+                    var trimmed = (chunk || '').trim();
+                    if (!trimmed) return;
+                    if (/^toàn\s*hàm$/i.test(trimmed) || /^toan\s*ham$/i.test(trimmed)) {
+                        if (out.indexOf('Toàn hàm') < 0) out.push('Toàn hàm');
+                        return;
+                    }
+                    trimmed.split(/\s+/).forEach(function (sub) {
+                        var clean = sub.replace(/^R-?/i, '').trim();
+                        if (clean && out.indexOf(clean) < 0) out.push(clean);
+                    });
+                });
+                return out;
             }
 
             function reload(preferredExecId) {
@@ -545,7 +548,7 @@
                 return Promise.all(reqs).then(function (res) {
                     if (mySeq !== state.reloadSeq) return;
                     var overview = res[0];
-                    state.locked = !!overview.locked;
+                    state.locked = state.domLocked || !!overview.locked;
                     state.executions = overview.executions || [];
                     state.availableServices = overview.availableServices || [];
                     state.availableCombos = overview.availableCombos || [];
@@ -1047,6 +1050,7 @@
             function renderXraySection(ex, step, vals, draft, isEditable) {
                 var ro = isEditable ? '' : 'disabled';
                 var orders = state.paraclinicalOrders || [];
+                var boundOrderId = vals.xrayOrderId ? Number(vals.xrayOrderId) : null;
                 var listHtml = '';
                 if (orders.length === 0) {
                     listHtml = '<div class="p-3 rounded-3 border bg-light small text-secondary mb-2">'
@@ -1056,24 +1060,33 @@
                     listHtml = orders.map(function (ord) {
                         var img = ord.primaryImageUrl || ord.imageUrl || (ord.attachments && ord.attachments[0] ? ord.attachments[0].fileUrl : '');
                         var isDone = ord.status === 'COMPLETED';
+                        var isLinked = boundOrderId && Number(ord.orderId) === boundOrderId;
                         var badgeCls = isDone ? 'bg-success-subtle text-success border-success-subtle' : 'bg-warning-subtle text-warning-emphasis border-warning-subtle';
+                        var cardBorderCls = isLinked ? 'border-primary bg-primary-subtle bg-opacity-10' : 'bg-white';
                         var thumb = img
                             ? '<img src="' + esc(img) + '" class="wf-film-thumb" alt="Film" onclick="window.FT43.openFilmModal(\'' + esc(img) + '\',\'' + esc(ord.serviceName || 'Phim X-quang') + '\',\'' + esc(ord.resultSummary || '') + '\')">'
                             : '<div class="wf-film-thumb d-flex flex-column align-items-center justify-content-center text-white-50" style="font-size:11px;"><i class="bi bi-film fs-5 mb-1"></i>Chưa ảnh</div>';
+                        var selectBtn = isEditable && orders.length > 1
+                            ? '<button type="button" class="btn btn-sm ' + (isLinked ? 'btn-primary' : 'btn-outline-secondary') + ' rounded-pill px-2 py-0 fw-semibold" style="font-size:11.5px;" '
+                              + '        onclick="window.FT43.selectXrayOrder(' + Number(ex.executionId) + ',' + Number(step.stepId) + ',' + Number(ord.orderId) + ',' + Number(ord.orderItemId) + ')">'
+                              + '  <i class="bi ' + (isLinked ? 'bi-check-circle-fill' : 'bi-link-45deg') + ' me-1"></i>' + (isLinked ? 'Đang gắn bước này' : 'Gắn bước này')
+                              + '</button>'
+                            : (isLinked ? '<span class="badge bg-primary text-white rounded-pill" style="font-size:11px;">Đang gắn bước</span>' : '');
                         var quickActions = isEditable && !isDone
                             ? '<div class="d-flex flex-wrap gap-1 mt-2">'
+                              + selectBtn
                               + '<label class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0 fw-semibold mb-0" style="font-size:11.5px; cursor:pointer;">'
                               + '  <i class="bi bi-upload me-1"></i>Tải ảnh KQ'
-                              + '  <input type="file" accept="image/*" class="d-none" onchange="window.FT43.uploadXrayFile(' + Number(ord.orderItemId) + ', this)">'
+                              + '  <input type="file" accept="image/*" class="d-none" onchange="window.FT43.uploadXrayFile(' + Number(ord.orderItemId) + ', this, ' + Number(ex.executionId) + ', ' + Number(step.stepId) + ', ' + Number(ord.orderId) + ')">'
                               + '</label>'
                               + '<button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0 fw-semibold" style="font-size:11.5px;" '
-                              + '        onclick="window.FT43.markXrayDone(' + Number(ord.orderItemId) + ')">'
+                              + '        onclick="window.FT43.markXrayDone(' + Number(ord.orderItemId) + ',' + Number(ex.executionId) + ',' + Number(step.stepId) + ',' + Number(ord.orderId) + ')">'
                               + '  <i class="bi bi-check2 me-1"></i>Đã có KQ'
                               + '</button>'
                               + '</div>'
-                            : '';
+                            : (selectBtn ? '<div class="d-flex flex-wrap gap-1 mt-2">' + selectBtn + '</div>' : '');
 
-                        return '<div class="d-flex align-items-start gap-3 p-2 rounded-3 border bg-white mb-2">'
+                        return '<div class="d-flex align-items-start gap-3 p-2 rounded-3 border ' + cardBorderCls + ' mb-2">'
                             + thumb
                             + '<div class="flex-grow-1" style="min-width:0;">'
                             + '  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">'
@@ -1209,7 +1222,18 @@
                 if (cfs.length === 0) return '';
                 var ro = isEditable ? '' : 'disabled';
                 var fieldsHtml = cfs.map(function (cf) {
-                    var val = (vals.custom && vals.custom[cf.id] != null) ? vals.custom[cf.id] : '';
+                    var val = '';
+                    if (vals.custom) {
+                        if (vals.custom[cf.id] != null && vals.custom[cf.id] !== '') {
+                            val = vals.custom[cf.id];
+                        } else if (cf.label) {
+                            var normLabel = String(cf.label).trim().toLowerCase();
+                            var matchedKey = Object.keys(vals.custom).find(function (k) {
+                                return k && k.trim().toLowerCase() === normLabel;
+                            });
+                            if (matchedKey && vals.custom[matchedKey] != null) val = vals.custom[matchedKey];
+                        }
+                    }
                     var inputHtml = '';
                     if (cf.type === 'select') {
                         var opts = ['<option value="">-- Chọn --</option>'].concat((cf.options || []).map(function (opt) {
@@ -1387,14 +1411,27 @@
                 }
 
                 var syncLaboDone = Promise.resolve();
-                if (st.frameKey === 'PROSTHETICS_LABO' && draft.data && draft.data.laboId && !draft.data.requestLaboRework) {
-                    var linkedLabo = state.laboOrders.find(function (o) { return Number(o.laboId) === Number(draft.data.laboId); });
+                if (st.frameKey === 'PROSTHETICS_LABO') {
+                    var linkedLabo = draft.data && draft.data.laboId
+                        ? state.laboOrders.find(function (o) { return Number(o.laboId) === Number(draft.data.laboId); })
+                        : null;
+                    if ((draft.data && draft.data.requestLaboRework) || (linkedLabo && linkedLabo.status === 'RETURNED')) {
+                        showWorkspaceError('Mẫu Labo đang ở trạng thái yêu cầu xưởng chỉnh sửa lại (RETURNED). Vui lòng chọn "Lưu kết quả buổi này" hoặc "Tạm dừng" thay vì Hoàn thành bước.');
+                        return;
+                    }
                     if (linkedLabo && linkedLabo.status === 'DELIVERED') {
                         syncLaboDone = fetch('/api/doctor/labo-orders/' + Number(linkedLabo.laboId) + '/status', {
                             method: 'PATCH',
                             headers: csrfHeaders(true),
                             body: JSON.stringify({ status: 'FITTED_SUCCESS', note: note || 'Hoàn tất thử & gắn phục hình' })
-                        }).catch(function () {});
+                        }).then(function (r) {
+                            return r.json().then(function (b) {
+                                if (!r.ok || b.success === false) {
+                                    throw new Error((b && b.message) || 'Không thể chốt trạng thái gắn phục hình Labo (FITTED_SUCCESS).');
+                                }
+                                return b;
+                            });
+                        });
                     }
                 }
 
@@ -1476,6 +1513,27 @@
                 }
             }
 
+            function selectXrayOrder(execId, stepId, orderId, orderItemId) {
+                var ex = state.executions.find(function (e) { return Number(e.executionId) === Number(execId); });
+                var st = ex ? (ex.steps || []).find(function (s) { return Number(s.stepId) === Number(stepId); }) : null;
+                if (!ex || !st) return;
+                var draft = ensureDraft(ex, st);
+                if (orderId) draft.data.xrayOrderId = Number(orderId);
+                if (orderItemId) draft.data.paraclinicalOrderItemId = Number(orderItemId);
+                renderWorkspace(ex);
+            }
+
+            function bindOrderToDraft(execId, stepId, orderId, orderItemId) {
+                var eId = execId || state.selectedExecutionId;
+                var ex = state.executions.find(function (e) { return Number(e.executionId) === Number(eId); });
+                var sId = stepId || (ex ? state.selectedStepByExec[ex.executionId] : null);
+                var st = ex && sId ? (ex.steps || []).find(function (s) { return Number(s.stepId) === Number(sId); }) : null;
+                if (!ex || !st) return;
+                var draft = ensureDraft(ex, st);
+                if (orderId) draft.data.xrayOrderId = Number(orderId);
+                if (orderItemId) draft.data.paraclinicalOrderItemId = Number(orderItemId);
+            }
+
             function createXrayOrder(execId, stepId) {
                 var sel = document.getElementById('ft43NewXraySvc-' + stepId);
                 if (!sel || !sel.value) return;
@@ -1495,16 +1553,21 @@
                             return b;
                         });
                     })
-                    .then(function () {
+                    .then(function (created) {
+                        var createdItem = Array.isArray(created) ? created[0] : (created && created.order ? created.order : created);
+                        if (createdItem && (createdItem.orderId || createdItem.orderItemId)) {
+                            bindOrderToDraft(execId, stepId, createdItem.orderId, createdItem.orderItemId);
+                        }
                         notify('Đã tạo chỉ định chụp phim mới cho ca khám.', false);
                         return reload(execId);
                     })
                     .catch(function (err) { showWorkspaceError(err.message); });
             }
 
-            function uploadXrayFile(orderItemId, inputEl) {
+            function uploadXrayFile(orderItemId, inputEl, execId, stepId, orderId) {
                 var file = inputEl && inputEl.files && inputEl.files[0];
                 if (!file) return;
+                if (orderId || orderItemId) bindOrderToDraft(execId, stepId, orderId, orderItemId);
                 var fd = new FormData();
                 fd.append('file', file);
                 fd.append('resultSummary', 'Đã tải phim X-quang tại quy trình điều trị');
@@ -1521,12 +1584,13 @@
                     })
                     .then(function () {
                         notify('Đã tải ảnh kết quả cận lâm sàng thành công.', false);
-                        return reload(state.selectedExecutionId);
+                        return reload(execId || state.selectedExecutionId);
                     })
                     .catch(function (err) { showWorkspaceError(err.message); });
             }
 
-            function markXrayDone(orderItemId) {
+            function markXrayDone(orderItemId, execId, stepId, orderId) {
+                if (orderId || orderItemId) bindOrderToDraft(execId, stepId, orderId, orderItemId);
                 fetch('/api/doctor/paraclinical-orders/' + encodeURIComponent(orderItemId) + '/status', {
                     method: 'PUT',
                     headers: csrfHeaders(true),
@@ -1540,7 +1604,7 @@
                     })
                     .then(function () {
                         notify('Đã xác nhận có kết quả cận lâm sàng.', false);
-                        return reload(state.selectedExecutionId);
+                        return reload(execId || state.selectedExecutionId);
                     })
                     .catch(function (err) { showWorkspaceError(err.message); });
             }
@@ -1686,7 +1750,7 @@
                     .catch(function (err) { notify(err.message, true); });
             }
 
-            function startService(serviceId, planItemId, planStageId) {
+            function startService(serviceId, planItemId, planStageId, patientConfirmed) {
                 if (!state.visitId || (!serviceId && !planItemId && !planStageId)) return;
                 fetch('/api/doctor/workflows/execution/start', {
                     method: 'POST',
@@ -1695,7 +1759,8 @@
                         visitId: Number(state.visitId),
                         serviceId: serviceId ? Number(serviceId) : null,
                         planItemId: planItemId ? Number(planItemId) : null,
-                        planStageId: planStageId ? Number(planStageId) : null
+                        planStageId: planStageId ? Number(planStageId) : null,
+                        patientConfirmed: !!patientConfirmed
                     })
                 })
                     .then(function (res) {
@@ -1709,7 +1774,17 @@
                         syncParentTabs(dto);
                         return reload(dto.executionId);
                     })
-                    .catch(function (err) { notify(err.message, true); });
+                    .catch(function (err) {
+                        var msg = err && err.message ? err.message : 'Không thể khởi tạo quy trình.';
+                        if (msg.indexOf('PATIENT_CONFIRM_REQUIRED:') === 0 && !patientConfirmed) {
+                            var cleanMsg = msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, '');
+                            if (window.confirm(cleanMsg + '\n\nBấm OK để xác nhận bệnh nhân đồng ý và thực hiện luôn trong ca này.')) {
+                                startService(serviceId, planItemId, planStageId, true);
+                            }
+                            return;
+                        }
+                        notify(msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, ''), true);
+                    });
             }
 
             function deleteExecution(execId) {
@@ -1908,11 +1983,11 @@
                 bootstrap.Modal.getOrCreateInstance(mEl).show();
             }
 
-            window.openTreatmentPlanStepWorkflow = function (planItemId, serviceId, planStageId) {
+            window.openTreatmentPlanStepWorkflow = function (planItemId, serviceId, planStageId, patientConfirmed) {
                 if (typeof window.switchMainTab === 'function') {
                     window.switchMainTab('tab-workflow-execution');
                 }
-                startService(serviceId, planItemId, planStageId);
+                startService(serviceId, planItemId, planStageId, patientConfirmed);
             };
 
             window.FT43 = {
@@ -1954,6 +2029,7 @@
                 openToothPopover: openToothPopover,
                 toggleTooth: toggleTooth,
                 createXrayOrder: createXrayOrder,
+                selectXrayOrder: selectXrayOrder,
                 uploadXrayFile: uploadXrayFile,
                 markXrayDone: markXrayDone,
                 createAndLinkLabo: createAndLinkLabo,
