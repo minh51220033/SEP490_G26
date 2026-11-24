@@ -102,6 +102,9 @@ public class TreatmentPlanRestController {
             }
         }
         try {
+            if (doctorVisitAccess != null && isHttpRequestActive()) {
+                doctorVisitAccess.assertTreatmentPlanIncludesBookedService(request.getVisitId(), request);
+            }
             TreatmentPlanResponseDTO created = treatmentPlanService.createPlan(request);
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -264,7 +267,8 @@ public class TreatmentPlanRestController {
             @PathVariable Long itemId,
             @RequestParam Long visitId,
             @RequestParam(required = false) Long doctorId,
-            @RequestParam(required = false) Long assistantId) {
+            @RequestParam(required = false) Long assistantId,
+            @RequestParam(defaultValue = "false") boolean patientConfirmed) {
         if (doctorVisitAccess != null && isHttpRequestActive()) {
             jakarta.servlet.http.HttpSession session = currentHttpSession();
             doctorVisitAccess.requireTreatmentPlanItem(session, itemId);
@@ -324,6 +328,13 @@ public class TreatmentPlanRestController {
                         "success", false,
                         "message", "Ca khám không khớp với hồ sơ bệnh nhân của kế hoạch điều trị."
                 ));
+            }
+            if (doctorVisitAccess != null && isHttpRequestActive()) {
+                doctorVisitAccess.assertVisitServiceExecutionAllowed(
+                        visitId,
+                        item.getService() != null ? item.getService().getServiceId() : null,
+                        itemId,
+                        patientConfirmed);
             }
 
             Long docId;

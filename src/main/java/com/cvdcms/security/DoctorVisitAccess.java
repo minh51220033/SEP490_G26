@@ -92,6 +92,9 @@ public class DoctorVisitAccess {
     @Autowired(required = false)
     private com.cvdcms.repository.ClinicalQueueTicketRepository queueTickets;
 
+    @Autowired(required = false)
+    private com.cvdcms.repository.ServiceRepository serviceRepository;
+
     public void requireWorkflowExecution(HttpSession session, Long executionId) {
         requireWorkflowExecution(session, executionId, null);
     }
@@ -628,5 +631,142 @@ public class DoctorVisitAccess {
             }
         }
         return !hasBranchMetadata;
+    }
+
+    public java.util.Map<String, Object> resolveBookedServiceSummary(Visit visit) {
+        if (visit == null || visit.getAppointmentId() == null || appointments == null) {
+            return null;
+        }
+        Appointment appt = appointments.findByIdWithService(visit.getAppointmentId()).orElse(null);
+        if (appt == null || appt.getService() == null) {
+            return null;
+        }
+        com.cvdcms.entity.Service srv = appt.getService();
+        java.util.Map<String, Object> map = new java.util.LinkedHashMap<>();
+        map.put("serviceId", srv.getServiceId());
+        map.put("serviceCode", srv.getServiceCode());
+        map.put("serviceName", srv.getServiceName());
+        map.put("basePrice", srv.getBasePrice());
+        map.put("unit", srv.getUnit());
+        map.put("requiresTooth", srv.getRequiresTooth());
+        map.put("isParaclinical", srv.getIsParaclinical());
+        map.put("appointmentCode", appt.getAppointmentCode());
+        return map;
+    }
+
+    public int countWaitingPatientsForVisitDoctor(Visit visit) {
+        if (visit == null || queueTickets == null || visit.getBranch() == null || visit.getPrimaryDoctor() == null) {
+            return 0;
+        }
+        var tickets = queueTickets.findForDoctorOnDay(
+                visit.getBranch().getBranchId(),
+                java.time.LocalDate.now(),
+                com.cvdcms.entity.enums.QueueType.EXAM,
+                visit.getPrimaryDoctor().getStaffId());
+        if (tickets == null || tickets.isEmpty()) {
+            return 0;
+        }
+        return (int) tickets.stream()
+                .filter(t -> t.getStatus() == com.cvdcms.entity.enums.QueueStatus.WAITING
+                        && t.getVisit() != null
+                        && !visit.getVisitId().equals(t.getVisit().getVisitId()))
+                .count();
+    }
+
+    public void assertTreatmentPlanIncludesBookedService(Long visitId, com.cvdcms.DTO.TreatmentPlanRequestDTO request) {
+        if (visitId == null || request == null || visits == null || appointments == null) {
+            return;
+        }
+        Visit visit = visits.findById(visitId).orElse(null);
+        var booked = resolveBookedServiceSummary(visit);
+        if (booked == null || booked.get("serviceId") == null) {
+            return;
+        }
+        Long bookedServiceId = ((Number) booked.get("serviceId")).longValue();
+
+        if (treatmentPlans != null && visit != null && visit.getPatientProfile() != null) {
+            var existingPlans = treatmentPlans.findByProfileIdWithDetails(visit.getPatientProfile().getProfileId());
+            boolean alreadyCovered = existingPlans != null && existingPlans.stream()
+                    .filter(tp -> tp.getStatus() != com.cvdcms.entity.enums.TreatmentPlanStatus.CANCELLED)
+                    .flatMap(tp -> tp.getStages() == null ? java.util.stream.Stream.empty() : tp.getStages().stream())
+                    .flatMap(st -> st.getItems() == null ? java.util.stream.Stream.empty() : st.getItems().stream())
+                    .anyMatch(it -> it.getService() != null && bookedServiceId.equals(it.getService().getServiceId()));
+            if (alreadyCovered) {
+                return;
+            }
+        }
+
+        boolean includedInRequest = request.getStages() != null && request.getStages().stream()
+                .filter(st -> st.getItems() != null)
+                .flatMap(st -> st.getItems().stream())
+                .anyMatch(it -> it.getServiceId() != null && bookedServiceId.equals(it.getServiceId()));
+
+        if (!includedInRequest) {
+            throw new IllegalArgumentException(
+                    "Kế hoạch điều trị bắt buộc phải giữ dịch vụ bệnh nhân đã đăng ký từ lịch hẹn: " + booked.get("serviceName"));
+        }
+    }
+
+    public void assertVisitServiceExecutionAllowed(Long visitId, Long targetServiceId, Long planItemId, boolean patientConfirmed) {
+        if (visitId == null || visits == null) {
+            return;
+        }
+        Visit visit = visits.findById(visitId).orElse(null);
+        if (visit == null) {
+            return;
+        }
+
+        com.cvdcms.entity.Service targetService = null;
+        if (planItemId != null && treatmentPlanItems != null) {
+            var it = treatmentPlanItems.findById(planItemId).orElse(null);
+            if (it != null && it.getService() != null) {
+                targetService = it.getService();
+                if (targetServiceId == null) {
+                    targetServiceId = targetService.getServiceId();
+                }
+            }
+        }
+        if (targetService == null && targetServiceId != null && serviceRepository != null) {
+            targetService = serviceRepository.findById(targetServiceId).orElse(null);
+        }
+        if (targetService != null && Boolean.TRUE.equals(targetService.getIsParaclinical())) {
+            return;
+        }
+
+        var booked = resolveBookedServiceSummary(visit);
+        int waitingCount = countWaitingPatientsForVisitDoctor(visit);
+
+        if (booked != null && booked.get("serviceId") != null) {
+            Long bookedServiceId = ((Number) booked.get("serviceId")).longValue();
+            if (targetServiceId != null && bookedServiceId.equals(targetServiceId)) {
+                return;
+            }
+            if (waitingCount > 0) {
+                throw new IllegalStateException(
+                        "Hiện đang có " + waitingCount + " bệnh nhân chờ trong hàng đợi. Ca khám này chỉ khóa thực hiện dịch vụ đã đặt lịch ("
+                                + booked.get("serviceName") + "); dịch vụ tư vấn phát sinh vui lòng lưu trong Kế hoạch điều trị để hẹn ca khám sau!");
+            }
+            if (!patientConfirmed) {
+                throw new IllegalStateException(
+                        "PATIENT_CONFIRM_REQUIRED: Dịch vụ phát sinh ngoài lịch hẹn (" + booked.get("serviceName")
+                                + "). Hàng đợi hiện đang trống (0 người chờ) — vui lòng xác nhận bệnh nhân đã đồng ý thực hiện luôn trong ca này!");
+            }
+        } else if (waitingCount > 0 && performedServices != null && targetServiceId != null) {
+            var performedList = performedServices.findByVisitIdWithDetails(visitId);
+            java.util.Set<Long> performedIds = new java.util.HashSet<>();
+            if (performedList != null) {
+                for (var ps : performedList) {
+                    if (ps.getStatus() != com.cvdcms.entity.enums.PerformedServiceStatus.CANCELLED
+                            && ps.getService() != null
+                            && !Boolean.TRUE.equals(ps.getService().getIsParaclinical())) {
+                        performedIds.add(ps.getService().getServiceId());
+                    }
+                }
+            }
+            if (!performedIds.isEmpty() && !performedIds.contains(targetServiceId)) {
+                throw new IllegalStateException(
+                        "Hiện đang có " + waitingCount + " bệnh nhân chờ trong hàng đợi. Không thể làm gộp thêm dịch vụ mới phát sinh trong cùng ca khám — vui lòng lưu trong Kế hoạch điều trị để hẹn ca khám sau!");
+            }
+        }
     }
 }

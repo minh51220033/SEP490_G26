@@ -519,6 +519,12 @@
                                                     class="text-secondary opacity-50">•</span> Cơ sở: <span
                                                     class="text-dark" th:text="${visit.branch.branchName}">Cơ sở mẫu
                                                     1</span></span>
+                                            <span th:if="${bookedService != null}">
+                                                <span class="text-secondary opacity-50">•</span> DV đặt lịch:
+                                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold">
+                                                    <i class="bi bi-lock-fill me-1"></i><span th:text="${bookedService['serviceName']}">Dịch vụ</span>
+                                                </span>
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -536,7 +542,14 @@
                                 </div>
                                 <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0"
                                     th:if="${isReadOnlyView != true and (visit.status == null or visit.status.name() != 'COMPLETED')}">
-                                    <div class="d-flex align-items-center gap-2 justify-content-end">
+                                    <div class="d-flex align-items-center gap-2 justify-content-end flex-wrap">
+                                        <span id="deskQueueWaitingBadge"
+                                              th:with="initWait=${deskWaitingCount != null ? deskWaitingCount : 0}"
+                                              th:class="${'badge rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1 border df-num text-nowrap ' + (initWait > 0 ? 'bg-warning-subtle text-warning-emphasis border-warning-subtle' : 'bg-success-subtle text-success border-success-subtle')}"
+                                              th:title="${initWait > 0 ? 'Đang có bệnh nhân chờ trong hàng đợi — ca này chỉ khóa làm dịch vụ đã đặt lịch, dịch vụ phát sinh hẹn ca sau' : 'Hàng đợi đang trống — có thể làm thêm dịch vụ phát sinh nếu bệnh nhân đồng ý'}">
+                                            <i th:class="${initWait > 0 ? 'bi bi-people-fill' : 'bi bi-people'}"></i>
+                                            <span id="deskQueueWaitingText" th:text="${initWait > 0 ? ('Hàng đợi: ' + initWait + ' đang chờ') : 'Hàng đợi: 0 chờ'}">Hàng đợi: 0 chờ</span>
+                                        </span>
                                         <th:block
                                             th:if="${visit.status == null or visit.status.name() != 'WAITING_PAYMENT'}">
                                             <button type="button" id="btnDirectHandover"
@@ -2256,11 +2269,31 @@
         </div>
     </div>
 
+    <script th:inline="javascript">
+        window.BOOKED_SERVICE = /*[[${bookedService}]]*/ null;
+        window.DESK_WAITING_COUNT = /*[[${deskWaitingCount != null ? deskWaitingCount : 0}]]*/ 0;
+    </script>
     <script>
         (function initClinicalDeskEmergencyListener() {
             const bannerEl = document.getElementById('clinicalEmergencyFloatAlert');
             const bodyEl = document.getElementById('clinicalEmergencyFloatBody');
             let lastSeenSig = '';
+
+            function updateDeskWaitingUi(waitingCount) {
+                const count = Math.max(0, Number(waitingCount || 0));
+                window.DESK_WAITING_COUNT = count;
+                const badge = document.getElementById('deskQueueWaitingBadge');
+                const textEl = document.getElementById('deskQueueWaitingText');
+                if (!badge || !textEl) return;
+                const icon = badge.querySelector('i');
+                badge.className = 'badge rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1 border df-num text-nowrap '
+                    + (count > 0 ? 'bg-warning-subtle text-warning-emphasis border-warning-subtle' : 'bg-success-subtle text-success border-success-subtle');
+                badge.title = count > 0
+                    ? 'Đang có bệnh nhân chờ trong hàng đợi — ca này chỉ khóa làm dịch vụ đã đặt lịch, dịch vụ phát sinh hẹn ca sau'
+                    : 'Hàng đợi đang trống — có thể làm thêm dịch vụ phát sinh nếu bệnh nhân đồng ý';
+                if (icon) icon.className = count > 0 ? 'bi bi-people-fill' : 'bi bi-people';
+                textEl.textContent = count > 0 ? ('Hàng đợi: ' + count + ' đang chờ') : 'Hàng đợi: 0 chờ';
+            }
 
             function renderAlerts(alerts, fallbackMsg) {
                 if (!bannerEl || !bodyEl) return;
@@ -2291,6 +2324,7 @@
                     const res = await fetch('/api/doctor/visits/queue-status', { cache: 'no-store' });
                     if (!res.ok) return null;
                     const data = await res.json();
+                    updateDeskWaitingUi(data.waitingCount);
                     renderAlerts(data.emergencyAlerts || []);
                     return data;
                 } catch (_) {

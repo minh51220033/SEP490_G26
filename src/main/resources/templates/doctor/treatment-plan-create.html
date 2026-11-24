@@ -738,13 +738,26 @@
                                     <span th:if="${visit.branch != null and visit.branch.branchName != null}"><span
                                             class="text-secondary opacity-50">•</span> Cơ sở: <span
                                             class="text-dark" th:text="${visit.branch.branchName}">Cơ sở</span></span>
+                                    <span th:if="${bookedService != null}">
+                                        <span class="text-secondary opacity-50">•</span> DV đặt lịch:
+                                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold">
+                                            <i class="bi bi-lock-fill me-1"></i><span th:text="${bookedService['serviceName']}">Dịch vụ</span>
+                                        </span>
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
                         <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0"
                             th:if="${visit.status == null or visit.status.name() != 'COMPLETED'}">
-                            <div class="d-flex align-items-center gap-2 justify-content-end">
+                            <div class="d-flex align-items-center gap-2 justify-content-end flex-wrap">
+                                <span id="deskQueueWaitingBadge"
+                                      th:with="initWait=${deskWaitingCount != null ? deskWaitingCount : 0}"
+                                      th:class="${'badge rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1 border df-num text-nowrap ' + (initWait > 0 ? 'bg-warning-subtle text-warning-emphasis border-warning-subtle' : 'bg-success-subtle text-success border-success-subtle')}"
+                                      th:title="${initWait > 0 ? 'Đang có bệnh nhân chờ trong hàng đợi — ca này chỉ khóa làm dịch vụ đã đặt lịch, dịch vụ phát sinh hẹn ca sau' : 'Hàng đợi đang trống — có thể làm thêm dịch vụ phát sinh nếu bệnh nhân đồng ý'}">
+                                    <i th:class="${initWait > 0 ? 'bi bi-people-fill' : 'bi bi-people'}"></i>
+                                    <span id="deskQueueWaitingText" th:text="${initWait > 0 ? ('Hàng đợi: ' + initWait + ' đang chờ') : 'Hàng đợi: 0 chờ'}">Hàng đợi: 0 chờ</span>
+                                </span>
                                 <a th:if="${visit.status == null or visit.status.name() != 'WAITING_PAYMENT'}"
                                     th:href="@{'/doctor/examination/' + ${visitToken} + '/diagnoses#tab-examination'}"
                                     class="btn btn-primary rounded-pill px-4 py-2 fw-bold d-inline-flex align-items-center gap-2 shadow-sm text-white text-nowrap text-decoration-none"
@@ -1432,6 +1445,8 @@
     const SERVER_COMMON_ICDS = /*[[${commonIcds}]]*/ [];
     const SERVER_WORKFLOW_TEMPLATES = /*[[${workflowTemplates}]]*/ [];
     const SERVER_WORKFLOW_COMBOS = /*[[${workflowCombos}]]*/ [];
+    const SERVER_BOOKED_SERVICE = /*[[${bookedService}]]*/ null;
+    let DESK_WAITING_COUNT = /*[[${deskWaitingCount != null ? deskWaitingCount : 0}]]*/ 0;
     /*]]>*/
 </script>
 <script th:inline="none">
@@ -2035,6 +2050,17 @@
         };
 
         initServiceStagesFromCatalog(serviceEntry);
+        const isBookedMatch = Boolean(SERVER_BOOKED_SERVICE && String(SERVER_BOOKED_SERVICE.serviceId) === String(srvId));
+        if (isBookedMatch) {
+            serviceEntry.isBookedLocked = true;
+        } else if (SERVER_BOOKED_SERVICE && SERVER_BOOKED_SERVICE.serviceId && Number(DESK_WAITING_COUNT || 0) > 0) {
+            if (Array.isArray(serviceEntry.stages) && serviceEntry.stages.length > 0 && Number(serviceEntry.stages[0].days || 0) === 0) {
+                serviceEntry.stages[0].days = 7;
+            }
+            if (!skipRender) {
+                showToast(`Đang có ${DESK_WAITING_COUNT} bệnh nhân chờ: Dịch vụ tư vấn phát sinh được xếp lịch dự kiến cho ca khám sau (+7 ngày).`, 'warning');
+            }
+        }
         PLAN_SERVICES.push(serviceEntry);
 
         if (overrideSrvId === undefined) {
@@ -2138,6 +2164,10 @@
     function removePlanService(id) {
         const idx = PLAN_SERVICES.findIndex(x => x.id === id);
         if (idx < 0) return;
+        if (PLAN_SERVICES[idx].isBookedLocked) {
+            showToast('Dịch vụ này bệnh nhân đã đăng ký từ lịch hẹn, đã khóa cố định cho ca khám.', 'warning');
+            return;
+        }
         if (hasServiceLockedSteps(PLAN_SERVICES[idx])) {
             showToast('Không thể xóa dịch vụ đã có bước thủ thuật đang thực hiện hoặc đã hoàn thành trong ca khám!', 'warning');
             return;
@@ -2579,15 +2609,20 @@
                 });
             }
 
+            const isLockedRow = hasLocked || Boolean(d.isBookedLocked);
+
             html += `
                 <tr>
                     <td>
                         <div class="d-flex align-items-center justify-content-between mb-1">
                             <span class="badge bg-light text-primary border fw-semibold">DV #${d.order}</span>
-                            ${hasLocked ? '<span class="badge bg-success-subtle text-success border">Có bước đã làm</span>' : ''}
+                            <div class="d-flex align-items-center gap-1">
+                                ${d.isBookedLocked ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold"><i class="bi bi-lock-fill me-1"></i>Đã đặt lịch</span>' : ''}
+                                ${hasLocked ? '<span class="badge bg-success-subtle text-success border">Có bước đã làm</span>' : ''}
+                            </div>
                         </div>
                         <select class="form-select form-select-sm fw-semibold text-dark" style="height: 36px; font-size: 13.5px;"
-                                ${hasLocked ? 'disabled title="Không thể đổi dịch vụ vì đã có bước thực hiện"' : `onchange="changeService('${escapeJsAttr(d.id)}', this.value)" title="Đổi dịch vụ điều trị"`}>
+                                ${isLockedRow ? `disabled title="${d.isBookedLocked ? 'Dịch vụ bệnh nhân đã đăng ký từ lịch hẹn (đã khóa)' : 'Không thể đổi dịch vụ vì đã có bước thực hiện'}"` : `onchange="changeService('${escapeJsAttr(d.id)}', this.value)" title="Đổi dịch vụ điều trị"`}>
                             ${srvOpts}
                         </select>
                     </td>
@@ -2624,7 +2659,7 @@
                     </td>
                     <td class="text-center">
                         <button type="button" class="df-btn-icon-muted"
-                                ${hasLocked ? 'disabled title="Không thể xóa vì đã có bước thực hiện"' : `onclick="removePlanService('${escapeJsAttr(d.id)}')" title="Xóa dịch vụ"`}>
+                                ${isLockedRow ? `disabled title="${d.isBookedLocked ? 'Dịch vụ đã đặt lịch (đã khóa)' : 'Không thể xóa vì đã có bước thực hiện'}"` : `onclick="removePlanService('${escapeJsAttr(d.id)}')" title="Xóa dịch vụ"`}>
                             <i class="bi bi-trash3"></i>
                         </button>
                     </td>
@@ -2768,6 +2803,10 @@
     function changeService(id, srvId) {
         const d = PLAN_SERVICES.find(x => x.id === id);
         if (!d || hasServiceLockedSteps(d)) return;
+        if (d.isBookedLocked) {
+            showToast('Dịch vụ này bệnh nhân đã đăng ký từ lịch hẹn, đã khóa cố định cho ca khám.', 'warning');
+            return;
+        }
         d.serviceId = String(srvId);
         initServiceStagesFromCatalog(d);
         recalculateStepPrices(d);
@@ -3663,6 +3702,7 @@
         if (typeof hideInlineBanner === 'function') hideInlineBanner();
         if (typeof clearFieldError === 'function') clearFieldError('planNameError');
 
+        ensureBookedServiceInPlan();
         recalculatePlanEndDate();
         renderAll();
         if (typeof renderInstallmentsTable === 'function') {
@@ -3670,6 +3710,25 @@
         }
         switchServiceInputMode('single');
         switchPlanSubTab(null);
+    }
+
+    function ensureBookedServiceInPlan() {
+        if (!SERVER_BOOKED_SERVICE || !SERVER_BOOKED_SERVICE.serviceId) return;
+        const bookedId = String(SERVER_BOOKED_SERVICE.serviceId);
+        if (!SERVICES_DICT[bookedId]) return;
+        const existing = PLAN_SERVICES.find(x => String(x.serviceId) === bookedId);
+        if (existing) {
+            existing.isBookedLocked = true;
+            return;
+        }
+        const defaultScope = isPackageService(bookedId) ? 'Toàn hàm' : '';
+        addServiceFromPicker(bookedId, defaultScope, 1, true);
+        const added = PLAN_SERVICES.find(x => String(x.serviceId) === bookedId);
+        if (added) added.isBookedLocked = true;
+        const nameInp = document.getElementById('planNameInput');
+        if (nameInp && !nameInp.value.trim()) {
+            nameInp.value = 'Kế hoạch điều trị: ' + (SERVER_BOOKED_SERVICE.serviceName || SERVICES_DICT[bookedId].name || '');
+        }
     }
 
     async function loadPlanIntoForm(editPlanId) {
@@ -3778,6 +3837,7 @@
                                     presetKey: 'CUSTOM',
                                     workflowTemplateId: null,
                                     workflowTemplateName: '',
+                                    isBookedLocked: Boolean(SERVER_BOOKED_SERVICE && String(SERVER_BOOKED_SERVICE.serviceId) === String(rawSrvId)),
                                     stepsPool: [],
                                     stages: []
                                 });
@@ -4538,10 +4598,35 @@
             }
             updateFade();
         }
+        function initDeskQueueBadgeRefresh() {
+            fetch('/api/doctor/visits/queue-status', { cache: 'no-store' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) {
+                    if (!data || data.waitingCount === undefined) return;
+                    var count = Math.max(0, Number(data.waitingCount || 0));
+                    DESK_WAITING_COUNT = count;
+                    var badge = document.getElementById('deskQueueWaitingBadge');
+                    var textEl = document.getElementById('deskQueueWaitingText');
+                    if (!badge || !textEl) return;
+                    var icon = badge.querySelector('i');
+                    badge.className = 'badge rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-1 border df-num text-nowrap '
+                        + (count > 0 ? 'bg-warning-subtle text-warning-emphasis border-warning-subtle' : 'bg-success-subtle text-success border-success-subtle');
+                    badge.title = count > 0
+                        ? 'Đang có bệnh nhân chờ trong hàng đợi — ca này chỉ khóa làm dịch vụ đã đặt lịch, dịch vụ phát sinh hẹn ca sau'
+                        : 'Hàng đợi đang trống — có thể làm thêm dịch vụ phát sinh nếu bệnh nhân đồng ý';
+                    if (icon) icon.className = count > 0 ? 'bi bi-people-fill' : 'bi bi-people';
+                    textEl.textContent = count > 0 ? ('Hàng đợi: ' + count + ' đang chờ') : 'Hàng đợi: 0 chờ';
+                })
+                .catch(function () {});
+        }
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initMainSubnavScroll);
+            document.addEventListener('DOMContentLoaded', function () {
+                initMainSubnavScroll();
+                initDeskQueueBadgeRefresh();
+            });
         } else {
             initMainSubnavScroll();
+            initDeskQueueBadgeRefresh();
         }
     })();
 </script>

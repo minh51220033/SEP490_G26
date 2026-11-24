@@ -1750,7 +1750,7 @@
                     .catch(function (err) { notify(err.message, true); });
             }
 
-            function startService(serviceId, planItemId, planStageId) {
+            function startService(serviceId, planItemId, planStageId, patientConfirmed) {
                 if (!state.visitId || (!serviceId && !planItemId && !planStageId)) return;
                 fetch('/api/doctor/workflows/execution/start', {
                     method: 'POST',
@@ -1759,7 +1759,8 @@
                         visitId: Number(state.visitId),
                         serviceId: serviceId ? Number(serviceId) : null,
                         planItemId: planItemId ? Number(planItemId) : null,
-                        planStageId: planStageId ? Number(planStageId) : null
+                        planStageId: planStageId ? Number(planStageId) : null,
+                        patientConfirmed: !!patientConfirmed
                     })
                 })
                     .then(function (res) {
@@ -1773,7 +1774,17 @@
                         syncParentTabs(dto);
                         return reload(dto.executionId);
                     })
-                    .catch(function (err) { notify(err.message, true); });
+                    .catch(function (err) {
+                        var msg = err && err.message ? err.message : 'Không thể khởi tạo quy trình.';
+                        if (msg.indexOf('PATIENT_CONFIRM_REQUIRED:') === 0 && !patientConfirmed) {
+                            var cleanMsg = msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, '');
+                            if (window.confirm(cleanMsg + '\n\nBấm OK để xác nhận bệnh nhân đồng ý và thực hiện luôn trong ca này.')) {
+                                startService(serviceId, planItemId, planStageId, true);
+                            }
+                            return;
+                        }
+                        notify(msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, ''), true);
+                    });
             }
 
             function deleteExecution(execId) {
@@ -1972,11 +1983,11 @@
                 bootstrap.Modal.getOrCreateInstance(mEl).show();
             }
 
-            window.openTreatmentPlanStepWorkflow = function (planItemId, serviceId, planStageId) {
+            window.openTreatmentPlanStepWorkflow = function (planItemId, serviceId, planStageId, patientConfirmed) {
                 if (typeof window.switchMainTab === 'function') {
                     window.switchMainTab('tab-workflow-execution');
                 }
-                startService(serviceId, planItemId, planStageId);
+                startService(serviceId, planItemId, planStageId, patientConfirmed);
             };
 
             window.FT43 = {

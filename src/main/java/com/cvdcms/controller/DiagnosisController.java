@@ -802,6 +802,8 @@ public class DiagnosisController {
             log.warn("Không thể kiểm tra điều kiện lâm sàng cho visitId={}: {}", visitId, ex.getMessage());
         }
         model.addAttribute("clinicalCheck", clinicalCheck);
+        model.addAttribute("bookedService", doctorVisitAccess != null ? doctorVisitAccess.resolveBookedServiceSummary(visit) : null);
+        model.addAttribute("deskWaitingCount", doctorVisitAccess != null ? doctorVisitAccess.countWaitingPatientsForVisitDoctor(visit) : 0);
 
         model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14), Kế hoạch (FT15), Dịch vụ thực hiện (FT16), Ảnh lâm sàng (FT17) & Đơn thuốc (FT18)");
         model.addAttribute("activeMenu", "examination");
@@ -971,6 +973,8 @@ public class DiagnosisController {
         model.addAttribute("isDoctorSelectorEditable", isAdmin);
         model.addAttribute("defaultActingDoctor", defaultActingDoctor);
         model.addAttribute("allVisits", allVisits);
+        model.addAttribute("bookedService", doctorVisitAccess != null ? doctorVisitAccess.resolveBookedServiceSummary(visit) : null);
+        model.addAttribute("deskWaitingCount", doctorVisitAccess != null ? doctorVisitAccess.countWaitingPatientsForVisitDoctor(visit) : 0);
 
         List<com.cvdcms.DTO.WorkflowTemplateResponseDTO> workflowTemplates = (clinicalWorkflowService != null)
                 ? clinicalWorkflowService.getAllTemplates().stream()

@@ -297,12 +297,25 @@ function renderPlanInlineRoadmapHtml(plan, options = {}) {
                             `;
                         }
 
+                        const bookedSrvId = window.BOOKED_SERVICE && window.BOOKED_SERVICE.serviceId
+                            ? Number(window.BOOKED_SERVICE.serviceId)
+                            : null;
+                        const isBookedItem = Boolean(bookedSrvId && it.serviceId && Number(it.serviceId) === bookedSrvId);
+                        const isDeferredHint = Boolean(bookedSrvId && it.serviceId && Number(it.serviceId) !== bookedSrvId
+                            && !isComp && !isInProg && Number(window.DESK_WAITING_COUNT || 0) > 0);
+                        const bookedBadgeHtml = isBookedItem
+                            ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size: 10.5px;"><i class="bi bi-lock-fill me-1"></i>Đã đặt lịch</span>'
+                            : (isDeferredHint
+                                ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 10.5px;" title="Đang có bệnh nhân chờ — dịch vụ tư vấn phát sinh hẹn ca sau"><i class="bi bi-calendar2-week me-1"></i>Hẹn ca sau</span>'
+                                : '');
+
                         itemsRows += `
                             <tr id="item-row-${it.planItemId}">
                                 <td class="text-center text-muted df-num">${idx + 1}</td>
                                 <td>
                                     <strong class="text-dark">${it.stepName || it.serviceName}</strong>
                                     ${(it.stepName && it.stepName !== it.serviceName) ? `<span class="badge bg-light text-primary border ms-1" style="font-size: 10px;">${it.serviceName}</span>` : (it.categoryName ? `<span class="badge bg-light text-muted border ms-1" style="font-size: 10px;">${it.categoryName}</span>` : '')}
+                                    ${bookedBadgeHtml}
                                 </td>
                                 <td class="text-center">${toothBadge}</td>
                                 <td class="text-center df-num">
@@ -989,7 +1002,7 @@ function changeStageStatus(stageId, status) {
 /**
  * Bác sĩ nhấn "Làm trong ca này": liên kết trực tiếp bước KHDT vào ca khám hiện tại (FT15 -> FT16)
  */
-function executePlanItemDirectly(planItemId) {
+function executePlanItemDirectly(planItemId, patientConfirmed = false) {
     window._executingPlanItems = window._executingPlanItems || new Set();
     if (window._executingPlanItems.has(planItemId)) {
         return;
@@ -1016,7 +1029,7 @@ function executePlanItemDirectly(planItemId) {
         return;
     }
 
-    fetch(`/api/doctor/treatment-plans/items/${planItemId}/execute-in-visit?visitId=${visitId}`, {
+    fetch(`/api/doctor/treatment-plans/items/${planItemId}/execute-in-visit?visitId=${visitId}&patientConfirmed=${patientConfirmed ? 'true' : 'false'}`, {
         method: 'POST'
     })
     .then(res => {
@@ -1043,16 +1056,24 @@ function executePlanItemDirectly(planItemId) {
     })
     .catch(err => {
         resetBtn();
-        showToast(err.message, true);
+        const msg = err && err.message ? err.message : 'Lỗi khi ghi nhận dịch vụ thực hiện';
+        if (msg.startsWith('PATIENT_CONFIRM_REQUIRED:') && !patientConfirmed) {
+            const cleanMsg = msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, '');
+            if (window.confirm(cleanMsg + '\n\nBấm OK để xác nhận bệnh nhân đồng ý và thực hiện luôn trong ca này.')) {
+                executePlanItemDirectly(planItemId, true);
+            }
+            return;
+        }
+        showToast(msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, ''), true);
     });
 }
 
 /**
  * Mở tab Quy trình thực hiện để khám & cập nhật từng bước cho hạng mục KHDT (FT43 <-> FT15)
  */
-function startPlanItemWorkflow(planItemId, serviceId, planStageId) {
+function startPlanItemWorkflow(planItemId, serviceId, planStageId, patientConfirmed = false) {
     if (typeof window.openTreatmentPlanStepWorkflow === 'function') {
-        window.openTreatmentPlanStepWorkflow(planItemId, serviceId, planStageId);
+        window.openTreatmentPlanStepWorkflow(planItemId, serviceId, planStageId, patientConfirmed);
         return;
     }
     const visitIdInput = document.getElementById('visitId') || document.getElementById('treatVisitId');
@@ -1074,7 +1095,8 @@ function startPlanItemWorkflow(planItemId, serviceId, planStageId) {
             visitId: Number(visitId),
             serviceId: serviceId ? Number(serviceId) : null,
             planItemId: planItemId ? Number(planItemId) : null,
-            planStageId: planStageId ? Number(planStageId) : null
+            planStageId: planStageId ? Number(planStageId) : null,
+            patientConfirmed: !!patientConfirmed
         })
     })
     .then(res => res.json().then(body => {
@@ -1089,7 +1111,17 @@ function startPlanItemWorkflow(planItemId, serviceId, planStageId) {
             window.FT43.selectExecution(dto.executionId);
         }
     })
-    .catch(err => showToast(err.message, true));
+    .catch(err => {
+        const msg = err && err.message ? err.message : 'Không thể khởi tạo quy trình cho hạng mục này.';
+        if (msg.startsWith('PATIENT_CONFIRM_REQUIRED:') && !patientConfirmed) {
+            const cleanMsg = msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, '');
+            if (window.confirm(cleanMsg + '\n\nBấm OK để xác nhận bệnh nhân đồng ý và thực hiện luôn trong ca này.')) {
+                startPlanItemWorkflow(planItemId, serviceId, planStageId, true);
+            }
+            return;
+        }
+        showToast(msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, ''), true);
+    });
 }
 window.startPlanItemWorkflow = startPlanItemWorkflow;
 
