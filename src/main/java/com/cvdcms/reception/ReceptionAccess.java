@@ -55,7 +55,25 @@ public class ReceptionAccess {
         return new Scope(user, admin, canManage, branchIds);
     }
 
+    public boolean canAssignDoctor(Scope scope) {
+        if (scope == null) {
+            return false;
+        }
+        if (scope.admin()) {
+            return true;
+        }
+        User user = scope.user();
+        if (user == null || hasRole(user, "LE_TAN")) {
+            return false;
+        }
+        Long uid = user.getUserId();
+        return uid != null && users != null && users.hasActivePermission(uid, "CLINICAL_DISPATCH");
+    }
+
     private boolean hasRole(User user, String name) {
+        if (user == null || user.getRoles() == null) {
+            return false;
+        }
         for (Role role : user.getRoles()) {
             if (role != null && Boolean.TRUE.equals(role.getIsActive()) && role.getRoleName() != null) {
                 String actual = role.getRoleName().toUpperCase();

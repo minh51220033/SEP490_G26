@@ -127,6 +127,9 @@ public class Appointment {
     @Column(name = "resource_conflict_note", length = 500)
     private String resourceConflictNote;
 
+    @Column(name = "booking_group_code", length = 40)
+    private String bookingGroupCode;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

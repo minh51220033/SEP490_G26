@@ -39,6 +39,9 @@ public class QueueWorkflowService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.ResourceBookingTransactionService resourceBookingTransactionService;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.AppointmentRepository appointmentRepository;
+
     public QueueWorkflowService(ReceptionAccess access, DispatchBranchRepository branches,
             QueueWorkflowRepository tickets, DispatchVisitRepository visits, DispatchRoomRepository rooms,
             DispatchChairRepository chairs, DispatchDoctorRepository doctors, ReceptionAuditRepository audits,
@@ -178,13 +181,26 @@ public class QueueWorkflowService {
         Branch branch = branches.findById(branchId).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy chi nhánh."));
         if (!Boolean.TRUE.equals(branch.getIsActive())) throw error(HttpStatus.NOT_FOUND, "Chi nhánh không hoạt động.");
         List<QueueTicket> all = ordered(branchId);
-        List<PublicNumber> called = all.stream().filter(t -> t.getStatus() == QueueStatus.CALLED)
+        List<PublicNumber> called = all.stream()
+                .filter(t -> t.getStatus() == QueueStatus.CALLED
+                        && t.getVisit() != null
+                        && t.getVisit().getRoomId() != null
+                        && t.getVisit().getChairId() != null)
                 .sorted(Comparator.comparing(QueueTicket::getCalledAt, Comparator.nullsLast(Comparator.reverseOrder()))
                         .thenComparing(QueueTicket::getTicketId, Comparator.reverseOrder()))
-                .map(t -> new PublicNumber(t.getTicketId(), t.getDisplayNumber(),
-                        t.getVisit().getRoomId() == null ? "" : rooms.findById(t.getVisit().getRoomId()).map(Room::getRoomName).orElse(""),
-                        t.getVisit().getChairId() == null ? "" : chairs.findById(t.getVisit().getChairId()).map(DentalChair::getChairName).orElse(""),
-                        t.getCalledAt() != null ? t.getCalledAt().atZone(ZONE).toInstant().toEpochMilli() : null)).toList();
+                .map(t -> {
+                    String roomName = rooms.findById(t.getVisit().getRoomId()).map(Room::getRoomName).orElse("");
+                    String chairName = chairs.findById(t.getVisit().getChairId()).map(DentalChair::getChairName).orElse("");
+                    String patientName = (t.getVisit().getPatientProfile() != null
+                            && t.getVisit().getPatientProfile().getFullName() != null)
+                            ? t.getVisit().getPatientProfile().getFullName().trim()
+                            : null;
+                    return new PublicNumber(t.getTicketId(), t.getDisplayNumber(), roomName, chairName,
+                            t.getCalledAt() != null ? t.getCalledAt().atZone(ZONE).toInstant().toEpochMilli() : null,
+                            patientName);
+                })
+                .filter(n -> !n.room().isBlank() && !n.chair().isBlank())
+                .toList();
         List<PublicNumber> serving = all.stream().filter(t -> t.getStatus() == QueueStatus.IN_SERVICE)
                 .map(t -> new PublicNumber(t.getTicketId(), t.getDisplayNumber(),
                         t.getVisit().getRoomId() == null ? "" : rooms.findById(t.getVisit().getRoomId()).map(Room::getRoomName).orElse(""),
@@ -268,8 +284,57 @@ public class QueueWorkflowService {
             String rawChair = cId != null ? chairLookup.getOrDefault(cId, "Ghế " + cId) : "";
 
             boolean isCallingOrExam = (t.getStatus() == QueueStatus.CALLED || t.getStatus() == QueueStatus.IN_SERVICE);
-            String displayRoom = isCallingOrExam ? (rawRoom.isEmpty() ? "Phòng chỉ định" : rawRoom) : "—";
-            String displayChair = isCallingOrExam ? (rawChair.isEmpty() ? "Ghế điều trị" : rawChair) : "—";
+            String displayRoom = (isCallingOrExam && !rawRoom.isEmpty()) ? rawRoom : "Chưa phân công";
+            String displayChair = (isCallingOrExam && !rawChair.isEmpty()) ? rawChair : "Chưa phân công";
+            String rawPatientName = (t.getVisit() != null && t.getVisit().getPatientProfile() != null
+                    && t.getVisit().getPatientProfile().getFullName() != null
+                    && !t.getVisit().getPatientProfile().getFullName().isBlank())
+                    ? t.getVisit().getPatientProfile().getFullName().trim()
+                    : "—";
+            Long primaryDoctorId = (t.getVisit() != null && t.getVisit().getPrimaryDoctor() != null)
+                    ? t.getVisit().getPrimaryDoctor().getStaffId()
+                    : null;
+            String primaryDoctorName = (t.getVisit() != null && t.getVisit().getPrimaryDoctor() != null
+                    && t.getVisit().getPrimaryDoctor().getFullName() != null
+                    && !t.getVisit().getPrimaryDoctor().getFullName().isBlank())
+                    ? t.getVisit().getPrimaryDoctor().getFullName().trim()
+                    : null;
+            Long bookedDoctorId = null;
+            String bookedDoctorName = null;
+            if (appointmentRepository != null && t.getVisit() != null && t.getVisit().getAppointmentId() != null) {
+                var apptOpt = appointmentRepository.findById(t.getVisit().getAppointmentId());
+                if (apptOpt.isPresent() && apptOpt.get().getDoctor() != null) {
+                    bookedDoctorId = apptOpt.get().getDoctor().getStaffId();
+                    bookedDoctorName = apptOpt.get().getDoctor().getFullName();
+                }
+            }
+            String doctorAssignmentType;
+            String doctorStatusLabel;
+            String doctorDisplay;
+            if (bookedDoctorId != null && bookedDoctorName != null && !bookedDoctorName.isBlank()) {
+                if (Objects.equals(bookedDoctorId, primaryDoctorId) || primaryDoctorId == null) {
+                    doctorAssignmentType = "BOOKED_DOCTOR";
+                    doctorStatusLabel = "Đã đặt bác sĩ";
+                    doctorDisplay = bookedDoctorName.trim();
+                } else {
+                    doctorAssignmentType = "ASSIGNED_DOCTOR";
+                    doctorStatusLabel = "Đã được phân bổ";
+                    doctorDisplay = primaryDoctorName != null ? primaryDoctorName : bookedDoctorName.trim();
+                }
+            } else if (primaryDoctorName != null) {
+                doctorAssignmentType = "ASSIGNED_DOCTOR";
+                doctorStatusLabel = "Đã được phân bổ";
+                doctorDisplay = primaryDoctorName;
+            } else if (t.getVisit() != null && t.getVisit().getNotes() != null
+                    && t.getVisit().getNotes().contains("Chờ")) {
+                doctorAssignmentType = "WAITING_DOCTOR";
+                doctorStatusLabel = "Chờ bác sĩ phù hợp";
+                doctorDisplay = "Chờ bác sĩ phù hợp";
+            } else {
+                doctorAssignmentType = "UNSPECIFIED";
+                doctorStatusLabel = "Chưa chỉ định";
+                doctorDisplay = "Chưa chỉ định";
+            }
 
             rows.add(new PublicQueueRow(
                     idx,
@@ -277,7 +342,11 @@ public class QueueWorkflowService {
                     displayRoom,
                     displayChair,
                     t.getStatus() != null ? t.getStatus().name() : "WAITING",
-                    isCallingOrExam
+                    isCallingOrExam,
+                    rawPatientName,
+                    doctorDisplay,
+                    doctorAssignmentType,
+                    doctorStatusLabel
             ));
         }
         return rows;
@@ -476,6 +545,17 @@ public class QueueWorkflowService {
             chair.setStatus(ChairStatus.AVAILABLE);
             chairs.save(chair);
         }
+        if (queueCoordinator != null) {
+            LocalDate today = LocalDate.now(ZONE);
+            tickets.forBoard(branchId, today, QueueType.EXAM).stream()
+                    .filter(t -> t.getStatus() == QueueStatus.WAITING
+                            && t.getVisit() != null
+                            && t.getVisit().getPrimaryDoctor() != null
+                            && isWaitingOrResult(t.getVisit()))
+                    .map(t -> t.getVisit().getPrimaryDoctor().getStaffId())
+                    .distinct()
+                    .forEach(docId -> queueCoordinator.autoCallNextForDoctorIfIdle(branchId, docId, scope.user().getUserId()));
+        }
     }
 
     private void audit(HttpSession session, QueueTicket ticket, String action, QueueStatus before, String reason) {
@@ -609,12 +689,15 @@ public class QueueWorkflowService {
             this(branchId, branches, tickets, doctors, List.of(), List.of(), Map.of(), Map.of());
         }
     }
-    public record PublicNumber(Long ticketId, String number, String room, String chair, Long callTime) {
+    public record PublicNumber(Long ticketId, String number, String room, String chair, Long callTime, String patientFullName) {
+        public PublicNumber(Long ticketId, String number, String room, String chair, Long callTime) {
+            this(ticketId, number, room, chair, callTime, null);
+        }
         public PublicNumber(Long ticketId, String number, String room, String chair) {
-            this(ticketId, number, room, chair, null);
+            this(ticketId, number, room, chair, null, null);
         }
         public PublicNumber(String number, String room, String chair) {
-            this(null, number, room, chair, null);
+            this(null, number, room, chair, null, null);
         }
     }
     public record PublicBoard(String branch, List<PublicNumber> called, List<PublicNumber> serving,
@@ -635,7 +718,36 @@ public class QueueWorkflowService {
             String roomName,
             String chairName,
             String status,
-            boolean isCallingOrExam
+            boolean isCallingOrExam,
+            String patientFullName,
+            String doctorDisplay,
+            String doctorAssignmentType,
+            String doctorStatusLabel
     ) {
+        public PublicQueueRow(
+                int stt,
+                String ticketNumber,
+                String roomName,
+                String chairName,
+                String status,
+                boolean isCallingOrExam,
+                String patientFullName,
+                String doctorDisplay
+        ) {
+            this(stt, ticketNumber, roomName, chairName, status, isCallingOrExam,
+                    patientFullName, doctorDisplay, "ASSIGNED_DOCTOR", "Đã được phân bổ");
+        }
+
+        public PublicQueueRow(
+                int stt,
+                String ticketNumber,
+                String roomName,
+                String chairName,
+                String status,
+                boolean isCallingOrExam
+        ) {
+            this(stt, ticketNumber, roomName, chairName, status, isCallingOrExam,
+                    "—", "Chưa chỉ định", "UNSPECIFIED", "Chưa chỉ định");
+        }
     }
 }

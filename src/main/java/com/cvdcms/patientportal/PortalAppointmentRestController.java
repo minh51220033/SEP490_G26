@@ -69,6 +69,13 @@ public class PortalAppointmentRestController {
         return appointments.book(session, request);
     }
 
+    @PostMapping("/multi-service")
+    @ResponseStatus(HttpStatus.CREATED)
+    public PortalAppointmentService.MultiServiceBookingResult bookMultiService(HttpSession session,
+            @Valid @RequestBody PortalAppointmentService.MultiServiceBookingRequest request) {
+        return appointments.bookMultiService(session, request);
+    }
+
     @GetMapping
     public List<PortalAppointmentService.AppointmentView> list(HttpSession session,
             @RequestParam(required = false) Long profileId) {

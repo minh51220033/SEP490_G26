@@ -126,6 +126,39 @@ class ReceptionAccessTest {
         assertEquals(HttpStatus.FORBIDDEN, noPerm.getStatusCode());
     }
 
+    @Test
+    void canAssignDoctorAllowsAdminAndClinicalDispatchNonReceptionistButBlocksLeTan() {
+        ReceptionAccess access = new ReceptionAccess(users, assignments);
+
+        User adminUser = new User();
+        adminUser.setUserId(1L);
+        Role adminRole = new Role();
+        adminRole.setRoleName("ADMIN");
+        adminRole.setIsActive(true);
+        adminUser.getRoles().add(adminRole);
+        assertTrue(access.canAssignDoctor(new ReceptionAccess.Scope(adminUser, true, List.of())));
+
+        User adminWithLeTan = receptionist();
+        adminWithLeTan.getRoles().add(adminRole);
+        assertTrue(access.canAssignDoctor(new ReceptionAccess.Scope(adminWithLeTan, true, List.of())));
+
+        User leTan = receptionist();
+        assertFalse(access.canAssignDoctor(new ReceptionAccess.Scope(leTan, false, List.of(1L))));
+        verify(users, never()).hasActivePermission(9L, "CLINICAL_DISPATCH");
+
+        User doctorUser = new User();
+        doctorUser.setUserId(12L);
+        Role docRole = new Role();
+        docRole.setRoleName("BAC_SI");
+        docRole.setIsActive(true);
+        doctorUser.getRoles().add(docRole);
+        when(users.hasActivePermission(12L, "CLINICAL_DISPATCH")).thenReturn(true);
+        assertTrue(access.canAssignDoctor(new ReceptionAccess.Scope(doctorUser, false, List.of(1L))));
+
+        assertFalse(access.canAssignDoctor(null));
+        assertFalse(access.canAssignDoctor(new ReceptionAccess.Scope(null, false, List.of(1L))));
+    }
+
     private User receptionist() {
         User user = new User(); user.setUserId(9L); user.setStatus("ACTIVE"); user.setIsActive(true);
         Role role = new Role(); role.setRoleName("LE_TAN"); role.setIsActive(true);

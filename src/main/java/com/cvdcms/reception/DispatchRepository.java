@@ -63,6 +63,9 @@ interface DispatchTicketRepository extends JpaRepository<QueueTicket, Long> {
     @Query("select coalesce(max(t.ticketNumber), 0) from QueueTicket t where t.branch.branchId = :branch and t.queueDate = :day and t.queueType = :type and t.isPriority = :priority")
     int maxNumber(@Param("branch") Long branch, @Param("day") LocalDate day, @Param("type") QueueType type, @Param("priority") boolean priority);
 
+    @Query("select count(t) from QueueTicket t where t.branch.branchId = :branch and t.queueDate = :day and t.queueType = com.cvdcms.entity.enums.QueueType.EXAM and t.status in (com.cvdcms.entity.enums.QueueStatus.CALLED, com.cvdcms.entity.enums.QueueStatus.IN_SERVICE) and t.visit.chairId = :chair and t.visit.visitId <> :excludeVisitId")
+    long countHoldingChair(@Param("branch") Long branch, @Param("day") LocalDate day, @Param("chair") Long chair, @Param("excludeVisitId") Long excludeVisitId);
+
     @Query("select t from QueueTicket t join fetch t.visit v join fetch v.patientProfile where t.branch.branchId = :branch and t.queueDate = :day and t.queueType = :type order by t.isEmergency desc, t.isPriority desc, t.ticketNumber")
     List<QueueTicket> board(@Param("branch") Long branch, @Param("day") LocalDate day, @Param("type") QueueType type);
 }

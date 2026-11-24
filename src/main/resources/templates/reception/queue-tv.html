@@ -265,12 +265,60 @@
       border: 1px solid #cbd5e1;
     }
 
-    tr.tv-row-active .tv-badge-stt {
+    tr.tv-row-active,
+    tr.tv-row-calling {
+      background: linear-gradient(90deg, #eff6ff 0%, #e0f2fe 100%);
+    }
+
+    tr.tv-row-examining {
+      background: linear-gradient(90deg, #f0fdf4 0%, #dcfce7 100%);
+    }
+
+    tr.tv-row-active .tv-badge-stt,
+    tr.tv-row-calling .tv-badge-stt {
       background: #0284c7 !important;
       color: #ffffff !important;
       border-color: #0284c7 !important;
       box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
       animation: pulseActive 1.8s infinite;
+    }
+
+    tr.tv-row-examining .tv-badge-stt {
+      background: #16a34a !important;
+      color: #ffffff !important;
+      border-color: #16a34a !important;
+    }
+
+    .tv-doctor-name {
+      font-size: clamp(16px, 1.2vw, 20px);
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .tv-doctor-tag {
+      display: inline-block;
+      margin-top: 3px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .tv-doctor-tag.booked {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .tv-doctor-tag.assigned {
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    .tv-doctor-tag.waiting-doc {
+      background: #fee2e2;
+      color: #b91c1c;
     }
 
     @keyframes pulseActive {
@@ -310,6 +358,121 @@
     .cell-dash {
       color: #94a3b8;
       font-weight: 500;
+    }
+
+    /* ================= HERO CALLING & EXAMINING SECTIONS ================= */
+    .tv-section-card {
+      background: var(--tv-card-bg);
+      border: 1.5px solid var(--tv-border);
+      border-radius: 16px;
+      padding: 16px 22px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+
+    .tv-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      gap: 12px;
+    }
+
+    .tv-section-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: clamp(16px, 1.3vw, 20px);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--tv-text-main);
+    }
+
+    .tv-calling-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 14px;
+    }
+
+    .tv-calling-card {
+      background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
+      border: 2px solid #0284c7;
+      border-radius: 16px;
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 6px 18px rgba(2, 132, 199, 0.14);
+    }
+
+    .tv-calling-card.examining {
+      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      border-color: #16a34a;
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.12);
+    }
+
+    .tv-calling-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .tv-calling-stt {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(24px, 2vw, 34px);
+      font-weight: 900;
+      color: #0369a1;
+      background: #ffffff;
+      border: 2px solid #0284c7;
+      border-radius: 12px;
+      padding: 4px 16px;
+      line-height: 1.2;
+    }
+
+    .tv-calling-card.examining .tv-calling-stt {
+      color: #15803d;
+      border-color: #16a34a;
+    }
+
+    .tv-calling-name {
+      font-size: clamp(22px, 1.75vw, 30px);
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .tv-calling-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      font-size: clamp(15px, 1.15vw, 18px);
+      font-weight: 600;
+      color: #1e293b;
+      padding-top: 6px;
+      border-top: 1px dashed rgba(2, 132, 199, 0.3);
+    }
+
+    .tv-calling-card.examining .tv-calling-meta {
+      border-top-color: rgba(22, 163, 74, 0.3);
+    }
+
+    .tv-calling-empty {
+      padding: 16px 20px;
+      border-radius: 12px;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      color: #64748b;
+      font-size: 16px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .tv-table-scroll {
+      max-height: calc(100vh - 215px);
+      overflow-y: auto;
     }
 
     .tv-empty-box {
@@ -407,46 +570,77 @@
     </div>
   </header>
 
-  <!-- ================= MAIN TABLE (4 CỘT ZERO-PII CÔNG KHAI) ================= -->
+  <!-- ================= BẢNG HÀNG ĐỢI THỐNG NHẤT ================= -->
   <main class="tv-main-card">
-    <div class="tv-table-container">
+    <div class="tv-section-header" style="padding: 16px 22px 0 22px; margin-bottom: 10px; flex-wrap: wrap;">
+      <div class="tv-section-title" style="color: #0f172a;">
+        <i class="bi bi-display"></i>
+        <span>Bảng theo dõi gọi số &amp; hàng đợi khám</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <span id="tvCallingCount" class="tv-status-badge calling" style="margin-left: 0;"
+              th:text="${#lists.size(board.queueList.?[status == 'CALLED']) + ' đang gọi'}">0 đang gọi</span>
+        <span id="tvExaminingCount" class="tv-status-badge examining" style="margin-left: 0;"
+              th:text="${#lists.size(board.queueList.?[status == 'IN_SERVICE']) + ' đang khám'}">0 đang khám</span>
+        <span id="tvWaitingCount" class="tv-status-badge" style="background: #f1f5f9; color: #475569; margin-left: 0;"
+              th:text="${#lists.size(board.queueList.?[status != 'CALLED' and status != 'IN_SERVICE']) + ' đang chờ'}">0 đang chờ</span>
+      </div>
+    </div>
+    <div class="tv-table-container tv-table-scroll">
       <table class="tv-table" id="tvListTable">
         <thead>
           <tr>
-            <th class="cell-center" style="width: 170px;">Số thứ tự / Phiếu</th>
-            <th class="cell-center" style="width: 240px;">Trạng thái</th>
-            <th class="cell-center" style="width: 260px;">Phòng khám</th>
-            <th class="cell-center" style="width: 240px;">Ghế nha</th>
+            <th class="cell-center" style="width: 160px;">Số thứ tự / Phiếu</th>
+            <th style="text-align: left; padding-left: 20px;">Họ và tên</th>
+            <th style="text-align: left; padding-left: 16px; width: 250px;">Bác sĩ phụ trách</th>
+            <th class="cell-center" style="width: 165px;">Trạng thái</th>
+            <th class="cell-center" style="width: 190px;">Phòng khám</th>
+            <th class="cell-center" style="width: 175px;">Ghế nha</th>
           </tr>
         </thead>
         <tbody>
-          <!-- Dynamic / Server-rendered rows -->
           <tr th:each="row : ${board.queueList}"
-              th:classappend="${row.isCallingOrExam ? 'tv-row-active' : ''}">
+              th:classappend="${row.status == 'CALLED'} ? 'tv-row-calling' : (${row.status == 'IN_SERVICE'} ? 'tv-row-examining' : '')">
             <td class="cell-center">
               <span class="tv-badge-stt" th:text="${row.ticketNumber}">01</span>
             </td>
+            <td style="text-align: left; padding-left: 20px; font-size: clamp(18px, 1.4vw, 24px); font-weight: 800; color: var(--tv-text-main); overflow-wrap: anywhere;"
+                th:text="${row.patientFullName ?: '—'}">Nguyễn Văn A</td>
+            <td style="text-align: left; padding-left: 16px;">
+              <div class="tv-doctor-name" th:text="${row.doctorDisplay != null and row.doctorDisplay != '—' ? row.doctorDisplay : 'Chưa chỉ định'}">BS Nguyễn A</div>
+              <span class="tv-doctor-tag"
+                    th:classappend="${row.doctorDisplay != null and row.doctorDisplay != '—' and row.doctorDisplay != 'Chưa chỉ định' and row.doctorDisplay != 'Chờ bác sĩ phù hợp'} ? 'assigned' : ''"
+                    th:text="${row.doctorDisplay != null and row.doctorDisplay != '—' and row.doctorDisplay != 'Chưa chỉ định' and row.doctorDisplay != 'Chờ bác sĩ phù hợp' ? 'Đã được phân bổ' : 'Chưa chỉ định'}">Đã được phân bổ</span>
+            </td>
             <td class="cell-center">
-              <span th:if="${row.status == 'CALLED'}" class="tv-status-badge calling">
-                <i class="bi bi-megaphone-fill me-1"></i>Đang gọi
+              <span th:if="${row.status == 'CALLED'}" class="tv-status-badge calling" style="margin-left: 0;">
+                <i class="bi bi-megaphone-fill"></i> Đang gọi
               </span>
-              <span th:if="${row.status == 'IN_SERVICE'}" class="tv-status-badge examining">
-                <i class="bi bi-heart-pulse-fill me-1"></i>Đang khám
+              <span th:if="${row.status == 'IN_SERVICE'}" class="tv-status-badge examining" style="margin-left: 0;">
+                <i class="bi bi-heart-pulse-fill"></i> Đang khám
               </span>
-              <span th:if="${row.status != 'CALLED' and row.status != 'IN_SERVICE'}" class="tv-status-badge" style="background: #f1f5f9; color: #475569;">
+              <span th:if="${row.status == 'PAUSED'}" class="tv-status-badge" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; margin-left: 0;">
+                Tạm hoãn
+              </span>
+              <span th:if="${row.status != 'CALLED' and row.status != 'IN_SERVICE' and row.status != 'PAUSED'}"
+                    class="tv-status-badge" style="background: #f1f5f9; color: #475569; margin-left: 0;">
                 Đang chờ
               </span>
             </td>
-            <td class="cell-center cell-room" th:text="${row.isCallingOrExam ? row.roomName : '—'}">Phòng 101</td>
-            <td class="cell-center cell-chair" th:text="${row.isCallingOrExam ? row.chairName : '—'}">Ghế 01</td>
+            <td class="cell-center"
+                th:classappend="${row.isCallingOrExam and row.roomName != 'Chưa phân công'} ? 'fw-bold text-dark' : 'cell-dash'"
+                th:text="${row.isCallingOrExam ? (row.roomName ?: 'Chưa phân công') : 'Chưa phân công'}">Chưa phân công</td>
+            <td class="cell-center"
+                th:classappend="${row.isCallingOrExam and row.chairName != 'Chưa phân công'} ? 'fw-bold text-dark' : 'cell-dash'"
+                th:text="${row.isCallingOrExam ? (row.chairName ?: 'Chưa phân công') : 'Chưa phân công'}">Chưa phân công</td>
           </tr>
 
           <!-- Empty state row -->
-          <tr th:if="${board.queueList == null or #lists.isEmpty(board.queueList)}" id="tvEmptyRow">
-            <td colspan="4">
+          <tr th:if="${#lists.isEmpty(board.queueList)}" id="tvEmptyRow">
+            <td colspan="6">
               <div class="tv-empty-box">
                 <i class="bi bi-person-lines-fill"></i>
-                <div style="font-size: 18px; font-weight: 700; color: #475569;">Hiện tại chưa có bệnh nhân trong hàng chờ gọi số</div>
+                <div style="font-size: 18px; font-weight: 700; color: #475569;">Hiện tại chưa có bệnh nhân trong hàng đợi</div>
                 <div style="font-size: 14px; margin-top: 4px;">Quý khách vui lòng liên hệ quầy Tiếp đón &amp; Lễ tân để nhận phiếu thứ tự.</div>
               </div>
             </td>
@@ -464,7 +658,7 @@
     </div>
     <div class="tv-footer-marquee">
       <marquee behavior="scroll" direction="left" scrollamount="6">
-        Chào mừng Quý khách đến với Nha khoa Cường Việt · Quý khách vui lòng theo dõi số thứ tự và vị trí Phòng / Ghế điều trị hiển thị trên màn hình · Khi đến lượt, xin vui lòng di chuyển vào đúng phòng khám được chỉ định · Xin cảm ơn!
+        Quý khách vui lòng theo dõi số thứ tự và họ tên trên màn hình. Khi được gọi, vui lòng di chuyển đến đúng phòng khám và ghế nha được hiển thị. Nếu cần hỗ trợ, vui lòng liên hệ quầy lễ tân.
       </marquee>
     </div>
   </footer>

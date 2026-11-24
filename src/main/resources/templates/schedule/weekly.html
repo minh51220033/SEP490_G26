@@ -482,7 +482,20 @@
                     <select id="docAssignRoom" name="roomId" class="form-select" required>
                         <option value="">-- Chọn phòng ACTIVE --</option>
                         <option th:each="rm : ${activeRooms}" th:value="${rm.roomId}"
-                                th:text="${rm.roomCode + ' - ' + rm.roomName}">P101</option>
+                                th:text="${rm.roomCode + ' - ' + rm.roomName + ' (' + (activeChairCountByRoom != null and activeChairCountByRoom.get(rm.roomId) != null ? activeChairCountByRoom.get(rm.roomId) : 0) + ' ghế hoạt động)'}">P101</option>
+                    </select>
+                </div>
+
+                <div class="mb-3" id="docAssignChairBox" style="display: none;">
+                    <div class="border rounded-3 bg-light p-2 mb-2">
+                        <div class="small fw-semibold text-dark mb-1">
+                            <i class="bi bi-hospital-fill text-primary me-1"></i>Ghế tại phòng: <span id="docAssignChairCountBadge" class="badge bg-primary-subtle text-primary">0</span>
+                        </div>
+                        <div id="docAssignChairList" class="d-flex flex-wrap gap-1 small"></div>
+                    </div>
+                    <label for="docAssignChairSelect" class="form-label small fw-semibold">Gán ghế phụ trách (tùy chọn)</label>
+                    <select id="docAssignChairSelect" class="form-select form-select-sm">
+                        <option value="">-- Linh hoạt mọi ghế trong phòng --</option>
                     </select>
                 </div>
 
@@ -754,6 +767,51 @@
             });
         }
 
+        var roomChairsData = /*[[${roomChairsJson != null ? roomChairsJson : '{}'}]]*/ '{}';
+        var roomChairsMap = {};
+        try {
+            roomChairsMap = typeof roomChairsData === 'string' ? JSON.parse(roomChairsData) : (roomChairsData || {});
+        } catch (e) {
+            roomChairsMap = {};
+        }
+
+        function renderChairsForSelectedRoom(roomId) {
+            var box = document.getElementById('docAssignChairBox');
+            var listEl = document.getElementById('docAssignChairList');
+            var badgeEl = document.getElementById('docAssignChairCountBadge');
+            var selEl = document.getElementById('docAssignChairSelect');
+            if (!box || !listEl || !badgeEl || !selEl) return;
+            if (!roomId) {
+                box.style.display = 'none';
+                listEl.innerHTML = '';
+                selEl.innerHTML = '<option value="">-- Linh hoạt mọi ghế trong phòng --</option>';
+                return;
+            }
+            var chairs = roomChairsMap[String(roomId)] || [];
+            var activeChairs = chairs.filter(function (c) { return c.operational; });
+            box.style.display = '';
+            badgeEl.textContent = activeChairs.length + ' / ' + chairs.length + ' đang hoạt động';
+            if (chairs.length === 0) {
+                listEl.innerHTML = '<span class="text-muted">Phòng này chưa khai báo ghế.</span>';
+            } else {
+                listEl.innerHTML = chairs.map(function (c) {
+                    var cls = c.operational ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border';
+                    return '<span class="badge ' + cls + '">' + (c.chairCode || c.chairName) + ' (' + c.status + ')</span>';
+                }).join('');
+            }
+            selEl.innerHTML = '<option value="">-- Linh hoạt mọi ghế trong phòng --</option>'
+                + activeChairs.map(function (c) {
+                    return '<option value="' + (c.chairCode || c.chairName) + '">' + (c.chairName || c.chairCode) + ' (' + c.chairCode + ')</option>';
+                }).join('');
+        }
+
+        var docAssignRoomEl = document.getElementById('docAssignRoom');
+        if (docAssignRoomEl) {
+            docAssignRoomEl.addEventListener('change', function () {
+                renderChairsForSelectedRoom(this.value);
+            });
+        }
+
         var docRoomModal = document.getElementById('doctorRoomAssignModal');
         if (docRoomModal) {
             docRoomModal.addEventListener('show.bs.modal', function (ev) {
@@ -762,11 +820,26 @@
                 document.getElementById('docAssignDate').value = btn.getAttribute('data-date') || '';
                 document.getElementById('docAssignShift').value = btn.getAttribute('data-shift') || '';
                 document.getElementById('docAssignLabel').textContent = btn.getAttribute('data-label') || '-';
-                document.getElementById('docAssignRoom').value = btn.getAttribute('data-room') || '';
+                var roomVal = btn.getAttribute('data-room') || '';
+                document.getElementById('docAssignRoom').value = roomVal;
+                renderChairsForSelectedRoom(roomVal);
                 docRoomModal.querySelectorAll('input[type="checkbox"][name="staffIds"]').forEach(function (cb) {
                     cb.checked = false;
                 });
             });
+            var docRoomForm = docRoomModal.closest('form') || docRoomModal.querySelector('form');
+            if (docRoomForm) {
+                docRoomForm.addEventListener('submit', function () {
+                    var selChair = document.getElementById('docAssignChairSelect');
+                    var noteInput = document.getElementById('docAssignNote');
+                    if (selChair && selChair.value && noteInput) {
+                        var prefix = '[Ghế ' + selChair.value + ']';
+                        if (!noteInput.value.includes(prefix)) {
+                            noteInput.value = noteInput.value.trim() ? (prefix + ' ' + noteInput.value.trim()) : prefix;
+                        }
+                    }
+                });
+            }
         }
 
         document.querySelectorAll('.js-open-move-room').forEach(function (btn) {

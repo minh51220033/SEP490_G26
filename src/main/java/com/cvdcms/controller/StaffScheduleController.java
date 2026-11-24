@@ -45,6 +45,9 @@ public class StaffScheduleController {
     @Autowired(required = false)
     private RoomRepository roomRepository;
 
+    @Autowired(required = false)
+    private com.cvdcms.repository.DentalChairRepository dentalChairRepository;
+
     public StaffScheduleController(StaffScheduleService scheduleService, BranchService branchService, com.cvdcms.repository.UserRepository userRepository, com.cvdcms.repository.AttendanceRecordRepository attendanceRepository) {
         this.scheduleService = scheduleService;
         this.branchService = branchService;
@@ -170,6 +173,34 @@ public class StaffScheduleController {
                 roomByIdMap.put(rm.getRoomId(), rm);
             }
             model.addAttribute("roomByIdMap", roomByIdMap);
+
+            Map<Long, Long> activeChairCountByRoom = new LinkedHashMap<>();
+            Map<Long, List<Map<String, Object>>> chairsByRoomMap = new LinkedHashMap<>();
+            if (dentalChairRepository != null) {
+                for (com.cvdcms.entity.DentalChair ch : dentalChairRepository.findByBranchBranchIdOrderByChairCodeAsc(branchId)) {
+                    if (ch.getRoom() == null || ch.getRoom().getRoomId() == null) continue;
+                    Long rid = ch.getRoom().getRoomId();
+                    boolean isAvail = ch.getStatus() == com.cvdcms.entity.enums.ChairStatus.AVAILABLE
+                            || ch.getStatus() == com.cvdcms.entity.enums.ChairStatus.IN_USE
+                            || ch.getStatus() == com.cvdcms.entity.enums.ChairStatus.TURNOVER;
+                    if (isAvail) {
+                        activeChairCountByRoom.merge(rid, 1L, Long::sum);
+                    }
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("chairId", ch.getChairId());
+                    item.put("chairCode", ch.getChairCode());
+                    item.put("chairName", ch.getChairName());
+                    item.put("status", ch.getStatus() != null ? ch.getStatus().name() : "AVAILABLE");
+                    item.put("operational", isAvail);
+                    chairsByRoomMap.computeIfAbsent(rid, k -> new ArrayList<>()).add(item);
+                }
+            }
+            model.addAttribute("activeChairCountByRoom", activeChairCountByRoom);
+            String roomChairsJson = "{}";
+            try {
+                roomChairsJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(chairsByRoomMap);
+            } catch (Exception ignored) {}
+            model.addAttribute("roomChairsJson", roomChairsJson);
 
             List<StaffProfile> branchDoctors = doctorShiftAssignmentService != null
                     ? doctorShiftAssignmentService.findBranchDoctors(branchId)
