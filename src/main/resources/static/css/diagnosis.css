@@ -3145,6 +3145,35 @@ body.modal-open .modal-backdrop {
     font-size: 14px;
     line-height: 1;
 }
+.df-tab-btn.d-none,
+.df-tab-btn[hidden],
+.df-tab-actionbar .d-none {
+    display: none !important;
+}
+.df-confirm-modal .modal-content {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.16);
+}
+.df-confirm-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.df-confirm-icon.is-primary { background: #e0f2fe; color: #0284c7; }
+.df-confirm-icon.is-warning { background: #fef3c7; color: #d97706; }
+.df-confirm-icon.is-danger { background: #fee2e2; color: #dc2626; }
+.df-confirm-msg {
+    font-size: 14px;
+    line-height: 1.55;
+    color: #334155;
+    white-space: pre-line;
+}
 .df-tab-btn-primary {
     background: #0284c7 !important;
     border: 1px solid #0284c7 !important;

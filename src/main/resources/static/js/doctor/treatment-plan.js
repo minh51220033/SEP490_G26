@@ -16,6 +16,100 @@ if (typeof window.formatVnd !== 'function') {
     };
 }
 
+if (typeof window.dfConfirm !== 'function') {
+    window.dfConfirm = function(message, options) {
+        const opts = options || {};
+        const title = opts.title || 'Xác nhận thao tác';
+        const confirmText = opts.confirmText || 'Đồng ý';
+        const cancelText = opts.cancelText || 'Hủy';
+        const variant = opts.variant || 'primary';
+        const iconMap = {
+            danger: 'bi-exclamation-triangle-fill',
+            warning: 'bi-exclamation-circle-fill',
+            primary: 'bi-question-circle-fill'
+        };
+        const btnMap = {
+            danger: 'btn-danger',
+            warning: 'btn-warning text-dark',
+            primary: 'btn-primary'
+        };
+
+        return new Promise((resolve) => {
+            if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+                resolve(true);
+                return;
+            }
+            let modalEl = document.getElementById('dfGlobalConfirmModal');
+            if (!modalEl) {
+                modalEl = document.createElement('div');
+                modalEl.id = 'dfGlobalConfirmModal';
+                modalEl.className = 'modal fade df-confirm-modal';
+                modalEl.tabIndex = -1;
+                modalEl.setAttribute('aria-hidden', 'true');
+                modalEl.innerHTML = `
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header border-0 pb-0 pt-3 px-4">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span id="dfConfirmIconWrap" class="df-confirm-icon is-primary">
+                                        <i id="dfConfirmIcon" class="bi bi-question-circle-fill"></i>
+                                    </span>
+                                    <h6 class="modal-title fw-bold text-dark mb-0" id="dfConfirmTitle"></h6>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                            </div>
+                            <div class="modal-body px-4 py-3">
+                                <div id="dfConfirmMessage" class="df-confirm-msg"></div>
+                            </div>
+                            <div class="modal-footer border-0 pt-0 pb-3 px-4 gap-2">
+                                <button type="button" class="btn btn-light border px-3 fw-semibold" id="dfConfirmCancelBtn" data-bs-dismiss="modal"></button>
+                                <button type="button" class="btn px-3 fw-semibold" id="dfConfirmOkBtn"></button>
+                            </div>
+                        </div>
+                    </div>`;
+                document.body.appendChild(modalEl);
+            }
+
+            const titleEl = modalEl.querySelector('#dfConfirmTitle');
+            const msgEl = modalEl.querySelector('#dfConfirmMessage');
+            const iconWrap = modalEl.querySelector('#dfConfirmIconWrap');
+            const iconEl = modalEl.querySelector('#dfConfirmIcon');
+            const cancelBtn = modalEl.querySelector('#dfConfirmCancelBtn');
+            const okBtn = modalEl.querySelector('#dfConfirmOkBtn');
+
+            if (titleEl) titleEl.textContent = title;
+            if (msgEl) msgEl.textContent = message || '';
+            if (iconWrap) iconWrap.className = 'df-confirm-icon is-' + (variant === 'danger' || variant === 'warning' ? variant : 'primary');
+            if (iconEl) iconEl.className = 'bi ' + (opts.icon || iconMap[variant] || iconMap.primary);
+            if (cancelBtn) cancelBtn.textContent = cancelText;
+            if (okBtn) {
+                okBtn.textContent = confirmText;
+                okBtn.className = 'btn px-3 fw-semibold ' + (btnMap[variant] || btnMap.primary);
+            }
+
+            let settled = false;
+            const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            const onConfirm = () => {
+                if (settled) return;
+                settled = true;
+                modal.hide();
+                resolve(true);
+            };
+            const onHidden = () => {
+                okBtn?.removeEventListener('click', onConfirm);
+                modalEl.removeEventListener('hidden.bs.modal', onHidden);
+                if (!settled) {
+                    settled = true;
+                    resolve(false);
+                }
+            };
+            okBtn?.addEventListener('click', onConfirm, { once: true });
+            modalEl.addEventListener('hidden.bs.modal', onHidden, { once: true });
+            modal.show();
+        });
+    };
+}
+
 /**
  * Chuyển hướng sang trang chuyên dụng tạo kế hoạch điều trị mới (treatment-plan-create.html)
  */
@@ -1059,9 +1153,14 @@ function executePlanItemDirectly(planItemId, patientConfirmed = false) {
         const msg = err && err.message ? err.message : 'Lỗi khi ghi nhận dịch vụ thực hiện';
         if (msg.startsWith('PATIENT_CONFIRM_REQUIRED:') && !patientConfirmed) {
             const cleanMsg = msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, '');
-            if (window.confirm(cleanMsg + '\n\nBấm OK để xác nhận bệnh nhân đồng ý và thực hiện luôn trong ca này.')) {
-                executePlanItemDirectly(planItemId, true);
-            }
+            window.dfConfirm(cleanMsg + '\n\nXác nhận bệnh nhân đồng ý và thực hiện luôn dịch vụ này trong ca khám hiện tại?', {
+                title: 'Xác nhận thực hiện dịch vụ phát sinh',
+                confirmText: 'Xác nhận thực hiện',
+                cancelText: 'Để buổi sau',
+                variant: 'primary'
+            }).then(ok => {
+                if (ok) executePlanItemDirectly(planItemId, true);
+            });
             return;
         }
         showToast(msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, ''), true);
@@ -1115,9 +1214,14 @@ function startPlanItemWorkflow(planItemId, serviceId, planStageId, patientConfir
         const msg = err && err.message ? err.message : 'Không thể khởi tạo quy trình cho hạng mục này.';
         if (msg.startsWith('PATIENT_CONFIRM_REQUIRED:') && !patientConfirmed) {
             const cleanMsg = msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, '');
-            if (window.confirm(cleanMsg + '\n\nBấm OK để xác nhận bệnh nhân đồng ý và thực hiện luôn trong ca này.')) {
-                startPlanItemWorkflow(planItemId, serviceId, planStageId, true);
-            }
+            window.dfConfirm(cleanMsg + '\n\nXác nhận bệnh nhân đồng ý và thực hiện luôn dịch vụ này trong ca khám hiện tại?', {
+                title: 'Xác nhận mở quy trình dịch vụ phát sinh',
+                confirmText: 'Xác nhận mở quy trình',
+                cancelText: 'Để buổi sau',
+                variant: 'primary'
+            }).then(ok => {
+                if (ok) startPlanItemWorkflow(planItemId, serviceId, planStageId, true);
+            });
             return;
         }
         showToast(msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, ''), true);
@@ -1128,8 +1232,14 @@ window.startPlanItemWorkflow = startPlanItemWorkflow;
 /**
  * Hoàn tác bước KHDT về lại Chưa làm
  */
-function revertPlanItemStatus(planItemId) {
-    if (!confirm('Bạn có chắc chắn muốn hoàn tác bước này về Chưa làm?')) return;
+async function revertPlanItemStatus(planItemId) {
+    const confirmed = await window.dfConfirm('Bạn có chắc chắn muốn hoàn tác bước này về trạng thái "Chưa làm"?\nTiến độ phác đồ và quy trình điều trị liên kết sẽ được đặt lại.', {
+        title: 'Hoàn tác bước thủ thuật',
+        confirmText: 'Hoàn tác',
+        cancelText: 'Hủy',
+        variant: 'warning'
+    });
+    if (!confirmed) return;
     fetch(`/api/doctor/treatment-plans/items/${planItemId}/status?status=PLANNED`, {
         method: 'PUT'
     })
@@ -1149,6 +1259,9 @@ function revertPlanItemStatus(planItemId) {
         if (typeof recalcPerformedTableTotals === 'function') {
             recalcPerformedTableTotals();
         }
+        if (window.FT43 && typeof window.FT43.reload === 'function') {
+            window.FT43.reload();
+        }
     })
     .catch(err => {
         showToast(err.message, true);
@@ -1158,8 +1271,14 @@ function revertPlanItemStatus(planItemId) {
 /**
  * Xóa kế hoạch điều trị
  */
-function deleteTreatmentPlan(planId) {
-    if (!confirm('Bạn có chắc chắn muốn xóa kế hoạch điều trị này?')) {
+async function deleteTreatmentPlan(planId) {
+    const confirmed = await window.dfConfirm('Bạn có chắc chắn muốn xóa kế hoạch điều trị này?', {
+        title: 'Xóa kế hoạch điều trị',
+        confirmText: 'Xóa kế hoạch',
+        cancelText: 'Hủy',
+        variant: 'danger'
+    });
+    if (!confirmed) {
         return;
     }
 
@@ -1189,6 +1308,9 @@ function deleteTreatmentPlan(planId) {
         if (typeof window.refreshTpGrid === 'function') {
             window.refreshTpGrid();
         }
+        if (window.FT43 && typeof window.FT43.reload === 'function') {
+            window.FT43.reload();
+        }
     })
     .catch(err => {
         showToast(err.message, true);
@@ -1210,9 +1332,15 @@ function updatePlanCountBadge() {
 /**
  * Chuyển kế hoạch điều trị sang bộ phận Kế toán xử lý riêng
  */
-function sendPlanToAccounting(planId, planCode) {
+async function sendPlanToAccounting(planId, planCode) {
     const code = planCode || 'KHDT';
-    if (!confirm(`Xác nhận chuyển Kế hoạch điều trị [${code}] sang bộ phận Kế toán để tư vấn & thu phí lộ trình?`)) {
+    const confirmed = await window.dfConfirm(`Xác nhận chuyển Kế hoạch điều trị [${code}] sang bộ phận Kế toán để tư vấn & thu phí lộ trình?`, {
+        title: 'Chuyển kế hoạch sang Kế toán',
+        confirmText: 'Chuyển Kế toán',
+        cancelText: 'Hủy',
+        variant: 'primary'
+    });
+    if (!confirmed) {
         return;
     }
 

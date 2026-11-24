@@ -610,8 +610,13 @@
                 });
 
                 var targetExecId = preferredExecId || state.selectedExecutionId;
-                var activeExec = state.executions.find(function (e) { return Number(e.executionId) === Number(targetExecId); })
-                    || state.executions[0] || null;
+                var matchedExec = targetExecId
+                    ? state.executions.find(function (e) { return Number(e.executionId) === Number(targetExecId); })
+                    : null;
+                if (state.viewMode === 'DETAIL' && targetExecId && !matchedExec) {
+                    state.viewMode = 'LIST';
+                }
+                var activeExec = matchedExec || state.executions[0] || null;
                 state.selectedExecutionId = activeExec ? activeExec.executionId : null;
 
                 if (activeExec) {
@@ -1901,8 +1906,15 @@
                         var msg = err && err.message ? err.message : 'Không thể áp dụng Combo vào bàn quy trình.';
                         if (msg.indexOf('PATIENT_CONFIRM_REQUIRED:') === 0 && !patientConfirmed) {
                             var cleanMsg = msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, '');
-                            if (window.confirm(cleanMsg + '\n\nBấm OK để xác nhận bệnh nhân đồng ý và thực hiện luôn trong ca này.')) {
-                                startCombo(comboId, true);
+                            if (typeof window.dfConfirm === 'function') {
+                                window.dfConfirm(cleanMsg + '\n\nXác nhận bệnh nhân đồng ý và thực hiện luôn trong ca này?', {
+                                    title: 'Xác nhận áp dụng Combo phát sinh',
+                                    confirmText: 'Xác nhận thực hiện',
+                                    cancelText: 'Để buổi sau',
+                                    variant: 'primary'
+                                }).then(function (ok) {
+                                    if (ok) startCombo(comboId, true);
+                                });
                             }
                             return;
                         }
@@ -1939,8 +1951,15 @@
                         var msg = err && err.message ? err.message : 'Không thể khởi tạo quy trình.';
                         if (msg.indexOf('PATIENT_CONFIRM_REQUIRED:') === 0 && !patientConfirmed) {
                             var cleanMsg = msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, '');
-                            if (window.confirm(cleanMsg + '\n\nBấm OK để xác nhận bệnh nhân đồng ý và thực hiện luôn trong ca này.')) {
-                                startService(serviceId, planItemId, planStageId, true);
+                            if (typeof window.dfConfirm === 'function') {
+                                window.dfConfirm(cleanMsg + '\n\nXác nhận bệnh nhân đồng ý và thực hiện luôn trong ca này?', {
+                                    title: 'Xác nhận mở quy trình phát sinh',
+                                    confirmText: 'Xác nhận mở quy trình',
+                                    cancelText: 'Để buổi sau',
+                                    variant: 'primary'
+                                }).then(function (ok) {
+                                    if (ok) startService(serviceId, planItemId, planStageId, true);
+                                });
                             }
                             return;
                         }

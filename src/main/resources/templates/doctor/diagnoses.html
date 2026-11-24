@@ -1383,6 +1383,149 @@
             toast.show();
         }
 
+        function ensureDfDialogModal() {
+            let modalEl = document.getElementById('dfGlobalConfirmModal');
+            if (modalEl) return modalEl;
+            modalEl = document.createElement('div');
+            modalEl.id = 'dfGlobalConfirmModal';
+            modalEl.className = 'modal fade df-confirm-modal';
+            modalEl.tabIndex = -1;
+            modalEl.setAttribute('aria-hidden', 'true');
+            modalEl.innerHTML = `
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header border-0 pb-0 pt-3 px-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <span id="dfConfirmIconWrap" class="df-confirm-icon is-primary">
+                                    <i id="dfConfirmIcon" class="bi bi-question-circle-fill"></i>
+                                </span>
+                                <h6 class="modal-title fw-bold text-dark mb-0" id="dfConfirmTitle"></h6>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                        </div>
+                        <div class="modal-body px-4 py-3">
+                            <div id="dfConfirmMessage" class="df-confirm-msg"></div>
+                            <div id="dfConfirmInputWrap" class="mt-3 d-none">
+                                <input type="text" id="dfConfirmInput" class="form-control form-control-sm">
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 pt-0 pb-3 px-4 gap-2">
+                            <button type="button" class="btn btn-light border px-3 fw-semibold" id="dfConfirmCancelBtn" data-bs-dismiss="modal"></button>
+                            <button type="button" class="btn px-3 fw-semibold" id="dfConfirmOkBtn"></button>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(modalEl);
+            return modalEl;
+        }
+
+        window.dfConfirm = function (message, options) {
+            const opts = options || {};
+            const title = opts.title || 'Xác nhận thao tác';
+            const confirmText = opts.confirmText || 'Đồng ý';
+            const cancelText = opts.cancelText || 'Hủy';
+            const variant = opts.variant || 'primary';
+            const iconMap = {
+                danger: 'bi-exclamation-triangle-fill',
+                warning: 'bi-exclamation-circle-fill',
+                primary: 'bi-question-circle-fill'
+            };
+            const btnMap = {
+                danger: 'btn-danger',
+                warning: 'btn-warning text-dark',
+                primary: 'btn-primary'
+            };
+            return new Promise((resolve) => {
+                if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+                    resolve(true);
+                    return;
+                }
+                const modalEl = ensureDfDialogModal();
+                modalEl.querySelector('#dfConfirmInputWrap')?.classList.add('d-none');
+                modalEl.querySelector('#dfConfirmTitle').textContent = title;
+                modalEl.querySelector('#dfConfirmMessage').textContent = message || '';
+                modalEl.querySelector('#dfConfirmIconWrap').className = 'df-confirm-icon is-' + (variant === 'danger' || variant === 'warning' ? variant : 'primary');
+                modalEl.querySelector('#dfConfirmIcon').className = 'bi ' + (opts.icon || iconMap[variant] || iconMap.primary);
+                modalEl.querySelector('#dfConfirmCancelBtn').textContent = cancelText;
+                const okBtn = modalEl.querySelector('#dfConfirmOkBtn');
+                okBtn.textContent = confirmText;
+                okBtn.className = 'btn px-3 fw-semibold ' + (btnMap[variant] || btnMap.primary);
+
+                let settled = false;
+                const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                const onConfirm = () => {
+                    if (settled) return;
+                    settled = true;
+                    modal.hide();
+                    resolve(true);
+                };
+                const onHidden = () => {
+                    okBtn.removeEventListener('click', onConfirm);
+                    modalEl.removeEventListener('hidden.bs.modal', onHidden);
+                    if (!settled) {
+                        settled = true;
+                        resolve(false);
+                    }
+                };
+                okBtn.addEventListener('click', onConfirm, { once: true });
+                modalEl.addEventListener('hidden.bs.modal', onHidden, { once: true });
+                modal.show();
+            });
+        };
+
+        window.dfPrompt = function (message, defaultValue, options) {
+            const opts = options || {};
+            const title = opts.title || 'Nhập thông tin';
+            const confirmText = opts.confirmText || 'Xác nhận';
+            const cancelText = opts.cancelText || 'Hủy';
+            return new Promise((resolve) => {
+                if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+                    resolve(defaultValue || '');
+                    return;
+                }
+                const modalEl = ensureDfDialogModal();
+                const inputWrap = modalEl.querySelector('#dfConfirmInputWrap');
+                const inputEl = modalEl.querySelector('#dfConfirmInput');
+                inputWrap?.classList.remove('d-none');
+                if (inputEl) inputEl.value = defaultValue || '';
+                modalEl.querySelector('#dfConfirmTitle').textContent = title;
+                modalEl.querySelector('#dfConfirmMessage').textContent = message || '';
+                modalEl.querySelector('#dfConfirmIconWrap').className = 'df-confirm-icon is-primary';
+                modalEl.querySelector('#dfConfirmIcon').className = 'bi ' + (opts.icon || 'bi-pencil-square');
+                modalEl.querySelector('#dfConfirmCancelBtn').textContent = cancelText;
+                const okBtn = modalEl.querySelector('#dfConfirmOkBtn');
+                okBtn.textContent = confirmText;
+                okBtn.className = 'btn px-3 fw-semibold btn-primary';
+
+                let settled = false;
+                const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                const onConfirm = () => {
+                    if (settled) return;
+                    settled = true;
+                    const val = inputEl ? inputEl.value : '';
+                    modal.hide();
+                    resolve(val);
+                };
+                const onShown = () => {
+                    inputEl?.focus();
+                    inputEl?.select();
+                };
+                const onHidden = () => {
+                    okBtn.removeEventListener('click', onConfirm);
+                    modalEl.removeEventListener('shown.bs.modal', onShown);
+                    modalEl.removeEventListener('hidden.bs.modal', onHidden);
+                    if (!settled) {
+                        settled = true;
+                        resolve(null);
+                    }
+                };
+                okBtn.addEventListener('click', onConfirm, { once: true });
+                modalEl.addEventListener('shown.bs.modal', onShown, { once: true });
+                modalEl.addEventListener('hidden.bs.modal', onHidden, { once: true });
+                modal.show();
+            });
+        };
+
         // BAR 2 (Cận lâm sàng) & BAR 3 (Chẩn đoán, Dịch vụ thực hiện, Đơn thuốc): Đã tách thành Frontend Fragments
 
         // MINI-SIDEBAR / DRAWER: DANH SÁCH CA KHÁM TRONG NGÀY CONTROLLER
@@ -1406,7 +1549,7 @@
                 const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
                 modal.show();
             } else {
-                alert(`⚠️ CẢNH BÁO QUYỀN TRUY CẬP:\nBác sĩ hiện đang làm việc tại: ${doctorAssignedBranchFullName || 'Cơ sở hiện tại'}.\nBạn chỉ có quyền tác nghiệp tại cơ sở này! Thao tác trên cơ sở khác đã bị chặn.`);
+                showToast(`Bác sĩ chỉ được phép thao tác tại ${doctorAssignedBranchFullName || 'cơ sở đang làm việc'}.`, true);
             }
         }
 
@@ -1786,7 +1929,7 @@
 
                 const isQueueLocked = v.status === 'WAITING' || v.status === 'WAITING_RESULT';
                 const cardClickAttr = isQueueLocked
-                    ? `onclick="alert('Bệnh nhân còn đang chờ khám. Vui lòng tiếp nhận theo thứ tự tại Khám trong ngày bằng nút Vào khám.')"`
+                    ? `onclick="showToast('Bệnh nhân còn đang chờ khám. Vui lòng tiếp nhận theo thứ tự tại Khám trong ngày bằng nút Vào khám.', true)"`
                     : `onclick="onSelectDailyVisitCard(${v.visitId}, '${v.visitToken || ''}', ${v.branchId || 'null'}, '${escapeHtml(v.branchName || v.branchCode || 'Cơ sở khác')}')"`;
 
                 html += `
@@ -1941,7 +2084,6 @@
             const targetVisitId = visitId || getCurrentExamVisitId() || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null);
             if (!targetVisitId) {
                 if (typeof showToast === 'function') showToast('Không tìm thấy thông tin ca khám.', true);
-                else alert('Không tìm thấy thông tin ca khám.');
                 return;
             }
             const modalEl = document.getElementById('completeExaminationModal');
@@ -2004,7 +2146,11 @@
 
         async function reopenClinicalExamination(visitId) {
             const targetVisitId = visitId || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null);
-            const reason = prompt('Nhập lý do mở lại ca khám lâm sàng (Kế toán chưa thu tiền):', 'Bác sĩ bổ sung chẩn đoán / điều trị');
+            const reason = await window.dfPrompt(
+                'Nhập lý do mở lại ca khám lâm sàng (Kế toán chưa thu tiền):',
+                'Bác sĩ bổ sung chẩn đoán / điều trị',
+                { title: 'Mở lại ca khám lâm sàng', confirmText: 'Mở lại ca khám', cancelText: 'Hủy' }
+            );
             if (reason === null) return;
 
             try {
@@ -2018,8 +2164,6 @@
                 if (res.ok && result.success) {
                     if (typeof showToast === 'function') {
                         showToast('✓ Đã mở lại ca khám lâm sàng thành công!');
-                    } else {
-                        alert('✓ Đã mở lại ca khám lâm sàng thành công!');
                     }
                     setTimeout(() => {
                         window.location.reload();
@@ -2027,13 +2171,11 @@
                 } else {
                     const msg = 'Không thể mở lại ca khám: ' + (result.message || 'Lỗi không xác định');
                     if (typeof showToast === 'function') showToast(msg, true);
-                    else alert(msg);
                 }
             } catch (err) {
                 console.error('Error reopening exam:', err);
                 const msg = 'Lỗi kết nối: ' + err.message;
                 if (typeof showToast === 'function') showToast(msg, true);
-                else alert(msg);
             }
         }
 
@@ -2041,15 +2183,18 @@
             const targetVisitId = visitId || getCurrentExamVisitId() || (typeof ft17CurrentVisitId !== 'undefined' ? ft17CurrentVisitId : null);
             if (!targetVisitId) {
                 if (typeof showToast === 'function') showToast('Không tìm thấy thông tin ca khám.', true);
-                else alert('Không tìm thấy thông tin ca khám.');
                 return;
             }
 
             const notesInput = document.getElementById('paymentHandoverNotes');
             const doctorNotes = notesInput ? notesInput.value.trim() : '';
 
-            if (!skipConfirm && !confirm('Xác nhận Hoàn tất ca khám lâm sàng?\n\n• Hồ sơ bệnh án sẽ được khóa bất biến theo quy chuẩn BR-EMR-02.\n• Các dịch vụ thực hiện, chỉ định cận lâm sàng và đơn thuốc sẽ được chuyển sang Kế toán nếu có phát sinh chi phí.')) {
-                return;
+            if (!skipConfirm) {
+                const ok = await window.dfConfirm(
+                    '• Hồ sơ bệnh án sẽ được khóa bất biến theo quy chuẩn BR-EMR-02.\n• Các dịch vụ thực hiện, chỉ định cận lâm sàng và đơn thuốc sẽ được chuyển sang Kế toán nếu có phát sinh chi phí.',
+                    { title: 'Xác nhận Hoàn tất ca khám lâm sàng?', confirmText: 'Hoàn tất khám', cancelText: 'Hủy', variant: 'primary' }
+                );
+                if (!ok) return;
             }
 
             const btn = document.getElementById('btnDirectHandover');
@@ -2111,7 +2256,11 @@
                         const modalObj = new bootstrap.Modal(successModalEl);
                         modalObj.show();
                     } else {
-                        if (confirm('✓ ' + (result.message || 'Đã hoàn tất ca khám lâm sàng thành công!') + '\n\nBấm OK để mở ngay Bệnh án điện tử (EMR) của ca khám.')) {
+                        const goEmr = await window.dfConfirm(
+                            (result.message || 'Đã hoàn tất ca khám lâm sàng thành công!') + '\n\nMở ngay Bệnh án điện tử (EMR) của ca khám?',
+                            { title: 'Hoàn tất ca khám', confirmText: 'Mở Bệnh án điện tử', cancelText: 'Ở lại trang', variant: 'primary' }
+                        );
+                        if (goEmr) {
                             window.location.href = '/emr/records';
                         } else {
                             window.location.reload();
@@ -2134,7 +2283,6 @@
                         </div>`;
                     }
                     if (typeof showToast === 'function') showToast(msg, true);
-                    else alert(msg);
                     if (btn) {
                         btn.disabled = false;
                         btn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i> <span>Hoàn tất khám</span>';
@@ -2148,7 +2296,6 @@
                 console.error('Error completing clinical exam:', err);
                 const msg = 'Lỗi kết nối khi hoàn tất khám: ' + err.message;
                 if (typeof showToast === 'function') showToast(msg, true);
-                else alert(msg);
                 if (btn) {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="bi bi-check2-circle fs-5"></i> <span>Hoàn tất khám</span>';
