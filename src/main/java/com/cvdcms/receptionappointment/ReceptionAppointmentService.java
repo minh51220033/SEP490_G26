@@ -527,6 +527,10 @@ public class ReceptionAppointmentService {
                 a.setDoctor(autoAssigned);
             }
         }
+        if (expectedTime != null) {
+            slots.validateBranchResourceCapacity(branch, a.getService(), request.date(),
+                    expectedTime, expectedTime.plusMinutes(a.getDurationMinutes()), null);
+        }
         a.setExpectedTime(expectedTime);
         a.syncExpectedEndTime();
         a.setSource(AppointmentSource.RECEPTIONIST);
@@ -716,6 +720,10 @@ public class ReceptionAppointmentService {
                 targetDoctor = autoAssigned;
                 doctorChanged = !Objects.equals(lockedCurrentDoctorId, autoAssigned.getStaffId());
             }
+        }
+        if (expectedTime != null) {
+            slots.validateBranchResourceCapacity(a.getBranch(), targetService, request.date(),
+                    expectedTime, expectedTime.plusMinutes(targetDuration), id);
         }
         a.setAppointmentDate(request.date()); a.setPreferredSession(request.session());
         a.setDoctor(targetDoctor); a.setService(targetService);

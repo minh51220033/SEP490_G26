@@ -38,6 +38,7 @@ class AppointmentSlotServiceTest {
 
     @Test
     void sharedArrivalAllowsMultiplePatientsUpToWaveAndSessionCapacityWhileEnforcingSessionBoundary() {
+        slots.setMaxConcurrentPerDoctorSlot(3);
         Branch branch = branch();
         StaffProfile doctor = new StaffProfile(); doctor.setStaffId(7L);
         Appointment booked = new Appointment(); booked.setExpectedTime(LocalTime.of(8, 30));
@@ -57,10 +58,11 @@ class AppointmentSlotServiceTest {
 
     @Test
     void requestedDoctorAllowsConcurrentArrivalUpToCapAndBlocksWhenWaveCapReached() {
+        slots.setMaxConcurrentPerDoctorSlot(3);
         Branch branch = branch();
         StaffProfile doctor = new StaffProfile(); doctor.setStaffId(7L);
         List<Appointment> existing = new java.util.ArrayList<>();
-        for (int i = 0; i < AppointmentSlotService.DEFAULT_CONCURRENT_ARRIVALS_PER_DOCTOR; i++) {
+        for (int i = 0; i < 3; i++) {
             Appointment b = new Appointment();
             b.setAppointmentId((long) (i + 1));
             b.setExpectedTime(LocalTime.of(8, 0));
@@ -119,6 +121,7 @@ class AppointmentSlotServiceTest {
         StaffProfileRepository staffRepo = mock(StaffProfileRepository.class);
         AppointmentSlotService richSlots = new AppointmentSlotService(
                 appointments, windows, policy, schRepo, leaveRepo, visitRepo, staffRepo);
+        richSlots.setMaxConcurrentPerDoctorSlot(3);
 
         StaffSchedule s1 = new StaffSchedule(); s1.setStaff(doc1); s1.setBranch(branch); s1.setShift(pm); s1.setWorkDate(date); s1.setStatus(ScheduleStatus.SCHEDULED);
         StaffSchedule s2 = new StaffSchedule(); s2.setStaff(doc2); s2.setBranch(branch); s2.setShift(pm); s2.setWorkDate(date); s2.setStatus(ScheduleStatus.SCHEDULED);
@@ -162,6 +165,7 @@ class AppointmentSlotServiceTest {
         StaffProfileRepository staffRepo = mock(StaffProfileRepository.class);
         AppointmentSlotService richSlots = new AppointmentSlotService(
                 appointments, windows, policy, schRepo, leaveRepo, visitRepo, staffRepo);
+        richSlots.setMaxConcurrentPerDoctorSlot(3);
         richSlots.setClock(fixedClock);
         richSlots.setMaxConcurrentPerDoctorSlot(1); // Cô lập test giải phóng sớm và grace 15p
 

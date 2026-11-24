@@ -2,21 +2,30 @@ package com.cvdcms.service;
 
 import com.cvdcms.entity.Appointment;
 import com.cvdcms.entity.Branch;
+import com.cvdcms.entity.ClinicEquipment;
+import com.cvdcms.entity.DentalChair;
 import com.cvdcms.entity.LeaveRequest;
+import com.cvdcms.entity.ServiceResourceRequirement;
 import com.cvdcms.entity.StaffProfile;
 import com.cvdcms.entity.StaffSchedule;
 import com.cvdcms.entity.Visit;
 import com.cvdcms.entity.WorkShift;
 import com.cvdcms.entity.enums.AppointmentActorType;
 import com.cvdcms.entity.enums.AppointmentStatus;
+import com.cvdcms.entity.enums.ChairStatus;
+import com.cvdcms.entity.enums.EquipmentStatus;
 import com.cvdcms.entity.enums.LeaveStatus;
 import com.cvdcms.entity.enums.PreferredSession;
+import com.cvdcms.entity.enums.ResourceRequirementKind;
 import com.cvdcms.entity.enums.ScheduleStatus;
 import com.cvdcms.entity.enums.StaffStatus;
 import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.repository.AppointmentPolicyRepository;
 import com.cvdcms.repository.AppointmentSessionWindowRepository;
+import com.cvdcms.repository.ClinicEquipmentRepository;
+import com.cvdcms.repository.DentalChairRepository;
 import com.cvdcms.repository.LeaveRequestRepository;
+import com.cvdcms.repository.ServiceResourceRequirementRepository;
 import com.cvdcms.repository.StaffProfileRepository;
 import com.cvdcms.repository.StaffScheduleRepository;
 import com.cvdcms.repository.VisitRepository;
@@ -53,7 +62,7 @@ public class AppointmentSlotService {
     public static final int GRACE_PERIOD_MINUTES = 15;
     public static final int NO_SHOW_CUTOFF_MINUTES = 30;
     public static final int SUGGESTED_STEP_MINUTES = 5;
-    public static final int DEFAULT_CONCURRENT_ARRIVALS_PER_DOCTOR = 3;
+    public static final int DEFAULT_CONCURRENT_ARRIVALS_PER_DOCTOR = 1;
 
     /**
      * Chỉ các trạng thái đang chiếm giữ khung giờ của bác sĩ.
@@ -114,7 +123,16 @@ public class AppointmentSlotService {
         return maxConcurrentPerDoctorSlot;
     }
 
-    @org.springframework.beans.factory.annotation.Value("${appointments.doctor-concurrent-per-slot:3}")
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.DentalChairRepository dentalChairs;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.ClinicEquipmentRepository clinicEquipments;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.repository.ServiceResourceRequirementRepository serviceRequirements;
+
+    @org.springframework.beans.factory.annotation.Value("${appointments.doctor-concurrent-per-slot:1}")
     public void setMaxConcurrentPerDoctorSlot(int maxConcurrentPerDoctorSlot) {
         this.maxConcurrentPerDoctorSlot = Math.max(1, maxConcurrentPerDoctorSlot);
     }
@@ -399,6 +417,207 @@ public class AppointmentSlotService {
     }
 
     /**
+     * Kiểm tra năng lực tài nguyên ghế nha và thiết bị độc quyền tại chi nhánh (Legacy mode)
+     * trong khoảng thời gian [start, end). Bỏ qua nếu repository chưa được inject (unit test thuần).
+     */
+    @Transactional(readOnly = true)
+    public void validateBranchResourceCapacity(
+            Branch branch,
+            com.cvdcms.entity.Service service,
+            LocalDate date,
+            LocalTime start,
+            LocalTime end,
+            Long excludeAppointmentId
+    ) {
+        if (branch == null || branch.getBranchId() == null || date == null || start == null || end == null || !start.isBefore(end)) {
+            return;
+        }
+        if (dentalChairs == null) {
+            return;
+        }
+
+        Long branchId = branch.getBranchId();
+        boolean needsChair = service == null || !Boolean.FALSE.equals(service.getRequiresChair());
+        List<ServiceResourceRequirement> equipmentReqs = List.of();
+        if (service != null && service.getServiceId() != null && serviceRequirements != null) {
+            equipmentReqs = serviceRequirements.findByServiceServiceIdOrderByRequirementIdAsc(service.getServiceId()).stream()
+                    .filter(r -> !Boolean.FALSE.equals(r.getIsRequired()))
+                    .filter(r -> r.getResourceKind() == ResourceRequirementKind.EQUIPMENT_TYPE
+                            || r.getResourceKind() == ResourceRequirementKind.SPECIFIC_EQUIPMENT)
+                    .toList();
+        }
+
+        if (!needsChair && equipmentReqs.isEmpty()) {
+            return;
+        }
+
+        List<Appointment> dayBooked = appointments.findOccupyingForBranchAndDate(branchId, date, OCCUPYING).stream()
+                .filter(a -> excludeAppointmentId == null || !Objects.equals(a.getAppointmentId(), excludeAppointmentId))
+                .toList();
+        Map<Long, Visit> visitByApptId = loadVisitsForCheckedInAppointments(dayBooked);
+        LocalDateTime nowDt = LocalDateTime.now(clock);
+        List<Appointment> overlapping = dayBooked.stream()
+                .filter(a -> overlapsWithRelease(a, start, end, date, nowDt, visitByApptId))
+                .toList();
+
+        if (needsChair) {
+            List<DentalChair> branchChairs = dentalChairs.findByBranchBranchIdOrderByChairCodeAsc(branchId);
+            if (!branchChairs.isEmpty()) {
+                long operationalChairs = branchChairs.stream()
+                        .filter(c -> c.getStatus() != ChairStatus.MAINTENANCE && c.getStatus() != ChairStatus.INACTIVE)
+                        .count();
+                if (operationalChairs <= 0) {
+                    throw new SlotAlreadyTakenException(
+                            "Chi nhánh hiện không có ghế nha khoa khả dụng cho khung giờ " + start + " - " + end + "."
+                    );
+                }
+                long chairUsed = overlapping.stream()
+                        .filter(a -> a.getService() == null || !Boolean.FALSE.equals(a.getService().getRequiresChair()))
+                        .count();
+                if (chairUsed >= operationalChairs) {
+                    throw new SlotAlreadyTakenException(
+                            "Tất cả " + operationalChairs + " ghế nha khoa tại chi nhánh đã kín lịch trong khung giờ "
+                                    + start + " - " + end + "."
+                    );
+                }
+            }
+        }
+
+        if (!equipmentReqs.isEmpty() && clinicEquipments != null) {
+            List<ClinicEquipment> activeEquipments = clinicEquipments
+                    .findByBranchBranchIdAndStatusOrderByEquipmentCodeAsc(branchId, EquipmentStatus.ACTIVE);
+            Map<Long, List<ServiceResourceRequirement>> reqCache = new HashMap<>();
+
+            for (ServiceResourceRequirement req : equipmentReqs) {
+                if (req.getResourceKind() == ResourceRequirementKind.SPECIFIC_EQUIPMENT && req.getEquipment() != null) {
+                    Long eqId = req.getEquipment().getEquipmentId();
+                    boolean eqActiveHere = activeEquipments.stream()
+                            .anyMatch(e -> Objects.equals(e.getEquipmentId(), eqId));
+                    if (!eqActiveHere) {
+                        throw new SlotAlreadyTakenException(
+                                "Thiết bị \"" + req.getEquipment().getEquipmentName() + "\" hiện không hoạt động tại chi nhánh."
+                        );
+                    }
+                    long usedEq = countOverlappingAppointmentsUsingSpecificEquipment(overlapping, eqId, reqCache);
+                    if (usedEq >= 1) {
+                        throw new SlotAlreadyTakenException(
+                                "Thiết bị \"" + req.getEquipment().getEquipmentName() + "\" đã kín lịch trong khung giờ "
+                                        + start + " - " + end + "."
+                        );
+                    }
+                } else if (req.getResourceKind() == ResourceRequirementKind.EQUIPMENT_TYPE && req.getEquipmentType() != null) {
+                    long totalActiveOfType = activeEquipments.stream()
+                            .filter(e -> e.getEquipmentType() == req.getEquipmentType())
+                            .count();
+                    if (totalActiveOfType <= 0) {
+                        throw new SlotAlreadyTakenException(
+                                "Chi nhánh hiện chưa có thiết bị " + req.getEquipmentType().name()
+                                        + " đang hoạt động cho dịch vụ \"" + service.getServiceName() + "\"."
+                        );
+                    }
+                    long usedOfType = countOverlappingAppointmentsUsingEquipmentType(overlapping, req.getEquipmentType(), reqCache);
+                    if (usedOfType >= totalActiveOfType) {
+                        throw new SlotAlreadyTakenException(
+                                "Thiết bị " + req.getEquipmentType().name() + " tại chi nhánh đã kín lịch trong khung giờ "
+                                        + start + " - " + end + "."
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    private long countOverlappingAppointmentsUsingSpecificEquipment(
+            List<Appointment> overlapping,
+            Long targetEquipmentId,
+            Map<Long, List<ServiceResourceRequirement>> reqCache
+    ) {
+        if (serviceRequirements == null || targetEquipmentId == null) {
+            return 0L;
+        }
+        long count = 0L;
+        for (Appointment appt : overlapping) {
+            if (appt.getService() == null || appt.getService().getServiceId() == null) continue;
+            List<ServiceResourceRequirement> reqs = reqCache.computeIfAbsent(
+                    appt.getService().getServiceId(),
+                    serviceRequirements::findByServiceServiceIdOrderByRequirementIdAsc
+            );
+            boolean uses = reqs.stream()
+                    .filter(r -> !Boolean.FALSE.equals(r.getIsRequired()))
+                    .anyMatch(r -> r.getResourceKind() == ResourceRequirementKind.SPECIFIC_EQUIPMENT
+                            && r.getEquipment() != null
+                            && Objects.equals(r.getEquipment().getEquipmentId(), targetEquipmentId));
+            if (uses) count++;
+        }
+        return count;
+    }
+
+    private long countOverlappingAppointmentsUsingEquipmentType(
+            List<Appointment> overlapping,
+            com.cvdcms.entity.enums.EquipmentType equipmentType,
+            Map<Long, List<ServiceResourceRequirement>> reqCache
+    ) {
+        if (serviceRequirements == null || equipmentType == null) {
+            return 0L;
+        }
+        long count = 0L;
+        for (Appointment appt : overlapping) {
+            if (appt.getService() == null || appt.getService().getServiceId() == null) continue;
+            List<ServiceResourceRequirement> reqs = reqCache.computeIfAbsent(
+                    appt.getService().getServiceId(),
+                    serviceRequirements::findByServiceServiceIdOrderByRequirementIdAsc
+            );
+            boolean uses = reqs.stream()
+                    .filter(r -> !Boolean.FALSE.equals(r.getIsRequired()))
+                    .anyMatch(r -> (r.getResourceKind() == ResourceRequirementKind.EQUIPMENT_TYPE
+                            && r.getEquipmentType() == equipmentType)
+                            || (r.getResourceKind() == ResourceRequirementKind.SPECIFIC_EQUIPMENT
+                            && r.getEquipment() != null
+                            && r.getEquipment().getEquipmentType() == equipmentType));
+            if (uses) count++;
+        }
+        return count;
+    }
+
+    private Integer resolveOperationalChairCap(Long branchId) {
+        if (dentalChairs == null || branchId == null) {
+            return null;
+        }
+        List<DentalChair> branchChairs = dentalChairs.findByBranchBranchIdOrderByChairCodeAsc(branchId);
+        if (branchChairs.isEmpty()) {
+            return null;
+        }
+        long operational = branchChairs.stream()
+                .filter(c -> c.getStatus() != ChairStatus.MAINTENANCE && c.getStatus() != ChairStatus.INACTIVE)
+                .count();
+        return (int) operational;
+    }
+
+    private int capRemainingByChairs(
+            Integer operationalChairCap,
+            int currentRemaining,
+            LocalTime start,
+            LocalTime end,
+            LocalDate date,
+            LocalDateTime nowDt,
+            List<Appointment> booked,
+            Map<Long, Visit> visitByApptId
+    ) {
+        if (operationalChairCap == null || currentRemaining <= 0) {
+            return currentRemaining;
+        }
+        if (operationalChairCap <= 0) {
+            return 0;
+        }
+        long chairOverlap = booked.stream()
+                .filter(a -> a.getService() == null || !Boolean.FALSE.equals(a.getService().getRequiresChair()))
+                .filter(a -> overlapsWithRelease(a, start, end, date, nowDt, visitByApptId))
+                .count();
+        int chairRemaining = Math.max(0, operationalChairCap - (int) chairOverlap);
+        return Math.min(currentRemaining, chairRemaining);
+    }
+
+    /**
      * Khóa bi quan bác sĩ, lịch trực và lịch hẹn chiếm chỗ cho lịch linh hoạt (expectedTime == null)
      * có chỉ định bác sĩ nhằm kiểm tra trạng thái bác sĩ, ca trực/nghỉ phép và giới hạn doctorCapacity theo buổi.
      */
@@ -604,6 +823,7 @@ public class AppointmentSlotService {
 
         Map<Long, DoctorSlotSnapshot> snapshots = buildDoctorSnapshots(
                 branch.getBranchId(), date, range, durationMinutes, excludeId, nowDt, targetDoctors, booked, visitByApptId);
+        Integer operationalChairCap = resolveOperationalChairCap(branch.getBranchId());
 
         int step = (durationMinutes % 15 != 0) ? SUGGESTED_STEP_MINUTES : 15;
         List<Slot> result = new ArrayList<>();
@@ -616,6 +836,7 @@ public class AppointmentSlotService {
             int remaining = computeRemainingAtWindow(
                     time, end, durationMinutes, date, nowDt, doctorId, availability.remainingBranch(),
                     targetDoctors, snapshots, booked, visitByApptId);
+            remaining = capRemainingByChairs(operationalChairCap, remaining, time, end, date, nowDt, booked, visitByApptId);
             if (remaining > 0) {
                 result.add(new Slot(time, remaining));
             }
@@ -711,6 +932,9 @@ public class AppointmentSlotService {
                 int remainingAtSlot = computeRemainingAtWindow(
                         requested, end, durationMinutes, date, nowDt, doctorId, availability.remainingBranch(),
                         targetDoctors, snapshots, booked, visitByApptId);
+                remainingAtSlot = capRemainingByChairs(
+                        resolveOperationalChairCap(branch.getBranchId()), remainingAtSlot,
+                        requested, end, date, nowDt, booked, visitByApptId);
                 if (remainingAtSlot <= 0) {
                     throw new SlotAlreadyTakenException(doctorId != null
                             ? "Khung giờ " + requested + " - " + end + " của bác sĩ đã đạt giới hạn tiếp nhận."
@@ -932,8 +1156,9 @@ public class AppointmentSlotService {
 
     private static long overlapMinutes(List<TimeInterval> busyIntervals, List<TimeInterval> workingIntervals) {
         if (busyIntervals.isEmpty() || workingIntervals.isEmpty()) return 0L;
+        List<TimeInterval> mergedBusy = mergeIntervals(busyIntervals);
         long total = 0L;
-        for (TimeInterval busy : busyIntervals) {
+        for (TimeInterval busy : mergedBusy) {
             for (TimeInterval work : workingIntervals) {
                 LocalTime s = busy.start().isAfter(work.start()) ? busy.start() : work.start();
                 LocalTime e = busy.end().isBefore(work.end()) ? busy.end() : work.end();

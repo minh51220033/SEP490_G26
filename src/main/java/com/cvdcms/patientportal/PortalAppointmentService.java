@@ -283,6 +283,10 @@ public class PortalAppointmentService {
                 assignedDoctor = autoAssigned;
             }
         }
+        if (resolvedTime != null) {
+            slots.validateBranchResourceCapacity(branch, service, request.date(),
+                    resolvedTime, resolvedTime.plusMinutes(durationMinutes), null);
+        }
         Appointment appointment = new Appointment();
         appointment.setAppointmentCode("LH" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase());
         appointment.setPatientProfile(profile);
@@ -428,6 +432,10 @@ public class PortalAppointmentService {
                 assignedDoctor = autoAssigned;
             }
         }
+        if (resolvedTime != null) {
+            slots.validateBranchResourceCapacity(branch, a.getService(), request.date(),
+                    resolvedTime, resolvedTime.plusMinutes(durationMinutes), appointmentId);
+        }
         a.setAppointmentDate(request.date());
         a.setPreferredSession(request.session());
         a.setDoctor(assignedDoctor);
@@ -570,6 +578,26 @@ public class PortalAppointmentService {
         if (request.requestKey() == null || !validKey(request.requestKey())) {
             throw bad("Mã yêu cầu không hợp lệ.");
         }
+        PortalBookingRequest existingReq = bookingRequests.findById(request.requestKey()).orElse(null);
+        if (existingReq != null && existingReq.getAppointment() != null) {
+            Appointment first = existingReq.getAppointment();
+            if (!Objects.equals(first.getPatientProfile().getProfileId(), verifiedProfile.getProfileId())) {
+                throw conflict("Mã yêu cầu đã được sử dụng cho hồ sơ khác.");
+            }
+            String existingGroupCode = first.getBookingGroupCode();
+            List<AppointmentView> replayViews = existingGroupCode != null
+                    ? appointments.findByPatientProfile_ProfileIdOrderByAppointmentDateDescAppointmentIdDesc(
+                            verifiedProfile.getProfileId()).stream()
+                            .filter(a -> existingGroupCode.equals(a.getBookingGroupCode()))
+                            .sorted(java.util.Comparator.comparing(Appointment::getExpectedTime,
+                                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                            .map(this::view).toList()
+                    : List.of(view(first));
+            int replayDuration = replayViews.stream()
+                    .mapToInt(v -> v.durationMinutes() != null ? v.durationMinutes() : 30)
+                    .sum();
+            return new MultiServiceBookingResult(existingGroupCode, replayDuration, replayViews);
+        }
         if (request.serviceIds() == null || request.serviceIds().isEmpty()) {
             throw bad("Vui lòng chọn ít nhất một dịch vụ.");
         }
@@ -620,6 +648,13 @@ public class PortalAppointmentService {
         }
 
         String groupCode = "GRP-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
+        LocalTime validateCursor = resolvedTime;
+        for (com.cvdcms.entity.Service svc : resolvedServices) {
+            int svcDuration = AppointmentSlotService.duration(svc);
+            slots.validateBranchResourceCapacity(branch, svc, request.date(),
+                    validateCursor, validateCursor.plusMinutes(svcDuration), null);
+            validateCursor = validateCursor.plusMinutes(svcDuration);
+        }
         LocalTime cursorTime = resolvedTime;
         List<AppointmentView> createdViews = new ArrayList<>();
         for (int i = 0; i < resolvedServices.size(); i++) {
@@ -648,6 +683,13 @@ public class PortalAppointmentService {
                 bookingRequests.save(bookingRequest);
             }
             history(appointment, user.getUserId(), "CREATE", null, snapshot(appointment), "GROUP:" + groupCode);
+            if (careEventPublisher != null && appointment.getAppointmentId() != null) {
+                careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentUpsertedCareEvent(appointment.getAppointmentId()));
+                careEventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                        "APPOINTMENT_BOOKED", branch.getBranchId(), assignedDoctor.getStaffId(),
+                        null, appointment.getAppointmentId(), appointment.getStatus().name(),
+                        "Đặt lịch hẹn nhiều dịch vụ #" + appointment.getAppointmentCode(), LocalDateTime.now(CLINIC_ZONE)));
+            }
             createdViews.add(view(appointment));
             cursorTime = cursorTime.plusMinutes(svcDuration);
         }

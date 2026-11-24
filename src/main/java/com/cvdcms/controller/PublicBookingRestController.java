@@ -846,6 +846,16 @@ public class PublicBookingRestController {
                         ex.getReason() != null ? ex.getReason() : "Bác sĩ hoặc ca khám không còn sức chứa khả dụng.");
             }
         }
+        if (resolvedExpectedTime != null) {
+            try {
+                appointmentSlotService.validateBranchResourceCapacity(
+                        branch, service, bookDate,
+                        resolvedExpectedTime, resolvedExpectedTime.plusMinutes(durationMinutes), null);
+            } catch (ResponseStatusException ex) {
+                return errorResponse(HttpStatus.valueOf(ex.getStatusCode().value()),
+                        ex.getReason() != null ? ex.getReason() : "Tài nguyên phòng khám không còn đủ cho khung giờ đã chọn.");
+            }
+        }
 
         String appointmentCode = idempotentCode != null
                 ? idempotentCode

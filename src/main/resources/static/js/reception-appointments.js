@@ -1977,7 +1977,7 @@
                 date: date,
                 session: selectedSession,
                 expectedTime: expectedTime,
-                durationMinutes: Number($('modalDuration')?.value || 30),
+                durationMinutes: ($('modalDuration') && $('modalDuration').value) ? Number($('modalDuration').value) : null,
                 serviceId: serviceId,
                 symptoms: symptoms,
                 internalNote: $('modalInternalNote').value.trim(),
