@@ -2,10 +2,10 @@ package com.cvdcms.controller;
 
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
-import com.cvdcms.patientportal.AccountPatientProfile;
-import com.cvdcms.patientportal.AccountPatientProfileRepository;
+import com.cvdcms.entity.AccountPatientProfile;
+import com.cvdcms.repository.AccountPatientProfileRepository;
 import com.cvdcms.repository.*;
-import com.cvdcms.reception.ReceptionVisitRepository;
+import com.cvdcms.repository.ReceptionVisitRepository;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

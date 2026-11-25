@@ -32,7 +32,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private org.springframework.context.ApplicationEventPublisher careEventPublisher;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+    private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private CustomerCareTaskRepository customerCareTaskRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -95,7 +95,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         }
 
         // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi chuyển thanh toán, hoàn tất, hủy hoặc EMR khóa
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 visit,
                 emrRecordRepository,
                 "Bệnh án lâm sàng đã hoàn tất và khóa bất biến. Không thể tạo đơn thuốc mới");
@@ -308,7 +308,7 @@ public class PrescriptionServiceImpl implements PrescriptionService {
         Prescription prescription = prescriptionRepository.findById(prescriptionId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn thuốc."));
 
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 prescription.getVisit(),
                 emrRecordRepository,
                 "Bệnh án lâm sàng đã khóa bất biến. Không thể xóa đơn thuốc");

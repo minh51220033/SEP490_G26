@@ -1,7 +1,7 @@
 //package com.cvdcms;
 //
 //import com.cvdcms.DTO.*;
-//import com.cvdcms.DTO.report.ReportDashboardDTO;
+//import com.cvdcms.DTO.ReportDashboardDTO;
 //import com.cvdcms.config.FeaturePermissionInterceptor;
 //import com.cvdcms.controller.PaymentRestController;
 //import com.cvdcms.entity.*;

@@ -10,7 +10,8 @@
     <div class="app-main">
       <header th:replace="~{fragments/header :: appTopbar('Điều phối lượt khám')}"></header>
       <main id="reception-content-area" class="app-content dispatch-page p-3"
-        th:attr="data-current-branch-id=${board.branchId}">
+        th:with="canManualDoctorAssign=${canAssignDoctor != null ? canAssignDoctor : (isAdmin == true or (session != null and session.isAdmin == true))}"
+        th:attr="data-current-branch-id=${board.branchId}, data-can-manual-doctor-assign=${canManualDoctorAssign}">
         <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
         <link rel="stylesheet" th:href="@{/css/patients.css}">
         <link rel="stylesheet" th:href="@{/css/check-in.css}">
@@ -249,10 +250,8 @@
           <div class="d-flex flex-wrap align-items-center gap-2">
             <button th:if="${issuedTicketId != null}"
               type="button"
-              class="btn btn-sm btn-primary fw-bold d-inline-flex align-items-center gap-2 shadow-sm btn-print-k80"
-              th:attr="data-ticket-number=${issuedTicketNumber != null ? issuedTicketNumber : '01'},
-                       data-patient-name=${notice != null ? notice : 'Bệnh nhân'},
-                       data-ticket-id=${issuedTicketId}"
+              class="btn btn-sm btn-primary fw-bold d-inline-flex align-items-center gap-2 shadow-sm"
+              th:attr="data-ticket-id=${issuedTicketId}"
               th:onclick="|printTicketDirect(${issuedTicketId})|">
               <i class="bi bi-printer-fill"></i><span>In phiếu A6 ngay</span>
             </button>
@@ -631,20 +630,25 @@
                     <!-- 11. Cột Thao tác tĩnh -->
                     <td data-col="actions" class="text-center">
                       <div class="dv-actions-cell-always d-flex align-items-center justify-content-center gap-1">
-                        <!-- Nút Phân công nếu chưa có Bác sĩ -->
+                        <!-- Nút Phân công / Điều phối tự động nếu chưa có Bác sĩ -->
                         <button th:if="${v.primaryDoctor == null}" type="button"
                           class="dv-equal-btn-primary btn-open-assign"
                           th:attr="data-visit-id=${v.visitId},
                                    data-visit-code=${v.visitCode},
                                    data-patient-name=${v.patientProfile != null ? v.patientProfile.fullName : ''},
                                    data-patient-code=${v.patientProfile != null ? v.patientProfile.patientCode : ''},
-                                   data-symptoms=${v.initialSymptoms}">
+                                   data-symptoms=${v.initialSymptoms},
+                                   data-is-emergency=${v.visitType != null and v.visitType.name() == 'EMERGENCY'},
+                                   data-requested-doctor=${v.appointmentId != null and board.requests[v.appointmentId] != null ? board.requests[v.appointmentId].id : null},
+                                   data-requested-doctor-name=${v.appointmentId != null and board.requests[v.appointmentId] != null ? board.requests[v.appointmentId].name : null},
+                                   data-current-room=${v.roomId},
+                                   data-current-chair=${v.chairId}">
                           <i class="bi bi-person-plus-fill"></i>
-                          <span>Phân BS</span>
+                          <span th:text="${canManualDoctorAssign ? 'Phân BS' : 'Điều phối'}">Phân BS</span>
                         </button>
 
-                        <!-- Nút Đổi Bác sĩ nếu đã có Bác sĩ -->
-                        <button th:if="${v.primaryDoctor != null}" type="button"
+                        <!-- Nút Đổi Bác sĩ nếu đã có Bác sĩ (chỉ dành cho Admin/quyền phân bổ lâm sàng) -->
+                        <button th:if="${canManualDoctorAssign and v.primaryDoctor != null}" type="button"
                           class="dv-equal-btn-secondary btn-open-transfer"
                           th:attr="data-visit-id=${v.visitId},
                                    data-visit-code=${v.visitCode},
@@ -696,9 +700,9 @@
                                    data-patient-name=${v.patientProfile != null ? v.patientProfile.fullName : ''},
                                    data-patient-code=${v.patientProfile != null ? v.patientProfile.patientCode : ''},
                                    data-symptoms=${v.initialSymptoms}">
-                          <i class="bi bi-person-plus-fill"></i><span>Phân BS</span>
+                          <i class="bi bi-person-plus-fill"></i><span th:text="${canManualDoctorAssign ? 'Phân BS' : 'Điều phối'}">Phân BS</span>
                         </button>
-                        <button th:if="${v.primaryDoctor != null}" type="button"
+                        <button th:if="${canManualDoctorAssign and v.primaryDoctor != null}" type="button"
                           class="dv-equal-btn-secondary btn-open-transfer"
                           th:attr="data-visit-id=${v.visitId},
                                    data-visit-code=${v.visitCode},
@@ -822,10 +826,11 @@
                 <div class="modal-header bg-light border-0 py-3 px-4 rounded-top-4">
                   <div>
                     <h5 class="modal-title fw-bold text-dark mb-0" id="assignModalLabel">
-                      <i class="bi bi-person-plus-fill text-primary me-1"></i> Phân công Bác sĩ &amp; Cấp số tự động
+                      <i class="bi bi-person-plus-fill text-primary me-1"></i>
+                      <span th:text="${canManualDoctorAssign ? 'Phân công Bác sĩ &amp; Cấp số tự động' : 'Điều phối &amp; Cấp số tự động'}">Phân công Bác sĩ &amp; Cấp số tự động</span>
                     </h5>
-                    <small class="text-muted">Hệ thống tự động gán bác sĩ, đồng bộ hàng chờ và cấp phiếu số thứ
-                      tự.</small>
+                    <small class="text-muted"
+                      th:text="${canManualDoctorAssign ? 'Hệ thống tự động gợi ý hoặc cho phép chọn bác sĩ, đồng bộ hàng chờ và cấp phiếu số thứ tự.' : 'Hệ thống tự động phân bổ bác sĩ phù hợp nhất, đồng bộ hàng chờ và cấp phiếu số thứ tự.'}">Hệ thống tự động gán bác sĩ, đồng bộ hàng chờ và cấp phiếu số thứ tự.</small>
                   </div>
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -840,9 +845,10 @@
                     <div class="small text-secondary" id="modalSymptoms">Triệu chứng: ...</div>
                   </div>
 
-                  <div id="modalDoctorAdvice" class="p-3 rounded-3 small mb-3 border"></div>
+                  <div id="modalDoctorAdvice" class="p-3 rounded-3 small mb-3 border"
+                    th:classappend="${!canManualDoctorAssign} ? 'd-none' : ''"></div>
 
-                  <div class="mb-3">
+                  <div class="mb-3" th:if="${canManualDoctorAssign}">
                     <label for="modalDoctorSelect" class="form-label small fw-bold text-dark mb-1">
                       Bác sĩ khám phụ trách *
                     </label>
@@ -853,6 +859,19 @@
                         th:text="|${d.name} (${d.waiting} đang chờ${d.isFull ? ' - ⚠️ Quá tải ca' : ''})|">
                       </option>
                     </select>
+                  </div>
+
+                  <div id="modalAutoAssignNotice" class="alert alert-info border border-info-subtle rounded-3 p-3 mb-3 small"
+                    role="status" th:if="${!canManualDoctorAssign}">
+                    <div class="d-flex align-items-start gap-2">
+                      <i class="bi bi-cpu-fill text-info fs-5 mt-1 flex-shrink-0"></i>
+                      <div>
+                        <div class="fw-bold text-dark mb-1">Hệ thống tự động phân bổ bác sĩ</div>
+                        <div class="text-secondary">
+                          Lễ tân không tự chọn hoặc đổi bác sĩ thủ công. Khi xác nhận điều phối, hệ thống sẽ tự động phân bổ bác sĩ phù hợp nhất theo quy tắc hàng chờ và cấp phiếu số thứ tự.
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div class="mb-3">
@@ -892,7 +911,7 @@
      MODAL 2: ĐỔI BÁC SĨ & CHUYỂN HÀNG CHỜ
      ========================================================================= -->
         <div class="modal fade" id="dispatchTransferModal" tabindex="-1" aria-labelledby="transferModalLabel"
-          aria-hidden="true">
+          aria-hidden="true" th:if="${canManualDoctorAssign}">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg rounded-4">
               <form id="modalTransferForm" method="post" action="">

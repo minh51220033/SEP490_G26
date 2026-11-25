@@ -15,7 +15,64 @@
         <header th:replace="~{fragments/header :: appTopbar('Chi tiết cơ sở')}"></header>
 
         <main class="app-content">
+            <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
             <link rel="stylesheet" th:href="@{/css/branch.css}">
+            <style>
+                .bank-table-scroll {
+                    min-height: 0 !important;
+                    max-height: none !important;
+                    overflow-x: auto !important;
+                    overflow-y: visible !important;
+                }
+                .bank-action-row {
+                    display: inline-flex !important;
+                    flex-wrap: nowrap !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    gap: 6px !important;
+                    white-space: nowrap !important;
+                }
+                .bank-action-row .dv-equal-btn-primary,
+                .bank-action-row .dv-equal-btn-secondary {
+                    width: auto !important;
+                    min-width: 0 !important;
+                    padding: 6px 11px !important;
+                    white-space: nowrap !important;
+                    flex-shrink: 0 !important;
+                }
+                .working-days-grid {
+                    display: grid;
+                    grid-template-columns: repeat(7, minmax(0, 1fr));
+                    gap: 6px;
+                }
+                .working-day-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 34px;
+                    border-radius: 8px;
+                    border: 1.5px solid #cbd5e1;
+                    background: #f8fafc;
+                    color: #64748b;
+                    font-size: 12.5px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    user-select: none;
+                    transition: all 0.15s ease;
+                    margin: 0;
+                }
+                .working-day-pill:hover {
+                    border-color: #38bdf8;
+                    color: #0284c7;
+                    background: #f0f9ff;
+                }
+                .working-day-check:checked + .working-day-pill {
+                    background: #eff6ff;
+                    border-color: #0284c7;
+                    color: #0369a1;
+                    box-shadow: 0 1px 3px rgba(2, 132, 199, 0.18);
+                }
+            </style>
 
             <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
             <div class="alert alert-danger" th:if="${errorMessage}" th:text="${errorMessage}"></div>
@@ -132,13 +189,15 @@
                                     <span class="room-card__meta">
                                         <span th:text="${room.roomType}">TREATMENT</span> ·
                                         <span th:text="${room.status}">ACTIVE</span> ·
+                                        <span th:if="${room.floorLabel != null}" th:text="${room.floorLabel + ' · '}">Tầng 1 · </span>
+                                        <span th:if="${room.zoneLabel != null}" th:text="${room.zoneLabel + ' · '}">Khu A · </span>
                                         <span th:text="${#lists.size(chairsByRoom[room.roomId])}">0</span> ghế
                                     </span>
                                 </div>
                                 <div class="d-flex gap-2">
                                     <button type="button" class="btn btn-sm btn-outline-secondary"
                                             data-bs-toggle="modal" data-bs-target="#roomModal" data-mode="edit"
-                                            th:attr="data-room-id=${room.roomId},data-room-code=${room.roomCode},data-room-name=${room.roomName},data-room-type=${room.roomType},data-room-status=${room.status}">
+                                            th:attr="data-room-id=${room.roomId},data-room-code=${room.roomCode},data-room-name=${room.roomName},data-room-type=${room.roomType},data-room-status=${room.status},data-floor-label=${room.floorLabel},data-zone-label=${room.zoneLabel},data-floor-order=${room.floorOrder}">
                                         <i class="bi bi-pencil" aria-hidden="true"></i> Sửa
                                     </button>
                                     <form th:action="@{/admin/branches/{id}/rooms/{rid}/delete(id=${branch.branchId},rid=${room.roomId})}"
@@ -241,25 +300,25 @@
 
                                             <!-- HÌNH ẢNH CƠ SỞ -->
                                             <div class="col-12 mt-2">
-                                                <label for="infoImageFile" class="form-label small fw-bold mb-1">
+                                                <label for="infoImageFile" class="form-label small fw-bold mb-2">
                                                     <i class="bi bi-image text-primary me-1"></i>Hình ảnh mặt tiền cơ sở
                                                 </label>
-                                                <div class="d-flex align-items-center gap-2.5 p-2 rounded border bg-light">
+                                                <div class="d-flex align-items-center gap-3 p-3 rounded border bg-light">
                                                     <img id="detailBranchImagePreview"
                                                          th:src="${branch.imageUrl != null and !#strings.isEmpty(branch.imageUrl) ? branch.imageUrl : '/uploads/images/storefont.png'}"
                                                          th:alt="${branch.branchName}"
                                                          style="width: 100px; height: 68px; object-fit: cover; border-radius: 8px; border: 1px solid #cbd5e1; flex-shrink: 0;">
                                                     <div class="flex-grow-1">
-                                                        <input type="file" id="infoImageFile" name="imageFile" class="form-control form-control-sm mb-1"
+                                                        <input type="file" id="infoImageFile" name="imageFile" class="form-control form-control-sm mb-2"
                                                                accept="image/jpeg,image/png,image/webp">
-                                                        <div class="text-muted" style="font-size: 11px;">
+                                                        <div class="text-muted" style="font-size: 11.5px;">
                                                             JPG, PNG, WEBP (tối đa 5MB) hiển thị tại mục Ghé thăm cơ sở.
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="mt-2.5">
+                                        <div class="mt-3">
                                             <button type="submit" class="btn btn-primary btn-sm fw-bold px-3">
                                                 <i class="bi bi-save me-1" aria-hidden="true"></i> Lưu thông tin cơ sở
                                             </button>
@@ -271,11 +330,11 @@
                             <!-- CỘT PHẢI (col-xl-5): CẤU HÌNH MẠNG WIFI CHẤM CÔNG & GIỜ MỞ CỬA -->
                             <div class="col-xl-5">
                                 <div class="card border rounded-3 p-3 shadow-xs bg-white h-100">
-                                    <h6 class="fw-bold text-dark mb-2.5 pb-2 border-bottom d-flex align-items-center gap-2" style="font-size: 15px;">
+                                    <h6 class="fw-bold text-dark mb-3 pb-2 border-bottom d-flex align-items-center gap-2" style="font-size: 15px;">
                                         <i class="bi bi-wifi text-primary"></i>
                                         <span>Cấu hình Wifi &amp; Giờ làm việc</span>
                                     </h6>
-                                    <form th:action="@{/admin/branches/{id}/config(id=${branch.branchId})}"
+                                    <form id="branchConfigForm" th:action="@{/admin/branches/{id}/config(id=${branch.branchId})}"
                                           th:object="${config}" method="post">
                                         <div class="row g-2">
                                             <div class="col-12">
@@ -295,10 +354,43 @@
                                                 <label for="closingTime" class="form-label small fw-bold mb-1">Giờ đóng cửa</label>
                                                 <input type="time" id="closingTime" th:field="*{closingTime}" class="form-control form-control-sm">
                                             </div>
-                                            <div class="col-12">
-                                                <label for="workingDays" class="form-label small fw-bold mb-1">Ngày làm việc</label>
-                                                <input type="text" id="workingDays" th:field="*{workingDays}"
-                                                       class="form-control form-control-sm" maxlength="20" placeholder="2,3,4,5,6,7,CN">
+                                            <div class="col-12 mt-2">
+                                                <label class="form-label small fw-bold mb-1">Ngày làm việc trong tuần</label>
+                                                <input type="hidden" id="workingDays" th:field="*{workingDays}">
+                                                <div class="working-days-grid" id="workingDaysPicker" role="group" aria-label="Chọn các ngày làm việc trong tuần">
+                                                    <div>
+                                                        <input type="checkbox" class="d-none working-day-check" id="wd-2" value="2">
+                                                        <label class="working-day-pill w-100" for="wd-2" title="Thứ 2">T2</label>
+                                                    </div>
+                                                    <div>
+                                                        <input type="checkbox" class="d-none working-day-check" id="wd-3" value="3">
+                                                        <label class="working-day-pill w-100" for="wd-3" title="Thứ 3">T3</label>
+                                                    </div>
+                                                    <div>
+                                                        <input type="checkbox" class="d-none working-day-check" id="wd-4" value="4">
+                                                        <label class="working-day-pill w-100" for="wd-4" title="Thứ 4">T4</label>
+                                                    </div>
+                                                    <div>
+                                                        <input type="checkbox" class="d-none working-day-check" id="wd-5" value="5">
+                                                        <label class="working-day-pill w-100" for="wd-5" title="Thứ 5">T5</label>
+                                                    </div>
+                                                    <div>
+                                                        <input type="checkbox" class="d-none working-day-check" id="wd-6" value="6">
+                                                        <label class="working-day-pill w-100" for="wd-6" title="Thứ 6">T6</label>
+                                                    </div>
+                                                    <div>
+                                                        <input type="checkbox" class="d-none working-day-check" id="wd-7" value="7">
+                                                        <label class="working-day-pill w-100" for="wd-7" title="Thứ 7">T7</label>
+                                                    </div>
+                                                    <div>
+                                                        <input type="checkbox" class="d-none working-day-check" id="wd-CN" value="CN">
+                                                        <label class="working-day-pill w-100" for="wd-CN" title="Chủ nhật">CN</label>
+                                                    </div>
+                                                </div>
+                                                <div id="workingDaysSummary" class="text-muted mt-1" style="font-size: 11.5px;"></div>
+                                                <div id="workingDaysError" class="text-danger small mt-1 d-none">
+                                                    <i class="bi bi-exclamation-circle me-1"></i>Vui lòng chọn ít nhất 1 ngày làm việc.
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="mt-3">
@@ -311,85 +403,136 @@
                             </div>
                         </div>
 
-                        <!-- HÀNG 2: TÀI KHOẢN NGÂN HÀNG & VIETQR NHẬN TIỀN CỦA CHI NHÁNH -->
-                        <div class="card border rounded-3 p-3 shadow-xs bg-white mt-3">
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
-                                <div>
-                                    <h6 class="fw-bold text-dark m-0 d-flex align-items-center gap-2" style="font-size: 15px;">
-                                        <i class="bi bi-bank text-primary"></i>
-                                        <span>Tài khoản Ngân hàng &amp; Mã VietQR nhận tiền</span>
-                                        <span class="badge bg-primary-subtle text-primary border" th:text="${bankAccounts != null ? #lists.size(bankAccounts) : 0} + ' tài khoản'">0 tài khoản</span>
-                                    </h6>
+                        <!-- HÀNG 2: TÀI KHOẢN NGÂN HÀNG & VIETQR NHẬN TIỀN CỦA CHI NHÁNH (ĐỒNG BỘ CHUẨN BẢNG CƠ SỞ) -->
+                        <section class="dv-grid-card mt-4">
+                            <div class="dv-grid-topbar">
+                                <div class="d-flex flex-column gap-1">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="fw-bold text-dark d-inline-flex align-items-center gap-2" style="font-size: 15px;">
+                                            <i class="bi bi-bank text-primary"></i>
+                                            <span>Tài khoản Ngân hàng &amp; Mã VietQR nhận tiền</span>
+                                        </span>
+                                        <span class="badge rounded-pill px-3 py-1"
+                                              style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; font-size: 12.5px; font-weight: 700;"
+                                              th:text="${bankAccounts != null ? #lists.size(bankAccounts) : 0} + ' tài khoản'">0 tài khoản</span>
+                                    </div>
                                     <small class="text-muted">Cấu hình tài khoản ngân hàng nhận tiền chuyển khoản (VietQR) cho chi nhánh này.</small>
                                 </div>
-                                <button type="button" class="btn btn-primary btn-sm fw-bold px-3"
+                                <button type="button"
+                                        class="btn btn-primary btn-sm fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                                        style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;"
                                         data-bs-toggle="modal" data-bs-target="#createBranchAccountModal">
-                                    <i class="bi bi-plus-lg me-1"></i> Thêm tài khoản ngân hàng
+                                    <i class="bi bi-plus-lg"></i>
+                                    <span>Thêm tài khoản ngân hàng</span>
                                 </button>
                             </div>
 
-                            <!-- Bảng danh sách tài khoản -->
-                            <div class="table-responsive" th:if="${bankAccounts != null and !#lists.isEmpty(bankAccounts)}">
-                                <table class="table table-hover align-middle mb-0" style="font-size: 13px;">
-                                    <thead class="table-light">
+                            <!-- Bảng danh sách tài khoản chuẩn dv-amis-table -->
+                            <div class="dv-table-scroll-container bank-table-scroll" th:if="${bankAccounts != null and !#lists.isEmpty(bankAccounts)}">
+                                <table class="dv-amis-table" id="branchBankAccountTable">
+                                    <thead>
                                     <tr>
-                                        <th style="min-width: 180px;">Ngân hàng</th>
-                                        <th style="min-width: 180px;">Số tài khoản &amp; Chủ TK</th>
-                                        <th style="min-width: 100px;">Mặc định</th>
-                                        <th style="min-width: 110px;">Trạng thái</th>
-                                        <th>Ghi chú</th>
-                                        <th class="text-end" style="min-width: 160px;">Thao tác</th>
+                                        <th style="width: 60px; min-width: 60px;" class="text-center">
+                                            <div class="dv-th-inner justify-content-center"><span>#</span></div>
+                                        </th>
+                                        <th style="min-width: 140px;">
+                                            <div class="dv-th-inner"><span>Mã ngân hàng</span></div>
+                                        </th>
+                                        <th style="min-width: 260px;">
+                                            <div class="dv-th-inner"><span>Ngân hàng</span></div>
+                                        </th>
+                                        <th style="min-width: 220px;">
+                                            <div class="dv-th-inner"><span>Số tài khoản &amp; Chủ TK</span></div>
+                                        </th>
+                                        <th style="min-width: 200px;">
+                                            <div class="dv-th-inner"><span>Ghi chú</span></div>
+                                        </th>
+                                        <th style="min-width: 135px;">
+                                            <div class="dv-th-inner"><span>Mặc định</span></div>
+                                        </th>
+                                        <th style="min-width: 155px;">
+                                            <div class="dv-th-inner"><span>Trạng thái</span></div>
+                                        </th>
+                                        <th class="text-center" style="min-width: 255px;">
+                                            <div class="dv-th-inner justify-content-center"><span>Nút ấn nhanh</span></div>
+                                        </th>
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    <tr th:each="acc : ${bankAccounts}">
-                                        <td>
-                                            <div class="fw-bold text-dark" th:text="${acc.bankName}">Vietcombank</div>
-                                            <div class="d-flex align-items-center gap-1 mt-1">
-                                                <span class="badge bg-light text-secondary border font-monospace" th:text="'BIN: ' + ${acc.bankBin}">BIN: 970436</span>
-                                                <span th:if="${acc.bankShortName}" class="badge bg-primary-subtle text-primary border" th:text="${acc.bankShortName}">VCB</span>
+                                    <tr th:each="acc, iterStat : ${bankAccounts}" class="dv-data-row">
+                                        <!-- 1. STT -->
+                                        <td class="text-center text-muted fw-semibold" style="width: 60px; min-width: 60px;" th:text="${iterStat.count}">1</td>
+
+                                        <!-- 2. Mã ngân hàng & BIN -->
+                                        <td style="min-width: 140px;">
+                                            <span class="dv-code-pill text-nowrap"
+                                                  th:text="${acc.bankShortName != null and !acc.bankShortName.isBlank() ? acc.bankShortName : acc.bankBin}">VCB</span>
+                                            <div class="text-muted small mt-1 text-nowrap">
+                                                BIN: <span class="font-monospace" th:text="${acc.bankBin}">970436</span>
                                             </div>
                                         </td>
-                                        <td>
-                                            <div class="font-monospace fw-bold text-primary fs-6" th:text="${acc.accountNumber}">0071001234561</div>
-                                            <div class="small fw-semibold text-secondary text-uppercase" th:text="${acc.accountHolderName}">NHA KHOA CUONG VIET</div>
+
+                                        <!-- 3. Tên ngân hàng -->
+                                        <td style="min-width: 260px;">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="dv-patient-avatar flex-shrink-0"
+                                                     style="background: linear-gradient(135deg, #0284c7, #3b82f6); font-size: 1.05rem; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 0 !important;">
+                                                    <i class="bi bi-bank text-white"></i>
+                                                </div>
+                                                <div class="d-flex flex-column justify-content-center">
+                                                    <span class="dv-patient-name" th:text="${acc.bankName}">Ngân hàng TMCP Ngoại thương Việt Nam</span>
+                                                    <div class="text-muted small mt-1" th:if="${acc.hasTransactions}">
+                                                        <i class="bi bi-receipt text-primary me-1"></i>Đã phát sinh giao dịch
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </td>
-                                        <td>
-                                            <span th:if="${acc.isDefault}" class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+
+                                        <!-- 4. Số tài khoản & Chủ TK -->
+                                        <td style="min-width: 220px;">
+                                            <div class="small fw-bold text-dark font-monospace text-nowrap">
+                                                <i class="bi bi-credit-card text-primary me-1"></i><span th:text="${acc.accountNumber}">0071001234561</span>
+                                            </div>
+                                            <div class="text-muted small mt-1 text-uppercase">
+                                                <i class="bi bi-person text-muted me-1"></i><span th:text="${acc.accountHolderName}">NHA KHOA CUONG VIET</span>
+                                            </div>
+                                        </td>
+
+                                        <!-- 5. Ghi chú -->
+                                        <td style="min-width: 200px;">
+                                            <div class="text-secondary small fw-semibold"
+                                                 th:text="${acc.notes != null and !acc.notes.isBlank() ? acc.notes : '-'}">-</div>
+                                        </td>
+
+                                        <!-- 6. Mặc định -->
+                                        <td style="min-width: 135px;">
+                                            <span th:if="${acc.isDefault}"
+                                                  class="badge rounded-pill fw-bold text-nowrap"
+                                                  style="background:#fffbeb; color:#b45309; font-size:12.5px; border:1px solid #fde68a; padding: 6px 12px;">
                                                 <i class="bi bi-star-fill text-warning me-1"></i>Mặc định
                                             </span>
                                             <span th:unless="${acc.isDefault}" class="text-muted small">-</span>
                                         </td>
-                                        <td>
-                                            <span th:if="${acc.isActive}" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
-                                                <i class="bi bi-check-circle-fill me-1"></i>Hoạt động
-                                            </span>
-                                            <span th:unless="${acc.isActive}" class="badge bg-secondary-subtle text-secondary border px-2 py-1">
-                                                <i class="bi bi-slash-circle me-1"></i>Ngừng sử dụng
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span class="small text-muted" th:text="${acc.notes != null and !acc.notes.isBlank() ? acc.notes : '-'}">-</span>
-                                            <span th:if="${acc.hasTransactions}" class="d-block badge bg-info-subtle text-info mt-1" style="font-size: 0.7rem; width: fit-content;">
-                                                <i class="bi bi-receipt"></i> Đã có giao dịch
-                                            </span>
-                                        </td>
-                                        <td class="text-end">
-                                            <div class="btn-group btn-group-sm">
-                                                <!-- Đặt làm mặc định -->
-                                                <form th:if="${!acc.isDefault and acc.isActive}"
-                                                      th:action="@{/admin/bank-accounts/{id}/set-default(id=${acc.accountId})}"
-                                                      method="post" class="d-inline"
-                                                      onsubmit="return confirm('Đặt tài khoản này làm mặc định nhận tiền VietQR cho chi nhánh?')">
-                                                    <input type="hidden" name="branchId" th:value="${branch.branchId}">
-                                                    <input type="hidden" name="returnUrl" th:value="'/admin/branches/' + ${branch.branchId} + '#pane-settings'">
-                                                    <button type="submit" class="btn btn-outline-warning" title="Đặt làm mặc định">
-                                                        <i class="bi bi-star"></i> Mặc định
-                                                    </button>
-                                                </form>
 
+                                        <!-- 7. Trạng thái -->
+                                        <td style="min-width: 155px;">
+                                            <span th:if="${acc.isActive}"
+                                                  class="badge rounded-pill fw-bold text-nowrap"
+                                                  style="background:#ecfdf5; color:#059669; font-size:12.5px; border:1px solid #a7f3d0; padding: 6px 12px;">
+                                                <i class="bi bi-check-circle-fill me-1"></i>Đang hoạt động
+                                            </span>
+                                            <span th:unless="${acc.isActive}"
+                                                  class="badge rounded-pill fw-bold text-nowrap"
+                                                  style="background:#fef2f2; color:#dc2626; font-size:12.5px; border:1px solid #fecaca; padding: 6px 12px;">
+                                                <i class="bi bi-dash-circle-fill me-1"></i>Ngừng sử dụng
+                                            </span>
+                                        </td>
+
+                                        <!-- 8. Nút ấn nhanh -->
+                                        <td class="text-center text-nowrap" style="min-width: 255px;">
+                                            <div class="bank-action-row">
                                                 <!-- Nút Sửa -->
-                                                <button type="button" class="btn btn-outline-primary"
+                                                <button type="button" class="dv-equal-btn-primary"
                                                         th:data-account-id="${acc.accountId}"
                                                         th:data-branch-id="${acc.branchId}"
                                                         th:data-bank-bin="${acc.bankBin}"
@@ -403,35 +546,39 @@
                                                         th:data-has-tx="${acc.hasTransactions}"
                                                         onclick="openBranchAccountEditModal(this)"
                                                         title="Chỉnh sửa tài khoản">
-                                                    <i class="bi bi-pencil"></i>
+                                                    <i class="bi bi-pencil-square"></i>
+                                                    <span>Sửa</span>
                                                 </button>
 
                                                 <!-- Bật / Ngừng sử dụng -->
                                                 <form th:action="@{/admin/bank-accounts/{id}/toggle-status(id=${acc.accountId})}"
-                                                      method="post" class="d-inline">
+                                                      method="post" class="d-inline m-0">
                                                     <input type="hidden" name="branchId" th:value="${branch.branchId}">
                                                     <input type="hidden" name="active" th:value="${!acc.isActive}">
                                                     <input type="hidden" name="returnUrl" th:value="'/admin/branches/' + ${branch.branchId} + '#pane-settings'">
-                                                    <button th:if="${acc.isActive}" type="submit" class="btn btn-outline-secondary"
+                                                    <button th:if="${acc.isActive}" type="submit" class="dv-equal-btn-secondary"
                                                             onclick="return confirm('Bạn có chắc chắn muốn NGỪNG SỬ DỤNG tài khoản này?')"
                                                             title="Ngừng sử dụng">
                                                         <i class="bi bi-pause-circle"></i>
+                                                        <span>Ngừng</span>
                                                     </button>
-                                                    <button th:unless="${acc.isActive}" type="submit" class="btn btn-outline-success"
+                                                    <button th:unless="${acc.isActive}" type="submit" class="dv-equal-btn-secondary text-success border-success-subtle"
                                                             title="Kích hoạt lại">
                                                         <i class="bi bi-play-circle"></i>
+                                                        <span>Kích hoạt</span>
                                                     </button>
                                                 </form>
 
                                                 <!-- Xóa (chỉ khi chưa có giao dịch) -->
                                                 <form th:if="${!acc.hasTransactions}"
                                                       th:action="@{/admin/bank-accounts/{id}/delete(id=${acc.accountId})}"
-                                                      method="post" class="d-inline"
+                                                      method="post" class="d-inline m-0"
                                                       onsubmit="return confirm('Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản chưa phát sinh giao dịch này?')">
                                                     <input type="hidden" name="branchId" th:value="${branch.branchId}">
                                                     <input type="hidden" name="returnUrl" th:value="'/admin/branches/' + ${branch.branchId} + '#pane-settings'">
-                                                    <button type="submit" class="btn btn-outline-danger" title="Xóa tài khoản tạo nhầm">
+                                                    <button type="submit" class="dv-equal-btn-secondary text-danger border-danger-subtle" title="Xóa tài khoản tạo nhầm">
                                                         <i class="bi bi-trash"></i>
+                                                        <span>Xóa</span>
                                                     </button>
                                                 </form>
                                             </div>
@@ -442,16 +589,19 @@
                             </div>
 
                             <!-- Khi chưa có tài khoản nào -->
-                            <div class="text-center py-4 border rounded bg-light" th:if="${bankAccounts == null or #lists.isEmpty(bankAccounts)}">
+                            <div class="text-center py-5 px-3 bg-white" th:if="${bankAccounts == null or #lists.isEmpty(bankAccounts)}">
                                 <i class="bi bi-qr-code-scan text-muted fs-1 d-block mb-2"></i>
-                                <h6 class="fw-bold text-secondary">Chi nhánh chưa có tài khoản ngân hàng nhận tiền nào</h6>
+                                <h6 class="fw-bold text-secondary mb-1">Chi nhánh chưa có tài khoản ngân hàng nhận tiền nào</h6>
                                 <p class="text-muted small mb-3">Thêm tài khoản ngân hàng để hệ thống tự động sinh mã VietQR khi thanh toán hóa đơn / thu đợt điều trị.</p>
-                                <button type="button" class="btn btn-primary btn-sm fw-bold px-3"
+                                <button type="button"
+                                        class="btn btn-primary btn-sm fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2"
+                                        style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;"
                                         data-bs-toggle="modal" data-bs-target="#createBranchAccountModal">
-                                    <i class="bi bi-plus-lg me-1"></i> Thêm tài khoản ngay
+                                    <i class="bi bi-plus-lg"></i>
+                                    <span>Thêm tài khoản ngay</span>
                                 </button>
                             </div>
-                        </div>
+                        </section>
 
                     </div>
                 </div>
@@ -498,6 +648,18 @@
                                     th:text="${s.name() == 'ACTIVE' ? 'Đang hoạt động' : s.name() == 'MAINTENANCE' ? 'Bảo trì' : 'Tạm ngưng'}"></option>
                         </select>
                     </div>
+                    <div class="col-md-4">
+                        <label for="roomFloorLabel" class="form-label">Tầng</label>
+                        <input type="text" id="roomFloorLabel" name="floorLabel" class="form-control" maxlength="50" placeholder="VD: Tầng 1">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="roomZoneLabel" class="form-label">Khu vực</label>
+                        <input type="text" id="roomZoneLabel" name="zoneLabel" class="form-control" maxlength="50" placeholder="VD: Khu A">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="roomFloorOrder" class="form-label">Thứ tự tầng</label>
+                        <input type="number" id="roomFloorOrder" name="floorOrder" class="form-control" min="1" max="50" value="1">
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -541,8 +703,13 @@
                     <div class="col-md-6">
                         <label for="chairStatus" class="form-label">Trạng thái</label>
                         <select id="chairStatus" name="status" class="form-select">
-                            <option th:each="s : ${chairStatuses}" th:value="${s}"
-                                    th:text="${s.name() == 'AVAILABLE' ? 'Trống (Sẵn sàng)' : s.name() == 'IN_USE' ? 'Đang khám' : 'Bảo trì'}"></option>
+                            <option th:each="s : ${chairStatuses}"
+                                    th:value="${s}"
+                                    th:text="${s.name() == 'AVAILABLE' ? 'Khả dụng'
+                                            : s.name() == 'IN_USE' ? 'Đang dùng'
+                                            : s.name() == 'TURNOVER' ? 'Vệ sinh / Chuẩn bị'
+                                            : s.name() == 'MAINTENANCE' ? 'Bảo trì'
+                                            : 'Không hoạt động'}"></option>
                         </select>
                     </div>
                 </div>
@@ -743,6 +910,59 @@
             });
         }
 
+        // Bộ chọn ngày làm việc dạng nút bật/tắt (T2 -> CN) đồng bộ chuẩn backend "2,3,4,5,6,7,CN"
+        var workingDaysInput = document.getElementById('workingDays');
+        var workingDayChecks = document.querySelectorAll('#workingDaysPicker .working-day-check');
+        var workingDaysSummary = document.getElementById('workingDaysSummary');
+        var workingDaysError = document.getElementById('workingDaysError');
+        var branchConfigForm = document.getElementById('branchConfigForm');
+        var dayLabels = { '2': 'Thứ 2', '3': 'Thứ 3', '4': 'Thứ 4', '5': 'Thứ 5', '6': 'Thứ 6', '7': 'Thứ 7', 'CN': 'Chủ nhật' };
+
+        function syncWorkingDaysValue() {
+            if (!workingDaysInput) return;
+            var selected = [];
+            workingDayChecks.forEach(function (chk) {
+                if (chk.checked) selected.push(chk.value);
+            });
+            workingDaysInput.value = selected.join(',');
+            if (workingDaysSummary) {
+                if (selected.length === 7) {
+                    workingDaysSummary.textContent = 'Đang chọn: Cả tuần (Thứ 2 – Chủ nhật)';
+                } else if (selected.length > 0) {
+                    workingDaysSummary.textContent = 'Đang chọn: ' + selected.map(function (v) { return dayLabels[v] || v; }).join(', ');
+                } else {
+                    workingDaysSummary.textContent = 'Chưa chọn ngày làm việc nào.';
+                }
+            }
+            if (workingDaysError && selected.length > 0) {
+                workingDaysError.classList.add('d-none');
+            }
+        }
+
+        function applyWorkingDaysFromString(raw) {
+            var tokens = (raw || '').split(',').map(function (s) { return s.trim().toUpperCase(); }).filter(Boolean);
+            workingDayChecks.forEach(function (chk) {
+                chk.checked = tokens.indexOf(chk.value.toUpperCase()) !== -1;
+            });
+            syncWorkingDaysValue();
+        }
+
+        if (workingDaysInput && workingDayChecks.length > 0) {
+            applyWorkingDaysFromString(workingDaysInput.value);
+            workingDayChecks.forEach(function (chk) {
+                chk.addEventListener('change', syncWorkingDaysValue);
+            });
+            if (branchConfigForm) {
+                branchConfigForm.addEventListener('submit', function (e) {
+                    syncWorkingDaysValue();
+                    if (!workingDaysInput.value) {
+                        e.preventDefault();
+                        if (workingDaysError) workingDaysError.classList.remove('d-none');
+                    }
+                });
+            }
+        }
+
         // Modal phòng: đổi form theo chế độ thêm / sửa.
         document.getElementById('roomModal').addEventListener('show.bs.modal', function (e) {
             var b = e.relatedTarget, f = document.getElementById('roomForm');
@@ -753,6 +973,9 @@
             f.roomName.value = edit ? b.dataset.roomName : '';
             f.roomType.value = edit ? b.dataset.roomType : 'TREATMENT';
             f.status.value = edit ? b.dataset.roomStatus : 'ACTIVE';
+            f.floorLabel.value = edit ? (b.dataset.floorLabel || '') : '';
+            f.zoneLabel.value = edit ? (b.dataset.zoneLabel || '') : '';
+            f.floorOrder.value = edit ? (b.dataset.floorOrder || '1') : '1';
         });
 
         // Modal ghế: đổi form theo chế độ thêm / sửa.

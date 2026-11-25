@@ -57,4 +57,9 @@ public interface StaffProfileRepository extends JpaRepository<StaffProfile, Long
     @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "5000")})
     @Query("SELECT s FROM StaffProfile s WHERE s.staffId = :staffId")
     Optional<StaffProfile> lockById(@Param("staffId") Long staffId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "5000")})
+    @Query("SELECT s FROM StaffProfile s WHERE s.staffId IN :staffIds ORDER BY s.staffId ASC")
+    List<StaffProfile> findByIdInForUpdateOrderByStaffIdAsc(@Param("staffIds") java.util.Collection<Long> staffIds);
 }

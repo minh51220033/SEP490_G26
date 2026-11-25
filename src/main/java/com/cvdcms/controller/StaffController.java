@@ -327,7 +327,7 @@ public class StaffController {
         if (primaryRole != null) {
             formDto.setRoleId(primaryRole.getRoleId());
         }
-        boolean isDoctorStaff = primaryRole != null && "BAC_SI".equalsIgnoreCase(primaryRole.getRoleName());
+        boolean isDoctorStaff = isDoctorStaff(staff, activeAssignments);
 
         model.addAttribute("staff", staff);
         model.addAttribute("assignments", assignments);
@@ -341,6 +341,23 @@ public class StaffController {
         model.addAttribute("statuses", StaffStatus.values());
 
         return "staff/detail";
+    }
+
+    private static boolean isDoctorRoleName(String roleName) {
+        return "BAC_SI".equalsIgnoreCase(roleName) || "DOCTOR".equalsIgnoreCase(roleName);
+    }
+
+    private static boolean isDoctorStaff(StaffProfile staff, List<StaffBranchAssignment> activeAssignments) {
+        if (staff == null) {
+            return false;
+        }
+        if (activeAssignments != null && !activeAssignments.isEmpty()) {
+            return activeAssignments.stream()
+                    .anyMatch(a -> a.getRole() != null && isDoctorRoleName(a.getRole().getRoleName()));
+        }
+        return staff.getUser() != null && staff.getUser().getRoles() != null
+                && staff.getUser().getRoles().stream()
+                        .anyMatch(r -> r != null && isDoctorRoleName(r.getRoleName()));
     }
 
     // ===================== TRẠNG THÁI LÀM VIỆC =====================

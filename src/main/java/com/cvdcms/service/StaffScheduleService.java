@@ -52,6 +52,12 @@ public class StaffScheduleService {
     @Autowired(required = false)
     private com.cvdcms.repository.AppointmentRepository appointmentRepository;
 
+    @Autowired(required = false)
+    private com.cvdcms.repository.DoctorShiftAssignmentRepository doctorShiftAssignmentRepository;
+
+    @Autowired(required = false)
+    private DoctorShiftAssignmentService doctorShiftAssignmentService;
+
     public StaffScheduleService(WorkShiftRepository shiftRepository,
                                 StaffScheduleRepository scheduleRepository,
                                 StaffBranchAssignmentRepository assignmentRepository,
@@ -298,7 +304,30 @@ public class StaffScheduleService {
             removedAttendance = true;
         }
 
-        scheduleRepository.delete(s);
+        boolean hasShiftRoomHistory = false;
+        if (doctorShiftAssignmentRepository != null) {
+            List<com.cvdcms.entity.DoctorShiftAssignment> linkedAssignments = doctorShiftAssignmentRepository
+                    .findByStaffSchedule_ScheduleIdAndStatusInOrderByShiftAssignmentIdAsc(
+                            s.getScheduleId(),
+                            List.of(com.cvdcms.entity.enums.DoctorShiftAssignmentStatus.values()));
+            if (!linkedAssignments.isEmpty()) {
+                hasShiftRoomHistory = true;
+                for (com.cvdcms.entity.DoctorShiftAssignment dsa : linkedAssignments) {
+                    if (dsa.getStatus() == com.cvdcms.entity.enums.DoctorShiftAssignmentStatus.ACTIVE) {
+                        dsa.setStatus(com.cvdcms.entity.enums.DoctorShiftAssignmentStatus.CANCELLED);
+                        dsa.syncActiveSlotKey();
+                        doctorShiftAssignmentRepository.save(dsa);
+                    }
+                }
+            }
+        }
+
+        if (hasShiftRoomHistory) {
+            s.setStatus(ScheduleStatus.CANCELLED);
+            scheduleRepository.save(s);
+        } else {
+            scheduleRepository.delete(s);
+        }
         return removedAttendance;
     }
 
@@ -306,8 +335,46 @@ public class StaffScheduleService {
     @Transactional
     public int copyWeek(Long branchId, LocalDate fromMonday, LocalDate toMonday) {
         int copied = 0;
+        Set<Long> doctorShiftScheduleIds = new java.util.HashSet<>();
+        if (doctorShiftAssignmentRepository != null && doctorShiftAssignmentService != null) {
+            for (com.cvdcms.entity.DoctorShiftAssignment src : doctorShiftAssignmentRepository
+                    .findByBranchAndDateRangeWithDetails(branchId, fromMonday, fromMonday.plusDays(6))) {
+                if (src.getStaffSchedule() != null && src.getStaffSchedule().getScheduleId() != null) {
+                    doctorShiftScheduleIds.add(src.getStaffSchedule().getScheduleId());
+                }
+                if (src.getStatus() != com.cvdcms.entity.enums.DoctorShiftAssignmentStatus.ACTIVE) {
+                    continue;
+                }
+                LocalDate target = toMonday.plusDays(java.time.temporal.ChronoUnit.DAYS.between(fromMonday, src.getWorkDate()));
+                if (target.isBefore(LocalDate.now())) {
+                    continue;
+                }
+                try {
+                    com.cvdcms.entity.enums.DoctorShiftAssignmentRole copyRole =
+                            src.getAssignmentRole() == com.cvdcms.entity.enums.DoctorShiftAssignmentRole.REPLACEMENT
+                                    ? com.cvdcms.entity.enums.DoctorShiftAssignmentRole.PRIMARY
+                                    : src.getAssignmentRole();
+                    doctorShiftAssignmentService.assignDoctorsToRoomIsolated(
+                            branchId,
+                            target,
+                            src.getShift().getShiftId(),
+                            src.getRoom().getRoomId(),
+                            src.getChair() != null ? src.getChair().getChairId() : null,
+                            List.of(src.getStaff().getStaffId()),
+                            copyRole,
+                            src.getNote(),
+                            null);
+                    copied++;
+                } catch (IllegalArgumentException | IllegalStateException ignored) {
+                    // Trùng ca, hết quyền phòng hoặc nghỉ phép -> bỏ qua
+                }
+            }
+        }
         for (StaffSchedule src : scheduleRepository.findByBranchAndRange(branchId, fromMonday, fromMonday.plusDays(6))) {
             if (src.getStatus() != ScheduleStatus.SCHEDULED) {
+                continue;
+            }
+            if (src.getScheduleId() != null && doctorShiftScheduleIds.contains(src.getScheduleId())) {
                 continue;
             }
             LocalDate target = toMonday.plusDays(java.time.temporal.ChronoUnit.DAYS.between(fromMonday, src.getWorkDate()));
@@ -317,7 +384,7 @@ public class StaffScheduleService {
             try {
                 assign(branchId, src.getStaff().getStaffId(), src.getShift().getShiftId(), target, src.getNote());
                 copied++;
-            } catch (IllegalArgumentException ignored) {
+            } catch (IllegalArgumentException | IllegalStateException ignored) {
                 // Trùng ca hoặc nhân viên không còn phù hợp -> bỏ qua.
             }
         }

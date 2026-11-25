@@ -54,7 +54,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
     @Autowired(required = false)
     private org.springframework.context.ApplicationEventPublisher careEventPublisher;
     @Autowired(required = false)
-    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+    private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
     @Autowired(required = false)
     private com.cvdcms.service.AppointmentLifecycleService appointmentLifecycleService;
 
@@ -156,7 +156,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                         () -> new IllegalArgumentException("Không tìm thấy ca khám với ID: " + request.getVisitId()));
 
         // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi đã chuyển thanh toán, hoàn thành, hủy hoặc khóa EMR
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 visit,
                 emrRecordRepository,
                 "Bệnh án lâm sàng đã được hoàn tất và khóa bất biến. Không thể thêm chẩn đoán mới");
@@ -208,7 +208,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chẩn đoán có ID: " + diagnosisId));
 
         // Quy tắc BR-EMR-02: Khóa bất biến
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 diagnosis.getVisit(),
                 emrRecordRepository,
                 "Bệnh án lâm sàng đã được hoàn tất và khóa bất biến. Không thể xóa chẩn đoán");
@@ -453,7 +453,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         }
 
         Visit visit = getVisitOrThrow(visitId);
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 visit,
                 emrRecordRepository,
                 "Lượt khám hiện tại không thể hoàn tất khám do đã khóa hoặc đã hủy");
@@ -725,7 +725,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
 
         if (emrRecordRepository != null) {
             emrRecordRepository.findByVisit_VisitId(visitId).ifPresent(record -> {
-                if (com.cvdcms.emr.EmrStatePolicy.isEmrLockedStatus(record.getStatus())) {
+                if (com.cvdcms.util.EmrStatePolicy.isEmrLockedStatus(record.getStatus())) {
                     throw new IllegalStateException(
                             "Hồ sơ bệnh án điện tử (" + record.getRecordCode()
                                     + ") đã khóa/ký xác thực. Không thể mở lại ca khám (BR-EMR-02).");
@@ -878,7 +878,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
         Visit visit = getVisitOrThrow(request.getVisitId());
 
         // Kiểm tra khóa bất biến EMR (BR-EMR-02)
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 visit,
                 emrRecordRepository,
                 "Hồ sơ bệnh án lâm sàng đã khóa. Không thể chỉnh sửa thông tin khám");
@@ -1002,7 +1002,7 @@ public class DiagnosisServiceImpl implements DiagnosisService {
             throw new IllegalArgumentException("Mã ca khám không hợp lệ.");
         }
         Visit visit = getVisitOrThrow(visitId);
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 visit,
                 emrRecordRepository,
                 "Hồ sơ bệnh án lâm sàng đã khóa. Không thể cập nhật lời dặn bác sĩ");

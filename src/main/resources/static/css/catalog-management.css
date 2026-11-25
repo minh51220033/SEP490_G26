@@ -1,161 +1,378 @@
 /* ============================================================================
  * CV-DCMS CATALOG MANAGEMENT (QUẢN LÝ DANH MỤC TẬP TRUNG)
- * Phạm vi: Các trang quản lý danh mục (Dịch vụ, Nhóm dịch vụ, Thuốc, ICD-10)
+ * Đồng bộ hoàn toàn phong cách Tài chính & Quản lý kho vật tư
  * ============================================================================ */
 
-/* Khung chứa thanh tab ngang phía trên */
-.catalog-tabs-container {
-    width: 100%;
-    margin-bottom: 1.25rem;
+/* 0. NỀN KHÔNG GIAN LÀM VIỆC & NHỊP KHOẢNG CÁCH LIỀN MẠCH (TẮT ANIMATION GÂY GIẬT) */
+body.service-catalog-page .app-main,
+body.service-category-page .app-main,
+body.medication-catalog-page .app-main,
+body.icd10-catalog-page .app-main {
+    background: #f1f5f9 !important;
 }
 
-/* Danh sách tab ngang */
-.catalog-tabs-nav {
+body.service-catalog-page .app-content,
+body.service-category-page .app-content,
+body.medication-catalog-page .app-content,
+body.icd10-catalog-page .app-content {
+    background: #f1f5f9 !important;
+    padding: 14px 20px 28px !important;
+    gap: 10px !important;
+    animation: none !important;
+}
+
+.catalog-tab-content {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    padding: 0;
-    margin: 0;
-    list-style: none;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    transition: opacity 0.12s ease;
 }
 
-/* Từng ô tab riêng biệt có viền, khoảng cách rõ ràng */
-.catalog-tab-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 18px;
-    font-size: 13.5px;
-    font-weight: 600;
-    color: #475569;
-    background-color: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    text-decoration: none;
-    transition: all 0.15s ease-in-out;
-    cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-    white-space: nowrap;
-    user-select: none;
+.catalog-tab-content.catalog-pjax-loading {
+    opacity: 0.65;
+    pointer-events: none;
 }
 
-.catalog-tab-item:hover {
-    color: #0284c7;
-    border-color: #38bdf8;
-    background-color: #f0f9ff;
-    text-decoration: none;
-    box-shadow: 0 2px 4px rgba(2, 132, 199, 0.1);
-}
-
-/* Tab đang được chọn (Nổi bật màu xanh chuẩn giao diện hệ thống) */
-.catalog-tab-item.is-active {
-    color: #0284c7;
-    background-color: #e0f2fe;
-    border-color: #0284c7;
-    font-weight: 700;
-    box-shadow: 0 1px 3px rgba(2, 132, 199, 0.2);
-}
-
-.catalog-tab-item.is-active i {
-    color: #0284c7;
-}
-
-.catalog-tab-item i {
-    font-size: 15px;
-    color: #64748b;
-    transition: color 0.15s ease-in-out;
-}
-
-.catalog-tab-item:hover i {
-    color: #0284c7;
-}
-
-/* Tối ưu hiển thị trên màn hình nhỏ / điện thoại */
-@media (max-width: 768px) {
-    .catalog-tabs-nav {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: 6px;
-    }
-
-    .catalog-tab-item {
-        flex: 0 0 auto;
-        padding: 7px 14px;
-        font-size: 13px;
+@media (max-width: 575.98px) {
+    body.service-catalog-page .app-content,
+    body.service-category-page .app-content,
+    body.medication-catalog-page .app-content,
+    body.icd10-catalog-page .app-content {
+        padding: 10px !important;
     }
 }
 
-/* ============================================================================
-   Synchronized Brand Blue Button & Topbar Theme for Catalog Management
-   Matches app-wide sky-to-royal blue gradient (#0284c7 -> #2563eb)
-   ============================================================================ */
-.catalog-filter-panel {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+/* 1. HEADER QUẢN LÝ DANH MỤC (CHUẨN ICON + TITLE + NÚT LÀM MỚI NHƯ TÀI CHÍNH) */
+#catalogTabsWrapper.catalog-nav-wrapper {
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#catalogTabsWrapper .catalog-header-row {
+    margin-bottom: 10px !important;
+}
+
+#catalogTabsWrapper .dv-header-icon {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 12px !important;
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 19px !important;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25) !important;
+    flex-shrink: 0 !important;
+}
+
+#catalogTabsWrapper .dv-page-title {
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    line-height: 1.25 !important;
+    margin: 0 !important;
+}
+
+#catalogTabsWrapper .dv-page-subtitle {
+    font-size: 13px !important;
+    color: #64748b !important;
+    margin: 2px 0 0 !important;
+}
+
+#catalogTabsWrapper .catalog-refresh-btn {
+    height: 36px !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    padding: 0 14px !important;
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    color: #334155 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    text-decoration: none !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+    transition: all 0.15s ease !important;
+}
+
+#catalogTabsWrapper .catalog-refresh-btn:hover {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+/* 2. THANH TAB SEGMENTED TRẮNG LIỀN MẠCH (CHUẨN TÀI CHÍNH / KHO VẬT TƯ) */
+#catalogTabsWrapper .catalog-tabs-container {
+    display: block !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 4px !important;
+    margin: 0 !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+}
+
+#catalogTabsWrapper .catalog-tabs-nav {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    flex-wrap: nowrap !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    list-style: none !important;
+    border: none !important;
+}
+
+#catalogTabsWrapper .catalog-tab-item {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    padding: 8px 15px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1.35 !important;
+    color: #64748b !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 8px !important;
+    text-decoration: none !important;
+    transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+    white-space: nowrap !important;
+    user-select: none !important;
+    flex-shrink: 0 !important;
+}
+
+#catalogTabsWrapper .catalog-tab-item:hover {
+    color: #0f172a !important;
+    background: #f1f5f9 !important;
+    text-decoration: none !important;
+}
+
+#catalogTabsWrapper .catalog-tab-item i {
+    font-size: 14.5px !important;
+    color: inherit !important;
+    opacity: 0.85 !important;
+}
+
+#catalogTabsWrapper .catalog-tab-item.is-active,
+#catalogTabsWrapper .catalog-tab-item.is-active:hover {
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25) !important;
+}
+
+#catalogTabsWrapper .catalog-tab-item.is-active span,
+#catalogTabsWrapper .catalog-tab-item.is-active i {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+/* 3. THẺ KPI & KHUNG BỘ LỌC & BẢNG DỮ LIỆU LIỀN KHỐI */
+body.service-category-page .catalog-tab-content > .row.mb-3,
+body.service-catalog-page .app-content section.catalog-filter-panel,
+body.service-category-page .app-content section.catalog-filter-panel,
+body.medication-catalog-page .app-content section.catalog-filter-panel,
+body.icd10-catalog-page .app-content section.catalog-filter-panel,
+.catalog-tab-content .alert {
+    margin-bottom: 0 !important;
+}
+
+body.service-category-page .dv-kpi-card {
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 14px 18px !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+
+body.service-category-page .dv-kpi-card:hover {
+    transform: translateY(-2px);
+    border-color: #bae6fd !important;
+    box-shadow: 0 6px 16px rgba(2, 132, 199, 0.08) !important;
+}
+
+/* Bảo vệ .catalog-filter-panel khỏi rule > section.panel cũ của icd10.css & service-catalog.css */
+body.service-catalog-page .app-content section.panel.catalog-filter-panel,
+body.service-category-page .app-content section.panel.catalog-filter-panel,
+body.medication-catalog-page .app-content section.panel.catalog-filter-panel,
+body.icd10-catalog-page .app-content section.panel.catalog-filter-panel,
+section.panel.catalog-filter-panel {
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+    overflow: hidden !important;
 }
 
 .catalog-filter-panel .form-control,
 .catalog-filter-panel .form-select,
 .catalog-filter-panel .input-group-text,
 .catalog-filter-panel .btn {
-    min-height: 38px;
+    min-height: 38px !important;
+    height: 38px !important;
+    font-size: 13px !important;
 }
 
-.dv-quick-segment {
-    display: inline-flex;
-    background: #f1f5f9;
-    padding: 4px;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    gap: 4px;
-    flex-wrap: wrap;
+.catalog-filter-panel .form-control,
+.catalog-filter-panel .form-select {
+    background-color: #f8fafc !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    color: #0f172a !important;
+    transition: all 0.2s ease !important;
 }
 
-.dv-seg-btn {
-    border: none;
-    background: transparent;
-    color: #475569;
-    font-size: 13.5px;
-    font-weight: 700;
-    padding: 7px 14px;
-    border-radius: 9px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    white-space: nowrap;
-    text-decoration: none;
+.catalog-filter-panel .form-control:focus,
+.catalog-filter-panel .form-select:focus {
+    background-color: #ffffff !important;
+    border-color: #0284c7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12) !important;
 }
 
-.dv-seg-btn:hover {
-    color: #0f172a;
-    background: rgba(255, 255, 255, 0.7);
-    text-decoration: none;
+.catalog-filter-panel .input-group .input-group-text {
+    background-color: #f8fafc !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-right: none !important;
+    border-radius: 10px 0 0 10px !important;
 }
 
-.dv-seg-btn.active {
+.catalog-filter-panel .input-group .form-control {
+    border-left: none !important;
+    border-radius: 0 10px 10px 0 !important;
+}
+
+.catalog-filter-panel .btn {
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    padding: 0 14px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+.service-catalog-page .dv-grid-card,
+.service-category-page .dv-grid-card,
+.medication-catalog-page .dv-grid-card,
+.icd10-catalog-page .dv-grid-card {
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+    overflow: hidden !important;
+}
+
+.service-catalog-page .dv-grid-topbar,
+.service-category-page .dv-grid-topbar,
+.medication-catalog-page .dv-grid-topbar,
+.icd10-catalog-page .dv-grid-topbar {
+    background: #f8fafc !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding: 11px 16px !important;
+}
+
+.service-catalog-page .dv-grid-topbar .btn,
+.service-category-page .dv-grid-topbar .btn,
+.medication-catalog-page .dv-grid-topbar .btn,
+.icd10-catalog-page .dv-grid-topbar .btn {
+    border-radius: 8px !important;
+    font-size: 12.5px !important;
+    font-weight: 600 !important;
+    padding: 6px 12px !important;
+}
+
+.service-catalog-page .dv-amis-table thead th,
+.service-category-page .dv-amis-table thead th,
+.medication-catalog-page .dv-amis-table thead th,
+.icd10-catalog-page .dv-amis-table thead th {
+    background: #f8fafc !important;
+    color: #475569 !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    border-bottom: 1.5px solid #e2e8f0 !important;
+}
+
+.service-catalog-page .panel:not(.catalog-filter-panel),
+.service-category-page .panel:not(.catalog-filter-panel) {
     background: #ffffff;
-    color: #0284c7;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
 }
 
-.dv-seg-count {
-    font-size: 11.5px;
-    font-weight: 800;
-    padding: 1px 7px;
-    border-radius: 20px;
-    background: #e2e8f0;
-    color: #334155;
+/* Segmented controls (Tất cả / Dịch vụ / Sản phẩm) — khắc phục lỗi chữ xanh chìm trên nền xanh */
+body .dv-quick-segment {
+    display: inline-flex !important;
+    background: #f1f5f9 !important;
+    padding: 4px !important;
+    border-radius: 12px !important;
+    border: 1.5px solid #e2e8f0 !important;
+    gap: 4px !important;
+    flex-wrap: wrap !important;
 }
 
-.dv-seg-btn.active .dv-seg-count {
-    background: #e0f2fe;
-    color: #0284c7;
+body .dv-quick-segment .dv-seg-btn {
+    border: none !important;
+    background: transparent !important;
+    color: #64748b !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    padding: 6px 13px !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+    text-decoration: none !important;
+}
+
+body .dv-quick-segment .dv-seg-btn:hover {
+    color: #0f172a !important;
+    background: rgba(255, 255, 255, 0.85) !important;
+    text-decoration: none !important;
+}
+
+body .dv-quick-segment .dv-seg-btn.active,
+body .dv-quick-segment .dv-seg-btn.active:hover {
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25) !important;
+}
+
+body .dv-quick-segment .dv-seg-btn.active span:not(.dv-seg-count),
+body .dv-quick-segment .dv-seg-btn.active i {
+    color: #ffffff !important;
+}
+
+body .dv-quick-segment .dv-seg-btn .dv-seg-count {
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    padding: 1px 7px !important;
+    border-radius: 20px !important;
+    background: #e2e8f0 !important;
+    color: #334155 !important;
+}
+
+body .dv-quick-segment .dv-seg-btn.active .dv-seg-count {
+    background: rgba(255, 255, 255, 0.24) !important;
+    color: #ffffff !important;
 }
 
 .dv-grid-topbar .fin-topbar-right {
@@ -169,8 +386,10 @@
 .dv-grid-topbar .fin-topbar-right .enhanced-custom-toggle-btn {
     order: -1;
     margin-left: 0 !important;
+    border-radius: 8px !important;
 }
 
+/* Synchronized Brand Blue Button Theme */
 .service-catalog-page .btn-primary,
 .service-category-page .btn-primary,
 .medication-catalog-page .btn-primary,
@@ -185,7 +404,7 @@
     background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
     border-color: transparent !important;
     color: #ffffff !important;
-    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.22) !important;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25) !important;
 }
 
 .service-catalog-page .btn-primary:hover,
@@ -202,7 +421,7 @@
     background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%) !important;
     border-color: transparent !important;
     color: #ffffff !important;
-    box-shadow: 0 5px 14px rgba(2, 132, 199, 0.34) !important;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.32) !important;
 }
 
 .service-catalog-page .btn-primary:focus,
@@ -348,4 +567,3 @@
     background-color: transparent !important;
     opacity: 0.65 !important;
 }
-

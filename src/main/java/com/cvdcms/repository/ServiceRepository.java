@@ -43,6 +43,9 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
 
     // Danh sách dịch vụ thuộc một nhóm.
     @EntityGraph(attributePaths = "category")
+    Optional<Service> findWithCategoryByServiceId(Long serviceId);
+
+    @EntityGraph(attributePaths = "category")
     List<Service> findByCategory_CategoryIdOrderByServiceNameAsc(
             Long categoryId
     );

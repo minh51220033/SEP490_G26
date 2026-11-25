@@ -52,7 +52,7 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
     private final StaffBranchAssignmentRepository staffBranchAssignmentRepository;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+    private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -180,7 +180,7 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
         if (visit.getPatientProfile() == null || !visit.getPatientProfile().getProfileId().equals(patient.getProfileId())) {
             throw new IllegalArgumentException("Lượt khám mã " + visit.getVisitCode() + " không thuộc về bệnh nhân " + patient.getFullName());
         }
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 visit,
                 emrRecordRepository,
                 "Lượt khám đã hoàn tất/chờ thanh toán/hủy hoặc EMR đã khóa. Không thể đối chiếu phim X-quang");

@@ -75,6 +75,9 @@ public class Branch {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    @Column(name = "resource_engine_enabled", nullable = false)
+    private Boolean resourceEngineEnabled = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

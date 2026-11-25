@@ -66,6 +66,9 @@ public class RoomService {
         room.setRoomName(name);
         room.setRoomType(dto.getRoomType() != null ? dto.getRoomType() : RoomType.TREATMENT);
         room.setStatus(dto.getStatus() != null ? dto.getStatus() : RoomStatus.ACTIVE);
+        room.setFloorLabel(trimToNull(dto.getFloorLabel(), 50));
+        room.setZoneLabel(trimToNull(dto.getZoneLabel(), 50));
+        room.setFloorOrder(dto.getFloorOrder() != null ? dto.getFloorOrder() : 1);
         return roomRepository.save(room);
     }
 
@@ -88,7 +91,27 @@ public class RoomService {
         if (dto.getStatus() != null) {
             room.setStatus(dto.getStatus());
         }
+        if (dto.getFloorLabel() != null) {
+            room.setFloorLabel(trimToNull(dto.getFloorLabel(), 50));
+        }
+        if (dto.getZoneLabel() != null) {
+            room.setZoneLabel(trimToNull(dto.getZoneLabel(), 50));
+        }
+        if (dto.getFloorOrder() != null) {
+            room.setFloorOrder(dto.getFloorOrder());
+        }
         return roomRepository.save(room);
+    }
+
+    private String trimToNull(String value, int maxLen) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String t = value.trim();
+        if (t.length() > maxLen) {
+            throw new IllegalArgumentException("Giá trị không được vượt quá " + maxLen + " ký tự.");
+        }
+        return t;
     }
 
     // Chỉ cho xóa phòng khi không còn ghế nha gắn với phòng.

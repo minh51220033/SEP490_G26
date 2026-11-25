@@ -42,7 +42,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
     private final SystemAuditLogService auditService;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+    private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private TreatmentPlanItemRepository treatmentPlanItemRepo;
@@ -1381,8 +1381,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             };
         }
         if (visit != null && emrRecordRepository != null && visit.getVisitId() != null) {
-            Optional<com.cvdcms.emr.EmrRecord> emrOpt = emrRecordRepository.findByVisit_VisitId(visit.getVisitId());
-            if (emrOpt.isPresent() && com.cvdcms.emr.EmrStatePolicy.isEmrLockedStatus(emrOpt.get().getStatus())) {
+            Optional<com.cvdcms.entity.EmrRecord> emrOpt = emrRecordRepository.findByVisit_VisitId(visit.getVisitId());
+            if (emrOpt.isPresent() && com.cvdcms.util.EmrStatePolicy.isEmrLockedStatus(emrOpt.get().getStatus())) {
                 return "Hồ sơ bệnh án điện tử (EMR) đã khóa hoặc ký số xác thực, quy trình được khóa.";
             }
         }

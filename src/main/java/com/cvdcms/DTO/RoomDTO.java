@@ -16,4 +16,10 @@ public class RoomDTO {
     private RoomType roomType = RoomType.TREATMENT;
 
     private RoomStatus status = RoomStatus.ACTIVE;
+
+    private String floorLabel;
+
+    private String zoneLabel;
+
+    private Integer floorOrder = 1;
 }

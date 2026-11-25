@@ -76,6 +76,30 @@ public class Service {
     @Column(name = "estimated_duration_minutes", nullable = false)
     private Integer estimatedDurationMinutes = 30;
 
+    @Column(name = "preparation_duration_minutes", nullable = false)
+    private Integer preparationDurationMinutes = 0;
+
+    @Column(name = "procedure_duration_minutes", nullable = false)
+    private Integer procedureDurationMinutes = 30;
+
+    @Column(name = "turnover_duration_minutes", nullable = false)
+    private Integer turnoverDurationMinutes = 0;
+
+    @Column(name = "requires_chair", nullable = false)
+    private Boolean requiresChair = true;
+
+    @Column(name = "is_room_exclusive", nullable = false)
+    private Boolean isRoomExclusive = false;
+
+    @Column(name = "doctor_required_in_prep", nullable = false)
+    private Boolean doctorRequiredInPrep = false;
+
+    @Column(name = "doctor_required_in_turnover", nullable = false)
+    private Boolean doctorRequiredInTurnover = false;
+
+    @Column(name = "is_default_consultation", nullable = false)
+    private Boolean isDefaultConsultation = false;
+
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 

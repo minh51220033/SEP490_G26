@@ -4,6 +4,9 @@
 <head th:replace="~{fragments/head :: head('Quản lý danh mục - Danh mục thuốc')}"></head>
 
 <body class="app-body medication-catalog-page fin-brand-theme">
+<th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
+<link rel="stylesheet" th:href="@{/css/catalog-management.css(v='20261125-3')}">
+
 <div class="app-shell">
 
   <aside th:replace="~{fragments/sidebar :: sidebar('catalogs')}"></aside>
@@ -13,25 +16,10 @@
     <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục')}"></header>
 
     <main class="app-content">
-      <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
-      <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
+      <!-- HEADER & THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
+      <div th:replace="~{fragments/catalog-tabs :: catalogTabs('medications')}"></div>
 
-      <!-- BREADCRUMB & BỘ CHỌN CƠ SỞ PHÍA TRÊN CÙNG -->
-      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-        <nav aria-label="breadcrumb">
-          <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
-            <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Danh mục thuốc</li>
-          </ol>
-        </nav>
-        <div class="d-flex align-items-center gap-2">
-          <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-        </div>
-      </div>
-
-      <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
-      <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('medications')}"></nav>
+      <div id="catalogTabContent" class="catalog-tab-content">
 
       <!-- THÔNG BÁO -->
       <div class="alert alert-success" role="status"
@@ -248,6 +236,7 @@
         </div>
 
       </div><!-- /dv-grid-card -->
+      </div><!-- /#catalogTabContent -->
 
     </main><!-- /app-content -->
   </div><!-- /app-main -->
@@ -438,14 +427,14 @@ function openEditModal(btn) {
   if (kw) {
     kw.addEventListener('input', function() {
       if (timer) clearTimeout(timer);
-      timer = setTimeout(function() { form.submit(); }, 350);
+      timer = setTimeout(function() { form.requestSubmit ? form.requestSubmit() : form.submit(); }, 350);
     });
   }
   if (activeSel) {
-    activeSel.addEventListener('change', function() { form.submit(); });
+    activeSel.addEventListener('change', function() { form.requestSubmit ? form.requestSubmit() : form.submit(); });
   }
   if (sizeSel) {
-    sizeSel.addEventListener('change', function() { form.submit(); });
+    sizeSel.addEventListener('change', function() { form.requestSubmit ? form.requestSubmit() : form.submit(); });
   }
 })();
 </script>

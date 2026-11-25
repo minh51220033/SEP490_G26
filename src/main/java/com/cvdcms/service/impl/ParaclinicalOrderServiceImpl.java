@@ -32,7 +32,7 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     private final InvoiceItemRepository invoiceItemRepository;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+    private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.ServiceCommissionService serviceCommissionService;
@@ -116,7 +116,7 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         }
 
         // Ràng buộc nghiệp vụ BR-EMR-02: Khóa bệnh án bất biến
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 visit,
                 emrRecordRepository,
                 "Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến. Không thể tạo thêm chỉ định cận lâm sàng");
@@ -235,7 +235,7 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chỉ định ID: " + orderItemId));
 
         Visit visit = item.getOrder().getVisit();
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 visit,
                 emrRecordRepository,
                 "Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến");
@@ -324,7 +324,7 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chỉ định ID: " + orderItemId));
 
         Visit visit = item.getOrder().getVisit();
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 visit,
                 emrRecordRepository,
                 "Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến");
@@ -409,7 +409,7 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
 
         ParaclinicalOrder parentOrder = item.getOrder();
         Visit visit = parentOrder.getVisit();
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 visit,
                 emrRecordRepository,
                 "Hồ sơ bệnh án đã hoàn tất và bị khóa bất biến. Không thể xóa chỉ định");

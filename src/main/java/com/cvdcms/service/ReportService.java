@@ -1,8 +1,8 @@
 package com.cvdcms.service;
 
-import com.cvdcms.DTO.report.FinancialReportDTO;
-import com.cvdcms.DTO.report.OperationalReportDTO;
-import com.cvdcms.DTO.report.ReportDashboardDTO;
+import com.cvdcms.DTO.FinancialReportDTO;
+import com.cvdcms.DTO.OperationalReportDTO;
+import com.cvdcms.DTO.ReportDashboardDTO;
 
 import java.time.LocalDate;
 import java.util.Collection;

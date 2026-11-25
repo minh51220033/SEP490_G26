@@ -1,9 +1,9 @@
 package com.cvdcms.controller;
 
-import com.cvdcms.DTO.report.FinancialReportDTO;
-import com.cvdcms.DTO.report.OperationalReportDTO;
-import com.cvdcms.DTO.report.ReportDashboardDTO;
-import com.cvdcms.DTO.report.ReportFilterDTO;
+import com.cvdcms.DTO.FinancialReportDTO;
+import com.cvdcms.DTO.OperationalReportDTO;
+import com.cvdcms.DTO.ReportDashboardDTO;
+import com.cvdcms.DTO.ReportFilterDTO;
 import com.cvdcms.entity.Branch;
 import com.cvdcms.entity.User;
 import com.cvdcms.entity.enums.AssignmentStatus;

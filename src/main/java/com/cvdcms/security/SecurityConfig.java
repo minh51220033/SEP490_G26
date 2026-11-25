@@ -48,7 +48,6 @@ public class SecurityConfig {
                         .ignoringRequestMatchers(
                                 "/reception/queue/tv/**",
                                 "/portal/patients/**",
-                                "/portal/appointments/api/**",
                                 "/ws/**",
                                 "/ws-chat/**",
                                 "/chat-websocket/**"
@@ -58,6 +57,8 @@ public class SecurityConfig {
                             return path.startsWith("/api/")
                                     && !path.equals("/api/reception/check-ins")
                                     && !path.startsWith("/api/reception/check-ins/")
+                                    && !path.equals("/api/reception/appointments")
+                                    && !path.startsWith("/api/reception/appointments/")
                                     && !path.equals("/api/public/booking")
                                     && !path.startsWith("/api/public/booking/");
                         })

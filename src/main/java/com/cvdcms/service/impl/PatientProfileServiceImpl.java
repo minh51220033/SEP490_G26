@@ -3,8 +3,8 @@ package com.cvdcms.service.impl;
 import com.cvdcms.entity.Branch;
 import com.cvdcms.entity.PatientProfile;
 import com.cvdcms.entity.User;
-import com.cvdcms.patientportal.AccountPatientProfile;
-import com.cvdcms.patientportal.AccountPatientProfileRepository;
+import com.cvdcms.entity.AccountPatientProfile;
+import com.cvdcms.repository.AccountPatientProfileRepository;
 import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.repository.UserRepository;
@@ -167,10 +167,10 @@ public class PatientProfileServiceImpl implements PatientProfileService {
 
         Branch branch = getActiveBranch(branchId);
 
-        // Chỉ hồ sơ đầu tiên mới được đặt làm hồ sơ mặc định.
+        // Đặt làm hồ sơ mặc định nếu tài khoản chưa có hồ sơ mặc định nào.
         boolean firstProfile =
                 !patientProfileRepository
-                        .existsByUser_UserId(user.getUserId());
+                        .existsByUser_UserIdAndIsDefaultTrue(user.getUserId());
 
         PatientProfile profile = new PatientProfile();
         profile.setUser(user);
@@ -194,7 +194,7 @@ public class PatientProfileServiceImpl implements PatientProfileService {
             syncAccountBranch(user, branch);
         }
 
-        PatientProfile saved = patientProfileRepository.save(profile);
+        PatientProfile saved = patientProfileRepository.saveAndFlush(profile);
         ensureAccountProfileLink(user, saved, firstProfile);
         return saved;
     }

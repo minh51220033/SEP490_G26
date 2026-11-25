@@ -1,23 +1,25 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <body>
-<!-- Reuse the existing endpoints so filters, validation and POST redirects stay in their tab. -->
-<section th:fragment="membershipTabs(activeTab)" class="membership-tabs-wrapper mb-3">
+<!-- HEADER & THANH TAB SEGMENTED CHO THÀNH VIÊN & ƯU ĐÃI (ĐỒNG BỘ TÀI CHÍNH / QUẢN LÝ KHO) -->
+<section th:fragment="membershipTabs(activeTab)" class="membership-tabs-wrapper" id="membershipTabsWrapper">
     <!-- TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN HỆ THỐNG -->
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 membership-header-row">
         <div class="d-flex align-items-center gap-3">
-            <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
-                <i class="bi bi-person-vcard-fill"></i>
+            <div class="dv-header-icon">
+                <i class="bi bi-person-vcard-fill" aria-hidden="true"></i>
             </div>
             <div>
                 <h1 class="dv-page-title mb-0">Thành viên &amp; Ưu đãi</h1>
-                <p class="dv-page-subtitle">Tra cứu thẻ bệnh nhân, quản lý hạng thành viên, tích điểm và chương trình ưu đãi</p>
+                <p class="dv-page-subtitle mb-0">Tra cứu thẻ bệnh nhân, quản lý hạng thành viên, tích điểm và chương trình ưu đãi</p>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
             <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-            <a th:href="@{/reception/memberships}" class="btn btn-outline-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
-                <i class="bi bi-arrow-clockwise"></i> Làm mới
+            <a id="membershipRefreshBtn"
+               th:href="${activeTab == 'tiers'} ? @{/admin/membership-tiers} : (${activeTab == 'promotions'} ? @{/admin/promotions} : @{/reception/memberships})"
+               class="btn btn-outline-secondary membership-refresh-btn">
+                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Làm mới
             </a>
         </div>
     </div>
@@ -25,6 +27,7 @@
         <ul class="membership-tabs-list">
             <li th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'RECEPTION_MEMBERSHIPS'))}">
                 <a th:href="@{/reception/memberships}" class="membership-tab-btn"
+                   id="tab-membership-cards"
                    th:classappend="${activeTab == 'cards'} ? 'active' : ''"
                    th:attr="aria-current=${activeTab == 'cards' ? 'page' : null}">
                     <i class="bi bi-credit-card-2-front" aria-hidden="true"></i><span>Thẻ bệnh nhân</span>
@@ -32,6 +35,7 @@
             </li>
             <li th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_MEMBERSHIP_TIERS'))}">
                 <a th:href="@{/admin/membership-tiers}" class="membership-tab-btn"
+                   id="tab-membership-tiers"
                    th:classappend="${activeTab == 'tiers'} ? 'active' : ''"
                    th:attr="aria-current=${activeTab == 'tiers' ? 'page' : null}">
                     <i class="bi bi-award" aria-hidden="true"></i><span>Hạng thẻ &amp; Tích điểm</span>
@@ -39,6 +43,7 @@
             </li>
             <li th:if="${isAdmin or (permissionCodes != null and #lists.contains(permissionCodes, 'CATALOG_PROMOTIONS'))}">
                 <a th:href="@{/admin/promotions}" class="membership-tab-btn"
+                   id="tab-membership-promotions"
                    th:classappend="${activeTab == 'promotions'} ? 'active' : ''"
                    th:attr="aria-current=${activeTab == 'promotions' ? 'page' : null}">
                     <i class="bi bi-ticket-perforated" aria-hidden="true"></i><span>Khuyến mãi &amp; Voucher</span>
@@ -46,6 +51,7 @@
             </li>
         </ul>
     </nav>
+    <script th:src="@{/js/membership-tabs.js(v='20261125-1')}"></script>
 </section>
 
 <a th:fragment="membershipMenu(activeMenu)" class="side-link side-sublink"

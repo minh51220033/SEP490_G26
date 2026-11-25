@@ -90,6 +90,12 @@
                             <span class="badge bg-secondary-subtle text-secondary ms-1" th:text="${activeAssignmentCount}">0</span>
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation" th:if="${isDoctorStaff}">
+                        <button class="nav-link" id="tab-resource-perms" data-bs-toggle="tab" data-bs-target="#pane-resource-perms"
+                                type="button" role="tab" aria-controls="pane-resource-perms" aria-selected="false">
+                            <i class="bi bi-diagram-2"></i> Phòng &amp; Dịch vụ chuyên môn
+                        </button>
+                    </li>
                 </ul>
 
                 <div class="tab-content pt-2">
@@ -319,6 +325,74 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- ============ TAB 3: PHÂN CÔNG PHÒNG & DỊCH VỤ (PHASE 1 - CHỈ BÁC SĨ) ============ -->
+                    <div class="tab-pane fade" id="pane-resource-perms" role="tabpanel" aria-labelledby="tab-resource-perms" th:if="${isDoctorStaff}">
+                        <div class="alert alert-light border d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 py-2">
+                            <span class="small"><i class="bi bi-info-circle text-primary me-1"></i>Chỉ các bản ghi đã được Quản trị viên duyệt sang trạng thái <strong>ACTIVE</strong> mới được dùng để phân bổ lịch khám; bản ghi <strong>PENDING_REVIEW</strong> chỉ mang tính gợi ý chờ duyệt.</span>
+                        </div>
+                        <div id="docResAlert" class="alert d-none py-2 px-3 small mb-3" role="alert"></div>
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <div class="border rounded-3 p-3 bg-white h-100 d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                                        <h6 class="fw-bold mb-0"><i class="bi bi-door-open text-primary me-2"></i>Phân công Phòng theo chi nhánh</h6>
+                                        <span class="badge bg-light text-secondary border" id="docRoomCountBadge">0</span>
+                                    </div>
+                                    <div class="row g-2 mb-3 align-items-end">
+                                        <div class="col-md-5">
+                                            <label for="docResBranchSelect" class="form-label small text-muted mb-1">Chi nhánh</label>
+                                            <select id="docResBranchSelect" class="form-select form-select-sm">
+                                                <option th:each="a : ${assignments}"
+                                                        th:if="${a.branch != null and a.status.name() == 'ACTIVE'}"
+                                                        th:value="${a.branch.branchId}"
+                                                        th:text="${a.branch.branchName}"></option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="docResRoomSelect" class="form-label small text-muted mb-1">Phòng khám</label>
+                                            <select id="docResRoomSelect" class="form-select form-select-sm">
+                                                <option value="">-- Đang tải phòng --</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <button type="button" id="btnAddDocRoom" class="btn btn-sm btn-primary w-100 text-nowrap">
+                                                <i class="bi bi-plus-lg me-1"></i>Cấp quyền
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div id="docRoomAssignmentList" class="small text-muted flex-grow-1">Đang tải danh sách phòng...</div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="border rounded-3 p-3 bg-white h-100 d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                                        <h6 class="fw-bold mb-0"><i class="bi bi-clipboard2-pulse text-primary me-2"></i>Quyền Dịch vụ chuyên môn</h6>
+                                        <span class="badge bg-light text-secondary border" id="docServiceCountBadge">0</span>
+                                    </div>
+                                    <div class="row g-2 mb-3 align-items-end">
+                                        <div class="col-md-5">
+                                            <label for="docResServiceSearch" class="form-label small text-muted mb-1">Tìm &amp; chọn dịch vụ</label>
+                                            <input type="text" id="docResServiceSearch" class="form-control form-control-sm mb-1" placeholder="Tìm tên hoặc mã dịch vụ...">
+                                            <select id="docResServiceSelect" class="form-select form-select-sm">
+                                                <option value="">-- Đang tải dịch vụ --</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="docResServiceNote" class="form-label small text-muted mb-1">Ghi chú</label>
+                                            <input type="text" id="docResServiceNote" class="form-control form-control-sm" placeholder="Ghi chú chuyên môn">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <button type="button" id="btnAddDocService" class="btn btn-sm btn-primary w-100 text-nowrap">
+                                                <i class="bi bi-plus-lg me-1"></i>Cấp quyền
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div id="docServicePermList" class="small text-muted flex-grow-1">Đang tải danh sách quyền dịch vụ...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>
@@ -478,6 +552,216 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+
+    // 4. Phase 1: Tải, cấp & thu hồi phân công Phòng / Dịch vụ cho bác sĩ
+    const csrfMeta = document.querySelector('meta[name="_csrf"]');
+    const csrfHeaderMeta = document.querySelector('meta[name="_csrf_header"]');
+    const csrfInput = document.querySelector('input[name="_csrf"]');
+    const csrfToken = csrfMeta ? csrfMeta.content : (csrfInput ? csrfInput.value : '');
+    const csrfHeader = csrfHeaderMeta ? csrfHeaderMeta.content : 'X-CSRF-TOKEN';
+    const branchSel = document.getElementById('docResBranchSelect');
+    const roomSel = document.getElementById('docResRoomSelect');
+    const svcSel = document.getElementById('docResServiceSelect');
+    const svcSearch = document.getElementById('docResServiceSearch');
+    const resAlert = document.getElementById('docResAlert');
+
+    let allActiveServices = [];
+    let grantedRoomIds = new Set();
+    let grantedServiceIds = new Set();
+
+    function showResAlert(msg, isError) {
+        if (!resAlert) return;
+        resAlert.className = 'alert py-2 px-3 small mb-3 ' + (isError ? 'alert-danger' : 'alert-success');
+        resAlert.textContent = msg;
+        resAlert.classList.remove('d-none');
+    }
+
+    function escapeHtml(str) {
+        return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function reqRes(url, method, params) {
+        const headers = {};
+        if (csrfToken) headers[csrfHeader] = csrfToken;
+        const opts = { method, headers };
+        if (method === 'POST') {
+            headers['Content-Type'] = 'application/x-www-form-urlencoded';
+            opts.body = new URLSearchParams(params || {});
+        }
+        return fetch(url, opts)
+            .then(r => r.json().catch(() => ({})).then(d => { if (!r.ok) throw new Error(d.message || 'Thao tác thất bại'); return d; }));
+    }
+
+    function statusBadgeHtml(status) {
+        if (status === 'ACTIVE') return '<span class="badge bg-success-subtle text-success">ACTIVE</span>';
+        if (status === 'PENDING_REVIEW') return '<span class="badge bg-warning-subtle text-warning-emphasis">PENDING_REVIEW</span>';
+        return '<span class="badge bg-secondary-subtle text-secondary">Đã thu hồi</span>';
+    }
+
+    function loadBranchRoomsDropdown() {
+        if (!roomSel || !branchSel || !branchSel.value) {
+            if (roomSel) roomSel.innerHTML = '<option value="">-- Chưa có chi nhánh ACTIVE --</option>';
+            return;
+        }
+        roomSel.innerHTML = '<option value="">Đang tải phòng...</option>';
+        fetch(`/admin/api/resources/branches/${branchSel.value}/rooms`)
+            .then(r => r.ok ? r.json() : [])
+            .then(rooms => {
+                const available = rooms.filter(r => !grantedRoomIds.has(r.roomId));
+                if (!available.length) {
+                    roomSel.innerHTML = '<option value="">-- Không còn phòng trống để cấp --</option>';
+                    return;
+                }
+                roomSel.innerHTML = '<option value="">-- Chọn phòng khám --</option>' + available.map(r =>
+                    `<option value="${r.roomId}">${escapeHtml(r.roomCode)} - ${escapeHtml(r.roomName)} (${r.chairCount} ghế · ${escapeHtml(r.status)})</option>`
+                ).join('');
+            })
+            .catch(() => { roomSel.innerHTML = '<option value="">-- Lỗi tải danh sách phòng --</option>'; });
+    }
+
+    function renderServiceDropdown() {
+        if (!svcSel) return;
+        const q = (svcSearch?.value || '').trim().toLowerCase();
+        const available = allActiveServices.filter(s => {
+            if (grantedServiceIds.has(s.serviceId)) return false;
+            if (!q) return true;
+            return (s.serviceCode || '').toLowerCase().includes(q) || (s.serviceName || '').toLowerCase().includes(q);
+        });
+        if (!available.length) {
+            svcSel.innerHTML = '<option value="">-- Không tìm thấy dịch vụ phù hợp --</option>';
+            return;
+        }
+        svcSel.innerHTML = '<option value="">-- Chọn dịch vụ --</option>' + available.map(s =>
+            `<option value="${s.serviceId}">${escapeHtml(s.serviceCode)} - ${escapeHtml(s.serviceName)} (${s.durationMinutes}p)</option>`
+        ).join('');
+    }
+
+    function loadServicesDropdown() {
+        if (!svcSel) return;
+        fetch('/admin/api/resources/services')
+            .then(r => r.ok ? r.json() : [])
+            .then(list => {
+                allActiveServices = Array.isArray(list) ? list : [];
+                renderServiceDropdown();
+            })
+            .catch(() => { svcSel.innerHTML = '<option value="">-- Lỗi tải dịch vụ --</option>'; });
+    }
+
+    function loadDocRooms() {
+        const box = document.getElementById('docRoomAssignmentList');
+        const badge = document.getElementById('docRoomCountBadge');
+        if (!box || !branchSel || !branchSel.value) {
+            if (box) box.innerHTML = '<div class="text-muted py-2">Nhân viên chưa có chi nhánh ACTIVE.</div>';
+            loadBranchRoomsDropdown();
+            return;
+        }
+        box.innerHTML = '<div class="text-muted py-2">Đang tải danh sách phòng...</div>';
+        fetch(`/admin/api/resources/branches/${branchSel.value}/doctors/${staffId}/rooms`)
+            .then(r => r.ok ? r.json() : [])
+            .then(list => {
+                const activeList = list.filter(a => a.status !== 'INACTIVE');
+                grantedRoomIds = new Set(activeList.map(a => a.roomId));
+                if (badge) badge.textContent = String(activeList.length);
+                loadBranchRoomsDropdown();
+                if (!list.length) { box.innerHTML = '<div class="text-muted py-2">Chưa có phân công phòng nào.</div>'; return; }
+                box.innerHTML = list.map(a => {
+                    const approveBtn = a.status === 'PENDING_REVIEW'
+                        ? `<button type="button" class="btn btn-outline-success btn-sm py-0 px-2 btn-approve-room" data-id="${a.assignmentId}">Duyệt ACTIVE</button>`
+                        : '';
+                    const revokeBtn = a.status !== 'INACTIVE'
+                        ? `<button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 btn-revoke-room" data-id="${a.assignmentId}"><i class="bi bi-x-circle me-1"></i>Thu hồi</button>`
+                        : '';
+                    return `<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 border-bottom">
+                        <span><strong>${escapeHtml(a.roomCode)}</strong> - ${escapeHtml(a.roomName)} ${statusBadgeHtml(a.status)}</span>
+                        <span class="d-flex gap-1">${approveBtn}${revokeBtn}</span>
+                    </div>`;
+                }).join('');
+                box.querySelectorAll('.btn-approve-room').forEach(btn => {
+                    btn.addEventListener('click', () => reqRes(`/admin/api/resources/doctors/room-assignments/${btn.dataset.id}/approve`, 'POST')
+                        .then(() => { showResAlert('Đã duyệt phân công phòng sang ACTIVE.', false); loadDocRooms(); })
+                        .catch(e => showResAlert(e.message, true)));
+                });
+                box.querySelectorAll('.btn-revoke-room').forEach(btn => {
+                    btn.addEventListener('click', () => reqRes(`/admin/api/resources/doctors/room-assignments/${btn.dataset.id}`, 'DELETE')
+                        .then(() => { showResAlert('Đã thu hồi phân công phòng.', false); loadDocRooms(); })
+                        .catch(e => showResAlert(e.message, true)));
+                });
+            });
+    }
+
+    function loadDocServices() {
+        const box = document.getElementById('docServicePermList');
+        const badge = document.getElementById('docServiceCountBadge');
+        if (!box) return;
+        box.innerHTML = '<div class="text-muted py-2">Đang tải danh sách quyền dịch vụ...</div>';
+        fetch(`/admin/api/resources/doctors/${staffId}/services`)
+            .then(r => r.ok ? r.json() : [])
+            .then(list => {
+                const activeList = list.filter(p => p.status !== 'INACTIVE');
+                grantedServiceIds = new Set(activeList.map(p => p.serviceId));
+                if (badge) badge.textContent = String(activeList.length);
+                renderServiceDropdown();
+                if (!list.length) { box.innerHTML = '<div class="text-muted py-2">Chưa có phân quyền dịch vụ nào.</div>'; return; }
+                box.innerHTML = list.map(p => {
+                    const approveBtn = p.status === 'PENDING_REVIEW'
+                        ? `<button type="button" class="btn btn-outline-success btn-sm py-0 px-2 btn-approve-svc" data-id="${p.permissionId}">Duyệt ACTIVE</button>`
+                        : '';
+                    const revokeBtn = p.status !== 'INACTIVE'
+                        ? `<button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 btn-revoke-svc" data-id="${p.permissionId}"><i class="bi bi-x-circle me-1"></i>Thu hồi</button>`
+                        : '';
+                    return `<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 border-bottom">
+                        <span><strong>${escapeHtml(p.serviceCode)}</strong> - ${escapeHtml(p.serviceName)} ${statusBadgeHtml(p.status)}</span>
+                        <span class="d-flex gap-1">${approveBtn}${revokeBtn}</span>
+                    </div>`;
+                }).join('');
+                box.querySelectorAll('.btn-approve-svc').forEach(btn => {
+                    btn.addEventListener('click', () => reqRes(`/admin/api/resources/doctors/service-permissions/${btn.dataset.id}/approve`, 'POST')
+                        .then(() => { showResAlert('Đã duyệt quyền dịch vụ sang ACTIVE.', false); loadDocServices(); })
+                        .catch(e => showResAlert(e.message, true)));
+                });
+                box.querySelectorAll('.btn-revoke-svc').forEach(btn => {
+                    btn.addEventListener('click', () => reqRes(`/admin/api/resources/doctors/service-permissions/${btn.dataset.id}`, 'DELETE')
+                        .then(() => { showResAlert('Đã thu hồi quyền dịch vụ.', false); loadDocServices(); })
+                        .catch(e => showResAlert(e.message, true)));
+                });
+            });
+    }
+
+    if (branchSel) branchSel.addEventListener('change', loadDocRooms);
+    if (svcSearch) svcSearch.addEventListener('input', renderServiceDropdown);
+    document.getElementById('btnAddDocRoom')?.addEventListener('click', () => {
+        if (!branchSel || !branchSel.value || !roomSel || !roomSel.value) {
+            showResAlert('Vui lòng chọn chi nhánh và phòng khám hợp lệ.', true);
+            return;
+        }
+        reqRes(`/admin/api/resources/branches/${branchSel.value}/doctors/${staffId}/rooms`, 'POST', {
+            roomId: roomSel.value,
+            status: 'PENDING_REVIEW'
+        }).then(() => {
+            showResAlert('Đã gửi yêu cầu phân công phòng.', false);
+            loadDocRooms();
+        }).catch(e => showResAlert(e.message, true));
+    });
+    document.getElementById('btnAddDocService')?.addEventListener('click', () => {
+        if (!svcSel || !svcSel.value) {
+            showResAlert('Vui lòng chọn dịch vụ hợp lệ.', true);
+            return;
+        }
+        reqRes(`/admin/api/resources/doctors/${staffId}/services`, 'POST', {
+            serviceId: svcSel.value,
+            note: document.getElementById('docResServiceNote').value,
+            status: 'PENDING_REVIEW'
+        }).then(() => {
+            document.getElementById('docResServiceNote').value = '';
+            showResAlert('Đã gửi yêu cầu phân quyền dịch vụ.', false);
+            loadDocServices();
+        }).catch(e => showResAlert(e.message, true));
+    });
+    if (document.getElementById('docResRoomSelect')) {
+        loadServicesDropdown();
+        loadDocRooms();
+        loadDocServices();
+    }
 });
 </script>
 </body>

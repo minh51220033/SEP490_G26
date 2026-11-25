@@ -5,7 +5,7 @@ import com.cvdcms.DTO.OdontogramResponseDTO;
 import com.cvdcms.entity.PatientOdontogram;
 import com.cvdcms.entity.PatientProfile;
 import com.cvdcms.entity.User;
-import com.cvdcms.patient.PatientAccess;
+import com.cvdcms.security.PatientAccess;
 import com.cvdcms.repository.PatientOdontogramRepository;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.repository.VisitRepository;

@@ -37,7 +37,7 @@ public class TreatmentPlanRestController {
     private com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+    private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
 
     private jakarta.servlet.http.HttpSession currentHttpSession() {
         var attrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
@@ -317,7 +317,7 @@ public class TreatmentPlanRestController {
                         "message", "Ca khám đã hoàn tất lâm sàng hoặc đã khóa/hủy (BR-EMR-02). Không thể thêm dịch vụ thực hiện."
                 ));
             }
-            com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+            com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                     visit,
                     emrRecordRepository,
                     "Bệnh án lâm sàng đã hoàn tất và khóa bất biến. Không thể thêm dịch vụ thực hiện");

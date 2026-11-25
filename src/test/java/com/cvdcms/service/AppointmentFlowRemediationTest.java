@@ -1,13 +1,14 @@
 package com.cvdcms.service;
 
+import com.cvdcms.DTO.PortalProfileView;
+import com.cvdcms.security.PortalAccess;
+import com.cvdcms.security.ReceptionAccess;
+
 import com.cvdcms.controller.CustomerPortalController;
 import com.cvdcms.controller.ProfileController;
 import com.cvdcms.controller.PublicBookingRestController;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
-import com.cvdcms.patientportal.*;
-import com.cvdcms.reception.*;
-import com.cvdcms.receptionappointment.*;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.impl.AppointmentLifecycleServiceImpl;
 import com.cvdcms.service.impl.PatientProfileServiceImpl;
@@ -483,10 +484,10 @@ class AppointmentFlowRemediationTest {
         ReceptionAppointmentRepository apptRepo = mock(ReceptionAppointmentRepository.class);
         AppointmentBookingLockRepository lockRepo = mock(AppointmentBookingLockRepository.class);
         ReceptionAppointmentService recService = new ReceptionAppointmentService(
-                mock(com.cvdcms.patient.PatientAccess.class),
+                mock(com.cvdcms.security.PatientAccess.class),
                 apptRepo,
                 mock(ReceptionAppointmentPatientRepository.class),
-                mock(com.cvdcms.patient.ReceptionPatientRepository.class),
+                mock(com.cvdcms.repository.ReceptionPatientRepository.class),
                 mock(BranchRepository.class),
                 lockRepo,
                 mock(ServiceRepository.class),
@@ -497,7 +498,7 @@ class AppointmentFlowRemediationTest {
                 new AppointmentLifecycleServiceImpl(),
                 mock(AppointmentConflictDetectionService.class),
                 mock(AppointmentSlotService.class),
-                mock(com.cvdcms.patient.PatientService.class),
+                mock(com.cvdcms.service.PatientService.class),
                 jakarta.validation.Validation.buildDefaultValidatorFactory().getValidator());
 
         Appointment scheduled = new Appointment();

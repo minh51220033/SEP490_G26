@@ -1,5 +1,6 @@
 package com.cvdcms.entity;
 
+import com.cvdcms.entity.enums.AppointmentResourceStatus;
 import com.cvdcms.entity.enums.AppointmentSource;
 import com.cvdcms.entity.enums.AppointmentStatus;
 import com.cvdcms.entity.enums.PreferredSession;
@@ -50,6 +51,9 @@ public class Appointment {
     @JoinColumn(name = "doctor_id")
     private StaffProfile doctor;
 
+    @Column(name = "is_doctor_requested", nullable = false)
+    private Boolean isDoctorRequested = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id")
     private Service service;
@@ -92,6 +96,42 @@ public class Appointment {
 
     @Column(name = "cancelled_at")
     private LocalDateTime cancelledAt;
+
+    @Column(name = "preparation_duration_minutes")
+    private Integer preparationDurationMinutes;
+
+    @Column(name = "procedure_duration_minutes")
+    private Integer procedureDurationMinutes;
+
+    @Column(name = "turnover_duration_minutes")
+    private Integer turnoverDurationMinutes;
+
+    @Column(name = "is_room_exclusive_snapshot", nullable = false)
+    private Boolean isRoomExclusiveSnapshot = false;
+
+    @Column(name = "doctor_required_in_prep_snapshot", nullable = false)
+    private Boolean doctorRequiredInPrepSnapshot = false;
+
+    @Column(name = "doctor_required_in_turnover_snapshot", nullable = false)
+    private Boolean doctorRequiredInTurnoverSnapshot = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_room_id")
+    private Room assignedRoom;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assigned_chair_id")
+    private DentalChair assignedChair;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "resource_status", length = 30)
+    private AppointmentResourceStatus resourceStatus;
+
+    @Column(name = "resource_conflict_note", length = 500)
+    private String resourceConflictNote;
+
+    @Column(name = "booking_group_code", length = 40)
+    private String bookingGroupCode;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

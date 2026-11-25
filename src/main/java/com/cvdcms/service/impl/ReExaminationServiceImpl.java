@@ -53,6 +53,8 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     private com.cvdcms.repository.AppointmentBookingLockRepository appointmentBookingLockRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private StaffScheduleRepository staffScheduleRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ResourceBookingTransactionService resourceBookingTransactionService;
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -87,6 +89,7 @@ public class ReExaminationServiceImpl implements ReExaminationService {
         if (appointmentBookingLockRepository != null && branch.getBranchId() != null) {
             branch = appointmentBookingLockRepository.findByIdForBooking(branch.getBranchId()).orElse(branch);
         }
+        enforceHttpAccessForCreate(dto, branch.getBranchId());
 
         StaffProfile doctor = null;
         if (dto.getDoctorId() != null) {
@@ -129,6 +132,54 @@ public class ReExaminationServiceImpl implements ReExaminationService {
         LocalTime resolvedTime = parseExpectedTimeStrictOrDefault(dto.getExpectedTime(), defaultTimeForSession(resolvedSession));
         if (targetDate.isEqual(today) && resolvedTime != null && resolvedTime.isBefore(nowTime)) {
             throw new IllegalArgumentException("Giờ hẹn tái khám hôm nay không được nằm trong quá khứ!");
+        }
+        if (Boolean.TRUE.equals(branch.getResourceEngineEnabled())) {
+            if (service == null || service.getStatus() != ServiceStatus.ACTIVE) {
+                throw new IllegalArgumentException("Chi nhánh đã bật Resource Engine: tái khám bắt buộc phải chọn dịch vụ đang hoạt động.");
+            }
+            if (resolvedTime == null) {
+                throw new IllegalArgumentException("Vui lòng chọn giờ hẹn tái khám cụ thể.");
+            }
+            if (resourceBookingTransactionService == null) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Resource Booking Engine chưa sẵn sàng.");
+            }
+            var resResult = resourceBookingTransactionService.bookInExistingTransaction(
+                    new com.cvdcms.DTO.availability.ResourceBookingRequest(
+                            branch.getBranchId(),
+                            patient.getProfileId(),
+                            service.getServiceId(),
+                            targetDate,
+                            resolvedTime,
+                            doctor != null ? doctor.getStaffId() : null,
+                            doctor == null,
+                            null,
+                            resolvedSession,
+                            AppointmentSource.RECEPTIONIST,
+                            dto.getFollowupReason() != null ? dto.getFollowupReason() : "Tái khám kiểm tra sau điều trị",
+                            null,
+                            false),
+                    AppointmentStatus.CONFIRMED);
+            Appointment savedAppt = appointmentRepository.findById(resResult.appointmentId())
+                    .orElseThrow(() -> new IllegalStateException("Không thể tải lịch hẹn tái khám sau khi lưu."));
+            CustomerCareTask careTask = null;
+            if (dto.isCreateCareTask()) {
+                careTask = new CustomerCareTask();
+                careTask.setTaskCode("CSKH" + System.currentTimeMillis() % 10000000);
+                careTask.setPatientProfile(patient);
+                careTask.setBranch(branch);
+                careTask.setTaskType(CustomerCareTaskType.APPOINTMENT_REMINDER);
+                careTask.setAppointment(savedAppt);
+                careTask.setVisit(currentVisit);
+                LocalDate careDueDate = savedAppt.getAppointmentDate().minusDays(1);
+                if (careDueDate.isBefore(today)) careDueDate = today;
+                careTask.setDueDate(careDueDate);
+                careTask.setStatus(CustomerCareTaskStatus.PENDING);
+                careTask.setNotes("Nhắc lịch hẹn tái khám ngày " + savedAppt.getAppointmentDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                        + ": " + savedAppt.getInitialSymptoms()
+                        + (dto.getCareTaskNotes() != null && !dto.getCareTaskNotes().isBlank() ? " | Ghi chú thêm: " + dto.getCareTaskNotes() : ""));
+                careTask = customerCareTaskRepository.save(careTask);
+            }
+            return mapToDTO(savedAppt, careTask);
         }
         int durationMinutes = com.cvdcms.service.AppointmentSlotService.duration(service);
         if (doctor != null) {
@@ -202,6 +253,9 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     @Transactional(readOnly = true)
     public List<ReExaminationResponseDTO> getReExaminationsByPatient(Long patientProfileId) {
         if (patientProfileId == null) return Collections.emptyList();
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requirePatientRead(currentHttpSession(), patientProfileId);
+        }
 
         List<Appointment> list = appointmentRepository.findByPatientProfile_ProfileIdOrderByAppointmentDateDesc(patientProfileId);
         return list.stream().map(this::mapToDTO).collect(Collectors.toList());
@@ -245,6 +299,13 @@ public class ReExaminationServiceImpl implements ReExaminationService {
         if ("OVERDUE".equalsIgnoreCase(dateFilter)) {
             list = list.stream()
                     .filter(a -> a.getStatus() == AppointmentStatus.PENDING || a.getStatus() == AppointmentStatus.CONFIRMED)
+                    .collect(Collectors.toList());
+        }
+
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            User user = doctorVisitAccess.requireAuthenticatedUser(currentHttpSession());
+            list = list.stream()
+                    .filter(a -> a.getBranch() != null && doctorVisitAccess.isBranchAllowed(user, a.getBranch().getBranchId()))
                     .collect(Collectors.toList());
         }
 
@@ -308,6 +369,32 @@ public class ReExaminationServiceImpl implements ReExaminationService {
         return stats;
     }
 
+    private boolean isHttpRequestActive() {
+        return org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
+                instanceof org.springframework.web.context.request.ServletRequestAttributes;
+    }
+
+    private jakarta.servlet.http.HttpSession currentHttpSession() {
+        var attrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        return attrs instanceof org.springframework.web.context.request.ServletRequestAttributes sra
+                ? sra.getRequest().getSession(false) : null;
+    }
+
+    private void enforceHttpAccessForCreate(ReExaminationRequestDTO dto, Long branchId) {
+        if (doctorVisitAccess == null || !isHttpRequestActive()) {
+            return;
+        }
+        jakarta.servlet.http.HttpSession session = currentHttpSession();
+        if (dto.getVisitId() != null) {
+            doctorVisitAccess.require(session, dto.getVisitId());
+        } else {
+            doctorVisitAccess.requirePatient(session, dto.getPatientProfileId());
+        }
+        if (branchId != null) {
+            doctorVisitAccess.requireBranch(session, branchId);
+        }
+    }
+
     private Set<Long> resolveCurrentUserBranchScope() {
         if (doctorVisitAccess == null) {
             return null;
@@ -330,7 +417,11 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     @Override
     @Transactional
     public ReExaminationResponseDTO updateAppointmentStatus(Long appointmentId, String statusStr, String cancelReason) {
-        Appointment appt = appointmentRepository.findById(appointmentId)
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireReExamination(currentHttpSession(), appointmentId);
+        }
+        Appointment appt = appointmentRepository.lockById(appointmentId)
+                .or(() -> appointmentRepository.findById(appointmentId))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lịch hẹn tái khám."));
 
         assertAppointmentMutable(appt, "Không thể cập nhật trạng thái lịch hẹn đã hoàn thành, đã check-in hoặc đã hủy.");
@@ -345,11 +436,15 @@ public class ReExaminationServiceImpl implements ReExaminationService {
             throw new IllegalArgumentException("Trạng thái lịch hẹn không hợp lệ: " + statusStr);
         }
 
-        appt.setStatus(newStatus);
         if (newStatus == AppointmentStatus.CANCELLED) {
+            if (resourceBookingTransactionService != null) {
+                resourceBookingTransactionService.releaseReservationsOnCancelOrNoShow(
+                        appointmentId, ReservationStatus.CANCELLED, "APPOINTMENT_CANCELLED", LocalDateTime.now(CLINIC_ZONE));
+            }
             appt.setCancelReason(cancelReason != null && !cancelReason.isBlank() ? cancelReason : "Bệnh nhân báo bận");
             appt.setCancelledAt(LocalDateTime.now(CLINIC_ZONE));
         }
+        appt.setStatus(newStatus);
         Appointment saved = appointmentRepository.save(appt);
         if (newStatus == AppointmentStatus.CANCELLED) {
             cancelLinkedCareTasks(appointmentId, saved.getCancelReason());
@@ -360,6 +455,9 @@ public class ReExaminationServiceImpl implements ReExaminationService {
     @Override
     @Transactional
     public ReExaminationResponseDTO updateAppointmentDate(Long appointmentId, LocalDate newDate, String newTime, PreferredSession session) {
+        if (doctorVisitAccess != null && isHttpRequestActive()) {
+            doctorVisitAccess.requireReExamination(currentHttpSession(), appointmentId);
+        }
         AppointmentLockSnapshot snap = readLockSnapshot(appointmentId);
         if (snap == null) {
             throw new IllegalArgumentException("Không tìm thấy lịch hẹn tái khám.");
@@ -425,6 +523,41 @@ public class ReExaminationServiceImpl implements ReExaminationService {
 
         if (targetDate.isEqual(today) && targetTime != null && targetTime.isBefore(nowTime)) {
             throw new IllegalArgumentException("Giờ hẹn tái khám hôm nay không được nằm trong quá khứ!");
+        }
+        if (appt.getBranch() != null && Boolean.TRUE.equals(appt.getBranch().getResourceEngineEnabled())) {
+            if (appt.getService() == null || targetTime == null) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Lịch hẹn tái khám thiếu dịch vụ hoặc giờ hẹn cụ thể để đặt giữ tài nguyên trên Resource Engine.");
+            }
+            if (resourceBookingTransactionService == null) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Resource Booking Engine chưa sẵn sàng.");
+            }
+            Long doctorId = appt.getDoctor() != null ? appt.getDoctor().getStaffId() : null;
+            resourceBookingTransactionService.rescheduleInExistingTransaction(
+                    com.cvdcms.DTO.availability.ResourceRescheduleRequest.reschedule(
+                            appointmentId, appt.getBranch().getBranchId(), null,
+                            targetDate, targetTime, targetSession,
+                            doctorId, doctorId == null,
+                            "RESCHEDULED", appt.getStatus(), true));
+            Appointment saved = appointmentRepository.findById(appointmentId)
+                    .orElseThrow(() -> new IllegalStateException("Không thể tải lịch hẹn sau khi dời lịch."));
+            List<CustomerCareTask> linkedTasks = findLinkedCareTasks(appointmentId);
+            for (CustomerCareTask task : linkedTasks) {
+                LocalDate newDueDate = targetDate.minusDays(1);
+                if (newDueDate.isBefore(today)) newDueDate = today;
+                task.setDueDate(newDueDate);
+                if (task.getStatus() != CustomerCareTaskStatus.COMPLETED && task.getStatus() != CustomerCareTaskStatus.CANCELLED) {
+                    task.setStatus(CustomerCareTaskStatus.PENDING);
+                }
+                String changeNote = "[Đổi ngày sang: " + targetDate
+                        + " " + targetTime.format(DateTimeFormatter.ofPattern("HH:mm")) + "]";
+                String existingNotes = task.getNotes();
+                task.setNotes((existingNotes != null && !existingNotes.isBlank())
+                        ? existingNotes + " | " + changeNote
+                        : changeNote);
+                customerCareTaskRepository.save(task);
+            }
+            return mapToDTO(saved);
         }
         if (appt.getDoctor() != null) {
             if (appt.getDoctor().getStatus() != null && appt.getDoctor().getStatus() != StaffStatus.ACTIVE) {

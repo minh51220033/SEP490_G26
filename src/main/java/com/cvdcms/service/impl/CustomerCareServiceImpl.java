@@ -72,7 +72,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
 
     private String buildExaminationDetailUrl(Long visitId) {
         String ref = urlIdCodec != null ? urlIdCodec.encodeVisit(visitId) : "";
-        return "/doctor/examination/" + ref + "/diagnoses#tab-instructions";
+        return "/doctor/examination/" + ref + "/diagnoses?readOnly=true#tab-instructions";
     }
 
     public CustomerCareServiceImpl(

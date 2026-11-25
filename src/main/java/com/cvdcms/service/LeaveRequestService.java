@@ -41,6 +41,9 @@ public class LeaveRequestService {
     @Autowired(required = false)
     private AppointmentHistoryRepository appointmentHistoryRepository;
 
+    @Autowired(required = false)
+    private DoctorShiftAssignmentRepository doctorShiftAssignmentRepository;
+
     public LeaveRequestService(LeaveRequestRepository leaveRequestRepository,
                                StaffScheduleRepository scheduleRepository,
                                AppointmentRepository appointmentRepository,
@@ -264,6 +267,13 @@ public class LeaveRequestService {
                     scheduleRepository.lockDoctorSchedulesForDate(staffId, cursor, ScheduleStatus.SCHEDULED);
                     cursor = cursor.plusDays(1);
                 }
+                if (doctorShiftAssignmentRepository != null) {
+                    doctorShiftAssignmentRepository.lockByStaffAndDateRangeAndStatusOrderByIdAsc(
+                            staffId,
+                            leave.getStartDate(),
+                            leave.getEndDate(),
+                            com.cvdcms.entity.enums.DoctorShiftAssignmentStatus.ACTIVE);
+                }
             }
         }
 
@@ -333,6 +343,30 @@ public class LeaveRequestService {
             scheduleRepository.saveAll(schedulesToLock);
         }
 
+        // Đồng bộ khóa các phân công bác sĩ theo phòng/ca (chỉ đánh dấu bác sĩ nghỉ, giữ nguyên đồng nghiệp cùng phòng)
+        if (doctorShiftAssignmentRepository != null && staffId != null) {
+            List<DoctorShiftAssignment> activeShiftAssignments = doctorShiftAssignmentRepository
+                    .lockByStaffAndDateRangeAndStatusOrderByIdAsc(
+                            staffId, leave.getStartDate(), leave.getEndDate(),
+                            com.cvdcms.entity.enums.DoctorShiftAssignmentStatus.ACTIVE);
+            List<DoctorShiftAssignment> dsaToLeave = new ArrayList<>();
+            for (DoctorShiftAssignment dsa : activeShiftAssignments) {
+                boolean branchMatches = leaveBranchId == null
+                        || (dsa.getBranch() != null && leaveBranchId.equals(dsa.getBranch().getBranchId()));
+                boolean shiftMatches = leave.getShift() == null
+                        || (dsa.getShift() != null && Objects.equals(leave.getShift().getShiftId(), dsa.getShift().getShiftId()));
+                if (branchMatches && shiftMatches) {
+                    dsa.setStatus(com.cvdcms.entity.enums.DoctorShiftAssignmentStatus.ON_LEAVE);
+                    dsa.setLeaveRequest(leave);
+                    dsa.syncActiveSlotKey();
+                    dsaToLeave.add(dsa);
+                }
+            }
+            if (!dsaToLeave.isEmpty()) {
+                doctorShiftAssignmentRepository.saveAll(dsaToLeave);
+            }
+        }
+
         // 2. GIỮ NGUYÊN CÁC LỊCH HẸN BỊ ẢNH HƯỞNG (PENDING & CONFIRMED) Ở TRẠNG THÁI CẦN ĐIỀU PHỐI (NEEDS_REASSIGNMENT)
         // Không tự động hủy hàng loạt khi duyệt nghỉ phép để tránh mất lịch hẹn hợp lệ của bệnh nhân.
         List<Appointment> affectedAppointments = Collections.emptyList();
@@ -365,6 +399,9 @@ public class LeaveRequestService {
 
         if (!affectedAppointments.isEmpty()) {
             for (Appointment app : affectedAppointments) {
+                app.setResourceStatus(com.cvdcms.entity.enums.AppointmentResourceStatus.NEEDS_REASSIGNMENT);
+                app.setResourceConflictNote("Bác sĩ " + doctorName + " nghỉ phép (#LR-" + leave.getLeaveId() + "); chờ điều phối thay thế.");
+                appointmentRepository.save(app);
                 if (appointmentHistoryRepository != null && app.getAppointmentId() != null) {
                     String baseSnap = app.getAppointmentDate() + "|" + app.getPreferredSession()
                             + "|doctor=" + (app.getDoctor() != null ? app.getDoctor().getStaffId() : null)
