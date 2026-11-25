@@ -97,7 +97,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private BranchBankAccountRepository branchBankAccountRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+    private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     @org.springframework.context.annotation.Lazy
     private com.cvdcms.service.PerformedServiceService performedServiceService;
@@ -141,7 +141,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         if (request.getVisitId() != null && visitRepository != null) {
             Visit visit = visitRepository.findById(request.getVisitId())
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám phù hợp."));
-            com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+            com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                     visit,
                     emrRecordRepository,
                     "Ca khám đã khóa/hoàn tất lâm sàng, không thể lập kế hoạch điều trị");
@@ -267,7 +267,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         if (request.getVisitId() != null && visitRepository != null) {
             Visit visit = visitRepository.findById(request.getVisitId())
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám phù hợp."));
-            com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+            com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                     visit,
                     emrRecordRepository,
                     "Ca khám đã khóa/hoàn tất lâm sàng, không thể chỉnh sửa kế hoạch điều trị");
@@ -509,7 +509,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                         List<PerformedService> activeServices = performedServiceRepository
                                 .findByPlanItem_PlanItemIdAndStatusNot(it.getPlanItemId(), PerformedServiceStatus.CANCELLED);
                         for (PerformedService ps : activeServices) {
-                            com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                            com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                                     ps.getVisit(),
                                     emrRecordRepository,
                                     "Bệnh án lâm sàng đã khóa/hủy, không thể đặt lại trạng thái giai đoạn phác đồ");
@@ -578,7 +578,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             List<PerformedService> activeServices = performedServiceRepository.findByPlanItem_PlanItemIdAndStatusNot(
                     planItemId, PerformedServiceStatus.CANCELLED);
             for (PerformedService ps : activeServices) {
-                com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+                com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                         ps.getVisit(),
                         emrRecordRepository,
                         "Bệnh án lâm sàng đã khóa/hủy, không thể hoàn tác bước thủ thuật phác đồ");

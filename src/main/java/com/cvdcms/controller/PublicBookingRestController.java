@@ -77,10 +77,10 @@ public class PublicBookingRestController {
     private final AppointmentSlotService appointmentSlotService;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private com.cvdcms.patientportal.PortalAccess portalAccess;
+    private com.cvdcms.security.PortalAccess portalAccess;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private com.cvdcms.patientportal.PortalPatientService portalPatientService;
+    private com.cvdcms.service.PortalPatientService portalPatientService;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.AppointmentBookingLockRepository appointmentBookingLockRepository;

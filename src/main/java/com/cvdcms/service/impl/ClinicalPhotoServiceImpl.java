@@ -42,7 +42,7 @@ public class ClinicalPhotoServiceImpl implements ClinicalPhotoService {
     private ParaclinicalOrderItemRepository paraclinicalOrderItemRepository;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+    private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
 
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
@@ -88,7 +88,7 @@ public class ClinicalPhotoServiceImpl implements ClinicalPhotoService {
         Visit visit = null;
         if (visitId != null) {
             visit = visitRepository.findById(visitId).orElse(null);
-            com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+            com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                     visit,
                     emrRecordRepository,
                     "Hồ sơ bệnh án đã khóa hoặc đã hủy. Không thể tải lên ảnh lâm sàng");
@@ -181,7 +181,7 @@ public class ClinicalPhotoServiceImpl implements ClinicalPhotoService {
     public void deletePhoto(Long photoId) throws IOException {
         ClinicalPhoto photo = clinicalPhotoRepository.findById(photoId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ảnh ID: " + photoId));
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 photo.getVisit(),
                 emrRecordRepository,
                 "Hồ sơ bệnh án đã khóa hoặc đã hủy. Không thể xóa ảnh lâm sàng");
@@ -207,7 +207,7 @@ public class ClinicalPhotoServiceImpl implements ClinicalPhotoService {
     public ClinicalPhotoResponseDTO updatePhoto(Long photoId, String caption, PhotoStage stage, PhotoCategory category) {
         ClinicalPhoto photo = clinicalPhotoRepository.findById(photoId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ảnh ID: " + photoId));
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 photo.getVisit(),
                 emrRecordRepository,
                 "Hồ sơ bệnh án đã khóa hoặc đã hủy. Không thể cập nhật ảnh lâm sàng");

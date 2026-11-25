@@ -1,7 +1,8 @@
 package com.cvdcms.service;
 
+import com.cvdcms.security.EmrAccess;
+
 import com.cvdcms.DTO.*;
-import com.cvdcms.emr.*;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;

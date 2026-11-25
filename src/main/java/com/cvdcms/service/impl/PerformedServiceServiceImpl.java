@@ -58,7 +58,7 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
     private com.cvdcms.repository.InvoiceItemRepository invoiceItemRepository;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+    private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.MaterialConsumptionRepository materialConsumptionRepository;
@@ -181,7 +181,7 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám với ID: " + requestDTO.getVisitId()));
 
         // Quy tắc BR-EMR-02: Khóa bệnh án lâm sàng bất biến khi chuyển thanh toán, hoàn tất, hủy hoặc EMR đã khóa
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 visit,
                 emrRecordRepository,
                 "Bệnh án lâm sàng đã hoàn tất và khóa bất biến. Không thể thêm dịch vụ thực hiện");
@@ -382,7 +382,7 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
         }
 
         // Quy tắc BR-EMR-02: Khóa bất biến theo VisitStatus & trạng thái EMR
-        com.cvdcms.emr.EmrStatePolicy.assertMutableVisitAndEmr(
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
                 ps.getVisit(),
                 emrRecordRepository,
                 "Bệnh án lâm sàng đã khóa bất biến. Không thể xóa hoặc hủy dịch vụ đã thực hiện");

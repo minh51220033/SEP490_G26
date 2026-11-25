@@ -1,12 +1,21 @@
 package com.cvdcms;
 
+import com.cvdcms.controller.AdminPatientPageController;
+import com.cvdcms.controller.DoctorRecordPageController;
+import com.cvdcms.controller.PatientPageController;
+import com.cvdcms.DTO.PatientOverviewDTO;
+import com.cvdcms.DTO.PatientView;
+import com.cvdcms.service.DoctorRecordService;
+import com.cvdcms.service.PatientDocumentStorageService;
+import com.cvdcms.service.PatientOverviewService;
+import com.cvdcms.service.PatientService;
+
 import com.cvdcms.DTO.LaboOrderResponseDTO;
 import com.cvdcms.DTO.WorkflowTemplateResponseDTO;
 import com.cvdcms.controller.ClinicalWorkflowController;
 import com.cvdcms.controller.LaboPageController;
-import com.cvdcms.emr.EmrModuleService;
-import com.cvdcms.emr.EmrPageController;
-import com.cvdcms.patient.*;
+import com.cvdcms.service.EmrModuleService;
+import com.cvdcms.controller.EmrPageController;
 import com.cvdcms.repository.BranchRepository;
 import com.cvdcms.repository.PatientProfileRepository;
 import com.cvdcms.repository.SupplierRepository;
@@ -248,7 +257,7 @@ public class MisaAmisPaginationUnitTest {
         for (int i = 1; i <= 14; i++) {
             mockRows.add(new EmrModuleService.RecordRow((long) i, "EMR-" + i, (long) i, "LK-" + i, (long) i, "BN-" + i,
                     "Bệnh nhân " + i, "Cơ sở 1", "BS. A", java.time.LocalDateTime.now(),
-                    com.cvdcms.emr.EmrRecordStatus.DRAFT, 1, java.time.LocalDateTime.now()));
+                    com.cvdcms.entity.enums.EmrRecordStatus.DRAFT, 1, java.time.LocalDateTime.now()));
         }
         EmrModuleService.Dashboard dashboard = new EmrModuleService.Dashboard(mockRows, List.of(), 14, 0, 0);
         when(emrModuleService.dashboard(any(), any(), any(), any(), any(), any(), any())).thenReturn(dashboard);

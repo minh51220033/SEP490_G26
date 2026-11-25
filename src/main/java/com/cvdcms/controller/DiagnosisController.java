@@ -75,7 +75,7 @@ public class DiagnosisController {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
+    private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
 
     public void setDoctorCoverGrantRepository(com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository) {
         this.doctorCoverGrantRepository = doctorCoverGrantRepository;
@@ -760,10 +760,10 @@ public class DiagnosisController {
         model.addAttribute("careInteractions", careInteractions);
         model.addAttribute("careTasks", careTasks);
 
-        com.cvdcms.emr.EmrRecord visitEmrRecord = (emrRecordRepository != null && visitId != null)
+        com.cvdcms.entity.EmrRecord visitEmrRecord = (emrRecordRepository != null && visitId != null)
                 ? emrRecordRepository.findByVisit_VisitId(visitId).orElse(null)
                 : null;
-        List<com.cvdcms.emr.EmrRecord> patientEmrRecords = (emrRecordRepository != null && profileId != null)
+        List<com.cvdcms.entity.EmrRecord> patientEmrRecords = (emrRecordRepository != null && profileId != null)
                 ? emrRecordRepository.findAllByPatientProfileId(profileId)
                 : Collections.emptyList();
         model.addAttribute("visitEmrRecord", visitEmrRecord);
@@ -1028,7 +1028,7 @@ public class DiagnosisController {
         List<com.cvdcms.DTO.ParaclinicalOrderItemResponseDTO> paraclinicalOrders = paraclinicalOrderService.getOrdersByVisit(visitId);
         model.addAttribute("paraclinicalOrders", paraclinicalOrders);
 
-        List<com.cvdcms.emr.EmrRecord> patientEmrRecords = (emrRecordRepository != null && profileId != null)
+        List<com.cvdcms.entity.EmrRecord> patientEmrRecords = (emrRecordRepository != null && profileId != null)
                 ? emrRecordRepository.findAllByPatientProfileId(profileId)
                 : Collections.emptyList();
         model.addAttribute("patientEmrRecords", patientEmrRecords);
