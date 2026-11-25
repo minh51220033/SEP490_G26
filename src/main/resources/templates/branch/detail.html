@@ -703,8 +703,13 @@
                     <div class="col-md-6">
                         <label for="chairStatus" class="form-label">Trạng thái</label>
                         <select id="chairStatus" name="status" class="form-select">
-                            <option th:each="s : ${chairStatuses}" th:value="${s}"
-                                    th:text="${s.name() == 'AVAILABLE' ? 'Trống (Sẵn sàng)' : s.name() == 'IN_USE' ? 'Đang khám' : 'Bảo trì'}"></option>
+                            <option th:each="s : ${chairStatuses}"
+                                    th:value="${s}"
+                                    th:text="${s.name() == 'AVAILABLE' ? 'Khả dụng'
+                                            : s.name() == 'IN_USE' ? 'Đang dùng'
+                                            : s.name() == 'TURNOVER' ? 'Vệ sinh / Chuẩn bị'
+                                            : s.name() == 'MAINTENANCE' ? 'Bảo trì'
+                                            : 'Không hoạt động'}"></option>
                         </select>
                     </div>
                 </div>

@@ -57,6 +57,7 @@ public interface DoctorShiftAssignmentRepository extends JpaRepository<DoctorShi
         JOIN FETCH d.shift sh
         JOIN FETCH d.room rm
         JOIN FETCH d.branch br
+        LEFT JOIN FETCH d.chair ch
         LEFT JOIN FETCH d.replacedForStaff rf
         LEFT JOIN FETCH d.replacedByUser rb
         WHERE d.branch.branchId = :branchId
@@ -75,6 +76,7 @@ public interface DoctorShiftAssignmentRepository extends JpaRepository<DoctorShi
         JOIN FETCH d.shift sh
         JOIN FETCH d.room rm
         JOIN FETCH d.branch br
+        LEFT JOIN FETCH d.chair ch
         WHERE d.staff.staffId = :staffId
           AND d.workDate = :workDate
           AND d.status = com.cvdcms.entity.enums.DoctorShiftAssignmentStatus.ACTIVE
@@ -101,6 +103,7 @@ public interface DoctorShiftAssignmentRepository extends JpaRepository<DoctorShi
         JOIN FETCH d.shift sh
         JOIN FETCH d.room rm
         JOIN FETCH d.branch br
+        LEFT JOIN FETCH d.chair ch
         LEFT JOIN FETCH d.staffSchedule sc
         WHERE d.branch.branchId = :branchId
           AND d.workDate = :workDate

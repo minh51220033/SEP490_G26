@@ -359,6 +359,7 @@ public class StaffScheduleService {
                             target,
                             src.getShift().getShiftId(),
                             src.getRoom().getRoomId(),
+                            src.getChair() != null ? src.getChair().getChairId() : null,
                             List.of(src.getStaff().getStaffId()),
                             copyRole,
                             src.getNote(),

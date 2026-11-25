@@ -1,6 +1,24 @@
 /* FT33 - Phân ca làm việc (SCR-33.1, SCR-33.3)
    Chuẩn thiết kế giao diện MISA AMIS Table & Modern Calendar */
 
+/* Mở khóa cuộn dọc tự nhiên cho trang Phân ca (tránh bị staff.css khóa 100vh cắt cụt Ca Chiều/Ca Tối) */
+body.staff-page-body {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto !important;
+}
+body.staff-page-body .app-shell,
+body.staff-page-body .app-main {
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible !important;
+}
+body.staff-page-body .app-content {
+    height: auto !important;
+    overflow: visible !important;
+}
+
 /* ---------- Container & Header Card ---------- */
 .schedule-container {
     display: flex;
