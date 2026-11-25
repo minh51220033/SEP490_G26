@@ -349,9 +349,14 @@ public class DoctorVisitAccess {
             return;
         }
         Long branchId = resolveTreatmentPlanBranchId(plan);
-        if (!isBranchAllowed(user, branchId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Không có quyền xem kế hoạch điều trị của chi nhánh khác.");
+        if (isBranchAllowed(user, branchId)) {
+            return;
         }
+        if (plan.getPatientProfile() != null) {
+            requirePatientRead(session, plan.getPatientProfile().getProfileId());
+            return;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Không có quyền xem kế hoạch điều trị của chi nhánh khác.");
     }
 
     public void requireTreatmentPlanWrite(HttpSession session, Long planId) {
