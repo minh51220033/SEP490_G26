@@ -153,8 +153,8 @@ class Phase1ResourceMasterDataIntegrationTest {
     }
 
     @Test
-    @DisplayName("Phân công BS-Phòng & BS-Dịch vụ ở trạng thái PENDING_REVIEW không được tính là ACTIVE")
-    void pendingReviewDoctorAssignmentsExcludedFromActiveQueries() {
+    @DisplayName("Phân công BS-Phòng & BS-Dịch vụ có hiệu lực ACTIVE ngay và bị loại khi thu hồi INACTIVE")
+    void doctorAssignmentsActiveImmediatelyAndExcludedWhenRevoked() {
         Branch branch = createBranch("BR-DOC1", "CS Bác sĩ");
         Room room = createRoom(branch, "P105", "Phòng Khám 105", "Tầng 1", 1);
 
@@ -192,18 +192,18 @@ class Phase1ResourceMasterDataIntegrationTest {
         assertEquals(10, savedSvc.getEstimatedDurationMinutes(), "Tổng 3 pha (2+5+3=10p < 15p) phải đồng bộ vào estimatedDurationMinutes");
 
         DoctorRoomAssignment roomAssn = assignmentAdminService.assignDoctorRoom(
-                branch.getBranchId(), staff.getStaffId(), room.getRoomId(), true, LocalDate.now(), null, DoctorAssignmentStatus.PENDING_REVIEW);
+                branch.getBranchId(), staff.getStaffId(), room.getRoomId(), true, LocalDate.now(), null, null);
         DoctorServicePermission svcPerm = assignmentAdminService.grantDoctorServicePermission(
-                staff.getStaffId(), savedSvc.getServiceId(), branch.getBranchId(), LocalDate.now(), null, DoctorServicePermissionStatus.PENDING_REVIEW, "Chờ duyệt");
-
-        assertTrue(assignmentAdminService.getActiveRoomAssignments(branch.getBranchId(), staff.getStaffId()).isEmpty());
-        assertTrue(assignmentAdminService.getActiveServicePermissions(savedSvc.getServiceId()).isEmpty());
-
-        assignmentAdminService.approveRoomAssignment(roomAssn.getAssignmentId());
-        assignmentAdminService.approveServicePermission(svcPerm.getPermissionId());
+                staff.getStaffId(), savedSvc.getServiceId(), branch.getBranchId(), LocalDate.now(), null, null, "Cấp trực tiếp");
 
         assertEquals(1, assignmentAdminService.getActiveRoomAssignments(branch.getBranchId(), staff.getStaffId()).size());
         assertEquals(1, assignmentAdminService.getActiveServicePermissions(savedSvc.getServiceId()).size());
+
+        assignmentAdminService.revokeRoomAssignment(roomAssn.getAssignmentId());
+        assignmentAdminService.revokeServicePermission(svcPerm.getPermissionId());
+
+        assertTrue(assignmentAdminService.getActiveRoomAssignments(branch.getBranchId(), staff.getStaffId()).isEmpty());
+        assertTrue(assignmentAdminService.getActiveServicePermissions(savedSvc.getServiceId()).isEmpty());
     }
 
     @Test

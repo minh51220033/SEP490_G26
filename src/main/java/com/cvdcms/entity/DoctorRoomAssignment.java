@@ -49,5 +49,5 @@ public class DoctorRoomAssignment {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private DoctorAssignmentStatus status = DoctorAssignmentStatus.PENDING_REVIEW;
+    private DoctorAssignmentStatus status = DoctorAssignmentStatus.ACTIVE;
 }

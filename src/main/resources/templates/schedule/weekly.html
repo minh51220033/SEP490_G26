@@ -509,17 +509,21 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label small fw-semibold">Chọn một hoặc nhiều bác sĩ <span class="text-danger">*</span></label>
-                    <div class="schedule-doc-checklist">
-                        <label th:each="doc : ${branchDoctors}" class="schedule-doc-check-item">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-semibold mb-0">Chọn bác sĩ phụ trách phòng <span class="text-danger">*</span></label>
+                        <span id="docAssignEligibleBadge" class="badge bg-light text-secondary border small">0 bác sĩ</span>
+                    </div>
+                    <div class="schedule-doc-checklist" id="docAssignChecklist">
+                        <label th:each="doc : ${branchDoctors}" class="schedule-doc-check-item"
+                               th:attr="data-staff-id=${doc.staffId}" style="display: none;">
                             <span class="d-flex align-items-center gap-2">
                                 <input class="form-check-input m-0" type="checkbox" name="staffIds" th:value="${doc.staffId}">
                                 <span class="small fw-semibold" th:text="${doc.fullName}">BS A</span>
                             </span>
                             <span class="text-muted small" th:text="${doc.staffCode + (doc.specialty != null ? ' · ' + doc.specialty : '')}">BS01</span>
                         </label>
-                        <div th:if="${branchDoctors == null or #lists.isEmpty(branchDoctors)}" class="text-muted small text-center py-2">
-                            Chưa có bác sĩ ACTIVE tại chi nhánh này.
+                        <div id="docAssignEmptyState" class="text-muted small text-center py-3 px-2">
+                            Vui lòng chọn phòng khám để xem danh sách bác sĩ được phân công phòng.
                         </div>
                     </div>
                 </div>
@@ -784,6 +788,66 @@
             roomChairsMap = {};
         }
 
+        var roomDoctorsData = /*[[${roomDoctorsJson != null ? roomDoctorsJson : '{}'}]]*/ '{}';
+        var roomDoctorsMap = {};
+        try {
+            roomDoctorsMap = typeof roomDoctorsData === 'string' ? JSON.parse(roomDoctorsData) : (roomDoctorsData || {});
+        } catch (e) {
+            roomDoctorsMap = {};
+        }
+
+        function renderDoctorsForSelectedRoom(roomId, workDate) {
+            var checklist = document.getElementById('docAssignChecklist');
+            var emptyEl = document.getElementById('docAssignEmptyState');
+            var badgeEl = document.getElementById('docAssignEligibleBadge');
+            if (!checklist) return;
+            var items = checklist.querySelectorAll('.schedule-doc-check-item');
+
+            if (!roomId) {
+                items.forEach(function (el) {
+                    el.style.display = 'none';
+                    var cb = el.querySelector('input[type="checkbox"]');
+                    if (cb) cb.checked = false;
+                });
+                if (badgeEl) badgeEl.textContent = '0 bác sĩ';
+                if (emptyEl) {
+                    emptyEl.style.display = '';
+                    emptyEl.innerHTML = 'Vui lòng chọn phòng khám để xem danh sách bác sĩ được phân công phòng.';
+                }
+                return;
+            }
+
+            var records = roomDoctorsMap[String(roomId)] || [];
+            var eligibleIds = {};
+            records.forEach(function (rec) {
+                if (workDate) {
+                    if (rec.effectiveFrom && workDate < rec.effectiveFrom) return;
+                    if (rec.effectiveTo && workDate > rec.effectiveTo) return;
+                }
+                eligibleIds[String(rec.staffId)] = true;
+            });
+
+            var visibleCount = 0;
+            items.forEach(function (el) {
+                var sid = el.getAttribute('data-staff-id');
+                var isEligible = Boolean(eligibleIds[String(sid)]);
+                el.style.display = isEligible ? '' : 'none';
+                var cb = el.querySelector('input[type="checkbox"]');
+                if (cb && !isEligible) cb.checked = false;
+                if (isEligible) visibleCount++;
+            });
+
+            if (badgeEl) badgeEl.textContent = visibleCount + ' bác sĩ';
+            if (emptyEl) {
+                if (visibleCount === 0) {
+                    emptyEl.style.display = '';
+                    emptyEl.innerHTML = 'Chưa có bác sĩ nào được cấp quyền phòng này. Vào <a href="/admin/staffs" class="fw-semibold text-decoration-none">Quản lý nhân sự</a> → tab <strong>Phòng &amp; Dịch vụ chuyên môn</strong> để cấp quyền phòng trước.';
+                } else {
+                    emptyEl.style.display = 'none';
+                }
+            }
+        }
+
         function renderChairsForSelectedRoom(roomId) {
             var box = document.getElementById('docAssignChairBox');
             var listEl = document.getElementById('docAssignChairList');
@@ -818,6 +882,7 @@
         if (docAssignRoomEl) {
             docAssignRoomEl.addEventListener('change', function () {
                 renderChairsForSelectedRoom(this.value);
+                renderDoctorsForSelectedRoom(this.value, document.getElementById('docAssignDate')?.value || '');
             });
         }
 
@@ -826,7 +891,8 @@
             docRoomModal.addEventListener('show.bs.modal', function (ev) {
                 var btn = ev.relatedTarget;
                 if (!btn) return;
-                document.getElementById('docAssignDate').value = btn.getAttribute('data-date') || '';
+                var workDateVal = btn.getAttribute('data-date') || '';
+                document.getElementById('docAssignDate').value = workDateVal;
                 document.getElementById('docAssignShift').value = btn.getAttribute('data-shift') || '';
                 document.getElementById('docAssignLabel').textContent = btn.getAttribute('data-label') || '-';
                 var roomVal = btn.getAttribute('data-room') || '';
@@ -835,6 +901,7 @@
                 docRoomModal.querySelectorAll('input[type="checkbox"][name="staffIds"]').forEach(function (cb) {
                     cb.checked = false;
                 });
+                renderDoctorsForSelectedRoom(roomVal, workDateVal);
             });
         }
 

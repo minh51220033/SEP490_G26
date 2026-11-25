@@ -210,13 +210,23 @@ public class AdminResourceMasterRestController {
             return List.of();
         }
         return serviceRepository.findByStatusAndCategory_IsActiveTrueOrderByServiceNameAsc(ServiceStatus.ACTIVE).stream()
-                .map(s -> Map.<String, Object>of(
-                        "serviceId", s.getServiceId(),
-                        "serviceCode", s.getServiceCode(),
-                        "serviceName", s.getServiceName(),
-                        "durationMinutes", AppointmentSlotService.duration(s),
-                        "status", s.getStatus().name()
-                )).toList();
+                .sorted(java.util.Comparator
+                        .comparing((Service s) -> s.getCategory() != null && s.getCategory().getDisplayOrder() != null
+                                ? s.getCategory().getDisplayOrder() : Integer.MAX_VALUE)
+                        .thenComparing(s -> s.getCategory() != null && s.getCategory().getCategoryName() != null
+                                ? s.getCategory().getCategoryName() : "", String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing(s -> s.getServiceName() != null ? s.getServiceName() : "", String.CASE_INSENSITIVE_ORDER))
+                .map(s -> {
+                    Map<String, Object> item = new java.util.LinkedHashMap<>();
+                    item.put("serviceId", s.getServiceId());
+                    item.put("serviceCode", s.getServiceCode());
+                    item.put("serviceName", s.getServiceName());
+                    item.put("categoryId", s.getCategory() != null ? s.getCategory().getCategoryId() : null);
+                    item.put("categoryName", s.getCategory() != null ? s.getCategory().getCategoryName() : "Khác");
+                    item.put("durationMinutes", AppointmentSlotService.duration(s));
+                    item.put("status", s.getStatus().name());
+                    return item;
+                }).toList();
     }
 
     @GetMapping("/branches/{branchId}/doctors/{staffId}/rooms")
@@ -256,20 +266,29 @@ public class AdminResourceMasterRestController {
         ));
     }
 
-    @PostMapping("/doctors/room-assignments/{assignmentId}/approve")
-    public Map<String, Object> approveRoomAssignment(
-            @PathVariable Long assignmentId, HttpSession session, Authentication auth) {
-        requireAdminRole(session, auth);
-        DoctorRoomAssignment approved = assignmentAdminService.approveRoomAssignment(assignmentId);
-        return Map.of("assignmentId", approved.getAssignmentId(), "status", approved.getStatus().name());
-    }
-
     @DeleteMapping("/doctors/room-assignments/{assignmentId}")
     public Map<String, Object> revokeRoomAssignment(
             @PathVariable Long assignmentId, HttpSession session, Authentication auth) {
         requireAdminRole(session, auth);
         DoctorRoomAssignment revoked = assignmentAdminService.revokeRoomAssignment(assignmentId);
         return Map.of("assignmentId", revoked.getAssignmentId(), "status", revoked.getStatus().name());
+    }
+
+    @PutMapping("/branches/{branchId}/doctors/{staffId}/rooms/sync")
+    public Map<String, Object> syncDoctorRooms(
+            @PathVariable Long branchId,
+            @PathVariable Long staffId,
+            @RequestBody(required = false) RoomSyncPayload payload,
+            HttpSession session,
+            Authentication auth) {
+        requireAdminRole(session, auth);
+        requireBranchAccess(branchId, session, auth);
+        List<Long> roomIds = payload != null && payload.roomIds() != null ? payload.roomIds() : List.of();
+        List<DoctorRoomAssignment> active = assignmentAdminService.syncDoctorRooms(branchId, staffId, roomIds);
+        return Map.of(
+                "activeCount", active.size(),
+                "roomIds", active.stream().map(a -> a.getRoom().getRoomId()).toList()
+        );
     }
 
     @GetMapping("/doctors/{staffId}/services")
@@ -310,14 +329,6 @@ public class AdminResourceMasterRestController {
         ));
     }
 
-    @PostMapping("/doctors/service-permissions/{permissionId}/approve")
-    public Map<String, Object> approveServicePermission(
-            @PathVariable Long permissionId, HttpSession session, Authentication auth) {
-        requireAdminRole(session, auth);
-        DoctorServicePermission approved = assignmentAdminService.approveServicePermission(permissionId);
-        return Map.of("permissionId", approved.getPermissionId(), "status", approved.getStatus().name());
-    }
-
     @DeleteMapping("/doctors/service-permissions/{permissionId}")
     public Map<String, Object> revokeServicePermission(
             @PathVariable Long permissionId, HttpSession session, Authentication auth) {
@@ -325,6 +336,25 @@ public class AdminResourceMasterRestController {
         DoctorServicePermission revoked = assignmentAdminService.revokeServicePermission(permissionId);
         return Map.of("permissionId", revoked.getPermissionId(), "status", revoked.getStatus().name());
     }
+
+    @PutMapping("/doctors/{staffId}/services/sync")
+    public Map<String, Object> syncDoctorServices(
+            @PathVariable Long staffId,
+            @RequestBody(required = false) ServiceSyncPayload payload,
+            HttpSession session,
+            Authentication auth) {
+        requireAdminRole(session, auth);
+        List<Long> serviceIds = payload != null && payload.serviceIds() != null ? payload.serviceIds() : List.of();
+        List<DoctorServicePermission> active = assignmentAdminService.syncDoctorServices(staffId, null, serviceIds);
+        return Map.of(
+                "activeCount", active.size(),
+                "serviceIds", active.stream().map(p -> p.getService().getServiceId()).toList()
+        );
+    }
+
+    public record RoomSyncPayload(List<Long> roomIds) {}
+
+    public record ServiceSyncPayload(List<Long> serviceIds) {}
 
     @GetMapping("/services/{serviceId}/requirements")
     public List<Map<String, Object>> listServiceRequirements(

@@ -149,7 +149,7 @@ class Phase2Milestone3AvailabilityIntegrationTest {
                     + "(1, 3, 1, DATE_SUB(CURDATE(), INTERVAL 5 DAY), 'ACTIVE'),"
                     + "(1, 5, 1, DATE_SUB(CURDATE(), INTERVAL 5 DAY), 'ACTIVE'),"
                     + "(2, 1, 1, DATE_SUB(CURDATE(), INTERVAL 5 DAY), 'ACTIVE'),"
-                    + "(2, 2, 1, DATE_SUB(CURDATE(), INTERVAL 5 DAY), 'PENDING_REVIEW'),"
+                    + "(2, 2, 1, DATE_SUB(CURDATE(), INTERVAL 5 DAY), 'INACTIVE'),"
                     + "(3, 4, 1, DATE_SUB(CURDATE(), INTERVAL 5 DAY), 'ACTIVE')");
 
             // Rule di chuyển P101 -> P102 = 15 phút
@@ -165,7 +165,7 @@ class Phase2Milestone3AvailabilityIntegrationTest {
 
     @Test
     @Order(1)
-    @DisplayName("1. Nhiều bác sĩ trong phòng P101, lọc DoctorServicePermission ACTIVE/PENDING_REVIEW & không ghi reservation")
+    @DisplayName("1. Nhiều bác sĩ trong phòng P101, lọc DoctorServicePermission ACTIVE/INACTIVE & không ghi reservation")
     void multiDoctorSameRoomServicePermissionAndStrictlyReadOnly() {
         // P101 ca Sáng FUTURE_DATE có BS01 và BS02; P104 ca Sáng có BS03
         doctorShiftAssignmentService.assignDoctorsToRoom(
@@ -185,7 +185,7 @@ class Phase2Milestone3AvailabilityIntegrationTest {
         assertEquals(2, r1.options().size());
         assertTrue(r1.options().stream().allMatch(o -> o.roomId().equals(1L) && o.equipmentIds().isEmpty()));
 
-        // Dịch vụ 2 (DV-DOC-QUYEN): BS02 chỉ có PENDING_REVIEW nên bị loại, chỉ còn BS01
+        // Dịch vụ 2 (DV-DOC-QUYEN): BS02 đã bị thu hồi (INACTIVE) nên bị loại, chỉ còn BS01
         ResourceAvailabilityResult r2 = availabilityService.checkAvailability(
                 AvailabilityCheckRequest.forSlot(1L, 2L, FUTURE_DATE, LocalTime.of(9, 0)));
         assertTrue(r2.available());
