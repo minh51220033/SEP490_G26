@@ -707,6 +707,20 @@ public class UserController {
                         );
 
         if (!hasDefaultProfile) {
+            List<PatientProfile> existingProfiles =
+                    patientProfileRepository
+                            .findByUser_UserIdOrderByIsDefaultDescProfileIdDesc(
+                                    user.getUserId()
+                            );
+            if (!existingProfiles.isEmpty()) {
+                PatientProfile primaryProfile = existingProfiles.get(0);
+                primaryProfile.setIsDefault(true);
+                patientProfileRepository.save(primaryProfile);
+                hasDefaultProfile = true;
+            }
+        }
+
+        if (!hasDefaultProfile) {
             return "redirect:/profile/complete";
         }
 

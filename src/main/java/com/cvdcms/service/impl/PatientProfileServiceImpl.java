@@ -167,10 +167,10 @@ public class PatientProfileServiceImpl implements PatientProfileService {
 
         Branch branch = getActiveBranch(branchId);
 
-        // Chỉ hồ sơ đầu tiên mới được đặt làm hồ sơ mặc định.
+        // Đặt làm hồ sơ mặc định nếu tài khoản chưa có hồ sơ mặc định nào.
         boolean firstProfile =
                 !patientProfileRepository
-                        .existsByUser_UserId(user.getUserId());
+                        .existsByUser_UserIdAndIsDefaultTrue(user.getUserId());
 
         PatientProfile profile = new PatientProfile();
         profile.setUser(user);
@@ -194,7 +194,7 @@ public class PatientProfileServiceImpl implements PatientProfileService {
             syncAccountBranch(user, branch);
         }
 
-        PatientProfile saved = patientProfileRepository.save(profile);
+        PatientProfile saved = patientProfileRepository.saveAndFlush(profile);
         ensureAccountProfileLink(user, saved, firstProfile);
         return saved;
     }
