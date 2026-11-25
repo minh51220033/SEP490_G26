@@ -312,7 +312,9 @@ public class QueueWorkflowService {
             String bookedDoctorName = null;
             if (appointmentRepository != null && t.getVisit() != null && t.getVisit().getAppointmentId() != null) {
                 var apptOpt = appointmentRepository.findById(t.getVisit().getAppointmentId());
-                if (apptOpt.isPresent() && apptOpt.get().getDoctor() != null) {
+                if (apptOpt.isPresent()
+                        && Boolean.TRUE.equals(apptOpt.get().getIsDoctorRequested())
+                        && apptOpt.get().getDoctor() != null) {
                     bookedDoctorId = apptOpt.get().getDoctor().getStaffId();
                     bookedDoctorName = apptOpt.get().getDoctor().getFullName();
                 }
@@ -321,7 +323,7 @@ public class QueueWorkflowService {
             String doctorStatusLabel;
             String doctorDisplay;
             if (bookedDoctorId != null && bookedDoctorName != null && !bookedDoctorName.isBlank()) {
-                if (Objects.equals(bookedDoctorId, primaryDoctorId) || primaryDoctorId == null) {
+                if (!isCallingOrExam || Objects.equals(bookedDoctorId, primaryDoctorId) || primaryDoctorId == null) {
                     doctorAssignmentType = "BOOKED_DOCTOR";
                     doctorStatusLabel = "Đã đặt bác sĩ";
                     doctorDisplay = bookedDoctorName.trim();
@@ -330,7 +332,7 @@ public class QueueWorkflowService {
                     doctorStatusLabel = "Đã được phân bổ";
                     doctorDisplay = primaryDoctorName != null ? primaryDoctorName : bookedDoctorName.trim();
                 }
-            } else if (primaryDoctorName != null) {
+            } else if (isCallingOrExam && primaryDoctorName != null) {
                 doctorAssignmentType = "ASSIGNED_DOCTOR";
                 doctorStatusLabel = "Đã được phân bổ";
                 doctorDisplay = primaryDoctorName;
@@ -341,8 +343,8 @@ public class QueueWorkflowService {
                 doctorDisplay = "Chờ bác sĩ phù hợp";
             } else {
                 doctorAssignmentType = "UNSPECIFIED";
-                doctorStatusLabel = "Chưa chỉ định";
-                doctorDisplay = "Chưa chỉ định";
+                doctorStatusLabel = "Chưa phân công";
+                doctorDisplay = "Chưa phân công";
             }
 
             rows.add(new PublicQueueRow(
@@ -555,15 +557,7 @@ public class QueueWorkflowService {
             chairs.save(chair);
         }
         if (queueCoordinator != null) {
-            LocalDate today = LocalDate.now(ZONE);
-            tickets.forBoard(branchId, today, QueueType.EXAM).stream()
-                    .filter(t -> t.getStatus() == QueueStatus.WAITING
-                            && t.getVisit() != null
-                            && t.getVisit().getPrimaryDoctor() != null
-                            && isWaitingOrResult(t.getVisit()))
-                    .map(t -> t.getVisit().getPrimaryDoctor().getStaffId())
-                    .distinct()
-                    .forEach(docId -> queueCoordinator.autoCallNextForDoctorIfIdle(branchId, docId, scope.user().getUserId()));
+            queueCoordinator.autoCallNextForAnyIdleDoctor(branchId, scope.user().getUserId());
         }
     }
 

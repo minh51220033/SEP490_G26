@@ -607,10 +607,10 @@
             <td style="text-align: left; padding-left: 20px; font-size: clamp(18px, 1.4vw, 24px); font-weight: 800; color: var(--tv-text-main); overflow-wrap: anywhere;"
                 th:text="${row.patientFullName ?: '—'}">Nguyễn Văn A</td>
             <td style="text-align: left; padding-left: 16px;">
-              <div class="tv-doctor-name" th:text="${row.doctorDisplay != null and row.doctorDisplay != '—' ? row.doctorDisplay : 'Chưa chỉ định'}">BS Nguyễn A</div>
+              <div class="tv-doctor-name" th:text="${row.doctorDisplay != null and row.doctorDisplay != '—' ? row.doctorDisplay : 'Chưa phân công'}">Chưa phân công</div>
               <span class="tv-doctor-tag"
-                    th:classappend="${row.doctorDisplay != null and row.doctorDisplay != '—' and row.doctorDisplay != 'Chưa chỉ định' and row.doctorDisplay != 'Chờ bác sĩ phù hợp'} ? 'assigned' : ''"
-                    th:text="${row.doctorDisplay != null and row.doctorDisplay != '—' and row.doctorDisplay != 'Chưa chỉ định' and row.doctorDisplay != 'Chờ bác sĩ phù hợp' ? 'Đã được phân bổ' : 'Chưa chỉ định'}">Đã được phân bổ</span>
+                    th:classappend="${row.doctorAssignmentType == 'BOOKED_DOCTOR'} ? 'booked' : (${row.doctorAssignmentType == 'ASSIGNED_DOCTOR'} ? 'assigned' : (${row.doctorAssignmentType == 'WAITING_DOCTOR'} ? 'waiting-doc' : ''))"
+                    th:text="${row.doctorStatusLabel != null ? row.doctorStatusLabel : 'Chưa phân công'}">Chưa phân công</span>
             </td>
             <td class="cell-center">
               <span th:if="${row.status == 'CALLED'}" class="tv-status-badge calling" style="margin-left: 0;">

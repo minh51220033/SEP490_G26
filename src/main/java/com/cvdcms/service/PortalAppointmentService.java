@@ -294,6 +294,7 @@ public class PortalAppointmentService {
         appointment.setPatientProfile(profile);
         appointment.setBranch(branch);
         appointment.setDoctor(assignedDoctor);
+        appointment.setIsDoctorRequested(request.doctorId() != null);
         appointment.setService(service);
         appointment.setAppointmentDate(request.date());
         appointment.setPreferredSession(request.session());
@@ -441,6 +442,7 @@ public class PortalAppointmentService {
         a.setAppointmentDate(request.date());
         a.setPreferredSession(request.session());
         a.setDoctor(assignedDoctor);
+        a.setIsDoctorRequested(request.doctorId() != null);
         a.setDurationMinutes(durationMinutes);
         a.setExpectedTime(resolvedTime);
         a.syncExpectedEndTime();
@@ -668,6 +670,7 @@ public class PortalAppointmentService {
             appointment.setPatientProfile(profile);
             appointment.setBranch(branch);
             appointment.setDoctor(assignedDoctor);
+            appointment.setIsDoctorRequested(request.doctorId() != null);
             appointment.setService(svc);
             appointment.setAppointmentDate(request.date());
             appointment.setPreferredSession(request.session());

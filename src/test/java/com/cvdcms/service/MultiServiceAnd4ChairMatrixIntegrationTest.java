@@ -395,6 +395,7 @@ class MultiServiceAnd4ChairMatrixIntegrationTest {
         apptA.setPatientProfile(pBooked);
         apptA.setBranch(branch);
         apptA.setDoctor(docA);
+        apptA.setIsDoctorRequested(true);
         apptA.setService(svcExam30);
         apptA.setAppointmentDate(today);
         apptA.setExpectedTime(LocalTime.of(10, 0));

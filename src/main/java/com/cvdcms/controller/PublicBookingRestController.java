@@ -866,6 +866,7 @@ public class PublicBookingRestController {
         appointment.setBranch(branch);
         appointment.setPatientProfile(profile);
         appointment.setDoctor(doctor);
+        appointment.setIsDoctorRequested(form.getDoctorId() != null);
         appointment.setService(service);
         appointment.setAppointmentDate(bookDate);
         appointment.setPreferredSession(sessionPeriod);

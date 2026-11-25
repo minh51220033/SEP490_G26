@@ -503,6 +503,7 @@ public class ReceptionAppointmentService {
         a.setAppointmentCode(code()); a.setBranch(branch); a.setPatientProfile(profile);
         a.setAppointmentDate(request.date()); a.setPreferredSession(targetSession);
         a.setDoctor(doctor(request.doctorId()));
+        a.setIsDoctorRequested(request.doctorId() != null);
         a.setService(service(request.serviceId()));
 
         a.setInitialSymptoms(notes);
@@ -727,6 +728,11 @@ public class ReceptionAppointmentService {
         }
         a.setAppointmentDate(request.date()); a.setPreferredSession(request.session());
         a.setDoctor(targetDoctor); a.setService(targetService);
+        if (request.doctorId() != null) {
+            a.setIsDoctorRequested(true);
+        } else if (targetDoctor == null) {
+            a.setIsDoctorRequested(false);
+        }
         a.setInitialSymptoms(clean(request.symptoms()));
         a.setDurationMinutes(targetDuration);
         a.setExpectedTime(expectedTime);
@@ -812,6 +818,9 @@ public class ReceptionAppointmentService {
                     a.getAppointmentDate(), a.getPreferredSession(), id);
         }
         a.setDoctor(resolvedDoctor);
+        if (effectiveDoctorId == null) {
+            a.setIsDoctorRequested(false);
+        }
         a.syncExpectedEndTime();
         lifecycle.transition(a, AppointmentStatus.CONFIRMED, AppointmentLifecycleAction.CONFIRM);
         appointments.saveAndFlush(a);

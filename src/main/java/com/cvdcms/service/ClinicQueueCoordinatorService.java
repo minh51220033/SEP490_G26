@@ -372,27 +372,18 @@ public class ClinicQueueCoordinatorService {
             LocalDate today = LocalDate.now(CLINIC_ZONE);
             new org.springframework.transaction.support.TransactionTemplate(transactionManager)
                     .executeWithoutResult(status -> reconcileLegacyCalledTicketsWithoutResources(today));
-            Set<String> seenPairs = new LinkedHashSet<>();
-            List<long[]> pairs = new ArrayList<>();
+            Set<Long> seenBranches = new LinkedHashSet<>();
             new org.springframework.transaction.support.TransactionTemplate(transactionManager)
                     .executeWithoutResult(status -> {
-                        for (QueueTicket t : tickets.findWaitingWithDoctorOnDay(today, QueueType.EXAM)) {
-                            if (t.getBranch() != null && t.getBranch().getBranchId() != null
-                                    && t.getVisit() != null && t.getVisit().getPrimaryDoctor() != null
-                                    && t.getVisit().getPrimaryDoctor().getStaffId() != null
-                                    && WAITING_VISIT_STATUSES.contains(t.getVisit().getStatus())) {
-                                Long bId = t.getBranch().getBranchId();
-                                Long dId = t.getVisit().getPrimaryDoctor().getStaffId();
-                                String key = bId + ":" + dId;
-                                if (seenPairs.add(key)) {
-                                    pairs.add(new long[]{bId, dId});
-                                }
+                        for (Branch br : branches.findAll()) {
+                            if (br != null && br.getBranchId() != null && Boolean.TRUE.equals(br.getIsActive())) {
+                                seenBranches.add(br.getBranchId());
                             }
                         }
                     });
-            for (long[] pair : pairs) {
+            for (Long bId : seenBranches) {
                 new org.springframework.transaction.support.TransactionTemplate(transactionManager)
-                        .executeWithoutResult(status -> autoCallNextForDoctorIfIdle(pair[0], pair[1], null));
+                        .executeWithoutResult(status -> autoCallNextForAnyIdleDoctor(bId, null));
             }
         } catch (Exception ex) {
             log.warn("Không thể đồng bộ tự gọi số khi khởi động: {}", ex.getMessage());
@@ -424,16 +415,19 @@ public class ClinicQueueCoordinatorService {
         if (!Boolean.TRUE.equals(branch.getIsActive())
                 || visit.getCheckInAt() == null
                 || !visit.getCheckInAt().toLocalDate().equals(today)
-                || !WAITING_VISIT_STATUSES.contains(visit.getStatus())
-                || visit.getPrimaryDoctor() == null) {
+                || !WAITING_VISIT_STATUSES.contains(visit.getStatus())) {
             return null;
         }
         User actor = actorUserId != null ? users.findById(actorUserId).orElse(null) : null;
-        Long doctorId = visit.getPrimaryDoctor().getStaffId();
+        Long doctorId = visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null;
 
         QueueTicket existingActive = findLatestActiveOrPausedTicket(visitId);
         if (existingActive != null) {
-            autoCallNextForDoctorIfIdleLocked(branchId, doctorId, actor, today);
+            if (doctorId != null) {
+                autoCallNextForDoctorIfIdleLocked(branchId, doctorId, actor, today);
+            } else {
+                autoCallNextForAnyIdleDoctorLocked(branchId, actor, today);
+            }
             return existingActive;
         }
 
@@ -502,8 +496,58 @@ public class ClinicQueueCoordinatorService {
                 "Hệ thống tự cấp số " + saved.getDisplayNumber() + " cho " + patientName(visit),
                 now);
 
-        autoCallNextForDoctorIfIdleLocked(branchId, doctorId, actor, today);
+        if (doctorId != null) {
+            autoCallNextForDoctorIfIdleLocked(branchId, doctorId, actor, today);
+        } else {
+            autoCallNextForAnyIdleDoctorLocked(branchId, actor, today);
+        }
         return saved;
+    }
+
+    @Transactional
+    public int autoCallNextForAnyIdleDoctor(Long branchId, Long actorUserId) {
+        if (branchId == null) {
+            return 0;
+        }
+        Branch branch = branches.findByIdForUpdate(branchId).orElse(null);
+        if (branch == null || !Boolean.TRUE.equals(branch.getIsActive())) {
+            return 0;
+        }
+        User actor = actorUserId != null ? users.findById(actorUserId).orElse(null) : null;
+        return autoCallNextForAnyIdleDoctorLocked(branchId, actor, LocalDate.now(clock));
+    }
+
+    private int autoCallNextForAnyIdleDoctorLocked(Long branchId, User actor, LocalDate today) {
+        List<Long> candidateDoctorIds = resolveEligibleDoctorIdsForBranch(branchId, today);
+        int called = 0;
+        for (Long docId : candidateDoctorIds) {
+            if (autoCallNextForDoctorIfIdleLocked(branchId, docId, actor, today).isPresent()) {
+                called++;
+            }
+        }
+        return called;
+    }
+
+    private List<Long> resolveEligibleDoctorIdsForBranch(Long branchId, LocalDate today) {
+        Set<Long> doctorIds = new LinkedHashSet<>();
+        if (staffSchedules != null) {
+            for (StaffSchedule ss : staffSchedules.findForBooking(branchId, today, ScheduleStatus.SCHEDULED)) {
+                if (ss.getStaff() != null && ss.getStaff().getStaffId() != null) {
+                    doctorIds.add(ss.getStaff().getStaffId());
+                }
+            }
+        }
+        if (doctorIds.isEmpty() && branchAssignments != null) {
+            for (StaffBranchAssignment sba : branchAssignments.findByBranchAndStatus(branchId, AssignmentStatus.ACTIVE)) {
+                if (sba.getStaff() != null && sba.getStaff().getStaffId() != null
+                        && sba.getRole() != null && sba.getRole().getRoleName() != null
+                        && (sba.getRole().getRoleName().equalsIgnoreCase("BAC_SI")
+                        || sba.getRole().getRoleName().equalsIgnoreCase("DOCTOR"))) {
+                    doctorIds.add(sba.getStaff().getStaffId());
+                }
+            }
+        }
+        return doctorIds.stream().sorted().toList();
     }
 
     @Transactional
@@ -543,71 +587,66 @@ public class ClinicQueueCoordinatorService {
         }
 
         LocalDateTime nowCheck = LocalDateTime.now(clock);
-        Optional<QueueTicket> candidateOpt = doctorTickets.stream()
+        List<QueueTicket> orderedCandidates = tickets.findForBoard(branchId, today, QueueType.EXAM).stream()
                 .filter(t -> t.getStatus() == QueueStatus.WAITING
                         && t.getVisit() != null
                         && WAITING_VISIT_STATUSES.contains(t.getVisit().getStatus())
-                        && !isWaitingBeforeWindow(t, nowCheck))
-                .min(waitingQueueComparator());
-        boolean pulledViaWaterfall = false;
-        if (candidateOpt.isEmpty()) {
-            candidateOpt = tickets.findForBoard(branchId, today, QueueType.EXAM).stream()
-                    .filter(t -> t.getStatus() == QueueStatus.WAITING
-                            && t.getVisit() != null
-                            && WAITING_VISIT_STATUSES.contains(t.getVisit().getStatus())
-                            && !isWaitingBeforeWindow(t, nowCheck)
-                            && isWaterfallPullable(branchId, t.getVisit(), doctorId, today))
-                    .min(waitingQueueComparator());
-            pulledViaWaterfall = candidateOpt.isPresent();
-        }
-        if (candidateOpt.isEmpty()) {
+                        && !isWaitingBeforeWindow(t, nowCheck)
+                        && canDoctorServeVisit(branchId, doctorId, t.getVisit(), today))
+                .sorted(waitingQueueComparator())
+                .toList();
+        if (orderedCandidates.isEmpty()) {
             return Optional.empty();
         }
 
-        QueueTicket lockedTicket = tickets.lockById(candidateOpt.get().getTicketId()).orElse(null);
-        if (lockedTicket == null || lockedTicket.getStatus() != QueueStatus.WAITING || lockedTicket.getVisit() == null) {
-            return Optional.empty();
-        }
-        Visit lockedVisit = visits.lockById(lockedTicket.getVisit().getVisitId()).orElse(lockedTicket.getVisit());
-        if (!WAITING_VISIT_STATUSES.contains(lockedVisit.getStatus())) {
-            return Optional.empty();
-        }
-        Long currentDocId = lockedVisit.getPrimaryDoctor() != null ? lockedVisit.getPrimaryDoctor().getStaffId() : null;
-        if (!doctorId.equals(currentDocId)) {
-            if (!pulledViaWaterfall || !isWaterfallPullable(branchId, lockedVisit, doctorId, today) || doctor == null) {
+        for (QueueTicket candidate : orderedCandidates) {
+            QueueTicket lockedTicket = tickets.lockById(candidate.getTicketId()).orElse(null);
+            if (lockedTicket == null || lockedTicket.getStatus() != QueueStatus.WAITING || lockedTicket.getVisit() == null) {
+                continue;
+            }
+            Visit lockedVisit = visits.lockById(lockedTicket.getVisit().getVisitId()).orElse(lockedTicket.getVisit());
+            if (!WAITING_VISIT_STATUSES.contains(lockedVisit.getStatus())) {
+                continue;
+            }
+            if (!canDoctorServeVisit(branchId, doctorId, lockedVisit, today) || doctor == null) {
+                continue;
+            }
+            if (tickets.countOtherForDoctor(branchId, today, QueueType.EXAM, doctorId, ACTIVE_DESK_STATUSES, lockedTicket.getTicketId()) > 0) {
                 return Optional.empty();
             }
-            lockedVisit.setPrimaryDoctor(doctor);
-            visits.saveAndFlush(lockedVisit);
-            examinations.syncDoctorOnQueueTransfer(lockedVisit.getVisitId(), doctor);
-        }
-        if (tickets.countOtherForDoctor(branchId, today, QueueType.EXAM, doctorId, ACTIVE_DESK_STATUSES, lockedTicket.getTicketId()) > 0) {
-            return Optional.empty();
-        }
 
-        if (!allocateChairForCallLocked(branchId, lockedVisit, today)) {
-            return Optional.empty();
+            if (!allocateChairForCallLocked(branchId, lockedVisit, today)) {
+                return Optional.empty();
+            }
+            if (lockedVisit.getRoomId() == null || lockedVisit.getChairId() == null) {
+                return Optional.empty();
+            }
+
+            Long currentDocId = lockedVisit.getPrimaryDoctor() != null ? lockedVisit.getPrimaryDoctor().getStaffId() : null;
+            if (!doctorId.equals(currentDocId)) {
+                lockedVisit.setPrimaryDoctor(doctor);
+                visits.saveAndFlush(lockedVisit);
+                examinations.syncDoctorOnQueueTransfer(lockedVisit.getVisitId(), doctor);
+            }
+
+            LocalDateTime now = LocalDateTime.now(CLINIC_ZONE);
+            lockedTicket.setStatus(QueueStatus.CALLED);
+            lockedTicket.setCalledAt(now);
+            tickets.saveAndFlush(lockedTicket);
+
+            saveAudit(actor, branch, "queue_tickets", lockedTicket.getTicketId(), "QUEUE_AUTO_CALL",
+                    Map.of("status", "WAITING"),
+                    Map.of("status", "CALLED", "displayNumber", lockedTicket.getDisplayNumber(),
+                            "visitId", lockedVisit.getVisitId(), "doctorId", doctorId, "calledAt", now.toString()));
+
+            publishEvent("QUEUE_CALLED", branchId, doctorId, lockedVisit.getVisitId(), lockedVisit.getAppointmentId(),
+                    "CALLED",
+                    "Đang gọi " + lockedTicket.getDisplayNumber() + " – " + patientName(lockedVisit),
+                    now);
+            log.info("Auto-called ticket {} for doctor {} at branch {}", lockedTicket.getDisplayNumber(), doctorId, branchId);
+            return Optional.of(lockedTicket);
         }
-        if (lockedVisit.getRoomId() == null || lockedVisit.getChairId() == null) {
-            return Optional.empty();
-        }
-
-        LocalDateTime now = LocalDateTime.now(CLINIC_ZONE);
-        lockedTicket.setStatus(QueueStatus.CALLED);
-        lockedTicket.setCalledAt(now);
-        tickets.saveAndFlush(lockedTicket);
-
-        saveAudit(actor, branch, "queue_tickets", lockedTicket.getTicketId(), "QUEUE_AUTO_CALL",
-                Map.of("status", "WAITING"),
-                Map.of("status", "CALLED", "displayNumber", lockedTicket.getDisplayNumber(),
-                        "visitId", lockedVisit.getVisitId(), "doctorId", doctorId, "calledAt", now.toString()));
-
-        publishEvent("QUEUE_CALLED", branchId, doctorId, lockedVisit.getVisitId(), lockedVisit.getAppointmentId(),
-                "CALLED",
-                "Đang gọi " + lockedTicket.getDisplayNumber() + " – " + patientName(lockedVisit),
-                now);
-        log.info("Auto-called ticket {} for doctor {} at branch {}", lockedTicket.getDisplayNumber(), doctorId, branchId);
-        return Optional.of(lockedTicket);
+        return Optional.empty();
     }
 
     // -------------------------------------------------------------------------
@@ -1037,6 +1076,7 @@ public class ClinicQueueCoordinatorService {
         LocalDate today = effectiveNow.toLocalDate();
         int promoted = 0;
         Set<String> candidatePairs = new LinkedHashSet<>();
+        Set<Long> candidateBranches = new LinkedHashSet<>();
         for (QueueTicket t : tickets.findWaitingWithDoctorOnDay(today, QueueType.EXAM)) {
             if (t == null || t.getVisit() == null || !isEarlyWaitingReason(t.getPriorityReason())) {
                 continue;
@@ -1049,7 +1089,7 @@ public class ClinicQueueCoordinatorService {
             }
             Branch branch = t.getBranch();
             StaffProfile doc = t.getVisit().getPrimaryDoctor();
-            if (branch == null || branch.getBranchId() == null || doc == null || doc.getStaffId() == null) {
+            if (branch == null || branch.getBranchId() == null) {
                 continue;
             }
             QueueTicket lockedTicket = tickets.lockById(t.getTicketId()).orElse(null);
@@ -1069,11 +1109,18 @@ public class ClinicQueueCoordinatorService {
             lockedTicket.setPriorityReason("ON_TIME: Bệnh nhân đặt lịch đến sớm đã bước vào khung giờ hẹn");
             tickets.saveAndFlush(lockedTicket);
             promoted++;
-            candidatePairs.add(branch.getBranchId() + ":" + doc.getStaffId());
+            if (doc != null && doc.getStaffId() != null) {
+                candidatePairs.add(branch.getBranchId() + ":" + doc.getStaffId());
+            } else {
+                candidateBranches.add(branch.getBranchId());
+            }
         }
         for (String pair : candidatePairs) {
             String[] parts = pair.split(":");
             autoCallNextForDoctorIfIdle(Long.parseLong(parts[0]), Long.parseLong(parts[1]), null);
+        }
+        for (Long bId : candidateBranches) {
+            autoCallNextForAnyIdleDoctor(bId, null);
         }
         return promoted;
     }
@@ -1151,30 +1198,34 @@ public class ClinicQueueCoordinatorService {
         return true;
     }
 
-    private boolean isWaterfallPullable(Long branchId, Visit visit, Long candidateDoctorId, LocalDate today) {
+    private boolean canDoctorServeVisit(Long branchId, Long candidateDoctorId, Visit visit, LocalDate today) {
         if (visit == null || candidateDoctorId == null) {
             return false;
         }
+        Appointment appt = null;
         if (visit.getAppointmentId() != null && appointmentRepository != null) {
-            var apptOpt = appointmentRepository.findById(visit.getAppointmentId());
-            if (apptOpt.isPresent() && apptOpt.get().getDoctor() != null) {
-                return false; // Bệnh nhân đã đặt bác sĩ riêng: chỉ chờ đúng bác sĩ đó
+            appt = appointmentRepository.findById(visit.getAppointmentId()).orElse(null);
+            if (appt != null && Boolean.TRUE.equals(appt.getIsDoctorRequested()) && appt.getDoctor() != null) {
+                return Objects.equals(candidateDoctorId, appt.getDoctor().getStaffId());
             }
         }
-        StaffProfile assignedDoc = visit.getPrimaryDoctor();
-        if (assignedDoc == null || assignedDoc.getStaffId() == null) {
-            return true;
+        if (doctorServicePermissions != null && appt != null && appt.getService() != null && appt.getService().getServiceId() != null) {
+            List<DoctorServicePermission> docPerms = doctorServicePermissions
+                    .findByStaffStaffIdAndStatusOrderByPermissionIdAsc(candidateDoctorId, DoctorServicePermissionStatus.ACTIVE);
+            if (!docPerms.isEmpty()) {
+                Long svcId = appt.getService().getServiceId();
+                boolean permitted = docPerms.stream()
+                        .anyMatch(p -> p.getService() != null && Objects.equals(svcId, p.getService().getServiceId()));
+                if (!permitted) {
+                    return false;
+                }
+            }
         }
-        Long assignedId = assignedDoc.getStaffId();
-        if (Objects.equals(assignedId, candidateDoctorId)) {
-            return false;
-        }
-        if (!isDoctorEligibleToCallToday(branchId, assignedDoc, today)) {
-            return true;
-        }
-        List<QueueTicket> assignedTickets = tickets.findForDoctorOnDay(branchId, today, QueueType.EXAM, assignedId);
-        return assignedTickets.stream().anyMatch(t -> ACTIVE_DESK_STATUSES.contains(t.getStatus()))
-                || !findActiveExamsForDoctorToday(branchId, assignedId, today).isEmpty();
+        return true;
+    }
+
+    private boolean isWaterfallPullable(Long branchId, Visit visit, Long candidateDoctorId, LocalDate today) {
+        return canDoctorServeVisit(branchId, candidateDoctorId, visit, today);
     }
 
     /**
