@@ -1,9 +1,10 @@
 package com.cvdcms.service;
 
+import com.cvdcms.security.PortalAccess;
+
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
-import com.cvdcms.patientportal.*;
-import com.cvdcms.reception.ReceptionVisitRepository;
+import com.cvdcms.repository.ReceptionVisitRepository;
 import com.cvdcms.repository.*;
 import com.cvdcms.service.impl.AppointmentLifecycleServiceImpl;
 import com.cvdcms.service.impl.AppointmentPolicyServiceImpl;

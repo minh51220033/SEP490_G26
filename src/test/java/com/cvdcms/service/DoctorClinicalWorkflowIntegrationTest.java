@@ -1,10 +1,10 @@
 package com.cvdcms.service;
 
 import com.cvdcms.DTO.*;
-import com.cvdcms.emr.EmrModuleService;
-import com.cvdcms.emr.EmrRecord;
-import com.cvdcms.emr.EmrRecordRepository;
-import com.cvdcms.emr.EmrRecordStatus;
+import com.cvdcms.service.EmrModuleService;
+import com.cvdcms.entity.EmrRecord;
+import com.cvdcms.repository.EmrRecordRepository;
+import com.cvdcms.entity.enums.EmrRecordStatus;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;

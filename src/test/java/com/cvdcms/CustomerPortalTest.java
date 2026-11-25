@@ -25,7 +25,7 @@
 //import com.cvdcms.entity.enums.ServiceStatus;
 //import com.cvdcms.entity.enums.ServiceType;
 //import com.cvdcms.entity.enums.StaffStatus;
-//import com.cvdcms.patientportal.PortalAccess;
+//import com.cvdcms.security.PortalAccess;
 //import com.cvdcms.repository.BranchRepository;
 //import com.cvdcms.repository.CommentBanRepository;
 //import com.cvdcms.repository.CommentLikeRepository;

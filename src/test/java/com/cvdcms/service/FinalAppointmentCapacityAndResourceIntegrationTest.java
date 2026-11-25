@@ -2,7 +2,7 @@ package com.cvdcms.service;
 
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
-import com.cvdcms.patientportal.PortalAppointmentService;
+import com.cvdcms.service.PortalAppointmentService;
 import com.cvdcms.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
