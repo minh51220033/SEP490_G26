@@ -2261,10 +2261,12 @@
    Phạm vi: .finance-page, .cashier-page, .expense-income-page, .fin-brand-theme
    ============================================================================ */
 
-/* 0. NỀN KHÔNG GIAN LÀM VIỆC & NHỊP KHOẢNG CÁCH LIỀN MẠCH */
+/* 0. NỀN KHÔNG GIAN LÀM VIỆC & NHỊP KHOẢNG CÁCH LIỀN MẠCH (TẮT ANIMATION GÂY GIẬT) */
 .app-content.finance-page {
     background: #f1f5f9;
     padding: 14px 20px 28px !important;
+    gap: 0 !important;
+    animation: none !important;
 }
 
 @media (max-width: 575.98px) {
@@ -2275,6 +2277,7 @@
 
 /* 0B. HEADER & HAI HÀNG TAB TÀI CHÍNH CHUẨN SEGMENTED BAR NHƯ QUẢN LÝ KHO */
 .finance-page #financeTabsWrapper.finance-nav-wrapper {
+    flex-shrink: 0 !important;
     margin-bottom: 10px !important;
 }
 

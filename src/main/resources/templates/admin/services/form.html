@@ -6,6 +6,7 @@
 <body class="app-body service-catalog-page fin-brand-theme">
 
 <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/43.0.0/ckeditor5.css">
+<link rel="stylesheet" th:href="@{/css/catalog-management.css(v='20261125-3')}">
 
 <div class="app-shell">
 
@@ -17,20 +18,8 @@
         <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục')}"></header>
 
         <main class="app-content">
-            <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
-
-            <!-- BREADCRUMB -->
-            <nav aria-label="breadcrumb" class="mb-3">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
-                    <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
-                    <li class="breadcrumb-item"><a th:href="@{/admin/services}">Danh mục dịch vụ</a></li>
-                    <li class="breadcrumb-item active" aria-current="page" th:text="${isEdit ? 'Chỉnh sửa dịch vụ' : 'Thêm dịch vụ'}">Chỉnh sửa dịch vụ</li>
-                </ol>
-            </nav>
-
-            <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
-            <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('services')}"></nav>
+            <!-- HEADER & THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
+            <div th:replace="~{fragments/catalog-tabs :: catalogTabs('services')}"></div>
 
             <div class="d-flex flex-wrap justify-content-between
                         align-items-center gap-3 mb-4">

@@ -3,55 +3,90 @@
 <body>
 
 <!--
-    THANH TAB NGANG CHO QUẢN LÝ DANH MỤC (CV-DCMS CATALOG TABS)
-    activeTab: 'services' | 'categories' | 'medications' | 'icd10'
+    HEADER & THANH TAB NGANG CHO QUẢN LÝ DANH MỤC (ĐỒNG BỘ PHONG CÁCH TÀI CHÍNH / KHO VẬT TƯ)
+    activeTab: 'categories' | 'services' | 'medications' | 'icd10'
 -->
-<nav th:fragment="catalogTabs(activeTab)" class="catalog-tabs-container mb-3" aria-label="Quản lý danh mục">
-    <div class="catalog-tabs-nav">
-
-        <!-- 1. Nhóm dịch vụ -->
-        <a th:href="@{/admin/services/categories}"
-           class="catalog-tab-item"
-           th:classappend="${activeTab == 'categories'} ? 'is-active' : ''"
-           th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_SERVICE_CATEGORIES') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))}"
-           id="tab-catalog-categories">
-            <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
-            <span>Nhóm dịch vụ</span>
-        </a>
-
-        <!-- 2. Danh mục dịch vụ -->
-        <a th:href="@{/admin/services}"
-           class="catalog-tab-item"
-           th:classappend="${activeTab == 'services'} ? 'is-active' : ''"
-           th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))}"
-           id="tab-catalog-services">
-            <i class="bi bi-tags" aria-hidden="true"></i>
-            <span>Danh mục dịch vụ</span>
-        </a>
-
-        <!-- 3. Danh mục thuốc -->
-        <a th:href="@{/admin/medications}"
-           class="catalog-tab-item"
-           th:classappend="${activeTab == 'medications'} ? 'is-active' : ''"
-           th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_MEDICATIONS') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))}"
-           id="tab-catalog-medications">
-            <i class="bi bi-capsule" aria-hidden="true"></i>
-            <span>Danh mục thuốc</span>
-        </a>
-
-        <!-- 4. Danh mục ICD-10 -->
-        <a th:href="@{/admin/icd10}"
-           class="catalog-tab-item"
-           th:classappend="${activeTab == 'icd10'} ? 'is-active' : ''"
-           th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_ICD10') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))}"
-           id="tab-catalog-icd10">
-            <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
-            <span>Danh mục ICD-10</span>
-        </a>
-
+<div th:fragment="catalogTabs(activeTab)" class="catalog-nav-wrapper" id="catalogTabsWrapper">
+    <!-- HÀNG TIÊU ĐỀ + ICON QUẢN LÝ DANH MỤC + CHỌN CHI NHÁNH & LÀM MỚI -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 catalog-header-row">
+        <div class="d-flex align-items-center gap-3">
+            <div class="dv-header-icon">
+                <i class="bi bi-collection" aria-hidden="true"></i>
+            </div>
+            <div>
+                <h1 class="dv-page-title mb-0">Quản lý danh mục</h1>
+                <p class="dv-page-subtitle mb-0">Quản lý tập trung nhóm dịch vụ, danh mục dịch vụ, thuốc và mã bệnh ICD-10</p>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+            <a th:if="${activeTab == 'categories'}" th:href="@{/admin/services/categories}"
+               class="btn btn-outline-secondary catalog-refresh-btn">
+                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Làm mới
+            </a>
+            <a th:if="${activeTab == 'services'}" th:href="@{/admin/services}"
+               class="btn btn-outline-secondary catalog-refresh-btn">
+                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Làm mới
+            </a>
+            <a th:if="${activeTab == 'medications'}" th:href="@{/admin/medications}"
+               class="btn btn-outline-secondary catalog-refresh-btn">
+                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Làm mới
+            </a>
+            <a th:if="${activeTab == 'icd10'}" th:href="@{/admin/icd10}"
+               class="btn btn-outline-secondary catalog-refresh-btn">
+                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Làm mới
+            </a>
+        </div>
     </div>
-</nav>
+
+    <!-- THANH TAB SEGMENTED TRẮNG LIỀN MẠCH -->
+    <nav class="catalog-tabs-container" aria-label="Quản lý danh mục">
+        <div class="catalog-tabs-nav">
+
+            <!-- 1. Nhóm dịch vụ -->
+            <a th:href="@{/admin/services/categories}"
+               class="catalog-tab-item"
+               th:classappend="${activeTab == 'categories'} ? 'is-active' : ''"
+               th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_SERVICE_CATEGORIES') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))}"
+               id="tab-catalog-categories">
+                <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
+                <span>Nhóm dịch vụ</span>
+            </a>
+
+            <!-- 2. Danh mục dịch vụ -->
+            <a th:href="@{/admin/services}"
+               class="catalog-tab-item"
+               th:classappend="${activeTab == 'services'} ? 'is-active' : ''"
+               th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_SERVICES') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))}"
+               id="tab-catalog-services">
+                <i class="bi bi-tags" aria-hidden="true"></i>
+                <span>Danh mục dịch vụ</span>
+            </a>
+
+            <!-- 3. Danh mục thuốc -->
+            <a th:href="@{/admin/medications}"
+               class="catalog-tab-item"
+               th:classappend="${activeTab == 'medications'} ? 'is-active' : ''"
+               th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_MEDICATIONS') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))}"
+               id="tab-catalog-medications">
+                <i class="bi bi-capsule" aria-hidden="true"></i>
+                <span>Danh mục thuốc</span>
+            </a>
+
+            <!-- 4. Danh mục ICD-10 -->
+            <a th:href="@{/admin/icd10}"
+               class="catalog-tab-item"
+               th:classappend="${activeTab == 'icd10'} ? 'is-active' : ''"
+               th:if="${isAdmin or (permissionCodes != null and (#lists.contains(permissionCodes, 'CATALOG_ICD10') or #lists.contains(permissionCodes, 'CATALOG_MANAGE')))}"
+               id="tab-catalog-icd10">
+                <i class="bi bi-clipboard2-pulse" aria-hidden="true"></i>
+                <span>Danh mục ICD-10</span>
+            </a>
+
+        </div>
+    </nav>
+    <script th:src="@{/js/catalog-tabs.js(v='20261125-3')}"></script>
+</div>
 
 </body>
 </html>
-

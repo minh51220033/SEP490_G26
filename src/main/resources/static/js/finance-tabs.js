@@ -1,9 +1,9 @@
 /**
  * ============================================================================
- * CV-DCMS FINANCE UNIFIED PJAX TABS & QUICK DATE ROUTER
- * Chuyển đổi mượt giữa các tab (Tổng quan, Hóa đơn, Công nợ, Tiền tạm ứng,
- * Hoàn tiền, Lịch sử thanh toán, Chi phí vận hành, Thanh toán NCC, Bảng lương...)
- * và giữa 2 nhóm [ Khách hàng ] <-> [ Phòng khám ] không tải lại toàn trang.
+ * CV-DCMS FINANCE UNIFIED SMOOTH TAB SWITCHER
+ * Giữ cố định Header + Thanh chuyển nhóm [Khách hàng | Phòng khám] + Tabs,
+ * chỉ hoán đổi vùng nội dung bên dưới kèm prefetch cache khi di chuột giúp
+ * chuyển tab Tài chính mượt tức thì như Quản lý kho vật tư.
  * ============================================================================
  */
 (function () {
@@ -18,11 +18,16 @@
     let activeAbortController = null;
     const loadedScripts = window.__finLoadedScripts || (window.__finLoadedScripts = new Set());
     const initialStyles = window.__finInitialStyles || (window.__finInitialStyles = new Set());
+    const prefetchCache = new Map();
+    const CACHE_TTL_MS = 15000;
+    const PAGE_MAIN_CLASSES = ['cashier-page', 'expense-income-page', 'patient-finance-dashboard'];
+
+    const GLOBAL_SCRIPT_RE = /bootstrap\.bundle|\/js\/(layout|chat-widget|sidebar|header|enhanced-table|cashier-money-input|finance-signature|finance-tabs|cashier-tabs|expense-income-tabs)\.js/i;
+    const EXTRA_OUTSIDE_SELECTOR = '.modal:not(#changePasswordModal), .fin-modal-backdrop, .fin-modal-overlay, #paymentSuccessToast, template';
 
     function normalizePath(urlStr) {
         try {
-            const u = new URL(urlStr, window.location.origin);
-            return u.pathname;
+            return new URL(urlStr, window.location.origin).pathname;
         } catch (e) {
             return String(urlStr || '');
         }
@@ -30,15 +35,11 @@
 
     function isSameOriginUrl(urlStr) {
         try {
-            const u = new URL(urlStr, window.location.origin);
-            return u.origin === window.location.origin;
+            return new URL(urlStr, window.location.origin).origin === window.location.origin;
         } catch (e) {
             return false;
         }
     }
-
-    const GLOBAL_SCRIPT_RE = /bootstrap\.bundle|\/js\/(layout|chat-widget|sidebar|header|enhanced-table|cashier-money-input|finance-signature|finance-tabs|cashier-tabs|expense-income-tabs)\.js/i;
-    const EXTRA_OUTSIDE_SELECTOR = '.modal:not(#changePasswordModal), .fin-modal-backdrop, .fin-modal-overlay, #paymentSuccessToast, template';
 
     function recordCurrentDocumentAssets() {
         document.querySelectorAll('script[src]').forEach(s => {
@@ -93,12 +94,11 @@
             const newLink = document.createElement('link');
             newLink.rel = 'stylesheet';
             newLink.href = href;
-            const p = new Promise(resolve => {
+            loadPromises.push(new Promise(resolve => {
                 const timer = setTimeout(resolve, 1200);
                 newLink.addEventListener('load', () => { clearTimeout(timer); resolve(); }, { once: true });
                 newLink.addEventListener('error', () => { clearTimeout(timer); resolve(); }, { once: true });
-            });
-            loadPromises.push(p);
+            }));
             if (financeLink && financeLink.parentNode === document.head) {
                 document.head.insertBefore(newLink, financeLink);
             } else {
@@ -205,7 +205,10 @@
         }
     }
 
-    function reinitializeSharedModules(mainEl) {
+    function reinitializeSharedModules(scopeEl) {
+        if (typeof window.setupUniversalEnterpriseTable === 'function') {
+            try { window.setupUniversalEnterpriseTable(); } catch (e) { console.warn(e); }
+        }
         if (typeof window.initializeEnhancedTables === 'function') {
             try { window.initializeEnhancedTables(); } catch (e) { console.warn(e); }
         }
@@ -216,7 +219,7 @@
             try { window.initFinanceSignatures(document); } catch (e) { console.warn(e); }
         }
         if (typeof window.initFinanceQuickDateSelects === 'function') {
-            try { window.initFinanceQuickDateSelects(mainEl || document); } catch (e) { console.warn(e); }
+            try { window.initFinanceQuickDateSelects(scopeEl || document); } catch (e) { console.warn(e); }
         }
     }
 
@@ -224,15 +227,119 @@
         const wrapper = document.getElementById('financeTabsWrapper');
         if (!wrapper || !clickedLink) return;
         if (clickedLink.classList.contains('finance-subtab-btn')) {
-            wrapper.querySelectorAll('.finance-subtab-btn').forEach(el => el.classList.remove('active'));
-            clickedLink.classList.add('active');
+            wrapper.querySelectorAll('.finance-subtab-btn').forEach(el => {
+                const isTarget = el === clickedLink;
+                el.classList.toggle('active', isTarget);
+            });
         } else if (clickedLink.classList.contains('finance-group-btn')) {
-            wrapper.querySelectorAll('.finance-group-btn').forEach(el => el.classList.remove('active'));
-            clickedLink.classList.add('active');
+            wrapper.querySelectorAll('.finance-group-btn').forEach(el => {
+                const isTarget = el === clickedLink;
+                el.classList.toggle('active', isTarget);
+                el.setAttribute('aria-selected', isTarget ? 'true' : 'false');
+            });
         }
     }
 
-    async function navigateFinancePjax(targetUrl, pushState = true, clickedLink = null) {
+    function syncMainPageClasses(currentMain, newMain) {
+        if (!currentMain || !newMain) return;
+        PAGE_MAIN_CLASSES.forEach(cls => {
+            currentMain.classList.toggle(cls, newMain.classList.contains(cls));
+        });
+    }
+
+    function syncHeaderPartial(newWrapper, finalUrl) {
+        const curWrapper = document.getElementById('financeTabsWrapper');
+        if (!curWrapper || !newWrapper) return;
+
+        // 1. Cập nhật nút hành động bên phải (Lập phiếu chi mới / Làm mới)
+        const curBtns = curWrapper.querySelector('#financeHeaderActionButtons');
+        const newBtns = newWrapper.querySelector('#financeHeaderActionButtons');
+        if (curBtns && newBtns) {
+            curBtns.innerHTML = newBtns.innerHTML;
+        }
+
+        // 2. Đồng bộ trạng thái active 2 nút chuyển nhóm [ Khách hàng | Phòng khám ]
+        const curGroups = curWrapper.querySelectorAll('.finance-group-btn');
+        const newGroups = newWrapper.querySelectorAll('.finance-group-btn');
+        if (curGroups.length === newGroups.length) {
+            curGroups.forEach((btn, idx) => {
+                const isActive = newGroups[idx].classList.contains('active');
+                btn.classList.toggle('active', isActive);
+                btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+        }
+
+        // 3. Nếu chuyển cùng nhóm -> chỉ cập nhật class .active trên hàng tab; nếu đổi nhóm -> thay hàng .finance-subtabs-nav
+        const curNav = curWrapper.querySelector('.finance-subtabs-nav');
+        const newNav = newWrapper.querySelector('.finance-subtabs-nav');
+        if (curNav && newNav) {
+            const curLabel = curNav.getAttribute('aria-label') || '';
+            const newLabel = newNav.getAttribute('aria-label') || '';
+            if (curLabel === newLabel) {
+                const newActiveHref = newNav.querySelector('.finance-subtab-btn.active')?.getAttribute('href');
+                const targetPath = newActiveHref ? normalizePath(newActiveHref) : normalizePath(finalUrl);
+                curNav.querySelectorAll('.finance-subtab-btn').forEach(btn => {
+                    btn.classList.toggle('active', normalizePath(btn.getAttribute('href')) === targetPath);
+                });
+            } else {
+                curNav.replaceWith(document.importNode(newNav, true));
+            }
+        } else if (!curNav && newNav) {
+            curWrapper.appendChild(document.importNode(newNav, true));
+        }
+    }
+
+    async function fetchFinanceHtml(url, signal) {
+        const cached = prefetchCache.get(url);
+        if (cached && (Date.now() - cached.ts) < CACHE_TTL_MS) {
+            return { html: cached.html, finalUrl: cached.finalUrl };
+        }
+        const response = await fetch(url, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'FinancePjax',
+                'Accept': 'text/html,application/xhtml+xml'
+            },
+            signal
+        });
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+        }
+        const finalUrl = response.url || url;
+        if (normalizePath(finalUrl).startsWith('/login')) {
+            return { redirectLogin: finalUrl };
+        }
+        const html = await response.text();
+        if (new URL(url, window.location.origin).search === '') {
+            prefetchCache.set(url, { html, finalUrl, ts: Date.now() });
+        }
+        return { html, finalUrl };
+    }
+
+    function prefetchFinanceUrl(rawHref) {
+        if (!rawHref || rawHref === '#' || rawHref.startsWith('javascript:')) return;
+        const absUrl = new URL(rawHref, window.location.origin).toString();
+        if (!isSameOriginUrl(absUrl)) return;
+        if (absUrl === window.location.href) return;
+        const cached = prefetchCache.get(absUrl);
+        if (cached && (Date.now() - cached.ts) < CACHE_TTL_MS) return;
+
+        fetch(absUrl, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'FinancePjax', 'Accept': 'text/html' }
+        }).then(res => {
+            if (!res.ok) return null;
+            const finalUrl = res.url || absUrl;
+            if (normalizePath(finalUrl).startsWith('/login')) return null;
+            return res.text().then(html => ({ html, finalUrl }));
+        }).then(data => {
+            if (data) prefetchCache.set(absUrl, { html: data.html, finalUrl: data.finalUrl, ts: Date.now() });
+        }).catch(() => {});
+    }
+
+    async function navigateFinancePjax(targetUrl, pushState = true, clickedLink = null, bypassCache = false) {
         if (!isSameOriginUrl(targetUrl)) {
             window.location.href = targetUrl;
             return;
@@ -242,6 +349,10 @@
         if (!currentMain) {
             window.location.href = targetUrl;
             return;
+        }
+
+        if (bypassCache) {
+            prefetchCache.delete(targetUrl);
         }
 
         recordCurrentDocumentAssets();
@@ -256,43 +367,32 @@
             applyOptimisticActiveState(clickedLink);
         }
 
-        const activeContentZone = document.getElementById('cashierTabContent') || document.getElementById('expenseIncomeTabContent') || currentMain;
-        if (activeContentZone) {
-            activeContentZone.classList.add('fin-pjax-loading', 'is-loading');
-        }
+        const activeContentZone = document.getElementById('cashierTabContent') || document.getElementById('expenseIncomeTabContent');
+        let loadingTimer = setTimeout(() => {
+            if (requestId === activeRequestId && activeContentZone) {
+                activeContentZone.classList.add('fin-pjax-loading', 'is-loading');
+            }
+        }, 120);
 
         try {
-            const response = await fetch(targetUrl, {
-                method: 'GET',
-                credentials: 'same-origin',
-                headers: {
-                    'X-Requested-With': 'FinancePjax',
-                    'Accept': 'text/html,application/xhtml+xml'
-                },
-                signal: activeAbortController ? activeAbortController.signal : undefined
-            });
+            const result = await fetchFinanceHtml(targetUrl, activeAbortController ? activeAbortController.signal : undefined);
+            clearTimeout(loadingTimer);
 
             if (requestId !== activeRequestId) return;
 
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
-            }
-
-            const finalUrl = response.url || targetUrl;
-            if (normalizePath(finalUrl).startsWith('/login')) {
-                window.location.href = finalUrl;
+            if (result.redirectLogin) {
+                window.location.href = result.redirectLogin;
                 return;
             }
 
-            const html = await response.text();
-            if (requestId !== activeRequestId) return;
-
+            const finalUrl = result.finalUrl || targetUrl;
             const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
+            const doc = parser.parseFromString(result.html, 'text/html');
             const newMain = doc.querySelector('main.app-content');
             const newWrapper = doc.getElementById('financeTabsWrapper');
+            const newContentZone = doc.getElementById('cashierTabContent') || doc.getElementById('expenseIncomeTabContent');
 
-            if (!newMain || !newWrapper) {
+            if (!newMain || !newWrapper || !newContentZone) {
                 window.location.href = finalUrl;
                 return;
             }
@@ -303,13 +403,23 @@
             cleanupOpenOverlays();
 
             const collectedScripts = [];
-            newMain.querySelectorAll('script').forEach(sc => {
+            const newAppShell = doc.querySelector('.app-shell');
+
+            newContentZone.querySelectorAll('script').forEach(sc => {
                 collectedScripts.push(sc);
                 sc.remove();
             });
 
+            newMain.querySelectorAll('script').forEach(sc => {
+                if (!newContentZone.contains(sc) && !newWrapper.contains(sc)) {
+                    const src = sc.getAttribute('src');
+                    if (!src || !GLOBAL_SCRIPT_RE.test(src)) {
+                        collectedScripts.push(sc);
+                    }
+                }
+            });
+
             const outsideNodes = [];
-            const newAppShell = doc.querySelector('.app-shell');
             doc.body.querySelectorAll(EXTRA_OUTSIDE_SELECTOR).forEach(el => {
                 if ((!newAppShell || !newAppShell.contains(el)) && !newMain.contains(el)) {
                     el.querySelectorAll('script').forEach(sc => {
@@ -331,8 +441,31 @@
 
             document.querySelectorAll('[data-fin-pjax-extra="true"]').forEach(el => el.remove());
 
-            currentMain.className = newMain.className;
-            currentMain.innerHTML = newMain.innerHTML;
+            // Xóa các alert cũ ở mức page trước khi đồng bộ alert mới (nếu có)
+            currentMain.querySelectorAll(':scope > .alert').forEach(el => el.remove());
+            const curWrapper = document.getElementById('financeTabsWrapper');
+            if (curWrapper) {
+                newMain.querySelectorAll(':scope > .alert').forEach(alertEl => {
+                    currentMain.insertBefore(document.importNode(alertEl, true), curWrapper);
+                });
+            }
+
+            syncMainPageClasses(currentMain, newMain);
+            syncHeaderPartial(newWrapper, finalUrl);
+
+            // Chỉ hoán đổi vùng nội dung bên dưới #financeTabsWrapper để Header & Tabs đứng yên tuyệt đối
+            if (activeContentZone) {
+                activeContentZone.classList.remove('fin-pjax-loading', 'is-loading');
+                if (activeContentZone.id === newContentZone.id) {
+                    activeContentZone.className = newContentZone.className;
+                    activeContentZone.innerHTML = newContentZone.innerHTML;
+                } else {
+                    const importedZone = document.importNode(newContentZone, true);
+                    activeContentZone.replaceWith(importedZone);
+                }
+            } else {
+                currentMain.innerHTML = newMain.innerHTML;
+            }
 
             const appShell = document.querySelector('.app-shell');
             const insertAnchor = appShell ? appShell.nextSibling : null;
@@ -356,15 +489,12 @@
                 window.history.pushState({ finPjax: true, url: finalUrl }, doc.title || '', finalUrl);
             }
 
-            if (window.scrollY > 120) {
-                window.scrollTo({ top: 0, behavior: 'instant' });
-            }
-
             await executeCollectedScripts(collectedScripts);
             if (requestId !== activeRequestId) return;
 
-            reinitializeSharedModules(currentMain);
+            reinitializeSharedModules(document.getElementById('cashierTabContent') || document.getElementById('expenseIncomeTabContent') || currentMain);
         } catch (err) {
+            clearTimeout(loadingTimer);
             if (err && err.name === 'AbortError') {
                 return;
             }
@@ -375,6 +505,13 @@
             window.location.href = targetUrl;
         }
     }
+
+    document.addEventListener('mouseenter', function (e) {
+        const tab = e.target && e.target.closest ? e.target.closest('#financeTabsWrapper a.finance-subtab-btn, #financeTabsWrapper a.finance-group-btn') : null;
+        if (tab) {
+            prefetchFinanceUrl(tab.getAttribute('href'));
+        }
+    }, true);
 
     document.addEventListener('click', function (e) {
         if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) {
@@ -391,7 +528,7 @@
 
         const isGroupTab = Boolean(link.closest('#financeTabsWrapper') && link.classList.contains('finance-group-btn'));
         const isSubTab = Boolean(link.closest('#financeTabsWrapper') && link.classList.contains('finance-subtab-btn'));
-        const isHeaderRefresh = Boolean(link.closest('#financeTabsWrapper') && link.classList.contains('btn-outline-secondary'));
+        const isHeaderRefresh = Boolean(link.closest('#financeTabsWrapper') && (link.classList.contains('fin-refresh-btn') || link.classList.contains('btn-outline-secondary')));
         const isPagination = Boolean(link.closest('.finance-page .misa-pagination-footer') && link.classList.contains('misa-nav-btn') && !link.classList.contains('disabled'));
         const isFilterReset = Boolean(link.closest('.finance-page .fin-filter-container') && link.classList.contains('fin-btn-outline'));
 
@@ -409,15 +546,21 @@
         }
 
         e.preventDefault();
-        navigateFinancePjax(parsedTarget.toString(), true, (isGroupTab || isSubTab) ? link : null);
+        navigateFinancePjax(parsedTarget.toString(), true, (isGroupTab || isSubTab) ? link : null, isHeaderRefresh);
     });
 
     document.addEventListener('submit', function (e) {
-        if (e.defaultPrevented) return;
         const form = e.target;
-        if (!form || !form.classList || !form.classList.contains('fin-filter-bar')) return;
+        if (!form) return;
+
+        if (String(form.method || 'get').toLowerCase() === 'post') {
+            prefetchCache.clear();
+            return;
+        }
+
+        if (e.defaultPrevented) return;
+        if (!form.classList || !form.classList.contains('fin-filter-bar')) return;
         if (!form.closest('.finance-page')) return;
-        if (String(form.method || 'get').toLowerCase() !== 'get') return;
         if (!document.getElementById('financeTabsWrapper')) return;
 
         e.preventDefault();
@@ -425,7 +568,7 @@
         const target = new URL(actionAttr, window.location.origin);
         const params = new URLSearchParams(new FormData(form));
         target.search = params.toString();
-        navigateFinancePjax(target.toString(), true);
+        navigateFinancePjax(target.toString(), true, null, true);
     });
 
     window.addEventListener('popstate', function () {
@@ -443,7 +586,7 @@
         url.searchParams.set('size', newSize);
         url.searchParams.set('page', '0');
         if (document.getElementById('financeTabsWrapper')) {
-            navigateFinancePjax(url.toString(), true);
+            navigateFinancePjax(url.toString(), true, null, true);
         } else {
             window.location.href = url.toString();
         }

@@ -1,9 +1,11 @@
 /* CV-DCMS - Quản lý Dịch vụ & Bảng giá: Upload ảnh dịch vụ + CKEditor 5 cho Mô tả dịch vụ */
-document.addEventListener("DOMContentLoaded", function () {
+(function () {
     "use strict";
 
-    const form = document.getElementById("serviceFormElement") || document.getElementById("createServiceForm");
-    if (!form) return;
+    function initServiceEditor() {
+        const form = document.getElementById("serviceFormElement") || document.getElementById("createServiceForm");
+        if (!form || form.dataset.serviceEditorBound === "true") return;
+        form.dataset.serviceEditorBound = "true";
 
     const uploadUrl = form.dataset.uploadUrl || "/admin/services/upload/image";
     const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -313,4 +315,12 @@ document.addEventListener("DOMContentLoaded", function () {
             descriptionTextarea.value = editorInstance.getData();
         }
     });
-});
+    }
+
+    window.initServiceEditor = initServiceEditor;
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initServiceEditor);
+    } else {
+        initServiceEditor();
+    }
+})();
