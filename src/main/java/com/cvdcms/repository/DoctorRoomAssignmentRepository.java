@@ -4,6 +4,7 @@ import com.cvdcms.entity.DoctorRoomAssignment;
 import com.cvdcms.entity.enums.DoctorAssignmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface DoctorRoomAssignmentRepository extends JpaRepository<DoctorRoomAssignment, Long> {
@@ -17,4 +18,11 @@ public interface DoctorRoomAssignmentRepository extends JpaRepository<DoctorRoom
     List<DoctorRoomAssignment> findByBranchBranchIdAndStaffStaffIdOrderByAssignmentIdAsc(Long branchId, Long staffId);
 
     List<DoctorRoomAssignment> findByRoomRoomIdAndStatus(Long roomId, DoctorAssignmentStatus status);
+
+    boolean existsByBranchBranchIdAndStaffStaffIdAndRoomRoomIdAndStatusIn(
+            Long branchId,
+            Long staffId,
+            Long roomId,
+            Collection<DoctorAssignmentStatus> statuses
+    );
 }

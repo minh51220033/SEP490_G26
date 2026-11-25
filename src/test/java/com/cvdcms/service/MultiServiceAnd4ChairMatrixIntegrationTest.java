@@ -294,56 +294,42 @@ class MultiServiceAnd4ChairMatrixIntegrationTest {
     }
 
     @Test
-    @DisplayName("Section B & C: Multi-service booking groups appointments, sums duration, and rejects overbooking")
-    void multiServiceBookingGroupsAndValidatesTotalCapacity() {
+    @DisplayName("Section B & C: Multi-service (>1 service) is rejected (400) while separate single-service bookings work cleanly")
+    void multiServiceRejectedAndSeparateSingleServiceBookingsAllowed() {
         StaffProfile doc = createScheduledDoctor("MS", tomorrow);
         Role patientRole = ensureRole("BENH_NHAN");
         User patUser = createUser("pat_ms_" + SEQ.incrementAndGet(), patientRole, UserType.PATIENT);
-        PatientProfile profile = createPatient("BN Multi Service", patUser);
+        PatientProfile profile = createPatient("BN Single Service 1", patUser);
 
         MockHttpSession session = new MockHttpSession();
         session.setAttribute("loggedInUser", patUser);
 
-        // Book 2 services together: 30p + 60p = 90p starting 08:00 (08:00-09:30)
-        var req = new PortalAppointmentService.MultiServiceBookingRequest(
+        // Sending 2 services in a single request must be rejected (400 Bad Request)
+        var multiReq = new PortalAppointmentService.MultiServiceBookingRequest(
                 profile.getProfileId(), branch.getBranchId(), tomorrow, PreferredSession.MORNING,
                 doc.getStaffId(), List.of(svcExam30.getServiceId(), svcExtract60.getServiceId()),
                 LocalTime.of(8, 0), "Kham + Nho rang", UUID.randomUUID().toString());
+        ResponseStatusException exMulti = assertThrows(ResponseStatusException.class,
+                () -> portalAppointmentService.bookMultiService(session, multiReq));
+        assertEquals(400, exMulti.getStatusCode().value());
 
-        var result = portalAppointmentService.bookMultiService(session, req);
-        assertNotNull(result.bookingGroupCode());
-        assertEquals(90, result.totalDurationMinutes());
-        assertEquals(2, result.appointments().size());
-        assertEquals(LocalTime.of(8, 0), result.appointments().get(0).expectedTime());
-        assertEquals(LocalTime.of(8, 30), result.appointments().get(1).expectedTime());
+        // Booking 1st service separately succeeds (30p: 08:00-08:30)
+        var single1 = portalAppointmentService.book(session, new PortalAppointmentService.BookingRequest(
+                profile.getProfileId(), branch.getBranchId(), tomorrow, PreferredSession.MORNING,
+                doc.getStaffId(), svcExam30.getServiceId(), "Kham 30p", UUID.randomUUID().toString(), LocalTime.of(8, 0)));
+        assertEquals(30, single1.durationMinutes());
+        assertEquals(LocalTime.of(8, 0), single1.expectedTime());
 
-        // Verify persisted bookingGroupCode
-        List<Appointment> saved = result.appointments().stream()
-                .map(v -> appointmentRepository.findById(v.id()).orElseThrow())
-                .toList();
-        assertEquals(result.bookingGroupCode(), saved.get(0).getBookingGroupCode());
-        assertEquals(result.bookingGroupCode(), saved.get(1).getBookingGroupCode());
-
-        // Fill 09:30-11:00 (another 90p -> only 60p left in 08:00-12:00 morning shift)
+        // Booking 2nd service in a separate request succeeds (60p: 08:30-09:30)
         User uSecond = createUser("pat_2nd_" + SEQ.incrementAndGet(), patientRole, UserType.PATIENT);
         PatientProfile pSecond = createPatient("BN Second", uSecond);
         MockHttpSession sSecond = new MockHttpSession();
         sSecond.setAttribute("loggedInUser", uSecond);
-        portalAppointmentService.bookMultiService(sSecond, new PortalAppointmentService.MultiServiceBookingRequest(
+        var single2 = portalAppointmentService.book(sSecond, new PortalAppointmentService.BookingRequest(
                 pSecond.getProfileId(), branch.getBranchId(), tomorrow, PreferredSession.MORNING,
-                doc.getStaffId(), List.of(svcExam30.getServiceId(), svcExtract60.getServiceId()),
-                LocalTime.of(9, 30), "Slot 2", UUID.randomUUID().toString()));
-
-        // 3rd 90-min multi-service booking in MORNING must be rejected (only 60p left < 90p)
-        User uOver = createUser("pat_over_" + SEQ.incrementAndGet(), patientRole, UserType.PATIENT);
-        PatientProfile pOver = createPatient("BN Overbook", uOver);
-        MockHttpSession sOver = new MockHttpSession();
-        sOver.setAttribute("loggedInUser", uOver);
-        assertThrows(ResponseStatusException.class, () -> portalAppointmentService.bookMultiService(sOver,
-                new PortalAppointmentService.MultiServiceBookingRequest(
-                        pOver.getProfileId(), branch.getBranchId(), tomorrow, PreferredSession.MORNING,
-                        doc.getStaffId(), List.of(svcExam30.getServiceId(), svcExtract60.getServiceId()),
-                        LocalTime.of(11, 0), "Over capacity", UUID.randomUUID().toString())));
+                doc.getStaffId(), svcExtract60.getServiceId(), "Nho rang 60p", UUID.randomUUID().toString(), LocalTime.of(8, 30)));
+        assertEquals(60, single2.durationMinutes());
+        assertEquals(LocalTime.of(8, 30), single2.expectedTime());
     }
 
     @Test

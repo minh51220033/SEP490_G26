@@ -2,10 +2,15 @@ package com.cvdcms.controller;
 
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
+import com.cvdcms.repository.DentalChairRepository;
+import com.cvdcms.repository.RoomRepository;
+import com.cvdcms.repository.ServiceRepository;
+import com.cvdcms.repository.StaffProfileRepository;
 import com.cvdcms.repository.UserRepository;
 import com.cvdcms.service.*;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +36,18 @@ public class AdminResourceMasterRestController {
     private final ResourceAssignmentAdminService assignmentAdminService;
     private final BranchService branchService;
     private final UserRepository userRepository;
+
+    @Autowired(required = false)
+    private RoomRepository roomRepository;
+
+    @Autowired(required = false)
+    private ServiceRepository serviceRepository;
+
+    @Autowired(required = false)
+    private DentalChairRepository dentalChairRepository;
+
+    @Autowired(required = false)
+    private StaffProfileRepository staffProfileRepository;
 
     // -------------------------------------------------------------------------
     // 1. Quy tắc di chuyển liên phòng / liên tầng (branch_room_transition_rules)
@@ -159,9 +176,53 @@ public class AdminResourceMasterRestController {
     // 3. Phân công Bác sĩ - Phòng & Bác sĩ - Dịch vụ & Yêu cầu Dịch vụ
     // -------------------------------------------------------------------------
 
+    @GetMapping("/branches/{branchId}/rooms")
+    public List<Map<String, Object>> listBranchRooms(
+            @PathVariable Long branchId, HttpSession session, Authentication auth) {
+        requireBranchAccess(branchId, session, auth);
+        if (roomRepository == null) {
+            return List.of();
+        }
+        Map<Long, Long> chairCounts = new java.util.HashMap<>();
+        if (dentalChairRepository != null) {
+            for (DentalChair ch : dentalChairRepository.findByBranchBranchIdOrderByChairCodeAsc(branchId)) {
+                if (ch.getRoom() != null && ch.getRoom().getRoomId() != null
+                        && ch.getStatus() != ChairStatus.MAINTENANCE && ch.getStatus() != ChairStatus.INACTIVE) {
+                    chairCounts.merge(ch.getRoom().getRoomId(), 1L, Long::sum);
+                }
+            }
+        }
+        return roomRepository.findByBranchBranchIdAndStatusOrderByRoomCodeAsc(branchId, RoomStatus.ACTIVE).stream()
+                .map(r -> Map.<String, Object>of(
+                        "roomId", r.getRoomId(),
+                        "roomCode", r.getRoomCode(),
+                        "roomName", r.getRoomName(),
+                        "roomType", r.getRoomType() != null ? r.getRoomType().name() : "",
+                        "status", r.getStatus().name(),
+                        "chairCount", chairCounts.getOrDefault(r.getRoomId(), 0L)
+                )).toList();
+    }
+
+    @GetMapping("/services")
+    public List<Map<String, Object>> listActiveServices(HttpSession session, Authentication auth) {
+        requireAdminOrBranchUser(session, auth);
+        if (serviceRepository == null) {
+            return List.of();
+        }
+        return serviceRepository.findByStatusAndCategory_IsActiveTrueOrderByServiceNameAsc(ServiceStatus.ACTIVE).stream()
+                .map(s -> Map.<String, Object>of(
+                        "serviceId", s.getServiceId(),
+                        "serviceCode", s.getServiceCode(),
+                        "serviceName", s.getServiceName(),
+                        "durationMinutes", AppointmentSlotService.duration(s),
+                        "status", s.getStatus().name()
+                )).toList();
+    }
+
     @GetMapping("/branches/{branchId}/doctors/{staffId}/rooms")
     public List<Map<String, Object>> listDoctorRooms(
             @PathVariable Long branchId, @PathVariable Long staffId, HttpSession session, Authentication auth) {
+        requireAdminOrSelfDoctor(staffId, session, auth);
         requireBranchAccess(branchId, session, auth);
         return assignmentAdminService.getAllRoomAssignments(branchId, staffId).stream()
                 .map(a -> Map.<String, Object>of(
@@ -185,6 +246,7 @@ public class AdminResourceMasterRestController {
             @RequestParam(required = false) DoctorAssignmentStatus status,
             HttpSession session,
             Authentication auth) {
+        requireAdminRole(session, auth);
         requireBranchAccess(branchId, session, auth);
         DoctorRoomAssignment saved = assignmentAdminService.assignDoctorRoom(
                 branchId, staffId, roomId, isPrimary, effectiveFrom, effectiveTo, status);
@@ -202,10 +264,18 @@ public class AdminResourceMasterRestController {
         return Map.of("assignmentId", approved.getAssignmentId(), "status", approved.getStatus().name());
     }
 
+    @DeleteMapping("/doctors/room-assignments/{assignmentId}")
+    public Map<String, Object> revokeRoomAssignment(
+            @PathVariable Long assignmentId, HttpSession session, Authentication auth) {
+        requireAdminRole(session, auth);
+        DoctorRoomAssignment revoked = assignmentAdminService.revokeRoomAssignment(assignmentId);
+        return Map.of("assignmentId", revoked.getAssignmentId(), "status", revoked.getStatus().name());
+    }
+
     @GetMapping("/doctors/{staffId}/services")
     public List<Map<String, Object>> listDoctorServices(
             @PathVariable Long staffId, HttpSession session, Authentication auth) {
-        requireAdminOrBranchUser(session, auth);
+        requireAdminOrSelfDoctor(staffId, session, auth);
         return assignmentAdminService.getAllServicePermissionsByStaff(staffId).stream()
                 .map(p -> Map.<String, Object>of(
                         "permissionId", p.getPermissionId(),
@@ -228,10 +298,9 @@ public class AdminResourceMasterRestController {
             @RequestParam(required = false) String note,
             HttpSession session,
             Authentication auth) {
+        requireAdminRole(session, auth);
         if (branchId != null) {
             requireBranchAccess(branchId, session, auth);
-        } else {
-            requireAdminRole(session, auth);
         }
         DoctorServicePermission saved = assignmentAdminService.grantDoctorServicePermission(
                 staffId, serviceId, branchId, effectiveFrom, effectiveTo, status, note);
@@ -247,6 +316,14 @@ public class AdminResourceMasterRestController {
         requireAdminRole(session, auth);
         DoctorServicePermission approved = assignmentAdminService.approveServicePermission(permissionId);
         return Map.of("permissionId", approved.getPermissionId(), "status", approved.getStatus().name());
+    }
+
+    @DeleteMapping("/doctors/service-permissions/{permissionId}")
+    public Map<String, Object> revokeServicePermission(
+            @PathVariable Long permissionId, HttpSession session, Authentication auth) {
+        requireAdminRole(session, auth);
+        DoctorServicePermission revoked = assignmentAdminService.revokeServicePermission(permissionId);
+        return Map.of("permissionId", revoked.getPermissionId(), "status", revoked.getStatus().name());
     }
 
     @GetMapping("/services/{serviceId}/requirements")
@@ -312,6 +389,21 @@ public class AdminResourceMasterRestController {
         if (!userRepository.hasActiveAdminRole(user.getUserId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Chỉ Quản trị viên hệ thống (ADMIN) mới có quyền thực hiện.");
         }
+    }
+
+    private void requireAdminOrSelfDoctor(Long staffId, HttpSession session, Authentication auth) {
+        User user = requireAdminOrBranchUser(session, auth);
+        if (userRepository.hasActiveAdminRole(user.getUserId())) {
+            return;
+        }
+        boolean isSelf = staffProfileRepository != null && staffProfileRepository.findById(staffId)
+                .map(s -> s.getUser() != null && java.util.Objects.equals(s.getUser().getUserId(), user.getUserId()))
+                .orElse(false);
+        if (isSelf && assignmentAdminService.isDoctorStaff(staffId)) {
+            return;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Chỉ Quản trị viên hoặc chính Bác sĩ sở hữu hồ sơ mới có quyền xem phân công này.");
     }
 
     private void requireBranchAccess(Long branchId, HttpSession session, Authentication auth) {

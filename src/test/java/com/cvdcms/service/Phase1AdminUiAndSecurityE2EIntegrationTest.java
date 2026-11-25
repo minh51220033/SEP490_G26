@@ -50,6 +50,7 @@ class Phase1AdminUiAndSecurityE2EIntegrationTest {
     @Autowired private ClinicEquipmentRepository equipmentRepository;
     @Autowired private DoctorRoomAssignmentRepository roomAssignmentRepository;
     @Autowired private DoctorServicePermissionRepository servicePermissionRepository;
+    @Autowired private StaffBranchAssignmentRepository staffBranchAssignmentRepository;
 
     private MockMvc mockMvc;
 
@@ -161,8 +162,8 @@ class Phase1AdminUiAndSecurityE2EIntegrationTest {
         // 1. Render 3 trang Admin UI & xác nhận có đủ DOM Phase 1 + không hỏng trang cũ
         mockMvc.perform(get("/admin/branches/" + b1.getBranchId()).session(adminSession))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("phase1TransitionRulesCard")))
-                .andExpect(content().string(containsString("phase1EquipmentsCard")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("phase1TransitionRulesCard"))))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("phase1EquipmentsCard"))))
                 .andExpect(content().string(containsString("roomFloorLabel")))
                 .andExpect(content().string(containsString("Phòng 101")));
 
@@ -237,5 +238,207 @@ class Phase1AdminUiAndSecurityE2EIntegrationTest {
                         .session(adminSession).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
+
+        // 4. Dropdown APIs + Duplicate rejection (409) + Revoke (DELETE -> INACTIVE)
+        mockMvc.perform(get("/admin/api/resources/branches/" + b1.getBranchId() + "/rooms")
+                        .session(adminSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].roomCode").exists());
+
+        mockMvc.perform(get("/admin/api/resources/branches/" + b2.getBranchId() + "/rooms")
+                        .session(nonAdminSession))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/admin/api/resources/services")
+                        .session(adminSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].serviceCode").exists());
+
+        // Trùng phân công phòng -> 409 Conflict
+        mockMvc.perform(post("/admin/api/resources/branches/" + b1.getBranchId() + "/doctors/" + doc.getStaffId() + "/rooms")
+                        .session(adminSession).with(csrf())
+                        .param("roomId", r1.getRoomId().toString()))
+                .andExpect(status().isConflict());
+
+        // Cấp quyền dịch vụ -> trùng 409 -> duyệt -> thu hồi INACTIVE
+        mockMvc.perform(post("/admin/api/resources/doctors/" + doc.getStaffId() + "/services")
+                        .session(adminSession).with(csrf())
+                        .param("serviceId", svc.getServiceId().toString())
+                        .param("note", "Test perm"))
+                .andExpect(status().isCreated());
+
+        Long permId = servicePermissionRepository
+                .findByStaffStaffIdOrderByPermissionIdAsc(doc.getStaffId())
+                .get(0).getPermissionId();
+
+        mockMvc.perform(post("/admin/api/resources/doctors/" + doc.getStaffId() + "/services")
+                        .session(adminSession).with(csrf())
+                        .param("serviceId", svc.getServiceId().toString()))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/admin/api/resources/doctors/room-assignments/" + roomAssignId)
+                        .session(adminSession).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("INACTIVE"));
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/admin/api/resources/doctors/service-permissions/" + permId)
+                        .session(adminSession).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("INACTIVE"));
+    }
+
+    @Test
+    @DisplayName("Role-based #tab-resource-perms & API security: chỉ Bác sĩ có tab, non-doctor bị ẩn & chặn API, đổi role giữ nguyên lịch sử")
+    @WithMockUser(username = "admin_role_test", roles = {"ADMIN"})
+    void roleBasedResourceTabAndApiSecurityVerification() throws Exception {
+        Branch b1 = createBranch("BR-ROLE-1", "Cơ sở Role 1");
+        User adminUser = createUserWithRole("admin_rt", "ADMIN", b1);
+
+        RoomDTO rDto = new RoomDTO();
+        rDto.setRoomCode("PR101");
+        rDto.setRoomName("Phòng Role 101");
+        rDto.setRoomType(RoomType.EXAM);
+        Room r1 = roomService.createRoom(b1.getBranchId(), rDto);
+
+        ServiceCategory cat = new ServiceCategory();
+        cat.setCategoryCode("CAT-RT-" + System.nanoTime());
+        cat.setCategoryName("Khám Role");
+        cat.setCategoryType(ServiceType.CONSULTATION);
+        cat = serviceCategoryRepository.save(cat);
+
+        ServiceCreateDTO svcDto = new ServiceCreateDTO();
+        svcDto.setCategoryId(cat.getCategoryId());
+        svcDto.setServiceCode("SVC-RT-" + Math.abs(System.nanoTime() % 1_000_000L));
+        svcDto.setServiceName("Khám Role Test");
+        svcDto.setServiceType(ServiceType.CONSULTATION);
+        svcDto.setUnit("Lần");
+        svcDto.setBasePrice(new BigDecimal("100000"));
+        svcDto.setSurchargeAmount(BigDecimal.ZERO);
+        svcDto.setRequiresTooth(false);
+        svcDto.setIsBookableOnline(true);
+        svcDto.setPreparationDurationMinutes(2);
+        svcDto.setProcedureDurationMinutes(6);
+        svcDto.setTurnoverDurationMinutes(2);
+        svcDto.setStatus(ServiceStatus.ACTIVE);
+        serviceCatalogService.createService(svcDto);
+        Service svc = serviceRepository.findByServiceCode(svcDto.getServiceCode()).orElseThrow();
+
+        Role doctorRole = roleRepository.findByRoleName("BAC_SI").orElseThrow();
+        Role recRole = roleRepository.findByRoleName("LE_TAN").orElseThrow();
+
+        StaffProfile doc = createStaffWithBranchRole("bs_rt", "BAC_SI", "BS Role Test", b1);
+        StaffProfile rec = createStaffWithBranchRole("lt_rt", "LE_TAN", "LT Role Test", b1);
+        StaffProfile acc = createStaffWithBranchRole("kt_rt", "KE_TOAN", "KT Role Test", b1);
+        StaffProfile inv = createStaffWithBranchRole("kho_rt", "QUAN_LY_KHO", "Kho Role Test", b1);
+
+        MockHttpSession adminSession = new MockHttpSession();
+        adminSession.setAttribute("loggedInUser", adminUser);
+        adminSession.setAttribute("roleNames", List.of("ADMIN"));
+
+        MockHttpSession docSession = new MockHttpSession();
+        docSession.setAttribute("loggedInUser", doc.getUser());
+        docSession.setAttribute("roleNames", List.of("BAC_SI"));
+
+        MockHttpSession recSession = new MockHttpSession();
+        recSession.setAttribute("loggedInUser", rec.getUser());
+        recSession.setAttribute("roleNames", List.of("LE_TAN"));
+
+        // 1. Admin mở hồ sơ Bác sĩ -> thấy tab và cấu hình được
+        mockMvc.perform(get("/admin/staffs/" + doc.getStaffId()).session(adminSession))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("tab-resource-perms")))
+                .andExpect(content().string(containsString("pane-resource-perms")));
+
+        // 2-4. Admin mở hồ sơ Lễ tân, Kế toán, Quản lý kho -> không thấy tab
+        for (StaffProfile nonDoc : List.of(rec, acc, inv)) {
+            mockMvc.perform(get("/admin/staffs/" + nonDoc.getStaffId()).session(adminSession))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(org.hamcrest.Matchers.not(containsString("tab-resource-perms"))))
+                    .andExpect(content().string(org.hamcrest.Matchers.not(containsString("pane-resource-perms"))));
+
+            // Admin gọi trực tiếp API cấp quyền cho nhân viên không phải Bác sĩ -> 403 Forbidden
+            mockMvc.perform(post("/admin/api/resources/branches/" + b1.getBranchId() + "/doctors/" + nonDoc.getStaffId() + "/rooms")
+                            .session(adminSession).with(csrf())
+                            .param("roomId", r1.getRoomId().toString()))
+                    .andExpect(status().isForbidden());
+        }
+
+        // Admin cấp quyền & duyệt cho Bác sĩ
+        mockMvc.perform(post("/admin/api/resources/branches/" + b1.getBranchId() + "/doctors/" + doc.getStaffId() + "/rooms")
+                        .session(adminSession).with(csrf())
+                        .param("roomId", r1.getRoomId().toString()))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/admin/api/resources/doctors/" + doc.getStaffId() + "/services")
+                        .session(adminSession).with(csrf())
+                        .param("serviceId", svc.getServiceId().toString()))
+                .andExpect(status().isCreated());
+
+        // 5. Bác sĩ tự xem được phân công của mình (200 OK), nhưng không tự cấp quyền được (403); Lễ tân gọi API bị 403
+        mockMvc.perform(get("/admin/api/resources/branches/" + b1.getBranchId() + "/doctors/" + doc.getStaffId() + "/rooms")
+                        .session(docSession))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/admin/api/resources/doctors/" + doc.getStaffId() + "/services")
+                        .session(docSession))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/admin/api/resources/doctors/" + doc.getStaffId() + "/services")
+                        .session(docSession).with(csrf())
+                        .param("serviceId", svc.getServiceId().toString()))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/admin/api/resources/branches/" + b1.getBranchId() + "/doctors/" + doc.getStaffId() + "/rooms")
+                        .session(recSession))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/admin/api/resources/doctors/" + doc.getStaffId() + "/services")
+                        .session(recSession))
+                .andExpect(status().isForbidden());
+
+        // 6. Đổi nhân viên từ Bác sĩ sang Lễ tân -> tab biến mất, API bị 403, dữ liệu phân công vẫn được giữ nguyên trong DB
+        StaffBranchAssignment sba = staffBranchAssignmentRepository
+                .findByStaffStaffIdAndStatus(doc.getStaffId(), AssignmentStatus.ACTIVE).get(0);
+        sba.setRole(recRole);
+        staffBranchAssignmentRepository.saveAndFlush(sba);
+
+        mockMvc.perform(get("/admin/staffs/" + doc.getStaffId()).session(adminSession))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("tab-resource-perms"))));
+
+        mockMvc.perform(get("/admin/api/resources/doctors/" + doc.getStaffId() + "/services")
+                        .session(adminSession))
+                .andExpect(status().isForbidden());
+
+        assertFalse(roomAssignmentRepository.findByBranchBranchIdAndStaffStaffIdOrderByAssignmentIdAsc(
+                b1.getBranchId(), doc.getStaffId()).isEmpty());
+        assertFalse(servicePermissionRepository.findByStaffStaffIdOrderByPermissionIdAsc(
+                doc.getStaffId()).isEmpty());
+
+        // Đổi lại thành Bác sĩ -> tab hiện lại và dữ liệu cũ vẫn còn nguyên
+        sba.setRole(doctorRole);
+        staffBranchAssignmentRepository.saveAndFlush(sba);
+        mockMvc.perform(get("/admin/staffs/" + doc.getStaffId()).session(adminSession))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("tab-resource-perms")));
+    }
+
+    private StaffProfile createStaffWithBranchRole(String prefix, String roleName, String fullName, Branch branch) {
+        User u = createUserWithRole(prefix, roleName, branch);
+        StaffProfile sp = new StaffProfile();
+        sp.setUser(u);
+        sp.setStaffCode("STF" + Math.abs(System.nanoTime() % 1_000_000_000L));
+        sp.setFullName(fullName);
+        sp.setStatus(StaffStatus.ACTIVE);
+        sp = staffProfileRepository.saveAndFlush(sp);
+
+        Role role = roleRepository.findByRoleName(roleName).orElseThrow();
+        StaffBranchAssignment sba = new StaffBranchAssignment();
+        sba.setStaff(sp);
+        sba.setBranch(branch);
+        sba.setRole(role);
+        sba.setStatus(AssignmentStatus.ACTIVE);
+        sba.setIsPrimary(true);
+        sba.setStartDate(java.time.LocalDate.now().minusDays(1));
+        staffBranchAssignmentRepository.saveAndFlush(sba);
+        return sp;
     }
 }

@@ -601,10 +601,10 @@ public class PortalAppointmentService {
             return new MultiServiceBookingResult(existingGroupCode, replayDuration, replayViews);
         }
         if (request.serviceIds() == null || request.serviceIds().isEmpty()) {
-            throw bad("Vui lòng chọn ít nhất một dịch vụ.");
+            throw bad("Vui lòng chọn 1 dịch vụ khám.");
         }
-        if (request.serviceIds().size() > 5) {
-            throw bad("Mỗi lần đặt lịch chỉ hỗ trợ tối đa 5 dịch vụ.");
+        if (request.serviceIds().size() > 1) {
+            throw bad("Mỗi lần đặt lịch chỉ được chọn tối đa 1 dịch vụ. Nếu muốn đặt thêm dịch vụ khác, vui lòng tạo lượt đặt lịch riêng.");
         }
 
         PatientProfile profile = patientProfiles != null

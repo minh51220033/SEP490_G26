@@ -4,8 +4,11 @@ import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -24,6 +27,9 @@ public class ResourceAssignmentAdminService {
     private final ServiceRepository serviceRepository;
     private final ClinicEquipmentRepository equipmentRepository;
 
+    @Autowired(required = false)
+    private StaffBranchAssignmentRepository staffBranchAssignmentRepository;
+
     @Transactional(readOnly = true)
     public List<DoctorRoomAssignment> getActiveRoomAssignments(Long branchId, Long staffId) {
         return roomAssignmentRepository
@@ -32,7 +38,43 @@ public class ResourceAssignmentAdminService {
     }
 
     @Transactional(readOnly = true)
+    public boolean isDoctorStaff(Long staffId) {
+        if (staffId == null) return false;
+        return staffProfileRepository.findById(staffId)
+                .map(this::isDoctorStaff)
+                .orElse(false);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isDoctorStaff(StaffProfile staff) {
+        if (staff == null) return false;
+        if (staffBranchAssignmentRepository != null && staff.getStaffId() != null) {
+            List<StaffBranchAssignment> active = staffBranchAssignmentRepository
+                    .findByStaffStaffIdAndStatus(staff.getStaffId(), AssignmentStatus.ACTIVE);
+            if (!active.isEmpty()) {
+                return active.stream().anyMatch(a -> a.getRole() != null && isDoctorRoleName(a.getRole().getRoleName()));
+            }
+        }
+        return staff.getUser() != null && staff.getUser().getRoles() != null
+                && staff.getUser().getRoles().stream().anyMatch(r -> r != null && isDoctorRoleName(r.getRoleName()));
+    }
+
+    private static boolean isDoctorRoleName(String roleName) {
+        return "BAC_SI".equalsIgnoreCase(roleName) || "DOCTOR".equalsIgnoreCase(roleName);
+    }
+
+    private void requireDoctorStaff(StaffProfile staff) {
+        if (!isDoctorStaff(staff)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Chức năng phân công phòng và dịch vụ chuyên môn chỉ áp dụng cho nhân sự có vai trò Bác sĩ.");
+        }
+    }
+
+    @Transactional(readOnly = true)
     public List<DoctorRoomAssignment> getAllRoomAssignments(Long branchId, Long staffId) {
+        StaffProfile staff = staffProfileRepository.findById(staffId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân sự."));
+        requireDoctorStaff(staff);
         return roomAssignmentRepository.findByBranchBranchIdAndStaffStaffIdOrderByAssignmentIdAsc(branchId, staffId);
     }
 
@@ -44,6 +86,9 @@ public class ResourceAssignmentAdminService {
 
     @Transactional(readOnly = true)
     public List<DoctorServicePermission> getAllServicePermissionsByStaff(Long staffId) {
+        StaffProfile staff = staffProfileRepository.findById(staffId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân sự."));
+        requireDoctorStaff(staff);
         return servicePermissionRepository.findByStaffStaffIdOrderByPermissionIdAsc(staffId);
     }
 
@@ -61,10 +106,24 @@ public class ResourceAssignmentAdminService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chi nhánh."));
         StaffProfile staff = staffProfileRepository.findById(staffId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân sự."));
+        requireDoctorStaff(staff);
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phòng."));
         if (!Objects.equals(room.getBranch().getBranchId(), branchId)) {
             throw new IllegalArgumentException("Phòng không thuộc chi nhánh được phân công.");
+        }
+        if (room.getStatus() != RoomStatus.ACTIVE) {
+            throw new IllegalArgumentException("Phòng " + room.getRoomCode() + " hiện không ở trạng thái hoạt động (ACTIVE).");
+        }
+        if (staffBranchAssignmentRepository != null
+                && !staffBranchAssignmentRepository.findByStaffStaffIdAndStatus(staffId, AssignmentStatus.ACTIVE).isEmpty()
+                && !staffBranchAssignmentRepository.hasActiveAssignment(staffId, branchId, AssignmentStatus.ACTIVE)) {
+            throw new IllegalArgumentException("Nhân sự không thuộc phạm vi phân công ACTIVE của chi nhánh này.");
+        }
+        if (roomAssignmentRepository.existsByBranchBranchIdAndStaffStaffIdAndRoomRoomIdAndStatusIn(
+                branchId, staffId, roomId, List.of(DoctorAssignmentStatus.PENDING_REVIEW, DoctorAssignmentStatus.ACTIVE))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Nhân sự đã được phân công phòng " + room.getRoomCode() + " (đang chờ duyệt hoặc đang hoạt động).");
         }
 
         DoctorRoomAssignment assignment = new DoctorRoomAssignment();
@@ -82,7 +141,17 @@ public class ResourceAssignmentAdminService {
     public DoctorRoomAssignment approveRoomAssignment(Long assignmentId) {
         DoctorRoomAssignment assignment = roomAssignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phân công phòng."));
+        requireDoctorStaff(assignment.getStaff());
         assignment.setStatus(DoctorAssignmentStatus.ACTIVE);
+        return roomAssignmentRepository.save(assignment);
+    }
+
+    @Transactional
+    public DoctorRoomAssignment revokeRoomAssignment(Long assignmentId) {
+        DoctorRoomAssignment assignment = roomAssignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phân công phòng."));
+        requireDoctorStaff(assignment.getStaff());
+        assignment.setStatus(DoctorAssignmentStatus.INACTIVE);
         return roomAssignmentRepository.save(assignment);
     }
 
@@ -98,8 +167,17 @@ public class ResourceAssignmentAdminService {
     ) {
         StaffProfile staff = staffProfileRepository.findById(staffId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân sự."));
+        requireDoctorStaff(staff);
         com.cvdcms.entity.Service service = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ."));
+        if (service.getStatus() != ServiceStatus.ACTIVE) {
+            throw new IllegalArgumentException("Dịch vụ " + service.getServiceCode() + " đã ngừng hoạt động, không thể cấp quyền.");
+        }
+        if (servicePermissionRepository.existsByStaffStaffIdAndServiceServiceIdAndStatusIn(
+                staffId, serviceId, List.of(DoctorServicePermissionStatus.PENDING_REVIEW, DoctorServicePermissionStatus.ACTIVE))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Nhân sự đã có quyền thực hiện dịch vụ " + service.getServiceCode() + " (đang chờ duyệt hoặc đang hoạt động).");
+        }
         Branch branch = null;
         if (branchId != null) {
             branch = branchRepository.findById(branchId)
@@ -121,7 +199,17 @@ public class ResourceAssignmentAdminService {
     public DoctorServicePermission approveServicePermission(Long permissionId) {
         DoctorServicePermission permission = servicePermissionRepository.findById(permissionId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phân quyền dịch vụ."));
+        requireDoctorStaff(permission.getStaff());
         permission.setStatus(DoctorServicePermissionStatus.ACTIVE);
+        return servicePermissionRepository.save(permission);
+    }
+
+    @Transactional
+    public DoctorServicePermission revokeServicePermission(Long permissionId) {
+        DoctorServicePermission permission = servicePermissionRepository.findById(permissionId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phân quyền dịch vụ."));
+        requireDoctorStaff(permission.getStaff());
+        permission.setStatus(DoctorServicePermissionStatus.INACTIVE);
         return servicePermissionRepository.save(permission);
     }
 
