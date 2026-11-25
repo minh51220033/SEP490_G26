@@ -275,7 +275,7 @@
                     pendingRow.remove();
                 }
             } else {
-                alert('Vui lòng mở Kế hoạch điều trị để thao tác.');
+                if (typeof showToast === 'function') showToast('Vui lòng mở Kế hoạch điều trị để thao tác.', true);
             }
         }
 

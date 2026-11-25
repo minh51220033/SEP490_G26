@@ -1503,7 +1503,7 @@
             };
             window.tpToggleColumnVisibility = function (colId, checked) {
                 if (!checked && tpCols.filter(c => c.visible).length <= 2) {
-                    alert('Cần giữ lại tối thiểu 2 cột hiển thị!');
+                    if (typeof showToast === 'function') showToast('Cần giữ lại tối thiểu 2 cột hiển thị!', true);
                     renderTpColumnCustomizerList();
                     return;
                 }

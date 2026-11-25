@@ -487,7 +487,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     .findFirstByPlanStage_StageIdAndVersion_Template_Service_ServiceId(planStage.getStageId(),
                             resolvedServiceId);
             if (existingByStage.isPresent()) {
-                return mapExecutionToDTO(existingByStage.get(), visit);
+                WorkflowExecution ex = reconcileOrphanedCompletedExecution(existingByStage.get(), visit);
+                return mapExecutionToDTO(ex, visit);
             }
             for (TreatmentPlanItem sib : stageServiceItems) {
                 Optional<WorkflowExecution> sibExec = executionRepo.findFirstByPlanItem_PlanItemId(sib.getPlanItemId());
@@ -497,6 +498,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                         ex.setPlanStage(planStage);
                         ex = executionRepo.save(ex);
                     }
+                    ex = reconcileOrphanedCompletedExecution(ex, visit);
                     return mapExecutionToDTO(ex, visit);
                 }
             }
@@ -505,7 +507,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         if (planItemId != null) {
             Optional<WorkflowExecution> existingByPlan = executionRepo.findFirstByPlanItem_PlanItemId(planItemId);
             if (existingByPlan.isPresent()) {
-                return mapExecutionToDTO(existingByPlan.get(), visit);
+                WorkflowExecution ex = reconcileOrphanedCompletedExecution(existingByPlan.get(), visit);
+                return mapExecutionToDTO(ex, visit);
             }
         }
 
@@ -662,6 +665,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         Set<String> startedStageServiceKeys = new HashSet<>();
         List<WorkflowExecutionDTO> executionDTOs = new ArrayList<>();
         for (WorkflowExecution e : executions) {
+            if (isOrphanedCompletedPlanExecution(e)) {
+                continue;
+            }
             executionDTOs.add(mapExecutionToDTO(e, visit));
             ClinicalWorkflowTemplate t = e.getVersion().getTemplate();
             TreatmentPlanStage st = e.getPlanStage() != null ? e.getPlanStage()
@@ -1644,6 +1650,79 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 return !mp.isEmpty();
             return !String.valueOf(v).isBlank();
         });
+    }
+
+    private boolean isOrphanedCompletedPlanExecution(WorkflowExecution execution) {
+        if (execution == null || execution.getStatus() != WorkflowExecutionStatus.COMPLETED) {
+            return false;
+        }
+        if (treatmentPlanItemRepo == null) {
+            return false;
+        }
+        TreatmentPlanStage stage = execution.getPlanStage() != null
+                ? execution.getPlanStage()
+                : (execution.getPlanItem() != null ? execution.getPlanItem().getStage() : null);
+        Long serviceId = execution.getVersion() != null
+                && execution.getVersion().getTemplate() != null
+                && execution.getVersion().getTemplate().getService() != null
+                        ? execution.getVersion().getTemplate().getService().getServiceId()
+                        : null;
+
+        List<TreatmentPlanItem> linkedItems = new ArrayList<>();
+        if (stage != null && stage.getStageId() != null) {
+            for (TreatmentPlanItem it : treatmentPlanItemRepo.findByStage_StageId(stage.getStageId())) {
+                if (it.getStatus() == TreatmentPlanItemStatus.CANCELLED) {
+                    continue;
+                }
+                if (serviceId == null || (it.getService() != null && serviceId.equals(it.getService().getServiceId()))) {
+                    linkedItems.add(it);
+                }
+            }
+        } else if (execution.getPlanItem() != null
+                && execution.getPlanItem().getStatus() != TreatmentPlanItemStatus.CANCELLED) {
+            linkedItems.add(execution.getPlanItem());
+        }
+
+        if (linkedItems.isEmpty()) {
+            return false;
+        }
+        boolean allPlanned = linkedItems.stream()
+                .allMatch(it -> it.getStatus() == TreatmentPlanItemStatus.PLANNED);
+        if (!allPlanned) {
+            return false;
+        }
+        return linkedItems.stream().noneMatch(it -> it.getPlanItemId() != null
+                && performedServiceRepo.existsByPlanItem_PlanItemIdAndStatusNot(
+                        it.getPlanItemId(), PerformedServiceStatus.CANCELLED));
+    }
+
+    private WorkflowExecution reconcileOrphanedCompletedExecution(WorkflowExecution execution, Visit visit) {
+        if (!isOrphanedCompletedPlanExecution(execution)) {
+            return execution;
+        }
+        List<WorkflowStepExecution> steps = new ArrayList<>(
+                stepExecutionRepo.findByExecution_ExecutionIdOrderByStep_SequenceOrderAsc(execution.getExecutionId()));
+        steps.sort(Comparator.comparingInt(this::effectiveStepOrder));
+        for (WorkflowStepExecution se : steps) {
+            se.setStatus(WorkflowStepExecutionStatus.PENDING);
+            se.setStartedAt(null);
+            se.setCompletedAt(null);
+            se.setApprovedBy(null);
+            se.setApprovedAt(null);
+        }
+        if (!steps.isEmpty()) {
+            stepExecutionRepo.saveAll(steps);
+        }
+        execution.setStatus(WorkflowExecutionStatus.IN_PROGRESS);
+        execution.setCompletedAt(null);
+        execution.setCurrentStep(steps.isEmpty() ? null : steps.get(0).getStep());
+        if (visit != null) {
+            execution.setVisit(visit);
+            if (visit.getBranch() != null) {
+                execution.setBranch(visit.getBranch());
+            }
+        }
+        return executionRepo.save(execution);
     }
 
     private boolean canDeleteExecution(WorkflowExecution execution, List<WorkflowStepExecution> steps) {
