@@ -190,12 +190,12 @@ class QueueAndDispatchEndpointAcceptanceTest {
     }
 
     @Test
-    @DisplayName("Endpoint 10: GET /reception/queue/tv/{id}/data trả JSON chỉ chứa số và vị trí (không có PII bệnh nhân)")
+    @DisplayName("Endpoint 10: GET /reception/queue/tv/{id}/data trả JSON chỉ chứa số và vị trí (không PII, không tên bác sĩ)")
     void tvDataEndpointExcludesPatientPii() throws Exception {
         var publicBoard = new QueueWorkflowService.PublicBoard("Cơ sở Quận 1",
-                List.of(new QueueWorkflowService.PublicNumber("P-01", "BS. Nguyễn Văn A", "Phòng 101", "Ghế 1")),
-                List.of(new QueueWorkflowService.PublicNumber("02", "BS. Trần Thị B", "Phòng 102", "Ghế 2")),
-                List.of("03 · BS. Nguyễn Văn A"),
+                List.of(new QueueWorkflowService.PublicNumber("P-01", "Phòng 101", "Ghế 1")),
+                List.of(new QueueWorkflowService.PublicNumber("02", "Phòng 102", "Ghế 2")),
+                List.of("03"),
                 4);
         when(queueWorkflowService.publicBoard(1L)).thenReturn(publicBoard);
 
@@ -204,9 +204,9 @@ class QueueAndDispatchEndpointAcceptanceTest {
                 .andExpect(jsonPath("$.branch").value("Cơ sở Quận 1"))
                 .andExpect(jsonPath("$.waiting").value(4))
                 .andExpect(jsonPath("$.called[0].number").value("P-01"))
-                .andExpect(jsonPath("$.called[0].doctor").value("BS. Nguyễn Văn A"))
                 .andExpect(jsonPath("$.called[0].room").value("Phòng 101"))
                 .andExpect(jsonPath("$.called[0].chair").value("Ghế 1"))
+                .andExpect(jsonPath("$.called[0].doctor").doesNotExist())
                 // Ensure no patient PII fields exist
                 .andExpect(jsonPath("$.patient").doesNotExist())
                 .andExpect(jsonPath("$.phone").doesNotExist())

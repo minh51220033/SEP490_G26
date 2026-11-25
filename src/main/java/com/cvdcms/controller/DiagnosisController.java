@@ -74,6 +74,8 @@ public class DiagnosisController {
     private com.cvdcms.security.UrlIdCodec urlIdCodec = new com.cvdcms.security.UrlIdCodec();
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.emr.EmrRecordRepository emrRecordRepository;
 
     public void setDoctorCoverGrantRepository(com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository) {
         this.doctorCoverGrantRepository = doctorCoverGrantRepository;
@@ -178,6 +180,9 @@ public class DiagnosisController {
         boolean isDoctorAccount = currentDoctor != null && !isAdmin;
         Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
         boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
+        String assignedBranchFullName = assignedBranch != null
+                ? ((assignedBranch.getBranchCode() != null && !assignedBranch.getBranchCode().isEmpty() ? assignedBranch.getBranchCode() + " - " : "") + assignedBranch.getBranchName())
+                : "";
 
         if (isDoctorRestricted) {
             branchId = assignedBranch.getBranchId();
@@ -201,10 +206,6 @@ public class DiagnosisController {
                 session.removeAttribute("doctorSelectedBranchId");
             }
         }
-
-        String assignedBranchFullName = assignedBranch != null
-                ? ((assignedBranch.getBranchCode() != null && !assignedBranch.getBranchCode().isEmpty() ? assignedBranch.getBranchCode() + " - " : "") + assignedBranch.getBranchName())
-                : "";
 
         model.addAttribute("activeMenu", "daily-visits");
         List<Branch> allBranches = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
@@ -266,7 +267,6 @@ public class DiagnosisController {
         boolean isDoctorAccount = currentDoctor != null && !isAdmin;
         Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
         boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
-
         String assignedBranchFullName = assignedBranch != null
                 ? ((assignedBranch.getBranchCode() != null && !assignedBranch.getBranchCode().isEmpty() ? assignedBranch.getBranchCode() + " - " : "") + assignedBranch.getBranchName())
                 : "";
@@ -475,6 +475,7 @@ public class DiagnosisController {
             @PathVariable("visitRef") String visitRef,
             @RequestParam(value = "branchId", required = false) Long branchIdParam,
             @RequestParam(value = "readOnly", required = false, defaultValue = "false") boolean readOnly,
+            @RequestParam(value = "fromQueue", required = false, defaultValue = "false") boolean fromQueue,
             @RequestParam(value = "fromPatientRef", required = false) String fromPatientRef,
             @RequestParam(value = "fromPatientId", required = false) Long fromPatientId,
             jakarta.servlet.http.HttpSession session,
@@ -485,7 +486,55 @@ public class DiagnosisController {
         Long resolvedFromPatientId = (fromPatientRef != null && !fromPatientRef.isBlank())
                 ? decodePatientRef(fromPatientRef)
                 : fromPatientId;
+        if (readOnly && fromQueue && resolvedFromPatientId == null) {
+            try {
+                Visit queueVisit = diagnosisService.getVisitOrThrow(visitId);
+                User currentUser = getLoggedInUser(session);
+                boolean isAdmin = currentUser != null && userRepository.hasActiveAdminRole(currentUser.getUserId());
+                StaffProfile currentDoctor = currentUser != null
+                        ? staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null)
+                        : null;
+                Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
+                boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
+                if (canSwitchReadOnlyToEditMode(session, queueVisit, isAdmin, isDoctorRestricted, assignedBranch, currentDoctor)) {
+                    String target = "redirect:/doctor/examination/" + encodeVisit(visitId) + "/diagnoses";
+                    return branchIdParam != null ? target + "?branchId=" + branchIdParam : target;
+                }
+            } catch (Exception ignored) {
+                // Giữ nguyên chế độ chỉ xem an toàn cho lễ tân hoặc bác sĩ không phụ trách ca
+            }
+        }
         return examinationDiagnosesInternal(visitId, branchIdParam, readOnly, resolvedFromPatientId, session, redirectAttributes, model);
+    }
+
+    private boolean canSwitchReadOnlyToEditMode(
+            jakarta.servlet.http.HttpSession session,
+            Visit visit,
+            boolean isAdmin,
+            boolean isDoctorRestricted,
+            Branch assignedBranch,
+            StaffProfile currentDoctor
+    ) {
+        if (visit == null || visit.getVisitId() == null || visit.getPrimaryDoctor() == null) {
+            return false;
+        }
+        VisitStatus st = visit.getStatus();
+        if (st == VisitStatus.WAITING_PAYMENT || st == VisitStatus.COMPLETED || st == VisitStatus.CANCELLED) {
+            return false;
+        }
+        if (isDoctorRestricted && visit.getBranch() != null && !visit.getBranch().getBranchId().equals(assignedBranch.getBranchId())) {
+            return false;
+        }
+        if (!canDoctorAccessVisitForExam(isAdmin, currentDoctor, visit)) {
+            return false;
+        }
+        try {
+            doctorVisitAccess.require(session, visit.getVisitId());
+            doctorVisitAccess.requireActiveClinicalExam(session, visit.getVisitId());
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     private String examinationDiagnosesInternal(
@@ -505,7 +554,6 @@ public class DiagnosisController {
         boolean isDoctorAccount = currentDoctor != null && !isAdmin;
         Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
         boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
-
         String assignedBranchFullName = assignedBranch != null
                 ? ((assignedBranch.getBranchCode() != null && !assignedBranch.getBranchCode().isEmpty() ? assignedBranch.getBranchCode() + " - " : "") + assignedBranch.getBranchName())
                 : "";
@@ -712,10 +760,21 @@ public class DiagnosisController {
         model.addAttribute("careInteractions", careInteractions);
         model.addAttribute("careTasks", careTasks);
 
+        com.cvdcms.emr.EmrRecord visitEmrRecord = (emrRecordRepository != null && visitId != null)
+                ? emrRecordRepository.findByVisit_VisitId(visitId).orElse(null)
+                : null;
+        List<com.cvdcms.emr.EmrRecord> patientEmrRecords = (emrRecordRepository != null && profileId != null)
+                ? emrRecordRepository.findAllByPatientProfileId(profileId)
+                : Collections.emptyList();
+        model.addAttribute("visitEmrRecord", visitEmrRecord);
+        model.addAttribute("patientEmrRecords", patientEmrRecords);
+
         boolean isClinicalLocked = readOnly || (visit.getStatus() != null &&
                 (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED));
+        boolean canSwitchToEditMode = readOnly && canSwitchReadOnlyToEditMode(session, visit, isAdmin, isDoctorRestricted, assignedBranch, currentDoctor);
         model.addAttribute("isClinicalLocked", isClinicalLocked);
         model.addAttribute("isReadOnlyView", readOnly);
+        model.addAttribute("canSwitchToEditMode", canSwitchToEditMode);
         Long resolvedFromPatientId = fromPatientId != null ? fromPatientId
                 : (visit.getPatientProfile() != null ? visit.getPatientProfile().getProfileId() : null);
         model.addAttribute("fromPatientId", resolvedFromPatientId);
@@ -743,6 +802,8 @@ public class DiagnosisController {
             log.warn("Không thể kiểm tra điều kiện lâm sàng cho visitId={}: {}", visitId, ex.getMessage());
         }
         model.addAttribute("clinicalCheck", clinicalCheck);
+        model.addAttribute("bookedService", doctorVisitAccess != null ? doctorVisitAccess.resolveBookedServiceSummary(visit) : null);
+        model.addAttribute("deskWaitingCount", doctorVisitAccess != null ? doctorVisitAccess.countWaitingPatientsForVisitDoctor(visit) : 0);
 
         model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14), Kế hoạch (FT15), Dịch vụ thực hiện (FT16), Ảnh lâm sàng (FT17) & Đơn thuốc (FT18)");
         model.addAttribute("activeMenu", "examination");
@@ -805,17 +866,27 @@ public class DiagnosisController {
             @PathVariable("visitRef") String visitRef,
             @RequestParam(value = "diagId", required = false) Long preselectedDiagId,
             jakarta.servlet.http.HttpSession session,
+            RedirectAttributes redirectAttributes,
             Model model
     ) {
         Long visitId = decodeVisitRef(visitRef);
         doctorVisitAccess.require(session, visitId);
-        return showCreateTreatmentPlanPage(visitId, preselectedDiagId, model);
+        return showCreateTreatmentPlanPage(visitId, preselectedDiagId, model, redirectAttributes);
     }
 
     public String showCreateTreatmentPlanPage(
             Long visitId,
             Long preselectedDiagId,
             Model model
+    ) {
+        return showCreateTreatmentPlanPage(visitId, preselectedDiagId, model, null);
+    }
+
+    public String showCreateTreatmentPlanPage(
+            Long visitId,
+            Long preselectedDiagId,
+            Model model,
+            RedirectAttributes redirectAttributes
     ) {
         jakarta.servlet.http.HttpServletRequest request = null;
         try {
@@ -837,6 +908,9 @@ public class DiagnosisController {
         boolean isDoctorAccount = currentDoctor != null && !isAdmin;
         Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
         boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
+        String assignedBranchFullName = assignedBranch != null
+                ? ((assignedBranch.getBranchCode() != null && !assignedBranch.getBranchCode().isEmpty() ? assignedBranch.getBranchCode() + " - " : "") + assignedBranch.getBranchName())
+                : "";
 
         Visit visit;
         try {
@@ -847,25 +921,22 @@ public class DiagnosisController {
         }
 
         if (visit.getPrimaryDoctor() == null) {
+            if (redirectAttributes != null) {
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "Ca khám " + visit.getVisitCode() + " chưa được phân công bác sĩ phụ trách, không thể lập phác đồ điều trị.");
+            }
             return "redirect:/doctor/daily-visits";
         }
 
-        if (visit.getStatus() == VisitStatus.WAITING
-                || visit.getStatus() == VisitStatus.WAITING_RESULT
-                || visit.getStatus() == VisitStatus.CANCELLED) {
-            return "redirect:/doctor/daily-visits";
-        }
-        if (clinicalQueueTicketRepository != null && visit.getVisitId() != null) {
-            var ticketOpt = clinicalQueueTicketRepository.findByVisitIdAndTypeOrderByDesc(visit.getVisitId(), QueueType.EXAM)
-                    .stream()
-                    .filter(t -> t.getStatus() != QueueStatus.CANCELLED)
-                    .findFirst();
-            if (ticketOpt.isPresent()) {
-                QueueStatus qs = ticketOpt.get().getStatus();
-                if (qs == QueueStatus.WAITING || qs == QueueStatus.PAUSED || qs == QueueStatus.CALLED) {
-                    return "redirect:/doctor/daily-visits";
-                }
+        try {
+            doctorVisitAccess.requireActiveClinicalExam(session, visitId);
+        } catch (org.springframework.web.server.ResponseStatusException ex) {
+            if (redirectAttributes != null) {
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "Không thể lập phác đồ điều trị khi chưa gọi bệnh nhân vào khám. "
+                                + (ex.getReason() != null ? ex.getReason() : "Vui lòng bấm 'Vào khám' cho đúng lượt Đang gọi."));
             }
+            return "redirect:/doctor/daily-visits";
         }
 
         if (isDoctorRestricted && visit.getBranch() != null && !visit.getBranch().getBranchId().equals(assignedBranch.getBranchId())) {
@@ -902,11 +973,19 @@ public class DiagnosisController {
         model.addAttribute("isDoctorSelectorEditable", isAdmin);
         model.addAttribute("defaultActingDoctor", defaultActingDoctor);
         model.addAttribute("allVisits", allVisits);
+        model.addAttribute("bookedService", doctorVisitAccess != null ? doctorVisitAccess.resolveBookedServiceSummary(visit) : null);
+        model.addAttribute("deskWaitingCount", doctorVisitAccess != null ? doctorVisitAccess.countWaitingPatientsForVisitDoctor(visit) : 0);
 
         List<com.cvdcms.DTO.WorkflowTemplateResponseDTO> workflowTemplates = (clinicalWorkflowService != null)
-                ? clinicalWorkflowService.getAllTemplates()
+                ? clinicalWorkflowService.getAllTemplates().stream()
+                        .filter(w -> w.getStatus() == null || "ACTIVE".equalsIgnoreCase(w.getStatus()))
+                        .toList()
                 : List.of();
         model.addAttribute("workflowTemplates", workflowTemplates);
+        List<com.cvdcms.DTO.ServiceComboDTO> workflowCombos = (clinicalWorkflowService != null)
+                ? clinicalWorkflowService.getAllCombos(true)
+                : List.of();
+        model.addAttribute("workflowCombos", workflowCombos);
         String workflowTemplatesJson = "[]";
         try {
             workflowTemplatesJson = new ObjectMapper().writeValueAsString(workflowTemplates);
@@ -938,6 +1017,109 @@ public class DiagnosisController {
         boolean isClinicalLocked = visit.getStatus() != null &&
                 (visit.getStatus() == VisitStatus.WAITING_PAYMENT || visit.getStatus() == VisitStatus.COMPLETED);
         model.addAttribute("isClinicalLocked", isClinicalLocked);
+        model.addAttribute("isReadOnlyView", false);
+
+        Long profileId = (visit.getPatientProfile() != null) ? visit.getPatientProfile().getProfileId() : null;
+        List<TreatmentPlanResponseDTO> treatmentPlans = (profileId != null)
+                ? treatmentPlanService.getPlansByPatientId(profileId)
+                : Collections.emptyList();
+        model.addAttribute("treatmentPlans", treatmentPlans);
+
+        List<com.cvdcms.DTO.ParaclinicalOrderItemResponseDTO> paraclinicalOrders = paraclinicalOrderService.getOrdersByVisit(visitId);
+        model.addAttribute("paraclinicalOrders", paraclinicalOrders);
+
+        List<com.cvdcms.emr.EmrRecord> patientEmrRecords = (emrRecordRepository != null && profileId != null)
+                ? emrRecordRepository.findAllByPatientProfileId(profileId)
+                : Collections.emptyList();
+        model.addAttribute("patientEmrRecords", patientEmrRecords);
+
+        List<PrescriptionResponseDTO> prescriptions = prescriptionService.getPrescriptionsByVisit(visitId);
+        model.addAttribute("prescriptions", prescriptions);
+
+        List<com.cvdcms.DTO.ReExaminationResponseDTO> reExaminations = (profileId != null)
+                ? reExaminationService.getReExaminationsByPatient(profileId)
+                : Collections.emptyList();
+        model.addAttribute("reExaminations", reExaminations);
+
+        List<CustomerCareTask> careTasks = (profileId != null)
+                ? customerCareTaskRepository.findByPatientProfileIdWithDetails(profileId)
+                : Collections.emptyList();
+        List<CustomerCareInteraction> careInteractions = (profileId != null)
+                ? customerCareInteractionRepository.findByProfileIdWithDetails(profileId)
+                : Collections.emptyList();
+        model.addAttribute("careTasks", careTasks);
+        model.addAttribute("careInteractions", careInteractions);
+
+        List<PerformedServiceResponseDTO> performedServices = performedServiceService.getPerformedServicesByVisitId(visitId);
+        model.addAttribute("performedServices", performedServices);
+
+        List<com.cvdcms.DTO.LaboOrderResponseDTO> laboOrders = laboOrderService.getOrdersByVisit(visitId);
+        model.addAttribute("laboOrders", laboOrders);
+
+        List<ClinicalPhotoResponseDTO> clinicalPhotos = clinicalPhotoService.getPhotosByProfile(profileId);
+        model.addAttribute("clinicalPhotos", clinicalPhotos);
+        List<Map<String, Object>> xrayPhotos = buildXrayPhotoList(paraclinicalOrders, visit, profileId);
+        java.util.Set<String> clinicalUrls = new java.util.HashSet<>();
+        if (clinicalPhotos != null) {
+            for (ClinicalPhotoResponseDTO cp : clinicalPhotos) {
+                if (cp != null && cp.getImageUrl() != null && !cp.getImageUrl().isBlank()) {
+                    clinicalUrls.add(cp.getImageUrl().trim());
+                }
+            }
+        }
+        List<Map<String, Object>> galleryXrayPhotos = new ArrayList<>();
+        for (Map<String, Object> xr : xrayPhotos) {
+            Object uObj = xr.get("imageUrl");
+            String u = uObj != null ? uObj.toString().trim() : "";
+            if (!u.isEmpty() && !clinicalUrls.contains(u)) {
+                galleryXrayPhotos.add(xr);
+            }
+        }
+        model.addAttribute("galleryXrayPhotos", galleryXrayPhotos);
+
+        List<Branch> branches = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
+        if (branches.isEmpty()) {
+            branches = branchRepository.findAll();
+        }
+        Long selectedBranchId = null;
+        if (isDoctorRestricted) {
+            selectedBranchId = assignedBranch.getBranchId();
+        } else {
+            if (visit.getBranch() != null) {
+                selectedBranchId = visit.getBranch().getBranchId();
+            }
+            if (selectedBranchId == null && session != null && session.getAttribute("doctorSelectedBranchId") != null) {
+                selectedBranchId = (Long) session.getAttribute("doctorSelectedBranchId");
+            }
+            if (selectedBranchId == null && !branches.isEmpty()) {
+                selectedBranchId = branches.get(0).getBranchId();
+            }
+        }
+        if (selectedBranchId != null && session != null) {
+            session.setAttribute("doctorSelectedBranchId", selectedBranchId);
+        }
+        Branch selectedBranch = null;
+        if (selectedBranchId != null) {
+            for (Branch b : branches) {
+                if (b.getBranchId().equals(selectedBranchId)) {
+                    selectedBranch = b;
+                    break;
+                }
+            }
+        }
+        if (selectedBranch == null && !branches.isEmpty()) {
+            selectedBranch = branches.get(0);
+        }
+        branches = filterAccessibleBranches(branches, isDoctorRestricted, assignedBranch);
+        model.addAttribute("branches", branches);
+        model.addAttribute("selectedBranchId", selectedBranchId);
+        model.addAttribute("selectedBranch", selectedBranch);
+        model.addAttribute("isDoctorRestricted", isDoctorRestricted);
+        model.addAttribute("doctorAssignedBranchId", assignedBranch != null ? assignedBranch.getBranchId() : null);
+        model.addAttribute("doctorAssignedBranchCode", assignedBranch != null ? assignedBranch.getBranchCode() : "");
+        model.addAttribute("doctorAssignedBranchName", assignedBranch != null ? assignedBranch.getBranchName() : "");
+        model.addAttribute("doctorAssignedBranchFullName", assignedBranchFullName);
+        model.addAttribute("currentBranchName", selectedBranch != null ? (selectedBranch.getBranchCode() != null && !selectedBranch.getBranchCode().isEmpty() ? selectedBranch.getBranchCode() : selectedBranch.getBranchName()) : (assignedBranch != null ? assignedBranch.getBranchName() : ""));
 
         model.addAttribute("pageTitle", "Lập Kế hoạch & Lộ trình điều trị - DentalFlow");
         model.addAttribute("activeMenu", "examination");
@@ -954,7 +1136,6 @@ public class DiagnosisController {
         boolean isDoctorAccount = currentDoctor != null && !isAdmin;
         Branch assignedBranch = !isAdmin ? getDoctorAssignedBranch(currentUser) : null;
         boolean isDoctorRestricted = !isAdmin && assignedBranch != null;
-
         String assignedBranchFullName = assignedBranch != null
                 ? ((assignedBranch.getBranchCode() != null && !assignedBranch.getBranchCode().isEmpty() ? assignedBranch.getBranchCode() + " - " : "") + assignedBranch.getBranchName())
                 : "";

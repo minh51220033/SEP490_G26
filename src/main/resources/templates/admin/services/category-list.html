@@ -5,6 +5,9 @@
 
 <body class="app-body service-category-page fin-brand-theme">
 
+<th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
+<link rel="stylesheet" th:href="@{/css/catalog-management.css(v='20261125-3')}">
+
 <div class="app-shell">
 
   <aside th:replace="~{fragments/sidebar :: sidebar('catalogs')}"></aside>
@@ -15,25 +18,10 @@
     <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục')}"></header>
 
     <main class="app-content">
-      <th:block th:replace="~{fragments/table_style :: tableStyle}"></th:block>
-      <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
+      <!-- HEADER & THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
+      <div th:replace="~{fragments/catalog-tabs :: catalogTabs('categories')}"></div>
 
-      <!-- BREADCRUMB & BỘ CHỌN CƠ SỞ PHÍA TRÊN CÙNG -->
-      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-        <nav aria-label="breadcrumb">
-          <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
-            <li class="breadcrumb-item"><a th:href="@{/admin/services/categories}">Quản lý danh mục</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Nhóm dịch vụ</li>
-          </ol>
-        </nav>
-        <div class="d-flex align-items-center gap-2">
-          <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-        </div>
-      </div>
-
-      <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
-      <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('categories')}"></nav>
+      <div id="catalogTabContent" class="catalog-tab-content">
 
       <!-- 4 THẺ KPI TỔNG QUAN -->
       <div class="row g-3 mb-3">
@@ -133,7 +121,24 @@
               </div>
             </div>
 
-            <!-- 2. Bộ lọc trạng thái -->
+            <!-- 2. Bộ lọc loại nhóm -->
+            <div class="col-12 col-sm-6 col-md-3 col-lg-2">
+              <label for="catTypeFilter" class="form-label small text-muted mb-1">
+                Loại nhóm
+              </label>
+              <select id="catTypeFilter"
+                      name="type"
+                      class="form-select">
+                <option value="">Tất cả loại</option>
+                <option th:each="stype : ${serviceTypes}"
+                        th:value="${stype.name()}"
+                        th:selected="${selectedType != null and selectedType == stype}"
+                        th:text="${stype.label}">
+                </option>
+              </select>
+            </div>
+
+            <!-- 3. Bộ lọc trạng thái -->
             <div class="col-12 col-sm-6 col-md-3 col-lg-2">
               <label for="catStatusFilter" class="form-label small text-muted mb-1">
                 Trạng thái
@@ -217,6 +222,9 @@
                 <span th:case="'LAB'">Xét nghiệm</span>
                 <span th:case="'XRAY'">X-Ray</span>
                 <span th:case="'CONSULTATION'">Khám / Tư vấn</span>
+                <span th:case="'PRODUCT'" class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                  <i class="bi bi-bag-check me-1" aria-hidden="true"></i>Sản phẩm
+                </span>
                 <span th:case="*" th:text="${category.categoryType}"></span>
               </td>
 
@@ -332,6 +340,7 @@
           </div>
         </div>
       </div> <!-- /dv-grid-card -->
+      </div> <!-- /#catalogTabContent -->
     </main>
 
 
@@ -387,6 +396,7 @@
                 <option value="LAB" th:selected="${categoryForm?.categoryType?.name() == 'LAB'}">Xét nghiệm</option>
                 <option value="XRAY" th:selected="${categoryForm?.categoryType?.name() == 'XRAY'}">X-Ray</option>
                 <option value="CONSULTATION" th:selected="${categoryForm?.categoryType?.name() == 'CONSULTATION'}">Khám / Tư vấn</option>
+                <option value="PRODUCT" th:selected="${categoryForm?.categoryType?.name() == 'PRODUCT'}">Sản phẩm</option>
               </select>
             </div>
 

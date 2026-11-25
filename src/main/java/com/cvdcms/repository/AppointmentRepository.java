@@ -29,6 +29,11 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("SELECT a FROM Appointment a WHERE a.appointmentId = :id")
     Optional<Appointment> lockById(@Param("id") Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @QueryHints({@QueryHint(name = "jakarta.persistence.lock.timeout", value = "5000")})
+    @Query("SELECT a FROM Appointment a WHERE a.appointmentId IN :appointmentIds ORDER BY a.appointmentId ASC")
+    List<Appointment> findByIdInForUpdateOrderByAppointmentIdAsc(@Param("appointmentIds") Collection<Long> appointmentIds);
+
     @Query("""
         SELECT new com.cvdcms.repository.AppointmentLockSnapshot(
             a.appointmentId, p.profileId, b.branchId, d.staffId,
@@ -40,6 +45,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         WHERE a.appointmentId = :id
     """)
     Optional<AppointmentLockSnapshot> findLockSnapshotById(@Param("id") Long id);
+
+    @Query("SELECT a FROM Appointment a LEFT JOIN FETCH a.service srv WHERE a.appointmentId = :id")
+    Optional<Appointment> findByIdWithService(@Param("id") Long id);
 
     List<Appointment> findByPatientProfile_ProfileIdOrderByAppointmentDateDesc(Long profileId);
 
@@ -165,4 +173,20 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             @Param("endDate") LocalDate endDate,
             @Param("statuses") List<AppointmentStatus> statuses
     );
+
+    @Query("""
+        SELECT a FROM Appointment a
+        JOIN FETCH a.branch b
+        LEFT JOIN FETCH a.doctor d
+        LEFT JOIN FETCH a.service srv
+        LEFT JOIN FETCH a.assignedRoom ar
+        WHERE d.staffId IN :doctorIds
+          AND a.appointmentDate = :appointmentDate
+          AND a.status IN :statuses
+        ORDER BY a.expectedTime ASC, a.appointmentId ASC
+    """)
+    List<Appointment> findActiveByDoctorIdsAndDateWithDetails(
+            @Param("doctorIds") Collection<Long> doctorIds,
+            @Param("appointmentDate") LocalDate appointmentDate,
+            @Param("statuses") Collection<AppointmentStatus> statuses);
 }

@@ -1293,7 +1293,10 @@
                             try {
                                 if (contentType.includes('application/json')) {
                                     const errJson = await res.json();
-                                    if (errJson && errJson.message) csrfOrAuthMsg = errJson.message;
+                                    const rawMsg = errJson && errJson.message ? String(errJson.message).trim() : '';
+                                    if (rawMsg && !/^(Forbidden|Unauthorized|Access Denied)$/i.test(rawMsg)) {
+                                        csrfOrAuthMsg = rawMsg;
+                                    }
                                 }
                             } catch (_) {}
                             if (addPatientErrorAlert) {

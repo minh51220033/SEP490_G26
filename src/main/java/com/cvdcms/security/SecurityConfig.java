@@ -48,7 +48,6 @@ public class SecurityConfig {
                         .ignoringRequestMatchers(
                                 "/reception/queue/tv/**",
                                 "/portal/patients/**",
-                                "/portal/appointments/api/**",
                                 "/ws/**",
                                 "/ws-chat/**",
                                 "/chat-websocket/**"
@@ -58,6 +57,8 @@ public class SecurityConfig {
                             return path.startsWith("/api/")
                                     && !path.equals("/api/reception/check-ins")
                                     && !path.startsWith("/api/reception/check-ins/")
+                                    && !path.equals("/api/reception/appointments")
+                                    && !path.startsWith("/api/reception/appointments/")
                                     && !path.equals("/api/public/booking")
                                     && !path.startsWith("/api/public/booking/");
                         })
@@ -143,9 +144,24 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
-                // Nếu chưa đăng nhập, chuyển hướng người dùng về trang đăng nhập /login
+                // Nếu chưa đăng nhập: API trả 401 JSON (tránh lỗi <!DOCTYPE), trang web chuyển hướng về /login
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login"))
+                        .defaultAuthenticationEntryPointFor(
+                                (req, res, authEx) -> {
+                                    res.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                                    res.setContentType("application/json;charset=UTF-8");
+                                    res.getWriter().write("{\"message\":\"Phiên đăng nhập đã hết hạn hoặc máy chủ vừa khởi động lại, vui lòng đăng nhập lại.\"}");
+                                },
+                                req -> {
+                                    String ctx = req.getContextPath() != null ? req.getContextPath() : "";
+                                    String path = req.getRequestURI().substring(ctx.length());
+                                    return path.startsWith("/api/");
+                                }
+                        )
+                        .defaultAuthenticationEntryPointFor(
+                                new LoginUrlAuthenticationEntryPoint("/login"),
+                                req -> true
+                        )
                 );
 
         return http.build();

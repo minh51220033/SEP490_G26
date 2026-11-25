@@ -167,6 +167,7 @@ public class DispatchController {
                 .toList();
 
         model.addAttribute("board", board);
+        model.addAttribute("canAssignDoctor", service.canAssignDoctor(session));
         model.addAttribute("currentBranchId", board.branchId());
         model.addAttribute("items", pagedItems);
         model.addAttribute("doctorVisitMap", filteredDoctorVisits);

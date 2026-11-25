@@ -36,6 +36,8 @@ public interface ServiceCatalogService {
 
     List<ServiceCategory> searchCategories(String keyword, Boolean isActive);
 
+    List<ServiceCategory> searchCategories(String keyword, ServiceType categoryType, Boolean isActive);
+
     // =====================================================
     // DỊCH VỤ VÀ BẢNG GIÁ
     // =====================================================
@@ -43,6 +45,8 @@ public interface ServiceCatalogService {
     List<Service> getAllServices();
 
     List<Service> searchServices(String keyword, Long categoryId, ServiceStatus status);
+
+    List<Service> searchServices(String keyword, Long categoryId, ServiceStatus status, ServiceType serviceType, String itemKind);
 
     org.springframework.data.domain.Page<Service> searchServices(String keyword, Long categoryId, ServiceStatus status, org.springframework.data.domain.Pageable pageable);
 

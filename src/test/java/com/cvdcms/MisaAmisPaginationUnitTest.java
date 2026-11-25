@@ -84,7 +84,7 @@ public class MisaAmisPaginationUnitTest {
 
         Model model = new ConcurrentModel();
         // Request page 0, size 10
-        String view = controller.getWorkflowsPage(0, 10, null, null, null, model);
+        String view = controller.getWorkflowsPage(0, 10, null, null, null, session, model);
         assertEquals("doctor/workflows", view);
         assertEquals(24L, model.getAttribute("totalItems"));
         assertEquals(0, model.getAttribute("currentPage"));
@@ -95,7 +95,7 @@ public class MisaAmisPaginationUnitTest {
 
         // Page 2 (last page, items 21-24)
         Model modelPage2 = new ConcurrentModel();
-        controller.getWorkflowsPage(2, 10, null, null, null, modelPage2);
+        controller.getWorkflowsPage(2, 10, null, null, null, session, modelPage2);
         assertEquals(2, modelPage2.getAttribute("currentPage"));
         assertEquals(21L, modelPage2.getAttribute("fromItem"));
         assertEquals(24L, modelPage2.getAttribute("toItem"));
@@ -110,7 +110,7 @@ public class MisaAmisPaginationUnitTest {
         when(performedServiceService.getAllActiveServices()).thenReturn(List.of());
 
         Model model = new ConcurrentModel();
-        controller.getWorkflowsPage(0, 10, null, null, null, model);
+        controller.getWorkflowsPage(0, 10, null, null, null, session, model);
         assertEquals(0L, model.getAttribute("totalItems"));
         assertEquals(0, model.getAttribute("currentPage"));
         assertEquals(0, model.getAttribute("totalPages"));
@@ -127,7 +127,7 @@ public class MisaAmisPaginationUnitTest {
         when(performedServiceService.getAllActiveServices()).thenReturn(List.of());
 
         Model model = new ConcurrentModel();
-        controller.getWorkflowsPage(0, 999, null, null, null, model);
+        controller.getWorkflowsPage(0, 999, null, null, null, session, model);
         assertEquals(10, model.getAttribute("pageSize"));
     }
 

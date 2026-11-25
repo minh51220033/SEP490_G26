@@ -6,6 +6,7 @@
 <body class="app-body service-catalog-page fin-brand-theme">
 
 <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/43.0.0/ckeditor5.css">
+<link rel="stylesheet" th:href="@{/css/catalog-management.css(v='20261125-3')}">
 
 <div class="app-shell">
 
@@ -17,20 +18,8 @@
         <header th:replace="~{fragments/header :: appTopbar('Quản lý danh mục')}"></header>
 
         <main class="app-content">
-            <link rel="stylesheet" th:href="@{/css/catalog-management.css}">
-
-            <!-- BREADCRUMB -->
-            <nav aria-label="breadcrumb" class="mb-3">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a th:href="@{/home}">Trang chủ</a></li>
-                    <li class="breadcrumb-item"><a th:href="@{/admin/services}">Quản lý danh mục</a></li>
-                    <li class="breadcrumb-item"><a th:href="@{/admin/services}">Danh mục dịch vụ</a></li>
-                    <li class="breadcrumb-item active" aria-current="page" th:text="${isEdit ? 'Chỉnh sửa dịch vụ' : 'Thêm dịch vụ'}">Chỉnh sửa dịch vụ</li>
-                </ol>
-            </nav>
-
-            <!-- THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
-            <nav th:replace="~{fragments/catalog-tabs :: catalogTabs('services')}"></nav>
+            <!-- HEADER & THANH TAB NGANG 4 Ô CHUẨN TẬP TRUNG -->
+            <div th:replace="~{fragments/catalog-tabs :: catalogTabs('services')}"></div>
 
             <div class="d-flex flex-wrap justify-content-between
                         align-items-center gap-3 mb-4">
@@ -525,11 +514,46 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label for="estimatedDurationMinutes" class="form-label">Thời lượng lịch hẹn dự kiến (phút)</label>
+                                <label for="estimatedDurationMinutes" class="form-label">Tổng thời lượng giữ phòng (phút)</label>
                                 <input id="estimatedDurationMinutes" type="number" th:field="*{estimatedDurationMinutes}"
-                                       class="form-control" min="15" max="240" step="15" required>
-                                <div class="form-text">Dùng để kiểm tra giờ trống và tránh đặt trùng lịch bác sĩ.</div>
+                                       class="form-control" min="5" max="240" step="1" required>
+                                <div class="form-text">Tự đồng bộ từ 3 pha bên dưới (Chuẩn bị + Thực hiện + Bàn giao).</div>
                                 <div class="invalid-feedback" th:errors="*{estimatedDurationMinutes}"></div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="preparationDurationMinutes" class="form-label">Chuẩn bị (Prep, phút)</label>
+                                <input id="preparationDurationMinutes" type="number" th:field="*{preparationDurationMinutes}"
+                                       class="form-control phase1-dur-input" min="0" max="120" value="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="procedureDurationMinutes" class="form-label">Thực hiện (Procedure, phút)</label>
+                                <input id="procedureDurationMinutes" type="number" th:field="*{procedureDurationMinutes}"
+                                       class="form-control phase1-dur-input" min="1" max="240" value="30">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="turnoverDurationMinutes" class="form-label">Bàn giao / Vệ sinh (Turnover, phút)</label>
+                                <input id="turnoverDurationMinutes" type="number" th:field="*{turnoverDurationMinutes}"
+                                       class="form-control phase1-dur-input" min="0" max="120" value="0">
+                            </div>
+
+                            <div class="col-12 d-flex flex-wrap gap-3 pt-1">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="requiresChair" th:field="*{requiresChair}">
+                                    <label class="form-check-label" for="requiresChair">Yêu cầu ghế nha</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="isRoomExclusive" th:field="*{isRoomExclusive}">
+                                    <label class="form-check-label" for="isRoomExclusive">Độc chiếm toàn phòng</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="doctorRequiredInPrep" th:field="*{doctorRequiredInPrep}">
+                                    <label class="form-check-label" for="doctorRequiredInPrep">BS tham gia Prep</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="doctorRequiredInTurnover" th:field="*{doctorRequiredInTurnover}">
+                                    <label class="form-check-label" for="doctorRequiredInTurnover">BS tham gia Turnover</label>
+                                </div>
                             </div>
 
                         </div>
@@ -564,6 +588,103 @@
                 </div>
 
             </form>
+
+            <!-- PHASE 1: YÊU CẦU TÀI NGUYÊN DỊCH VỤ (CHỈ HIỂN THỊ KHI CHỈNH SỬA) -->
+            <section th:if="${isEdit}" class="card shadow-sm mb-4" id="phase1ServiceReqCard">
+                <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-diagram-3 me-1 text-primary"></i>Yêu cầu nguồn lực thực hiện dịch vụ</span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3">
+                            <select id="reqKind" class="form-select form-select-sm">
+                                <option value="ROOM_TYPE">Loại phòng (ROOM_TYPE)</option>
+                                <option value="EQUIPMENT_TYPE">Loại thiết bị (EQUIPMENT_TYPE)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="reqRoomType" class="form-select form-select-sm">
+                                <option value="EXAM">EXAM (Khám)</option>
+                                <option value="TREATMENT">TREATMENT (Điều trị)</option>
+                                <option value="XRAY">XRAY (X-quang)</option>
+                                <option value="LAB">LAB</option>
+                            </select>
+                            <select id="reqEquipType" class="form-select form-select-sm d-none">
+                                <option value="XRAY">XRAY</option>
+                                <option value="CONE_BEAM">CONE_BEAM</option>
+                                <option value="IMPLANT_MOTOR">IMPLANT_MOTOR</option>
+                                <option value="SCANNER">SCANNER</option>
+                                <option value="LASER">LASER</option>
+                                <option value="OTHER">OTHER</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="reqPhase" class="form-select form-select-sm">
+                                <option value="ALL">Toàn bộ (ALL)</option>
+                                <option value="PROCEDURE" selected>Thực hiện (PROCEDURE)</option>
+                                <option value="PREP">Chuẩn bị (PREP)</option>
+                                <option value="TURNOVER">Bàn giao (TURNOVER)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="button" id="btnAddServiceReq" class="btn btn-sm btn-primary w-100">Thêm yêu cầu</button>
+                        </div>
+                    </div>
+                    <div id="serviceReqList" class="small text-muted">Đang tải yêu cầu nguồn lực...</div>
+                </div>
+            </section>
+
+            <script th:inline="javascript">
+                document.addEventListener('DOMContentLoaded', function () {
+                    var durInputs = document.querySelectorAll('.phase1-dur-input');
+                    var totalEl = document.getElementById('estimatedDurationMinutes');
+                    function syncTotal() {
+                        if (!totalEl) return;
+                        var p = parseInt(document.getElementById('preparationDurationMinutes')?.value || '0', 10) || 0;
+                        var pr = parseInt(document.getElementById('procedureDurationMinutes')?.value || '0', 10) || 0;
+                        var t = parseInt(document.getElementById('turnoverDurationMinutes')?.value || '0', 10) || 0;
+                        if (pr > 0) totalEl.value = String(p + pr + t);
+                    }
+                    durInputs.forEach(function (inp) { inp.addEventListener('input', syncTotal); });
+
+                    var serviceId = /*[[${serviceId}]]*/ null;
+                    if (!serviceId) return;
+                    var csrfInput = document.querySelector('input[name="_csrf"]');
+                    var csrfToken = csrfInput ? csrfInput.value : '';
+                    var reqKindEl = document.getElementById('reqKind');
+                    if (reqKindEl) {
+                        reqKindEl.addEventListener('change', function () {
+                            var isRoom = this.value === 'ROOM_TYPE';
+                            document.getElementById('reqRoomType').classList.toggle('d-none', !isRoom);
+                            document.getElementById('reqEquipType').classList.toggle('d-none', isRoom);
+                        });
+                    }
+                    function loadReqs() {
+                        var box = document.getElementById('serviceReqList');
+                        fetch('/admin/api/resources/services/' + serviceId + '/requirements')
+                            .then(function (r) { return r.json(); })
+                            .then(function (list) {
+                                if (!list.length) { box.innerHTML = '<span>Chưa có cấu hình yêu cầu nguồn lực.</span>'; return; }
+                                box.innerHTML = list.map(function (item) {
+                                    var target = item.roomType || item.roomName || item.equipmentType || item.equipmentName || '—';
+                                    return '<div class="py-1 border-bottom"><strong>' + item.resourceKind + '</strong>: ' + target + ' (' + item.usagePhase + ')</div>';
+                                }).join('');
+                            });
+                    }
+                    document.getElementById('btnAddServiceReq')?.addEventListener('click', function () {
+                        var kind = reqKindEl.value;
+                        var params = new URLSearchParams({ kind: kind, usagePhase: document.getElementById('reqPhase').value, isRequired: 'true' });
+                        if (kind === 'ROOM_TYPE') params.append('roomType', document.getElementById('reqRoomType').value);
+                        else params.append('equipmentType', document.getElementById('reqEquipType').value);
+                        fetch('/admin/api/resources/services/' + serviceId + '/requirements', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-TOKEN': csrfToken },
+                            body: params
+                        }).then(function (r) { if (!r.ok) throw new Error('Lỗi thêm yêu cầu'); loadReqs(); }).catch(function (e) { alert(e.message); });
+                    });
+                    loadReqs();
+                });
+            </script>
         </main>
 
 

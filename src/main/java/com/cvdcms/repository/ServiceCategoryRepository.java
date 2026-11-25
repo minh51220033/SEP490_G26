@@ -59,4 +59,22 @@ public interface ServiceCategoryRepository extends JpaRepository<ServiceCategory
             @Param("keyword") String keyword,
             @Param("isActive") Boolean isActive
     );
+
+    @Query("""
+        SELECT c
+        FROM ServiceCategory c
+        WHERE (:isActive IS NULL OR c.isActive = :isActive)
+          AND (:categoryType IS NULL OR c.categoryType = :categoryType)
+          AND (
+              :keyword IS NULL OR :keyword = ''
+              OR LOWER(c.categoryName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(c.categoryCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          )
+        ORDER BY c.displayOrder ASC, c.categoryName ASC
+        """)
+    List<ServiceCategory> searchAdminCategoriesByType(
+            @Param("keyword") String keyword,
+            @Param("categoryType") ServiceType categoryType,
+            @Param("isActive") Boolean isActive
+    );
 }

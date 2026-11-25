@@ -27,158 +27,332 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
             </div>
 
-            <!-- BREADCRUMB CHUẨN ĐỒNG BỘ -->
             <nav class="dv-breadcrumb mb-2">
-                <a th:href="@{/}">Trang chủ</a> / <span>Quản lý nhân sự</span> / <span>Phân ca làm việc</span>
+                <a th:href="@{/}">Trang chủ</a> / <span>Quản lý nhân sự</span> / <span>Phân ca &amp; Phòng trực bác sĩ</span>
             </nav>
 
-            <!-- 1. TIÊU ĐỀ TRANG ĐỒNG BỘ CHUẨN (Có icon nhận diện chuẩn như Chấm công & Quản lý nhân sự) -->
+            <!-- TIÊU ĐỀ TRANG -->
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
                 <div class="d-flex align-items-center gap-3">
                     <div class="dv-header-icon" style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
                         <i class="bi bi-calendar-range"></i>
                     </div>
                     <div>
-                        <h1 class="dv-page-title mb-0">Bảng phân ca làm việc theo tuần</h1>
-                        <p class="dv-page-subtitle">Xếp nhân sự vào ca Sáng / Chiều / Tối theo từng chi nhánh phòng khám</p>
+                        <h1 class="dv-page-title mb-0">Bảng phân ca &amp; Phòng trực bác sĩ theo tuần</h1>
+                        <p class="dv-page-subtitle">Chi nhánh &rarr; Ngày &rarr; Ca &rarr; Phòng &rarr; Danh sách bác sĩ trực (hỗ trợ nhiều bác sĩ cùng phòng/ca)</p>
                     </div>
                 </div>
 
-                <!-- Nút Sao chép tuần trước -->
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex flex-wrap align-items-center gap-2">
                     <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                    <button type="button" class="btn btn-outline-secondary btn-vua"
+                            th:if="${selectedBranchId != null}"
+                            data-bs-toggle="modal" data-bs-target="#replacementHistoryModal">
+                        <i class="bi bi-clock-history me-1"></i>Lịch sử thay thế
+                        <span class="badge bg-secondary-subtle text-dark ms-1"
+                              th:text="${replacementLogs != null ? #lists.size(replacementLogs) : 0}">0</span>
+                    </button>
                     <form th:if="${selectedBranchId != null}" th:action="@{/admin/schedules/copy-week}" method="post"
                           class="m-0"
-                          onsubmit="return confirm('Bạn có chắc chắn muốn sao chép toàn bộ lịch trực của tuần trước sang tuần này?');">
+                          onsubmit="return confirm('Sao chép lịch trực và phân công phòng bác sĩ từ tuần trước sang tuần này?');">
                         <input type="hidden" name="branchId" th:value="${selectedBranchId}">
                         <input type="hidden" name="week" th:value="${monday}">
                         <button type="submit" class="btn btn-secondary-custom btn-vua shadow-sm">
-                            <i class="bi bi-copy me-1"></i> Sao chép tuần trước
+                            <i class="bi bi-copy me-1"></i>Sao chép tuần trước
                         </button>
                     </form>
                 </div>
             </div>
 
-            <!-- THANH TAB NGANG PHÂN HỆ NHÂN SỰ (Chuẩn DentalSoft) -->
             <nav th:replace="~{fragments/hr_tabs :: hrTabs('schedules')}"></nav>
 
-            <!-- 2. TOOLBAR ĐIỀU KHIỂN (Hàng ngang tích hợp) -->
-            <div class="schedule-toolbar-card flex-shrink-0">
-                    <form th:action="@{/admin/schedules}" method="get" class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-                        <input type="hidden" name="week" th:value="${monday}">
+            <!-- TOOLBAR TUẦN & BỘ LỌC -->
+            <div class="schedule-toolbar-card flex-shrink-0 mb-3">
+                <form th:action="@{/admin/schedules}" method="get" class="d-flex flex-column gap-2">
+                    <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                    <input type="hidden" name="week" th:value="${monday}">
 
-                        <!-- Bên trái: Điều hướng tuần -->
-                        <div class="d-flex align-items-center flex-wrap gap-3">
-                            <!-- Bộ nút điều hướng tuần -->
-                            <div class="d-flex align-items-center gap-1">
-                                <a th:href="@{/admin/schedules(branchId=${selectedBranchId}, week=${prevWeek})}"
-                                   class="schedule-nav-btn" title="Tuần trước">
-                                    <i class="bi bi-chevron-left"></i>
-                                </a>
-                                <a th:href="@{/admin/schedules(branchId=${selectedBranchId})}"
-                                   class="schedule-today-btn"
-                                   th:classappend="${!today.isBefore(monday) and !today.isAfter(monday.plusDays(6))} ? 'btn btn-primary' : 'btn btn-outline-secondary'">
-                                    Tuần này
-                                </a>
-                                <a th:href="@{/admin/schedules(branchId=${selectedBranchId}, week=${nextWeek})}"
-                                   class="schedule-nav-btn" title="Tuần sau">
-                                    <i class="bi bi-chevron-right"></i>
-                                </a>
-
-                                <!-- Khoảng thời gian tuần -->
-                                <span class="schedule-week-badge ms-2">
-                                    <i class="bi bi-calendar3 me-1 text-primary"></i>
-                                    <strong th:text="${#temporals.format(monday, 'dd/MM/yyyy')}">26/10/2026</strong>
-                                    <span class="text-muted mx-1">&rarr;</span>
-                                    <strong th:text="${#temporals.format(monday.plusDays(6), 'dd/MM/yyyy')}">01/11/2026</strong>
-                                </span>
-                            </div>
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <a th:href="@{/admin/schedules(branchId=${selectedBranchId}, week=${prevWeek})}"
+                               class="schedule-nav-btn btn btn-outline-secondary" title="Tuần trước">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                            <a th:href="@{/admin/schedules(branchId=${selectedBranchId})}"
+                               class="schedule-today-btn"
+                               th:classappend="${!today.isBefore(monday) and !today.isAfter(monday.plusDays(6))} ? 'btn btn-primary' : 'btn btn-outline-secondary'">
+                                Tuần này
+                            </a>
+                            <a th:href="@{/admin/schedules(branchId=${selectedBranchId}, week=${nextWeek})}"
+                               class="schedule-nav-btn btn btn-outline-secondary" title="Tuần sau">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                            <span class="schedule-week-badge ms-1">
+                                <i class="bi bi-calendar3 me-1 text-primary"></i>
+                                <strong th:text="${#temporals.format(monday, 'dd/MM/yyyy')}">23/11/2026</strong>
+                                <span class="text-muted mx-1">&rarr;</span>
+                                <strong th:text="${#temporals.format(monday.plusDays(6), 'dd/MM/yyyy')}">29/11/2026</strong>
+                            </span>
                         </div>
 
-                        <!-- Bên phải: Chú thích loại nhân sự (Legend) -->
-                        <div class="d-flex align-items-center gap-3 small">
-                            <span class="schedule-legend-item"><span class="legend-dot legend-dot--doctor"></span>Bác sĩ</span>
-                            <span class="schedule-legend-item"><span class="legend-dot legend-dot--staff"></span>Nhân sự khác</span>
-                            <span class="schedule-legend-item"><span class="legend-dot legend-dot--leave"></span>Nghỉ phép</span>
+                        <div class="d-flex flex-wrap align-items-center gap-3 small">
+                            <span class="schedule-legend-item"><span class="legend-dot legend-dot--doctor"></span>Bác sĩ trực phòng</span>
+                            <span class="schedule-legend-item"><span class="legend-dot legend-dot--staff"></span>Nhân sự hỗ trợ</span>
+                            <span class="schedule-legend-item"><span class="legend-dot legend-dot--leave"></span>Nghỉ phép / Thay thế</span>
                         </div>
-                    </form>
-                </div>
+                    </div>
 
-                <!-- Khi chưa có chi nhánh -->
-                <div th:if="${selectedBranchId == null}" class="schedule-card schedule-empty">
-                    <i class="bi bi-buildings fs-1 text-muted d-block mb-2"></i>
-                    <p class="mb-0">Chưa có chi nhánh nào đang hoạt động trong hệ thống.</p>
-                </div>
+                    <!-- Bộ lọc Ngày, Ca, Phòng, Bác sĩ, Trạng thái, Loại -->
+                    <div class="schedule-filter-bar" th:if="${selectedBranchId != null}">
+                        <select name="filterDate" class="form-select form-select-sm schedule-filter-control">
+                            <option value="">Tất cả ngày</option>
+                            <option th:each="wd : ${weekDays}"
+                                    th:value="${wd}"
+                                    th:selected="${filterDate != null and filterDate == wd}"
+                                    th:text="${#temporals.dayOfWeekNameShort(wd) + ' ' + #temporals.format(wd, 'dd/MM')}">
+                                T2 23/11
+                            </option>
+                        </select>
 
-                <!-- 3. MA TRẬN BẢNG PHÂN CA (Full width, thoáng đãng) -->
-                <div class="schedule-table-card" th:if="${matrix != null}">
-                    <div class="table-responsive m-0 p-0">
-                        <table class="table schedule-table">
-                            <thead>
-                            <tr>
-                                <th class="schedule-table__corner">Ca / Ngày</th>
-                                <th th:each="d : ${matrix.keySet()}"
-                                    th:classappend="${d == today} ? 'is-today' : (${d.isBefore(today)} ? 'is-past' : '')">
-                                    <div class="schedule-day">
-                                        <span th:text="${#temporals.dayOfWeekNameShort(d)}">T2</span>
-                                        <strong th:text="${#temporals.format(d, 'dd/MM')}">01/01</strong>
-                                        <span th:if="${d == today}" class="schedule-today-pill">Hôm nay</span>
+                        <select name="filterShiftId" class="form-select form-select-sm schedule-filter-control">
+                            <option value="">Tất cả ca</option>
+                            <option th:each="sh : ${shifts}"
+                                    th:value="${sh.shiftId}"
+                                    th:selected="${filterShiftId != null and filterShiftId == sh.shiftId}"
+                                    th:text="${sh.shiftName}">
+                                Ca sáng
+                            </option>
+                        </select>
+
+                        <select name="filterRoomId" class="form-select form-select-sm schedule-filter-control">
+                            <option value="">Tất cả phòng</option>
+                            <option th:each="rm : ${activeRooms}"
+                                    th:value="${rm.roomId}"
+                                    th:selected="${filterRoomId != null and filterRoomId == rm.roomId}"
+                                    th:text="${rm.roomCode + ' - ' + rm.roomName}">
+                                P101
+                            </option>
+                        </select>
+
+                        <select name="filterStaffId" class="form-select form-select-sm schedule-filter-control">
+                            <option value="">Tất cả bác sĩ / nhân sự</option>
+                            <option th:each="a : ${assignableStaff}"
+                                    th:value="${a.staff.staffId}"
+                                    th:selected="${filterStaffId != null and filterStaffId == a.staff.staffId}"
+                                    th:text="${a.staff.fullName + ' (' + a.staff.staffCode + ')'}">
+                                BS A
+                            </option>
+                        </select>
+
+                        <select name="filterStatus" class="form-select form-select-sm schedule-filter-control">
+                            <option value="ALL" th:selected="${filterStatus == 'ALL'}">Mọi trạng thái</option>
+                            <option value="ACTIVE" th:selected="${filterStatus == 'ACTIVE'}">Đang trực (ACTIVE)</option>
+                            <option value="ON_LEAVE" th:selected="${filterStatus == 'ON_LEAVE'}">Nghỉ phép (ON_LEAVE)</option>
+                            <option value="REPLACED" th:selected="${filterStatus == 'REPLACED'}">Đã thay thế (REPLACED)</option>
+                            <option value="EMPTY_ROOM" th:selected="${filterStatus == 'EMPTY_ROOM'}">Phòng chưa có bác sĩ</option>
+                        </select>
+
+                        <select name="viewType" class="form-select form-select-sm schedule-filter-control">
+                            <option value="ALL" th:selected="${viewType == 'ALL'}">Bác sĩ + Hỗ trợ</option>
+                            <option value="DOCTORS" th:selected="${viewType == 'DOCTORS'}">Chỉ bác sĩ theo phòng</option>
+                            <option value="SUPPORT" th:selected="${viewType == 'SUPPORT'}">Chỉ nhân sự hỗ trợ</option>
+                        </select>
+
+                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-funnel me-1"></i>Lọc
+                        </button>
+                        <a th:href="@{/admin/schedules(branchId=${selectedBranchId}, week=${monday})}"
+                           class="btn btn-sm btn-outline-secondary">Xóa lọc</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Khi chưa có chi nhánh -->
+            <div th:if="${selectedBranchId == null}" class="schedule-card schedule-empty">
+                <i class="bi bi-buildings fs-1 text-muted d-block mb-2"></i>
+                <p class="mb-0">Chưa có chi nhánh nào đang hoạt động trong hệ thống.</p>
+            </div>
+
+            <!-- ==================== DESKTOP: MA TRẬN TUẦN (CA x NGÀY -> PHÒNG -> NHIỀU BÁC SĨ) ==================== -->
+            <div class="schedule-table-card schedule-desktop-view" th:if="${doctorRoomMatrix != null}">
+                <div class="table-responsive m-0 p-0">
+                    <table class="table schedule-table">
+                        <thead>
+                        <tr>
+                            <th class="schedule-table__corner">Ca / Ngày</th>
+                            <th th:each="d : ${displayedDays}"
+                                th:classappend="${d == today} ? 'is-today' : (${d.isBefore(today)} ? 'is-past' : '')">
+                                <div class="schedule-day">
+                                    <span th:text="${#temporals.dayOfWeekNameShort(d)}">T2</span>
+                                    <strong th:text="${#temporals.format(d, 'dd/MM')}">23/11</strong>
+                                    <span th:if="${d == today}" class="schedule-today-pill">Hôm nay</span>
+                                </div>
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="sh : ${displayedShifts}">
+                            <th class="schedule-shift">
+                                <div class="schedule-shift__name">
+                                    <i class="bi"
+                                       th:classappend="${#strings.containsIgnoreCase(sh.shiftName, 'sáng')} ? 'bi-sunrise text-warning' : (${#strings.containsIgnoreCase(sh.shiftName, 'chiều')} ? 'bi-sun text-primary' : 'bi-moon-stars text-indigo')"></i>
+                                    <span th:text="${sh.shiftName}">Ca sáng</span>
+                                </div>
+                                <div class="schedule-shift__time"
+                                     th:text="${#temporals.format(sh.startTime, 'HH:mm')} + ' - ' + ${#temporals.format(sh.endTime, 'HH:mm')}">
+                                    08:00 - 12:00
+                                </div>
+                            </th>
+
+                            <td th:each="d : ${displayedDays}" class="schedule-cell"
+                                th:classappend="${d == today} ? 'is-today' : (${d.isBefore(today)} ? 'is-past' : '')">
+
+                                <!-- 1. KHỐI BÁC SĨ THEO PHÒNG -->
+                                <div th:if="${viewType != 'SUPPORT'}">
+                                    <!-- Từng phòng trong ô (Ngày x Ca) -->
+                                    <div th:each="roomEntry : ${doctorRoomMatrix.get(d)?.get(sh.shiftId)}"
+                                         th:with="roomObj=${roomByIdMap != null ? roomByIdMap.get(roomEntry.key) : null},
+                                                  docList=${roomEntry.value}"
+                                         class="schedule-room-card"
+                                         th:classappend="${#lists.isEmpty(docList)} ? 'schedule-room-card--empty' : ''">
+                                        <div class="schedule-room-header">
+                                            <span class="schedule-room-title">
+                                                <i class="bi bi-door-open me-1 text-primary"></i>
+                                                <span th:text="${roomObj != null ? roomObj.roomCode : 'Phòng #' + roomEntry.key}">P101</span>
+                                            </span>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <span class="badge bg-primary-subtle text-primary"
+                                                      th:if="${!#lists.isEmpty(docList)}"
+                                                      th:text="${#lists.size(docList.?[#strings.toString(status) == 'ACTIVE']) + ' BS'}">2 BS</span>
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle"
+                                                      th:if="${#lists.isEmpty(docList) or #lists.isEmpty(docList.?[#strings.toString(status) == 'ACTIVE'])}">0 BS</span>
+                                                <button type="button" class="btn btn-sm btn-link p-0 text-primary"
+                                                        th:if="${!d.isBefore(today)}"
+                                                        title="Thêm nhiều bác sĩ vào phòng"
+                                                        data-bs-toggle="modal" data-bs-target="#doctorRoomAssignModal"
+                                                        th:attr="data-date=${d}, data-shift=${sh.shiftId}, data-room=${roomEntry.key},
+                                                                 data-label=${sh.shiftName + ' · ' + #temporals.format(d, 'dd/MM/yyyy')}">
+                                                    <i class="bi bi-person-plus-fill"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div th:if="${#lists.isEmpty(docList)}" class="small text-muted fst-italic py-1">
+                                            Phòng chưa có bác sĩ trực
+                                        </div>
+
+                                        <!-- Danh sách nhiều bác sĩ trong cùng phòng -->
+                                        <div th:each="dsa : ${docList}"
+                                             class="schedule-doc-row"
+                                             th:classappend="${#strings.toString(dsa.status) == 'ON_LEAVE'} ? 'schedule-doc-row--leave' : (${#strings.toString(dsa.status) == 'REPLACED'} ? 'schedule-doc-row--replaced' : '')">
+                                            <div class="schedule-doc-meta">
+                                                <span class="badge bg-primary-subtle text-primary"
+                                                      th:if="${#strings.toString(dsa.assignmentRole) == 'PRIMARY'}">Chính</span>
+                                                <span class="badge bg-info-subtle text-info"
+                                                      th:if="${#strings.toString(dsa.assignmentRole) == 'REPLACEMENT'}">Thay</span>
+                                                <span class="schedule-doc-name"
+                                                      th:text="${dsa.staff.fullName}"
+                                                      th:title="${dsa.staff.staffCode + (dsa.staff.specialty != null ? ' · ' + dsa.staff.specialty : '')}">
+                                                    BS A
+                                                </span>
+                                                <span class="badge bg-warning-subtle text-dark"
+                                                      th:if="${#strings.toString(dsa.status) == 'ON_LEAVE'}">Nghỉ</span>
+                                                <span class="badge bg-secondary-subtle text-dark"
+                                                      th:if="${#strings.toString(dsa.status) == 'REPLACED'}">Đã thay</span>
+                                                <span class="badge bg-danger-subtle text-danger"
+                                                      th:if="${dsa.roomPermissionOverridden}"
+                                                      title="Admin đã bật ngoại lệ ngoài phân công phòng">Ngoại lệ</span>
+                                            </div>
+
+                                            <!-- Hành động trên từng bác sĩ (từ hôm nay trở đi) -->
+                                            <div class="dropdown" th:if="${!d.isBefore(today) and (#strings.toString(dsa.status) == 'ACTIVE' or #strings.toString(dsa.status) == 'ON_LEAVE')}">
+                                                <button class="btn btn-sm btn-link text-secondary p-0" type="button"
+                                                        data-bs-toggle="dropdown" aria-expanded="false" title="Thao tác bác sĩ">
+                                                    <i class="bi bi-three-dots-vertical"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                                    <li th:if="${#strings.toString(dsa.status) == 'ACTIVE'}">
+                                                        <button type="button" class="dropdown-item small js-open-move-room"
+                                                                data-bs-toggle="modal" data-bs-target="#moveRoomModal"
+                                                                th:attr="data-dsa-id=${dsa.shiftAssignmentId},
+                                                                         data-staff-name=${dsa.staff.fullName},
+                                                                         data-room-id=${dsa.room.roomId},
+                                                                         data-room-code=${dsa.room.roomCode}">
+                                                            <i class="bi bi-arrow-left-right me-2 text-primary"></i>Chuyển phòng
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item small js-open-replace-doctor"
+                                                                data-bs-toggle="modal" data-bs-target="#replaceDoctorModal"
+                                                                th:attr="data-dsa-id=${dsa.shiftAssignmentId}">
+                                                            <i class="bi bi-person-check me-2 text-warning"></i>Thay thế BS
+                                                        </button>
+                                                    </li>
+                                                    <li th:if="${#strings.toString(dsa.status) == 'ACTIVE'}">
+                                                        <form th:action="@{/admin/schedules/doctor-shifts/{id}/remove(id=${dsa.shiftAssignmentId})}"
+                                                              method="post" class="m-0"
+                                                              onsubmit="return confirm('Gỡ bác sĩ này khỏi phòng trực (các bác sĩ khác trong phòng vẫn giữ nguyên)?');">
+                                                            <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                                                            <input type="hidden" name="week" th:value="${monday}">
+                                                            <button type="submit" class="dropdown-item small text-danger">
+                                                                <i class="bi bi-trash me-2"></i>Gỡ khỏi phòng
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
                                     </div>
-                                </th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr th:each="sh : ${shifts}">
-                                <!-- Cột Tên Ca Bên Trái -->
-                                <th class="schedule-shift">
-                                    <div class="schedule-shift__name">
-                                        <i class="bi"
-                                           th:classappend="${#strings.containsIgnoreCase(sh.shiftName, 'sáng')} ? 'bi-sunrise text-warning' : (${#strings.containsIgnoreCase(sh.shiftName, 'chiều')} ? 'bi-sun text-primary' : 'bi-moon-stars text-indigo')"></i>
-                                        <span th:text="${sh.shiftName}">Ca sáng</span>
-                                    </div>
-                                    <div class="schedule-shift__time"
-                                         th:text="${#temporals.format(sh.startTime, 'HH:mm')} + ' - ' + ${#temporals.format(sh.endTime, 'HH:mm')}">
-                                        08:00 - 12:00
-                                    </div>
-                                </th>
 
-                                <!-- Các Ô Ngày x Ca -->
-                                <td th:each="entry : ${matrix}" class="schedule-cell"
-                                    th:classappend="${entry.key == today} ? 'is-today' : (${entry.key.isBefore(today)} ? 'is-past' : '')">
+                                    <!-- Cảnh báo gọn các phòng chưa có bác sĩ trong ca -->
+                                    <div class="schedule-empty-rooms-bar"
+                                         th:if="${emptyRoomsMatrix != null and !#lists.isEmpty(emptyRoomsMatrix.get(d)?.get(sh.shiftId)) and filterStatus != 'EMPTY_ROOM' and filterRoomId == null}">
+                                        <i class="bi bi-exclamation-circle me-1"></i>
+                                        Chưa có BS:
+                                        <span th:each="er, iter : ${emptyRoomsMatrix.get(d)?.get(sh.shiftId)}">
+                                            <span th:text="${er.roomCode}">P103</span><span th:if="${!iter.last}">, </span>
+                                        </span>
+                                    </div>
 
-                                    <!-- Danh sách nhân viên trong ca -->
-                                    <div th:each="s : ${entry.value[sh.shiftId]}"
+                                    <!-- Nút Thêm phòng vào ca -->
+                                    <button type="button" class="schedule-add mb-1"
+                                            th:if="${!d.isBefore(today) and activeRooms != null and !#lists.isEmpty(activeRooms)}"
+                                            data-bs-toggle="modal" data-bs-target="#doctorRoomAssignModal"
+                                            th:attr="data-date=${d}, data-shift=${sh.shiftId}, data-room='',
+                                                     data-label=${sh.shiftName + ' · ' + #temporals.format(d, 'dd/MM/yyyy')}">
+                                        <i class="bi bi-building-add me-1"></i>+ Thêm phòng / BS
+                                    </button>
+                                </div>
+
+                                <!-- 2. NHÂN SỰ HỖ TRỢ CA (GIỮ NGUYÊN CHỨC NĂNG CŨ CHO LỄ TÂN / KẾ TOÁN / KHO) -->
+                                <div class="schedule-support-section" th:if="${viewType != 'DOCTORS'}">
+                                    <div class="schedule-support-heading"
+                                         th:if="${!#lists.isEmpty(supportMatrix.get(d)?.get(sh.shiftId)) or !d.isBefore(today)}">
+                                        Nhân sự hỗ trợ / chưa gắn phòng
+                                    </div>
+                                    <div th:each="s : ${supportMatrix.get(d)?.get(sh.shiftId)}"
                                          class="schedule-chip"
                                          th:classappend="${#strings.toString(s.status) == 'ON_LEAVE' ? 'schedule-chip--leave' : (#strings.startsWith(s.staff.staffCode, 'BS') ? 'schedule-chip--doctor' : 'schedule-chip--staff')}">
-
-                                        <!-- Badge vai trò -->
                                         <span class="schedule-role-tag"
                                               th:text="${#strings.toString(s.status) == 'ON_LEAVE' ? 'Nghỉ' : (#strings.startsWith(s.staff.staffCode, 'BS') ? 'BS' : 'NV')}">
                                             NV
                                         </span>
-
-                                        <!-- Tên nhân viên -->
                                         <span class="schedule-chip__name"
                                               th:text="${s.staff.fullName}"
                                               th:title="${s.staff.staffCode + (s.staff.positionTitle != null ? ' - ' + s.staff.positionTitle : '')}">
                                             Họ tên
                                         </span>
-
-                                        <!-- Badge báo đã check-in hôm nay -->
-                                        <span th:if="${entry.key == today and checkedInStaffTimesToday != null and checkedInStaffTimesToday.containsKey(s.staff.staffId)}"
+                                        <span th:if="${d == today and checkedInStaffTimesToday != null and checkedInStaffTimesToday.containsKey(s.staff.staffId)}"
                                               class="badge bg-success-subtle text-success border border-success-subtle px-1 py-0 ms-1 d-inline-flex align-items-center gap-1"
-                                              style="font-size: 0.68rem;"
-                                              th:title="'Đã check-in lúc ' + ${checkedInStaffTimesToday[s.staff.staffId]}">
-                                            <i class="bi bi-fingerprint"></i><span th:text="${checkedInStaffTimesToday[s.staff.staffId]}">08:00</span>
+                                              style="font-size: 0.68rem;">
+                                            <i class="bi bi-fingerprint"></i><span th:text="${checkedInStaffTimesToday.get(s.staff.staffId)}">08:00</span>
                                         </span>
-
-                                        <!-- Nút gỡ nhân viên (chỉ khả dụng từ hôm nay trở đi) -->
-                                        <form th:if="${!entry.key.isBefore(today)}"
+                                        <form th:if="${!d.isBefore(today)}"
                                               th:action="@{/admin/schedules/{id}/delete(id=${s.scheduleId})}" method="post"
                                               class="m-0"
                                               th:attr="data-staff-name=${s.staff.fullName},
-                                                       data-checked-in=${entry.key == today and checkedInStaffTimesToday != null and checkedInStaffTimesToday.containsKey(s.staff.staffId)},
-                                                       data-checkin-time=${(entry.key == today and checkedInStaffTimesToday != null and checkedInStaffTimesToday.containsKey(s.staff.staffId)) ? checkedInStaffTimesToday[s.staff.staffId] : ''}"
+                                                       data-checked-in=${d == today and checkedInStaffTimesToday != null and checkedInStaffTimesToday.containsKey(s.staff.staffId)},
+                                                       data-checkin-time=${(d == today and checkedInStaffTimesToday != null and checkedInStaffTimesToday.containsKey(s.staff.staffId)) ? checkedInStaffTimesToday.get(s.staff.staffId) : ''}"
                                               onsubmit="return handleConfirmRemove(this);">
                                             <input type="hidden" name="branchId" th:value="${selectedBranchId}">
                                             <input type="hidden" name="week" th:value="${monday}">
@@ -188,60 +362,345 @@
                                         </form>
                                     </div>
 
-                                    <!-- Nút Thêm nhân viên (Cho hôm nay và tương lai) -->
                                     <button type="button" class="schedule-add"
-                                            th:if="${!entry.key.isBefore(today)}"
+                                            th:if="${!d.isBefore(today)}"
                                             data-bs-toggle="modal" data-bs-target="#assignModal"
-                                            th:attr="data-date=${entry.key}, data-shift=${sh.shiftId},
-                                                     data-label=${sh.shiftName + ' · ' + #temporals.format(entry.key, 'dd/MM/yyyy')}">
-                                        <i class="bi bi-plus-lg"></i> Thêm nhân sự
+                                            th:attr="data-date=${d}, data-shift=${sh.shiftId},
+                                                     data-label=${sh.shiftName + ' · ' + #temporals.format(d, 'dd/MM/yyyy')}">
+                                        <i class="bi bi-plus-lg"></i> Xếp nhân sự khác
                                     </button>
-
-                                    <!-- Hiển thị nhãn mờ lịch sự nếu ngày đã qua và không có ai trong ca -->
-                                    <div th:if="${entry.key.isBefore(today) and #lists.isEmpty(entry.value[sh.shiftId])}"
-                                         class="schedule-past-empty">
-                                        <i class="bi bi-clock-history me-1"></i>Đã qua
-                                    </div>
-                                </td>
-                            </tr>
-                            </tbody>
-                        </table>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="misa-pagination-footer">
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong th:text="${displayedShifts != null ? #lists.size(displayedShifts) : 0}">3</strong> ca làm việc &middot;
+                        <strong th:text="${activeRooms != null ? #lists.size(activeRooms) : 0}">0</strong> phòng ACTIVE
                     </div>
+                    <div class="misa-pagination-right">
+                        <span class="text-muted small"><i class="bi bi-shield-check me-1 text-primary"></i>Quản lý ca trực đa bác sĩ theo phòng CV-DCMS</span>
+                    </div>
+                </div>
+            </div>
 
-                    <!-- FOOTER CHUẨN MISA AMIS (Đồng bộ Quản lý tài khoản, Quản lý nhân sự, Quản lý cơ sở) -->
-                    <div class="misa-pagination-footer" style="flex-shrink: 0;">
-                        <div class="misa-pagination-left">
-                            Tổng số: <strong th:text="${shifts != null ? #lists.size(shifts) : 0}">3</strong> ca làm việc / ngày (Sáng · Chiều · Tối)
-                        </div>
-                        <div class="misa-pagination-right">
-                            <span class="text-muted small">
-                                <i class="bi bi-shield-check me-1 text-primary"></i>Hệ thống quản lý chuỗi nha khoa CV-DCMS
-                            </span>
+            <!-- ==================== MOBILE (< 768px): CHỌN NGÀY + ACCORDION CA & PHÒNG ==================== -->
+            <div class="schedule-mobile-view" th:if="${doctorRoomMatrix != null}">
+                <ul class="nav nav-pills flex-nowrap overflow-auto gap-2 pb-2 mb-2" id="mobileDayTabs" role="tablist">
+                    <li class="nav-item flex-shrink-0" th:each="d, dStat : ${displayedDays}">
+                        <button class="nav-link py-1 px-3 small"
+                                th:classappend="${d == today or (dStat.first and !displayedDays.contains(today))} ? 'active' : ''"
+                                th:id="${'mob-tab-' + d}"
+                                data-bs-toggle="pill"
+                                th:attr="data-bs-target=${'#mob-pane-' + d}"
+                                type="button" role="tab">
+                            <span th:text="${#temporals.dayOfWeekNameShort(d) + ' ' + #temporals.format(d, 'dd/MM')}">T2 23/11</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade"
+                         th:each="d, dStat : ${displayedDays}"
+                         th:id="${'mob-pane-' + d}"
+                         th:classappend="${d == today or (dStat.first and !displayedDays.contains(today))} ? 'show active' : ''">
+                        <div class="accordion" th:id="${'mobAcc-' + d}">
+                            <div class="accordion-item mb-2 border rounded-3 overflow-hidden" th:each="sh, shStat : ${displayedShifts}">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button py-2 px-3 fw-semibold small"
+                                            th:classappend="${!shStat.first} ? 'collapsed' : ''"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            th:attr="data-bs-target=${'#mobCol-' + d + '-' + sh.shiftId}">
+                                        <span th:text="${sh.shiftName + ' (' + #temporals.format(sh.startTime, 'HH:mm') + ' - ' + #temporals.format(sh.endTime, 'HH:mm') + ')'}">Ca sáng</span>
+                                    </button>
+                                </h2>
+                                <div th:id="${'mobCol-' + d + '-' + sh.shiftId}"
+                                     class="accordion-collapse collapse"
+                                     th:classappend="${shStat.first} ? 'show' : ''">
+                                    <div class="accordion-body p-2 bg-white">
+                                        <div th:each="roomEntry : ${doctorRoomMatrix.get(d)?.get(sh.shiftId)}"
+                                             th:with="mobRoom=${roomByIdMap != null ? roomByIdMap.get(roomEntry.key) : null}"
+                                             class="schedule-room-card">
+                                            <div class="schedule-room-header">
+                                                <strong class="small" th:text="${mobRoom != null ? mobRoom.roomCode + ' - ' + mobRoom.roomName : 'Phòng #' + roomEntry.key}">P101</strong>
+                                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2"
+                                                        th:if="${!d.isBefore(today)}"
+                                                        data-bs-toggle="modal" data-bs-target="#doctorRoomAssignModal"
+                                                        th:attr="data-date=${d}, data-shift=${sh.shiftId}, data-room=${roomEntry.key},
+                                                                 data-label=${sh.shiftName + ' · ' + #temporals.format(d, 'dd/MM/yyyy')}">
+                                                    + BS
+                                                </button>
+                                            </div>
+                                            <div th:each="dsa : ${roomEntry.value}" class="schedule-doc-row">
+                                                <span th:text="${dsa.staff.fullName}">BS A</span>
+                                                <span class="badge bg-light text-dark border" th:text="${dsa.status}">ACTIVE</span>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 mt-1"
+                                                th:if="${!d.isBefore(today)}"
+                                                data-bs-toggle="modal" data-bs-target="#doctorRoomAssignModal"
+                                                th:attr="data-date=${d}, data-shift=${sh.shiftId}, data-room='',
+                                                         data-label=${sh.shiftName + ' · ' + #temporals.format(d, 'dd/MM/yyyy')}">
+                                            + Thêm phòng / bác sĩ
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
         </main>
     </div>
 </div>
 
-<!-- ==================== MODAL XẾP CA (ĐẶT NGOÀI app-shell ĐỂ KHÔNG BỊ BACKDROP CHE) ==================== -->
-<div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width: 460px;">
-        <form class="modal-content shadow-lg border-0" style="border-radius: 12px; overflow: hidden;"
-              th:action="@{/admin/schedules/assign}" method="post">
-            <div class="modal-header py-3 px-4" style="border-bottom: 1px solid #e2e8f0; background: #ffffff;">
-                <h5 class="modal-title fw-bold text-dark fs-6" id="assignModalLabel">
-                    <i class="bi bi-person-plus text-primary me-2"></i>Xếp nhân viên vào ca
+<!-- ==================== MODAL 1: THÊM PHÒNG & NHIỀU BÁC SĨ VÀO PHÒNG TRỰC ==================== -->
+<div class="modal fade" id="doctorRoomAssignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content shadow-lg border-0" th:action="@{/admin/schedules/doctor-shifts/assign}" method="post">
+            <div class="modal-header py-3 px-4 border-bottom">
+                <h5 class="modal-title fw-bold fs-6">
+                    <i class="bi bi-hospital text-primary me-2"></i>Phân công bác sĩ theo phòng &amp; ca
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
-            <div class="modal-body px-4 py-3" style="background: #ffffff;">
+            <div class="modal-body px-4 py-3">
+                <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                <input type="hidden" name="workDate" id="docAssignDate">
+                <input type="hidden" name="shiftId" id="docAssignShift">
+
+                <div class="alert alert-primary bg-primary-subtle text-primary border-0 py-2 px-3 mb-3 small">
+                    <strong>Ca &amp; Ngày:</strong> <span id="docAssignLabel">-</span>
+                </div>
+
+                <div class="mb-3">
+                    <label for="docAssignRoom" class="form-label small fw-semibold">Chọn phòng khám <span class="text-danger">*</span></label>
+                    <select id="docAssignRoom" name="roomId" class="form-select" required>
+                        <option value="">-- Chọn phòng ACTIVE --</option>
+                        <option th:each="rm : ${activeRooms}" th:value="${rm.roomId}"
+                                th:text="${rm.roomCode + ' - ' + rm.roomName + ' (' + (activeChairCountByRoom != null and activeChairCountByRoom.get(rm.roomId) != null ? activeChairCountByRoom.get(rm.roomId) : 0) + ' ghế hoạt động)'}">P101</option>
+                    </select>
+                </div>
+
+                <div class="mb-3" id="docAssignChairBox" style="display: none;">
+                    <div class="border rounded-3 bg-light p-2 mb-2">
+                        <div class="small fw-semibold text-dark mb-1">
+                            <i class="bi bi-hospital-fill text-primary me-1"></i>Ghế tại phòng: <span id="docAssignChairCountBadge" class="badge bg-primary-subtle text-primary">0</span>
+                        </div>
+                        <div id="docAssignChairList" class="d-flex flex-wrap gap-1 small"></div>
+                    </div>
+                    <label for="docAssignChairSelect" class="form-label small fw-semibold">Gán ghế phụ trách (tùy chọn)</label>
+                    <select id="docAssignChairSelect" class="form-select form-select-sm">
+                        <option value="">-- Linh hoạt mọi ghế trong phòng --</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Chọn một hoặc nhiều bác sĩ <span class="text-danger">*</span></label>
+                    <div class="schedule-doc-checklist">
+                        <label th:each="doc : ${branchDoctors}" class="schedule-doc-check-item">
+                            <span class="d-flex align-items-center gap-2">
+                                <input class="form-check-input m-0" type="checkbox" name="staffIds" th:value="${doc.staffId}">
+                                <span class="small fw-semibold" th:text="${doc.fullName}">BS A</span>
+                            </span>
+                            <span class="text-muted small" th:text="${doc.staffCode + (doc.specialty != null ? ' · ' + doc.specialty : '')}">BS01</span>
+                        </label>
+                        <div th:if="${branchDoctors == null or #lists.isEmpty(branchDoctors)}" class="text-muted small text-center py-2">
+                            Chưa có bác sĩ ACTIVE tại chi nhánh này.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-md-5">
+                        <label for="docAssignRole" class="form-label small fw-semibold">Vai trò ca</label>
+                        <select id="docAssignRole" name="role" class="form-select form-select-sm">
+                            <option value="CO_ATTENDING">Bác sĩ cùng trực</option>
+                            <option value="PRIMARY">Bác sĩ chính (hiển thị)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-7">
+                        <label for="docAssignNote" class="form-label small fw-semibold">Ghi chú</label>
+                        <input id="docAssignNote" name="note" type="text" maxlength="250" class="form-control form-control-sm"
+                               placeholder="Ví dụ: Hỗ trợ ca đông bệnh nhân...">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer px-4 py-3 justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary btn-vua">
+                    <i class="bi bi-check-lg me-1"></i>Xác nhận phân công
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ==================== MODAL 2: CHUYỂN BÁC SĨ SANG PHÒNG KHÁC ==================== -->
+<div class="modal fade" id="moveRoomModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <form id="moveRoomForm" class="modal-content shadow-lg border-0" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf != null}">
+            <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+            <input type="hidden" name="week" th:value="${monday}">
+            <div class="modal-header py-3 px-4 border-bottom">
+                <h5 class="modal-title fw-bold fs-6">
+                    <i class="bi bi-arrow-left-right text-primary me-2"></i>Chuyển bác sĩ sang phòng khác
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <p class="small mb-3">
+                    Bác sĩ: <strong id="moveRoomStaffName">-</strong> (hiện tại: <strong id="moveRoomCurrent">-</strong>)
+                </p>
+                <div class="mb-2">
+                    <label for="moveTargetRoom" class="form-label small fw-semibold">Phòng mới <span class="text-danger">*</span></label>
+                    <select id="moveTargetRoom" name="targetRoomId" class="form-select" required>
+                        <option value="">-- Chọn phòng đích --</option>
+                        <option th:each="rm : ${activeRooms}" th:value="${rm.roomId}"
+                                th:text="${rm.roomCode + ' - ' + rm.roomName}">P102</option>
+                    </select>
+                </div>
+                <div class="form-text small text-muted">
+                    Các bác sĩ khác tại phòng hiện tại vẫn được giữ nguyên phân công.
+                </div>
+            </div>
+            <div class="modal-footer px-4 py-3 justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary btn-vua">Xác nhận chuyển phòng</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ==================== MODAL 3: THAY THẾ BÁC SĨ & XEM LỊCH HẸN BỊ ẢNH HƯỞNG ==================== -->
+<div class="modal fade" id="replaceDoctorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form id="replaceDoctorForm" class="modal-content shadow-lg border-0" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" th:if="${_csrf != null}">
+            <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+            <input type="hidden" name="week" th:value="${monday}">
+            <div class="modal-header py-3 px-4 border-bottom">
+                <h5 class="modal-title fw-bold fs-6">
+                    <i class="bi bi-person-check text-warning me-2"></i>Thay thế bác sĩ trực phòng
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+                <div class="alert alert-light border small mb-3" id="replaceMetaBox">
+                    Đang tải thông tin ca trực và lịch hẹn bị ảnh hưởng...
+                </div>
+
+                <div class="mb-3">
+                    <div class="small fw-semibold mb-1">Lịch hẹn của bác sĩ gốc trong ca này:</div>
+                    <div class="border rounded-2 p-2 bg-light small" id="replaceAffectedBox" style="max-height: 140px; overflow-y: auto;">
+                        -
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="replaceCandidateSelect" class="form-label small fw-semibold">Chọn bác sĩ thay thế <span class="text-danger">*</span></label>
+                    <select id="replaceCandidateSelect" name="replacementStaffId" class="form-select" required>
+                        <option value="">-- Chọn bác sĩ thay thế --</option>
+                    </select>
+                    <div id="replaceCandidateNote" class="small mt-1 text-muted"></div>
+                </div>
+
+                <div class="form-check mb-2" th:if="${isAdminUser}">
+                    <input class="form-check-input" type="checkbox" id="overrideRoomPermissionChk" name="overrideRoomPermission" value="true">
+                    <label class="form-check-label small fw-semibold text-danger" for="overrideRoomPermissionChk">
+                        Ngoại lệ ADMIN: Cho phép thay thế ngoài phân công phòng nền (chỉ áp dụng duy nhất ca này, ghi SystemAuditLog)
+                    </label>
+                </div>
+
+                <div class="mb-2">
+                    <label for="replacementReasonInput" class="form-label small fw-semibold">Lý do thay thế <span class="text-danger">*</span></label>
+                    <textarea id="replacementReasonInput" name="replacementReason" class="form-control form-control-sm" rows="2" required
+                              minlength="5" maxlength="500"
+                              placeholder="Nhập lý do thay thế bác sĩ (tối thiểu 5 ký tự; tối thiểu 10 ký tự nếu dùng ngoại lệ ADMIN)..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer px-4 py-3 justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn btn-primary btn-vua">Xác nhận thay thế</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ==================== MODAL 4: LỊCH SỬ THAY THẾ BÁC SĨ TRONG TUẦN ==================== -->
+<div class="modal fade" id="replacementHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header py-3 px-4 border-bottom">
+                <h5 class="modal-title fw-bold fs-6">
+                    <i class="bi bi-clock-history text-primary me-2"></i>Lịch sử thay thế bác sĩ trong tuần
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="table-responsive" th:if="${replacementLogs != null and !#lists.isEmpty(replacementLogs)}">
+                    <table class="table table-sm align-middle mb-0 small">
+                        <thead class="table-light">
+                        <tr>
+                            <th>Thời điểm</th>
+                            <th>Ngày / Ca</th>
+                            <th>Phòng</th>
+                            <th>BS gốc</th>
+                            <th>BS thay thế</th>
+                            <th>Chuyển giao / Cần xử lý</th>
+                            <th>Người duyệt</th>
+                            <th>Lý do</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="log : ${replacementLogs}">
+                            <td th:text="${#temporals.format(log.replacedAt, 'dd/MM HH:mm')}">23/11 08:15</td>
+                            <td th:text="${#temporals.format(log.workDate, 'dd/MM/yyyy') + ' · ' + log.shift.shiftName}">23/11</td>
+                            <td th:text="${log.room.roomCode}">P101</td>
+                            <td th:text="${log.replacedForStaff.fullName}">BS B</td>
+                            <td>
+                                <span th:text="${log.replacementStaff.fullName}">BS D</span>
+                                <span class="badge bg-danger-subtle text-danger ms-1" th:if="${log.roomPermissionOverridden}">Ngoại lệ phòng</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-success-subtle text-success" th:text="${log.transferredAppointmentCount + ' chuyển giao'}">0</span>
+                                <span class="badge bg-warning-subtle text-dark ms-1" th:if="${log.needsReassignmentCount > 0}"
+                                      th:text="${log.needsReassignmentCount + ' NEEDS_REASSIGNMENT'}">0</span>
+                            </td>
+                            <td th:text="${log.replacedByUser.username}">admin</td>
+                            <td th:text="${log.replacementReason}">Nghỉ đột xuất</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-center text-muted py-4 small" th:if="${replacementLogs == null or #lists.isEmpty(replacementLogs)}">
+                    Chưa có lượt thay thế bác sĩ nào trong tuần này.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== MODAL 5: XẾP NHÂN SỰ HỖ TRỢ CA (GIỮ NGUYÊN CHỨC NĂNG CŨ) ==================== -->
+<div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 460px;">
+        <form class="modal-content shadow-lg border-0" th:action="@{/admin/schedules/assign}" method="post">
+            <div class="modal-header py-3 px-4 border-bottom">
+                <h5 class="modal-title fw-bold text-dark fs-6" id="assignModalLabel">
+                    <i class="bi bi-person-plus text-primary me-2"></i>Xếp nhân sự hỗ trợ vào ca
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
                 <input type="hidden" name="branchId" th:value="${selectedBranchId}">
                 <input type="hidden" name="workDate" id="assignDate">
                 <input type="hidden" name="shiftId" id="assignShift">
 
-                <!-- Khung thông tin ca & ngày trực -->
                 <div class="alert alert-primary bg-primary-subtle text-primary border-0 rounded-3 py-2 px-3 mb-3 d-flex align-items-center gap-2">
                     <i class="bi bi-calendar-event fs-5"></i>
                     <div>
@@ -251,9 +710,7 @@
                 </div>
 
                 <div class="mb-3">
-                    <label for="assignStaff" class="form-label small fw-semibold text-muted">
-                        Chọn nhân viên <span class="text-danger">*</span>
-                    </label>
+                    <label for="assignStaff" class="form-label small fw-semibold text-muted">Chọn nhân viên <span class="text-danger">*</span></label>
                     <select id="assignStaff" name="staffId" class="form-select" required
                             th:disabled="${assignableStaff == null or #lists.isEmpty(assignableStaff)}">
                         <option value="">-- Chọn nhân viên --</option>
@@ -262,21 +719,15 @@
                             Nhân viên
                         </option>
                     </select>
-                    <div class="alert alert-warning py-2 px-3 mt-2 small mb-0 rounded-2"
-                         th:if="${assignableStaff == null or #lists.isEmpty(assignableStaff)}">
-                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                        Chi nhánh này chưa có nhân viên được phân công làm việc.
-                        Vui lòng vào <a th:href="@{/admin/staffs}" class="alert-link fw-bold" target="_blank">Quản lý nhân sự</a> để phân công trước.
-                    </div>
                 </div>
 
                 <div class="mb-2">
                     <label for="assignNote" class="form-label small fw-semibold text-muted">Ghi chú ca trực</label>
                     <input type="text" id="assignNote" name="note" maxlength="255" class="form-control"
-                           placeholder="Ví dụ: Trực phụ tá chính, trực bàn khám số 1...">
+                           placeholder="Ví dụ: Lễ tân trực quầy, phụ tá ca...">
                 </div>
             </div>
-            <div class="modal-footer px-4 py-3 justify-content-end gap-2 bg-white" style="border-top: 1px solid #e2e8f0;">
+            <div class="modal-footer px-4 py-3 justify-content-end gap-2 bg-white border-top">
                 <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Hủy</button>
                 <button type="submit" class="btn btn-primary btn-vua"
                         th:disabled="${assignableStaff == null or #lists.isEmpty(assignableStaff)}">
@@ -294,38 +745,179 @@
         var isCheckedIn = form.getAttribute('data-checked-in') === 'true';
         var time = form.getAttribute('data-checkin-time') || '';
         if (isCheckedIn) {
-            var msg = '⚠️ CẢNH BÁO: Nhân viên ' + name + ' ĐÃ CHẤM CÔNG hôm nay' + (time ? ' (lúc ' + time + ')' : '') + '!\n\n';
+            var msg = 'CẢNH BÁO: Nhân viên ' + name + ' ĐÃ CHẤM CÔNG hôm nay' + (time ? ' (lúc ' + time + ')' : '') + '!\n\n';
             msg += 'Bạn có chắc chắn muốn gỡ nhân viên này khỏi ca trực không?\n';
-            msg += '(Lượt chấm công nhầm hôm nay của nhân viên cũng sẽ được TỰ ĐỘNG HỦY / XÓA BỎ)';
+            msg += '(Lượt chấm công nhầm hôm nay sẽ được tự động hủy bỏ)';
             return confirm(msg);
         }
         return confirm('Gỡ nhân viên ' + name + ' khỏi ca trực?');
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        var modalEl = document.getElementById('assignModal');
-        if (!modalEl) return;
-
-        function fillModalData(btn) {
-            if (!btn) return;
-            document.getElementById('assignDate').value = btn.getAttribute('data-date') || '';
-            document.getElementById('assignShift').value = btn.getAttribute('data-shift') || '';
-            document.getElementById('assignLabel').textContent = btn.getAttribute('data-label') || '-';
-            document.getElementById('assignStaff').value = '';
-            document.getElementById('assignNote').value = '';
+        var assignModal = document.getElementById('assignModal');
+        if (assignModal) {
+            assignModal.addEventListener('show.bs.modal', function (ev) {
+                var btn = ev.relatedTarget;
+                if (!btn) return;
+                document.getElementById('assignDate').value = btn.getAttribute('data-date') || '';
+                document.getElementById('assignShift').value = btn.getAttribute('data-shift') || '';
+                document.getElementById('assignLabel').textContent = btn.getAttribute('data-label') || '-';
+                document.getElementById('assignStaff').value = '';
+                document.getElementById('assignNote').value = '';
+            });
         }
 
-        modalEl.addEventListener('show.bs.modal', function (ev) {
-            if (ev.relatedTarget) {
-                fillModalData(ev.relatedTarget);
-            }
-        });
+        var roomChairsData = /*[[${roomChairsJson != null ? roomChairsJson : '{}'}]]*/ '{}';
+        var roomChairsMap = {};
+        try {
+            roomChairsMap = typeof roomChairsData === 'string' ? JSON.parse(roomChairsData) : (roomChairsData || {});
+        } catch (e) {
+            roomChairsMap = {};
+        }
 
-        document.querySelectorAll('.schedule-add').forEach(function (btn) {
+        function renderChairsForSelectedRoom(roomId) {
+            var box = document.getElementById('docAssignChairBox');
+            var listEl = document.getElementById('docAssignChairList');
+            var badgeEl = document.getElementById('docAssignChairCountBadge');
+            var selEl = document.getElementById('docAssignChairSelect');
+            if (!box || !listEl || !badgeEl || !selEl) return;
+            if (!roomId) {
+                box.style.display = 'none';
+                listEl.innerHTML = '';
+                selEl.innerHTML = '<option value="">-- Linh hoạt mọi ghế trong phòng --</option>';
+                return;
+            }
+            var chairs = roomChairsMap[String(roomId)] || [];
+            var activeChairs = chairs.filter(function (c) { return c.operational; });
+            box.style.display = '';
+            badgeEl.textContent = activeChairs.length + ' / ' + chairs.length + ' đang hoạt động';
+            if (chairs.length === 0) {
+                listEl.innerHTML = '<span class="text-muted">Phòng này chưa khai báo ghế.</span>';
+            } else {
+                listEl.innerHTML = chairs.map(function (c) {
+                    var cls = c.operational ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border';
+                    return '<span class="badge ' + cls + '">' + (c.chairCode || c.chairName) + ' (' + c.status + ')</span>';
+                }).join('');
+            }
+            selEl.innerHTML = '<option value="">-- Linh hoạt mọi ghế trong phòng --</option>'
+                + activeChairs.map(function (c) {
+                    return '<option value="' + (c.chairCode || c.chairName) + '">' + (c.chairName || c.chairCode) + ' (' + c.chairCode + ')</option>';
+                }).join('');
+        }
+
+        var docAssignRoomEl = document.getElementById('docAssignRoom');
+        if (docAssignRoomEl) {
+            docAssignRoomEl.addEventListener('change', function () {
+                renderChairsForSelectedRoom(this.value);
+            });
+        }
+
+        var docRoomModal = document.getElementById('doctorRoomAssignModal');
+        if (docRoomModal) {
+            docRoomModal.addEventListener('show.bs.modal', function (ev) {
+                var btn = ev.relatedTarget;
+                if (!btn) return;
+                document.getElementById('docAssignDate').value = btn.getAttribute('data-date') || '';
+                document.getElementById('docAssignShift').value = btn.getAttribute('data-shift') || '';
+                document.getElementById('docAssignLabel').textContent = btn.getAttribute('data-label') || '-';
+                var roomVal = btn.getAttribute('data-room') || '';
+                document.getElementById('docAssignRoom').value = roomVal;
+                renderChairsForSelectedRoom(roomVal);
+                docRoomModal.querySelectorAll('input[type="checkbox"][name="staffIds"]').forEach(function (cb) {
+                    cb.checked = false;
+                });
+            });
+            var docRoomForm = docRoomModal.closest('form') || docRoomModal.querySelector('form');
+            if (docRoomForm) {
+                docRoomForm.addEventListener('submit', function () {
+                    var selChair = document.getElementById('docAssignChairSelect');
+                    var noteInput = document.getElementById('docAssignNote');
+                    if (selChair && selChair.value && noteInput) {
+                        var prefix = '[Ghế ' + selChair.value + ']';
+                        if (!noteInput.value.includes(prefix)) {
+                            noteInput.value = noteInput.value.trim() ? (prefix + ' ' + noteInput.value.trim()) : prefix;
+                        }
+                    }
+                });
+            }
+        }
+
+        document.querySelectorAll('.js-open-move-room').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                fillModalData(this);
+                var dsaId = this.getAttribute('data-dsa-id');
+                document.getElementById('moveRoomForm').action = '/admin/schedules/doctor-shifts/' + dsaId + '/move-room';
+                document.getElementById('moveRoomStaffName').textContent = this.getAttribute('data-staff-name') || '-';
+                document.getElementById('moveRoomCurrent').textContent = this.getAttribute('data-room-code') || '-';
+                document.getElementById('moveTargetRoom').value = '';
             });
         });
+
+        document.querySelectorAll('.js-open-replace-doctor').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var dsaId = this.getAttribute('data-dsa-id');
+                var form = document.getElementById('replaceDoctorForm');
+                form.action = '/admin/schedules/doctor-shifts/' + dsaId + '/replace';
+                var metaBox = document.getElementById('replaceMetaBox');
+                var affectedBox = document.getElementById('replaceAffectedBox');
+                var selectEl = document.getElementById('replaceCandidateSelect');
+                var noteEl = document.getElementById('replaceCandidateNote');
+                metaBox.textContent = 'Đang tải thông tin phân công...';
+                affectedBox.textContent = '-';
+                selectEl.innerHTML = '<option value="">-- Đang tải --</option>';
+                noteEl.textContent = '';
+
+                fetch('/admin/schedules/doctor-shifts/' + dsaId + '/replacement-preview')
+                    .then(function (resp) { return resp.json(); })
+                    .then(function (data) {
+                        metaBox.innerHTML = 'Phòng: <strong>' + data.roomLabel + '</strong> &middot; '
+                            + data.shiftLabel + ' (' + data.workDate + ') &middot; BS gốc: <strong>' + data.originalStaffName + '</strong>';
+                        if (!data.affectedAppointments || data.affectedAppointments.length === 0) {
+                            affectedBox.innerHTML = '<span class="text-success">Không có lịch hẹn nào bị ảnh hưởng trong ca này.</span>';
+                        } else {
+                            affectedBox.innerHTML = data.affectedAppointments.map(function (a) {
+                                return '<div><strong>' + a.appointmentCode + '</strong> (' + (a.expectedTime || 'Linh động') + ') · '
+                                    + a.patientName + ' · <em>' + a.serviceName + '</em></div>';
+                            }).join('');
+                        }
+
+                        selectEl.innerHTML = '<option value="">-- Chọn bác sĩ thay thế --</option>';
+                        (data.candidates || []).forEach(function (c) {
+                            var opt = document.createElement('option');
+                            opt.value = c.staffId;
+                            var warnings = [];
+                            if (!c.hasRoomPermission) warnings.push('Chưa có quyền phòng');
+                            if (c.hasTimeConflict) warnings.push('Trùng lịch');
+                            if (c.missingServices && c.missingServices.length > 0) {
+                                warnings.push('Thiếu quyền DV: ' + c.missingServices.join(', '));
+                            }
+                            opt.textContent = c.fullName + ' (' + c.staffCode + ')'
+                                + (warnings.length === 0 ? ' [Đủ điều kiện]' : ' [' + warnings.join(' | ') + ']');
+                            opt.setAttribute('data-warning', warnings.join(' ; '));
+                            opt.setAttribute('data-conflict', c.conflictMessage || '');
+                            selectEl.appendChild(opt);
+                        });
+                    })
+                    .catch(function () {
+                        metaBox.textContent = 'Không tải được dữ liệu xem trước. Vui lòng thử lại.';
+                    });
+            });
+        });
+
+        var replSelect = document.getElementById('replaceCandidateSelect');
+        if (replSelect) {
+            replSelect.addEventListener('change', function () {
+                var selected = this.options[this.selectedIndex];
+                var noteEl = document.getElementById('replaceCandidateNote');
+                if (!selected || !selected.value) {
+                    noteEl.textContent = '';
+                    return;
+                }
+                var warn = selected.getAttribute('data-warning');
+                var conflict = selected.getAttribute('data-conflict');
+                noteEl.className = warn ? 'small mt-1 text-danger' : 'small mt-1 text-success';
+                noteEl.textContent = warn ? (conflict || warn) : 'Bác sĩ thay thế đủ điều kiện phòng, lịch trực và chuyên môn.';
+            });
+        }
     });
 </script>
 </body>

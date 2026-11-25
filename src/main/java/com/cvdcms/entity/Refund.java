@@ -59,6 +59,9 @@ public class Refund {
     @Column(name = "reduce_invoice_total", nullable = false)
     private Boolean reduceInvoiceTotal = false;
 
+    @Column(name = "signature_url", length = 500)
+    private String signatureUrl;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "refunded_by", nullable = false)
     private StaffProfile refundedBy;

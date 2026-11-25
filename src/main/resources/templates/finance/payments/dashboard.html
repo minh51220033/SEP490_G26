@@ -73,6 +73,7 @@
 
                     <!-- Khoảng ngày phát sinh / đến khám -->
                     <div class="fin-form-group fin-date-group d-flex align-items-center gap-1" style="flex: 0 1 auto;">
+                        <select th:replace="~{fragments/cashier-tabs :: quickDateSelect('pendingFromDate', 'pendingToDate')}"></select>
                         <span class="text-muted small fw-medium text-nowrap"><i class="bi bi-calendar-event me-1"></i>Từ:</span>
                         <input type="date" id="pendingFromDate" name="pendingFromDate" class="fin-input" style="width: 135px;"
                                th:value="${pendingFromDate}" title="Từ ngày phát sinh / đến khám">
@@ -94,19 +95,65 @@
                     </div>
                 </form>
 
-                <!-- Phím tắt chọn nhanh khoảng thời gian -->
-                <div class="d-flex align-items-center gap-2 mt-2 pt-2 border-top flex-wrap" style="font-size: 12px;">
-                    <span class="text-muted fw-semibold me-1"><i class="bi bi-lightning-charge text-warning"></i> Chọn nhanh ngày:</span>
-                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn" onclick="setCashierQuickDate('today')">Hôm nay</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn" onclick="setCashierQuickDate('yesterday')">Hôm qua</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn" onclick="setCashierQuickDate('week')">7 ngày qua</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn" onclick="setCashierQuickDate('month')">Tháng này</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill date-quick-btn" onclick="setCashierQuickDate('clear')">Xóa ngày</button>
-                </div>
-
                 <!-- Cảnh báo lỗi ngày -->
                 <div th:if="${pendingDateError}" class="alert alert-warning py-2 px-3 mt-2 mb-0 small" role="alert">
                     <i class="bi bi-exclamation-triangle-fill me-1"></i> <span th:text="${pendingDateError}"></span>
+                </div>
+            </div>
+
+            <!-- Dải 4 thẻ tổng hợp Tài chính Khách hàng theo bộ lọc (không trùng lặp) -->
+            <div class="fin-vt-summary-grid is-overview-4">
+                <div class="fin-vt-summary-card">
+                    <div class="fin-vt-summary-head">
+                        <span class="fin-vt-summary-label">Doanh số hóa đơn</span>
+                        <span class="fin-vt-icon-chip is-blue" title="Tổng giá trị hóa đơn theo bộ lọc"><i class="bi bi-receipt-cutoff"></i></span>
+                    </div>
+                    <p class="fin-vt-summary-value"
+                       th:text="${#numbers.formatDecimal(metrics != null ? (metrics.todayTotalBilled ?: 0) : 0, 1, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
+                    <div class="fin-vt-summary-sub">
+                        <span class="fw-semibold text-dark" th:text="${(metrics != null ? metrics.todayTotalInvoices : 0)} + ' đơn'">0 đơn</span>
+                        <span>•</span>
+                        <span th:text="${filterPeriodLabel ?: 'Toàn thời gian'}">Toàn thời gian</span>
+                    </div>
+                </div>
+                <div class="fin-vt-summary-card">
+                    <div class="fin-vt-summary-head">
+                        <span class="fin-vt-summary-label">Tổng thu</span>
+                        <a th:href="@{/invoices/create(branchId=${pendingBranchId}, returnUrl='/payments/dashboard')}" class="fin-vt-quick-btn is-income" title="Lập hóa đơn mới">+</a>
+                    </div>
+                    <p class="fin-vt-summary-value"
+                       th:text="${#numbers.formatDecimal(filteredTotalIncome ?: 0, 1, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
+                    <div class="fin-vt-summary-sub">
+                        <span th:text="${filterBranchLabel ?: 'Tất cả cơ sở'}">Tất cả cơ sở</span>
+                        <span>•</span>
+                        <span th:text="${filterPeriodLabel ?: 'Toàn thời gian'}">Toàn thời gian</span>
+                    </div>
+                </div>
+                <div class="fin-vt-summary-card">
+                    <div class="fin-vt-summary-head">
+                        <span class="fin-vt-summary-label">Công nợ phát sinh</span>
+                        <span class="fin-vt-icon-chip is-amber" title="Số tiền hóa đơn còn phải thu"><i class="bi bi-exclamation-circle"></i></span>
+                    </div>
+                    <p class="fin-vt-summary-value"
+                       th:classappend="${metrics != null and metrics.todayTotalDebt != null and metrics.todayTotalDebt.signum() > 0} ? ' is-amber' : ' is-dark'"
+                       th:text="${#numbers.formatDecimal(metrics != null ? (metrics.todayTotalDebt ?: 0) : 0, 1, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
+                    <div class="fin-vt-summary-sub">
+                        <span>Chưa thu</span>
+                        <span>•</span>
+                        <span th:text="${filterBranchLabel ?: 'Tất cả cơ sở'}">Tất cả cơ sở</span>
+                    </div>
+                </div>
+                <div class="fin-vt-summary-card">
+                    <div class="fin-vt-summary-head">
+                        <span class="fin-vt-summary-label">Còn lại (Thực thu khách)</span>
+                        <span class="fin-vt-icon-chip is-slate" title="Tổng thu trừ Hoàn tiền khách hàng"><i class="bi bi-calculator"></i></span>
+                    </div>
+                    <p class="fin-vt-summary-value"
+                       th:classappend="${filteredCustomerNetIncome != null and filteredCustomerNetIncome.signum() < 0} ? ' is-danger' : ' is-success'"
+                       th:text="${#numbers.formatDecimal(filteredCustomerNetIncome ?: 0, 1, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</p>
+                    <div class="fin-vt-summary-sub">
+                        <span th:text="'Đã trừ hoàn tiền: ' + ${#numbers.formatDecimal(filteredRefundExpense ?: 0, 1, 'COMMA', 0, 'POINT')} + ' đ'">Đã trừ hoàn tiền: 0 đ</span>
+                    </div>
                 </div>
             </div>
 
@@ -321,42 +368,6 @@
                     </nav>
                 </div>
             </div>
-
-            <script>
-            function setCashierQuickDate(preset) {
-                const fromInput = document.getElementById('pendingFromDate');
-                const toInput = document.getElementById('pendingToDate');
-                if (!fromInput || !toInput) return;
-
-                const pad = (n) => String(n).padStart(2, '0');
-                const toIsoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
-                const now = new Date();
-                if (preset === 'today') {
-                    const todayStr = toIsoDate(now);
-                    fromInput.value = todayStr;
-                    toInput.value = todayStr;
-                } else if (preset === 'yesterday') {
-                    const y = new Date(now);
-                    y.setDate(y.getDate() - 1);
-                    const yStr = toIsoDate(y);
-                    fromInput.value = yStr;
-                    toInput.value = yStr;
-                } else if (preset === 'week') {
-                    const past = new Date(now);
-                    past.setDate(past.getDate() - 6);
-                    fromInput.value = toIsoDate(past);
-                    toInput.value = toIsoDate(now);
-                } else if (preset === 'month') {
-                    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-                    fromInput.value = toIsoDate(startOfMonth);
-                    toInput.value = toIsoDate(now);
-                } else if (preset === 'clear') {
-                    fromInput.value = '';
-                    toInput.value = '';
-                }
-            }
-            </script>
 
             <!-- Modals chọn ca khám cho bệnh nhân có nhiều ca chờ lập (Requirement 5) -->
             <div th:each="p : ${pendingPatients}" th:if="${p.unbilledVisitCount > 1}">
@@ -1317,7 +1328,8 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold text-dark mb-1">Số tiền thực tế bệnh nhân đóng hôm nay (VNĐ): <span class="text-danger">*</span></label>
                             <div class="input-group input-group-lg">
-                                <input type="number" class="form-control fw-bold text-primary" id="instPayAmountInput" placeholder="Nhập số tiền..." min="1000" step="50000">
+                                <input type="text" class="form-control fw-bold text-primary" id="instPayAmountInput"
+                                       data-cashier-money="true" placeholder="Nhập số tiền..." min="1000">
                                 <span class="input-group-text fw-bold">đ</span>
                             </div>
                             <!-- Nút chọn nhanh số tiền -->
@@ -1438,7 +1450,8 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-semibold text-muted mb-1">Đợt 1 đóng ban đầu:</label>
-                            <input type="number" class="form-control form-control-sm" id="modalSplitDownPayment" value="5000000" min="0" step="500000">
+                            <input type="text" class="form-control form-control-sm" id="modalSplitDownPayment"
+                                   data-cashier-money="true" value="5000000" min="0">
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small fw-semibold text-muted mb-1">Số đợt còn lại:</label>
@@ -1566,8 +1579,8 @@
                             <div class="mb-3">
                                 <label for="modalPayAmount" class="form-label fw-bold">Số tiền thanh toán đợt này
                                     (VNĐ):</label>
-                                <input type="number" id="modalPayAmount" name="amount" class="form-control" required
-                                       min="1000" step="1000" oninput="triggerAllocationPreview()">
+                                <input type="text" id="modalPayAmount" name="amount" class="form-control" required
+                                       data-cashier-money="true" min="1000" oninput="triggerAllocationPreview()">
                             </div>
                             <!-- LIVE PREVIEW PHÂN BỔ TIỀN THU (REQUIREMENT 2) -->
                             <div id="quickPayAllocationPreviewBox" class="mb-3" style="display: none;">
@@ -1619,10 +1632,17 @@
                                 <input type="text" id="modalTransRef" name="transactionRef" class="form-control"
                                        placeholder="Mã giao dịch ngân hàng / hóa đơn đối soát...">
                             </div>
-                            <div class="mb-3 mb-lg-0">
+                            <div class="mb-3">
                                 <label for="modalPayNotes" class="form-label">Ghi chú thanh toán:</label>
                                 <textarea id="modalPayNotes" name="notes" class="form-control" rows="2"
                                           placeholder="Ghi chú đợt thanh toán..."></textarea>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 p-3 bg-light rounded border mb-3 mb-lg-0">
+                                <div>
+                                    <div class="form-label fw-bold mb-1">Xác nhận</div>
+                                    <th:block th:replace="~{fragments/finance-signature :: sigField('dashQuickPay', null)}"></th:block>
+                                </div>
+                                <th:block th:replace="~{fragments/finance-signature :: sigMirror('dashQuickPay', null, 'Người lập phiếu', '(Chữ Ký, Họ Và Tên)', ${displayName != null and !displayName.isBlank() ? displayName : (loggedInUser != null ? loggedInUser.username : 'Thu ngân')})}"></th:block>
                             </div>
                         </div>
                         <div id="dashboardQuickPayQrCol" class="col-12 col-lg-5" style="display: none;">
@@ -1692,8 +1712,8 @@
                             <div class="mb-3">
                                 <label for="depositAmountInput" class="form-label fw-bold">Số tiền nạp tạm ứng
                                     (VNĐ):</label>
-                                <input type="number" id="depositAmountInput" name="amount" class="form-control"
-                                       required min="10000" step="10000" placeholder="Nhập số tiền tạm ứng...">
+                                <input type="text" id="depositAmountInput" name="amount" class="form-control"
+                                       data-cashier-money="true" required min="10000" placeholder="Nhập số tiền tạm ứng...">
                             </div>
                             <div class="mb-3">
                                 <label for="depositMethodSelect" class="form-label fw-bold">Phương thức nộp:</label>
@@ -1710,10 +1730,17 @@
                                 <input type="text" id="depositTransRef" name="transactionRef" class="form-control"
                                        placeholder="Mã chuyển khoản hoặc biên nhận giấy...">
                             </div>
-                            <div class="mb-3 mb-lg-0">
+                            <div class="mb-3">
                                 <label for="depositNotes" class="form-label">Lý do nạp tiền:</label>
                                 <textarea id="depositNotes" name="notes" class="form-control" rows="2"
                                           placeholder="Tạm ứng điều trị chỉnh nha, cấy ghép implant..."></textarea>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 p-3 bg-light rounded border mb-3 mb-lg-0">
+                                <div>
+                                    <div class="form-label fw-bold mb-1">Xác nhận</div>
+                                    <th:block th:replace="~{fragments/finance-signature :: sigField('dashDeposit', null)}"></th:block>
+                                </div>
+                                <th:block th:replace="~{fragments/finance-signature :: sigMirror('dashDeposit', null, 'Người lập phiếu', '(Chữ Ký, Họ Và Tên)', ${displayName != null and !displayName.isBlank() ? displayName : (loggedInUser != null ? loggedInUser.username : 'Thu ngân')})}"></th:block>
                             </div>
                         </div>
                         <div id="dashboardDepositQrCol" class="col-12 col-lg-5" style="display: none;">
@@ -1829,12 +1856,12 @@
                         <label for="dashboardRefundAmount" class="form-label">
                             Số tiền hoàn (VNĐ)
                         </label>
-                        <input type="number"
+                        <input type="text"
                                id="dashboardRefundAmount"
                                name="amount"
+                               data-cashier-money="true"
                                class="form-control"
                                min="1"
-                               step="1"
                                required>
                     </div>
                     <div class="mb-3">
@@ -1859,6 +1886,13 @@
                                   rows="3"
                                   maxlength="400"
                                   required></textarea>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 p-3 bg-light rounded border">
+                        <div>
+                            <div class="form-label fw-bold mb-1">Xác nhận</div>
+                            <th:block th:replace="~{fragments/finance-signature :: sigField('dashRefund', null)}"></th:block>
+                        </div>
+                        <th:block th:replace="~{fragments/finance-signature :: sigMirror('dashRefund', null, 'Người lập phiếu', '(Chữ Ký, Họ Và Tên)', ${displayName != null and !displayName.isBlank() ? displayName : (loggedInUser != null ? loggedInUser.username : 'Kế toán')})}"></th:block>
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
@@ -1886,7 +1920,7 @@
     function formatMoney(num) {
         return new Intl.NumberFormat('vi-VN').format(Math.round(num)) + ' đ';
     }
-    let allocationDebounceTimer = null;
+    var allocationDebounceTimer = null;
     function triggerAllocationPreview() {
         clearTimeout(allocationDebounceTimer);
         allocationDebounceTimer = setTimeout(fetchAllocationPreview, 200);
@@ -1896,7 +1930,11 @@
         const invSelect = document.getElementById('modalInvoiceSelect');
         const invoiceId = invSelect ? invSelect.value : null;
         const amountInput = document.getElementById('modalPayAmount');
-        const amount = amountInput ? parseFloat(amountInput.value) : 0;
+        const amount = amountInput
+            ? ((typeof window.parseCashierMoney === 'function'
+                ? window.parseCashierMoney(amountInput.value)
+                : parseFloat(String(amountInput.value || '').replace(/,/g, ''))) || 0)
+            : 0;
         const box = document.getElementById('quickPayAllocationPreviewBox');
         const tbody = document.getElementById('quickPayAllocationPreviewTbody');
         const badge = document.getElementById('previewRemainingDebtBadge');
@@ -2257,7 +2295,7 @@
     });
 </script>
 <script th:inline="javascript">
-    const oldSearchForm = document.getElementById('dashboardPatientSearchForm');
+    var oldSearchForm = document.getElementById('dashboardPatientSearchForm');
     if (oldSearchForm) {
         oldSearchForm.addEventListener('submit', function (event) {
             // Handled via backend form submission
@@ -2271,7 +2309,7 @@
         }
     }
 
-    const dRefundModal = document.getElementById('dashboardRefundModal');
+    var dRefundModal = document.getElementById('dashboardRefundModal');
     if (dRefundModal) {
         dRefundModal.addEventListener('show.bs.modal', function () {
             ensureDashboardRefundKey();
@@ -2562,7 +2600,10 @@
 
     window.submitInstallmentPayment = async function() {
         const planId = document.getElementById('instPayPlanId').value;
-        const amount = Number(document.getElementById('instPayAmountInput').value || 0);
+        const instAmtVal = document.getElementById('instPayAmountInput').value;
+        const amount = (typeof window.parseCashierMoney === 'function'
+            ? window.parseCashierMoney(instAmtVal)
+            : Number(String(instAmtVal || '').replace(/,/g, ''))) || 0;
         const method = document.getElementById('instPayMethodSelect').value;
         const notes = document.getElementById('instPayNotesInput').value;
         const transRef = document.getElementById('instPayTransRef')?.value?.trim() || null;
@@ -2719,7 +2760,10 @@
     };
 
     window.generateModalSplit = function() {
-        const downPayment = Number(document.getElementById('modalSplitDownPayment').value || 0);
+        const splitDownVal = document.getElementById('modalSplitDownPayment').value;
+        const downPayment = (typeof window.parseCashierMoney === 'function'
+            ? window.parseCashierMoney(splitDownVal)
+            : Number(String(splitDownVal || '').replace(/,/g, ''))) || 0;
         const count = Math.max(1, parseInt(document.getElementById('modalSplitCount').value || 9));
         const intervalMonths = parseFloat(document.getElementById('modalSplitInterval').value || 1);
 
@@ -2768,11 +2812,14 @@
                 <td class="text-center fw-bold text-muted">${idx + 1}</td>
                 <td><input type="text" class="form-control form-control-sm" value="${it.phaseName || ''}" onchange="window.MODAL_SPLIT_ITEMS[${idx}].phaseName=this.value"></td>
                 <td><input type="date" class="form-control form-control-sm" value="${it.expectedDate || ''}" onchange="window.MODAL_SPLIT_ITEMS[${idx}].expectedDate=this.value"></td>
-                <td><input type="number" class="form-control form-control-sm text-end fw-bold" value="${it.expectedAmount || 0}" step="100000" onchange="window.MODAL_SPLIT_ITEMS[${idx}].expectedAmount=Number(this.value); window.updateModalSplitSum();"></td>
+                <td><input type="text" data-cashier-money="true" data-money-min="0" inputmode="numeric" class="form-control form-control-sm text-end fw-bold" value="${it.expectedAmount || 0}" onchange="window.MODAL_SPLIT_ITEMS[${idx}].expectedAmount=(typeof window.parseCashierMoney==='function'?window.parseCashierMoney(this.value):Number(String(this.value||'').replace(/,/g,'')))||0; window.updateModalSplitSum();"></td>
                 <td class="text-center"><button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="window.MODAL_SPLIT_ITEMS.splice(${idx},1); window.renderModalSplitTable();"><i class="bi bi-trash"></i></button></td>
             `;
             tbody.appendChild(tr);
         });
+        if (typeof window.initCashierMoneyInputs === 'function') {
+            window.initCashierMoneyInputs(tbody);
+        }
         const sumDisp = document.getElementById('modalSplitSumDisplay');
         if (sumDisp) sumDisp.innerText = `Tổng: ${formatVnd(sum)}`;
     };

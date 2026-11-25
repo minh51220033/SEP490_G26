@@ -51,8 +51,15 @@ class DispatchServiceTest {
         when(visits.lock(7L)).thenReturn(Optional.of(visit));
     }
 
+    private void permittedAdmin() {
+        User user = new User(); user.setUserId(1L);
+        when(access.require(session)).thenReturn(new ReceptionAccess.Scope(user, true, List.of(1L)));
+        when(branches.lock(1L)).thenReturn(Optional.of(branch));
+        when(visits.lock(7L)).thenReturn(Optional.of(visit));
+    }
+
     @Test void assignmentDoesNotReserveChair() {
-        permitted();
+        permittedAdmin();
         when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor));
         when(schedules.working(eq(3L), eq(1L), any(), any())).thenReturn(1L);
         when(doctors.findById(3L)).thenReturn(Optional.of(doctor));
@@ -68,7 +75,7 @@ class DispatchServiceTest {
     }
 
     @Test void assignmentRejectsChairAlreadyUsedByAnotherActiveVisit() {
-        permitted();
+        permittedAdmin();
         when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor));
         when(schedules.working(eq(3L), eq(1L), any(), any())).thenReturn(1L);
         when(doctors.findById(3L)).thenReturn(Optional.of(doctor));
@@ -86,7 +93,7 @@ class DispatchServiceTest {
     }
 
     @Test void assignmentRejectsChairFromAnotherBranch() {
-        permitted();
+        permittedAdmin();
         when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor));
         when(schedules.working(eq(3L), eq(1L), any(), any())).thenReturn(1L);
         when(doctors.findById(3L)).thenReturn(Optional.of(doctor));
@@ -105,7 +112,7 @@ class DispatchServiceTest {
     }
 
     @Test void doctorWithoutCurrentScheduleIsRejected() {
-        permitted();
+        permittedAdmin();
         when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor));
         assertThrows(ResponseStatusException.class, () -> service.assign(session, 1L, 7L, 3L, null, null, null));
         verify(visits, never()).save(any());
@@ -127,7 +134,7 @@ class DispatchServiceTest {
     }
 
     @Test void namedDoctorIsKeptAndOverrideRequiresReason() {
-        permitted();
+        permittedAdmin();
         PatientProfile patient = new PatientProfile(); patient.setProfileId(11L); visit.setPatientProfile(patient);
         Appointment appointment = new Appointment(); appointment.setAppointmentId(12L);
         appointment.setBranch(branch); appointment.setPatientProfile(patient); appointment.setDoctor(doctor);
@@ -146,7 +153,7 @@ class DispatchServiceTest {
     }
 
     @Test void transferKeepsExistingTicketAndRecordsReason() {
-        permitted(); visit.setPrimaryDoctor(doctor);
+        permittedAdmin(); visit.setPrimaryDoctor(doctor);
         StaffProfile other = new StaffProfile(); other.setStaffId(5L);
         QueueTicket ticket = new QueueTicket(); ticket.setStatus(QueueStatus.WAITING); ticket.setDisplayNumber("P-03");
         when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor, other));
@@ -165,7 +172,7 @@ class DispatchServiceTest {
     }
 
     @Test void cannotTransferAfterTicketWasCalled() {
-        permitted(); visit.setPrimaryDoctor(doctor);
+        permittedAdmin(); visit.setPrimaryDoctor(doctor);
         StaffProfile other = new StaffProfile(); other.setStaffId(5L);
         QueueTicket ticket = new QueueTicket(); ticket.setStatus(QueueStatus.CALLED);
         when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor, other));
@@ -223,7 +230,7 @@ class DispatchServiceTest {
 
     @Test
     void testCompleteDispatchAndIssueTicket_Success() {
-        permitted();
+        permittedAdmin();
         when(visits.findById(7L)).thenReturn(Optional.of(visit));
         when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor));
         when(schedules.working(eq(3L), eq(1L), any(), any())).thenReturn(1L);
@@ -263,7 +270,7 @@ class DispatchServiceTest {
 
     @Test
     void testCompleteDispatchAndIssueTicket_RollbackOnTicketFailure() {
-        permitted();
+        permittedAdmin();
         when(visits.findById(7L)).thenReturn(Optional.of(visit));
         when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor));
         when(schedules.working(eq(3L), eq(1L), any(), any())).thenReturn(1L);
@@ -320,5 +327,63 @@ class DispatchServiceTest {
         assertEquals(6, reissued.getTicketNumber());
         assertEquals("P-06", reissued.getDisplayNumber(), "Display number phải có prefix P- và số thứ tự mới");
         verify(tickets).saveAndFlush(cancelledTicket);
+    }
+
+    @Test
+    void receptionistManualDoctorAssignmentIsRejectedForbiddenBeforeDoctorLookup() {
+        User user = new User();
+        user.setUserId(4L);
+        ReceptionAccess.Scope leTanScope = new ReceptionAccess.Scope(user, false, List.of(1L));
+        when(access.require(session)).thenReturn(leTanScope);
+        when(access.canAssignDoctor(leTanScope)).thenReturn(false);
+        when(branches.lock(1L)).thenReturn(Optional.of(branch));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.assign(session, 1L, 7L, 3L, null, null, null));
+        assertEquals(HttpStatus.FORBIDDEN, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("Lễ tân không được tự ý chọn hoặc đổi bác sĩ"));
+
+        ResponseStatusException noteEx = assertThrows(ResponseStatusException.class,
+                () -> service.assign(session, 1L, 7L, 999999L, null, null, null, "Ghi chú"));
+        assertEquals(HttpStatus.FORBIDDEN, noteEx.getStatusCode());
+
+        ResponseStatusException ticketEx = assertThrows(ResponseStatusException.class,
+                () -> service.completeDispatchAndIssueTicket(session, 1L, 7L, 3L, null, null, false, null, null));
+        assertEquals(HttpStatus.FORBIDDEN, ticketEx.getStatusCode());
+
+        verify(doctors, never()).findById(anyLong());
+        verify(visits, never()).save(any());
+        verify(tickets, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void receptionistOmittingDoctorIdKeepsAlreadyAssignedDoctorWhenAvailable() {
+        permitted();
+        visit.setPrimaryDoctor(doctor);
+        StaffProfile quieter = new StaffProfile();
+        quieter.setStaffId(5L);
+        when(doctors.eligible(eq(1L), any())).thenReturn(List.of(doctor, quieter));
+        when(schedules.working(anyLong(), eq(1L), any(), any())).thenReturn(1L);
+        when(doctors.findById(3L)).thenReturn(Optional.of(doctor));
+
+        service.assign(session, 1L, 7L, null, null, null, null, "Khách cần ghế gần cửa");
+
+        assertSame(doctor, visit.getPrimaryDoctor());
+        verify(visits, atLeastOnce()).save(visit);
+    }
+
+    @Test
+    void canAssignDoctorChecksScopeAdminAndAccess() {
+        User adminUser = new User();
+        adminUser.setUserId(1L);
+        when(access.require(session)).thenReturn(new ReceptionAccess.Scope(adminUser, true, List.of(1L)));
+        assertTrue(service.canAssignDoctor(session));
+
+        User leTanUser = new User();
+        leTanUser.setUserId(4L);
+        ReceptionAccess.Scope leTanScope = new ReceptionAccess.Scope(leTanUser, false, List.of(1L));
+        when(access.require(session)).thenReturn(leTanScope);
+        when(access.canAssignDoctor(leTanScope)).thenReturn(false);
+        assertFalse(service.canAssignDoctor(session));
     }
 }

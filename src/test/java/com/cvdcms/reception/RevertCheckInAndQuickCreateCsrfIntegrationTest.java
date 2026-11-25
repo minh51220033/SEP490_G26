@@ -24,10 +24,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -553,5 +556,98 @@ class RevertCheckInAndQuickCreateCsrfIntegrationTest {
                 .filter(p -> phone.equals(p.getPhoneNumber()))
                 .count();
         assertEquals(1, count, "DB chỉ được có duy nhất 1 PatientProfile cho số điện thoại khi gửi request lặp");
+    }
+
+    // =========================================================================
+    // MỐC ĐẾN TRỄ (+16, +30, +31 PHÚT) VỚI LỊCH HẸN CÓ expectedTime CỤ THỂ
+    // =========================================================================
+
+    @Test
+    @DisplayName("Mốc đến trễ với expectedTime cụ thể: +16p -> LATE_BOOKING, +30p -> LATE_BOOKING, +31p -> chặn NO_SHOW (409)")
+    void lateBookingAndNoShowCutoffAt16And30And31MinutesWithSpecificExpectedTime() {
+        MockHttpSession session = newReceptionSession();
+        LocalTime fixedExpectedTime = LocalTime.of(10, 0);
+
+        try {
+            // 1. Mốc +16 phút (10:16 cho hẹn 10:00) -> vẫn cho check-in nhưng LATE_BOOKING (isBookedAndOnTime = false)
+            receptionService.setClock(Clock.fixed(
+                    LocalDateTime.of(today, LocalTime.of(10, 16)).atZone(ZONE).toInstant(), ZONE));
+            PatientProfile p16 = createTestPatient("BN Trễ 16 Phút", "0945160016");
+            Appointment appt16 = new Appointment();
+            appt16.setAppointmentCode("LH16M" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase());
+            appt16.setBranch(branch);
+            appt16.setPatientProfile(p16);
+            appt16.setDoctor(doctorStaff);
+            appt16.setAppointmentDate(today);
+            appt16.setPreferredSession(PreferredSession.MORNING);
+            appt16.setExpectedTime(fixedExpectedTime);
+            appt16.setStatus(AppointmentStatus.CONFIRMED);
+            appt16.setInitialSymptoms("Kiểm thử mốc trễ 16 phút");
+            appt16 = appointmentRepository.saveAndFlush(appt16);
+
+            ReceptionService.VisitResult res16 = receptionService.checkInAppointment(
+                    session, appt16.getAppointmentId(), "Đến trễ 16 phút", UUID.randomUUID().toString());
+            Visit visit16 = receptionVisitRepository.findById(res16.id()).orElseThrow();
+            assertFalse(Boolean.TRUE.equals(visit16.getIsBookedAndOnTime()),
+                    "Mốc +16 phút không được tính là đúng giờ (isBookedAndOnTime phải false)");
+            List<QueueTicket> tickets16 = queueTicketRepository.findAllByVisitAndType(visit16.getVisitId(), QueueType.EXAM);
+            assertEquals(1, tickets16.size());
+            assertTrue(tickets16.get(0).getPriorityReason() != null
+                            && tickets16.get(0).getPriorityReason().contains("LATE_BOOKING"),
+                    "Mốc +16 phút phải gắn nhãn LATE_BOOKING, thực tế: " + tickets16.get(0).getPriorityReason());
+
+            // 2. Mốc +30 phút (10:30 cho hẹn 10:00) -> biên cuối vẫn cho check-in dạng LATE_BOOKING
+            receptionService.setClock(Clock.fixed(
+                    LocalDateTime.of(today, LocalTime.of(10, 30)).atZone(ZONE).toInstant(), ZONE));
+            PatientProfile p30 = createTestPatient("BN Trễ 30 Phút", "0945300030");
+            Appointment appt30 = new Appointment();
+            appt30.setAppointmentCode("LH30M" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase());
+            appt30.setBranch(branch);
+            appt30.setPatientProfile(p30);
+            appt30.setDoctor(doctorStaff);
+            appt30.setAppointmentDate(today);
+            appt30.setPreferredSession(PreferredSession.MORNING);
+            appt30.setExpectedTime(fixedExpectedTime);
+            appt30.setStatus(AppointmentStatus.CONFIRMED);
+            appt30.setInitialSymptoms("Kiểm thử mốc trễ 30 phút");
+            appt30 = appointmentRepository.saveAndFlush(appt30);
+
+            ReceptionService.VisitResult res30 = receptionService.checkInAppointment(
+                    session, appt30.getAppointmentId(), "Đến trễ 30 phút", UUID.randomUUID().toString());
+            Visit visit30 = receptionVisitRepository.findById(res30.id()).orElseThrow();
+            assertFalse(Boolean.TRUE.equals(visit30.getIsBookedAndOnTime()),
+                    "Mốc +30 phút không được tính là đúng giờ");
+            List<QueueTicket> tickets30 = queueTicketRepository.findAllByVisitAndType(visit30.getVisitId(), QueueType.EXAM);
+            assertEquals(1, tickets30.size());
+            assertTrue(tickets30.get(0).getPriorityReason() != null
+                            && tickets30.get(0).getPriorityReason().contains("LATE_BOOKING"),
+                    "Mốc +30 phút phải gắn nhãn LATE_BOOKING, thực tế: " + tickets30.get(0).getPriorityReason());
+
+            // 3. Mốc +31 phút (10:31 cho hẹn 10:00) -> bị chặn 409 CONFLICT (quá 30 phút NO_SHOW), không tạo Visit
+            receptionService.setClock(Clock.fixed(
+                    LocalDateTime.of(today, LocalTime.of(10, 31)).atZone(ZONE).toInstant(), ZONE));
+            PatientProfile p31 = createTestPatient("BN Quá Hạn 31 Phút", "0945310031");
+            Appointment appt31 = new Appointment();
+            appt31.setAppointmentCode("LH31M" + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase());
+            appt31.setBranch(branch);
+            appt31.setPatientProfile(p31);
+            appt31.setDoctor(doctorStaff);
+            appt31.setAppointmentDate(today);
+            appt31.setPreferredSession(PreferredSession.MORNING);
+            appt31.setExpectedTime(fixedExpectedTime);
+            appt31.setStatus(AppointmentStatus.CONFIRMED);
+            appt31.setInitialSymptoms("Kiểm thử mốc quá hạn 31 phút");
+            final Long appt31Id = appointmentRepository.saveAndFlush(appt31).getAppointmentId();
+
+            ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+                    receptionService.checkInAppointment(session, appt31Id, "Đến trễ 31 phút", UUID.randomUUID().toString()));
+            assertEquals(409, ex.getStatusCode().value());
+            assertTrue(ex.getReason() != null && ex.getReason().contains("NO_SHOW"),
+                    "Thông báo chặn mốc +31 phút phải nêu rõ NO_SHOW, thực tế: " + ex.getReason());
+            assertTrue(receptionVisitRepository.findAllByAppointmentIdOrderByVisitIdDesc(appt31Id).isEmpty(),
+                    "Mốc +31 phút bị chặn không được tạo Visit mới");
+        } finally {
+            receptionService.setClock(Clock.system(ZONE));
+        }
     }
 }

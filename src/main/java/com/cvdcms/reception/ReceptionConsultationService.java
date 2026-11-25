@@ -263,7 +263,9 @@ public class ReceptionConsultationService {
 
         List<ServiceOption> serviceOptions = services.findByStatusOrderByCategory_DisplayOrderAscServiceNameAsc(ServiceStatus.ACTIVE)
                 .stream()
-                .filter(s -> s.getCategory() != null && Boolean.TRUE.equals(s.getCategory().getIsActive()))
+                .filter(s -> s.getCategory() != null
+                        && Boolean.TRUE.equals(s.getCategory().getIsActive())
+                        && s.getServiceType() != com.cvdcms.entity.enums.ServiceType.PRODUCT)
                 .map(s -> new ServiceOption(
                         s.getServiceId(),
                         s.getServiceName(),

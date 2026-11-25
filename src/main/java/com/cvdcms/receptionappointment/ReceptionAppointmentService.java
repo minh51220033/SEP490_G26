@@ -71,6 +71,12 @@ public class ReceptionAppointmentService {
     @Autowired(required = false)
     private SystemNotificationRepository notifications;
 
+    @Autowired(required = false)
+    private com.cvdcms.service.ResourceBookingTransactionService resourceBookingTransactionService;
+
+    @Autowired(required = false)
+    private com.cvdcms.service.ResourceAvailabilityService resourceAvailabilityService;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -206,7 +212,8 @@ public class ReceptionAppointmentService {
                         : branches.findById(scope.branchId()).filter(b -> Boolean.TRUE.equals(b.getIsActive())).stream().toList());
         List<BranchOption> branchOptions = allowed.stream().map(b -> new BranchOption(b.getBranchId(), b.getBranchName())).toList();
         List<ServiceOption> serviceOptions = services.findByStatusOrderByCategory_DisplayOrderAscServiceNameAsc(ServiceStatus.ACTIVE)
-                .stream().filter(s -> Boolean.TRUE.equals(s.getCategory().getIsActive()))
+                .stream().filter(s -> Boolean.TRUE.equals(s.getCategory().getIsActive())
+                        && s.getServiceType() != com.cvdcms.entity.enums.ServiceType.PRODUCT)
                 .map(s -> new ServiceOption(s.getServiceId(), s.getServiceName(),
                         AppointmentSlotService.duration(s))).toList();
         return new Options(branchOptions, serviceOptions);
@@ -451,16 +458,53 @@ public class ReceptionAppointmentService {
         // Bắt buộc xác minh điều kiện đặt lịch (ngày/giờ, quyền, trạng thái, khả dụng ca trực) - không bypass cho bất kỳ cờ nào
         rules.ensureBookable(branch, profile, request.date(), targetSession, request.doctorId(), null);
 
+        String notes = clean(request.symptoms());
+        if (request.internalNote() != null && !request.internalNote().isBlank()) {
+            notes = (notes == null ? "" : notes + " - ") + "[Ghi chú: " + request.internalNote().trim() + "]";
+        }
+
+        if (Boolean.TRUE.equals(branch.getResourceEngineEnabled())) {
+            if (request.serviceId() == null) {
+                throw bad("Chi nhánh đã bật Resource Engine: lịch hẹn mới bắt buộc phải chọn dịch vụ.");
+            }
+            if (resourceBookingTransactionService == null) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Resource Booking Engine chưa sẵn sàng.");
+            }
+            com.cvdcms.entity.Service svc = service(request.serviceId());
+            int svcDuration = AppointmentSlotService.duration(svc);
+            LocalTime resolvedTime = request.expectedTime() != null ? request.expectedTime()
+                    : slots.resolveFlexibly(branch, request.date(), targetSession, request.doctorId(),
+                            svcDuration, null, null, AppointmentActorType.RECEPTIONIST);
+            if (resolvedTime == null) {
+                throw bad("Vui lòng chọn khung giờ khám cụ thể.");
+            }
+            AppointmentStatus initialStatus = Boolean.TRUE.equals(request.isTentative())
+                    ? AppointmentStatus.PENDING : AppointmentStatus.CONFIRMED;
+            var resResult = resourceBookingTransactionService.bookInExistingTransaction(
+                    new com.cvdcms.DTO.availability.ResourceBookingRequest(
+                            branch.getBranchId(), profile.getProfileId(), svc.getServiceId(),
+                            request.date(), resolvedTime, request.doctorId(), request.doctorId() == null,
+                            null, targetSession, AppointmentSource.RECEPTIONIST, notes, null, false),
+                    initialStatus);
+            Appointment created = appointments.findById(resResult.appointmentId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR));
+            history(created, scope.user().getUserId(), "CREATE", null, snapshot(created), null);
+            if (careEventPublisher != null) {
+                careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentUpsertedCareEvent(created.getAppointmentId()));
+                careEventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                        "APPOINTMENT_BOOKED", branch.getBranchId(), resResult.doctorId(),
+                        null, created.getAppointmentId(), created.getStatus().name(),
+                        "Lịch hẹn mới #" + created.getAppointmentCode(), LocalDateTime.now(ReceptionAppointmentRules.ZONE)));
+            }
+            return view(created);
+        }
+
         Appointment a = new Appointment();
         a.setAppointmentCode(code()); a.setBranch(branch); a.setPatientProfile(profile);
         a.setAppointmentDate(request.date()); a.setPreferredSession(targetSession);
         a.setDoctor(doctor(request.doctorId()));
         a.setService(service(request.serviceId()));
 
-        String notes = clean(request.symptoms());
-        if (request.internalNote() != null && !request.internalNote().isBlank()) {
-            notes = (notes == null ? "" : notes + " - ") + "[Ghi chú: " + request.internalNote().trim() + "]";
-        }
         a.setInitialSymptoms(notes);
         if (request.durationMinutes() != null && (request.durationMinutes() < 15 || request.durationMinutes() > 240))
             throw bad("Thời lượng dự kiến phải từ 15 đến 240 phút.");
@@ -482,6 +526,10 @@ public class ReceptionAppointmentService {
             if (autoAssigned != null) {
                 a.setDoctor(autoAssigned);
             }
+        }
+        if (expectedTime != null) {
+            slots.validateBranchResourceCapacity(branch, a.getService(), request.date(),
+                    expectedTime, expectedTime.plusMinutes(a.getDurationMinutes()), null);
         }
         a.setExpectedTime(expectedTime);
         a.syncExpectedEndTime();
@@ -524,6 +572,10 @@ public class ReceptionAppointmentService {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Lịch hẹn ở trạng thái " + a.getStatus() + " không thể hủy.");
             }
             String reason = !note.isEmpty() ? note : "Bệnh nhân đổi kế hoạch";
+            if (resourceBookingTransactionService != null) {
+                resourceBookingTransactionService.releaseReservationsOnCancelOrNoShow(
+                        id, ReservationStatus.CANCELLED, "APPOINTMENT_CANCELLED", LocalDateTime.now(ReceptionAppointmentRules.ZONE));
+            }
             lifecycle.transition(a, AppointmentStatus.CANCELLED, AppointmentLifecycleAction.CANCEL);
             a.setCancelReason(reason);
             a.setCancelledBy(scope.user().getUserId());
@@ -604,6 +656,52 @@ public class ReceptionAppointmentService {
         LocalTime requestedTime = request.expectedTime() != null ? request.expectedTime()
                 : Objects.equals(a.getAppointmentDate(), request.date()) && a.getPreferredSession() == request.session()
                     ? a.getExpectedTime() : null;
+        if (Boolean.TRUE.equals(a.getBranch().getResourceEngineEnabled())) {
+            if (resourceBookingTransactionService == null) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Resource Booking Engine chưa sẵn sàng.");
+            }
+            Long effectiveServiceId = request.serviceId() != null ? request.serviceId()
+                    : (a.getService() != null ? a.getService().getServiceId() : null);
+            if (effectiveServiceId == null) {
+                throw conflict("Chi nhánh đã bật Resource Engine: lịch hẹn cần dịch vụ hợp lệ để đặt giữ tài nguyên.");
+            }
+            LocalTime resolvedEngineTime = requestedTime;
+            if (resolvedEngineTime == null) {
+                com.cvdcms.entity.Service svcForResolve = service(effectiveServiceId);
+                resolvedEngineTime = slots.resolveFlexibly(
+                        a.getBranch(), request.date(), request.session(), effectiveTargetDoctorId,
+                        AppointmentSlotService.duration(svcForResolve), id, null, AppointmentActorType.RECEPTIONIST);
+            }
+            if (resolvedEngineTime == null) {
+                throw conflict("Chi nhánh đã bật Resource Engine: vui lòng chọn khung giờ cụ thể khả dụng.");
+            }
+            boolean allowAuto = effectiveTargetDoctorId == null;
+            String releaseReason = doctorChanged ? "DOCTOR_REASSIGNED"
+                    : (request.serviceId() != null && (a.getService() == null || !Objects.equals(a.getService().getServiceId(), request.serviceId()))
+                            ? "SERVICE_CHANGED" : "RESCHEDULED");
+            var resResult = resourceBookingTransactionService.rescheduleInExistingTransaction(
+                    com.cvdcms.DTO.availability.ResourceRescheduleRequest.reschedule(
+                            id, a.getBranch().getBranchId(), request.serviceId(),
+                            request.date(), resolvedEngineTime, request.session(),
+                            effectiveTargetDoctorId, allowAuto,
+                            releaseReason, a.getStatus(), moved));
+            Appointment updated = appointments.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+            updated.setInitialSymptoms(clean(request.symptoms()));
+            appointments.saveAndFlush(updated);
+            boolean resolvedDoctorChanged = !Objects.equals(lockedCurrentDoctorId, resResult.doctorId());
+            String historyReason = clean(request.reason());
+            if (historyReason == null && wasNeedingReassignment && (resolvedDoctorChanged || moved)) {
+                historyReason = "Điều phối đổi bác sĩ hoặc dời lịch do bác sĩ trước đó không khả dụng";
+            }
+            history(updated, scope.user().getUserId(), moved ? "RESCHEDULE" : "UPDATE", old,
+                    snapshot(updated), historyReason);
+            updateReminders(updated, moved);
+            if (wasNeedingReassignment && (resolvedDoctorChanged || moved)) {
+                notifyPatientReassignment(updated, updated.getDoctor(), moved);
+            }
+            return view(updated);
+        }
         StaffProfile targetDoctor = doctor(effectiveTargetDoctorId);
         com.cvdcms.entity.Service targetService = service(request.serviceId());
         int targetDuration = AppointmentSlotService.duration(targetService);
@@ -622,6 +720,10 @@ public class ReceptionAppointmentService {
                 targetDoctor = autoAssigned;
                 doctorChanged = !Objects.equals(lockedCurrentDoctorId, autoAssigned.getStaffId());
             }
+        }
+        if (expectedTime != null) {
+            slots.validateBranchResourceCapacity(a.getBranch(), targetService, request.date(),
+                    expectedTime, expectedTime.plusMinutes(targetDuration), id);
         }
         a.setAppointmentDate(request.date()); a.setPreferredSession(request.session());
         a.setDoctor(targetDoctor); a.setService(targetService);
@@ -677,6 +779,22 @@ public class ReceptionAppointmentService {
         rules.ensureBookable(a.getBranch(), a.getPatientProfile(), a.getAppointmentDate(),
                 a.getPreferredSession(), effectiveDoctorId, id);
         String old = snapshot(a);
+        if (Boolean.TRUE.equals(a.getBranch().getResourceEngineEnabled())
+                && a.getExpectedTime() != null && a.getService() != null && resourceBookingTransactionService != null) {
+            resourceBookingTransactionService.rescheduleInExistingTransaction(
+                    com.cvdcms.DTO.availability.ResourceRescheduleRequest.reschedule(
+                            id, a.getBranch().getBranchId(), null,
+                            a.getAppointmentDate(), a.getExpectedTime(), a.getPreferredSession(),
+                            effectiveDoctorId, effectiveDoctorId == null,
+                            "CONFIRMED", AppointmentStatus.CONFIRMED, false));
+            Appointment confirmed = appointments.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+            history(confirmed, scope.user().getUserId(), "CONFIRM", old, snapshot(confirmed), null);
+            if (careEventPublisher != null) {
+                careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentUpsertedCareEvent(confirmed.getAppointmentId()));
+            }
+            return view(confirmed);
+        }
         StaffProfile resolvedDoctor = doctor(effectiveDoctorId);
         if (a.getExpectedTime() != null) {
             slots.resolveFlexibly(a.getBranch(), a.getAppointmentDate(), a.getPreferredSession(), effectiveDoctorId,
@@ -714,6 +832,10 @@ public class ReceptionAppointmentService {
             throw bad("Vui lòng chọn lý do hủy trong danh mục và ghi chú nếu chọn Khác.");
         String reason = note == null ? code : code + ": " + note;
         String old = snapshot(a);
+        if (resourceBookingTransactionService != null) {
+            resourceBookingTransactionService.releaseReservationsOnCancelOrNoShow(
+                    id, ReservationStatus.CANCELLED, "APPOINTMENT_CANCELLED", LocalDateTime.now(ReceptionAppointmentRules.ZONE));
+        }
         lifecycle.transition(a, AppointmentStatus.CANCELLED, AppointmentLifecycleAction.CANCEL);
         a.setCancelReason(reason);
         a.setCancelledBy(scope.user().getUserId());
@@ -774,6 +896,10 @@ public class ReceptionAppointmentService {
 
     private void applyNoShow(Appointment a, LocalDateTime now, Long actorId, String reason) {
         Long id = a.getAppointmentId();
+        if (resourceBookingTransactionService != null) {
+            resourceBookingTransactionService.releaseReservationsOnCancelOrNoShow(
+                    id, ReservationStatus.RELEASED, "NO_SHOW", now);
+        }
         lifecycle.transition(a, AppointmentStatus.NO_SHOW, AppointmentLifecycleAction.MARK_NO_SHOW);
         appointments.saveAndFlush(a);
         history(a, actorId, "NO_SHOW", snapshotWithStatus(a, AppointmentStatus.CONFIRMED), snapshot(a), reason);

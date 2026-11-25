@@ -46,6 +46,8 @@ public class PerformedServiceRestController {
                 requestDTO.getVisitId(), requestDTO.getServiceId());
 
         try {
+            doctorVisitAccess.assertVisitServiceExecutionAllowed(
+                    requestDTO.getVisitId(), requestDTO.getServiceId(), requestDTO.getPlanItemId(), true);
             PerformedServiceResponseDTO responseDTO = performedServiceService.createPerformedService(requestDTO);
 
             Map<String, Object> result = new HashMap<>();

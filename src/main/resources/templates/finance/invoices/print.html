@@ -315,8 +315,13 @@
             </div>
             <div class="print-sig-col">
                 <h5>NGƯỜI LẬP / THU NGÂN</h5>
-                <p class="small text-muted fst-italic">(Ký, ghi rõ họ tên)</p>
-                <div class="fw-bold mt-4" th:text="${invoice.cashier != null ? invoice.cashier.fullName : 'Thu ngân'}">Nguyễn Thu Ngân</div>
+                <p class="small text-muted fst-italic mb-1">(Ký, ghi rõ họ tên)</p>
+                <div class="my-2 d-flex justify-content-center align-items-center" style="min-height: 52px;">
+                    <img th:if="${invoice.signatureUrl != null and !invoice.signatureUrl.isEmpty()}"
+                         th:src="${invoice.signatureUrl}" alt="Chữ ký người lập phiếu"
+                         style="max-height: 52px; max-width: 170px; object-fit: contain;">
+                </div>
+                <div class="fw-bold mt-2" th:text="${invoice.cashier != null ? invoice.cashier.fullName : 'Thu ngân'}">Nguyễn Thu Ngân</div>
             </div>
         </div>
 

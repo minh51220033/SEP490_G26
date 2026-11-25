@@ -92,9 +92,27 @@ public class DoctorVisitAccess {
     @Autowired(required = false)
     private com.cvdcms.repository.ClinicalQueueTicketRepository queueTickets;
 
+    @Autowired(required = false)
+    private com.cvdcms.repository.ServiceRepository serviceRepository;
+
+    @Autowired(required = false)
+    private com.cvdcms.repository.ServiceComboRepository serviceComboRepository;
+
     public void requireWorkflowExecution(HttpSession session, Long executionId) {
+        requireWorkflowExecution(session, executionId, null);
+    }
+
+    public void requireWorkflowExecution(HttpSession session, Long executionId, Long activeVisitId) {
         var execution = workflowExecutions.findById(executionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (activeVisitId != null) {
+            Visit activeVisit = requireActiveClinicalExam(session, activeVisitId);
+            if (execution.getPatientProfile() != null && activeVisit.getPatientProfile() != null
+                    && !execution.getPatientProfile().getProfileId().equals(activeVisit.getPatientProfile().getProfileId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Quy trình không thuộc hồ sơ bệnh nhân của lượt khám này.");
+            }
+            return;
+        }
         require(session, execution.getVisit().getVisitId());
     }
 
@@ -175,12 +193,12 @@ public class DoctorVisitAccess {
         require(session, visitId);
         Visit visit = visits.findById(visitId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy ca khám."));
-        if (visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.WAITING
-                || visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.WAITING_RESULT
-                || visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.CANCELLED) {
+        if (visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.CANCELLED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Bệnh nhân còn đang chờ khám hoặc chưa bấm nút 'Vào khám'. Chỉ được mở và ghi điều trị cho ca hệ thống đã gọi vào khám.");
+                    "Ca khám đã bị hủy, không thể thao tác.");
         }
+
+        boolean hasActiveDeskTicket = false;
         if (queueTickets != null) {
             var activeTicketOpt = queueTickets.findByVisitIdAndTypeOrderByDesc(visitId, com.cvdcms.entity.enums.QueueType.EXAM)
                     .stream()
@@ -194,7 +212,15 @@ public class DoctorVisitAccess {
                     throw new ResponseStatusException(HttpStatus.CONFLICT,
                             "Lượt khám chưa bắt đầu phục vụ trên hàng chờ. Vui lòng dùng nút 'Vào khám' cho đúng lượt Đang gọi.");
                 }
+                hasActiveDeskTicket = qStatus == com.cvdcms.entity.enums.QueueStatus.IN_SERVICE;
             }
+        }
+
+        // Nếu ticket đang IN_SERVICE tại ghế bác sĩ thì không bị khóa bởi trạng thái trung gian WAITING_PARACLINICAL / WAITING_RESULT
+        if (!hasActiveDeskTicket && (visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.WAITING
+                || visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.WAITING_RESULT)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Bệnh nhân còn đang chờ khám hoặc chưa bấm nút 'Vào khám'. Chỉ được mở và ghi điều trị cho ca hệ thống đã gọi vào khám.");
         }
         return visit;
     }
@@ -608,5 +634,157 @@ public class DoctorVisitAccess {
             }
         }
         return !hasBranchMetadata;
+    }
+
+    public java.util.Map<String, Object> resolveBookedServiceSummary(Visit visit) {
+        if (visit == null || visit.getAppointmentId() == null || appointments == null) {
+            return null;
+        }
+        Appointment appt = appointments.findByIdWithService(visit.getAppointmentId()).orElse(null);
+        if (appt == null || appt.getService() == null) {
+            return null;
+        }
+        com.cvdcms.entity.Service srv = appt.getService();
+        java.util.Map<String, Object> map = new java.util.LinkedHashMap<>();
+        map.put("serviceId", srv.getServiceId());
+        map.put("serviceCode", srv.getServiceCode());
+        map.put("serviceName", srv.getServiceName());
+        map.put("basePrice", srv.getBasePrice());
+        map.put("unit", srv.getUnit());
+        map.put("requiresTooth", srv.getRequiresTooth());
+        map.put("isParaclinical", srv.getIsParaclinical());
+        map.put("appointmentCode", appt.getAppointmentCode());
+        return map;
+    }
+
+    public int countWaitingPatientsForVisitDoctor(Visit visit) {
+        if (visit == null || queueTickets == null || visit.getBranch() == null || visit.getPrimaryDoctor() == null) {
+            return 0;
+        }
+        var tickets = queueTickets.findForDoctorOnDay(
+                visit.getBranch().getBranchId(),
+                java.time.LocalDate.now(),
+                com.cvdcms.entity.enums.QueueType.EXAM,
+                visit.getPrimaryDoctor().getStaffId());
+        if (tickets == null || tickets.isEmpty()) {
+            return 0;
+        }
+        return (int) tickets.stream()
+                .filter(t -> t.getStatus() == com.cvdcms.entity.enums.QueueStatus.WAITING
+                        && t.getVisit() != null
+                        && !visit.getVisitId().equals(t.getVisit().getVisitId()))
+                .count();
+    }
+
+    public void assertTreatmentPlanIncludesBookedService(Long visitId, com.cvdcms.DTO.TreatmentPlanRequestDTO request) {
+        if (visitId == null || request == null || visits == null || appointments == null) {
+            return;
+        }
+        Visit visit = visits.findById(visitId).orElse(null);
+        var booked = resolveBookedServiceSummary(visit);
+        if (booked == null || booked.get("serviceId") == null) {
+            return;
+        }
+        Long bookedServiceId = ((Number) booked.get("serviceId")).longValue();
+
+        if (treatmentPlans != null && visit != null && visit.getPatientProfile() != null) {
+            var existingPlans = treatmentPlans.findByProfileIdWithDetails(visit.getPatientProfile().getProfileId());
+            boolean alreadyCovered = existingPlans != null && existingPlans.stream()
+                    .filter(tp -> tp.getStatus() != com.cvdcms.entity.enums.TreatmentPlanStatus.CANCELLED)
+                    .flatMap(tp -> tp.getStages() == null ? java.util.stream.Stream.empty() : tp.getStages().stream())
+                    .flatMap(st -> st.getItems() == null ? java.util.stream.Stream.empty() : st.getItems().stream())
+                    .anyMatch(it -> it.getService() != null && bookedServiceId.equals(it.getService().getServiceId()));
+            if (alreadyCovered) {
+                return;
+            }
+        }
+
+        boolean includedInRequest = request.getStages() != null && request.getStages().stream()
+                .filter(st -> st.getItems() != null)
+                .flatMap(st -> st.getItems().stream())
+                .anyMatch(it -> it.getServiceId() != null && bookedServiceId.equals(it.getServiceId()));
+
+        if (!includedInRequest) {
+            throw new IllegalArgumentException(
+                    "Kế hoạch điều trị bắt buộc phải giữ dịch vụ bệnh nhân đã đăng ký từ lịch hẹn: " + booked.get("serviceName"));
+        }
+    }
+
+    public void assertVisitServiceExecutionAllowed(Long visitId, Long targetServiceId, Long planItemId, boolean patientConfirmed) {
+        if (visitId == null || visits == null) {
+            return;
+        }
+        Visit visit = visits.findById(visitId).orElse(null);
+        if (visit == null) {
+            return;
+        }
+
+        com.cvdcms.entity.Service targetService = null;
+        if (planItemId != null && treatmentPlanItems != null) {
+            var it = treatmentPlanItems.findById(planItemId).orElse(null);
+            if (it != null && it.getService() != null) {
+                targetService = it.getService();
+                if (targetServiceId == null) {
+                    targetServiceId = targetService.getServiceId();
+                }
+            }
+        }
+        if (targetService == null && targetServiceId != null && serviceRepository != null) {
+            targetService = serviceRepository.findById(targetServiceId).orElse(null);
+        }
+        if (targetService != null && Boolean.TRUE.equals(targetService.getIsParaclinical())) {
+            return;
+        }
+
+        var booked = resolveBookedServiceSummary(visit);
+        int waitingCount = countWaitingPatientsForVisitDoctor(visit);
+
+        if (booked != null && booked.get("serviceId") != null) {
+            Long bookedServiceId = ((Number) booked.get("serviceId")).longValue();
+            if (targetServiceId != null && bookedServiceId.equals(targetServiceId)) {
+                return;
+            }
+            if (waitingCount > 0) {
+                throw new IllegalStateException(
+                        "Hiện đang có " + waitingCount + " bệnh nhân chờ trong hàng đợi. Ca khám này chỉ khóa thực hiện dịch vụ đã đặt lịch ("
+                                + booked.get("serviceName") + "); dịch vụ tư vấn phát sinh vui lòng lưu trong Kế hoạch điều trị để hẹn ca khám sau!");
+            }
+            if (!patientConfirmed) {
+                throw new IllegalStateException(
+                        "PATIENT_CONFIRM_REQUIRED: Dịch vụ phát sinh ngoài lịch hẹn (" + booked.get("serviceName")
+                                + "). Hàng đợi hiện đang trống (0 người chờ) — vui lòng xác nhận bệnh nhân đã đồng ý thực hiện luôn trong ca này!");
+            }
+        } else if (waitingCount > 0 && performedServices != null && targetServiceId != null) {
+            var performedList = performedServices.findByVisitIdWithDetails(visitId);
+            java.util.Set<Long> performedIds = new java.util.HashSet<>();
+            if (performedList != null) {
+                for (var ps : performedList) {
+                    if (ps.getStatus() != com.cvdcms.entity.enums.PerformedServiceStatus.CANCELLED
+                            && ps.getService() != null
+                            && !Boolean.TRUE.equals(ps.getService().getIsParaclinical())) {
+                        performedIds.add(ps.getService().getServiceId());
+                    }
+                }
+            }
+            if (!performedIds.isEmpty() && !performedIds.contains(targetServiceId)) {
+                throw new IllegalStateException(
+                        "Hiện đang có " + waitingCount + " bệnh nhân chờ trong hàng đợi. Không thể làm gộp thêm dịch vụ mới phát sinh trong cùng ca khám — vui lòng lưu trong Kế hoạch điều trị để hẹn ca khám sau!");
+            }
+        }
+    }
+
+    public void assertComboExecutionAllowed(Long visitId, Long comboId, boolean patientConfirmed) {
+        if (visitId == null || comboId == null || serviceComboRepository == null) {
+            return;
+        }
+        var combo = serviceComboRepository.findByIdWithItems(comboId).orElse(null);
+        if (combo == null || combo.getItems() == null || combo.getItems().isEmpty()) {
+            return;
+        }
+        for (var item : combo.getItems()) {
+            if (item != null && item.getService() != null) {
+                assertVisitServiceExecutionAllowed(visitId, item.getService().getServiceId(), null, patientConfirmed);
+            }
+        }
     }
 }

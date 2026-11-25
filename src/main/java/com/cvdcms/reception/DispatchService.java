@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 public class DispatchService {
     public static final int MAX_DOCTOR_QUEUE_LIMIT = 8;
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+    private Clock clock = Clock.system(ZONE);
     private final ReceptionAccess access;
     private final DispatchVisitRepository visits;
     private final DispatchDoctorRepository doctors;
@@ -38,6 +39,10 @@ public class DispatchService {
 
     @Autowired(required = false)
     private com.cvdcms.service.ClinicQueueCoordinatorService queueCoordinator;
+
+    public void setClock(Clock clock) {
+        this.clock = clock != null ? clock : Clock.system(ZONE);
+    }
 
     @Autowired
     public DispatchService(ReceptionAccess access, DispatchVisitRepository visits, DispatchDoctorRepository doctors,
@@ -78,8 +83,8 @@ public class DispatchService {
         if (options.isEmpty()) throw fail(HttpStatus.FORBIDDEN, "Không có chi nhánh được phân công.");
         Long branchId = requestedBranch == null ? options.get(0).getBranchId() : requestedBranch;
         checkBranch(session, branchId);
-        LocalDate day = requestedDay != null ? requestedDay : LocalDate.now(ZONE);
-        LocalTime now = LocalTime.now(ZONE);
+        LocalDate day = requestedDay != null ? requestedDay : LocalDate.now(clock);
+        LocalTime now = LocalTime.now(clock);
         String preset = datePreset == null ? "DAY" : datePreset.trim().toUpperCase();
         List<Visit> dayVisits;
         if ("THIS_WEEK".equals(preset)) {
@@ -276,15 +281,26 @@ public class DispatchService {
         return completeDispatchAndIssueTicket(session, branchId, visitId, doctorId, roomId, chairId, priority, reason, null);
     }
 
+    @Transactional(readOnly = true)
+    public boolean canAssignDoctor(HttpSession session) {
+        ReceptionAccess.Scope scope = access.require(session);
+        return scope.admin() || access.canAssignDoctor(scope);
+    }
+
     @Transactional
     public void assign(HttpSession session, Long branchId, Long visitId, Long doctorId, Long roomId, Long chairId,
             String reason) {
-        Branch branchObj = branch(session, branchId);
+        ReceptionAccess.Scope scope = access.require(session);
+        Branch branchObj = branch(scope, branchId);
+        if (doctorId != null && !(scope.admin() || access.canAssignDoctor(scope))) {
+            throw fail(HttpStatus.FORBIDDEN,
+                    "Lễ tân không được tự ý chọn hoặc đổi bác sĩ thủ công. Hệ thống sẽ tự động phân bổ bác sĩ.");
+        }
         Visit visit = visit(branchId, visitId);
         if (visit.getStatus() != VisitStatus.WAITING && visit.getStatus() != VisitStatus.WAITING_RESULT)
             throw fail(HttpStatus.CONFLICT, "Chỉ phân công lượt khám đang chờ hoặc chờ kết quả cận lâm sàng.");
-        LocalDate today = LocalDate.now(ZONE);
-        LocalTime now = LocalTime.now(ZONE);
+        LocalDate today = LocalDate.now(clock);
+        LocalTime now = LocalTime.now(clock);
         if (branchObj != null && branchObj.getClosingTime() != null && !now.isBefore(branchObj.getClosingTime())) {
             throw fail(HttpStatus.CONFLICT, "Chi nhánh đã đóng cửa, không thể điều phối tiếp nhận khám.");
         }
@@ -294,11 +310,18 @@ public class DispatchService {
         }
         Long requestedDoctor = requestedDoctor(visit);
         boolean isEmergency = visit.getVisitType() == VisitType.EMERGENCY;
+        boolean preserveUnavailableRequestedDoctor = false;
         if (doctorId == null) {
-            if (isEmergency) {
+            Long existingDoctorId = visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null;
+            if (existingDoctorId != null && available.stream().anyMatch(d -> d.getStaffId().equals(existingDoctorId))) {
+                doctorId = existingDoctorId;
+            } else if (isEmergency) {
                 doctorId = findEmergencyDoctor(available, branchId, today, visitId);
-            } else if (requestedDoctor != null && available.stream().anyMatch(d -> d.getStaffId().equals(requestedDoctor))) {
+            } else if (requestedDoctor != null) {
                 doctorId = requestedDoctor;
+                if (available.stream().noneMatch(d -> d.getStaffId().equals(requestedDoctor))) {
+                    preserveUnavailableRequestedDoctor = true;
+                }
             } else {
                 doctorId = available.stream()
                         .min(Comparator.comparingLong((StaffProfile d) -> load(d.getStaffId(), branchId, today, visitId))
@@ -308,7 +331,7 @@ public class DispatchService {
             }
         }
         final Long selectedDoctor = doctorId;
-        if (available.stream().noneMatch(d -> d.getStaffId().equals(selectedDoctor)))
+        if (!preserveUnavailableRequestedDoctor && available.stream().noneMatch(d -> d.getStaffId().equals(selectedDoctor)))
             throw fail(HttpStatus.CONFLICT, "Bác sĩ không có phân công hoặc ca làm việc hợp lệ tại chi nhánh.");
         Long previousDoctor = visit.getPrimaryDoctor() == null ? null : visit.getPrimaryDoctor().getStaffId();
         boolean overridesRequest = requestedDoctor != null && !requestedDoctor.equals(doctorId);
@@ -342,7 +365,8 @@ public class DispatchService {
                 if (c.getStatus() == ChairStatus.AVAILABLE && c.getRoom() != null
                         && c.getRoom().getStatus() == RoomStatus.ACTIVE
                         && (effectiveRoom == null || effectiveRoom.equals(c.getRoom().getRoomId()))
-                        && visits.occupiedChair(c.getChairId(), visitId, Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0) {
+                        && visits.occupiedChair(c.getChairId(), visitId, Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0
+                        && tickets.countHoldingChair(branchId, today, c.getChairId(), visitId) == 0) {
                     chairId = c.getChairId();
                     effectiveRoom = c.getRoom().getRoomId();
                     break;
@@ -357,7 +381,8 @@ public class DispatchService {
             if (effectiveRoom == null) effectiveRoom = chair.getRoom().getRoomId();
             if (!effectiveRoom.equals(chair.getRoom().getRoomId()))
                 throw fail(HttpStatus.CONFLICT, "Ghế không thuộc phòng đã chọn.");
-            if (visits.occupiedChair(chairId, visitId, Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) > 0)
+            if (visits.occupiedChair(chairId, visitId, Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) > 0
+                    || tickets.countHoldingChair(branchId, today, chairId, visitId) > 0)
                 throw fail(HttpStatus.CONFLICT, "Ghế đang được sử dụng cho lượt khám khác.");
         }
         if (effectiveRoom != null) {
@@ -425,7 +450,7 @@ public class DispatchService {
         if (visit.getStatus() != VisitStatus.WAITING && visit.getStatus() != VisitStatus.WAITING_RESULT)
             throw fail(HttpStatus.CONFLICT, "Chỉ cấp số cho lượt đang chờ khám hoặc chờ kết quả cận lâm sàng.");
         if (visit.getPrimaryDoctor() == null) throw fail(HttpStatus.CONFLICT, "Cần phân công bác sĩ trước khi cấp số.");
-        LocalDate day = LocalDate.now(ZONE);
+        LocalDate day = LocalDate.now(clock);
         if (!visit.getCheckInAt().toLocalDate().equals(day)) throw fail(HttpStatus.CONFLICT, "Chỉ cấp số trong ngày check-in.");
 
         boolean emergency = Boolean.TRUE.equals(visit.getIsEmergency()) || visit.getVisitType() == VisitType.EMERGENCY;
@@ -477,7 +502,8 @@ public class DispatchService {
                 if (c.getStatus() == ChairStatus.AVAILABLE && c.getRoom() != null
                         && c.getRoom().getStatus() == RoomStatus.ACTIVE
                         && (visit.getRoomId() == null || visit.getRoomId().equals(c.getRoom().getRoomId()))
-                        && visits.occupiedChair(c.getChairId(), visit.getVisitId(), Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0) {
+                        && visits.occupiedChair(c.getChairId(), visit.getVisitId(), Set.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT)) == 0
+                        && tickets.countHoldingChair(branchId, day, c.getChairId(), visit.getVisitId()) == 0) {
                     visit.setChairId(c.getChairId());
                     visit.setRoomId(c.getRoom().getRoomId());
                     visits.save(visit);
@@ -544,7 +570,10 @@ public class DispatchService {
     public record ExamTicketPrintView(String branchPhone, String roomName, String chairName) {}
 
     private Branch branch(HttpSession session, Long id) {
-        var scope = access.require(session);
+        return branch(access.require(session), id);
+    }
+
+    private Branch branch(ReceptionAccess.Scope scope, Long id) {
         Branch b = branches.lock(id).orElseThrow(() -> fail(HttpStatus.NOT_FOUND, "Không tìm thấy chi nhánh."));
         if (!scope.permits(id) || !Boolean.TRUE.equals(b.getIsActive()))
             throw fail(HttpStatus.FORBIDDEN, "Không được điều phối tại chi nhánh này.");

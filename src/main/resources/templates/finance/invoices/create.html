@@ -220,11 +220,13 @@
                                                            step="1" min="1" onchange="onItemQtyChange(this)">
                                                 </td>
                                                 <td class="text-end">
-                                                    <input type="number"
+                                                    <input type="text"
                                                            th:name="'items[' + ${iterStat.index} + '].unitPrice'"
                                                            th:value="${ps.unitPrice}"
+                                                           data-cashier-money="true"
+                                                           min="0"
                                                            class="form-control form-control-sm text-end item-price prop-price"
-                                                           step="1000" onchange="onItemPriceChange(this)">
+                                                           onchange="onItemPriceChange(this)">
                                                 </td>
                                                 <td class="text-end text-muted small item-clinical-discount"
                                                     th:data-discount="${ps.discountAmount}"
@@ -381,6 +383,12 @@
                                     </label>
                                     <textarea id="notes" name="notes" class="form-control" rows="2"
                                               placeholder="Nhập ghi chú thêm cho hóa đơn (hoặc lý do nếu có điều chỉnh đơn giá/số lượng)..."></textarea>
+                                    <div class="d-flex justify-content-end mt-3">
+                                        <div class="text-center">
+                                            <div class="inv-field-label mb-1">Xác nhận</div>
+                                            <th:block th:replace="~{fragments/finance-signature :: sigField('invoice', null)}"></th:block>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -427,8 +435,9 @@
                                         </div>
                                         <div class="col-6">
                                             <label for="manualDiscount" class="inv-field-label">Giảm khác (VNĐ)</label>
-                                            <input type="number" id="manualDiscount" name="discountAmount"
-                                                   class="form-control form-control-sm" value="0" min="0" step="1000"
+                                            <input type="text" id="manualDiscount" name="discountAmount"
+                                                   data-cashier-money="true"
+                                                   class="form-control form-control-sm" value="0" min="0"
                                                    onchange="triggerRecalculate()">
                                         </div>
                                         <div class="col-12">
@@ -469,6 +478,10 @@
                                         <div class="text-end text-muted mt-1" style="font-size: 12px;">
                                             Điểm tích lũy dự kiến: <strong id="lblPointsEarnable" class="text-success">+0 điểm</strong>
                                         </div>
+                                    </div>
+
+                                    <div class="border-top mt-3 pt-3">
+                                        <th:block th:replace="~{fragments/finance-signature :: sigMirror('invoice', null, 'Người lập phiếu', '(Chữ Ký, Họ Và Tên)', ${displayName != null and !displayName.isBlank() ? displayName : (loggedInUser != null ? loggedInUser.username : 'Thu ngân')})}"></th:block>
                                     </div>
 
                                     <div id="invoiceSubmitError" class="alert alert-danger py-2 px-3 small mt-3 mb-0" style="display: none;">
@@ -733,8 +746,16 @@
             triggerRecalculate();
         }
 
+        function getMoneyInputNumber(el) {
+            if (!el) return 0;
+            const n = typeof window.parseCashierMoney === 'function'
+                ? window.parseCashierMoney(el.value)
+                : parseFloat(String(el.value || '').replace(/,/g, ''));
+            return Number.isFinite(n) ? n : 0;
+        }
+
         function recalculateServiceRowTotal(row) {
-            const price = parseFloat(row.querySelector('.item-price').value) || 0;
+            const price = getMoneyInputNumber(row.querySelector('.item-price'));
             const qty = parseFloat(row.querySelector('.item-qty').value) || 1;
             const discountEl = row.querySelector('.item-clinical-discount');
             const discount = discountEl ? (parseFloat(discountEl.getAttribute('data-discount')) || 0) : 0;
@@ -912,7 +933,7 @@
             const promoId = document.getElementById('promotionId').value;
             const voucherId = document.getElementById('voucherId').value;
             const points = parseInt(document.getElementById('pointsToRedeem').value) || 0;
-            const manualDiscount = parseFloat(document.getElementById('manualDiscount').value) || 0;
+            const manualDiscount = getMoneyInputNumber(document.getElementById('manualDiscount'));
 
             const items = [];
             let clientServiceTotal = 0;
@@ -920,7 +941,7 @@
                 const cb = row.querySelector('.item-checkbox');
                 if (cb && cb.checked) {
                     const psId = row.querySelector('.prop-performed-id').value;
-                    const unitPrice = parseFloat(row.querySelector('.item-price').value) || 0;
+                    const unitPrice = getMoneyInputNumber(row.querySelector('.item-price'));
                     const qty = parseFloat(row.querySelector('.item-qty').value) || 1;
                     const lineVal = parseFloat(row.querySelector('.item-line-total')?.getAttribute('data-val')) || (unitPrice * qty);
                     clientServiceTotal += lineVal;

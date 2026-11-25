@@ -41,4 +41,13 @@ public class Room {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private RoomStatus status = RoomStatus.ACTIVE;
+
+    @Column(name = "floor_label", length = 50)
+    private String floorLabel;
+
+    @Column(name = "zone_label", length = 50)
+    private String zoneLabel;
+
+    @Column(name = "floor_order", nullable = false)
+    private Integer floorOrder = 1;
 }

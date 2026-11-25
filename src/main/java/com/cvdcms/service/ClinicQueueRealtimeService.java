@@ -1,6 +1,7 @@
 package com.cvdcms.service;
 
 import com.cvdcms.event.ClinicQueueDomainEvent;
+import com.cvdcms.event.PublicQueueStompEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,14 @@ public class ClinicQueueRealtimeService {
         }
         try {
             if (event.branchId() != null) {
-                messagingTemplate.convertAndSend("/topic/queue/branch/" + event.branchId(), event);
+                // Kênh công khai chỉ phát sự kiện tối giản, không chứa PII hay tên/ID bác sĩ
+                PublicQueueStompEvent publicEvent = new PublicQueueStompEvent(
+                        event.eventType(),
+                        event.branchId(),
+                        event.status(),
+                        event.occurredAt()
+                );
+                messagingTemplate.convertAndSend("/topic/queue/branch/" + event.branchId(), publicEvent);
             }
             if (event.doctorId() != null) {
                 messagingTemplate.convertAndSend("/topic/queue/doctor/" + event.doctorId(), event);

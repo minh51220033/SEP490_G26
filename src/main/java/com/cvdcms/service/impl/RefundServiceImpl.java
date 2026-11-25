@@ -243,6 +243,10 @@ public class RefundServiceImpl implements RefundService {
         refund.setRefundMethod(request.getRefundMethod() != null ? request.getRefundMethod() : RefundMethod.CASH);
         refund.setReason(request.getReason() + (invoice == null ? " (Hoàn tiền từ số dư ví tạm ứng)" : (Boolean.TRUE.equals(request.getReduceInvoiceTotal()) ? " (Kèm giảm nghĩa vụ hóa đơn)" : "")));
         refund.setReduceInvoiceTotal(Boolean.TRUE.equals(request.getReduceInvoiceTotal()));
+        if (request.getSignatureData() != null && !request.getSignatureData().isBlank()) {
+            refund.setSignatureUrl(com.cvdcms.util.InventoryFileStorageUtil.saveSignatureDataUrl(
+                    request.getSignatureData(), "refund"));
+        }
         refund.setRefundedBy(staff);
 
         Refund savedRefund = refundRepository.save(refund);

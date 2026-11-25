@@ -28,6 +28,9 @@
         const root = template.content.firstElementChild.cloneNode(true);
         root.dataset.activeDebtCollection = '';
         document.body.append(root);
+        if (typeof window.initCashierMoneyInputs === 'function') {
+            window.initCashierMoneyInputs(root);
+        }
         const modal = bootstrap.Modal.getOrCreateInstance(root);
         const abort = new AbortController();
         const picker = root.querySelector('[data-invoice-picker]');
@@ -78,7 +81,10 @@
             previewTimer = setTimeout(async () => {
                 try {
                     const url = new URL(form.dataset.previewUrl, location.origin);
-                    url.search = new URLSearchParams({invoiceId: select.value, amount: amount.value});
+                    const parsedAmount = typeof window.parseCashierMoney === 'function'
+                        ? window.parseCashierMoney(amount.value)
+                        : Number(String(amount.value || '').replace(/,/g, ''));
+                    url.search = new URLSearchParams({invoiceId: select.value, amount: Number.isFinite(parsedAmount) ? String(parsedAmount) : ''});
                     const res = await fetch(url, {signal: abort.signal});
                     if (!res.ok) return;
                     const data = await res.json();

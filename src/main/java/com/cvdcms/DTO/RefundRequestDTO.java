@@ -19,4 +19,5 @@ public class RefundRequestDTO {
     private String reason;
     private Boolean reduceInvoiceTotal = false; // Kết hợp hoàn tiền và giảm nghĩa vụ hóa đơn tương ứng
     private String idempotencyKey;
+    private String signatureData;
 }

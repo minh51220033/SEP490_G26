@@ -42,6 +42,10 @@ public class PortalAppointmentService {
     private StaffScheduleRepository staffSchedules;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private org.springframework.context.ApplicationEventPublisher careEventPublisher;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ResourceBookingTransactionService resourceBookingTransactionService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.ResourceAvailabilityService resourceAvailabilityService;
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -104,6 +108,7 @@ public class PortalAppointmentService {
         access.requireUser(httpSession);
         return services.findByStatusOrderByCategory_DisplayOrderAscServiceNameAsc(ServiceStatus.ACTIVE)
                 .stream().filter(s -> Boolean.TRUE.equals(s.getIsBookableOnline())
+                        && s.getServiceType() != com.cvdcms.entity.enums.ServiceType.PRODUCT
                         && Boolean.TRUE.equals(s.getCategory().getIsActive())).toList();
     }
 
@@ -161,9 +166,18 @@ public class PortalAppointmentService {
                     .map(s -> new SlotOption(s.startTime(), 1))
                     .toList();
         }
-        return slots.available(branch, date, period, doctorId, duration, excludeId,
-                        AppointmentActorType.PATIENT)
-                .stream().map(s -> new SlotOption(s.time(), s.remaining())).toList();
+        List<AppointmentSlotService.Slot> candidateSlots = slots.available(branch, date, period, doctorId, duration, excludeId,
+                        AppointmentActorType.PATIENT);
+        final Long effectiveServiceId = service != null ? service.getServiceId() : null;
+        boolean useEngine = Boolean.TRUE.equals(branch.getResourceEngineEnabled())
+                && effectiveServiceId != null && resourceAvailabilityService != null;
+        return candidateSlots.stream()
+                .filter(s -> !useEngine || resourceAvailabilityService.checkAvailability(
+                        new com.cvdcms.DTO.availability.AvailabilityCheckRequest(
+                                branchId, effectiveServiceId, date, s.time(), doctorId, excludeId, false))
+                        .available())
+                .map(s -> new SlotOption(s.time(), s.remaining()))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -214,6 +228,46 @@ public class PortalAppointmentService {
         policy.ensureBookable(branch, profile, request.date(), request.session(), request.doctorId(),
                 null, AppointmentActorType.PATIENT);
         com.cvdcms.entity.Service service = requestedService(request.serviceId());
+        if (Boolean.TRUE.equals(branch.getResourceEngineEnabled())) {
+            if (service == null) {
+                throw bad("Vui lòng chọn dịch vụ khám trước khi đặt lịch.");
+            }
+            if (resourceBookingTransactionService == null) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Resource Booking Engine chưa sẵn sàng.");
+            }
+            int durationMinutes = AppointmentSlotService.duration(service);
+            LocalTime resolvedTime = request.expectedTime() != null
+                    ? request.expectedTime()
+                    : slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
+                            durationMinutes, null, null, AppointmentActorType.PATIENT);
+            if (resolvedTime == null) {
+                throw bad("Vui lòng chọn khung giờ khám cụ thể.");
+            }
+            var result = resourceBookingTransactionService.bookInExistingTransaction(
+                    new com.cvdcms.DTO.availability.ResourceBookingRequest(
+                            branch.getBranchId(), profile.getProfileId(), service.getServiceId(),
+                            request.date(), resolvedTime, request.doctorId(), request.doctorId() == null,
+                            null, request.session(), AppointmentSource.ONLINE, clean(request.symptoms()),
+                            "PORTAL:" + request.requestKey(), false),
+                    AppointmentStatus.PENDING);
+            Appointment appointment = appointments.findById(result.appointmentId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR));
+            if (!result.idempotentReplay()) {
+                PortalBookingRequest bookingRequest = new PortalBookingRequest();
+                bookingRequest.setRequestKey(request.requestKey());
+                bookingRequest.setAppointment(appointment);
+                bookingRequests.save(bookingRequest);
+                history(appointment, user.getUserId(), "CREATE", null, snapshot(appointment), null);
+                if (careEventPublisher != null) {
+                    careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentUpsertedCareEvent(appointment.getAppointmentId()));
+                    careEventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                            "APPOINTMENT_BOOKED", branch.getBranchId(), result.doctorId(),
+                            null, appointment.getAppointmentId(), appointment.getStatus().name(),
+                            "Đặt lịch hẹn mới #" + appointment.getAppointmentCode(), LocalDateTime.now(CLINIC_ZONE)));
+                }
+            }
+            return view(appointment);
+        }
         int durationMinutes = AppointmentSlotService.duration(service);
         StaffProfile assignedDoctor = doctor(request.doctorId());
         LocalTime resolvedTime = slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
@@ -228,6 +282,10 @@ public class PortalAppointmentService {
             if (autoAssigned != null) {
                 assignedDoctor = autoAssigned;
             }
+        }
+        if (resolvedTime != null) {
+            slots.validateBranchResourceCapacity(branch, service, request.date(),
+                    resolvedTime, resolvedTime.plusMinutes(durationMinutes), null);
         }
         Appointment appointment = new Appointment();
         appointment.setAppointmentCode("LH" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase());
@@ -329,6 +387,36 @@ public class PortalAppointmentService {
         LocalTime requestedTime = request.expectedTime() != null ? request.expectedTime()
                 : Objects.equals(a.getAppointmentDate(), request.date()) && a.getPreferredSession() == request.session()
                     ? a.getExpectedTime() : null;
+        if (Boolean.TRUE.equals(branch.getResourceEngineEnabled())) {
+            if (resourceBookingTransactionService == null) {
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Resource Booking Engine chưa sẵn sàng.");
+            }
+            int durationMinutes = AppointmentSlotService.duration(a.getService());
+            LocalTime resolvedTime = requestedTime != null ? requestedTime
+                    : slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
+                            durationMinutes, appointmentId, null, AppointmentActorType.PATIENT);
+            if (resolvedTime == null) {
+                throw bad("Vui lòng chọn khung giờ khám cụ thể.");
+            }
+            resourceBookingTransactionService.rescheduleInExistingTransaction(
+                    com.cvdcms.DTO.availability.ResourceRescheduleRequest.reschedule(
+                            appointmentId, branch.getBranchId(), null,
+                            request.date(), resolvedTime, request.session(),
+                            request.doctorId(), request.doctorId() == null,
+                            "RESCHEDULED", AppointmentStatus.PENDING, true));
+            Appointment updated = appointments.findById(appointmentId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+            history(updated, user.getUserId(), "RESCHEDULE", oldValue, snapshot(updated), clean(request.reason()));
+            for (CustomerCareTask task : careTasks.findByAppointment_AppointmentId(appointmentId)) {
+                if (task.getTaskType() == CustomerCareTaskType.APPOINTMENT_REMINDER
+                        && task.getStatus() != CustomerCareTaskStatus.CANCELLED) {
+                    task.setDueDate(request.date().minusDays(1).isBefore(LocalDate.now(CLINIC_ZONE))
+                            ? LocalDate.now(CLINIC_ZONE) : request.date().minusDays(1));
+                    task.setStatus(CustomerCareTaskStatus.PENDING);
+                }
+            }
+            return view(updated);
+        }
         int durationMinutes = AppointmentSlotService.duration(a.getService());
         StaffProfile assignedDoctor = doctor(request.doctorId());
         LocalTime resolvedTime = slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
@@ -343,6 +431,10 @@ public class PortalAppointmentService {
             if (autoAssigned != null) {
                 assignedDoctor = autoAssigned;
             }
+        }
+        if (resolvedTime != null) {
+            slots.validateBranchResourceCapacity(branch, a.getService(), request.date(),
+                    resolvedTime, resolvedTime.plusMinutes(durationMinutes), appointmentId);
         }
         a.setAppointmentDate(request.date());
         a.setPreferredSession(request.session());
@@ -381,6 +473,10 @@ public class PortalAppointmentService {
         String reason = clean(request.reason());
         if (reason == null) throw bad("Vui lòng nhập lý do hủy.");
         String oldValue = snapshot(a);
+        if (resourceBookingTransactionService != null) {
+            resourceBookingTransactionService.releaseReservationsOnCancelOrNoShow(
+                    appointmentId, ReservationStatus.CANCELLED, "APPOINTMENT_CANCELLED", LocalDateTime.now(CLINIC_ZONE));
+        }
         lifecycle.transition(a, AppointmentStatus.CANCELLED, AppointmentLifecycleAction.CANCEL);
         a.setCancelReason(reason);
         a.setCancelledBy(user.getUserId());
@@ -454,6 +550,150 @@ public class PortalAppointmentService {
                 staffSchedules.lockDoctorSchedulesForDate(docId, d, ScheduleStatus.SCHEDULED);
             }
         }
+    }
+
+    public record MultiServiceBookingRequest(
+            @jakarta.validation.constraints.NotNull Long profileId,
+            @jakarta.validation.constraints.NotNull Long branchId,
+            @jakarta.validation.constraints.NotNull LocalDate date,
+            @jakarta.validation.constraints.NotNull PreferredSession session,
+            Long doctorId,
+            @jakarta.validation.constraints.NotEmpty List<Long> serviceIds,
+            LocalTime expectedTime,
+            String symptoms,
+            String requestKey
+    ) {}
+
+    public record MultiServiceBookingResult(
+            String bookingGroupCode,
+            int totalDurationMinutes,
+            List<AppointmentView> appointments
+    ) {}
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public MultiServiceBookingResult bookMultiService(HttpSession httpSession, MultiServiceBookingRequest request) {
+        User user = access.requireUser(httpSession);
+        PatientProfile verifiedProfile = access.requireProfile(user, request.profileId());
+        requireActiveProfile(verifiedProfile);
+        if (request.requestKey() == null || !validKey(request.requestKey())) {
+            throw bad("Mã yêu cầu không hợp lệ.");
+        }
+        PortalBookingRequest existingReq = bookingRequests.findById(request.requestKey()).orElse(null);
+        if (existingReq != null && existingReq.getAppointment() != null) {
+            Appointment first = existingReq.getAppointment();
+            if (!Objects.equals(first.getPatientProfile().getProfileId(), verifiedProfile.getProfileId())) {
+                throw conflict("Mã yêu cầu đã được sử dụng cho hồ sơ khác.");
+            }
+            String existingGroupCode = first.getBookingGroupCode();
+            List<AppointmentView> replayViews = existingGroupCode != null
+                    ? appointments.findByPatientProfile_ProfileIdOrderByAppointmentDateDescAppointmentIdDesc(
+                            verifiedProfile.getProfileId()).stream()
+                            .filter(a -> existingGroupCode.equals(a.getBookingGroupCode()))
+                            .sorted(java.util.Comparator.comparing(Appointment::getExpectedTime,
+                                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                            .map(this::view).toList()
+                    : List.of(view(first));
+            int replayDuration = replayViews.stream()
+                    .mapToInt(v -> v.durationMinutes() != null ? v.durationMinutes() : 30)
+                    .sum();
+            return new MultiServiceBookingResult(existingGroupCode, replayDuration, replayViews);
+        }
+        if (request.serviceIds() == null || request.serviceIds().isEmpty()) {
+            throw bad("Vui lòng chọn ít nhất một dịch vụ.");
+        }
+        if (request.serviceIds().size() > 5) {
+            throw bad("Mỗi lần đặt lịch chỉ hỗ trợ tối đa 5 dịch vụ.");
+        }
+
+        PatientProfile profile = patientProfiles != null
+                ? patientProfiles.findByIdForUpdate(verifiedProfile.getProfileId()).orElse(verifiedProfile)
+                : verifiedProfile;
+        refreshIfManaged(profile);
+        requireActiveProfile(profile);
+        Branch branch = lockedBranches.findByIdForBooking(request.branchId()).orElseThrow(() -> bad("Chi nhánh không tồn tại."));
+        refreshIfManaged(branch);
+        if (!Boolean.TRUE.equals(branch.getIsActive())) {
+            throw bad("Chi nhánh không hoạt động.");
+        }
+
+        List<com.cvdcms.entity.Service> resolvedServices = new ArrayList<>();
+        int totalDuration = 0;
+        for (Long svcId : request.serviceIds()) {
+            com.cvdcms.entity.Service svc = requestedService(svcId);
+            if (svc == null) {
+                throw bad("Dịch vụ không tồn tại hoặc không hỗ trợ đặt trực tuyến.");
+            }
+            resolvedServices.add(svc);
+            totalDuration += AppointmentSlotService.duration(svc);
+        }
+
+        policy.ensureBookable(branch, profile, request.date(), request.session(), request.doctorId(),
+                null, AppointmentActorType.PATIENT);
+
+        StaffProfile assignedDoctor = doctor(request.doctorId());
+        LocalTime resolvedTime = slots.resolveFlexibly(branch, request.date(), request.session(), request.doctorId(),
+                totalDuration, null, request.expectedTime(), AppointmentActorType.PATIENT);
+        if (resolvedTime == null) {
+            throw conflict("Không còn đủ năng lực tiếp nhận cho tổng thời lượng " + totalDuration + " phút trong khung giờ đã chọn.");
+        }
+        if (assignedDoctor == null) {
+            assignedDoctor = slots.autoAssignDoctorForSlot(
+                    branch, request.date(), request.session(), resolvedTime, totalDuration, null);
+            if (assignedDoctor == null) {
+                throw conflict("Không còn bác sĩ khả dụng cho tổng thời lượng " + totalDuration + " phút trong khung giờ đã chọn.");
+            }
+        } else {
+            slots.lockAndValidateDoctorSlot(branch.getBranchId(), assignedDoctor.getStaffId(),
+                    request.date(), resolvedTime, totalDuration, null);
+        }
+
+        String groupCode = "GRP-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
+        LocalTime validateCursor = resolvedTime;
+        for (com.cvdcms.entity.Service svc : resolvedServices) {
+            int svcDuration = AppointmentSlotService.duration(svc);
+            slots.validateBranchResourceCapacity(branch, svc, request.date(),
+                    validateCursor, validateCursor.plusMinutes(svcDuration), null);
+            validateCursor = validateCursor.plusMinutes(svcDuration);
+        }
+        LocalTime cursorTime = resolvedTime;
+        List<AppointmentView> createdViews = new ArrayList<>();
+        for (int i = 0; i < resolvedServices.size(); i++) {
+            com.cvdcms.entity.Service svc = resolvedServices.get(i);
+            int svcDuration = AppointmentSlotService.duration(svc);
+            Appointment appointment = new Appointment();
+            appointment.setAppointmentCode("LH" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase());
+            appointment.setBookingGroupCode(groupCode);
+            appointment.setPatientProfile(profile);
+            appointment.setBranch(branch);
+            appointment.setDoctor(assignedDoctor);
+            appointment.setService(svc);
+            appointment.setAppointmentDate(request.date());
+            appointment.setPreferredSession(request.session());
+            appointment.setDurationMinutes(svcDuration);
+            appointment.setExpectedTime(cursorTime);
+            appointment.syncExpectedEndTime();
+            appointment.setInitialSymptoms(clean(request.symptoms()));
+            appointment.setSource(AppointmentSource.ONLINE);
+            appointment.setStatus(AppointmentStatus.PENDING);
+            appointments.saveAndFlush(appointment);
+            if (i == 0) {
+                PortalBookingRequest bookingRequest = new PortalBookingRequest();
+                bookingRequest.setRequestKey(request.requestKey());
+                bookingRequest.setAppointment(appointment);
+                bookingRequests.save(bookingRequest);
+            }
+            history(appointment, user.getUserId(), "CREATE", null, snapshot(appointment), "GROUP:" + groupCode);
+            if (careEventPublisher != null && appointment.getAppointmentId() != null) {
+                careEventPublisher.publishEvent(new com.cvdcms.event.CustomerCareDomainEvents.AppointmentUpsertedCareEvent(appointment.getAppointmentId()));
+                careEventPublisher.publishEvent(new com.cvdcms.event.ClinicQueueDomainEvent(
+                        "APPOINTMENT_BOOKED", branch.getBranchId(), assignedDoctor.getStaffId(),
+                        null, appointment.getAppointmentId(), appointment.getStatus().name(),
+                        "Đặt lịch hẹn nhiều dịch vụ #" + appointment.getAppointmentCode(), LocalDateTime.now(CLINIC_ZONE)));
+            }
+            createdViews.add(view(appointment));
+            cursorTime = cursorTime.plusMinutes(svcDuration);
+        }
+        return new MultiServiceBookingResult(groupCode, totalDuration, createdViews);
     }
 
     private void refreshIfManaged(Object entity) {

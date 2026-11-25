@@ -9,22 +9,16 @@
 <div th:fragment="instructionsTab">
     <div class="df-unified-tab-card mb-4 overflow-hidden bg-white">
         <!-- Header -->
-        <div class="df-tab-content-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3 border-bottom">
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                <i class="bi bi-card-checklist text-primary fs-5"></i>
-                <h2 class="df-title-primary mb-0">Lời dặn &amp; hướng dẫn chăm sóc tại nhà</h2>
-                <span class="df-subtitle-secondary d-none d-lg-inline">· Vệ sinh răng miệng, chế độ ăn &amp; xử trí đau nhức</span>
-            </div>
-
+        <div class="df-tab-actionbar is-right-only">
             <!-- Cụm nút Thao tác: In phiếu dặn dò & Tạo lời dặn (Secondary trái — Primary phải) -->
-            <div class="d-flex align-items-center flex-wrap gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold"
+            <div class="df-tab-actions">
+                <button type="button" class="df-tab-btn df-tab-btn-secondary"
                         onclick="printDoctorInstructions()"
                         title="In phiếu hướng dẫn dặn dò cho bệnh nhân mang về">
-                    <i class="bi bi-printer text-primary"></i>
+                    <i class="bi bi-printer"></i>
                     <span>In phiếu dặn dò</span>
                 </button>
-                <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2 px-3 py-2 fw-semibold text-white"
+                <button type="button" class="df-tab-btn df-tab-btn-primary"
                         th:unless="${isClinicalLocked}"
                         onclick="openDoctorInstructionModal()"
                         title="Soạn lời dặn dò riêng cho bệnh nhân sau ca khám này">

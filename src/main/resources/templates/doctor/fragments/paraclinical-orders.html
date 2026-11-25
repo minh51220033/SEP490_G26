@@ -3,40 +3,34 @@
 <body>
 
 <!-- ========================================================================= -->
-<!-- BAR 2: CHỈ ĐỊNH CẬN LÂM SÀNG & CHẨN ĐOÁN HÌNH ẢNH (SCR-11.2, SCR-11.3)   -->
+<!-- TAB: CHỈ ĐỊNH CẬN LÂM SÀNG & CHẨN ĐOÁN HÌNH ẢNH (SCR-11.2, SCR-11.3)     -->
 <!-- Frontend Fragment: doctor/fragments/paraclinical-orders.html              -->
 <!-- ========================================================================= -->
 <div th:fragment="paraclinicalOrdersSection">
-    <div class="df-foldable-bar" id="bar-orders" onclick="toggleMainBar('orders')">
-        <div class="d-flex align-items-center gap-2">
-            <i class="bi bi-chevron-right df-foldable-chevron" id="chevron-orders"></i>
-            <span class="df-step-num">2</span>
-            <span class="df-foldable-title">Chỉ định cận lâm sàng &amp; hình ảnh</span>
-            <span class="df-meta-tertiary d-none d-md-inline ms-1">(Chụp X-Quang NanoPix, CT ConeBeam 3D, Xét nghiệm máu)</span>
-        </div>
-        <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-light text-primary border small df-num" id="ordersCountBadge"
+    <div class="bg-white border rounded-4 shadow-sm overflow-hidden">
+        <!-- HEADER BAR -->
+        <div class="df-tab-actionbar">
+            <span class="df-tab-count-pill" id="ordersCountBadge"
                   th:text="${paraclinicalOrders != null ? #lists.size(paraclinicalOrders) : 0} + ' chỉ định'">0 chỉ định</span>
-        </div>
-    </div>
-    <div class="df-foldable-content" id="content-orders" style="display: none;">
-        <div class="p-3 p-md-4 bg-white">
-            <!-- THANH TÁC VỤ CHỈ ĐỊNH CẬN LÂM SÀNG -->
-            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3 pb-2 border-bottom" th:unless="${isReadOnlyView == true}">
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 small"
+            <div class="df-tab-actions" th:unless="${isReadOnlyView == true}">
+                <button type="button" class="df-tab-btn df-tab-btn-secondary"
                         onclick="loadParaclinicalOrders()"
                         title="Làm mới danh sách kết quả đồng bộ từ máy X-quang">
-                    <i class="bi bi-arrow-clockwise me-1"></i>Làm mới kết quả
+                    <i class="bi bi-arrow-clockwise"></i><span>Làm mới kết quả</span>
                 </button>
-                <button type="button" class="btn df-btn-tonal-primary btn-sm rounded-pill px-3 py-1 fw-semibold"
+                <button type="button" class="df-tab-btn df-tab-btn-primary"
                         th:if="${isClinicalLocked != true}"
                         onclick="openAddParaclinicalModal()">
-                    <i class="bi bi-plus-circle me-1"></i>Thêm chỉ định
+                    <i class="bi bi-plus-lg"></i><span>Thêm chỉ định</span>
                 </button>
             </div>
+        </div>
+
+        <!-- BẢNG DANH SÁCH CHỈ ĐỊNH CẬN LÂM SÀNG (HIỂN THỊ TRỰC TIẾP, KHÔNG GẬP) -->
+        <div class="bg-white">
 
             <!-- BẢNG DANH SÁCH CHỈ ĐỊNH CẬN LÂM SÀNG (SCR-11.3 LƯU DATABASE) -->
-            <div class="table-responsive rounded-3 border">
+            <div class="table-responsive">
                 <table class="df-clean-table" data-disable-floating-actions="true">
                     <thead>
                         <tr>
@@ -740,10 +734,21 @@
     function renderParaclinicalOrdersTable(orders) {
         const tbody = document.getElementById('clinicalOrdersTableBody');
         const badge = document.getElementById('ordersCountBadge');
+        const tabBadge = document.getElementById('tabBadge-tab-paraclinical');
         if (!tbody) return;
 
+        const orderCount = Array.isArray(orders) ? orders.length : 0;
         if (badge) {
-            badge.innerText = `${orders.length} chỉ định`;
+            badge.innerText = `${orderCount} chỉ định`;
+            badge.classList.toggle('bg-light', orderCount === 0);
+            badge.classList.toggle('text-secondary', orderCount === 0);
+            badge.classList.toggle('bg-primary-subtle', orderCount > 0);
+            badge.classList.toggle('text-primary', orderCount > 0);
+            badge.classList.toggle('border-primary-subtle', orderCount > 0);
+        }
+        if (tabBadge) {
+            tabBadge.innerText = String(orderCount);
+            tabBadge.classList.toggle('d-none', orderCount === 0);
         }
 
         if (!orders || orders.length === 0) {

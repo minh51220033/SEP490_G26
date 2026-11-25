@@ -87,6 +87,19 @@
         renderActiveKeywordChip(raw);
     }
 
+    function canManualDoctorAssign() {
+        const content = document.getElementById('reception-content-area');
+        return content?.dataset?.canManualDoctorAssign === 'true';
+    }
+
+    function sanitiseHiddenDoctorInputs(formEl) {
+        if (!formEl) return;
+        formEl.querySelectorAll('[name="doctorId"]').forEach(el => {
+            el.value = '';
+            el.disabled = true;
+        });
+    }
+
     function handleOpenAssign(btn) {
         const assignModalEl = document.getElementById('dispatchAssignModal');
         const modalAssignForm = document.getElementById('modalAssignForm');
@@ -127,7 +140,14 @@
         if (modalPriorityCheckbox) modalPriorityCheckbox.checked = false;
         if (modalIssueTicketCheckbox) modalIssueTicketCheckbox.checked = true;
 
-        if (modalDoctorSelect) {
+        const allowManualDoctor = canManualDoctorAssign();
+        if (!allowManualDoctor) {
+            sanitiseHiddenDoctorInputs(modalAssignForm);
+            if (modalDoctorAdvice) {
+                modalDoctorAdvice.classList.add('d-none');
+            }
+        } else if (modalDoctorSelect) {
+            modalDoctorSelect.disabled = false;
             if (currentDoctor) {
                 modalDoctorSelect.value = currentDoctor;
                 if (modalDoctorAdvice) {
@@ -205,6 +225,7 @@
     }
 
     function handleOpenTransfer(btn) {
+        if (!canManualDoctorAssign()) return;
         const transferModalEl = document.getElementById('dispatchTransferModal');
         const modalTransferForm = document.getElementById('modalTransferForm');
         const modalTransferPatientName = document.getElementById('modalTransferPatientName');
@@ -212,6 +233,7 @@
         const modalTransferCurrentDoctor = document.getElementById('modalTransferCurrentDoctor');
         const modalTransferDoctorSelect = document.getElementById('modalTransferDoctorSelect');
         const modalTransferReasonInput = document.getElementById('modalTransferReasonInput');
+        if (!transferModalEl || !modalTransferDoctorSelect) return;
 
         const visitId = btn.dataset.visitId;
         const visitCode = btn.dataset.visitCode;
@@ -572,6 +594,15 @@
                 if (filterKeywordInput && filterForm && filterKeywordInput.value) {
                     filterKeywordInput.value = '';
                     filterForm.submit();
+                }
+            });
+        }
+
+        const modalAssignForm = document.getElementById('modalAssignForm');
+        if (modalAssignForm) {
+            modalAssignForm.addEventListener('submit', () => {
+                if (!canManualDoctorAssign()) {
+                    sanitiseHiddenDoctorInputs(modalAssignForm);
                 }
             });
         }

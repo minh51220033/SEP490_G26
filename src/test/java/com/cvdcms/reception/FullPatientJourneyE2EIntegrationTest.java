@@ -118,6 +118,11 @@ class FullPatientJourneyE2EIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        java.time.Clock fixedClock = java.time.Clock.fixed(
+                LocalDate.now(CLINIC_ZONE).atTime(9, 30).atZone(CLINIC_ZONE).toInstant(),
+                CLINIC_ZONE);
+        receptionService.setClock(fixedClock);
+        dispatchService.setClock(fixedClock);
         when(objectMapper.writeValueAsString(any())).thenReturn("{}");
 
         session = new MockHttpSession();
@@ -278,6 +283,12 @@ class FullPatientJourneyE2EIntegrationTest {
         chair3.setChairName("Ghế Khám 3");
         chair3.setStatus(ChairStatus.AVAILABLE);
         chair3 = chairRepository.saveAndFlush(chair3);
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void tearDownClock() {
+        receptionService.setClock(java.time.Clock.system(CLINIC_ZONE));
+        dispatchService.setClock(java.time.Clock.system(CLINIC_ZONE));
     }
 
     private PatientProfile createPatient(String name, String phone, int age) {
@@ -763,19 +774,20 @@ class FullPatientJourneyE2EIntegrationTest {
         QueueWorkflowService.PublicNumber publicCalled = publicBoard.called().stream()
                 .filter(c -> ticket.getDisplayNumber().equals(c.number()))
                 .findFirst().orElse(publicBoard.called().get(0));
-        assertEquals("BS. CK1 Lê Hoàng Nam", publicCalled.doctor());
         assertEquals("Phòng Khám 101", publicCalled.room());
         assertEquals("Ghế Khám 1", publicCalled.chair());
 
-        // Public TV called slot must contain zero patient PII
+        // Public TV called slot must contain zero patient PII and zero doctor name
         String calledSlotString = publicCalled.toString();
         assertFalse(calledSlotString.contains("Lê Hoài Nam"), "TV called slot must not reveal patient name");
         assertFalse(calledSlotString.contains("0912345678"), "TV called slot must not reveal patient phone");
+        assertFalse(calledSlotString.contains("Lê Hoàng Nam"), "TV called slot must not reveal doctor name");
 
-        // Pre-existing HEAD behavior: PublicBoard.queueList() includes PublicQueueRow.patientName for TV table display
+        // Zero-PII & No-Doctor-Name on entire PublicBoard (including queueList)
         String publicBoardString = publicBoard.toString();
         assertFalse(publicBoardString.contains("Lê Hoài Nam"), "Public TV board must not reveal patient name");
         assertFalse(publicBoardString.contains("0912345678"), "Public TV board must not reveal patient phone");
         assertFalse(publicBoardString.contains("Khám tổng quát"), "Public TV board must not reveal patient symptoms");
+        assertFalse(publicBoardString.contains("Lê Hoàng Nam"), "Public TV board must not reveal doctor name");
     }
 }

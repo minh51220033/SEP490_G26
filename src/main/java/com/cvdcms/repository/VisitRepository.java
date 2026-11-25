@@ -336,4 +336,19 @@ public interface VisitRepository extends JpaRepository<Visit, Long> {
                                   @Param("excludeVisitId") Long excludeVisitId,
                                   @Param("statuses") java.util.Collection<VisitStatus> statuses,
                                   @Param("cutoff") java.time.LocalDateTime cutoff);
+
+    @Query("""
+        SELECT COUNT(t) FROM QueueTicket t
+        WHERE t.branch.branchId = :branchId
+          AND t.queueDate = :queueDate
+          AND t.queueType = com.cvdcms.entity.enums.QueueType.EXAM
+          AND t.status IN :statuses
+          AND t.visit.chairId = :chairId
+          AND t.visit.visitId <> :excludeVisitId
+    """)
+    long countHoldingChairByTicketsOnDay(@Param("branchId") Long branchId,
+                                         @Param("queueDate") java.time.LocalDate queueDate,
+                                         @Param("statuses") java.util.Collection<com.cvdcms.entity.enums.QueueStatus> statuses,
+                                         @Param("chairId") Long chairId,
+                                         @Param("excludeVisitId") Long excludeVisitId);
 }

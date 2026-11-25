@@ -87,6 +87,32 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
 
     @Query("""
         SELECT COALESCE(SUM(r.amount), 0) FROM Refund r
+        JOIN r.patientProfile pp
+        JOIN r.branch b
+        LEFT JOIN r.invoice inv
+        WHERE (:branchId IS NULL OR b.branchId = :branchId)
+          AND (:refundMethod IS NULL OR r.refundMethod = :refundMethod)
+          AND (:startDate IS NULL OR r.refundedAt >= :startDate)
+          AND (:endDate IS NULL OR r.refundedAt <= :endDate)
+          AND (
+              :keyword IS NULL OR :keyword = ''
+              OR LOWER(r.refundCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(pp.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR LOWER(pp.patientCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              OR pp.phoneNumber LIKE CONCAT('%', :keyword, '%')
+              OR (inv IS NOT NULL AND LOWER(inv.invoiceCode) LIKE LOWER(CONCAT('%', :keyword, '%')))
+          )
+    """)
+    BigDecimal sumFilteredRefunds(
+            @Param("branchId") Long branchId,
+            @Param("refundMethod") RefundMethod refundMethod,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("keyword") String keyword
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(r.amount), 0) FROM Refund r
         WHERE (:branchId IS NULL OR r.branch.branchId = :branchId)
           AND (:startDate IS NULL OR r.refundedAt >= :startDate)
           AND (:endDate IS NULL OR r.refundedAt <= :endDate)

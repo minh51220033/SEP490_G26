@@ -88,6 +88,20 @@ public interface ClinicalQueueTicketRepository extends JpaRepository<QueueTicket
                                                  @Param("type") QueueType type);
 
     @Query("""
+            SELECT t FROM QueueTicket t
+            JOIN FETCH t.visit v
+            LEFT JOIN FETCH v.primaryDoctor d
+            JOIN FETCH t.branch b
+            WHERE t.queueDate = :queueDate
+              AND t.queueType = :type
+              AND t.status = com.cvdcms.entity.enums.QueueStatus.CALLED
+              AND b.isActive = true
+            ORDER BY t.ticketId ASC
+            """)
+    List<QueueTicket> findCalledOnDay(@Param("queueDate") LocalDate queueDate,
+                                      @Param("type") QueueType type);
+
+    @Query("""
             SELECT COUNT(t) FROM QueueTicket t
             WHERE t.branch.branchId = :branchId
               AND t.queueDate = :queueDate

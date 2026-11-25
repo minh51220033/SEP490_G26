@@ -1,81 +1,265 @@
-/* Shared shell for FT19 / FT20. Scoped to these pages only. */
-.membership-page .membership-tabs-wrapper {
-    margin-bottom: 16px;
+/* ============================================================================
+ * CV-DCMS MEMBERSHIP & PROMOTIONS THEME (FT19 & FT20)
+ * Đồng bộ hoàn toàn phong cách liền mạch của Tài chính & Quản lý kho vật tư
+ * ============================================================================ */
+
+/* 0. NỀN KHÔNG GIAN LÀM VIỆC & TẮT ANIMATION GÂY GIẬT */
+.app-content.finance-page.membership-page {
+    background: #f1f5f9 !important;
+    padding: 14px 20px 28px !important;
+    gap: 10px !important;
+    animation: none !important;
 }
 
-.membership-page .membership-header h1 {
+@media (max-width: 575.98px) {
+    .app-content.finance-page.membership-page {
+        padding: 10px !important;
+    }
+}
+
+/* 1. HEADER & THANH TAB SEGMENTED TRẮNG LIỀN MẠCH */
+.membership-page #membershipTabsWrapper.membership-tabs-wrapper {
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.membership-page #membershipTabsWrapper .membership-header-row {
+    margin-bottom: 10px !important;
+}
+
+.membership-page #membershipTabsWrapper .dv-header-icon {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 12px !important;
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 19px !important;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25) !important;
+    flex-shrink: 0 !important;
+}
+
+.membership-page #membershipTabsWrapper .dv-page-title {
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    line-height: 1.25 !important;
+    margin: 0 !important;
+}
+
+.membership-page #membershipTabsWrapper .dv-page-subtitle {
+    font-size: 13px !important;
+    color: #64748b !important;
+    margin: 2px 0 0 !important;
+}
+
+.membership-page #membershipTabsWrapper .membership-refresh-btn {
+    height: 36px !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    padding: 0 14px !important;
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    color: #334155 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    text-decoration: none !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+    transition: all 0.15s ease !important;
+}
+
+.membership-page #membershipTabsWrapper .membership-refresh-btn:hover {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+.membership-page #membershipTabsWrapper .membership-tabs-nav {
+    display: block !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 4px !important;
+    margin: 0 !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03) !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+}
+
+.membership-page #membershipTabsWrapper .membership-tabs-list {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 4px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none !important;
+}
+
+.membership-page #membershipTabsWrapper .membership-tabs-list li {
+    display: inline-flex !important;
+    flex-shrink: 0 !important;
+}
+
+.membership-page #membershipTabsWrapper .membership-tab-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+    padding: 8px 15px !important;
+    border: none !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: #64748b !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1.35 !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+    box-shadow: none !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.membership-page #membershipTabsWrapper .membership-tab-btn i {
+    font-size: 14.5px !important;
+    color: inherit !important;
+    opacity: 0.85 !important;
+}
+
+.membership-page #membershipTabsWrapper .membership-tab-btn:hover {
+    color: #0f172a !important;
+    background: #f1f5f9 !important;
+}
+
+.membership-page #membershipTabsWrapper .membership-tab-btn.active,
+.membership-page #membershipTabsWrapper .membership-tab-btn.active:hover {
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25) !important;
+}
+
+.membership-page #membershipTabsWrapper .membership-tab-btn.active span,
+.membership-page #membershipTabsWrapper .membership-tab-btn.active i {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+.membership-page #membershipTabsWrapper .membership-tab-btn:focus-visible {
+    outline: 2px solid #0284c7;
+    outline-offset: 2px;
+}
+
+/* 2. VÙNG NỘI DUNG CHUYỂN TAB MƯỢT & NHỊP KHOẢNG CÁCH 10PX LIỀN MẠCH */
+.membership-page .membership-tab-content {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 10px;
-    margin: 0;
-    color: #1e293b;
-    font-size: 1.5rem;
-    font-weight: 700;
+    width: 100%;
+    transition: opacity 0.12s ease;
 }
 
-.membership-page .membership-header h1 i {
-    color: #294690;
+.membership-page .membership-tab-content.membership-pjax-loading {
+    opacity: 0.65;
+    pointer-events: none;
 }
 
-.membership-page .membership-header p {
-    margin: 4px 0 12px;
-    color: #64748b;
-    font-size: 0.875rem;
+.membership-page .membership-tab-content > .row,
+.membership-page .membership-tab-content > .dv-toolbar-card,
+.membership-page .membership-tab-content > .fin-card,
+.membership-page .membership-tab-content > .fin-header,
+.membership-page .membership-tab-content > .alert {
+    margin-bottom: 0 !important;
 }
 
-.membership-page .membership-tabs-nav {
-    padding-bottom: 12px;
-    border-bottom: 1px solid #e2e8f0;
+.membership-page .dv-kpi-card {
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 14px 18px !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
 }
 
-.membership-page .membership-tabs-list {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
+.membership-page .dv-toolbar-card {
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 12px 16px !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
 }
 
-.membership-page .membership-tabs-list li {
-    display: inline-flex;
+.membership-page .dv-toolbar-card .dv-search-box input {
+    height: 38px !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
 }
 
-.membership-page .membership-tab-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 5px;
-    background: #fff;
-    color: #374151;
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.4;
-    text-decoration: none;
-    white-space: nowrap;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
+.membership-page .dv-toolbar-card .dv-adv-filter-btn,
+.membership-page .dv-toolbar-card .dv-view-switch {
+    height: 38px !important;
+    border-radius: 10px !important;
 }
 
-.membership-page .membership-tab-btn:hover {
-    border-color: #9ca3af;
-    background: #f9fafb;
-    color: #111827;
+.membership-page .dv-toolbar-card .dv-view-btn {
+    height: 30px !important;
+    border-radius: 8px !important;
 }
 
-.membership-page .membership-tab-btn.active {
-    border-color: #2563eb;
-    background: #eff6ff;
-    color: #2563eb;
-    font-weight: 600;
-    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+.membership-page .fin-header {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 18px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
 }
 
-.membership-page .membership-tab-btn:focus-visible {
-    outline: 2px solid #294690;
-    outline-offset: 3px;
+.membership-page .fin-header h1 {
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+}
+
+.membership-page .fin-header p {
+    font-size: 13px !important;
+    margin: 3px 0 0 !important;
+}
+
+.membership-page .fin-card {
+    border: 1.5px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+    padding: 16px 18px !important;
+}
+
+.membership-page .fin-card .form-control,
+.membership-page .fin-card .fin-select,
+.membership-page .fin-card .input-group-text,
+.membership-page .fin-card .fin-btn {
+    height: 38px !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+}
+
+.membership-page .fin-card .input-group .input-group-text {
+    background-color: #f8fafc !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-right: none !important;
+    border-radius: 10px 0 0 10px !important;
+}
+
+.membership-page .fin-card .input-group .form-control {
+    background-color: #f8fafc !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-left: none !important;
+    border-radius: 0 10px 10px 0 !important;
 }
 
 .membership-page .membership-subhead {
@@ -84,13 +268,13 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
 }
 
 .membership-page .membership-subhead h2 {
     margin: 0;
-    color: #1e293b;
-    font-size: 1.1rem;
+    color: #0f172a;
+    font-size: 1.05rem;
     font-weight: 700;
 }
 
@@ -101,12 +285,8 @@
 }
 
 @media (max-width: 575.98px) {
-    .membership-page .membership-header h1 {
-        font-size: 1.25rem;
-    }
-
-    .membership-page .membership-tab-btn {
-        padding: 5px 8px;
-        font-size: 12px;
+    .membership-page #membershipTabsWrapper .membership-tab-btn {
+        padding: 7px 11px !important;
+        font-size: 12.5px !important;
     }
 }

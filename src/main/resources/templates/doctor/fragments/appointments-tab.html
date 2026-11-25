@@ -8,23 +8,20 @@
 <!-- ===================================================================== -->
 <div th:fragment="appointmentsTab">
     <div class="df-unified-tab-card mb-4 overflow-hidden bg-white">
-        <div class="df-tab-content-header bg-white d-flex flex-wrap align-items-center justify-content-between gap-3 px-4 py-3 border-bottom">
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                <i class="bi bi-calendar2-check text-primary fs-5"></i>
-                <h2 class="df-title-primary mb-0">Lịch hẹn &amp; kế hoạch tái khám</h2>
-                <span class="df-tab-count df-num" id="appointmentsTabCountBadge"
-                      th:text="${reExaminations != null ? reExaminations.size() : 0} + ' lịch hẹn'">0 lịch hẹn</span>
-                <span class="df-subtitle-secondary d-none d-lg-inline">· Theo dõi lịch hẹn theo lộ trình điều trị</span>
-            </div>
+        <div class="df-tab-actionbar">
+            <span class="df-tab-count-pill" id="appointmentsTabCountBadge"
+                  th:text="${reExaminations != null ? reExaminations.size() : 0} + ' lịch hẹn'">0 lịch hẹn</span>
 
-            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-2 fw-semibold d-flex align-items-center gap-2 text-white"
-                    onclick="openReExamModal()">
-                <i class="bi bi-calendar2-plus-fill"></i>
-                <span>Đặt hẹn tái khám mới</span>
-            </button>
+            <div class="df-tab-actions">
+                <button type="button" class="df-tab-btn df-tab-btn-primary"
+                        onclick="openReExamModal()">
+                    <i class="bi bi-calendar2-plus-fill"></i>
+                    <span>Đặt hẹn tái khám mới</span>
+                </button>
+            </div>
         </div>
 
-        <div class="table-responsive p-4 bg-white">
+        <div class="table-responsive bg-white">
             <table class="table df-clean-table table-hover align-middle mb-0" data-disable-floating-actions="true" style="font-size: 13.5px;">
                 <thead>
                 <tr>
