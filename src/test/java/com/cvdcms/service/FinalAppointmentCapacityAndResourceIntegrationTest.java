@@ -293,24 +293,29 @@ class FinalAppointmentCapacityAndResourceIntegrationTest {
         StaffProfile doc2 = createDoctor("MULTI", afternoonShift);
         createChair("G2-" + SEQ.incrementAndGet(), ChairStatus.AVAILABLE);
         var s5 = patientSession("multi");
+        ResponseStatusException exMulti = assertThrows(ResponseStatusException.class, () ->
+                portalAppointmentService.bookMultiService(s5, new PortalAppointmentService.MultiServiceBookingRequest(
+                        profileId(s5), branch.getBranchId(), tomorrow, PreferredSession.AFTERNOON,
+                        doc2.getStaffId(), List.of(svc30.getServiceId(), svc60.getServiceId()),
+                        LocalTime.of(13, 0), "multi", UUID.randomUUID().toString())));
+        assertEquals(400, exMulti.getStatusCode().value());
+
         String reqKey = UUID.randomUUID().toString();
-        var multi = portalAppointmentService.bookMultiService(s5, new PortalAppointmentService.MultiServiceBookingRequest(
+        var single = portalAppointmentService.bookMultiService(s5, new PortalAppointmentService.MultiServiceBookingRequest(
                 profileId(s5), branch.getBranchId(), tomorrow, PreferredSession.AFTERNOON,
-                doc2.getStaffId(), List.of(svc30.getServiceId(), svc60.getServiceId()),
-                LocalTime.of(13, 0), "multi", reqKey));
-        assertEquals(90, multi.totalDurationMinutes());
-        assertEquals(2, multi.appointments().size());
-        assertEquals(LocalTime.of(13, 0), multi.appointments().get(0).expectedTime());
-        assertEquals(LocalTime.of(13, 30), endTimeOf(multi.appointments().get(0).id()));
-        assertEquals(LocalTime.of(13, 30), multi.appointments().get(1).expectedTime());
-        assertEquals(LocalTime.of(14, 30), endTimeOf(multi.appointments().get(1).id()));
+                doc2.getStaffId(), List.of(svc30.getServiceId()),
+                LocalTime.of(13, 0), "single", reqKey));
+        assertEquals(30, single.totalDurationMinutes());
+        assertEquals(1, single.appointments().size());
+        assertEquals(LocalTime.of(13, 0), single.appointments().get(0).expectedTime());
+        assertEquals(LocalTime.of(13, 30), endTimeOf(single.appointments().get(0).id()));
 
         var replay = portalAppointmentService.bookMultiService(s5, new PortalAppointmentService.MultiServiceBookingRequest(
                 profileId(s5), branch.getBranchId(), tomorrow, PreferredSession.AFTERNOON,
-                doc2.getStaffId(), List.of(svc30.getServiceId(), svc60.getServiceId()),
-                LocalTime.of(13, 0), "multi", reqKey));
-        assertEquals(multi.bookingGroupCode(), replay.bookingGroupCode());
-        assertEquals(2, replay.appointments().size());
+                doc2.getStaffId(), List.of(svc30.getServiceId()),
+                LocalTime.of(13, 0), "single", reqKey));
+        assertEquals(single.bookingGroupCode(), replay.bookingGroupCode());
+        assertEquals(1, replay.appointments().size());
     }
 
     @Test
