@@ -201,9 +201,18 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
 
         // Xử lý các giai đoạn (Stages) và chi tiết (Items)
         if (request.getStages() != null && !request.getStages().isEmpty()) {
-            int stageOrder = 1;
+            int maxOrder = 0;
+            Set<Integer> usedOrders = new HashSet<>();
             for (TreatmentPlanStageRequestDTO stageReq : request.getStages()) {
-                int resolvedOrder = stageReq.getStageOrder() != null ? stageReq.getStageOrder() : stageOrder++;
+                Integer reqOrder = stageReq.getStageOrder();
+                int resolvedOrder;
+                if (reqOrder != null && reqOrder > 0 && usedOrders.add(reqOrder)) {
+                    resolvedOrder = reqOrder;
+                    maxOrder = Math.max(maxOrder, resolvedOrder);
+                } else {
+                    resolvedOrder = ++maxOrder;
+                    usedOrders.add(resolvedOrder);
+                }
                 TreatmentPlanStage stage = new TreatmentPlanStage();
                 stage.setPlan(plan);
                 stage.setStageOrder(resolvedOrder);
@@ -542,21 +551,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         if (stage.getPlan() != null) {
             return syncPlanProgressAndStatus(stage.getPlan().getPlanId());
         }
-
-        if (false) { /*
-            // cleaned
-            // cleaned
-            // cleaned
-
-            // cleaned
-
-
-                }
-            }
-            // plan save */
-            // return null;
-        }
-
+        syncWorkflowExecutionsForStage(stage, null);
         return null;
     }
 
@@ -632,6 +627,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         }
         if (parentPlan != null && parentPlan.getPlanId() != null) {
             return syncPlanProgressAndStatus(parentPlan.getPlanId());
+        }
+        if (newStatus == TreatmentPlanItemStatus.COMPLETED || newStatus == TreatmentPlanItemStatus.IN_PROGRESS) {
+            syncWorkflowExecutionsForStage(stage, item);
         }
         return null;
     }
@@ -745,14 +743,30 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                     .filter(se -> se.getStep() != null && se.getStep().getAdhocExecutionId() == null)
                     .toList();
 
-            int keepCompleted = (int) Math.min(completedItemCount, templateSteps.size());
-            for (int i = keepCompleted; i < templateSteps.size(); i++) {
-                WorkflowStepExecution se = templateSteps.get(i);
-                se.setStatus(com.cvdcms.entity.enums.WorkflowStepExecutionStatus.PENDING);
-                se.setStartedAt(null);
-                se.setCompletedAt(null);
-                se.setApprovedBy(null);
-                se.setApprovedAt(null);
+            Map<Long, TreatmentPlanItem> matchedByStepExecId = mapPlanItemsToTemplateStepsForSync(stageServiceItems, templateSteps);
+            LocalDateTime now = LocalDateTime.now();
+            for (WorkflowStepExecution se : templateSteps) {
+                TreatmentPlanItem matchedItem = se.getStepExecutionId() != null
+                        ? matchedByStepExecId.get(se.getStepExecutionId())
+                        : null;
+                if (matchedItem != null && matchedItem.getStatus() == TreatmentPlanItemStatus.COMPLETED) {
+                    if (se.getStatus() != com.cvdcms.entity.enums.WorkflowStepExecutionStatus.COMPLETED
+                            && se.getStatus() != com.cvdcms.entity.enums.WorkflowStepExecutionStatus.SKIPPED) {
+                        LocalDateTime doneAt = matchedItem.getCompletedAt() != null ? matchedItem.getCompletedAt() : now;
+                        se.setStatus(com.cvdcms.entity.enums.WorkflowStepExecutionStatus.COMPLETED);
+                        if (se.getStartedAt() == null) se.setStartedAt(doneAt);
+                        se.setCompletedAt(doneAt);
+                        if (se.getResultNote() == null || se.getResultNote().isBlank()) {
+                            se.setResultNote("Đã hoàn thành nhanh từ Kế hoạch điều trị");
+                        }
+                    }
+                } else {
+                    se.setStatus(com.cvdcms.entity.enums.WorkflowStepExecutionStatus.PENDING);
+                    se.setStartedAt(null);
+                    se.setCompletedAt(null);
+                    se.setApprovedBy(null);
+                    se.setApprovedAt(null);
+                }
             }
             if (!stepExecs.isEmpty() && workflowStepExecutionRepository != null) {
                 workflowStepExecutionRepository.saveAll(stepExecs);
@@ -823,7 +837,228 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             }
         }
         treatmentPlanRepository.save(plan);
+        for (TreatmentPlanStage st : stages) {
+            syncWorkflowExecutionsForStage(st, null);
+        }
         return mapToResponseDTO(treatmentPlanRepository.findByIdWithDetails(planId).orElse(plan));
+    }
+
+    private void syncWorkflowExecutionsForStage(TreatmentPlanStage stage, TreatmentPlanItem targetItem) {
+        if (workflowExecutionRepository == null || workflowStepExecutionRepository == null) {
+            return;
+        }
+        Map<Long, WorkflowExecution> matchedExecs = new LinkedHashMap<>();
+        if (stage != null && stage.getStageId() != null) {
+            for (WorkflowExecution ex : workflowExecutionRepository.findByPlanStage_StageId(stage.getStageId())) {
+                if (ex.getExecutionId() != null) {
+                    matchedExecs.put(ex.getExecutionId(), ex);
+                }
+            }
+            for (TreatmentPlanItem it : treatmentPlanItemRepository.findByStage_StageId(stage.getStageId())) {
+                if (it.getPlanItemId() != null) {
+                    for (WorkflowExecution ex : workflowExecutionRepository.findByPlanItem_PlanItemId(it.getPlanItemId())) {
+                        if (ex.getExecutionId() != null) {
+                            matchedExecs.put(ex.getExecutionId(), ex);
+                        }
+                    }
+                }
+            }
+        } else if (targetItem != null && targetItem.getPlanItemId() != null) {
+            for (WorkflowExecution ex : workflowExecutionRepository.findByPlanItem_PlanItemId(targetItem.getPlanItemId())) {
+                if (ex.getExecutionId() != null) {
+                    matchedExecs.put(ex.getExecutionId(), ex);
+                }
+            }
+        }
+        if (matchedExecs.isEmpty()) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        for (WorkflowExecution ex : matchedExecs.values()) {
+            if (ex.getStatus() == com.cvdcms.entity.enums.WorkflowExecutionStatus.CANCELLED) {
+                continue;
+            }
+            TreatmentPlanStage exStage = ex.getPlanStage() != null
+                    ? ex.getPlanStage()
+                    : (stage != null ? stage : (ex.getPlanItem() != null ? ex.getPlanItem().getStage() : null));
+            Long exServiceId = (ex.getVersion() != null
+                    && ex.getVersion().getTemplate() != null
+                    && ex.getVersion().getTemplate().getService() != null)
+                    ? ex.getVersion().getTemplate().getService().getServiceId()
+                    : null;
+
+            List<TreatmentPlanItem> stageServiceItems = new ArrayList<>();
+            if (exStage != null && exStage.getStageId() != null) {
+                for (TreatmentPlanItem it : treatmentPlanItemRepository.findByStage_StageId(exStage.getStageId())) {
+                    if (it.getStatus() == TreatmentPlanItemStatus.CANCELLED) {
+                        continue;
+                    }
+                    if (exServiceId == null || (it.getService() != null && Objects.equals(it.getService().getServiceId(), exServiceId))) {
+                        stageServiceItems.add(it);
+                    }
+                }
+                stageServiceItems.sort(Comparator.comparing(TreatmentPlanItem::getPlanItemId));
+            } else if (ex.getPlanItem() != null && ex.getPlanItem().getStatus() != TreatmentPlanItemStatus.CANCELLED) {
+                stageServiceItems.add(ex.getPlanItem());
+            } else if (targetItem != null && targetItem.getStatus() != TreatmentPlanItemStatus.CANCELLED) {
+                stageServiceItems.add(targetItem);
+            }
+            if (stageServiceItems.isEmpty()) {
+                continue;
+            }
+
+            List<WorkflowStepExecution> stepExecs = new ArrayList<>(
+                    workflowStepExecutionRepository.findByExecution_ExecutionIdOrderByStep_SequenceOrderAsc(ex.getExecutionId()));
+            if (stepExecs.isEmpty()) {
+                continue;
+            }
+            stepExecs.sort(Comparator.comparingInt(se -> se.getStepOrder() != null
+                    ? se.getStepOrder()
+                    : (se.getStep() != null && se.getStep().getSequenceOrder() != null ? se.getStep().getSequenceOrder() : 999)));
+            List<WorkflowStepExecution> templateSteps = stepExecs.stream()
+                    .filter(se -> se.getStep() != null && se.getStep().getAdhocExecutionId() == null)
+                    .toList();
+
+            Map<Long, TreatmentPlanItem> matchedByStepExecId = mapPlanItemsToTemplateStepsForSync(stageServiceItems, templateSteps);
+            boolean stepsChanged = false;
+            for (WorkflowStepExecution se : templateSteps) {
+                TreatmentPlanItem matchedItem = se.getStepExecutionId() != null
+                        ? matchedByStepExecId.get(se.getStepExecutionId())
+                        : null;
+                if (matchedItem != null && matchedItem.getStatus() == TreatmentPlanItemStatus.COMPLETED
+                        && se.getStatus() != com.cvdcms.entity.enums.WorkflowStepExecutionStatus.COMPLETED
+                        && se.getStatus() != com.cvdcms.entity.enums.WorkflowStepExecutionStatus.SKIPPED) {
+                    LocalDateTime doneAt = matchedItem.getCompletedAt() != null ? matchedItem.getCompletedAt() : now;
+                    se.setStatus(com.cvdcms.entity.enums.WorkflowStepExecutionStatus.COMPLETED);
+                    if (se.getStartedAt() == null) se.setStartedAt(doneAt);
+                    se.setCompletedAt(doneAt);
+                    if (se.getResultNote() == null || se.getResultNote().isBlank()) {
+                        se.setResultNote("Đã hoàn thành nhanh từ Kế hoạch điều trị");
+                    }
+                    stepsChanged = true;
+                }
+            }
+            if (stepsChanged) {
+                workflowStepExecutionRepository.saveAll(stepExecs);
+            }
+
+            WorkflowStepExecution firstOpen = stepExecs.stream()
+                    .filter(se -> se.getStatus() != com.cvdcms.entity.enums.WorkflowStepExecutionStatus.COMPLETED
+                            && se.getStatus() != com.cvdcms.entity.enums.WorkflowStepExecutionStatus.SKIPPED)
+                    .findFirst()
+                    .orElse(null);
+
+            if (firstOpen == null) {
+                if (ex.getStatus() != com.cvdcms.entity.enums.WorkflowExecutionStatus.COMPLETED || ex.getCurrentStep() != null) {
+                    ex.setStatus(com.cvdcms.entity.enums.WorkflowExecutionStatus.COMPLETED);
+                    ex.setCurrentStep(null);
+                    if (ex.getCompletedAt() == null) ex.setCompletedAt(now);
+                    workflowExecutionRepository.save(ex);
+                }
+            } else {
+                TreatmentPlanItem nextOpenItem = stageServiceItems.stream()
+                        .filter(it -> it.getStatus() != TreatmentPlanItemStatus.COMPLETED)
+                        .findFirst()
+                        .orElse(ex.getPlanItem());
+                com.cvdcms.entity.enums.WorkflowExecutionStatus expectedStatus =
+                        firstOpen.getStatus() == com.cvdcms.entity.enums.WorkflowStepExecutionStatus.PAUSED
+                                ? com.cvdcms.entity.enums.WorkflowExecutionStatus.PAUSED
+                                : com.cvdcms.entity.enums.WorkflowExecutionStatus.IN_PROGRESS;
+                Long curStepId = ex.getCurrentStep() != null ? ex.getCurrentStep().getStepId() : null;
+                Long nextStepId = firstOpen.getStep() != null ? firstOpen.getStep().getStepId() : null;
+                Long curItemId = ex.getPlanItem() != null ? ex.getPlanItem().getPlanItemId() : null;
+                Long nextItemId = nextOpenItem != null ? nextOpenItem.getPlanItemId() : null;
+
+                if (stepsChanged || ex.getStatus() != expectedStatus
+                        || !Objects.equals(curStepId, nextStepId)
+                        || (nextItemId != null && !Objects.equals(curItemId, nextItemId))) {
+                    ex.setStatus(expectedStatus);
+                    ex.setCompletedAt(null);
+                    ex.setCurrentStep(firstOpen.getStep());
+                    if (nextOpenItem != null) {
+                        ex.setPlanItem(nextOpenItem);
+                    }
+                    workflowExecutionRepository.save(ex);
+                }
+            }
+        }
+    }
+
+    private Map<Long, TreatmentPlanItem> mapPlanItemsToTemplateStepsForSync(
+            List<TreatmentPlanItem> linkedItems,
+            List<WorkflowStepExecution> templateSteps) {
+        Map<Long, TreatmentPlanItem> mapping = new LinkedHashMap<>();
+        if (linkedItems == null || linkedItems.isEmpty() || templateSteps == null || templateSteps.isEmpty()) {
+            return mapping;
+        }
+        if (linkedItems.size() == 1) {
+            TreatmentPlanItem single = linkedItems.get(0);
+            if (single.getStatus() == TreatmentPlanItemStatus.COMPLETED || templateSteps.size() == 1) {
+                for (WorkflowStepExecution se : templateSteps) {
+                    if (se.getStepExecutionId() != null) {
+                        mapping.put(se.getStepExecutionId(), single);
+                    }
+                }
+            }
+            return mapping;
+        }
+
+        boolean[] usedStep = new boolean[templateSteps.size()];
+        Set<Integer> usedItemIdx = new HashSet<>();
+
+        for (int i = 0; i < linkedItems.size() && i < templateSteps.size(); i++) {
+            String itemNorm = normalizeStepNameForSync(linkedItems.get(i).getStepName());
+            String stepNorm = templateSteps.get(i).getStep() != null
+                    ? normalizeStepNameForSync(templateSteps.get(i).getStep().getStepName())
+                    : "";
+            if (!itemNorm.isEmpty() && itemNorm.equals(stepNorm)) {
+                if (templateSteps.get(i).getStepExecutionId() != null) {
+                    mapping.put(templateSteps.get(i).getStepExecutionId(), linkedItems.get(i));
+                }
+                usedStep[i] = true;
+                usedItemIdx.add(i);
+            }
+        }
+
+        for (int i = 0; i < linkedItems.size(); i++) {
+            if (usedItemIdx.contains(i)) continue;
+            String itemNorm = normalizeStepNameForSync(linkedItems.get(i).getStepName());
+            if (itemNorm.isEmpty()) continue;
+            for (int j = 0; j < templateSteps.size(); j++) {
+                if (usedStep[j]) continue;
+                String stepNorm = templateSteps.get(j).getStep() != null
+                        ? normalizeStepNameForSync(templateSteps.get(j).getStep().getStepName())
+                        : "";
+                if (itemNorm.equals(stepNorm)) {
+                    if (templateSteps.get(j).getStepExecutionId() != null) {
+                        mapping.put(templateSteps.get(j).getStepExecutionId(), linkedItems.get(i));
+                    }
+                    usedStep[j] = true;
+                    usedItemIdx.add(i);
+                    break;
+                }
+            }
+        }
+
+        for (int i = 0; i < linkedItems.size() && i < templateSteps.size(); i++) {
+            if (!usedItemIdx.contains(i) && !usedStep[i]) {
+                if (templateSteps.get(i).getStepExecutionId() != null) {
+                    mapping.put(templateSteps.get(i).getStepExecutionId(), linkedItems.get(i));
+                }
+                usedStep[i] = true;
+                usedItemIdx.add(i);
+            }
+        }
+        return mapping;
+    }
+
+    private String normalizeStepNameForSync(String s) {
+        if (s == null) return "";
+        return java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
+                .replace('đ', 'd').replace('Đ', 'd')
+                .trim().toLowerCase(Locale.ROOT);
     }
 
     private TreatmentPlanResponseDTO mapToResponseDTO(TreatmentPlan p) {

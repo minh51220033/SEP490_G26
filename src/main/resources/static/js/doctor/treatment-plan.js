@@ -1066,6 +1066,9 @@ function updatePlanStatusDirectly(planId, newStatus) {
         if (result.data) {
             updatePlanInlineView(result.data);
         }
+        if (window.FT43 && typeof window.FT43.reload === 'function') {
+            window.FT43.reload();
+        }
     })
     .catch(err => {
         showToast(err.message, true);
@@ -1086,6 +1089,9 @@ function changeStageStatus(stageId, status) {
         showToast('Đã cập nhật trạng thái giai đoạn & ghi nhận thời gian thực hiện (now())!');
         if (result.data) {
             updatePlanInlineView(result.data);
+        }
+        if (window.FT43 && typeof window.FT43.reload === 'function') {
+            window.FT43.reload();
         }
     })
     .catch(err => {
@@ -1146,6 +1152,9 @@ function executePlanItemDirectly(planItemId, patientConfirmed = false) {
             }
         } else if (typeof refreshPerformedServicesTable === 'function') {
             refreshPerformedServicesTable(visitId);
+        }
+        if (window.FT43 && typeof window.FT43.reload === 'function') {
+            window.FT43.reload();
         }
     })
     .catch(err => {

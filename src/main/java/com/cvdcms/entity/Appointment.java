@@ -51,6 +51,9 @@ public class Appointment {
     @JoinColumn(name = "doctor_id")
     private StaffProfile doctor;
 
+    @Column(name = "is_doctor_requested", nullable = false)
+    private Boolean isDoctorRequested = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id")
     private Service service;

@@ -234,8 +234,8 @@ public class DiagnosisController {
         model.addAttribute("doctors", performedServiceService.getAvailableDoctors());
         model.addAttribute("branches", branchRepository.findAll());
         model.addAttribute("stats", reExaminationService.getRecallsStatistics());
-        model.addAttribute("pageTitle", "Nhắc hẹn tái khám sau điều trị (SCR-18.2) - DentalFlow");
-        // Tinh gọn & Hợp nhất: Chuyển hướng sang phân hệ Quản lý CSKH & Nhắc hẹn tái khám chuẩn (FT44 - UC-26)
+        model.addAttribute("pageTitle", "Nhắc hẹn tái khám sau điều trị");
+        // Tinh gọn & Hợp nhất: Chuyển hướng sang phân hệ Quản lý CSKH & Nhắc hẹn tái khám chuẩn
         return "redirect:/customer-care";
     }
 
@@ -460,15 +460,7 @@ public class DiagnosisController {
         return "redirect:/doctor/examination/" + encodeVisit(newVisit.getVisitId()) + "/diagnoses";
     }
 
-    public String examinationDiagnoses(
-            Long visitId,
-            Long branchIdParam,
-            jakarta.servlet.http.HttpSession session,
-            RedirectAttributes redirectAttributes,
-            Model model
-    ) {
-        return examinationDiagnosesInternal(visitId, branchIdParam, false, null, session, redirectAttributes, model);
-    }
+
 
     @GetMapping({"/doctor/examination/{visitRef}/diagnoses", "/doctor/examination/{visitRef}/treatment"})
     public String examinationDiagnoses(
@@ -859,7 +851,7 @@ public class DiagnosisController {
     }
 
     /**
-     * SCR-15.2: Trang chuyen dung Lap Ke hoach & Lo trinh dieu tri (lien ket da chan doan, chuan Bo Y te)
+     *  Trang chuyen dung Lap Ke hoach & Lo trinh dieu tri (lien ket da chan doan, chuan Bo Y te)
      */
     @GetMapping("/doctor/examination/{visitRef}/treatment-plans/create")
     public String showCreateTreatmentPlanPageByRef(

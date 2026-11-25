@@ -192,21 +192,19 @@ public class ReceptionService {
             visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] · " + visit.getNotes());
         }
         visits.saveAndFlush(visit);
-        if (appointment.getDoctor() != null) {
+        if (Boolean.TRUE.equals(appointment.getIsDoctorRequested()) && appointment.getDoctor() != null) {
             visit.setPrimaryDoctor(appointment.getDoctor());
             visits.saveAndFlush(visit);
             if (examinations != null) {
                 examinations.ensureForAssignedVisit(visit.getVisitId());
             }
-        } else {
-            autoAssignDoctorOnCheckIn(branch, visit, nowDateTime);
         }
         storeKey(requestKey, visit);
 
         appointments.save(appointment);
 
         Long actorId = access.require(session).user().getUserId();
-        if (queueCoordinator != null && visit.getPrimaryDoctor() != null) {
+        if (queueCoordinator != null) {
             queueCoordinator.issueTicketForVisitIfEligible(visit.getVisitId(), actorId);
         }
         boolean arrivedEarly = appointment.getExpectedTime() != null
@@ -317,21 +315,19 @@ public class ReceptionService {
             visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] · " + visit.getNotes());
         }
         visits.saveAndFlush(visit);
-        if (appointment.getDoctor() != null) {
+        if (Boolean.TRUE.equals(appointment.getIsDoctorRequested()) && appointment.getDoctor() != null) {
             visit.setPrimaryDoctor(appointment.getDoctor());
             visits.saveAndFlush(visit);
             if (examinations != null) {
                 examinations.ensureForAssignedVisit(visit.getVisitId());
             }
-        } else {
-            autoAssignDoctorOnCheckIn(branch, visit, nowDateTime);
         }
         storeKey(requestKey, visit);
 
         appointments.save(appointment);
 
         Long confirmActorId = access.require(session).user().getUserId();
-        if (queueCoordinator != null && visit.getPrimaryDoctor() != null) {
+        if (queueCoordinator != null) {
             queueCoordinator.issueTicketForVisitIfEligible(visit.getVisitId(), confirmActorId);
         }
 
@@ -465,11 +461,10 @@ public class ReceptionService {
             visit.setNotes(visit.getNotes() == null ? "[ƯU TIÊN]" : "[ƯU TIÊN] " + visit.getNotes());
         }
         visits.saveAndFlush(visit);
-        autoAssignDoctorOnCheckIn(branch, visit, nowDateTime);
         storeKey(requestKey, visit);
 
         Long walkInActorId = access.require(session).user().getUserId();
-        if (queueCoordinator != null && visit.getPrimaryDoctor() != null) {
+        if (queueCoordinator != null) {
             queueCoordinator.issueTicketForVisitIfEligible(visit.getVisitId(), walkInActorId);
         }
 

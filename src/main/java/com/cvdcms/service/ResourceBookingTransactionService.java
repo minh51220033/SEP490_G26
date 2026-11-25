@@ -364,6 +364,7 @@ public class ResourceBookingTransactionService {
         }
 
         targetAppointment.setDoctor(allocation.doctor());
+        targetAppointment.setIsDoctorRequested(!request.allowDoctorAutoAssign());
         targetAppointment.setService(service);
         targetAppointment.setAppointmentDate(workDate);
         targetAppointment.setExpectedTime(startTime);
@@ -1018,6 +1019,7 @@ public class ResourceBookingTransactionService {
         }
 
         appt.setDoctor(allocation.doctor());
+        appt.setIsDoctorRequested(!request.allowDoctorAutoAssign());
         appt.setService(service);
         appt.setAppointmentDate(newDate);
         appt.setExpectedTime(newStart);
