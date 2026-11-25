@@ -373,7 +373,7 @@ public class StaffScheduleController {
             } else {
                 ra.addFlashAttribute("successMessage", "Đã gỡ nhân viên khỏi ca trực.");
             }
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             ra.addFlashAttribute("errorMessage", e.getMessage());
         }
         return redirectWeek(branchId, week);
@@ -404,6 +404,7 @@ public class StaffScheduleController {
             @RequestParam Long branchId,
             @RequestParam Long shiftId,
             @RequestParam Long roomId,
+            @RequestParam(required = false) Long chairId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate workDate,
             @RequestParam(name = "staffIds", required = false) List<Long> staffIds,
             @RequestParam(required = false, defaultValue = "CO_ATTENDING") DoctorShiftAssignmentRole role,
@@ -420,7 +421,7 @@ public class StaffScheduleController {
                 throw new IllegalStateException("Dịch vụ phân công bác sĩ theo phòng chưa sẵn sàng.");
             }
             List<DoctorShiftAssignment> created = doctorShiftAssignmentService.assignDoctorsToRoom(
-                    branchId, workDate, shiftId, roomId, staffIds, role, note, user != null ? user.getUserId() : null);
+                    branchId, workDate, shiftId, roomId, chairId, staffIds, role, note, user != null ? user.getUserId() : null);
             ra.addFlashAttribute("successMessage", "Đã phân công " + created.size() + " bác sĩ vào phòng trực.");
         } catch (IllegalArgumentException | IllegalStateException ex) {
             ra.addFlashAttribute("errorMessage", ex.getMessage());

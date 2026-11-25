@@ -255,6 +255,10 @@
                                                       th:title="${dsa.staff.staffCode + (dsa.staff.specialty != null ? ' · ' + dsa.staff.specialty : '')}">
                                                     BS A
                                                 </span>
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle"
+                                                      th:if="${dsa.chair != null}"
+                                                      th:title="${'Ghế cố định: ' + dsa.chair.chairName}"
+                                                      th:text="${dsa.chair.chairCode}">G101-01</span>
                                                 <span class="badge bg-warning-subtle text-dark"
                                                       th:if="${#strings.toString(dsa.status) == 'ON_LEAVE'}">Nghỉ</span>
                                                 <span class="badge bg-secondary-subtle text-dark"
@@ -435,7 +439,12 @@
                                                 </button>
                                             </div>
                                             <div th:each="dsa : ${roomEntry.value}" class="schedule-doc-row">
-                                                <span th:text="${dsa.staff.fullName}">BS A</span>
+                                                <span class="d-flex align-items-center gap-1 flex-wrap">
+                                                    <span th:text="${dsa.staff.fullName}">BS A</span>
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle"
+                                                          th:if="${dsa.chair != null}"
+                                                          th:text="${dsa.chair.chairCode}">G101-01</span>
+                                                </span>
                                                 <span class="badge bg-light text-dark border" th:text="${dsa.status}">ACTIVE</span>
                                             </div>
                                         </div>
@@ -494,7 +503,7 @@
                         <div id="docAssignChairList" class="d-flex flex-wrap gap-1 small"></div>
                     </div>
                     <label for="docAssignChairSelect" class="form-label small fw-semibold">Gán ghế phụ trách (tùy chọn)</label>
-                    <select id="docAssignChairSelect" class="form-select form-select-sm">
+                    <select id="docAssignChairSelect" name="chairId" class="form-select form-select-sm">
                         <option value="">-- Linh hoạt mọi ghế trong phòng --</option>
                     </select>
                 </div>
@@ -739,7 +748,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
+<script th:inline="javascript">
     function handleConfirmRemove(form) {
         var name = form.getAttribute('data-staff-name') || 'nhân viên này';
         var isCheckedIn = form.getAttribute('data-checked-in') === 'true';
@@ -801,7 +810,7 @@
             }
             selEl.innerHTML = '<option value="">-- Linh hoạt mọi ghế trong phòng --</option>'
                 + activeChairs.map(function (c) {
-                    return '<option value="' + (c.chairCode || c.chairName) + '">' + (c.chairName || c.chairCode) + ' (' + c.chairCode + ')</option>';
+                    return '<option value="' + c.chairId + '">' + (c.chairName || c.chairCode) + ' (' + c.chairCode + ')</option>';
                 }).join('');
         }
 
@@ -827,19 +836,6 @@
                     cb.checked = false;
                 });
             });
-            var docRoomForm = docRoomModal.closest('form') || docRoomModal.querySelector('form');
-            if (docRoomForm) {
-                docRoomForm.addEventListener('submit', function () {
-                    var selChair = document.getElementById('docAssignChairSelect');
-                    var noteInput = document.getElementById('docAssignNote');
-                    if (selChair && selChair.value && noteInput) {
-                        var prefix = '[Ghế ' + selChair.value + ']';
-                        if (!noteInput.value.includes(prefix)) {
-                            noteInput.value = noteInput.value.trim() ? (prefix + ' ' + noteInput.value.trim()) : prefix;
-                        }
-                    }
-                });
-            }
         }
 
         document.querySelectorAll('.js-open-move-room').forEach(function (btn) {

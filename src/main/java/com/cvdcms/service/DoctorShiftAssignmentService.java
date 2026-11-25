@@ -38,6 +38,9 @@ public class DoctorShiftAssignmentService {
     private final SystemAuditLogRepository systemAuditLogRepository;
     private final AppointmentHistoryRepository appointmentHistoryRepository;
 
+    @Autowired(required = false)
+    private DentalChairRepository dentalChairRepository;
+
     @Autowired
     public DoctorShiftAssignmentService(
             DoctorShiftAssignmentRepository shiftAssignmentRepository,
@@ -127,7 +130,21 @@ public class DoctorShiftAssignmentService {
             DoctorShiftAssignmentRole role,
             String note,
             Long actorUserId) {
-        return assignDoctorsToRoom(branchId, workDate, shiftId, roomId, rawStaffIds, role, note, actorUserId);
+        return assignDoctorsToRoom(branchId, workDate, shiftId, roomId, null, rawStaffIds, role, note, actorUserId);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
+    public List<DoctorShiftAssignment> assignDoctorsToRoomIsolated(
+            Long branchId,
+            LocalDate workDate,
+            Long shiftId,
+            Long roomId,
+            Long chairId,
+            List<Long> rawStaffIds,
+            DoctorShiftAssignmentRole role,
+            String note,
+            Long actorUserId) {
+        return assignDoctorsToRoom(branchId, workDate, shiftId, roomId, chairId, rawStaffIds, role, note, actorUserId);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -136,6 +153,20 @@ public class DoctorShiftAssignmentService {
             LocalDate workDate,
             Long shiftId,
             Long roomId,
+            List<Long> rawStaffIds,
+            DoctorShiftAssignmentRole role,
+            String note,
+            Long actorUserId) {
+        return assignDoctorsToRoom(branchId, workDate, shiftId, roomId, null, rawStaffIds, role, note, actorUserId);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public List<DoctorShiftAssignment> assignDoctorsToRoom(
+            Long branchId,
+            LocalDate workDate,
+            Long shiftId,
+            Long roomId,
+            Long chairId,
             List<Long> rawStaffIds,
             DoctorShiftAssignmentRole role,
             String note,
@@ -155,6 +186,9 @@ public class DoctorShiftAssignmentService {
                 .toList();
         if (sortedStaffIds.isEmpty()) {
             throw new IllegalArgumentException("Vui lòng chọn ít nhất một bác sĩ.");
+        }
+        if (chairId != null && sortedStaffIds.size() > 1) {
+            throw new IllegalArgumentException("Mỗi ghế khám cố định trong ca chỉ gán cho một bác sĩ. Vui lòng chọn 1 bác sĩ hoặc để 'Linh hoạt mọi ghế trong phòng'.");
         }
 
         // Global Lock Ordering: Branch(3) -> StaffProfile(4, staff_id ASC) -> StaffSchedule/DoctorShiftAssignment(5) -> Room(6)
@@ -183,6 +217,19 @@ public class DoctorShiftAssignmentService {
             throw new IllegalArgumentException("Chỉ được phân công vào phòng đang ở trạng thái ACTIVE.");
         }
 
+        DentalChair assignedChair = null;
+        if (chairId != null && dentalChairRepository != null) {
+            assignedChair = dentalChairRepository.findById(chairId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ghế khám đã chọn."));
+            if (assignedChair.getBranch() == null || !Objects.equals(branchId, assignedChair.getBranch().getBranchId())
+                    || assignedChair.getRoom() == null || !Objects.equals(roomId, assignedChair.getRoom().getRoomId())) {
+                throw new IllegalArgumentException("Ghế khám đã chọn không thuộc phòng " + room.getRoomCode() + ".");
+            }
+            if (assignedChair.getStatus() == ChairStatus.MAINTENANCE || assignedChair.getStatus() == ChairStatus.INACTIVE) {
+                throw new IllegalArgumentException("Ghế " + assignedChair.getChairCode() + " đang bảo trì hoặc không hoạt động, không thể gán trực.");
+            }
+        }
+
         User actor = actorUserId != null ? userRepository.findById(actorUserId).orElse(null) : null;
         DoctorShiftAssignmentRole effectiveRole = (role != null && role != DoctorShiftAssignmentRole.REPLACEMENT)
                 ? role : DoctorShiftAssignmentRole.CO_ATTENDING;
@@ -203,6 +250,16 @@ public class DoctorShiftAssignmentService {
             if (alreadyInRoom) {
                 throw new IllegalArgumentException("Bác sĩ " + doctor.getFullName() + " đã được phân công vào phòng " + room.getRoomCode() + " trong ca này.");
             }
+            if (assignedChair != null) {
+                Long targetChairId = assignedChair.getChairId();
+                Optional<DoctorShiftAssignment> chairConflict = existingAtSameRoom.stream()
+                        .filter(d -> d.getChair() != null && Objects.equals(targetChairId, d.getChair().getChairId()))
+                        .findFirst();
+                if (chairConflict.isPresent()) {
+                    String otherDoc = chairConflict.get().getStaff() != null ? chairConflict.get().getStaff().getFullName() : "bác sĩ khác";
+                    throw new IllegalArgumentException("Ghế " + assignedChair.getChairCode() + " đã được gán cho " + otherDoc + " trong ca này.");
+                }
+            }
 
             DoctorShiftAssignment assignment = new DoctorShiftAssignment();
             assignment.setStaffSchedule(schedule);
@@ -210,6 +267,7 @@ public class DoctorShiftAssignmentService {
             assignment.setWorkDate(workDate);
             assignment.setShift(shift);
             assignment.setRoom(room);
+            assignment.setChair(assignedChair);
             assignment.setStaff(doctor);
             assignment.setAssignmentRole(effectiveRole);
             assignment.setStatus(DoctorShiftAssignmentStatus.ACTIVE);
@@ -600,6 +658,7 @@ public class DoctorShiftAssignmentService {
         replacement.setWorkDate(workDate);
         replacement.setShift(shift);
         replacement.setRoom(room);
+        replacement.setChair(original.getChair());
         replacement.setStaff(newDoctor);
         replacement.setAssignmentRole(DoctorShiftAssignmentRole.REPLACEMENT);
         replacement.setStatus(DoctorShiftAssignmentStatus.ACTIVE);
