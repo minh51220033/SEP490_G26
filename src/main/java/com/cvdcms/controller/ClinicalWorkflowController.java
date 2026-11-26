@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import org.springframework.web.bind.annotation.RequestParam;
@@ -90,6 +91,41 @@ public class ClinicalWorkflowController {
         model.addAttribute("canManageWorkflowTemplates", resolveCanManageTemplates(session));
         model.addAttribute("activeMenu", "workflows");
         return "doctor/workflows";
+    }
+
+    @GetMapping("/create")
+    public String createWorkflowPage(jakarta.servlet.http.HttpSession session, Model model) {
+        model.addAttribute("isEditMode", false);
+        model.addAttribute("workflow", null);
+        model.addAttribute("activeServices", performedServiceService.getAllActiveServices());
+        model.addAttribute("frameCustomFields", workflowService.getAllFrameCustomFields());
+        model.addAttribute("canManageWorkflowTemplates", resolveCanManageTemplates(session));
+        model.addAttribute("activeMenu", "workflows");
+        return "doctor/workflow-form";
+    }
+
+    @GetMapping("/{id}/edit")
+    public String editWorkflowPage(
+            @PathVariable("id") Long id,
+            jakarta.servlet.http.HttpSession session,
+            Model model) {
+        WorkflowTemplateResponseDTO workflow;
+        try {
+            workflow = workflowService.getTemplateById(id);
+        } catch (Exception ex) {
+            log.warn("Không tìm thấy mẫu quy trình {}: {}", id, ex.getMessage());
+            return "redirect:/doctor/workflows";
+        }
+        if (workflow == null) {
+            return "redirect:/doctor/workflows";
+        }
+        model.addAttribute("isEditMode", true);
+        model.addAttribute("workflow", workflow);
+        model.addAttribute("activeServices", performedServiceService.getAllActiveServices());
+        model.addAttribute("frameCustomFields", workflowService.getAllFrameCustomFields());
+        model.addAttribute("canManageWorkflowTemplates", resolveCanManageTemplates(session));
+        model.addAttribute("activeMenu", "workflows");
+        return "doctor/workflow-form";
     }
 
     private boolean resolveCanManageTemplates(jakarta.servlet.http.HttpSession session) {

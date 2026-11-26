@@ -349,12 +349,12 @@ function renderPlanInlineRoadmapHtml(plan, options = {}) {
                                 </span>
                             `;
                             actionBtnHtml = `
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 fw-semibold d-inline-flex align-items-center gap-1"
-                                        style="font-size: 12px;"
-                                        title="Hoàn tác lại bước này (Chuyển về Chưa làm)"
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle d-inline-flex align-items-center justify-content-center p-0"
+                                        style="width: 34px; height: 34px;"
+                                        title="Hoàn tác lại hạng mục này (Chuyển về Chưa làm)"
+                                        aria-label="Hoàn tác"
                                         onclick="revertPlanItemStatus(${it.planItemId})">
-                                    <i class="bi bi-arrow-counterclockwise text-primary fw-bold" style="font-size: 13px;"></i>
-                                    <span>Hoàn tác</span>
+                                    <i class="bi bi-arrow-counterclockwise text-primary fw-bold" style="font-size: 14px;"></i>
                                 </button>
                             `;
                         } else {
@@ -372,20 +372,20 @@ function renderPlanInlineRoadmapHtml(plan, options = {}) {
                                     </span>
                                 `;
                             actionBtnHtml = `
-                                <div class="d-inline-flex flex-wrap justify-content-center gap-1">
-                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 fw-semibold d-inline-flex align-items-center gap-1"
-                                            style="font-size: 12px;"
-                                            title="Mở tab Quy trình thực hiện để khám &amp; cập nhật theo từng bước"
+                                <div class="d-inline-flex align-items-center justify-content-center gap-2 text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-circle d-inline-flex align-items-center justify-content-center p-0"
+                                            style="width: 34px; height: 34px;"
+                                            title="${isInProg ? 'Tiếp tục thực hiện theo từng bước' : 'Thực hiện theo từng bước quy trình'}"
+                                            aria-label="${isInProg ? 'Tiếp tục bước' : 'Theo bước'}"
                                             onclick="startPlanItemWorkflow(${it.planItemId}, ${it.serviceId}, ${st.stageId ? Number(st.stageId) : 'null'})">
-                                        <i class="bi bi-list-check"></i>
-                                        <span>${isInProg ? 'Tiếp tục bước' : 'Theo bước'}</span>
+                                        <i class="bi bi-list-check" style="font-size: 15px;"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm df-btn-tonal-primary rounded-pill px-2 py-1 fw-semibold d-inline-flex align-items-center gap-1"
-                                            style="font-size: 12px;"
-                                            title="Ghi nhận hoàn tất nhanh dịch vụ này vào Dịch vụ thực hiện (FT16)"
+                                    <button type="button" class="btn btn-sm df-btn-tonal-primary rounded-circle d-inline-flex align-items-center justify-content-center p-0"
+                                            style="width: 34px; height: 34px;"
+                                            title="Làm nhanh (hoàn tất ngay dịch vụ này)"
+                                            aria-label="Làm nhanh"
                                             onclick="executePlanItemDirectly(${it.planItemId})">
-                                        <i class="bi bi-lightning-charge-fill"></i>
-                                        <span>Làm nhanh</span>
+                                        <i class="bi bi-lightning-charge-fill" style="font-size: 14px;"></i>
                                     </button>
                                 </div>
                             `;
@@ -395,8 +395,13 @@ function renderPlanInlineRoadmapHtml(plan, options = {}) {
                             ? Number(window.BOOKED_SERVICE.serviceId)
                             : null;
                         const isBookedItem = Boolean(bookedSrvId && it.serviceId && Number(it.serviceId) === bookedSrvId);
+                        const isApprovedOrActivePlan = Boolean(plan && (plan.status === 'APPROVED' || plan.status === 'IN_PROGRESS'));
+                        const stageHasBookedItem = Boolean(bookedSrvId && Array.isArray(st.items)
+                            && st.items.some(sib => sib && sib.serviceId && Number(sib.serviceId) === bookedSrvId));
                         const isDeferredHint = Boolean(bookedSrvId && it.serviceId && Number(it.serviceId) !== bookedSrvId
-                            && !isComp && !isInProg && Number(window.DESK_WAITING_COUNT || 0) > 0);
+                            && !isComp && !isInProg && st.status !== 'IN_PROGRESS'
+                            && !isApprovedOrActivePlan && !stageHasBookedItem
+                            && Number(window.DESK_WAITING_COUNT || 0) > 0);
                         const bookedBadgeHtml = isBookedItem
                             ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size: 10.5px;"><i class="bi bi-lock-fill me-1"></i>Đã đặt lịch</span>'
                             : (isDeferredHint
@@ -458,12 +463,12 @@ function renderPlanInlineRoadmapHtml(plan, options = {}) {
                                 <thead>
                                     <tr>
                                         <th style="width: 45px;" class="text-center">#</th>
-                                        <th>Tên bước thực hiện / Quy trình thủ thuật</th>
+                                        <th>Dịch vụ / Thủ thuật điều trị</th>
                                         <th style="width: 110px;" class="text-center">Vị trí răng</th>
                                         <th style="width: 95px;" class="text-center">Số lượng</th>
                                         <th style="width: 165px;" class="text-center">Ngày thực hiện</th>
                                         <th style="width: 130px;" class="text-center">Trạng thái</th>
-                                        <th style="width: 140px;" class="text-center">Thao tác</th>
+                                        <th style="width: 105px;" class="text-center">Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody id="stage-items-body-${st.stageId}">
@@ -537,7 +542,7 @@ function renderPlanInlineRoadmapHtml(plan, options = {}) {
                         <strong>${plan.expectedEndDate || '---'}</strong>
                     </span>
                     <span class="badge bg-light text-primary border px-2 py-1 rounded-pill fw-bold df-num" id="plan-progress-badge-${plan.planId}">
-                        ${plan.totalItems ? `${plan.completedItems}/${plan.totalItems} bước (${plan.progressPercent}%)` : `${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)`}
+                        ${plan.totalItems ? `${plan.completedItems}/${plan.totalItems} hạng mục (${plan.progressPercent}%)` : `${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)`}
                     </span>
                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1 ms-1"
                             onclick="toggleAllCoursesInPlan(${plan.planId})"
@@ -797,7 +802,7 @@ function renderTreatmentPlanDetailHtml(plan) {
     const courses = groupStagesIntoCourses(plan.stages || [], plan);
     const pct = Number(plan.progressPercent || 0);
     const progressText = (plan.totalItems && plan.totalItems > 0)
-        ? `${plan.completedItems || 0}/${plan.totalItems} bước (${pct}%)`
+        ? `${plan.completedItems || 0}/${plan.totalItems} hạng mục (${pct}%)`
         : `${plan.completedStages || 0}/${plan.totalStages || 0} giai đoạn (${pct}%)`;
 
     const statusBadgeClass = plan.statusBadgeClass || 'bg-light text-secondary border';
@@ -1008,7 +1013,7 @@ function updatePlanInlineView(plan) {
         const progBadge = document.getElementById(`plan-progress-badge-${plan.planId}`);
         if (progBadge) {
             progBadge.innerText = (plan.totalItems && plan.totalItems > 0)
-                ? `${plan.completedItems}/${plan.totalItems} bước (${plan.progressPercent}%)`
+                ? `${plan.completedItems}/${plan.totalItems} hạng mục (${plan.progressPercent}%)`
                 : `${plan.completedStages}/${plan.totalStages} giai đoạn (${plan.progressPercent}%)`;
         }
         const progPercent = document.getElementById(`plan-progress-bar-${plan.planId}`);
@@ -1023,7 +1028,7 @@ function updatePlanInlineView(plan) {
         const stageCountText = document.getElementById(`plan-stages-text-${plan.planId}`);
         if (stageCountText) {
             stageCountText.innerText = (plan.totalItems && plan.totalItems > 0)
-                ? `${plan.completedItems}/${plan.totalItems} bước`
+                ? `${plan.completedItems}/${plan.totalItems} hạng mục`
                 : `${plan.completedStages}/${plan.totalStages} giai đoạn`;
         }
 
