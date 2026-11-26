@@ -915,13 +915,33 @@ public class DoctorVisitAccess {
                     return;
                 }
                 var stage = it.getStage();
-                if (stage != null && stage.getStageId() != null && workflowExecutions != null) {
-                    final Long resolvedSid = targetServiceId;
-                    boolean stageHasOpenExec = workflowExecutions.findByPlanStage_StageId(stage.getStageId()).stream()
-                            .anyMatch(ex -> (ex.getStatus() == com.cvdcms.entity.enums.WorkflowExecutionStatus.IN_PROGRESS
-                                    || ex.getStatus() == com.cvdcms.entity.enums.WorkflowExecutionStatus.PAUSED)
-                                    && (resolvedSid == null || resolvedSid.equals(serviceIdOfExecution(ex))));
-                    if (stageHasOpenExec) {
+                if (stage != null) {
+                    if (stage.getStageId() != null && workflowExecutions != null) {
+                        final Long resolvedSid = targetServiceId;
+                        boolean stageHasOpenExec = workflowExecutions.findByPlanStage_StageId(stage.getStageId()).stream()
+                                .anyMatch(ex -> (ex.getStatus() == com.cvdcms.entity.enums.WorkflowExecutionStatus.IN_PROGRESS
+                                        || ex.getStatus() == com.cvdcms.entity.enums.WorkflowExecutionStatus.PAUSED)
+                                        && (resolvedSid == null || resolvedSid.equals(serviceIdOfExecution(ex))));
+                        if (stageHasOpenExec) {
+                            return;
+                        }
+                    }
+                    if (stage.getStatus() == com.cvdcms.entity.enums.TreatmentPlanStageStatus.IN_PROGRESS) {
+                        return;
+                    }
+                    if (bookedServiceId != null && stage.getItems() != null && stage.getItems().stream()
+                            .anyMatch(sib -> sib.getService() != null && bookedServiceId.equals(sib.getService().getServiceId()))) {
+                        return;
+                    }
+                }
+                var plan = it.getPlan();
+                if (plan != null) {
+                    if (plan.getStatus() == com.cvdcms.entity.enums.TreatmentPlanStatus.ACCEPTED
+                            || plan.getStatus() == com.cvdcms.entity.enums.TreatmentPlanStatus.IN_PROGRESS) {
+                        return;
+                    }
+                    if (plan.getCreatedAt() != null && visit.getCheckInAt() != null
+                            && plan.getCreatedAt().isBefore(visit.getCheckInAt())) {
                         return;
                     }
                 }

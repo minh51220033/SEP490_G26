@@ -40,6 +40,12 @@ public interface AppointmentPolicyService {
                         PreferredSession session, Long doctorId, Long excludeAppointmentId,
                         AppointmentActorType actorType);
 
+    default void ensureBookable(Branch branch, PatientProfile profile, LocalDate date,
+                                PreferredSession session, Long doctorId, Long excludeAppointmentId,
+                                AppointmentActorType actorType, boolean allowCapacityOverlap) {
+        ensureBookable(branch, profile, date, session, doctorId, excludeAppointmentId, actorType);
+    }
+
     List<DoctorOption> doctorsForDate(Branch branch, LocalDate date, AppointmentActorType actorType);
 
     boolean doctorAvailable(Branch branch, LocalDate date, PreferredSession session, Long doctorId);

@@ -1,5 +1,7 @@
 package com.cvdcms.entity;
 
+import java.time.LocalDateTime;
+
 import com.cvdcms.entity.enums.ChairStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -41,6 +43,11 @@ public class DentalChair {
     @Column(name = "status", nullable = false, length = 20)
     private ChairStatus status = ChairStatus.AVAILABLE;
 
+    @Column(name = "turnover_started_at")
+    private LocalDateTime turnoverStartedAt;
+
+    @Column(name = "turnover_duration_minutes")
+    private Integer turnoverDurationMinutes;
     /**
      * Converts chair status safely, mapping legacy CLEANING rows in DB to AVAILABLE.
      */

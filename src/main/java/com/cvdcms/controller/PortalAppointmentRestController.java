@@ -51,8 +51,22 @@ public class PortalAppointmentRestController {
             @RequestParam(required = false) PreferredSession sessionPeriod,
             @RequestParam(required = false) Long doctorId,
             @RequestParam(required = false) Long serviceId,
+            @RequestParam(required = false) Long excludeAppointmentId,
+            @RequestParam(defaultValue = "false") boolean includeOverlap) {
+        return appointments.slots(session, branchId, date, sessionPeriod, doctorId, serviceId, excludeAppointmentId, includeOverlap);
+    }
+
+    @GetMapping("/overlap-check")
+    public com.cvdcms.service.AppointmentOverlapService.OverlapCheckResult overlapCheck(
+            HttpSession session,
+            @RequestParam Long branchId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam PreferredSession sessionPeriod,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) java.time.LocalTime expectedTime,
+            @RequestParam(required = false) Long doctorId,
+            @RequestParam(required = false) Long serviceId,
             @RequestParam(required = false) Long excludeAppointmentId) {
-        return appointments.slots(session, branchId, date, sessionPeriod, doctorId, serviceId, excludeAppointmentId);
+        return appointments.overlapCheck(session, branchId, date, sessionPeriod, expectedTime, doctorId, serviceId, excludeAppointmentId);
     }
 
     @GetMapping("/doctor-availability")
