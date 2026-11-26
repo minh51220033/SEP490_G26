@@ -77,6 +77,9 @@ public class ReceptionService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private StaffProfileRepository staffProfiles;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private OverdueVisitCleanupService overdueVisitCleanupService;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -858,6 +861,9 @@ public class ReceptionService {
         LocalDate today = today();
         LocalDateTime startOfToday = today.atStartOfDay();
         LocalDateTime endOfToday = today.plusDays(1).atStartOfDay();
+        if (overdueVisitCleanupService != null && patient != null && patient.getProfileId() != null) {
+            overdueVisitCleanupService.closeOverdueVisitsForPatient(patient.getProfileId(), LocalDateTime.now(clock));
+        }
         var allActive = visits.activeForProfile(patient.getProfileId(), ReceptionTransitionPolicy.activeVisits());
         var activeToday = allActive.stream()
                 .filter(v -> v.getCheckInAt() == null || (!v.getCheckInAt().isBefore(startOfToday) && v.getCheckInAt().isBefore(endOfToday)))
@@ -866,7 +872,10 @@ public class ReceptionService {
             throw error(HttpStatus.CONFLICT, "Bệnh nhân đã có lượt khám đang hoạt động: " + activeToday.get(0).getVisitCode());
         }
         for (Visit past : allActive) {
-            if (past.getCheckInAt() != null && past.getCheckInAt().isBefore(startOfToday) && past.getStatus() == VisitStatus.WAITING) {
+            if (past.getCheckInAt() != null && past.getCheckInAt().isBefore(startOfToday)
+                    && past.getStatus() != VisitStatus.WAITING_PAYMENT
+                    && past.getStatus() != VisitStatus.COMPLETED
+                    && past.getStatus() != VisitStatus.CANCELLED) {
                 past.setStatus(VisitStatus.CANCELLED);
                 past.setNotes((past.getNotes() != null ? past.getNotes() + " | " : "") + "Tự động đóng lượt khám chưa hoàn tất từ ngày trước (" + past.getCheckInAt().toLocalDate() + ")");
                 visits.save(past);

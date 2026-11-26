@@ -45,7 +45,7 @@ public class DoctorServicePermission {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private DoctorServicePermissionStatus status = DoctorServicePermissionStatus.PENDING_REVIEW;
+    private DoctorServicePermissionStatus status = DoctorServicePermissionStatus.ACTIVE;
 
     @Column(name = "note", length = 255)
     private String note;

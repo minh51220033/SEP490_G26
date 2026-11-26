@@ -180,7 +180,7 @@ class Phase1AdminUiAndSecurityE2EIntegrationTest {
                 .andExpect(content().string(containsString("pane-resource-perms")))
                 .andExpect(content().string(containsString("BS E2E")));
 
-        // 2. Tạo master data qua API (mặc định PENDING_VERIFICATION / PENDING_REVIEW) -> xác nhận DB & GET reload
+        // 2. Tạo master data qua API -> xác nhận DB & GET reload
         mockMvc.perform(post("/admin/api/resources/branches/" + b1.getBranchId() + "/transition-rules")
                         .session(adminSession).with(csrf())
                         .param("ruleScope", "SPECIFIC_PAIR")
@@ -213,31 +213,26 @@ class Phase1AdminUiAndSecurityE2EIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
 
-        // 3. Phân công BS-Phòng & BS-Dịch vụ -> PENDING_REVIEW -> Duyệt thủ công -> ACTIVE
+        // 3. Phân công BS-Phòng -> mặc định ACTIVE ngay khi Admin cấp quyền
         mockMvc.perform(post("/admin/api/resources/branches/" + b1.getBranchId() + "/doctors/" + doc.getStaffId() + "/rooms")
                         .session(adminSession).with(csrf())
                         .param("roomId", r1.getRoomId().toString()))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("PENDING_REVIEW"));
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
 
         Long roomAssignId = roomAssignmentRepository
                 .findByBranchBranchIdAndStaffStaffIdOrderByAssignmentIdAsc(b1.getBranchId(), doc.getStaffId())
                 .get(0).getAssignmentId();
 
-        // Non-ADMIN không được phép duyệt hoặc gọi API ngoài phạm vi chi nhánh
-        mockMvc.perform(post("/admin/api/resources/doctors/room-assignments/" + roomAssignId + "/approve")
+        // Non-ADMIN không được phép thu hồi hoặc gọi API ngoài phạm vi chi nhánh
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .delete("/admin/api/resources/doctors/room-assignments/" + roomAssignId)
                         .session(nonAdminSession).with(csrf()))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(get("/admin/api/resources/branches/" + b2.getBranchId() + "/equipments")
                         .session(nonAdminSession))
                 .andExpect(status().isForbidden());
-
-        // ADMIN duyệt thủ công -> ACTIVE
-        mockMvc.perform(post("/admin/api/resources/doctors/room-assignments/" + roomAssignId + "/approve")
-                        .session(adminSession).with(csrf()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ACTIVE"));
 
         // 4. Dropdown APIs + Duplicate rejection (409) + Revoke (DELETE -> INACTIVE)
         mockMvc.perform(get("/admin/api/resources/branches/" + b1.getBranchId() + "/rooms")

@@ -82,6 +82,9 @@ public class ClinicQueueCoordinatorService {
     @Autowired(required = false)
     private DoctorShiftAssignmentRepository doctorShiftAssignments;
 
+    @Autowired(required = false)
+    private OverdueVisitCleanupService overdueVisitCleanupService;
+
     private Clock clock = Clock.system(CLINIC_ZONE);
 
     public void setClock(Clock clock) {
@@ -368,6 +371,13 @@ public class ClinicQueueCoordinatorService {
      */
     @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     public void reconcileTodayWaitingQueuesOnStartup() {
+        if (overdueVisitCleanupService != null) {
+            try {
+                overdueVisitCleanupService.closeOverdueVisits(LocalDateTime.now(CLINIC_ZONE));
+            } catch (Exception ex) {
+                log.warn("Không thể tự động đóng ca khám quá hạn khi khởi động: {}", ex.getMessage());
+            }
+        }
         if (transactionManager == null) {
             return;
         }

@@ -48,6 +48,9 @@ public class StaffScheduleController {
     @Autowired(required = false)
     private com.cvdcms.repository.DentalChairRepository dentalChairRepository;
 
+    @Autowired(required = false)
+    private com.cvdcms.repository.DoctorRoomAssignmentRepository doctorRoomAssignmentRepository;
+
     public StaffScheduleController(StaffScheduleService scheduleService, BranchService branchService, com.cvdcms.repository.UserRepository userRepository, com.cvdcms.repository.AttendanceRecordRepository attendanceRepository) {
         this.scheduleService = scheduleService;
         this.branchService = branchService;
@@ -210,6 +213,30 @@ public class StaffScheduleController {
             for (StaffProfile d : branchDoctors) {
                 doctorStaffIds.add(d.getStaffId());
             }
+
+            Map<Long, List<Map<String, Object>>> roomDoctorsMap = new LinkedHashMap<>();
+            if (doctorRoomAssignmentRepository != null) {
+                for (Room rm : activeRooms) {
+                    List<Map<String, Object>> docs = new ArrayList<>();
+                    for (com.cvdcms.entity.DoctorRoomAssignment dra : doctorRoomAssignmentRepository
+                            .findByRoomRoomIdAndStatus(rm.getRoomId(), com.cvdcms.entity.enums.DoctorAssignmentStatus.ACTIVE)) {
+                        if (dra.getStaff() == null || dra.getStaff().getStaffId() == null) continue;
+                        Long sid = dra.getStaff().getStaffId();
+                        if (!doctorStaffIds.contains(sid)) continue;
+                        Map<String, Object> entry = new LinkedHashMap<>();
+                        entry.put("staffId", sid);
+                        entry.put("effectiveFrom", dra.getEffectiveFrom() != null ? dra.getEffectiveFrom().toString() : null);
+                        entry.put("effectiveTo", dra.getEffectiveTo() != null ? dra.getEffectiveTo().toString() : null);
+                        docs.add(entry);
+                    }
+                    roomDoctorsMap.put(rm.getRoomId(), docs);
+                }
+            }
+            String roomDoctorsJson = "{}";
+            try {
+                roomDoctorsJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(roomDoctorsMap);
+            } catch (Exception ignored) {}
+            model.addAttribute("roomDoctorsJson", roomDoctorsJson);
 
             // Cấu trúc Chi nhánh -> Ngày -> Ca -> Phòng -> Danh sách bác sĩ
             List<DoctorShiftAssignment> weekDoctorAssignments = doctorShiftAssignmentService != null

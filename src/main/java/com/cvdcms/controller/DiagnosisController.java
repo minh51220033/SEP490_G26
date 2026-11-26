@@ -76,6 +76,8 @@ public class DiagnosisController {
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.OverdueVisitCleanupService overdueVisitCleanupService;
 
     public void setDoctorCoverGrantRepository(com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository) {
         this.doctorCoverGrantRepository = doctorCoverGrantRepository;
@@ -385,10 +387,16 @@ public class DiagnosisController {
                 ? staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null)
                 : null;
 
+        LocalDateTime nowClinic = LocalDateTime.now(com.cvdcms.service.ClinicQueueCoordinatorService.CLINIC_ZONE);
+        if (overdueVisitCleanupService != null) {
+            overdueVisitCleanupService.closeOverdueVisitsForPatient(patientId, nowClinic);
+        }
+        LocalDateTime startOfToday = nowClinic.toLocalDate().atStartOfDay();
+
         Optional<Visit> queuedVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(
                 patientId,
                 List.of(VisitStatus.WAITING, VisitStatus.WAITING_RESULT)
-        );
+        ).filter(v -> v.getCheckInAt() == null || !v.getCheckInAt().isBefore(startOfToday));
         if (queuedVisitOpt.isPresent()) {
             redirectAttributes.addFlashAttribute("errorMessage",
                     "Bệnh nhân đang có lượt chờ khám (" + queuedVisitOpt.get().getVisitCode()
@@ -400,7 +408,9 @@ public class DiagnosisController {
             Optional<Visit> activeVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(
                     patientId,
                     List.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT, VisitStatus.WAITING_PARACLINICAL, VisitStatus.WAITING_PAYMENT)
-            );
+            ).filter(v -> v.getStatus() == VisitStatus.WAITING_PAYMENT
+                    || v.getCheckInAt() == null
+                    || !v.getCheckInAt().isBefore(startOfToday));
             if (activeVisitOpt.isPresent()) {
                 Visit av = activeVisitOpt.get();
                 if (isAdmin || assignedBranch == null || (av.getBranch() != null && av.getBranch().getBranchId().equals(assignedBranch.getBranchId()))) {
