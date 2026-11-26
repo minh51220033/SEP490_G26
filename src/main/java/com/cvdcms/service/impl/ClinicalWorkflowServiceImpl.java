@@ -71,6 +71,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private InvoiceItemRepository invoiceItemRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.DoctorClinicalCapabilityService capabilityService;
+
     private final Map<String, List<WorkflowStepDTO.CustomFieldDTO>> inMemoryFrameFields = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static final DateTimeFormatter DT_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -547,6 +550,13 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             throw new IllegalStateException(lockReason);
         }
 
+        if (resolvedServiceId != null) {
+            var capCheck = checkServiceCapability(visit, resolvedServiceId, userId);
+            if (!capCheck.allowed()) {
+                throw new IllegalStateException(capCheck.message());
+            }
+        }
+
         ClinicalWorkflowTemplate template = resolvedServiceId != null
                 ? templateRepo.findFirstByService_ServiceIdAndStatus(resolvedServiceId, WorkflowTemplateStatus.ACTIVE)
                         .orElse(null)
@@ -779,6 +789,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                                         && !stage.getStageName().isBlank())
                                                 ? stage.getStageName() + " (" + openItems.size() + " bước)"
                                                 : rep.getStepName();
+                                var capOpt = checkServiceCapability(visit, sId, null);
                                 available.add(WorkflowVisitOverviewDTO.ServiceOption.builder()
                                         .serviceId(sId)
                                         .serviceCode(rep.getService().getServiceCode())
@@ -795,6 +806,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                                         .planName(plan.getPlanName())
                                         .stepName(displayStep)
                                         .toothNumbers(teeth)
+                                        .canPerform(capOpt.allowed())
+                                        .capabilityReason(capOpt.message())
+                                        .requiresHandover(!capOpt.allowed())
                                         .build());
                             }
                         }
@@ -808,6 +822,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 if (startedStandaloneServiceIds.contains(sId)) {
                     continue;
                 }
+                var capOpt = checkServiceCapability(visit, sId, null);
                 available.add(WorkflowVisitOverviewDTO.ServiceOption.builder()
                         .serviceId(sId)
                         .serviceCode(t.getService().getServiceCode())
@@ -818,6 +833,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                         .allowSameVisit(!Boolean.FALSE.equals(t.getService().getAllowSameVisit()))
                         .isParaclinical(Boolean.TRUE.equals(t.getService().getIsParaclinical()))
                         .suggested(performedServiceIds.contains(sId))
+                        .canPerform(capOpt.allowed())
+                        .capabilityReason(capOpt.message())
+                        .requiresHandover(!capOpt.allowed())
                         .build());
             }
             available.sort(Comparator
@@ -828,6 +846,17 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         }
 
         List<ServiceComboDTO> activeCombos = lockReason == null ? getAllCombos(true) : List.of();
+        if (!activeCombos.isEmpty()) {
+            for (ServiceComboDTO combo : activeCombos) {
+                if (combo.getItems() == null) continue;
+                for (ServiceComboDTO.ComboItemDTO ci : combo.getItems()) {
+                    if (ci.getServiceId() == null) continue;
+                    var capItem = checkServiceCapability(visit, ci.getServiceId(), null);
+                    ci.setCanPerform(capItem.allowed());
+                    ci.setCapabilityReason(capItem.message());
+                }
+            }
+        }
         if (bookedServiceId != null && !activeCombos.isEmpty()) {
             final Long reqSrvId = bookedServiceId;
             activeCombos = activeCombos.stream()
@@ -875,6 +904,16 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         String lockReason = lockReason(effectiveVisit);
         if (lockReason != null) {
             throw new IllegalStateException(lockReason);
+        }
+        Long execServiceId = execution.getVersion() != null && execution.getVersion().getTemplate() != null
+                && execution.getVersion().getTemplate().getService() != null
+                        ? execution.getVersion().getTemplate().getService().getServiceId()
+                        : null;
+        if (execServiceId != null) {
+            var capCheck = checkServiceCapability(effectiveVisit, execServiceId, userId);
+            if (!capCheck.allowed()) {
+                throw new IllegalStateException(capCheck.message());
+            }
         }
         execution = reconcileExecutionWithPlanItems(execution, effectiveVisit);
         if (execution.getStatus() == WorkflowExecutionStatus.COMPLETED) {
@@ -1072,6 +1111,16 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         if (lockReason != null) {
             throw new IllegalStateException(lockReason);
         }
+        Long execServiceId = execution.getVersion() != null && execution.getVersion().getTemplate() != null
+                && execution.getVersion().getTemplate().getService() != null
+                        ? execution.getVersion().getTemplate().getService().getServiceId()
+                        : null;
+        if (execServiceId != null) {
+            var capCheck = checkServiceCapability(effectiveVisit, execServiceId, userId);
+            if (!capCheck.allowed()) {
+                throw new IllegalStateException(capCheck.message());
+            }
+        }
         if (execution.getStatus() == WorkflowExecutionStatus.COMPLETED
                 || execution.getStatus() == WorkflowExecutionStatus.CANCELLED) {
             throw new IllegalStateException("Quy trình đã kết thúc, không thể chèn thêm bước.");
@@ -1177,6 +1226,16 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         if (lockReason != null) {
             throw new IllegalStateException(lockReason);
         }
+        Long execServiceId = execution.getVersion() != null && execution.getVersion().getTemplate() != null
+                && execution.getVersion().getTemplate().getService() != null
+                        ? execution.getVersion().getTemplate().getService().getServiceId()
+                        : null;
+        if (execServiceId != null) {
+            var capCheck = checkServiceCapability(effectiveVisit, execServiceId, userId);
+            if (!capCheck.allowed()) {
+                throw new IllegalStateException(capCheck.message());
+            }
+        }
 
         List<WorkflowStepExecution> all = new ArrayList<>(
                 stepExecutionRepo.findByExecution_ExecutionIdOrderByStep_SequenceOrderAsc(executionId));
@@ -1221,6 +1280,16 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         String lockReason = lockReason(effectiveVisit);
         if (lockReason != null) {
             throw new IllegalStateException(lockReason);
+        }
+        Long execServiceId = execution.getVersion() != null && execution.getVersion().getTemplate() != null
+                && execution.getVersion().getTemplate().getService() != null
+                        ? execution.getVersion().getTemplate().getService().getServiceId()
+                        : null;
+        if (execServiceId != null) {
+            var capCheck = checkServiceCapability(effectiveVisit, execServiceId, userId);
+            if (!capCheck.allowed()) {
+                throw new IllegalStateException(capCheck.message());
+            }
         }
 
         List<WorkflowStepExecution> all = stepExecutionRepo
@@ -2764,8 +2833,17 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             }
         }
 
+        Long execServiceId = template != null && template.getService() != null
+                ? template.getService().getServiceId()
+                : null;
+        var capExec = checkServiceCapability(effectiveVisit, execServiceId, null);
+        Long currentDoctorId = effectiveVisit != null && effectiveVisit.getPrimaryDoctor() != null
+                ? effectiveVisit.getPrimaryDoctor().getStaffId()
+                : null;
+
         String lockReason = lockReason(effectiveVisit);
         boolean actionable = lockReason == null
+                && capExec.allowed()
                 && (effectiveExecStatus == WorkflowExecutionStatus.IN_PROGRESS
                         || effectiveExecStatus == WorkflowExecutionStatus.PAUSED);
         boolean interruptible = version.getFlowMode() == FlowMode.INTERRUPTIBLE;
@@ -2827,6 +2905,12 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                             ? "Đã hoàn thành nhanh từ Kế hoạch điều trị"
                             : null);
 
+            Long stepStaffId = se.getAssignedStaff() != null ? se.getAssignedStaff().getStaffId() : null;
+            boolean readOnlyOther = (st == WorkflowStepExecutionStatus.COMPLETED || st == WorkflowStepExecutionStatus.SKIPPED)
+                    && stepStaffId != null
+                    && currentDoctorId != null
+                    && !Objects.equals(stepStaffId, currentDoctorId);
+
             stepDTOs.add(WorkflowStepDTO.builder()
                     .stepId(step.getStepId())
                     .sequenceOrder(orderNum)
@@ -2850,6 +2934,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     .resultNote(effResultNote)
                     .resultData(parsedData)
                     .staffName(se.getAssignedStaff() != null ? se.getAssignedStaff().getFullName() : null)
+                    .assignedStaffId(stepStaffId)
+                    .readOnlyByOtherDoctor(readOnlyOther)
                     .allowedActions(actions)
                     .build());
         }
@@ -2916,10 +3002,29 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .toothNumbers(toothNumbers)
                 .continuedFromOtherVisit(continued)
                 .canDelete(lockReason == null && canDeleteExecution(execution, stepExecutions))
+                .canCurrentDoctorPerform(capExec.allowed())
+                .capabilityReason(capExec.message())
+                .requiresHandover(!capExec.allowed())
                 .startedAt(execution.getStartedAt() != null ? execution.getStartedAt().format(DT_FORMAT) : null)
                 .completedAt(execution.getCompletedAt() != null ? execution.getCompletedAt().format(DT_FORMAT) : null)
                 .steps(stepDTOs)
                 .build();
+    }
+
+    private com.cvdcms.service.DoctorClinicalCapabilityService.CapabilityCheckResult checkServiceCapability(
+            Visit visit, Long serviceId, Long actorUserId) {
+        if (capabilityService == null || visit == null || serviceId == null) {
+            return com.cvdcms.service.DoctorClinicalCapabilityService.CapabilityCheckResult.ok();
+        }
+        if (capabilityService.isParaclinicalOrLabService(serviceId)) {
+            return com.cvdcms.service.DoctorClinicalCapabilityService.CapabilityCheckResult.ok();
+        }
+        Long branchId = visit.getBranch() != null ? visit.getBranch().getBranchId() : null;
+        StaffProfile actorDoc = actorUserId != null ? staffOf(actorUserId) : null;
+        Long doctorId = actorDoc != null
+                ? actorDoc.getStaffId()
+                : (visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null);
+        return capabilityService.checkDoctorAndRoomCapability(branchId, doctorId, visit.getRoomId(), serviceId);
     }
 
     // =========================================================================
@@ -3064,6 +3169,13 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         if (lockReason != null) {
             throw new IllegalStateException(lockReason);
         }
+
+        if (resolvedServiceId != null) {
+            var capCheck = checkServiceCapability(visit, resolvedServiceId, userId);
+            if (!capCheck.allowed()) {
+                throw new IllegalStateException(capCheck.message());
+            }
+        }
         ServiceCombo combo = serviceComboRepo.findById(comboId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Combo ID: " + comboId));
         if (!"ACTIVE".equalsIgnoreCase(combo.getStatus())) {
@@ -3073,6 +3185,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         List<WorkflowExecutionDTO> started = new ArrayList<>();
         List<String> skipped = new ArrayList<>();
         List<String> deferred = new ArrayList<>();
+        List<Map<String, Object>> handoverRequiredServices = new ArrayList<>();
         List<ServiceComboItem> deferredItems = new ArrayList<>();
         Set<Long> deferredIds = deferredServiceIds != null ? deferredServiceIds : Set.of();
         List<ServiceComboItem> orderedItems = combo.getItems().stream()
@@ -3082,13 +3195,25 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         for (ServiceComboItem item : orderedItems) {
             if (item.getService() == null)
                 continue;
-            if (deferredIds.contains(item.getService().getServiceId())) {
+            Long svcId = item.getService().getServiceId();
+            if (deferredIds.contains(svcId)) {
                 deferred.add(item.getService().getServiceName());
                 deferredItems.add(item);
                 continue;
             }
+            var capCheck = checkServiceCapability(visit, svcId, userId);
+            if (!capCheck.allowed()) {
+                deferred.add(item.getService().getServiceName() + " (Cần BS chuyên môn)");
+                deferredItems.add(item);
+                Map<String, Object> ho = new LinkedHashMap<>();
+                ho.put("serviceId", svcId);
+                ho.put("serviceName", item.getService().getServiceName());
+                ho.put("reason", capCheck.message());
+                handoverRequiredServices.add(ho);
+                continue;
+            }
             WorkflowExecutionDTO dto = createOrGetExecution(
-                    visitId, item.getService().getServiceId(), null, null, userId, false, item.getDefaultQuantity());
+                    visitId, svcId, null, null, userId, false, item.getDefaultQuantity());
             if (dto != null) {
                 started.add(dto);
             } else {
@@ -3112,6 +3237,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         result.put("executions", started);
         result.put("skippedServices", skipped);
         result.put("deferredServices", deferred);
+        result.put("handoverRequiredServices", handoverRequiredServices);
         if (savedDeferredPlan != null) {
             result.put("deferredPlanId", savedDeferredPlan.getPlanId());
             result.put("deferredPlanCode", savedDeferredPlan.getPlanCode());

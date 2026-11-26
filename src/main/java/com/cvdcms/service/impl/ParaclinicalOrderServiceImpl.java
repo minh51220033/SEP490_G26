@@ -49,6 +49,9 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private TreatmentPlanItemRepository treatmentPlanItemRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private LabExternalOrderRepository labExternalOrderRepository;
+
     public void setServiceCommissionService(com.cvdcms.service.ServiceCommissionService serviceCommissionService) {
         this.serviceCommissionService = serviceCommissionService;
     }
@@ -100,9 +103,47 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             return Collections.emptyList();
         }
         // Đọc thuần (không phát sinh INSERT/UPDATE trong GET)
-        List<ParaclinicalOrderItem> items = paraclinicalOrderItemRepository
+        List<ParaclinicalOrderItem> currentItems = paraclinicalOrderItemRepository
                 .findByOrder_Visit_VisitIdOrderByOrder_OrderIdDescOrderItemIdDesc(visitId);
-        return items.stream().map(this::mapToDTO).collect(Collectors.toList());
+        List<ParaclinicalOrderItemResponseDTO> result = new ArrayList<>();
+        Set<Long> seenIds = new HashSet<>();
+        for (ParaclinicalOrderItem item : currentItems) {
+            result.add(mapToDTO(item, visitId));
+            if (item.getOrderItemId() != null) {
+                seenIds.add(item.getOrderItemId());
+            }
+        }
+
+        Visit visit = visitRepository.findById(visitId).orElse(null);
+        Long profileId = visit != null && visit.getPatientProfile() != null ? visit.getPatientProfile().getProfileId() : null;
+        if (profileId != null) {
+            List<ParaclinicalOrderItem> patientItems = paraclinicalOrderItemRepository
+                    .findByOrder_PatientProfile_ProfileIdOrderByOrder_OrderIdDescOrderItemIdDesc(profileId);
+            for (ParaclinicalOrderItem item : patientItems) {
+                if (item.getOrderItemId() != null && seenIds.contains(item.getOrderItemId())) {
+                    continue;
+                }
+                if (item.getStatus() == ParaclinicalOrderItemStatus.CANCELLED) {
+                    continue;
+                }
+                if (!isExternalLabItem(item)) {
+                    continue;
+                }
+                seenIds.add(item.getOrderItemId());
+                result.add(mapToDTO(item, visitId));
+            }
+        }
+        return result;
+    }
+
+    private boolean isExternalLabItem(ParaclinicalOrderItem item) {
+        if (item == null) {
+            return false;
+        }
+        if (item.getLabExternalOrder() != null) {
+            return true;
+        }
+        return item.getService() != null && item.getService().getServiceType() == ServiceType.LAB;
     }
 
     @Override
@@ -179,12 +220,15 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             order = paraclinicalOrderRepository.save(order);
         }
 
+        boolean externalLab = Boolean.TRUE.equals(dto.getIsExternalLab())
+                || (service.getServiceType() == ServiceType.LAB);
+
         // Tạo chi tiết chỉ định với mã liên kết duy nhất (external_ref_id) để máy chụp đối chiếu
         ParaclinicalOrderItem item = new ParaclinicalOrderItem();
         item.setOrder(order);
         item.setService(service);
         item.setToothNumbers((dto.getToothNumbers() != null && !dto.getToothNumbers().isBlank())
-                ? dto.getToothNumbers().trim() : "Toàn hàm");
+                ? dto.getToothNumbers().trim() : (externalLab ? "Mẫu máu" : "Toàn hàm"));
         item.setStatus(ParaclinicalOrderItemStatus.WAITING);
         item.setExternalRefId(generateUniqueExternalRefId());
 
@@ -192,39 +236,71 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             item.setResultSummary(dto.getNotes().trim());
         }
 
+        if (externalLab) {
+            LabExternalOrder extOrder = new LabExternalOrder();
+            extOrder.setOrderItem(item);
+            extOrder.setLabPartnerName(dto.getLabPartnerName() != null && !dto.getLabPartnerName().isBlank()
+                    ? dto.getLabPartnerName().trim()
+                    : "Bệnh viện / Cơ sở xét nghiệm ngoài viện");
+            String sampleCode = dto.getSampleCode() != null && !dto.getSampleCode().isBlank()
+                    ? dto.getSampleCode().trim()
+                    : "LAB-" + (10000 + Math.abs(XRAY_REF_COUNTER.incrementAndGet() % 89999));
+            extOrder.setSampleCode(sampleCode);
+            extOrder.setSampleType(dto.getSampleType() != null && !dto.getSampleType().isBlank()
+                    ? dto.getSampleType().trim()
+                    : "Mẫu máu xét nghiệm");
+            extOrder.setSentAt(LocalDateTime.now());
+            extOrder.setExpectedResultDate(parseExpectedDateSafe(dto.getExpectedResultDate()));
+            extOrder.setLabStatus(LabExternalStatus.SENT);
+            extOrder.setNotes(dto.getNotes() != null && !dto.getNotes().isBlank() ? dto.getNotes().trim() : null);
+            item.setLabExternalOrder(extOrder);
+        }
+
         if (dto.getImageUrl() != null && !dto.getImageUrl().isBlank()) {
+            String trimmedUrl = dto.getImageUrl().trim();
+            boolean isPdf = trimmedUrl.toLowerCase(Locale.ROOT).endsWith(".pdf");
             ParaclinicalResultAttachment att = new ParaclinicalResultAttachment();
             att.setOrderItem(item);
-            att.setFileName("Phim chụp / Kết quả CLS");
-            att.setFileUrl(dto.getImageUrl().trim());
-            att.setFileType(ParaclinicalFileType.IMAGE);
+            att.setFileName(externalLab ? "Phiếu kết quả xét nghiệm ngoài" : "Phim chụp / Kết quả CLS");
+            att.setFileUrl(trimmedUrl);
+            att.setFileType(isPdf ? ParaclinicalFileType.PDF : ParaclinicalFileType.IMAGE);
             att.setCaption(service.getServiceName());
             item.getAttachments().add(att);
             item.setStatus(ParaclinicalOrderItemStatus.COMPLETED);
             item.setPerformedAt(LocalDateTime.now());
+            if (item.getLabExternalOrder() != null) {
+                item.getLabExternalOrder().setLabStatus(LabExternalStatus.RESULT_RECEIVED);
+                item.getLabExternalOrder().setReceivedResultAt(LocalDateTime.now());
+                item.getLabExternalOrder().setResultFileUrl(trimmedUrl);
+            }
         }
 
-        // Tự động đồng bộ sang PerformedService nếu đã hoàn thành
-        syncOrderItemToPerformedService(item, false);
+        // Xét nghiệm máu ngoài viện bệnh nhân làm ở ngoài nên không đồng bộ phí thủ thuật tại phòng khám
+        if (!externalLab) {
+            syncOrderItemToPerformedService(item, false);
+        }
 
         ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
         if (savedItem != null && (savedItem.getExternalRefId() == null || savedItem.getExternalRefId().isBlank())) {
             savedItem.setExternalRefId(item.getExternalRefId());
         }
 
-        if (savedItem.getStatus() != ParaclinicalOrderItemStatus.COMPLETED) {
-            if (visit.getStatus() == VisitStatus.IN_EXAM || visit.getStatus() == VisitStatus.WAITING) {
-                visit.setStatus(VisitStatus.WAITING_PARACLINICAL);
-                visitRepository.save(visit);
+        // X-quang tại chỗ: chuyển WAITING_PARACLINICAL; Xét nghiệm máu ngoài viện: KHÔNG khóa/treo ca hôm nay
+        if (!externalLab) {
+            if (savedItem.getStatus() != ParaclinicalOrderItemStatus.COMPLETED) {
+                if (visit.getStatus() == VisitStatus.IN_EXAM || visit.getStatus() == VisitStatus.WAITING) {
+                    visit.setStatus(VisitStatus.WAITING_PARACLINICAL);
+                    visitRepository.save(visit);
+                }
+            } else {
+                checkAndUpdateVisitParaclinicalStatus(savedItem.getOrder());
             }
-        } else {
-            checkAndUpdateVisitParaclinicalStatus(savedItem.getOrder());
         }
 
-        log.info("Bác sĩ đã tạo chỉ định cận lâm sàng thành công: ItemId={}, ExternalRefId={}, Service={}, Tooth={}",
-                savedItem.getOrderItemId(), savedItem.getExternalRefId(), service.getServiceName(), savedItem.getToothNumbers());
+        log.info("Bác sĩ đã tạo chỉ định cận lâm sàng thành công: ItemId={}, ExternalRefId={}, Service={}, ExternalLab={}",
+                savedItem.getOrderItemId(), savedItem.getExternalRefId(), service.getServiceName(), externalLab);
 
-        return mapToDTO(savedItem);
+        return mapToDTO(savedItem, visitId);
     }
 
     @Override
@@ -308,11 +384,15 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             }
         }
 
-        // Đồng bộ sang PerformedService (giữ nguyên giá đã chốt khi không đổi dịch vụ)
-        syncOrderItemToPerformedService(item, serviceChanged);
+        // Đồng bộ sang PerformedService cho dịch vụ tại phòng khám
+        if (!isExternalLabItem(item)) {
+            syncOrderItemToPerformedService(item, serviceChanged);
+        }
 
         ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
-        checkAndUpdateVisitParaclinicalStatus(savedItem.getOrder());
+        if (!isExternalLabItem(savedItem)) {
+            checkAndUpdateVisitParaclinicalStatus(savedItem.getOrder());
+        }
         return mapToDTO(savedItem);
     }
 
@@ -346,18 +426,115 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             }
         }
 
-        // Đồng bộ sang PerformedService (không ghi đè giá cũ nếu PerformedService đã tồn tại)
-        syncOrderItemToPerformedService(item, false);
+        // Đồng bộ sang PerformedService cho dịch vụ tại phòng khám
+        if (!isExternalLabItem(item)) {
+            syncOrderItemToPerformedService(item, false);
+        }
 
         ParaclinicalOrderItem savedItem = paraclinicalOrderItemRepository.save(item);
-        checkAndUpdateVisitParaclinicalStatus(savedItem.getOrder());
+        if (!isExternalLabItem(savedItem)) {
+            checkAndUpdateVisitParaclinicalStatus(savedItem.getOrder());
+        }
 
         return mapToDTO(savedItem);
     }
 
+    @Override
+    @Transactional
+    public ParaclinicalOrderItemResponseDTO recordExternalLabResult(
+            Long orderItemId,
+            Long activeVisitId,
+            String labPartnerName,
+            String resultSummary,
+            String fileUrl,
+            String fileName,
+            boolean isPdf) {
+        ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findByIdForUpdate(orderItemId)
+                .or(() -> paraclinicalOrderItemRepository.findById(orderItemId))
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chỉ định ID: " + orderItemId));
+
+        Visit originVisit = item.getOrder() != null ? item.getOrder().getVisit() : null;
+        Visit checkVisit = activeVisitId != null
+                ? visitRepository.findById(activeVisitId).orElse(originVisit)
+                : originVisit;
+        if (checkVisit == null) {
+            throw new IllegalArgumentException("Không xác định được lượt khám đang mở để ghi nhận kết quả.");
+        }
+        com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
+                checkVisit,
+                emrRecordRepository,
+                "Ca khám hiện tại đã khóa bệnh án. Không thể ghi nhận thêm kết quả.");
+
+        if (originVisit != null && originVisit.getPatientProfile() != null
+                && checkVisit.getPatientProfile() != null
+                && !Objects.equals(originVisit.getPatientProfile().getProfileId(), checkVisit.getPatientProfile().getProfileId())) {
+            throw new IllegalStateException("Phiếu chỉ định không thuộc về cùng bệnh nhân của ca khám hiện tại.");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LabExternalOrder extOrder = item.getLabExternalOrder();
+        if (extOrder == null) {
+            extOrder = new LabExternalOrder();
+            extOrder.setOrderItem(item);
+            extOrder.setSampleCode("LAB-" + (item.getOrderItemId() != null ? item.getOrderItemId() : System.currentTimeMillis() % 10000));
+            extOrder.setSampleType("Mẫu máu xét nghiệm");
+            extOrder.setSentAt(item.getOrder() != null && item.getOrder().getOrderTime() != null ? item.getOrder().getOrderTime() : now);
+            extOrder.setLabPartnerName("Bệnh viện / Cơ sở xét nghiệm ngoài viện");
+        }
+        if (labPartnerName != null && !labPartnerName.isBlank()) {
+            extOrder.setLabPartnerName(labPartnerName.trim());
+        }
+        if (fileUrl != null && !fileUrl.isBlank()) {
+            extOrder.setResultFileUrl(fileUrl.trim());
+            ParaclinicalResultAttachment att = new ParaclinicalResultAttachment();
+            att.setOrderItem(item);
+            att.setFileName(fileName != null && !fileName.isBlank() ? fileName.trim() : "Kết quả xét nghiệm ngoài viện");
+            att.setFileUrl(fileUrl.trim());
+            att.setFileType(isPdf ? ParaclinicalFileType.PDF : ParaclinicalFileType.IMAGE);
+            att.setCaption(extOrder.getLabPartnerName());
+            item.getAttachments().add(att);
+        }
+        if (resultSummary != null && !resultSummary.isBlank()) {
+            item.setResultSummary(resultSummary.trim());
+            extOrder.setNotes(resultSummary.trim().length() > 250 ? resultSummary.trim().substring(0, 250) : resultSummary.trim());
+        } else if (item.getResultSummary() == null || item.getResultSummary().isBlank()) {
+            item.setResultSummary("Đã nhận kết quả xét nghiệm máu ngoài viện");
+        }
+        extOrder.setLabStatus(LabExternalStatus.RESULT_RECEIVED);
+        extOrder.setReceivedResultAt(now);
+        item.setLabExternalOrder(extOrder);
+
+        item.setStatus(ParaclinicalOrderItemStatus.COMPLETED);
+        item.setPerformedAt(now);
+        // KHÔNG chuyển VisitStatus sang WAITING_RESULT cho xét nghiệm máu ngoài viện (bệnh nhân quay lại xếp hàng bình thường)
+        ParaclinicalOrderItem saved = paraclinicalOrderItemRepository.save(item);
+        return mapToDTO(saved, checkVisit.getVisitId());
+    }
+
+    private LocalDateTime parseExpectedDateSafe(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String t = raw.trim();
+        try {
+            if (t.length() == 10) {
+                return java.time.LocalDate.parse(t).atTime(17, 0);
+            }
+            return LocalDateTime.parse(t);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     private void checkAndUpdateVisitParaclinicalStatus(ParaclinicalOrder parentOrder) {
         if (parentOrder == null) return;
-        List<ParaclinicalOrderItem> allItems = paraclinicalOrderItemRepository.findByOrder_OrderId(parentOrder.getOrderId());
+        List<ParaclinicalOrderItem> allItems = paraclinicalOrderItemRepository.findByOrder_OrderId(parentOrder.getOrderId())
+                .stream()
+                .filter(i -> !isExternalLabItem(i))
+                .toList();
+        if (allItems.isEmpty()) {
+            return;
+        }
         List<ParaclinicalOrderItem> activeItems = allItems.stream()
                 .filter(i -> i.getStatus() != ParaclinicalOrderItemStatus.CANCELLED)
                 .toList();
@@ -381,6 +558,7 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 boolean hasOtherPendingInVisit = paraclinicalOrderItemRepository
                         .findByOrder_Visit_VisitIdOrderByOrder_OrderIdDescOrderItemIdDesc(v.getVisitId())
                         .stream()
+                        .filter(i -> !isExternalLabItem(i))
                         .anyMatch(i -> i.getStatus() != ParaclinicalOrderItemStatus.CANCELLED
                                 && i.getStatus() != ParaclinicalOrderItemStatus.COMPLETED);
                 if (!hasOtherPendingInVisit) {
@@ -716,6 +894,10 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     }
 
     private ParaclinicalOrderItemResponseDTO mapToDTO(ParaclinicalOrderItem item) {
+        return mapToDTO(item, null);
+    }
+
+    private ParaclinicalOrderItemResponseDTO mapToDTO(ParaclinicalOrderItem item, Long viewingVisitId) {
         String statusLabel = "Chờ thực hiện";
         if (item.getStatus() == ParaclinicalOrderItemStatus.COMPLETED) {
             statusLabel = "Đã có kết quả";
@@ -760,6 +942,16 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             }
         }
 
+        LabExternalOrder ext = item.getLabExternalOrder();
+        boolean isExt = isExternalLabItem(item);
+        Visit orderVisit = item.getOrder() != null ? item.getOrder().getVisit() : null;
+        Long originVisitId = orderVisit != null ? orderVisit.getVisitId() : null;
+        String originVisitCode = orderVisit != null ? orderVisit.getVisitCode() : null;
+        boolean fromPrev = viewingVisitId != null && originVisitId != null && !Objects.equals(viewingVisitId, originVisitId);
+        if (primaryImageUrl == null && ext != null && ext.getResultFileUrl() != null && !ext.getResultFileUrl().isBlank()) {
+            primaryImageUrl = ext.getResultFileUrl();
+        }
+
         return ParaclinicalOrderItemResponseDTO.builder()
                 .orderItemId(item.getOrderItemId())
                 .orderId(item.getOrder() != null ? item.getOrder().getOrderId() : null)
@@ -777,10 +969,23 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
                 .orderTime(orderTimeStr)
                 .performedAt(performedAtStr)
                 .resultSummary(item.getResultSummary() != null ? item.getResultSummary() : "")
-                .imageUrl(primaryImageUrl != null ? primaryImageUrl : "") // Hỗ trợ tương thích ngược cho cả nhánh develop
+                .imageUrl(primaryImageUrl != null ? primaryImageUrl : "")
                 .attachmentsCount(attachmentDTOs.size())
                 .primaryImageUrl(primaryImageUrl)
                 .attachments(attachmentDTOs)
+                .isExternalLab(isExt)
+                .labOrderId(ext != null ? ext.getLabOrderId() : null)
+                .labPartnerName(ext != null ? ext.getLabPartnerName() : null)
+                .sampleCode(ext != null ? ext.getSampleCode() : null)
+                .sampleType(ext != null ? ext.getSampleType() : null)
+                .labStatus(ext != null && ext.getLabStatus() != null ? ext.getLabStatus().name() : null)
+                .sentAt(ext != null && ext.getSentAt() != null ? ext.getSentAt().format(DATE_TIME_FORMATTER) : null)
+                .expectedResultDate(ext != null && ext.getExpectedResultDate() != null ? ext.getExpectedResultDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : null)
+                .receivedResultAt(ext != null && ext.getReceivedResultAt() != null ? ext.getReceivedResultAt().format(DATE_TIME_FORMATTER) : null)
+                .resultFileUrl(ext != null ? ext.getResultFileUrl() : primaryImageUrl)
+                .originVisitId(originVisitId)
+                .originVisitCode(originVisitCode)
+                .fromPreviousVisit(fromPrev)
                 .build();
     }
 

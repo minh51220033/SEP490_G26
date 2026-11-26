@@ -45,5 +45,7 @@ public class ServiceComboDTO {
         private Integer workflowStepCount;
         private Integer estimatedDurationMinutes;
         private Boolean allowSameVisit;
+        private Boolean canPerform;
+        private String capabilityReason;
     }
 }

@@ -738,14 +738,22 @@
                     if (ex.continuedFromOtherVisit) {
                         extraBadges += '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size:11px;">Buổi trước</span>';
                     }
+                    if (ex.canCurrentDoctorPerform === false) {
+                        extraBadges += '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size:11px;" title="' + esc(ex.capabilityReason || '') + '"><i class="bi bi-shield-lock me-1"></i>Cần BS chuyên môn</span>';
+                    }
 
                     var delBtn = (ex.canDelete && !state.locked)
                         ? '<button type="button" class="df-btn-icon-muted" title="Xóa quy trình chưa làm bước nào" '
                           + 'onclick="window.FT43.deleteExecution(' + Number(ex.executionId) + ')"><i class="bi bi-trash3-fill"></i></button>'
                         : '';
 
-                    var ctaLabel = (ex.status === 'COMPLETED' || state.locked) ? 'Chi tiết' : 'Thực hiện';
-                    var ctaIcon = (ex.status === 'COMPLETED' || state.locked) ? 'bi-eye' : 'bi-list-check';
+                    var ctaLabel = (ex.status === 'COMPLETED' || state.locked || ex.canCurrentDoctorPerform === false) ? 'Chi tiết' : 'Thực hiện';
+                    var ctaIcon = (ex.status === 'COMPLETED' || state.locked || ex.canCurrentDoctorPerform === false) ? 'bi-eye' : 'bi-list-check';
+                    var handoverBtn = (!state.locked && ex.status !== 'COMPLETED' && ex.canCurrentDoctorPerform === false)
+                        ? '<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size:12.5px;" '
+                          + 'onclick="window.DFHandover && window.DFHandover.open(' + Number(ex.serviceId) + ',\'' + esc(ex.serviceName || ex.templateName || '') + '\')">'
+                          + '<i class="bi bi-arrow-left-right"></i><span>Chuyển BS</span></button>'
+                        : '';
 
                     html += '<tr style="cursor: pointer;" onclick="window.FT43.selectExecution(' + Number(ex.executionId) + ')">'
                         + '<td class="df-num"><span class="badge bg-light text-primary border font-monospace fw-bold px-2 py-1">' + esc(ex.templateCode || 'QT') + '</span></td>'
@@ -766,6 +774,7 @@
                         + '<td class="text-center"><span class="badge rounded-pill px-2 py-1 border fw-semibold ' + stMeta[1] + '">' + esc(stMeta[0]) + '</span></td>'
                         + '<td class="text-center" onclick="event.stopPropagation()">'
                         + '  <div class="d-inline-flex align-items-center justify-content-center gap-2">'
+                        + handoverBtn
                         + '    <button type="button" class="btn df-btn-tonal-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size:12.5px;" '
                         + '            onclick="window.FT43.selectExecution(' + Number(ex.executionId) + ')">'
                         + '      <i class="bi ' + ctaIcon + '"></i><span>' + ctaLabel + '</span>'
@@ -780,6 +789,7 @@
                     var total = s.stepCount || 0;
                     var isBooked = Boolean(bookedId && s.serviceId && Number(s.serviceId) === bookedId);
                     var isDeferred = Boolean(!isBooked && !s.isParaclinical && (s.allowSameVisit === false || (waitingCount > 0 && Number(s.estimatedDurationMinutes || 30) > 45)));
+                    var needsHandover = (s.canPerform === false);
                     var toothHtml = s.toothNumbers
                         ? '<span class="badge bg-light text-dark border df-num">R-' + esc(s.toothNumbers) + '</span>'
                         : '<span class="text-muted small">Toàn hàm</span>';
@@ -787,6 +797,8 @@
                     var badges = '';
                     if (isBooked) {
                         badges += '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size:11px;"><i class="bi bi-lock-fill me-1"></i>Đã đặt lịch</span>';
+                    } else if (needsHandover) {
+                        badges += '<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size:11px;" title="' + esc(s.capabilityReason || '') + '"><i class="bi bi-shield-lock me-1"></i>Cần BS chuyên môn</span>';
                     } else if (isDeferred) {
                         var deferredHintTitle = s.allowSameVisit === false
                             ? 'Dịch vụ cấu hình không làm gộp trong ca — hẹn buổi sau'
@@ -798,8 +810,9 @@
                         ? ('Từ KHDT: ' + s.planCode + (s.planName ? ' · ' + s.planName : ''))
                         : (s.templateName || 'Quy trình chuẩn');
                     var startCall = 'window.FT43.startService(' + Number(s.serviceId) + ',' + (s.planItemId ? Number(s.planItemId) : 'null') + ',' + (s.planStageId ? Number(s.planStageId) : 'null') + ')';
+                    var handoverCall = 'window.DFHandover && window.DFHandover.open(' + Number(s.serviceId) + ',\'' + esc(s.stepName || s.serviceName || '') + '\')';
 
-                    html += '<tr' + (state.locked ? '' : ' style="cursor: pointer;" onclick="' + startCall + '"') + '>'
+                    html += '<tr' + ((state.locked || needsHandover) ? '' : ' style="cursor: pointer;" onclick="' + startCall + '"') + '>'
                         + '<td class="df-num"><span class="badge bg-light text-secondary border font-monospace fw-bold px-2 py-1">' + esc(s.serviceCode || 'QT') + '</span></td>'
                         + '<td>'
                         + '  <div class="fw-bold text-dark">' + esc(s.stepName || s.serviceName) + badges + '</div>'
@@ -813,12 +826,15 @@
                         + '  </div>'
                         + '  <div class="progress" style="height: 6px;"><div class="progress-bar bg-success" role="progressbar" style="width: 0%;"></div></div>'
                         + '</td>'
-                        + '<td class="text-center"><span class="badge rounded-pill px-2 py-1 border fw-semibold bg-light text-secondary">Chưa bắt đầu</span></td>'
+                        + '<td class="text-center"><span class="badge rounded-pill px-2 py-1 border fw-semibold ' + (needsHandover ? 'bg-danger-subtle text-danger border-danger-subtle' : 'bg-light text-secondary') + '">' + (needsHandover ? 'Chờ BS chuyên môn' : 'Chưa bắt đầu') + '</span></td>'
                         + '<td class="text-center" onclick="event.stopPropagation()">'
                         + (state.locked
                             ? '<span class="small text-muted">Đã khóa</span>'
-                            : '<button type="button" class="btn df-btn-tonal-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size:12.5px;" onclick="' + startCall + '">'
-                              + '<i class="bi bi-play-fill"></i><span>Bắt đầu</span></button>')
+                            : (needsHandover
+                                ? '<button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size:12.5px;" onclick="' + handoverCall + '">'
+                                  + '<i class="bi bi-arrow-left-right"></i><span>Chuyển BS</span></button>'
+                                : '<button type="button" class="btn df-btn-tonal-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size:12.5px;" onclick="' + startCall + '">'
+                                  + '<i class="bi bi-play-fill"></i><span>Bắt đầu</span></button>'))
                         + '</td>'
                         + '</tr>';
                 });
@@ -905,6 +921,9 @@
                     } else {
                         label = (s.suggested ? '★ [Trong ca] ' : '') + s.serviceName + ' — ' + s.stepCount + ' bước';
                     }
+                    if (s.canPerform === false) {
+                        label += ' [Cần BS chuyên môn]';
+                    }
                     opts.push('<option value="' + esc(val) + '">' + esc(label) + '</option>');
                 });
                 sel.innerHTML = opts.join('');
@@ -980,6 +999,8 @@
                         + '  <div class="d-flex flex-wrap align-items-center gap-1 mt-1">'
                         + '    <span class="badge border ' + fm.badgeClass + '" style="font-size:10.5px;"><i class="bi ' + fm.icon + ' me-1"></i>' + esc(fm.label) + '</span>'
                         + '    <span class="badge ' + sb[1] + '" style="font-size:10.5px;">' + esc(sb[0]) + '</span>'
+                        + (st.staffName ? '<span class="badge bg-light text-dark border" style="font-size:10.5px;"><i class="bi bi-person me-1"></i>BS: ' + esc(st.staffName) + '</span>' : '')
+                        + (st.readOnlyByOtherDoctor ? '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle" style="font-size:10.5px;">Chỉ xem</span>' : '')
                         + (st.isAdhoc ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size:10.5px;">Phát sinh</span>' : '')
                         + (Array.isArray(st.customFields) && st.customFields.length > 0 ? '<span class="badge bg-light text-primary border" style="font-size:10.5px;">+' + st.customFields.length + ' trường</span>' : '')
                         + '  </div>'
@@ -1008,14 +1029,25 @@
                 var vals = draft.data;
                 var fm = FRAME_META[step.frameKey] || FRAME_META.PROCEDURE;
                 var sb = STEP_STATUS_BADGE[step.executionStatus] || [step.executionStatus, 'bg-light text-secondary border'];
-                var isLockedExec = state.locked || !!ex.locked;
+                var isLockedExec = state.locked || !!ex.locked || ex.canCurrentDoctorPerform === false;
                 var isCurrentOpen = Number(ex.currentStepId) === Number(step.stepId);
                 var isDoneOrSkipped = step.executionStatus === 'COMPLETED' || step.executionStatus === 'SKIPPED';
                 var isEditable = !isLockedExec && isCurrentOpen && !isDoneOrSkipped && ex.status !== 'COMPLETED' && ex.status !== 'CANCELLED';
 
                 var stateNotice = '';
-                if (isLockedExec && ex.lockedReason) {
+                if (state.locked && ex.lockedReason) {
                     stateNotice = '<div class="alert alert-warning py-2 px-3 small mb-3"><i class="bi bi-lock-fill me-2"></i>' + esc(ex.lockedReason) + '</div>';
+                } else if (ex.canCurrentDoctorPerform === false) {
+                    stateNotice = '<div class="alert alert-danger py-2 px-3 small mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">'
+                        + '<span><i class="bi bi-shield-lock-fill me-2"></i>' + esc(ex.capabilityReason || 'Dịch vụ này cần bác sĩ chuyên môn hoặc phòng phù hợp.') + '</span>'
+                        + '<button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold text-white" '
+                        + '        onclick="window.DFHandover && window.DFHandover.open(' + Number(ex.serviceId) + ',\'' + esc(ex.serviceName || ex.templateName || '') + '\')">'
+                        + '  <i class="bi bi-arrow-left-right me-1"></i>Chuyển BS chuyên môn</button>'
+                        + '</div>';
+                } else if (ex.locked && ex.lockedReason) {
+                    stateNotice = '<div class="alert alert-warning py-2 px-3 small mb-3"><i class="bi bi-lock-fill me-2"></i>' + esc(ex.lockedReason) + '</div>';
+                } else if (step.readOnlyByOtherDoctor && step.staffName) {
+                    stateNotice = '<div class="alert alert-secondary py-2 px-3 small mb-3"><i class="bi bi-eye-fill me-2"></i>Bước này đã được thực hiện bởi <strong>' + esc(step.staffName) + '</strong> (chế độ chỉ xem, bảo toàn trách nhiệm chuyên môn).</div>';
                 } else if (!isDoneOrSkipped && !isCurrentOpen) {
                     stateNotice = '<div class="alert alert-info py-2 px-3 small mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">'
                         + '<span><i class="bi bi-info-circle-fill me-2"></i>Cần thực hiện theo đúng thứ tự. Hiện tại đang ở bước: <strong>' + esc(ex.currentStepName || '') + '</strong>.</span>'
@@ -1906,7 +1938,23 @@
                             msg += ' Dịch vụ chưa có quy trình bước: ' + data.skippedServices.join(', ') + '.';
                         }
                         if (data.deferredServices && data.deferredServices.length > 0) {
-                            msg += ' Đã tự lưu vào Kế hoạch điều trị' + (data.deferredPlanCode ? ' [' + data.deferredPlanCode + ']' : '') + ' để hẹn buổi sau: ' + data.deferredServices.join(', ') + '.';
+                            msg += ' Đã tự lưu vào Kế hoạch điều trị' + (data.deferredPlanCode ? ' [' + data.deferredPlanCode + ']' : '') + ': ' + data.deferredServices.join(', ') + '.';
+                        }
+                        if (data.handoverRequiredServices && data.handoverRequiredServices.length > 0) {
+                            var hoSvc = data.handoverRequiredServices[0];
+                            msg += ' Bạn có thể bấm "Chuyển BS" để bàn giao dịch vụ cần BS chuyên môn.';
+                            setTimeout(function () {
+                                if (typeof window.dfConfirm === 'function' && window.DFHandover) {
+                                    window.dfConfirm('Combo có dịch vụ vượt quyền chuyên môn của bạn (' + data.handoverRequiredServices.map(function (x) { return x.serviceName; }).join(', ') + ').\nBạn có muốn mở bảng Chuyển BS chuyên môn ngay không?', {
+                                        title: 'Combo có dịch vụ cần BS chuyên môn',
+                                        confirmText: 'Mở Chuyển BS',
+                                        cancelText: 'Để làm các phần của tôi trước',
+                                        variant: 'primary'
+                                    }).then(function (ok) {
+                                        if (ok) window.DFHandover.open(hoSvc.serviceId, hoSvc.serviceName);
+                                    });
+                                }
+                            }, 350);
                         }
                         notify(msg, false);
                         if (data.deferredPlanId) {
@@ -1915,7 +1963,7 @@
                                 .then(function (p) { if (p && typeof window.updatePlanInlineView === 'function') window.updatePlanInlineView(p); })
                                 .catch(function () {});
                         }
-                        state.viewMode = 'DETAIL';
+                        state.viewMode = firstId ? 'DETAIL' : 'LIST';
                         return reload(firstId);
                     })
                     .catch(function (err) {

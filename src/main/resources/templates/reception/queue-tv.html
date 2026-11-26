@@ -335,6 +335,12 @@
       color: #b91c1c;
     }
 
+    .tv-doctor-tag.handover {
+      background: #eef2ff;
+      color: #4338ca;
+      border: 1px solid #c7d2fe;
+    }
+
     @keyframes pulseActive {
       0% {
         transform: scale(1);
@@ -634,7 +640,7 @@
                   th:text="${row.doctorDisplay != null and row.doctorDisplay != '—' ? row.doctorDisplay : 'Chưa phân công'}">
                   Chưa phân công</div>
                 <span class="tv-doctor-tag"
-                  th:classappend="${row.doctorAssignmentType == 'BOOKED_DOCTOR'} ? 'booked' : (${row.doctorAssignmentType == 'ASSIGNED_DOCTOR'} ? 'assigned' : (${row.doctorAssignmentType == 'WAITING_DOCTOR'} ? 'waiting-doc' : ''))"
+                  th:classappend="${row.doctorAssignmentType == 'BOOKED_DOCTOR'} ? 'booked' : (${row.doctorAssignmentType == 'ASSIGNED_DOCTOR'} ? 'assigned' : (${row.doctorAssignmentType == 'HANDOVER_DOCTOR'} ? 'handover' : (${row.doctorAssignmentType == 'WAITING_DOCTOR'} ? 'waiting-doc' : '')))"
                   th:text="${row.doctorStatusLabel != null ? row.doctorStatusLabel : 'Chưa phân công'}">Chưa phân
                   công</span>
               </td>

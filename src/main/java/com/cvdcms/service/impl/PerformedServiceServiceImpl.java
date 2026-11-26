@@ -85,6 +85,9 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
     private com.cvdcms.security.DoctorVisitAccess doctorVisitAccess;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.DoctorClinicalCapabilityService capabilityService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.WorkflowExecutionRepository workflowExecutionRepository;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -219,6 +222,13 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
             throw new IllegalArgumentException("Bác sĩ thực hiện hiện không ở trạng thái hoạt động.");
         }
         validateDoctorForVisit(doctor, visit);
+        if (!Boolean.TRUE.equals(service.getIsParaclinical()) && capabilityService != null && visit.getBranch() != null) {
+            var capCheck = capabilityService.checkDoctorAndRoomCapability(
+                    visit.getBranch().getBranchId(), doctor.getStaffId(), visit.getRoomId(), service.getServiceId());
+            if (!capCheck.allowed()) {
+                throw new IllegalStateException(capCheck.message());
+            }
+        }
 
         StaffProfile assistant = null;
         if (requestDTO.getAssistantId() != null) {

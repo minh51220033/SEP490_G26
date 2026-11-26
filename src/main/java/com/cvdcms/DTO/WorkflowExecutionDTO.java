@@ -50,6 +50,9 @@ public class WorkflowExecutionDTO {
     private String toothNumbers;
     private Boolean continuedFromOtherVisit;
     private Boolean canDelete;
+    private Boolean canCurrentDoctorPerform;
+    private String capabilityReason;
+    private Boolean requiresHandover;
 
     @Builder.Default
     private List<WorkflowStepDTO> steps = new ArrayList<>();

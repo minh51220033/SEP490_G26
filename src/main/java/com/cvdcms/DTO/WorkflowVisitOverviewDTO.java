@@ -51,5 +51,8 @@ public class WorkflowVisitOverviewDTO {
         private String planName;
         private String stepName;
         private String toothNumbers;
+        private Boolean canPerform;
+        private String capabilityReason;
+        private Boolean requiresHandover;
     }
 }

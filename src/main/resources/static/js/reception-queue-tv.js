@@ -254,6 +254,7 @@
         function doctorTagClass(assignmentType) {
             if (assignmentType === 'BOOKED_DOCTOR') return 'booked';
             if (assignmentType === 'ASSIGNED_DOCTOR') return 'assigned';
+            if (assignmentType === 'HANDOVER_DOCTOR') return 'handover';
             if (assignmentType === 'WAITING_DOCTOR') return 'waiting-doc';
             return '';
         }

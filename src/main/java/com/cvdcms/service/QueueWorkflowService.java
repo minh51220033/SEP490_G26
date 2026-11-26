@@ -341,7 +341,12 @@ public class QueueWorkflowService {
             String doctorAssignmentType;
             String doctorStatusLabel;
             String doctorDisplay;
-            if (bookedDoctorId != null && bookedDoctorName != null && !bookedDoctorName.isBlank()) {
+            boolean isHandover = t.getPriorityReason() != null && t.getPriorityReason().startsWith("HANDOVER:");
+            if (isHandover && primaryDoctorName != null) {
+                doctorAssignmentType = "HANDOVER_DOCTOR";
+                doctorStatusLabel = isCallingOrExam ? "Đang khám (Chuyển BS)" : "Chờ chuyển BS";
+                doctorDisplay = primaryDoctorName;
+            } else if (bookedDoctorId != null && bookedDoctorName != null && !bookedDoctorName.isBlank()) {
                 if (!isCallingOrExam || Objects.equals(bookedDoctorId, primaryDoctorId) || primaryDoctorId == null) {
                     doctorAssignmentType = "BOOKED_DOCTOR";
                     doctorStatusLabel = "Đã đặt bác sĩ";
@@ -351,9 +356,9 @@ public class QueueWorkflowService {
                     doctorStatusLabel = "Đã được phân bổ";
                     doctorDisplay = primaryDoctorName != null ? primaryDoctorName : bookedDoctorName.trim();
                 }
-            } else if (isCallingOrExam && primaryDoctorName != null) {
+            } else if (primaryDoctorName != null) {
                 doctorAssignmentType = "ASSIGNED_DOCTOR";
-                doctorStatusLabel = "Đã được phân bổ";
+                doctorStatusLabel = isCallingOrExam ? "Đã được phân bổ" : "Đã chỉ định BS";
                 doctorDisplay = primaryDoctorName;
             } else if (t.getVisit() != null && t.getVisit().getNotes() != null
                     && t.getVisit().getNotes().contains("Chờ")) {

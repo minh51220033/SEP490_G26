@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ========================================================================= -->
+<!-- MODAL CHUYỂN BÁC SĨ ĐIỀU TRỊ QUA HÀNG ĐỢI & SƠ ĐỒ PHÒNG KHÁM             -->
+<!-- ========================================================================= -->
+<div th:fragment="doctorHandoverModal">
+    <style>
+        .df-ho-card {
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 14px;
+            background: #ffffff;
+            cursor: pointer;
+            transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .df-ho-card:hover {
+            border-color: #38bdf8;
+            background: #f0f9ff;
+        }
+        .df-ho-card.is-selected {
+            border-color: #0284c7;
+            background: #eff6ff;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.14);
+        }
+        .df-ho-card.is-disabled {
+            opacity: 0.65;
+            background: #f8fafc;
+        }
+        .df-ho-room-pill {
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 8px 12px;
+            background: #ffffff;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.15s ease;
+            min-width: 145px;
+        }
+        .df-ho-room-pill:hover {
+            border-color: #38bdf8;
+            background: #f0f9ff;
+        }
+        .df-ho-room-pill.is-selected {
+            border-color: #0284c7;
+            background: #e0f2fe;
+            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.18);
+        }
+        .df-ho-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        .df-ho-dot.free { background: #16a34a; }
+        .df-ho-dot.busy { background: #d97706; }
+        .df-ho-chip-btn {
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            color: #334155;
+            border-radius: 999px;
+            padding: 3px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .df-ho-chip-btn:hover {
+            background: #e0f2fe;
+            border-color: #7dd3fc;
+            color: #0369a1;
+        }
+    </style>
+
+    <div class="modal fade" id="doctorHandoverModal" tabindex="-1" aria-labelledby="doctorHandoverModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header py-3 px-4 bg-white border-bottom">
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 text-dark d-flex align-items-center gap-2" style="font-size: 16px;" id="doctorHandoverModalLabel">
+                            <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary" style="width: 32px; height: 32px;">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </span>
+                            <span>Chuyển bác sĩ điều trị</span>
+                            <span id="hoServiceContextBadge" class="badge bg-info-subtle text-info-emphasis border border-info-subtle d-none" style="font-size: 12px;"></span>
+                        </h5>
+                        <div class="text-muted mt-1" style="font-size: 12.5px;">
+                            Giải phóng ghế hiện tại của bạn, đẩy bệnh nhân vào hàng đợi ưu tiên của bác sĩ nhận và hiển thị trên màn hình TV.
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+
+                <form id="doctorHandoverForm" novalidate onsubmit="event.preventDefault(); window.DFHandover.submit();">
+                    <div class="modal-body p-4" style="background: #f8fafc;">
+                        <div id="handoverModalError" class="alert alert-danger py-2 px-3 small d-none mb-3" role="alert"></div>
+
+                        <!-- Lịch sử chuyển giao nếu có -->
+                        <div id="hoHistoryBox" class="d-none mb-3 p-3 rounded-3 bg-white border">
+                            <div class="small fw-bold text-secondary mb-2">
+                                <i class="bi bi-clock-history me-1"></i>Lịch sử bàn giao trong ca này
+                            </div>
+                            <div id="hoHistoryList" class="d-flex flex-column gap-2 small"></div>
+                        </div>
+
+                        <!-- 1. CHỌN BÁC SĨ TIẾP NHẬN -->
+                        <div class="mb-3 p-3 rounded-3 bg-white border">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+                                <label class="fw-bold text-dark small mb-0">
+                                    1. Chọn bác sĩ tiếp nhận <span class="text-danger">*</span>
+                                </label>
+                                <span id="hoDoctorFilterHint" class="small text-muted">Hiển thị các bác sĩ có lịch trực hôm nay</span>
+                            </div>
+                            <div id="hoDoctorList" class="row g-2">
+                                <div class="col-12 text-center py-3 text-muted small">Đang tải danh sách bác sĩ...</div>
+                            </div>
+                        </div>
+
+                        <!-- 2. CHỌN PHÒNG KHÁM DỰ KIẾN -->
+                        <div class="mb-3 p-3 rounded-3 bg-white border">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+                                <label class="fw-bold text-dark small mb-0">2. Phòng khám tiếp nhận (tùy chọn)</label>
+                                <div class="d-flex align-items-center gap-3 small text-muted">
+                                    <span><span class="df-ho-dot free me-1"></span>Phòng trống</span>
+                                    <span><span class="df-ho-dot busy me-1"></span>Đang có khách</span>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <button type="button" id="hoBtnAutoRoom" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold"
+                                        onclick="window.DFHandover.selectRoom(null)">
+                                    <i class="bi bi-magic me-1"></i>Tự động phân phòng theo bác sĩ khi gọi số
+                                </button>
+                            </div>
+                            <div id="hoRoomMap" class="d-flex flex-column gap-2"></div>
+                        </div>
+
+                        <!-- 3. GHI CHÚ BÀN GIAO & TÙY CHỌN TRẢ VỀ -->
+                        <div class="p-3 rounded-3 bg-white border">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+                                <label for="handoverNoteInput" class="fw-bold text-dark small mb-0">
+                                    3. Ghi chú bàn giao chuyên môn <span class="text-danger">*</span>
+                                </label>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <button type="button" class="df-ho-chip-btn" onclick="window.DFHandover.appendSnippet('Đã khám tổng quát, nhờ BS chuyên khoa thực hiện tiếp.')">Khám xong → Chuyên khoa</button>
+                                    <button type="button" class="df-ho-chip-btn" onclick="window.DFHandover.appendSnippet('Đã gây tê & chuẩn bị vùng răng, nhờ BS tiểu phẫu xử lý.')">Đã gây tê → Tiểu phẫu</button>
+                                    <button type="button" class="df-ho-chip-btn" onclick="window.DFHandover.appendSnippet('Đã hoàn tất bước chuyên khoa, chuyển trả lại BS chính hoàn thiện.')">Xong → Trả lại BS chính</button>
+                                </div>
+                            </div>
+                            <textarea id="handoverNoteInput" class="form-control form-control-sm mb-2" rows="2" maxlength="300"
+                                      placeholder="Nhập dặn dò cho bác sĩ tiếp nhận: tình trạng răng, vùng tê, việc cần làm tiếp..."
+                                      oninput="document.getElementById('handoverModalError')?.classList.add('d-none')"></textarea>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="hoReturnToSenderCheck">
+                                <label class="form-check-label small text-dark" for="hoReturnToSenderCheck">
+                                    Gắn gợi ý <strong>chuyển trả lại tôi</strong> sau khi bác sĩ nhận hoàn tất phần việc (Combo còn dịch vụ sau)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer bg-white py-3 px-4 border-top justify-content-between">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-2 fw-semibold" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" id="btnConfirmHandover" class="btn btn-sm btn-primary rounded-pill px-4 py-2 fw-bold text-white">
+                            <i class="bi bi-send-check me-1"></i>Xác nhận chuyển BS
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const state = {
+                visitId: null,
+                serviceId: null,
+                serviceName: null,
+                options: null,
+                selectedDoctorId: null,
+                selectedRoomId: null,
+                submitting: false
+            };
+
+            function esc(str) {
+                if (str === null || str === undefined) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            function csrfHeaders() {
+                const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+                const token = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+                const headerName = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+                if (token && headerName) headers[headerName] = token;
+                return headers;
+            }
+
+            function resolveVisitId() {
+                if (typeof getCurrentVisitId === 'function') return getCurrentVisitId();
+                const el = document.getElementById('visitId');
+                return el && el.value ? Number(el.value) : null;
+            }
+
+            function showError(msg) {
+                const err = document.getElementById('handoverModalError');
+                if (!err) return;
+                if (!msg) {
+                    err.classList.add('d-none');
+                    err.textContent = '';
+                } else {
+                    err.textContent = msg;
+                    err.classList.remove('d-none');
+                }
+            }
+
+            function renderDoctors() {
+                const container = document.getElementById('hoDoctorList');
+                if (!container) return;
+                const doctors = (state.options && state.options.doctors) ? state.options.doctors : [];
+                if (doctors.length === 0) {
+                    container.innerHTML = '<div class="col-12 text-center py-3 text-muted small">Không có bác sĩ nào khác đang hoạt động hoặc có lịch trực hôm nay tại chi nhánh.</div>';
+                    return;
+                }
+
+                container.innerHTML = doctors.map(function (d) {
+                    const selected = Number(state.selectedDoctorId) === Number(d.staffId);
+                    const disabled = state.serviceId && !d.eligibleForService;
+                    const statusBadge = d.busy
+                        ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 11px;">Đang khám · ' + Number(d.waitingCount || 0) + ' chờ</span>'
+                        : '<span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 11px;">Đang rảnh' + (d.waitingCount > 0 ? (' · ' + d.waitingCount + ' chờ') : '') + '</span>';
+                    const returnBadge = d.suggestedReturn
+                        ? '<span class="badge bg-primary text-white ms-1" style="font-size: 10.5px;">Trả về BS trước</span>'
+                        : '';
+                    const permWarn = !d.eligibleForService
+                        ? '<div class="small text-danger mt-1"><i class="bi bi-shield-exclamation me-1"></i>Chưa có quyền chuyên môn dịch vụ này</div>'
+                        : '';
+                    const roomHint = (d.assignedRoomNames && d.assignedRoomNames.length > 0)
+                        ? '<div class="text-muted mt-1" style="font-size: 11.5px;"><i class="bi bi-door-open me-1"></i>Phòng: ' + esc(d.assignedRoomNames.join(', ')) + '</div>'
+                        : '';
+
+                    return '<div class="col-md-6">'
+                        + '<div class="df-ho-card h-100 ' + (selected ? 'is-selected' : '') + ' ' + (disabled ? 'is-disabled' : '') + '" '
+                        + '     onclick="window.DFHandover.selectDoctor(' + Number(d.staffId) + ')">'
+                        + '  <div class="d-flex align-items-start justify-content-between gap-2">'
+                        + '    <div>'
+                        + '      <div class="fw-bold text-dark" style="font-size: 13.5px;">' + esc(d.fullName) + returnBadge + '</div>'
+                        + '      <div class="small text-muted">' + esc(d.specialty || d.positionTitle || 'Bác sĩ điều trị') + '</div>'
+                        + '    </div>'
+                        + statusBadge
+                        + '  </div>'
+                        + (d.busyPatientName ? '<div class="small text-secondary mt-1">Đang khám: <strong>' + esc(d.busyPatientName) + '</strong></div>' : '')
+                        + roomHint
+                        + permWarn
+                        + '</div>'
+                        + '</div>';
+                }).join('');
+            }
+
+            function renderRooms() {
+                const autoBtn = document.getElementById('hoBtnAutoRoom');
+                if (autoBtn) {
+                    const isAuto = state.selectedRoomId === null || state.selectedRoomId === undefined;
+                    autoBtn.classList.toggle('btn-primary', isAuto);
+                    autoBtn.classList.toggle('text-white', isAuto);
+                    autoBtn.classList.toggle('btn-outline-primary', !isAuto);
+                }
+
+                const container = document.getElementById('hoRoomMap');
+                if (!container) return;
+                const rooms = (state.options && state.options.rooms) ? state.options.rooms : [];
+                if (rooms.length === 0) {
+                    container.innerHTML = '<div class="small text-muted">Chưa cấu hình danh sách phòng tại chi nhánh.</div>';
+                    return;
+                }
+
+                const selectedDoc = (state.options.doctors || []).find(function (d) { return Number(d.staffId) === Number(state.selectedDoctorId); });
+                const docRoomIds = selectedDoc && Array.isArray(selectedDoc.assignedRoomIds) ? selectedDoc.assignedRoomIds.map(Number) : [];
+
+                const byFloor = {};
+                rooms.forEach(function (r) {
+                    const f = r.floor || 'Tầng 1';
+                    if (!byFloor[f]) byFloor[f] = [];
+                    byFloor[f].push(r);
+                });
+
+                container.innerHTML = Object.keys(byFloor).map(function (floorName) {
+                    const pills = byFloor[floorName].map(function (r) {
+                        const selected = Number(state.selectedRoomId) === Number(r.roomId);
+                        const isDocRoom = docRoomIds.indexOf(Number(r.roomId)) >= 0;
+                        const warnReq = state.serviceId && r.matchesServiceRequirement === false;
+                        return '<button type="button" class="df-ho-room-pill ' + (selected ? 'is-selected' : '') + ' ' + (warnReq ? 'opacity-50' : '') + '" '
+                            + 'onclick="window.DFHandover.selectRoom(' + Number(r.roomId) + ')">'
+                            + '  <div class="d-flex align-items-center justify-content-between gap-2">'
+                            + '    <span class="fw-bold text-dark" style="font-size: 12.5px;">'
+                            + '      <span class="df-ho-dot ' + (r.occupied ? 'busy' : 'free') + ' me-1"></span>' + esc(r.roomName)
+                            + '    </span>'
+                            + (isDocRoom ? '<span class="badge bg-info-subtle text-info-emphasis" style="font-size: 10px;">Phòng BS</span>' : '')
+                            + '  </div>'
+                            + '  <div class="text-muted mt-1" style="font-size: 11px;">'
+                            + (r.occupied
+                                ? ('Có khách: ' + esc(r.occupiedByPatient || 'Đang sử dụng'))
+                                : (esc(r.roomType || 'Phòng khám') + (r.totalChairCount > 0 ? (' · ' + r.freeChairCount + '/' + r.totalChairCount + ' ghế trống') : '')))
+                            + '  </div>'
+                            + '</button>';
+                    }).join('');
+                    return '<div>'
+                        + '<div class="small fw-semibold text-secondary mb-1">' + esc(floorName) + '</div>'
+                        + '<div class="d-flex flex-wrap gap-2">' + pills + '</div>'
+                        + '</div>';
+                }).join('');
+            }
+
+            function renderHistory(history) {
+                const box = document.getElementById('hoHistoryBox');
+                const listEl = document.getElementById('hoHistoryList');
+                if (!box || !listEl) return;
+                if (!Array.isArray(history) || history.length === 0) {
+                    box.classList.add('d-none');
+                    return;
+                }
+                box.classList.remove('d-none');
+                listEl.innerHTML = history.map(function (h) {
+                    return '<div class="p-2 rounded bg-light border-start border-3 border-primary">'
+                        + '<div class="fw-semibold text-dark">'
+                        + esc(h.fromDoctorName) + ' &rarr; ' + esc(h.toDoctorName)
+                        + (h.serviceName ? (' <span class="badge bg-info-subtle text-info-emphasis ms-1">' + esc(h.serviceName) + '</span>') : '')
+                        + ' <span class="text-muted fw-normal ms-1">(' + esc(h.timestamp) + ')</span>'
+                        + '</div>'
+                        + '<div class="text-secondary mt-1">' + esc(h.note) + '</div>'
+                        + '</div>';
+                }).join('');
+            }
+
+            function renderIncomingBanner(data) {
+                const banner = document.getElementById('visitHandoverBanner');
+                if (!banner || !data || !Array.isArray(data.handoverHistory) || data.handoverHistory.length === 0) {
+                    if (banner) banner.classList.add('d-none');
+                    return;
+                }
+                const latest = data.handoverHistory[0];
+                const detailEl = document.getElementById('visitHandoverBannerDetail');
+                if (detailEl) {
+                    detailEl.innerHTML = '<strong>BS ' + esc(latest.fromDoctorName) + '</strong> bàn giao lúc ' + esc(latest.timestamp)
+                        + (latest.serviceName ? (' · Dịch vụ: <strong>' + esc(latest.serviceName) + '</strong>') : '')
+                        + '<div class="mt-1 text-dark">Lời dặn: "' + esc(latest.note) + '"</div>';
+                }
+                const returnBtn = document.getElementById('btnQuickReturnHandover');
+                if (returnBtn) {
+                    if (data.suggestedReturnDoctorId && data.suggestedReturnDoctorName) {
+                        returnBtn.classList.remove('d-none');
+                        returnBtn.textContent = 'Trả lại BS ' + data.suggestedReturnDoctorName;
+                        returnBtn.onclick = function () {
+                            window.DFHandover.open(null, null, data.suggestedReturnDoctorId);
+                        };
+                    } else {
+                        returnBtn.classList.add('d-none');
+                    }
+                }
+                banner.classList.remove('d-none');
+            }
+
+            function loadOptionsAndOpen(serviceId, serviceName, preselectDoctorId, openModal) {
+                const visitId = resolveVisitId();
+                if (!visitId) return;
+                state.visitId = visitId;
+                state.serviceId = serviceId ? Number(serviceId) : null;
+                state.serviceName = serviceName || null;
+
+                const badge = document.getElementById('hoServiceContextBadge');
+                if (badge) {
+                    if (state.serviceName) {
+                        badge.textContent = state.serviceName;
+                        badge.classList.remove('d-none');
+                    } else {
+                        badge.classList.add('d-none');
+                    }
+                }
+
+                const hintEl = document.getElementById('hoDoctorFilterHint');
+                if (hintEl) {
+                    hintEl.textContent = state.serviceName
+                        ? ('Ưu tiên bác sĩ có quyền chuyên môn: ' + state.serviceName)
+                        : 'Hiển thị các bác sĩ đang trực hôm nay';
+                }
+
+                const url = '/api/doctor/visits/' + encodeURIComponent(visitId) + '/handover-options'
+                    + (state.serviceId ? ('?serviceId=' + encodeURIComponent(state.serviceId)) : '');
+
+                fetch(url, { headers: { 'Accept': 'application/json' } })
+                    .then(function (r) {
+                        if (!r.ok) throw new Error('Không thể tải danh sách bác sĩ.');
+                        return r.json();
+                    })
+                    .then(function (data) {
+                        state.options = data;
+                        renderIncomingBanner(data);
+                        if (!openModal) return;
+
+                        showError(null);
+                        state.selectedRoomId = null;
+                        state.selectedDoctorId = null;
+                        const doctors = data.doctors || [];
+                        if (preselectDoctorId) {
+                            state.selectedDoctorId = Number(preselectDoctorId);
+                        } else {
+                            const firstEligible = doctors.find(function (d) { return d.eligibleForService && !d.busy; })
+                                || doctors.find(function (d) { return d.eligibleForService; });
+                            if (firstEligible) state.selectedDoctorId = firstEligible.staffId;
+                        }
+
+                        const noteEl = document.getElementById('handoverNoteInput');
+                        if (noteEl) {
+                            noteEl.value = state.serviceName
+                                ? ('Chuyển BS chuyên khoa thực hiện dịch vụ: ' + state.serviceName + '.')
+                                : '';
+                        }
+                        const retChk = document.getElementById('hoReturnToSenderCheck');
+                        if (retChk) retChk.checked = Boolean(state.serviceId);
+
+                        renderHistory(data.handoverHistory || []);
+                        renderDoctors();
+                        renderRooms();
+
+                        const modalEl = document.getElementById('doctorHandoverModal');
+                        if (modalEl && modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
+                        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                        setTimeout(function () { noteEl?.focus(); }, 200);
+                    })
+                    .catch(function (err) {
+                        if (openModal && typeof showToast === 'function') {
+                            showToast(err.message || 'Không thể mở hộp thoại chuyển bác sĩ.', true);
+                        }
+                    });
+            }
+
+            window.DFHandover = {
+                open: function (serviceId, serviceName, preselectDoctorId) {
+                    loadOptionsAndOpen(serviceId || null, serviceName || null, preselectDoctorId || null, true);
+                },
+                refreshBanner: function () {
+                    loadOptionsAndOpen(null, null, null, false);
+                },
+                selectDoctor: function (doctorId) {
+                    const docs = (state.options && state.options.doctors) ? state.options.doctors : [];
+                    const found = docs.find(function (d) { return Number(d.staffId) === Number(doctorId); });
+                    if (found && state.serviceId && !found.eligibleForService) {
+                        showError('Bác sĩ ' + found.fullName + ' chưa được phân quyền chuyên môn cho dịch vụ "' + (state.serviceName || '') + '".');
+                        return;
+                    }
+                    showError(null);
+                    state.selectedDoctorId = Number(doctorId);
+                    renderDoctors();
+                    renderRooms();
+                },
+                selectRoom: function (roomId) {
+                    state.selectedRoomId = roomId ? Number(roomId) : null;
+                    renderRooms();
+                },
+                appendSnippet: function (text) {
+                    const noteEl = document.getElementById('handoverNoteInput');
+                    if (!noteEl) return;
+                    noteEl.value = text;
+                    showError(null);
+                    noteEl.focus();
+                },
+                submit: function () {
+                    if (state.submitting) return;
+                    const visitId = state.visitId || resolveVisitId();
+                    if (!visitId) {
+                        showError('Không xác định được lượt khám hiện tại.');
+                        return;
+                    }
+                    if (!state.selectedDoctorId) {
+                        showError('Vui lòng chọn bác sĩ tiếp nhận trước khi chuyển.');
+                        return;
+                    }
+                    const noteEl = document.getElementById('handoverNoteInput');
+                    const note = noteEl ? noteEl.value.trim() : '';
+                    if (note.length < 3) {
+                        showError('Vui lòng nhập ghi chú bàn giao (tối thiểu 3 ký tự) cho bác sĩ nhận.');
+                        noteEl?.focus();
+                        return;
+                    }
+                    showError(null);
+                    state.submitting = true;
+                    const btn = document.getElementById('btnConfirmHandover');
+                    if (btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang chuyển...';
+
+                    const retChk = document.getElementById('hoReturnToSenderCheck');
+                    fetch('/api/doctor/visits/' + encodeURIComponent(visitId) + '/handover', {
+                        method: 'POST',
+                        headers: csrfHeaders(),
+                        body: JSON.stringify({
+                            targetDoctorId: state.selectedDoctorId,
+                            targetRoomId: state.selectedRoomId,
+                            serviceId: state.serviceId,
+                            serviceName: state.serviceName,
+                            note: note,
+                            returnToSender: Boolean(retChk && retChk.checked)
+                        })
+                    })
+                        .then(function (r) {
+                            return r.json().then(function (b) {
+                                if (!r.ok || b.success === false) {
+                                    throw new Error((b && b.message) || 'Không thể chuyển bác sĩ.');
+                                }
+                                return b;
+                            });
+                        })
+                        .then(function (res) {
+                            const modalEl = document.getElementById('doctorHandoverModal');
+                            const inst = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
+                            if (inst) inst.hide();
+                            if (typeof showToast === 'function') {
+                                showToast(res.message || 'Đã chuyển bác sĩ thành công!');
+                            }
+                            setTimeout(function () {
+                                window.location.href = '/doctor/daily-visits';
+                            }, 1300);
+                        })
+                        .catch(function (err) {
+                            showError(err.message || 'Lỗi khi chuyển bác sĩ.');
+                        })
+                        .finally(function () {
+                            state.submitting = false;
+                            if (btn) btn.innerHTML = '<i class="bi bi-send-check me-1"></i>Xác nhận chuyển BS';
+                        });
+                }
+            };
+
+            document.addEventListener('DOMContentLoaded', function () {
+                if (resolveVisitId()) {
+                    window.DFHandover.refreshBanner();
+                }
+            });
+        })();
+    </script>
+</div>
+
+</body>
+</html>
