@@ -168,13 +168,17 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         // Xác định dịch vụ cận lâm sàng được chỉ định
         com.cvdcms.entity.Service service = null;
         if (dto.getServiceId() != null) {
-            service = serviceRepository.findById(dto.getServiceId()).orElse(null);
+            service = serviceRepository.findById(dto.getServiceId())
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ cận lâm sàng ID: " + dto.getServiceId()));
         }
 
         if (service == null && dto.getCustomServiceName() != null && !dto.getCustomServiceName().isBlank()) {
             String nameLower = dto.getCustomServiceName().toLowerCase().trim();
             List<com.cvdcms.entity.Service> matches = serviceRepository.findAll();
             for (com.cvdcms.entity.Service s : matches) {
+                if (s.getServiceName() == null) {
+                    continue;
+                }
                 if (s.getServiceName().toLowerCase().contains(nameLower)
                         || nameLower.contains(s.getServiceName().toLowerCase())) {
                     service = s;
@@ -325,7 +329,7 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
 
         ParaclinicalOrderItemStatus requestedStatus = null;
         if (dto.getStatus() != null && !dto.getStatus().isBlank()) {
-            requestedStatus = ParaclinicalOrderItemStatus.valueOf(dto.getStatus().trim());
+            requestedStatus = ParaclinicalOrderItemStatus.valueOf(dto.getStatus().trim().toUpperCase(Locale.ROOT));
         }
 
         if (hasActiveInvoice) {
@@ -364,16 +368,20 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             if (trimmedUrl.isEmpty()) {
                 item.getAttachments().clear();
             } else {
+                ParaclinicalFileType fileType = trimmedUrl.toLowerCase(Locale.ROOT).endsWith(".pdf")
+                        ? ParaclinicalFileType.PDF
+                        : ParaclinicalFileType.IMAGE;
                 if (item.getAttachments().isEmpty()) {
                     ParaclinicalResultAttachment att = new ParaclinicalResultAttachment();
                     att.setOrderItem(item);
                     att.setFileName("Phim chụp / Kết quả CLS");
                     att.setFileUrl(trimmedUrl);
-                    att.setFileType(ParaclinicalFileType.IMAGE);
+                    att.setFileType(fileType);
                     att.setCaption(item.getService() != null ? item.getService().getServiceName() : "Ảnh CLS");
                     item.getAttachments().add(att);
                 } else {
                     item.getAttachments().get(0).setFileUrl(trimmedUrl);
+                    item.getAttachments().get(0).setFileType(fileType);
                 }
                 if (requestedStatus == null) {
                     item.setStatus(ParaclinicalOrderItemStatus.COMPLETED);
@@ -440,6 +448,23 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public boolean isExternalOrCrossVisitUpload(Long orderItemId, Long activeVisitId) {
+        if (orderItemId == null) {
+            return false;
+        }
+        ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findById(orderItemId).orElse(null);
+        if (item == null) {
+            return false;
+        }
+        if (isExternalLabItem(item)) {
+            return true;
+        }
+        Visit originVisit = item.getOrder() != null ? item.getOrder().getVisit() : null;
+        return activeVisitId != null && originVisit != null && !Objects.equals(activeVisitId, originVisit.getVisitId());
+    }
+
+    @Override
     @Transactional
     public ParaclinicalOrderItemResponseDTO recordExternalLabResult(
             Long orderItemId,
@@ -452,6 +477,10 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findByIdForUpdate(orderItemId)
                 .or(() -> paraclinicalOrderItemRepository.findById(orderItemId))
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chỉ định ID: " + orderItemId));
+
+        if (item.getStatus() == ParaclinicalOrderItemStatus.CANCELLED) {
+            throw new IllegalStateException("Chỉ định cận lâm sàng đã bị hủy, không thể ghi nhận kết quả.");
+        }
 
         Visit originVisit = item.getOrder() != null ? item.getOrder().getVisit() : null;
         Visit checkVisit = activeVisitId != null
@@ -762,7 +791,9 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
             if (candidate.getOrderItemId() == null) continue;
             ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findByIdForUpdate(candidate.getOrderItemId())
                     .orElse(candidate);
-            if (item.getStatus() == ParaclinicalOrderItemStatus.COMPLETED && item.getPerformedService() == null) {
+            if (item.getStatus() == ParaclinicalOrderItemStatus.COMPLETED
+                    && item.getPerformedService() == null
+                    && !isExternalLabItem(item)) {
                 syncOrderItemToPerformedService(item, false);
                 paraclinicalOrderItemRepository.save(item);
             }
@@ -785,7 +816,10 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
 
         for (Long orderItemId : candidateIds) {
             ParaclinicalOrderItem item = paraclinicalOrderItemRepository.findByIdForUpdate(orderItemId).orElse(null);
-            if (item == null || item.getStatus() != ParaclinicalOrderItemStatus.COMPLETED || item.getPerformedService() != null) {
+            if (item == null
+                    || item.getStatus() != ParaclinicalOrderItemStatus.COMPLETED
+                    || item.getPerformedService() != null
+                    || isExternalLabItem(item)) {
                 report.setSkippedCount(report.getSkippedCount() + 1);
                 continue;
             }

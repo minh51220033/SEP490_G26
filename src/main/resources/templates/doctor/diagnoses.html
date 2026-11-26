@@ -552,7 +552,7 @@
                                             <span id="deskQueueWaitingText" th:text="${initWait > 0 ? ('Hàng đợi: ' + initWait + ' đang chờ') : 'Hàng đợi: 0 chờ'}">Hàng đợi: 0 chờ</span>
                                         </span>
                                         <th:block
-                                            th:if="${visit.status == null or visit.status.name() != 'WAITING_PAYMENT'}">
+                                            th:if="${isReadOnlyView != true and (visit.status == null or visit.status.name() != 'WAITING_PAYMENT')}">
                                             <button type="button" id="btnOpenDoctorHandover"
                                                 class="btn btn-outline-primary rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-2 text-nowrap"
                                                 style="height: 36px; font-size: 13px;"
@@ -588,7 +588,7 @@
                                 </div>
                             </div>
                             <!-- BANNER BÀN GIAO NỘI BỘ (CHỈ HIỆN KHI CA KHÁM CÓ LỊCH SỬ CHUYỂN BS) -->
-                            <div id="visitHandoverBanner" class="d-none mt-2 px-3 py-2 rounded-3 bg-info-subtle border border-info-subtle d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                            <div id="visitHandoverBanner" th:unless="${isReadOnlyView == true}" class="d-none mt-2 px-3 py-2 rounded-3 bg-info-subtle border border-info-subtle d-flex align-items-center justify-content-between gap-2 flex-wrap">
                                 <div class="d-flex align-items-start gap-2 small">
                                     <i class="bi bi-arrow-left-right text-primary fs-6 mt-1"></i>
                                     <div id="visitHandoverBannerDetail" class="text-secondary"></div>
@@ -893,7 +893,7 @@
         <div th:replace="~{doctor/fragments/paraclinical-orders :: paraclinicalOrdersModal}"></div>
         <div th:replace="~{doctor/fragments/clinical-treatment :: clinicalTreatmentModals}"></div>
         <div th:replace="~{doctor/fragments/labo-tab :: laboModals}"></div>
-        <div th:replace="~{doctor/fragments/doctor-handover-modal :: doctorHandoverModal}"></div>
+        <div th:if="${isReadOnlyView != true}" th:replace="~{doctor/fragments/doctor-handover-modal :: doctorHandoverModal}"></div>
     </th:block>
 
     <!-- ========================================================= -->

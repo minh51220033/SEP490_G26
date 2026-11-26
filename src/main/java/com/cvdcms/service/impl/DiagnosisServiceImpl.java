@@ -7,6 +7,8 @@ import com.cvdcms.DTO.GeneralExaminationRequestDTO;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.DiagnosisType;
 import com.cvdcms.entity.enums.PerformedServiceStatus;
+import com.cvdcms.entity.enums.PrescriptionStatus;
+import com.cvdcms.entity.enums.ServiceType;
 import com.cvdcms.entity.enums.TreatmentPlanStatus;
 import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.repository.*;
@@ -264,7 +266,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 .map(ps -> ps.getFinalPrice() != null ? ps.getFinalPrice() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
 
-        List<Prescription> prescriptions = prescriptionRepository.findByVisit_VisitIdOrderByCreatedAtDesc(visitId);
+        List<Prescription> prescriptions = prescriptionRepository.findByVisit_VisitIdOrderByCreatedAtDesc(visitId)
+                .stream()
+                .filter(p -> p.getStatus() != PrescriptionStatus.CANCELLED)
+                .toList();
         int prescriptionCount = prescriptions.size();
         boolean hasPrescription = prescriptionCount > 0;
 

@@ -483,6 +483,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             }
         }
 
+        String lockReason = lockReason(visit);
+
         // 1. Ưu tiên tìm quy trình đang gắn cùng giai đoạn + dịch vụ (tránh nhân bản
         // khi 1 dịch vụ có nhiều bước trong giai đoạn)
         if (planStage != null && resolvedServiceId != null) {
@@ -490,20 +492,25 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     .findFirstByPlanStage_StageIdAndVersion_Template_Service_ServiceId(planStage.getStageId(),
                             resolvedServiceId);
             if (existingByStage.isPresent()) {
-                WorkflowExecution ex = reconcileOrphanedCompletedExecution(existingByStage.get(), visit);
-                ex = reconcileExecutionWithPlanItems(ex, visit);
+                WorkflowExecution ex = existingByStage.get();
+                if (lockReason == null) {
+                    ex = reconcileOrphanedCompletedExecution(ex, visit);
+                    ex = reconcileExecutionWithPlanItems(ex, visit);
+                }
                 return mapExecutionToDTO(ex, visit);
             }
             for (TreatmentPlanItem sib : stageServiceItems) {
                 Optional<WorkflowExecution> sibExec = executionRepo.findFirstByPlanItem_PlanItemId(sib.getPlanItemId());
                 if (sibExec.isPresent()) {
                     WorkflowExecution ex = sibExec.get();
-                    if (ex.getPlanStage() == null) {
-                        ex.setPlanStage(planStage);
-                        ex = executionRepo.save(ex);
+                    if (lockReason == null) {
+                        if (ex.getPlanStage() == null) {
+                            ex.setPlanStage(planStage);
+                            ex = executionRepo.save(ex);
+                        }
+                        ex = reconcileOrphanedCompletedExecution(ex, visit);
+                        ex = reconcileExecutionWithPlanItems(ex, visit);
                     }
-                    ex = reconcileOrphanedCompletedExecution(ex, visit);
-                    ex = reconcileExecutionWithPlanItems(ex, visit);
                     return mapExecutionToDTO(ex, visit);
                 }
             }
@@ -512,8 +519,11 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         if (planItemId != null) {
             Optional<WorkflowExecution> existingByPlan = executionRepo.findFirstByPlanItem_PlanItemId(planItemId);
             if (existingByPlan.isPresent()) {
-                WorkflowExecution ex = reconcileOrphanedCompletedExecution(existingByPlan.get(), visit);
-                ex = reconcileExecutionWithPlanItems(ex, visit);
+                WorkflowExecution ex = existingByPlan.get();
+                if (lockReason == null) {
+                    ex = reconcileOrphanedCompletedExecution(ex, visit);
+                    ex = reconcileExecutionWithPlanItems(ex, visit);
+                }
                 return mapExecutionToDTO(ex, visit);
             }
         }
@@ -545,7 +555,6 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             }
         }
 
-        String lockReason = lockReason(visit);
         if (lockReason != null) {
             throw new IllegalStateException(lockReason);
         }
@@ -3019,8 +3028,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         if (capabilityService.isParaclinicalOrLabService(serviceId)) {
             return com.cvdcms.service.DoctorClinicalCapabilityService.CapabilityCheckResult.ok();
         }
+        boolean isAdmin = actorUserId != null && userRepo != null && userRepo.hasActiveAdminRole(actorUserId);
         Long branchId = visit.getBranch() != null ? visit.getBranch().getBranchId() : null;
-        StaffProfile actorDoc = actorUserId != null ? staffOf(actorUserId) : null;
+        StaffProfile actorDoc = (!isAdmin && actorUserId != null) ? staffOf(actorUserId) : null;
         Long doctorId = actorDoc != null
                 ? actorDoc.getStaffId()
                 : (visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null);
@@ -3169,13 +3179,6 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         if (lockReason != null) {
             throw new IllegalStateException(lockReason);
         }
-
-        if (resolvedServiceId != null) {
-            var capCheck = checkServiceCapability(visit, resolvedServiceId, userId);
-            if (!capCheck.allowed()) {
-                throw new IllegalStateException(capCheck.message());
-            }
-        }
         ServiceCombo combo = serviceComboRepo.findById(comboId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy Combo ID: " + comboId));
         if (!"ACTIVE".equalsIgnoreCase(combo.getStatus())) {
@@ -3271,14 +3274,11 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
 
         List<TreatmentPlan> existingPlans = treatmentPlanRepo.findByProfileIdWithDetails(patient.getProfileId());
         TreatmentPlan plan = existingPlans == null ? null : existingPlans.stream()
-                .filter(p -> p.getStatus() != TreatmentPlanStatus.CANCELLED
-                        && p.getStatus() != TreatmentPlanStatus.COMPLETED)
-                .min(Comparator.comparingInt(p -> switch (p.getStatus()) {
-                    case IN_PROGRESS -> 0;
-                    case ACCEPTED -> 1;
-                    case PROPOSED -> 2;
-                    default -> 3;
-                }))
+                .filter(p -> (p.getStatus() == TreatmentPlanStatus.IN_PROGRESS
+                        || p.getStatus() == TreatmentPlanStatus.ACCEPTED)
+                        && !Boolean.TRUE.equals(p.getIsInstallment())
+                        && !Boolean.TRUE.equals(p.getSentToAccounting()))
+                .min(Comparator.comparingInt(p -> p.getStatus() == TreatmentPlanStatus.IN_PROGRESS ? 0 : 1))
                 .orElse(null);
 
         if (plan == null) {
@@ -3287,7 +3287,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             plan.setPatientProfile(patient);
             plan.setBranch(branch);
             plan.setDoctor(doctor);
-            plan.setPlanName("Kế hoạch điều trị: " + combo.getComboName());
+            String rawPlanName = "Kế hoạch điều trị: " + combo.getComboName();
+            plan.setPlanName(rawPlanName.length() > 150 ? rawPlanName.substring(0, 150) : rawPlanName);
             plan.setStatus(TreatmentPlanStatus.IN_PROGRESS);
             plan.setStartDate(LocalDate.now());
             plan.setExpectedEndDate(LocalDate.now().plusDays(14));
@@ -3332,7 +3333,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         TreatmentPlanStage stage = new TreatmentPlanStage();
         stage.setPlan(plan);
         stage.setStageOrder(nextStageOrder);
-        stage.setStageName("Giai đoạn " + nextStageOrder + ": Hẹn buổi tiếp theo (" + combo.getComboName() + ")");
+        String rawStageName = "Giai đoạn " + nextStageOrder + ": Hẹn buổi tiếp theo (" + combo.getComboName() + ")";
+        stage.setStageName(rawStageName.length() > 150 ? rawStageName.substring(0, 150) : rawStageName);
         stage.setDescription("Tự động lưu dịch vụ vượt ngưỡng thời gian trong ca từ Combo " + combo.getComboCode());
         stage.setStatus(TreatmentPlanStageStatus.PENDING);
         stage.setExpectedEndDate(LocalDate.now().plusDays(7));

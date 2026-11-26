@@ -751,7 +751,8 @@
                     var ctaIcon = (ex.status === 'COMPLETED' || state.locked || ex.canCurrentDoctorPerform === false) ? 'bi-eye' : 'bi-list-check';
                     var handoverBtn = (!state.locked && ex.status !== 'COMPLETED' && ex.canCurrentDoctorPerform === false)
                         ? '<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size:12.5px;" '
-                          + 'onclick="window.DFHandover && window.DFHandover.open(' + Number(ex.serviceId) + ',\'' + esc(ex.serviceName || ex.templateName || '') + '\')">'
+                          + 'data-service-id="' + Number(ex.serviceId) + '" data-service-name="' + esc(ex.serviceName || ex.templateName || '') + '" '
+                          + 'onclick="window.DFHandover && window.DFHandover.open(Number(this.getAttribute(\'data-service-id\')), this.getAttribute(\'data-service-name\'))">'
                           + '<i class="bi bi-arrow-left-right"></i><span>Chuyển BS</span></button>'
                         : '';
 
@@ -810,7 +811,7 @@
                         ? ('Từ KHDT: ' + s.planCode + (s.planName ? ' · ' + s.planName : ''))
                         : (s.templateName || 'Quy trình chuẩn');
                     var startCall = 'window.FT43.startService(' + Number(s.serviceId) + ',' + (s.planItemId ? Number(s.planItemId) : 'null') + ',' + (s.planStageId ? Number(s.planStageId) : 'null') + ')';
-                    var handoverCall = 'window.DFHandover && window.DFHandover.open(' + Number(s.serviceId) + ',\'' + esc(s.stepName || s.serviceName || '') + '\')';
+                    var handoverCall = 'window.DFHandover && window.DFHandover.open(Number(this.getAttribute(\'data-service-id\')), this.getAttribute(\'data-service-name\'))';
 
                     html += '<tr' + ((state.locked || needsHandover) ? '' : ' style="cursor: pointer;" onclick="' + startCall + '"') + '>'
                         + '<td class="df-num"><span class="badge bg-light text-secondary border font-monospace fw-bold px-2 py-1">' + esc(s.serviceCode || 'QT') + '</span></td>'
@@ -831,7 +832,7 @@
                         + (state.locked
                             ? '<span class="small text-muted">Đã khóa</span>'
                             : (needsHandover
-                                ? '<button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size:12.5px;" onclick="' + handoverCall + '">'
+                                ? '<button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size:12.5px;" data-service-id="' + Number(s.serviceId) + '" data-service-name="' + esc(s.stepName || s.serviceName || '') + '" onclick="' + handoverCall + '">'
                                   + '<i class="bi bi-arrow-left-right"></i><span>Chuyển BS</span></button>'
                                 : '<button type="button" class="btn df-btn-tonal-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size:12.5px;" onclick="' + startCall + '">'
                                   + '<i class="bi bi-play-fill"></i><span>Bắt đầu</span></button>'))
@@ -1035,13 +1036,16 @@
                 var isEditable = !isLockedExec && isCurrentOpen && !isDoneOrSkipped && ex.status !== 'COMPLETED' && ex.status !== 'CANCELLED';
 
                 var stateNotice = '';
-                if (state.locked && ex.lockedReason) {
-                    stateNotice = '<div class="alert alert-warning py-2 px-3 small mb-3"><i class="bi bi-lock-fill me-2"></i>' + esc(ex.lockedReason) + '</div>';
+                if (state.locked) {
+                    if (ex.lockedReason) {
+                        stateNotice = '<div class="alert alert-warning py-2 px-3 small mb-3"><i class="bi bi-lock-fill me-2"></i>' + esc(ex.lockedReason) + '</div>';
+                    }
                 } else if (ex.canCurrentDoctorPerform === false) {
                     stateNotice = '<div class="alert alert-danger py-2 px-3 small mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">'
                         + '<span><i class="bi bi-shield-lock-fill me-2"></i>' + esc(ex.capabilityReason || 'Dịch vụ này cần bác sĩ chuyên môn hoặc phòng phù hợp.') + '</span>'
                         + '<button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold text-white" '
-                        + '        onclick="window.DFHandover && window.DFHandover.open(' + Number(ex.serviceId) + ',\'' + esc(ex.serviceName || ex.templateName || '') + '\')">'
+                        + '        data-service-id="' + Number(ex.serviceId) + '" data-service-name="' + esc(ex.serviceName || ex.templateName || '') + '" '
+                        + '        onclick="window.DFHandover && window.DFHandover.open(Number(this.getAttribute(\'data-service-id\')), this.getAttribute(\'data-service-name\'))">'
                         + '  <i class="bi bi-arrow-left-right me-1"></i>Chuyển BS chuyên môn</button>'
                         + '</div>';
                 } else if (ex.locked && ex.lockedReason) {
@@ -1269,7 +1273,7 @@
                               + selectBtn
                               + '<label class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0 fw-semibold mb-0" style="font-size:11.5px; cursor:pointer;">'
                               + '  <i class="bi bi-upload me-1"></i>Tải ảnh KQ'
-                              + '  <input type="file" accept="image/*" class="d-none" onchange="window.FT43.uploadXrayFile(' + Number(ord.orderItemId) + ', this, ' + Number(ex.executionId) + ', ' + Number(step.stepId) + ', ' + Number(ord.orderId) + ')">'
+                              + '  <input type="file" accept="image/*,.pdf" class="d-none" onchange="window.FT43.uploadXrayFile(' + Number(ord.orderItemId) + ', this, ' + Number(ex.executionId) + ', ' + Number(step.stepId) + ', ' + Number(ord.orderId) + ')">'
                               + '</label>'
                               + '<button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0 fw-semibold" style="font-size:11.5px;" '
                               + '        onclick="window.FT43.markXrayDone(' + Number(ord.orderItemId) + ',' + Number(ex.executionId) + ',' + Number(step.stepId) + ',' + Number(ord.orderId) + ')">'
@@ -1712,13 +1716,13 @@
                 var draft = ensureDraft(ex, st);
                 if (orderId) draft.data.xrayOrderId = Number(orderId);
                 if (orderItemId) draft.data.paraclinicalOrderItemId = Number(orderItemId);
-                renderWorkspace(ex);
+                renderAll();
             }
 
             function bindOrderToDraft(execId, stepId, orderId, orderItemId) {
                 var eId = execId || state.selectedExecutionId;
                 var ex = state.executions.find(function (e) { return Number(e.executionId) === Number(eId); });
-                var sId = stepId || (ex ? state.selectedStepByExec[ex.executionId] : null);
+                var sId = stepId || state.selectedStepId || (ex ? ex.currentStepId : null);
                 var st = ex && sId ? (ex.steps || []).find(function (s) { return Number(s.stepId) === Number(sId); }) : null;
                 if (!ex || !st) return;
                 var draft = ensureDraft(ex, st);

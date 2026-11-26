@@ -87,6 +87,9 @@ public class DoctorVisitAccess {
     private StaffBranchAssignmentRepository branchAssignments;
 
     @Autowired(required = false)
+    private com.cvdcms.service.DoctorClinicalCapabilityService capabilityService;
+
+    @Autowired(required = false)
     private TreatmentPlanInstallmentRepository treatmentPlanInstallments;
 
     @Autowired(required = false)
@@ -235,6 +238,13 @@ public class DoctorVisitAccess {
 
     public Long resolveUserIdOrThrow(HttpSession session) {
         return requireAuthenticatedUser(session).getUserId();
+    }
+
+    public Long resolveActingDoctorStaffId(HttpSession session) {
+        User user = requireAuthenticatedUser(session);
+        return staff.findByUserUserId(user.getUserId())
+                .map(StaffProfile::getStaffId)
+                .orElse(null);
     }
 
     public boolean isAdmin(User user) {
@@ -1003,10 +1013,19 @@ public class DoctorVisitAccess {
         List<String> confirmNames = new java.util.ArrayList<>();
         List<String> deferredNames = new java.util.ArrayList<>();
         LocalDateTime simBase = LocalDateTime.now();
+        Long branchId = visit.getBranch() != null ? visit.getBranch().getBranchId() : null;
+        Long docId = visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null;
+        int capableCount = 0;
 
         for (int idx = 0; idx < ordered.size(); idx++) {
             var item = ordered.get(idx);
             var srv = item.getService();
+            if (capabilityService != null
+                    && !capabilityService.isParaclinicalOrLabService(srv.getServiceId())
+                    && !capabilityService.checkDoctorAndRoomCapability(branchId, docId, visit.getRoomId(), srv.getServiceId()).allowed()) {
+                continue;
+            }
+            capableCount++;
             int qty = item.getDefaultQuantity() != null ? Math.max(1, item.getDefaultQuantity()) : 1;
             int minutes = durationOf(srv) * qty;
             String srvName = srv.getServiceName() != null ? srv.getServiceName() : "Dịch vụ";
@@ -1031,7 +1050,7 @@ public class DoctorVisitAccess {
             }
         }
 
-        if (deferred.size() >= ordered.size()) {
+        if (capableCount > 0 && deferred.size() >= capableCount) {
             throw new IllegalStateException("Không có dịch vụ nào trong Combo đủ điều kiện làm trong ca này ("
                     + waiting + " bệnh nhân chờ; ngưỡng " + MAX_ADDON_SERVICE_MINUTES + " phút/dịch vụ, "
                     + MAX_ADDON_TOTAL_MINUTES + " phút tổng làm thêm). Vui lòng lưu Combo vào Kế hoạch điều trị để hẹn buổi sau!");

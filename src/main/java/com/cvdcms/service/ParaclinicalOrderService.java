@@ -17,6 +17,10 @@ public interface ParaclinicalOrderService {
     List<ServiceDTO> getParaclinicalServices();
     void syncParaclinicalOrdersToPerformedServices(Long visitId);
 
+    default boolean isExternalOrCrossVisitUpload(Long orderItemId, Long activeVisitId) {
+        return false;
+    }
+
     default ParaclinicalOrderItemResponseDTO recordExternalLabResult(
             Long orderItemId,
             Long activeVisitId,

@@ -147,7 +147,7 @@
                                     <button type="button" class="btn btn-sm"
                                             th:classappend="${ord.status == 'COMPLETED'} ? 'btn-outline-success' : 'df-btn-tonal-primary'"
                                             th:title="${ord.status == 'COMPLETED'} ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'"
-                                            th:disabled="${isClinicalLocked == true}"
+                                            th:disabled="${isClinicalLocked == true or ord.fromPreviousVisit == true}"
                                             th:data-id="${ord.orderItemId}"
                                             th:data-status="${ord.status}"
                                             onclick="toggleOrderStatus(this.getAttribute('data-id'), this.getAttribute('data-status'))">
@@ -155,7 +155,7 @@
                                     </button>
                                     <button type="button" class="df-btn-icon-muted ms-1"
                                             title="Xóa chỉ định này"
-                                            th:if="${isClinicalLocked != true}"
+                                            th:if="${isClinicalLocked != true and ord.fromPreviousVisit != true}"
                                             th:data-id="${ord.orderItemId}"
                                             onclick="deleteOrder(this.getAttribute('data-id'))">
                                         <i class="bi bi-trash3"></i>
@@ -276,7 +276,7 @@
                             <label class="form-label fw-semibold text-dark small mb-1" for="pcoOrderFileInput">
                                 Đính kèm ảnh / phim kết quả (tùy chọn)
                             </label>
-                            <input type="file" class="form-control form-control-sm" id="pcoOrderFileInput" accept="image/*"
+                            <input type="file" class="form-control form-control-sm" id="pcoOrderFileInput" accept="image/*,.pdf"
                                    onchange="previewOrderAttachImage(this)">
                             <div class="form-text text-muted small">Nếu đã có sẵn phim/ảnh trên máy, chọn để tải lên và đồng bộ ngay vào Kho ảnh.</div>
                             <div class="mt-2 text-center d-none" id="pcoOrderPreviewWrap">
@@ -1097,7 +1097,7 @@
         if (hasFile) formData.append('file', fileInput.files[0]);
         formData.append('stage', stageSelect ? stageSelect.value : 'BEFORE');
         formData.append('category', categorySelect ? categorySelect.value : 'OTHER');
-        if (visitId) formData.append('activeVisitId', String(visitId));
+        if (visitId && (isExtLab || fromPrev)) formData.append('activeVisitId', String(visitId));
         if (partnerInput && partnerInput.value.trim()) {
             formData.append('labPartnerName', partnerInput.value.trim());
         }

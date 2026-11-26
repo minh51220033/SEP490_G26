@@ -344,7 +344,9 @@ public class QueueWorkflowService {
             boolean isHandover = t.getPriorityReason() != null && t.getPriorityReason().startsWith("HANDOVER:");
             if (isHandover && primaryDoctorName != null) {
                 doctorAssignmentType = "HANDOVER_DOCTOR";
-                doctorStatusLabel = isCallingOrExam ? "Đang khám (Chuyển BS)" : "Chờ chuyển BS";
+                doctorStatusLabel = t.getStatus() == QueueStatus.IN_SERVICE
+                        ? "Đang khám (Chuyển BS)"
+                        : (t.getStatus() == QueueStatus.CALLED ? "Đang gọi (Chuyển BS)" : "Chờ chuyển BS");
                 doctorDisplay = primaryDoctorName;
             } else if (bookedDoctorId != null && bookedDoctorName != null && !bookedDoctorName.isBlank()) {
                 if (!isCallingOrExam || Objects.equals(bookedDoctorId, primaryDoctorId) || primaryDoctorId == null) {

@@ -65,7 +65,10 @@ public class DoctorParaclinicalRestController {
             }
             String fileUrl = nanoPixIntegrationService.storeParaclinicalFile(file);
             boolean isPdf = fileUrl.toLowerCase(java.util.Locale.ROOT).endsWith(".pdf");
-            if (activeVisitId != null || isPdf || (labPartnerName != null && !labPartnerName.isBlank())) {
+            boolean routeToExternalLab = isPdf
+                    || (labPartnerName != null && !labPartnerName.isBlank())
+                    || paraclinicalOrderService.isExternalOrCrossVisitUpload(orderItemId, activeVisitId);
+            if (routeToExternalLab) {
                 ParaclinicalOrderItemResponseDTO updated = paraclinicalOrderService.recordExternalLabResult(
                         orderItemId, activeVisitId, labPartnerName, resultSummary, fileUrl, file.getOriginalFilename(), isPdf);
                 return ResponseEntity.ok(updated);
@@ -166,9 +169,10 @@ public class DoctorParaclinicalRestController {
     ) {
         doctorVisitAccess.requireActiveClinicalExam(session, visitId);
         try {
-            ParaclinicalOrderItemResponseDTO created = paraclinicalOrderService.createOrder(visitId, dto, null);
+            Long currentDoctorId = doctorVisitAccess.resolveActingDoctorStaffId(session);
+            ParaclinicalOrderItemResponseDTO created = paraclinicalOrderService.createOrder(visitId, dto, currentDoctorId);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
-        } catch (IllegalStateException e) {
+        } catch (IllegalStateException | IllegalArgumentException e) {
             log.warn("Lỗi nghiệp vụ khi tạo chỉ định CLS: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
@@ -193,7 +197,7 @@ public class DoctorParaclinicalRestController {
         try {
             ParaclinicalOrderItemResponseDTO updated = paraclinicalOrderService.updateOrder(orderItemId, dto);
             return ResponseEntity.ok(updated);
-        } catch (IllegalStateException e) {
+        } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -228,7 +232,7 @@ public class DoctorParaclinicalRestController {
 
             ParaclinicalOrderItemResponseDTO updated = paraclinicalOrderService.updateStatus(orderItemId, status, resultSummary);
             return ResponseEntity.ok(updated);
-        } catch (IllegalStateException e) {
+        } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -245,7 +249,7 @@ public class DoctorParaclinicalRestController {
         try {
             paraclinicalOrderService.deleteOrder(orderItemId);
             return ResponseEntity.ok(Map.of("message", "Đã xóa chỉ định thành công."));
-        } catch (IllegalStateException e) {
+        } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

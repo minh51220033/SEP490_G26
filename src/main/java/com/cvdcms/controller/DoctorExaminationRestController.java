@@ -135,7 +135,8 @@ public class DoctorExaminationRestController {
             @PathVariable Long visitId,
             @RequestParam(value = "serviceId", required = false) Long serviceId,
             jakarta.servlet.http.HttpSession session) {
-        com.cvdcms.entity.User user = doctorVisitAccess.require(session, visitId);
+        doctorVisitAccess.require(session, visitId);
+        com.cvdcms.entity.User user = doctorVisitAccess.requireAuthenticatedUser(session);
         return ResponseEntity.ok(queueCoordinator.getHandoverOptions(user, visitId, serviceId));
     }
 
@@ -147,7 +148,8 @@ public class DoctorExaminationRestController {
             @PathVariable Long visitId,
             @RequestBody Map<String, Object> body,
             jakarta.servlet.http.HttpSession session) {
-        com.cvdcms.entity.User user = doctorVisitAccess.requireActiveClinicalExam(session, visitId);
+        doctorVisitAccess.requireActiveClinicalExam(session, visitId);
+        com.cvdcms.entity.User user = doctorVisitAccess.requireAuthenticatedUser(session);
         Long targetDoctorId = parseLongObj(body != null ? body.get("targetDoctorId") : null);
         Long targetRoomId = parseLongObj(body != null ? body.get("targetRoomId") : null);
         Long serviceId = parseLongObj(body != null ? body.get("serviceId") : null);

@@ -473,7 +473,11 @@ public class NanoPixIntegrationServiceImpl implements NanoPixIntegrationService 
             throw new IllegalArgumentException("Kích thước file ảnh vượt quá giới hạn tối đa cho phép (25 MB).");
         }
 
-        String originalFilename = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
+        String rawFilename = file.getOriginalFilename();
+        if (rawFilename == null || rawFilename.isBlank()) {
+            throw new IllegalArgumentException("Tên file không hợp lệ.");
+        }
+        String originalFilename = StringUtils.cleanPath(rawFilename);
         if (originalFilename.contains("..") || originalFilename.contains("/") || originalFilename.contains("\\")) {
             throw new IllegalArgumentException("Tên file không hợp lệ.");
         }
@@ -516,7 +520,11 @@ public class NanoPixIntegrationServiceImpl implements NanoPixIntegrationService 
         if (file.getSize() > MAX_EXTERNAL_LAB_FILE_SIZE) {
             throw new IllegalArgumentException("Kích thước file kết quả vượt quá giới hạn tối đa (15 MB).");
         }
-        String originalFilename = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
+        String rawFilename = file.getOriginalFilename();
+        if (rawFilename == null || rawFilename.isBlank()) {
+            throw new IllegalArgumentException("Tên file không hợp lệ.");
+        }
+        String originalFilename = StringUtils.cleanPath(rawFilename);
         if (originalFilename.contains("..") || originalFilename.contains("/") || originalFilename.contains("\\")) {
             throw new IllegalArgumentException("Tên file không hợp lệ.");
         }

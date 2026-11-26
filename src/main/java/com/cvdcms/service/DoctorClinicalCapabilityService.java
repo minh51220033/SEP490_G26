@@ -11,6 +11,7 @@ import com.cvdcms.entity.enums.DoctorAssignmentStatus;
 import com.cvdcms.entity.enums.DoctorServicePermissionStatus;
 import com.cvdcms.entity.enums.RoomStatus;
 import com.cvdcms.entity.enums.RoomType;
+import com.cvdcms.entity.enums.ServiceType;
 import com.cvdcms.repository.DoctorRoomAssignmentRepository;
 import com.cvdcms.repository.DoctorServicePermissionRepository;
 import com.cvdcms.repository.RoomRepository;
@@ -18,6 +19,7 @@ import com.cvdcms.repository.ServiceRepository;
 import com.cvdcms.repository.ServiceResourceRequirementRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -137,6 +139,10 @@ public class DoctorClinicalCapabilityService {
      * Quy tắc tương thích ngược: nếu bác sĩ chưa từng được cấu hình dòng phân quyền nào trong DB thì vẫn cho phép.
      */
     public CapabilityCheckResult checkDoctorServicePermission(Long doctorId, Long serviceId) {
+        return checkDoctorServicePermission(null, doctorId, serviceId);
+    }
+
+    public CapabilityCheckResult checkDoctorServicePermission(Long branchId, Long doctorId, Long serviceId) {
         if (doctorId == null || serviceId == null || doctorServicePermissionRepo == null) {
             return CapabilityCheckResult.ok();
         }
@@ -145,10 +151,13 @@ public class DoctorClinicalCapabilityService {
         if (allPerms == null || allPerms.isEmpty()) {
             return CapabilityCheckResult.ok();
         }
+        LocalDate today = LocalDate.now();
         boolean permitted = allPerms.stream()
                 .anyMatch(p -> p.getStatus() == DoctorServicePermissionStatus.ACTIVE
                         && p.getService() != null
-                        && Objects.equals(serviceId, p.getService().getServiceId()));
+                        && Objects.equals(serviceId, p.getService().getServiceId())
+                        && (branchId == null || p.getBranch() == null || Objects.equals(branchId, p.getBranch().getBranchId()))
+                        && isWithinEffectiveDates(p.getEffectiveFrom(), p.getEffectiveTo(), today));
         if (permitted) {
             return CapabilityCheckResult.ok();
         }
@@ -157,32 +166,41 @@ public class DoctorClinicalCapabilityService {
                 false,
                 true,
                 "SERVICE_PERMISSION_DENIED",
-                "Bác sĩ hiện tại chưa được phân quyền chuyên môn cho dịch vụ này. Vui lòng chuyển BS chuyên môn."
+                "Bác sĩ hiện tại chưa được phân quyền chuyên môn cho dịch vụ này (hoặc quyền đã hết hiệu lực). Vui lòng chuyển BS chuyên môn."
         );
+    }
+
+    private boolean isWithinEffectiveDates(LocalDate from, LocalDate to, LocalDate today) {
+        if (from != null && from.isAfter(today)) {
+            return false;
+        }
+        if (to != null && to.isBefore(today)) {
+            return false;
+        }
+        return true;
     }
 
     /**
      * Kiểm tra đồng thời quyền dịch vụ, phân công phòng của bác sĩ và yêu cầu phòng/thiết bị của dịch vụ.
      */
     public CapabilityCheckResult checkDoctorAndRoomCapability(Long branchId, Long doctorId, Long visitRoomId, Long serviceId) {
-        CapabilityCheckResult svcCheck = checkDoctorServicePermission(doctorId, serviceId);
+        CapabilityCheckResult svcCheck = checkDoctorServicePermission(branchId, doctorId, serviceId);
         if (!svcCheck.allowed()) {
             return svcCheck;
         }
 
-        if (visitRoomId == null) {
-            return CapabilityCheckResult.ok();
-        }
+        LocalDate today = LocalDate.now();
 
         // 1. Kiểm tra bác sĩ có được phân công tại phòng này không (nếu bác sĩ đã có cấu hình phòng ở chi nhánh)
-        if (branchId != null && doctorId != null && doctorRoomAssignmentRepo != null) {
+        if (visitRoomId != null && branchId != null && doctorId != null && doctorRoomAssignmentRepo != null) {
             List<DoctorRoomAssignment> allRoomAssignments = doctorRoomAssignmentRepo
                     .findByBranchBranchIdAndStaffStaffIdOrderByAssignmentIdAsc(branchId, doctorId);
             if (allRoomAssignments != null && !allRoomAssignments.isEmpty()) {
                 boolean roomAssigned = allRoomAssignments.stream()
                         .anyMatch(a -> a.getStatus() == DoctorAssignmentStatus.ACTIVE
                                 && a.getRoom() != null
-                                && Objects.equals(visitRoomId, a.getRoom().getRoomId()));
+                                && Objects.equals(visitRoomId, a.getRoom().getRoomId())
+                                && isWithinEffectiveDates(a.getEffectiveFrom(), a.getEffectiveTo(), today));
                 if (!roomAssigned) {
                     return new CapabilityCheckResult(
                             false,
@@ -205,14 +223,14 @@ public class DoctorClinicalCapabilityService {
                                 && (r.getRoom() != null || r.getRoomType() != null))
                         .toList();
                 if (!roomReqs.isEmpty()) {
-                    Room currentRoom = roomRepo.findById(visitRoomId).orElse(null);
+                    Room currentRoom = visitRoomId != null ? roomRepo.findById(visitRoomId).orElse(null) : null;
                     if (currentRoom == null) {
                         return new CapabilityCheckResult(
                                 false,
                                 true,
                                 false,
                                 "ROOM_REQUIREMENT_MISMATCH",
-                                "Không xác định được phòng khám hiện tại cho yêu cầu của dịch vụ."
+                                "Dịch vụ này yêu cầu phòng/thiết bị chuyên dụng, nhưng ca khám chưa được phân phòng phù hợp."
                         );
                     }
                     boolean matchesAnyRoomReq = roomReqs.stream().anyMatch(r -> matchesRoomRequirement(currentRoom, r));
@@ -234,13 +252,14 @@ public class DoctorClinicalCapabilityService {
     }
 
     /**
-     * Trả về tập phòng hợp lệ của bác sĩ tại chi nhánh (giao với yêu cầu phòng của dịch vụ nếu có).
-     * Trả về rỗng nếu không có ràng buộc cứng nào.
+     * Trả về null nếu bác sĩ và dịch vụ đều không có giới hạn phòng nào;
+     * trả về Set (có thể rỗng nếu giao nhau bằng rỗng) khi có ràng buộc phòng cụ thể.
      */
-    public Set<Long> resolveAllowedRoomIdsForDoctor(Long branchId, Long doctorId, Long serviceId) {
+    public Set<Long> resolveRestrictedRoomIds(Long branchId, Long doctorId, Long serviceId) {
         if (branchId == null) {
-            return Collections.emptySet();
+            return null;
         }
+        LocalDate today = LocalDate.now();
         Set<Long> doctorRooms = null;
         if (doctorId != null && doctorRoomAssignmentRepo != null) {
             List<DoctorRoomAssignment> allAssigns = doctorRoomAssignmentRepo
@@ -248,7 +267,10 @@ public class DoctorClinicalCapabilityService {
             if (allAssigns != null && !allAssigns.isEmpty()) {
                 doctorRooms = new LinkedHashSet<>();
                 for (DoctorRoomAssignment a : allAssigns) {
-                    if (a.getStatus() == DoctorAssignmentStatus.ACTIVE && a.getRoom() != null && a.getRoom().getRoomId() != null) {
+                    if (a.getStatus() == DoctorAssignmentStatus.ACTIVE
+                            && a.getRoom() != null
+                            && a.getRoom().getRoomId() != null
+                            && isWithinEffectiveDates(a.getEffectiveFrom(), a.getEffectiveTo(), today)) {
                         doctorRooms.add(a.getRoom().getRoomId());
                     }
                 }
@@ -272,7 +294,7 @@ public class DoctorClinicalCapabilityService {
         }
 
         if (doctorRooms == null && serviceRooms == null) {
-            return Collections.emptySet();
+            return null;
         }
         if (doctorRooms != null && serviceRooms != null) {
             Set<Long> intersection = new LinkedHashSet<>(doctorRooms);
@@ -280,6 +302,11 @@ public class DoctorClinicalCapabilityService {
             return intersection;
         }
         return doctorRooms != null ? doctorRooms : serviceRooms;
+    }
+
+    public Set<Long> resolveAllowedRoomIdsForDoctor(Long branchId, Long doctorId, Long serviceId) {
+        Set<Long> restricted = resolveRestrictedRoomIds(branchId, doctorId, serviceId);
+        return restricted != null ? restricted : Collections.emptySet();
     }
 
     public boolean doesRoomMatchServiceRequirement(Room room, Long serviceId) {
@@ -301,7 +328,9 @@ public class DoctorClinicalCapabilityService {
             return false;
         }
         Service svc = serviceRepo.findById(serviceId).orElse(null);
-        return svc != null && Boolean.TRUE.equals(svc.getIsParaclinical());
+        return svc != null && (Boolean.TRUE.equals(svc.getIsParaclinical())
+                || svc.getServiceType() == ServiceType.XRAY
+                || svc.getServiceType() == ServiceType.LAB);
     }
 
     public String roomTypeLabel(RoomType roomType) {
@@ -311,10 +340,9 @@ public class DoctorClinicalCapabilityService {
         return switch (roomType) {
             case EXAM -> "Khám & Tư vấn";
             case TREATMENT -> "Điều trị";
-            case SURGERY -> "Tiểu phẫu / Phẫu thuật";
             case XRAY -> "Chẩn đoán hình ảnh";
             case LAB -> "Xét nghiệm / Labo";
-            default -> roomType.name();
+            case OTHER -> "Phòng chức năng khác";
         };
     }
 

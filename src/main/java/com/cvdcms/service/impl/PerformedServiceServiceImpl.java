@@ -222,9 +222,10 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
             throw new IllegalArgumentException("Bác sĩ thực hiện hiện không ở trạng thái hoạt động.");
         }
         validateDoctorForVisit(doctor, visit);
-        if (!Boolean.TRUE.equals(service.getIsParaclinical()) && capabilityService != null && visit.getBranch() != null) {
+        if (capabilityService != null && !capabilityService.isParaclinicalOrLabService(service.getServiceId())) {
+            Long branchId = visit.getBranch() != null ? visit.getBranch().getBranchId() : null;
             var capCheck = capabilityService.checkDoctorAndRoomCapability(
-                    visit.getBranch().getBranchId(), doctor.getStaffId(), visit.getRoomId(), service.getServiceId());
+                    branchId, doctor.getStaffId(), visit.getRoomId(), service.getServiceId());
             if (!capCheck.allowed()) {
                 throw new IllegalStateException(capCheck.message());
             }
