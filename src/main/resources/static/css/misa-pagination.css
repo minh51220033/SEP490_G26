@@ -104,6 +104,7 @@
    PHẦN 1: QUY CHUẨN RESPONSIVE MOBILE & UX MÀN HÌNH NHỎ (<= 768px)
    -------------------------------------------------------------------------- */
 @media (max-width: 768px) {
+
     /* 1. Kiến trúc cuộn trang (Scroll Architecture) */
     html,
     body,
@@ -141,12 +142,13 @@
         flex: none !important;
     }
 
-    .table-responsive > table,
-    .table-wrap > table,
-    .table-viewport-wrapper > table,
-    .table-wrapper > table,
+    .table-responsive>table,
+    .table-wrap>table,
+    .table-viewport-wrapper>table,
+    .table-wrapper>table,
     .cv-table {
-        min-width: 860px !important; /* Đảm bảo các cột không bị co ép mất cấu trúc */
+        min-width: 860px !important;
+        /* Đảm bảo các cột không bị co ép mất cấu trúc */
     }
 
     /* Panel không bị khóa overflow */
@@ -196,7 +198,8 @@
     .stat-card .desc-text,
     .stat-card .text-muted-desc,
     .stat-card .stat-meta {
-        display: none !important; /* Ẩn text phụ */
+        display: none !important;
+        /* Ẩn text phụ */
     }
 
     .stat-card .stat-number,
@@ -220,6 +223,7 @@
     }
 
     .misa-page-size-wrapper {
-        display: none !important; /* Mobile ẩn bớt dropdown chọn size để tiết kiệm diện tích */
+        display: none !important;
+        /* Mobile ẩn bớt dropdown chọn size để tiết kiệm diện tích */
     }
 }

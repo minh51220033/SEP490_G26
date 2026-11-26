@@ -508,7 +508,8 @@
                     if (!rd.custom || typeof rd.custom !== 'object') rd.custom = {};
                     state.draftCache[k] = {
                         note: step.resultNote || '',
-                        data: rd
+                        data: rd,
+                        criteriaConfirmed: false
                     };
                 }
                 return state.draftCache[k];
@@ -1031,11 +1032,14 @@
                 var customHtml = renderCustomFieldsBody(step, vals, isEditable);
                 var sessionsHtml = renderSessionHistoryCard(step);
 
-                var criteriaConfirmHtml = (isEditable && step.completionCriteria)
+                var hasCriteria = Boolean(step.completionCriteria && String(step.completionCriteria).trim());
+                var criteriaChecked = !hasCriteria || Boolean(draft.criteriaConfirmed);
+                var criteriaConfirmHtml = (isEditable && hasCriteria)
                     ? '<div class="p-3 rounded-3 bg-primary-subtle border border-primary-subtle mt-3">'
                       + '<div class="form-check mb-0">'
-                      + '  <input class="form-check-input" type="checkbox" id="ft43WorkspaceCriteriaCheck" onchange="document.getElementById(\'ft43WorkspaceError\')?.classList.add(\'d-none\')">'
-                      + '  <label class="form-check-label small fw-semibold text-dark" for="ft43WorkspaceCriteriaCheck">'
+                      + '  <input class="form-check-input" type="checkbox" id="ft43WorkspaceCriteriaCheck" style="cursor:pointer;" ' + (criteriaChecked ? 'checked ' : '')
+                      + '         onchange="window.FT43.toggleCriteriaConfirm(' + Number(ex.executionId) + ',' + Number(step.stepId) + ',this.checked)">'
+                      + '  <label class="form-check-label small fw-semibold text-dark" for="ft43WorkspaceCriteriaCheck" style="cursor:pointer;">'
                       + '    Xác nhận đạt tiêu chí hoàn tất: <strong>' + esc(step.completionCriteria) + '</strong>'
                       + '  </label>'
                       + '</div>'
@@ -1062,7 +1066,7 @@
                         + '          onclick="window.FT43.saveDraft(' + Number(ex.executionId) + ',' + Number(step.stepId) + ')">'
                         + '    <i class="bi bi-floppy me-1"></i>Lưu kết quả buổi này'
                         + '  </button>'
-                        + '  <button type="button" class="btn btn-sm btn-primary rounded-pill px-4 py-2 fw-bold text-white" '
+                        + '  <button type="button" id="ft43BtnCompleteStep" class="btn btn-sm btn-primary rounded-pill px-4 py-2 fw-bold text-white' + (criteriaChecked ? '' : ' d-none') + '" '
                         + '          onclick="window.FT43.completeStep(' + Number(ex.executionId) + ',' + Number(step.stepId) + ')">'
                         + '    <i class="bi bi-check2-circle me-1"></i>Hoàn thành bước'
                         + '  </button>'
@@ -1922,7 +1926,7 @@
                     });
             }
 
-            function startService(serviceId, planItemId, planStageId, patientConfirmed) {
+            function startService(serviceId, planItemId, planStageId, patientConfirmed, switchTabOnSuccess) {
                 if (!state.visitId || (!serviceId && !planItemId && !planStageId)) return;
                 fetch('/api/doctor/workflows/execution/start', {
                     method: 'POST',
@@ -1942,6 +1946,10 @@
                         });
                     })
                     .then(function (dto) {
+                        document.getElementById('ft43AlertBox')?.classList.add('d-none');
+                        if (switchTabOnSuccess && typeof window.switchMainTab === 'function') {
+                            window.switchMainTab('tab-workflow-execution');
+                        }
                         notify('Đã mở quy trình "' + (dto.templateName || dto.serviceName) + '" cho ca khám.', false);
                         syncParentTabs(dto);
                         state.viewMode = 'DETAIL';
@@ -1958,12 +1966,17 @@
                                     cancelText: 'Để buổi sau',
                                     variant: 'primary'
                                 }).then(function (ok) {
-                                    if (ok) startService(serviceId, planItemId, planStageId, true);
+                                    if (ok) startService(serviceId, planItemId, planStageId, true, switchTabOnSuccess);
                                 });
                             }
                             return;
                         }
-                        notify(msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, ''), true);
+                        var finalErr = msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, '');
+                        if (switchTabOnSuccess && typeof window.showToast === 'function') {
+                            window.showToast(finalErr, true);
+                        } else {
+                            notify(finalErr, true);
+                        }
                     });
             }
 
@@ -2167,11 +2180,7 @@
             }
 
             window.openTreatmentPlanStepWorkflow = function (planItemId, serviceId, planStageId, patientConfirmed) {
-                if (typeof window.switchMainTab === 'function') {
-                    window.switchMainTab('tab-workflow-execution');
-                }
-                state.viewMode = 'DETAIL';
-                startService(serviceId, planItemId, planStageId, patientConfirmed);
+                startService(serviceId, planItemId, planStageId, patientConfirmed, true);
             };
 
             window.FT43 = {
@@ -2217,6 +2226,18 @@
                 startService: startService,
                 deleteExecution: deleteExecution,
                 saveDraft: saveDraft,
+                toggleCriteriaConfirm: function (execId, stepId, checked) {
+                    var ex = state.executions.find(function (e) { return Number(e.executionId) === Number(execId); });
+                    var st = ex ? (ex.steps || []).find(function (s) { return Number(s.stepId) === Number(stepId); }) : null;
+                    if (ex && st) {
+                        ensureDraft(ex, st).criteriaConfirmed = !!checked;
+                    }
+                    document.getElementById('ft43WorkspaceError')?.classList.add('d-none');
+                    var completeBtn = document.getElementById('ft43BtnCompleteStep');
+                    if (completeBtn) {
+                        completeBtn.classList.toggle('d-none', !checked);
+                    }
+                },
                 completeStep: completeStep,
                 openToothPopover: openToothPopover,
                 toggleTooth: toggleTooth,

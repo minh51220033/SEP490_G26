@@ -724,13 +724,47 @@ public class DoctorVisitAccess {
             return;
         }
 
+        var booked = resolveBookedServiceSummary(visit);
+        Long bookedServiceId = (booked != null && booked.get("serviceId") instanceof Number bNum)
+                ? bNum.longValue()
+                : null;
+
         com.cvdcms.entity.Service targetService = null;
         if (planItemId != null && treatmentPlanItems != null) {
+            if (workflowExecutions != null && workflowExecutions.findFirstByPlanItem_PlanItemId(planItemId).isPresent()) {
+                return;
+            }
             var it = treatmentPlanItems.findById(planItemId).orElse(null);
-            if (it != null && it.getService() != null) {
-                targetService = it.getService();
-                if (targetServiceId == null) {
-                    targetServiceId = targetService.getServiceId();
+            if (it != null) {
+                if (it.getService() != null) {
+                    targetService = it.getService();
+                    if (targetServiceId == null) {
+                        targetServiceId = targetService.getServiceId();
+                    }
+                }
+                if (it.getStatus() == com.cvdcms.entity.enums.TreatmentPlanItemStatus.IN_PROGRESS) {
+                    return;
+                }
+                var stage = it.getStage();
+                if (stage != null) {
+                    if (stage.getStatus() == com.cvdcms.entity.enums.TreatmentPlanStageStatus.IN_PROGRESS) {
+                        return;
+                    }
+                    if (bookedServiceId != null && stage.getItems() != null && stage.getItems().stream()
+                            .anyMatch(sib -> sib.getService() != null && bookedServiceId.equals(sib.getService().getServiceId()))) {
+                        return;
+                    }
+                }
+                var plan = it.getPlan();
+                if (plan != null) {
+                    if (plan.getStatus() == com.cvdcms.entity.enums.TreatmentPlanStatus.APPROVED
+                            || plan.getStatus() == com.cvdcms.entity.enums.TreatmentPlanStatus.IN_PROGRESS) {
+                        return;
+                    }
+                    if (plan.getCreatedAt() != null && visit.getCheckInAt() != null
+                            && plan.getCreatedAt().isBefore(visit.getCheckInAt())) {
+                        return;
+                    }
                 }
             }
         }
@@ -741,11 +775,9 @@ public class DoctorVisitAccess {
             return;
         }
 
-        var booked = resolveBookedServiceSummary(visit);
         int waitingCount = countWaitingPatientsForVisitDoctor(visit);
 
-        if (booked != null && booked.get("serviceId") != null) {
-            Long bookedServiceId = ((Number) booked.get("serviceId")).longValue();
+        if (bookedServiceId != null) {
             if (targetServiceId != null && bookedServiceId.equals(targetServiceId)) {
                 return;
             }

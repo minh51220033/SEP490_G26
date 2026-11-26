@@ -14,7 +14,7 @@
         <!-- TOPBAR -->
         <header th:replace="~{fragments/header :: appTopbar('Quy trình điều trị')}"></header>
 
-        <main class="app-content p-3 p-md-4" style="background: #f1f5f9 !important; min-height: calc(100vh - 64px);">
+        <main class="app-content p-3 p-md-4" style="background: #f1f5f9 !important; min-height: calc(100vh - 64px); gap: 10px !important;">
             <style>
                 :root {
                     --dv-primary: #0284c7;
@@ -61,7 +61,7 @@
                     background: #ffffff;
                     border: 1.5px solid #e2e8f0;
                     border-radius: 16px;
-                    padding: 20px 24px;
+                    padding: 16px 20px;
                     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
                     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
                     display: flex;
@@ -135,9 +135,9 @@
                     background: #ffffff;
                     border: 1.5px solid #e2e8f0;
                     border-radius: 16px;
-                    padding: 18px 22px;
+                    padding: 14px 18px;
                     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-                    margin-bottom: 20px;
+                    margin-bottom: 0;
                 }
 
                 .dv-search-box {
@@ -429,7 +429,7 @@
                 .step-timeline-item {
                     position: relative;
                     padding-left: 42px;
-                    padding-bottom: 24px;
+                    padding-bottom: 14px;
                 }
                 .step-timeline-item:last-child {
                     padding-bottom: 0;
@@ -483,7 +483,7 @@
                     border: 1px solid #e2e8f0;
                     border-radius: 12px;
                     padding: 16px;
-                    margin-bottom: 14px;
+                    margin-bottom: 10px;
                     box-shadow: 0 1px 3px rgba(0,0,0,0.02);
                     transition: all 0.2s;
                 }
@@ -533,7 +533,7 @@
             <!-- ========================================================================= -->
             <!-- 1. TIÊU ĐỀ TRANG & NÚT HÀNH ĐỘNG (ĐỒNG BỘ HEADER CHUẨN HỆ THỐNG)          -->
             <!-- ========================================================================= -->
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-0">
                 <div class="d-flex align-items-center gap-3">
                     <div class="dv-header-icon"
                         style="background: linear-gradient(135deg, #0284c7, #1d4ed8); color: white;">
@@ -552,7 +552,7 @@
             <!-- ========================================================================= -->
             <!-- 2. 4 THẺ KPI THỐNG KÊ (Bấm thẻ để lọc nhanh danh sách)                   -->
             <!-- ========================================================================= -->
-            <div class="row g-3 mb-4">
+            <div class="row g-2 mb-0">
                 <div class="col-xl-3 col-sm-6">
                     <div class="dv-kpi-card" id="kpiCardAll" th:classappend="${selectedStatus == null or selectedStatus == '' or selectedStatus == 'ALL'} ? 'active-kpi' : ''" style="--kpi-accent: #0284c7;" onclick="setStatusFilter('ALL')">
                         <div>
@@ -662,7 +662,7 @@
             </div>
 
             <!-- THƯ VIỆN 5 KHUNG BƯỚC CÓ SẴN (GHÉP QUY TRÌNH KHÔNG CẦN CODE LẠI) -->
-            <div class="dv-toolbar-card mb-3">
+            <div class="dv-toolbar-card mb-0">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                     <div class="fw-bold text-dark" style="font-size: 14px;">
                         <i class="bi bi-grid-1x2 text-primary me-1"></i>Thư viện 5 Khung thao tác có sẵn
@@ -739,10 +739,10 @@
                             Hiển thị <span class="text-primary fw-bolder" id="visibleCountText" th:text="${workflows != null ? workflows.size() : 0}">0</span> quy trình kỹ thuật
                         </div>
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-primary rounded-3 px-3 py-2 fw-semibold text-nowrap"
-                            onclick="openAddWorkflowModal()">
+                    <a th:href="@{/doctor/workflows/create}"
+                       class="btn btn-sm btn-outline-primary rounded-3 px-3 py-2 fw-semibold text-nowrap text-decoration-none">
                         <i class="bi bi-plus-lg me-1"></i>Thêm quy trình mới
-                    </button>
+                    </a>
                 </div>
 
                 <!-- Table Container -->
@@ -827,10 +827,11 @@
                                             title="Xem các bước lâm sàng" th:data-id="${wf.templateId}" onclick="viewWorkflowStepsModal(this.getAttribute('data-id'))">
                                         <i class="bi bi-eye-fill"></i> <span>Xem</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-3 px-2 py-1 fw-bold"
-                                            title="Chỉnh sửa quy trình &amp; các bước" th:data-id="${wf.templateId}" onclick="openEditWorkflowModal(this.getAttribute('data-id'))">
+                                    <a th:href="@{'/doctor/workflows/' + ${wf.templateId} + '/edit'}"
+                                       class="btn btn-sm btn-outline-secondary rounded-3 px-2 py-1 fw-bold"
+                                       title="Chỉnh sửa quy trình &amp; các bước">
                                         <i class="bi bi-pencil-square"></i>
-                                    </button>
+                                    </a>
                                     <button type="button" class="btn btn-sm btn-outline-danger rounded-3 px-2 py-1"
                                             title="Xóa quy trình" th:data-id="${wf.templateId}" onclick="deleteWorkflow(this.getAttribute('data-id'))">
                                         <i class="bi bi-trash3-fill"></i>
@@ -926,10 +927,11 @@
                                 onclick="resetFilters()">
                             <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt lại bộ lọc
                         </button>
-                        <button type="button" class="btn btn-outline-primary rounded-pill px-4 py-2 fw-bold"
-                                style="font-size: 14.5px;" onclick="openAddWorkflowModal()">
-                            <i class="bi bi-plus-lg me-1"></i>+ Thêm quy trình mới
-                        </button>
+                        <a th:href="@{/doctor/workflows/create}"
+                           class="btn btn-outline-primary rounded-pill px-4 py-2 fw-bold text-decoration-none"
+                           style="font-size: 14.5px;">
+                            <i class="bi bi-plus-lg me-1"></i>Thêm quy trình mới
+                        </a>
                     </div>
                 </div>
             </div>
@@ -937,7 +939,7 @@
             <!-- ========================================================================= -->
             <!-- TẦNG 1 · COMBO DỊCH VỤ MẪU (THAM KHẢO VTTECH DENTAL)                     -->
             <!-- ========================================================================= -->
-            <div class="dv-grid-card mt-4" id="comboSectionCard">
+            <div class="dv-grid-card mt-0" id="comboSectionCard">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 px-4 py-3 border-bottom" style="background: #f8fafc;">
                     <div>
                         <h2 class="h6 fw-bold text-dark mb-0 d-flex align-items-center gap-2">
@@ -966,7 +968,7 @@
                                     Chưa có Combo dịch vụ mẫu nào. Bấm <strong>+ Thêm Combo</strong> để tạo gói dịch vụ kết hợp.
                                 </td>
                             </tr>
-                            <tr th:each="c : ${combos}">
+                            <tr th:each="c, cStat : ${combos}" th:if="${cStat.index < 10}">
                                 <td class="ps-4 align-top py-3">
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                                         <span class="dv-code-pill text-nowrap" th:text="${c.comboCode}">CB-NR-01</span>
@@ -1004,6 +1006,48 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- FOOTER PHÂN TRANG CHUẨN MISA AMIS CHO COMBO DỊCH VỤ MẪU -->
+                <div class="misa-pagination-footer">
+                    <div class="misa-pagination-left">
+                        Tổng số: <strong id="comboFooterTotalItems" th:text="${combos != null ? combos.size() : 0}">0</strong>
+                    </div>
+                    <div class="misa-pagination-right">
+                        <div class="misa-page-size-wrapper">
+                            <span>Số dòng/trang</span>
+                            <select id="comboPageSizeSelect" class="form-select form-select-sm misa-page-size-select"
+                                    aria-label="Số dòng Combo trên mỗi trang" onchange="changeComboPageSize(this.value)">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                        <div class="misa-page-range">
+                            <span id="comboFromItem" th:text="${combos != null and !#lists.isEmpty(combos) ? 1 : 0}">0</span> - <span id="comboToItem" th:text="${combos != null ? (combos.size() > 10 ? 10 : combos.size()) : 0}">0</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <a href="javascript:void(0)" id="comboNavFirst" class="misa-nav-btn disabled"
+                               onclick="goToComboPage(0)" title="Trang đầu">
+                                <i class="bi bi-chevron-bar-left"></i>
+                            </a>
+                            <a href="javascript:void(0)" id="comboNavPrev" class="misa-nav-btn disabled"
+                               onclick="goToComboPage(comboCurrentPage - 1)" title="Trang trước">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                            <a href="javascript:void(0)" id="comboNavNext" class="misa-nav-btn"
+                               th:classappend="${combos == null or combos.size() <= 10} ? 'disabled' : ''"
+                               onclick="goToComboPage(comboCurrentPage + 1)" title="Trang sau">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                            <a href="javascript:void(0)" id="comboNavLast" class="misa-nav-btn"
+                               th:classappend="${combos == null or combos.size() <= 10} ? 'disabled' : ''"
+                               onclick="goToComboPage(comboTotalPages - 1)" title="Trang cuối">
+                                <i class="bi bi-chevron-bar-right"></i>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -1057,127 +1101,6 @@
                 <button type="button" class="btn btn-primary px-4 rounded-pill fw-bold" id="btnEditFromView"
                         style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
                     <i class="bi bi-pencil-square me-1"></i>Chỉnh sửa quy trình này
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ===================================================================== -->
-<!-- MODAL 2: THÊM / SỬA QUY TRÌNH KỸ THUẬT & CÁC BƯỚC (CRUD FORM)         -->
-<!-- ===================================================================== -->
-<div class="modal fade" id="editWorkflowModal" tabindex="-1" aria-labelledby="editWorkflowModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content" style="border-radius: 16px; border: 1.5px solid #cbd5e1; box-shadow: 0 16px 36px rgba(15,23,42,0.16);">
-            <div class="modal-header border-bottom py-3 px-4 bg-light">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="dv-wf-avatar">
-                        <i class="bi bi-sliders"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title fw-bold text-dark mb-0" id="editModalHeading">
-                            Cấu hình Quy trình Kỹ thuật
-                        </h5>
-                        <div class="small text-muted">Chọn khung có sẵn cho từng bước, đổi thứ tự ↑/↓ và thêm trường riêng nếu cần</div>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <form id="workflowForm">
-                    <input type="hidden" id="formTemplateId">
-                    <div id="wfModalErrorBanner" class="alert alert-danger py-2 px-3 small d-none mb-3" role="alert"></div>
-
-                    <!-- THÔNG TIN CHUNG: CHIA 2 HÀNG RỘNG THOÁNG (KHÔNG CẮT CHỮ DROPDOWN) -->
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-5">
-                            <label class="form-label fw-bold text-dark small" for="formTemplateName">Tên quy trình / dịch vụ <span class="text-danger">*</span></label>
-                            <input type="text" id="formTemplateName" class="form-control" required
-                                   placeholder="Ví dụ: Phục hình mão sứ" oninput="clearWfModalError()">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold text-dark small" for="formTemplateCode">Mã quy trình <span class="text-danger">*</span></label>
-                            <input type="text" id="formTemplateCode" class="form-control" required
-                                   placeholder="QTKT-PHUCHINH" style="font-family: monospace; text-transform: uppercase;" oninput="clearWfModalError()">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold text-dark small" for="formStatus">Trạng thái áp dụng</label>
-                            <select id="formStatus" class="form-select">
-                                <option value="ACTIVE">Đang áp dụng</option>
-                                <option value="DRAFT">Bản nháp</option>
-                                <option value="INACTIVE">Ngừng áp dụng</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-5">
-                            <label class="form-label fw-bold text-dark small" for="formServiceId">Dịch vụ nha khoa liên kết</label>
-                            <select id="formServiceId" class="form-select">
-                                <option value="">-- Chọn dịch vụ liên kết --</option>
-                                <option th:each="s : ${activeServices}" th:value="${s.serviceId}" th:text="${s.serviceName}">Cạo vôi răng</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label fw-bold text-dark small" for="formFlowMode">Chế độ luồng thực hiện</label>
-                            <select id="formFlowMode" class="form-select">
-                                <option value="CONTINUOUS">Liên tục tại ghế</option>
-                                <option value="INTERRUPTIBLE">Ngắt quãng (Chờ CLS)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold text-dark small" for="formDescription">Mô tả ngắn</label>
-                            <input type="text" id="formDescription" class="form-control"
-                                   placeholder="Ghi chú mô tả quy trình...">
-                        </div>
-                    </div>
-
-                    <!-- THANH GHÉP BƯỚC NHANH TỪ 5 KHUNG CÓ SẴN -->
-                    <div class="p-3 rounded-3 border bg-light mb-3">
-                        <div class="d-flex flex-wrap align-items-end gap-2">
-                            <div style="flex: 1 1 260px;">
-                                <label class="form-label small fw-bold text-dark mb-1" for="quickStepNameInput">Tên bước mới</label>
-                                <input type="text" id="quickStepNameInput" class="form-control form-control-sm"
-                                       placeholder="Ví dụ: Thử mão, Chụp X-quang kiểm tra..." oninput="clearWfModalError()">
-                            </div>
-                            <div style="flex: 1 1 240px;">
-                                <label class="form-label small fw-bold text-dark mb-1" for="quickStepFrameSelect">Chọn khung có sẵn</label>
-                                <select id="quickStepFrameSelect" class="form-select form-select-sm">
-                                    <option value="CLINICAL_EXAM">Khám lâm sàng (FDI + nhận xét)</option>
-                                    <option value="XRAY">X-quang / Cận lâm sàng</option>
-                                    <option value="ENDODONTICS">Nội nha (Ống tủy &amp; chiều dài)</option>
-                                    <option value="PROCEDURE" selected>Thủ thuật điều trị</option>
-                                    <option value="PROSTHETICS_LABO">Phục hình / Đặt xưởng Labo</option>
-                                </select>
-                            </div>
-                            <div>
-                                <button type="button" class="btn btn-sm btn-outline-primary rounded-3 px-3 py-2 fw-bold bg-white" onclick="addQuickStepFromComposer()">
-                                    <i class="bi bi-plus-circle me-1"></i>Thêm bước
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- DANH SÁCH CÁC BƯỚC TIẾN HÀNH -->
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                            <i class="bi bi-list-ol text-primary"></i>
-                            <span>Danh sách các bước trong quy trình</span>
-                            <span class="badge rounded-pill bg-primary" id="stepCounterBadge">0 bước</span>
-                        </h6>
-                        <span class="small text-muted">Dùng nút mũi tên để sắp xếp thứ tự thực hiện</span>
-                    </div>
-
-                    <div id="stepsContainer">
-                        <!-- Dynamic Step Rows -->
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer border-top py-3 px-4 bg-light d-flex justify-content-between align-items-center">
-                <button type="button" class="btn btn-outline-secondary px-4 rounded-3 fw-semibold" data-bs-dismiss="modal">Hủy bỏ</button>
-                <button type="button" class="btn btn-primary px-4 rounded-3 fw-bold" onclick="saveWorkflowForm()"
-                        style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;">
-                    <i class="bi bi-check-circle-fill me-1"></i>Lưu quy trình kỹ thuật
                 </button>
             </div>
         </div>
@@ -1743,144 +1666,15 @@
     }
 
     // =========================================================================
-    // MODAL 2: THÊM / SỬA QUY TRÌNH (CRUD)
+    // ĐIỀU HƯỚNG SANG TRANG TẠO / CHỈNH SỬA QUY TRÌNH ĐỘC LẬP
     // =========================================================================
-    function showWfModalError(msg) {
-        const el = document.getElementById("wfModalErrorBanner");
-        if (el) {
-            el.textContent = msg;
-            el.classList.remove("d-none");
-        } else {
-            alert(msg);
-        }
-    }
-
-    function clearWfModalError() {
-        document.getElementById("wfModalErrorBanner")?.classList.add("d-none");
-    }
-
-    function addQuickStepFromComposer() {
-        clearWfModalError();
-        const nameEl = document.getElementById("quickStepNameInput");
-        const frameEl = document.getElementById("quickStepFrameSelect");
-        const name = (nameEl?.value || '').trim();
-        const frameKey = frameEl?.value || 'PROCEDURE';
-        if (!name) {
-            showWfModalError("Vui lòng nhập tên bước mới trước khi thêm.");
-            nameEl?.focus();
-            return;
-        }
-        const inferredType = frameKey === 'XRAY' ? 'PARACLINICAL' : (frameKey === 'CLINICAL_EXAM' ? 'CLINICAL' : 'TREATMENT');
-        addNewStepRow({
-            stepName: name,
-            frameKey: frameKey,
-            stepType: inferredType,
-            estimatedDurationMinutes: 10
-        });
-        if (nameEl) nameEl.value = '';
-        nameEl?.focus();
-    }
-
-    function toggleStepAdvancedPanel(rowId) {
-        const el = document.getElementById(`adv-${rowId}`);
-        const btn = document.getElementById(`adv-btn-${rowId}`);
-        if (!el) return;
-        const hidden = el.classList.toggle('d-none');
-        if (btn) {
-            btn.innerHTML = hidden
-                ? '<i class="bi bi-sliders me-1"></i>Cấu hình nâng cao (BYT · Hàng đợi)'
-                : '<i class="bi bi-chevron-up me-1"></i>Thu gọn cấu hình nâng cao';
-        }
-    }
-
-    function onStepFrameSelectChange(frameSel) {
-        frameSel.dataset.manual = '1';
-        const row = frameSel.closest('.step-edit-row');
-        const typeSel = row?.querySelector('.step-type-select');
-        if (!typeSel || typeSel.dataset.manual === '1') return;
-        const fk = frameSel.value;
-        if (fk === 'XRAY') typeSel.value = 'PARACLINICAL';
-        else if (fk === 'CLINICAL_EXAM') typeSel.value = 'CLINICAL';
-        else typeSel.value = 'TREATMENT';
-    }
-
     function openAddWorkflowModal() {
-        clearWfModalError();
-        document.getElementById("workflowForm").reset();
-        document.getElementById("formTemplateId").value = '';
-        document.getElementById("formStatus").value = 'ACTIVE';
-        document.getElementById("formFlowMode").value = 'CONTINUOUS';
-        document.getElementById("editModalHeading").textContent = "Cấu hình Quy trình Kỹ thuật Mới";
-        document.getElementById("stepsContainer").innerHTML = '';
-        currentStepCount = 0;
-        updateStepBadge();
-
-        // 3 bước mẫu tinh gọn ghép từ khung có sẵn
-        addNewStepRow({
-            stepName: "Khám lâm sàng và giải thích",
-            stepDescription: "Khám khoang miệng, giải thích cho bệnh nhân rõ ràng quy trình kỹ thuật",
-            completionCriteria: "Bệnh nhân nắm rõ chỉ định và đồng thuận",
-            estimatedDurationMinutes: 5,
-            stepCode: "B1",
-            stepType: "CLINICAL",
-            frameKey: "CLINICAL_EXAM"
-        });
-        addNewStepRow({
-            stepName: "Tiến hành thao tác kỹ thuật chính",
-            stepDescription: "Thao tác chuẩn xác theo quy trình chuyên môn Bộ Y Tế",
-            completionCriteria: "Đảm bảo vô trùng tuyệt đối và đạt chuẩn kỹ thuật",
-            estimatedDurationMinutes: 15,
-            stepCode: "B2",
-            stepType: "TREATMENT",
-            frameKey: "PROCEDURE"
-        });
-        addNewStepRow({
-            stepName: "Hoàn thiện & Dặn dò sau điều trị",
-            stepDescription: "Kiểm tra kết quả lâm sàng, sát khuẩn vùng can thiệp và dặn dò chăm sóc",
-            completionCriteria: "Vùng điều trị sạch sẽ, bệnh nhân ổn định",
-            estimatedDurationMinutes: 5,
-            stepCode: "B3",
-            stepType: "FOLLOW_UP",
-            frameKey: "PROCEDURE"
-        });
-
-        const modal = new bootstrap.Modal(document.getElementById("editWorkflowModal"));
-        modal.show();
-        setTimeout(() => document.getElementById("formTemplateName")?.focus(), 180);
+        window.location.href = '/doctor/workflows/create';
     }
 
-    async function openEditWorkflowModal(templateId) {
-        clearWfModalError();
-        try {
-            const wf = await fetchWorkflowJson(`/api/doctor/workflows/${templateId}`);
-
-            document.getElementById("formTemplateId").value = wf.templateId || '';
-            document.getElementById("formTemplateName").value = wf.templateName || '';
-            document.getElementById("formTemplateCode").value = wf.templateCode || '';
-            document.getElementById("formServiceId").value = wf.serviceId || '';
-            document.getElementById("formStatus").value = wf.status || 'ACTIVE';
-            document.getElementById("formFlowMode").value = wf.flowMode || 'CONTINUOUS';
-            document.getElementById("formDescription").value = wf.description || '';
-            document.getElementById("editModalHeading").textContent = "Chỉnh sửa Quy trình: " + (wf.templateName || '');
-
-            const container = document.getElementById("stepsContainer");
-            container.innerHTML = '';
-            currentStepCount = 0;
-
-            if (wf.steps && wf.steps.length > 0) {
-                wf.steps.sort((a,b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0));
-                wf.steps.forEach(st => {
-                    addNewStepRow(st);
-                });
-            } else {
-                addNewStepRow({ stepName: "Khám lâm sàng", estimatedDurationMinutes: 10, stepCode: "B1", stepType: "CLINICAL", frameKey: "CLINICAL_EXAM" });
-            }
-
-            const modal = new bootstrap.Modal(document.getElementById("editWorkflowModal"));
-            modal.show();
-        } catch (e) {
-            alert("Lỗi: " + e.message);
-        }
+    function openEditWorkflowModal(templateId) {
+        if (!templateId) return;
+        window.location.href = `/doctor/workflows/${encodeURIComponent(templateId)}/edit`;
     }
 
     const FRAME_META = {
@@ -1895,263 +1689,6 @@
         return FRAME_META[frameKey] || FRAME_META.PROCEDURE;
     }
 
-    function addCustomFieldRowToStep(rowId, cf = {}) {
-        const box = document.getElementById(`cf-list-${rowId}`);
-        if (!box) return;
-        const cfId = cf.id || `cf-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-        const cfType = cf.type || 'text';
-        const cfOptions = Array.isArray(cf.options) ? cf.options.join(', ') : (cf.options || '');
-        const cfPlaceholder = cf.placeholder || '';
-        const item = document.createElement('div');
-        item.className = 'cf-edit-item row g-2 align-items-center mb-2 p-2 rounded-3 border bg-light';
-        item.dataset.cfId = cfId;
-        item.innerHTML = `
-            <div class="col-md-4">
-                <input type="text" class="form-control form-control-sm cf-label-input" value="${escapeHtml(cf.label || '')}" placeholder="Tên trường (VD: Độ khít)">
-            </div>
-            <div class="col-md-3">
-                <select class="form-select form-select-sm cf-type-select" onchange="toggleCfConfigInput(this)">
-                    <option value="text" ${cfType === 'text' ? 'selected' : ''}>Ô nhập 1 dòng</option>
-                    <option value="textarea" ${cfType === 'textarea' ? 'selected' : ''}>Đoạn văn dài</option>
-                    <option value="select" ${cfType === 'select' ? 'selected' : ''}>Danh sách chọn</option>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <input type="text" class="form-control form-control-sm cf-options-input ${cfType === 'select' ? '' : 'd-none'}"
-                       value="${escapeHtml(cfOptions)}" placeholder="Lựa chọn cách nhau dấu phẩy (VD: Đạt, Cần chỉnh)">
-                <input type="text" class="form-control form-control-sm cf-placeholder-input ${cfType === 'select' ? 'd-none' : ''}"
-                       value="${escapeHtml(cfPlaceholder)}" placeholder="Gợi ý nhập liệu cho bác sĩ (tùy chọn)">
-            </div>
-            <div class="col-md-1 text-end">
-                <button type="button" class="btn btn-sm btn-link text-secondary p-1" title="Xóa trường"
-                        onmouseenter="this.classList.replace('text-secondary','text-danger')"
-                        onmouseleave="this.classList.replace('text-danger','text-secondary')"
-                        onclick="this.closest('.cf-edit-item').remove()">
-                    <i class="bi bi-trash3"></i>
-                </button>
-            </div>
-        `;
-        box.appendChild(item);
-    }
-
-    function toggleCfConfigInput(sel) {
-        const item = sel.closest('.cf-edit-item');
-        if (!item) return;
-        const isSelect = sel.value === 'select';
-        item.querySelector('.cf-options-input')?.classList.toggle('d-none', !isSelect);
-        item.querySelector('.cf-placeholder-input')?.classList.toggle('d-none', isSelect);
-    }
-
-    function moveStepRow(rowId, delta) {
-        const container = document.getElementById("stepsContainer");
-        const row = document.getElementById(rowId);
-        if (!container || !row) return;
-        if (delta < 0 && row.previousElementSibling) {
-            container.insertBefore(row, row.previousElementSibling);
-        } else if (delta > 0 && row.nextElementSibling) {
-            container.insertBefore(row.nextElementSibling, row);
-        }
-        renumberSteps();
-    }
-
-    function autoSyncFrameFromStepType(selectEl) {
-        const row = selectEl.closest('.step-edit-row');
-        const frameSel = row?.querySelector('.step-frame-select');
-        if (!frameSel || frameSel.dataset.manual === '1') return;
-        const t = selectEl.value;
-        if (t === 'PARACLINICAL') frameSel.value = 'XRAY';
-        else if (t === 'CLINICAL') frameSel.value = 'CLINICAL_EXAM';
-        else frameSel.value = 'PROCEDURE';
-    }
-
-    function addNewStepRow(nameOrStep = '', desc = '', criteria = '', duration = 10, code = '', type = 'CLINICAL', price = 0, isOptional = false, requiresClinicalApproval = false, targetQueueType = '') {
-        currentStepCount++;
-        const stepObj = (nameOrStep && typeof nameOrStep === 'object') ? nameOrStep : {
-            stepName: nameOrStep,
-            stepDescription: desc,
-            completionCriteria: criteria,
-            estimatedDurationMinutes: duration,
-            stepCode: code,
-            stepType: type,
-            stepPrice: price,
-            isOptional: isOptional,
-            requiresClinicalApproval: requiresClinicalApproval,
-            targetQueueType: targetQueueType
-        };
-
-        const container = document.getElementById("stepsContainer");
-        const rowId = `step-row-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-        const defaultName = stepObj.stepName || `Bước ${currentStepCount}: `;
-        const stepCodeVal = stepObj.stepCode || `B${currentStepCount}`;
-        const stepDurationVal = stepObj.estimatedDurationMinutes || 10;
-        const stepPriceVal = stepObj.stepPrice || 0;
-        const stepDescVal = stepObj.stepDescription || '';
-        const stepCriteriaVal = stepObj.completionCriteria || '';
-        const stepTypeVal = stepObj.stepType || 'CLINICAL';
-        const stepFrameVal = stepObj.frameKey || (stepTypeVal === 'PARACLINICAL' ? 'XRAY' : (stepTypeVal === 'CLINICAL' ? 'CLINICAL_EXAM' : 'PROCEDURE'));
-        const stepQueueVal = stepObj.targetQueueType || '';
-        const stepOptChecked = stepObj.isOptional ? 'checked' : '';
-        const stepApprovalChecked = stepObj.requiresClinicalApproval ? 'checked' : '';
-
-        const row = document.createElement("div");
-        row.className = "step-edit-row";
-        row.id = rowId;
-        row.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-primary text-white px-2 py-1 rounded-pill step-num-badge">
-                        Bước ${currentStepCount}
-                    </span>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" class="btn btn-outline-secondary py-0 px-2" title="Chuyển lên" onclick="moveStepRow('${rowId}', -1)">
-                            <i class="bi bi-arrow-up"></i>
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary py-0 px-2" title="Chuyển xuống" onclick="moveStepRow('${rowId}', 1)">
-                            <i class="bi bi-arrow-down"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" id="adv-btn-${rowId}" class="btn btn-sm btn-link text-secondary p-1 text-decoration-none"
-                            style="font-size: 12px;" onclick="toggleStepAdvancedPanel('${rowId}')">
-                        <i class="bi bi-sliders me-1"></i>Cấu hình nâng cao (BYT · Hàng đợi)
-                    </button>
-                    <button type="button" class="btn btn-sm btn-link text-secondary p-1 fw-bold text-decoration-none" title="Xóa bước này"
-                            onmouseenter="this.classList.replace('text-secondary','text-danger')"
-                            onmouseleave="this.classList.replace('text-danger','text-secondary')"
-                            onclick="removeStepRow('${rowId}')">
-                        <i class="bi bi-trash3"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- THÔNG TIN CỐT LÕI (THOÁNG RỘNG NHƯ DEMO: TÊN BƯỚC + KHUNG CÓ SẴN) -->
-            <div class="row g-2 mb-2">
-                <div class="col-md-7">
-                    <label class="form-label small fw-semibold text-dark mb-1">Tên bước</label>
-                    <input type="text" class="form-control form-control-sm step-name-input" value="${escapeHtml(defaultName)}"
-                           placeholder="Ví dụ: Khám lâm sàng, Chụp X-quang, Thử mão..." oninput="clearWfModalError()">
-                </div>
-                <div class="col-md-5">
-                    <label class="form-label small fw-semibold text-primary mb-1">Khung thao tác có sẵn</label>
-                    <select class="form-select form-select-sm step-frame-select" onchange="onStepFrameSelectChange(this)">
-                        <option value="CLINICAL_EXAM" ${stepFrameVal === 'CLINICAL_EXAM' ? 'selected' : ''}>Khám lâm sàng (FDI + nhận xét)</option>
-                        <option value="XRAY" ${stepFrameVal === 'XRAY' ? 'selected' : ''}>X-quang / Cận lâm sàng</option>
-                        <option value="ENDODONTICS" ${stepFrameVal === 'ENDODONTICS' ? 'selected' : ''}>Nội nha (Ống tủy &amp; chiều dài)</option>
-                        <option value="PROCEDURE" ${stepFrameVal === 'PROCEDURE' ? 'selected' : ''}>Thủ thuật / Vật tư thực hiện</option>
-                        <option value="PROSTHETICS_LABO" ${stepFrameVal === 'PROSTHETICS_LABO' ? 'selected' : ''}>Phục hình / Đặt xưởng Labo</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- TRƯỜNG NHẬP LIỆU RIÊNG CỦA BƯỚC -->
-            <div class="border-top pt-2 mt-2">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="small fw-semibold text-dark"><i class="bi bi-sliders2 text-primary me-1"></i>Trường riêng của bước (tùy chọn)</span>
-                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0 fw-semibold" style="font-size: 12px;"
-                            onclick="addCustomFieldRowToStep('${rowId}')">
-                        <i class="bi bi-plus-lg me-1"></i>Thêm trường
-                    </button>
-                </div>
-                <div id="cf-list-${rowId}"></div>
-            </div>
-
-            <!-- CẤU HÌNH NÂNG CAO (MẶC ĐỊNH THU GỌN ĐỂ TRÁNH RỐI MẮT) -->
-            <div id="adv-${rowId}" class="d-none border-top pt-3 mt-2 bg-light rounded-3 p-3">
-                <div class="row g-2 mb-2">
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-dark mb-1">Mã bước</label>
-                        <input type="text" class="form-control form-control-sm step-code-input" value="${escapeHtml(stepCodeVal)}" placeholder="B${currentStepCount}" style="font-family: monospace; text-transform: uppercase;">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-dark mb-1">Loại bước</label>
-                        <select class="form-select form-select-sm step-type-select" onchange="this.dataset.manual='1'; autoSyncFrameFromStepType(this)">
-                            <option value="CLINICAL" ${stepTypeVal === 'CLINICAL' ? 'selected' : ''}>Khám lâm sàng (CLINICAL)</option>
-                            <option value="PARACLINICAL" ${stepTypeVal === 'PARACLINICAL' ? 'selected' : ''}>Cận lâm sàng (PARACLINICAL)</option>
-                            <option value="TREATMENT" ${stepTypeVal === 'TREATMENT' ? 'selected' : ''}>Điều trị (TREATMENT)</option>
-                            <option value="FOLLOW_UP" ${stepTypeVal === 'FOLLOW_UP' ? 'selected' : ''}>Dặn dò (FOLLOW_UP)</option>
-                            <option value="DECISION" ${stepTypeVal === 'DECISION' ? 'selected' : ''}>Quyết định (DECISION)</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-dark mb-1">Hàng đợi chuyển tiếp</label>
-                        <select class="form-select form-select-sm step-queue-select">
-                            <option value="" ${!stepQueueVal ? 'selected' : ''}>-- Không chuyển --</option>
-                            <option value="RECEPTION" ${stepQueueVal === 'RECEPTION' ? 'selected' : ''}>Tiếp đón</option>
-                            <option value="EXAM" ${stepQueueVal === 'EXAM' ? 'selected' : ''}>Khám bệnh</option>
-                            <option value="PARACLINICAL" ${stepQueueVal === 'PARACLINICAL' ? 'selected' : ''}>Cận lâm sàng</option>
-                            <option value="RESULT_READING" ${stepQueueVal === 'RESULT_READING' ? 'selected' : ''}>Đọc kết quả</option>
-                            <option value="TREATMENT" ${stepQueueVal === 'TREATMENT' ? 'selected' : ''}>Điều trị</option>
-                            <option value="PAYMENT" ${stepQueueVal === 'PAYMENT' ? 'selected' : ''}>Thanh toán</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-dark mb-1">Thời gian (phút) &amp; Giá (VNĐ)</label>
-                        <div class="input-group input-group-sm">
-                            <input type="number" class="form-control step-duration-input" value="${stepDurationVal}" min="1" max="180" title="Thời gian phút">
-                            <input type="text" inputmode="numeric" class="form-control step-price-input text-end" value="${Number(stepPriceVal || 0).toLocaleString('vi-VN')}" placeholder="0 đ"
-                                   oninput="const v=this.value.replace(/[^\\d]/g,''); this.value = v ? Number(v).toLocaleString('vi-VN') : '';">
-                        </div>
-                    </div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold text-dark mb-1">Mô tả kỹ thuật BYT</label>
-                        <input type="text" class="form-control form-control-sm step-desc-input" value="${escapeHtml(stepDescVal)}" placeholder="Dụng cụ, thao tác, góc độ...">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-semibold text-success mb-1">Tiêu chí hoàn thành bước (Nghiệm thu)</label>
-                        <input type="text" class="form-control form-control-sm step-criteria-input" value="${escapeHtml(stepCriteriaVal)}" placeholder="VD: Bề mặt sạch mảng bám, cầm máu tốt...">
-                    </div>
-                </div>
-                <div class="d-flex flex-wrap gap-4 pt-1">
-                    <div class="form-check">
-                        <input class="form-check-input step-optional-input" type="checkbox" id="opt-${rowId}" ${stepOptChecked}>
-                        <label class="form-check-label small fw-semibold text-dark" for="opt-${rowId}">Bước tùy chọn (cho phép bỏ qua)</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input step-approval-input" type="checkbox" id="app-${rowId}" ${stepApprovalChecked}>
-                        <label class="form-check-label small fw-semibold text-dark" for="app-${rowId}">Cần bác sĩ phê duyệt chuyên môn</label>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        container.appendChild(row);
-        if (stepObj.frameKey) {
-            const fs = row.querySelector('.step-frame-select');
-            if (fs) fs.dataset.manual = '1';
-        }
-        if (Array.isArray(stepObj.customFields)) {
-            stepObj.customFields.forEach(cf => addCustomFieldRowToStep(rowId, cf));
-        }
-        updateStepBadge();
-    }
-
-    function removeStepRow(rowId) {
-        const row = document.getElementById(rowId);
-        if (row) {
-            row.remove();
-            renumberSteps();
-        }
-    }
-
-    function renumberSteps() {
-        const rows = document.querySelectorAll("#stepsContainer .step-edit-row");
-        currentStepCount = 0;
-        rows.forEach((r, idx) => {
-            currentStepCount = idx + 1;
-            const badge = r.querySelector(".step-num-badge");
-            if (badge) badge.textContent = `Bước ${currentStepCount}`;
-        });
-        updateStepBadge();
-    }
-
-    function updateStepBadge() {
-        const badge = document.getElementById("stepCounterBadge");
-        if (badge) badge.textContent = `${currentStepCount} bước`;
-    }
-
     async function extractApiErrorMessage(res, fallback) {
         try {
             const data = await res.json();
@@ -2164,118 +1701,6 @@
             } catch (_) {}
         }
         return fallback;
-    }
-
-    async function saveWorkflowForm() {
-        const templateId = document.getElementById("formTemplateId").value;
-        const templateName = document.getElementById("formTemplateName").value.trim();
-        const templateCode = document.getElementById("formTemplateCode").value.trim().toUpperCase();
-        const serviceId = document.getElementById("formServiceId").value;
-        const status = document.getElementById("formStatus").value;
-        const flowMode = document.getElementById("formFlowMode").value || 'CONTINUOUS';
-        const description = document.getElementById("formDescription").value.trim();
-
-        if (!templateName) {
-            showWfModalError("Vui lòng nhập tên quy trình / dịch vụ.");
-            document.getElementById("formTemplateName")?.focus();
-            return;
-        }
-
-        const stepRows = document.querySelectorAll("#stepsContainer .step-edit-row");
-        const steps = [];
-
-        stepRows.forEach((r, idx) => {
-            const name = r.querySelector(".step-name-input").value.trim();
-            const stepCode = (r.querySelector(".step-code-input")?.value || '').trim().toUpperCase() || `B${idx + 1}`;
-            const duration = parseInt(r.querySelector(".step-duration-input").value) || 10;
-            const desc = r.querySelector(".step-desc-input").value.trim();
-            const criteria = r.querySelector(".step-criteria-input").value.trim();
-            const price = parseFloat((r.querySelector(".step-price-input").value || "0").replace(/[^\d]/g, "")) || 0;
-            const stepType = r.querySelector(".step-type-select")?.value || 'CLINICAL';
-            const frameKey = r.querySelector(".step-frame-select")?.value || 'PROCEDURE';
-            const targetQueueType = r.querySelector(".step-queue-select")?.value || null;
-            const isOptional = Boolean(r.querySelector(".step-optional-input")?.checked);
-            const requiresClinicalApproval = Boolean(r.querySelector(".step-approval-input")?.checked);
-
-            const customFields = [];
-            r.querySelectorAll('.cf-edit-item').forEach(cfEl => {
-                const label = cfEl.querySelector('.cf-label-input')?.value.trim();
-                if (!label) return;
-                const cfType = cfEl.querySelector('.cf-type-select')?.value || 'text';
-                const optsRaw = cfEl.querySelector('.cf-options-input')?.value || '';
-                const placeholder = cfEl.querySelector('.cf-placeholder-input')?.value.trim() || '';
-                const options = cfType === 'select'
-                    ? optsRaw.split(',').map(x => x.trim()).filter(Boolean)
-                    : [];
-                customFields.push({
-                    id: cfEl.dataset.cfId || undefined,
-                    label,
-                    type: cfType,
-                    options,
-                    placeholder: cfType === 'select' ? '' : placeholder
-                });
-            });
-
-            if (name) {
-                steps.push({
-                    sequenceOrder: idx + 1,
-                    stepCode: stepCode,
-                    stepName: name,
-                    stepDescription: desc,
-                    completionCriteria: criteria,
-                    estimatedDurationMinutes: duration,
-                    stepPrice: price,
-                    stepType: stepType,
-                    frameKey: frameKey,
-                    customFields: customFields,
-                    targetQueueType: targetQueueType || null,
-                    isOptional: isOptional,
-                    requiresClinicalApproval: requiresClinicalApproval
-                });
-            }
-        });
-
-        if (steps.length === 0) {
-            showWfModalError("Vui lòng thêm ít nhất 1 bước có tên cho quy trình kỹ thuật.");
-            return;
-        }
-
-        const payload = {
-            templateId: templateId ? parseInt(templateId) : null,
-            templateName,
-            templateCode,
-            serviceId: serviceId ? parseInt(serviceId) : null,
-            status,
-            flowMode,
-            description,
-            steps
-        };
-
-        try {
-            const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
-            const tokenMeta = document.querySelector('meta[name="_csrf"]');
-            const headerMeta = document.querySelector('meta[name="_csrf_header"]');
-            if (tokenMeta && headerMeta && tokenMeta.content && headerMeta.content) {
-                headers[headerMeta.content] = tokenMeta.content;
-            }
-            const res = await fetch('/api/doctor/workflows', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(payload)
-            });
-
-            if (!res.ok) {
-                const errMsg = await extractApiErrorMessage(res, "Lỗi khi lưu quy trình");
-                throw new Error(errMsg);
-            }
-
-            const modal = bootstrap.Modal.getInstance(document.getElementById("editWorkflowModal"));
-            if (modal) modal.hide();
-
-            await fetchWorkflows(true);
-        } catch (e) {
-            showWfModalError(e.message || "Không thể lưu quy trình.");
-        }
     }
 
     async function deleteWorkflow(templateId) {
@@ -2305,8 +1730,27 @@
     }
 
     // =========================================================================
-    // TẦNG 1 · COMBO DỊCH VỤ MẪU (VTTECH DENTAL) - CRUD JS
+    // TẦNG 1 · COMBO DỊCH VỤ MẪU (VTTECH DENTAL) - CRUD JS & PHÂN TRANG AMIS
     // =========================================================================
+    let comboCurrentPage = 0;
+    let comboPageSize = 10;
+    let comboTotalPages = 0;
+
+    function changeComboPageSize(val) {
+        const parsed = parseInt(val, 10);
+        comboPageSize = (parsed === 10 || parsed === 25 || parsed === 50 || parsed === 100) ? parsed : 10;
+        comboCurrentPage = 0;
+        renderComboTable();
+    }
+
+    function goToComboPage(page) {
+        if (comboTotalPages <= 0) return;
+        const target = Math.max(0, Math.min(page, comboTotalPages - 1));
+        if (target === comboCurrentPage) return;
+        comboCurrentPage = target;
+        renderComboTable();
+    }
+
     async function fetchCombos() {
         try {
             const res = await fetch('/api/doctor/workflows/combos');
@@ -2322,10 +1766,41 @@
         return Number(n || 0).toLocaleString('vi-VN') + ' đ';
     }
 
+    function updateComboPaginationUi(total, fromItem, toItem) {
+        const totalEl = document.getElementById('comboFooterTotalItems');
+        const fromEl = document.getElementById('comboFromItem');
+        const toEl = document.getElementById('comboToItem');
+        const btnFirst = document.getElementById('comboNavFirst');
+        const btnPrev = document.getElementById('comboNavPrev');
+        const btnNext = document.getElementById('comboNavNext');
+        const btnLast = document.getElementById('comboNavLast');
+
+        if (totalEl) totalEl.textContent = total;
+        if (fromEl) fromEl.textContent = fromItem;
+        if (toEl) toEl.textContent = toItem;
+
+        const atFirst = comboCurrentPage <= 0 || comboTotalPages <= 0;
+        const atLast = comboTotalPages <= 0 || comboCurrentPage >= comboTotalPages - 1;
+        if (btnFirst) btnFirst.classList.toggle('disabled', atFirst);
+        if (btnPrev) btnPrev.classList.toggle('disabled', atFirst);
+        if (btnNext) btnNext.classList.toggle('disabled', atLast);
+        if (btnLast) btnLast.classList.toggle('disabled', atLast);
+    }
+
     function renderComboTable() {
         const tbody = document.getElementById('comboTableBody');
         if (!tbody) return;
-        if (!Array.isArray(combosData) || combosData.length === 0) {
+        const list = Array.isArray(combosData) ? combosData : [];
+        const total = list.length;
+        comboTotalPages = total === 0 ? 0 : Math.ceil(total / comboPageSize);
+        if (comboTotalPages === 0) {
+            comboCurrentPage = 0;
+        } else if (comboCurrentPage >= comboTotalPages) {
+            comboCurrentPage = comboTotalPages - 1;
+        }
+
+        if (total === 0) {
+            updateComboPaginationUi(0, 0, 0);
             tbody.innerHTML = `
                 <tr>
                     <td colspan="4" class="text-center text-muted py-4 small">
@@ -2334,7 +1809,13 @@
                 </tr>`;
             return;
         }
-        tbody.innerHTML = combosData.map(c => {
+
+        const fromIndex = comboCurrentPage * comboPageSize;
+        const toIndex = Math.min(fromIndex + comboPageSize, total);
+        updateComboPaginationUi(total, fromIndex + 1, toIndex);
+
+        const pageItems = list.slice(fromIndex, toIndex);
+        tbody.innerHTML = pageItems.map(c => {
             const chips = (c.items || []).map((it, idx) => {
                 const stepBadge = it.workflowStepCount > 0 ? `<span class="text-primary ms-1">(${it.workflowStepCount} bước)</span>` : '';
                 const qtyBadge = it.defaultQuantity > 1 ? `<span class="text-muted ms-1">x${it.defaultQuantity}</span>` : '';

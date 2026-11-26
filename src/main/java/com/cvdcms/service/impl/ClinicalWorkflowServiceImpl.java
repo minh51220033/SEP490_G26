@@ -638,8 +638,15 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        // Nạp thêm các quy trình đang làm dở từ buổi khám trước của cùng bệnh nhân
-        // (điều trị nhiều buổi / KHDT)
+        Long bookedServiceId = null;
+        if (doctorVisitAccess != null) {
+            Map<String, Object> booked = doctorVisitAccess.resolveBookedServiceSummary(visit);
+            if (booked != null && booked.get("serviceId") instanceof Number num) {
+                bookedServiceId = num.longValue();
+            }
+        }
+
+        // Nạp thêm các quy trình thuộc Kế hoạch điều trị đang làm dở từ buổi khám trước của cùng bệnh nhân
         Long profileId = visit.getPatientProfile() != null ? visit.getPatientProfile().getProfileId() : null;
         if (profileId != null) {
             List<WorkflowExecution> patientExecs = executionRepo
@@ -649,10 +656,19 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     if (pe.getExecutionId() != null && seenExecIds.contains(pe.getExecutionId())) {
                         continue;
                     }
+                    boolean hasPlanLink = pe.getPlanItem() != null || pe.getPlanStage() != null;
+                    boolean activeInCurrentVisit = hasStepActivityInVisit(pe, visitId);
+                    Long peServiceId = (pe.getVersion() != null && pe.getVersion().getTemplate() != null
+                            && pe.getVersion().getTemplate().getService() != null)
+                                    ? pe.getVersion().getTemplate().getService().getServiceId()
+                                    : null;
+                    boolean matchesBookedService = bookedServiceId != null && bookedServiceId.equals(peServiceId);
+                    if (!hasPlanLink && !activeInCurrentVisit && !matchesBookedService) {
+                        continue;
+                    }
                     if (pe.getStatus() == WorkflowExecutionStatus.IN_PROGRESS
                             || pe.getStatus() == WorkflowExecutionStatus.PAUSED
-                            || (pe.getStatus() == WorkflowExecutionStatus.COMPLETED
-                                    && hasStepActivityInVisit(pe, visitId))) {
+                            || (pe.getStatus() == WorkflowExecutionStatus.COMPLETED && activeInCurrentVisit)) {
                         executions.add(pe);
                         if (pe.getExecutionId() != null)
                             seenExecIds.add(pe.getExecutionId());
@@ -804,13 +820,6 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     .thenComparing(o -> o.getServiceName() == null ? "" : o.getServiceName()));
         }
 
-        Long bookedServiceId = null;
-        if (doctorVisitAccess != null) {
-            Map<String, Object> booked = doctorVisitAccess.resolveBookedServiceSummary(visit);
-            if (booked != null && booked.get("serviceId") instanceof Number num) {
-                bookedServiceId = num.longValue();
-            }
-        }
         List<ServiceComboDTO> activeCombos = lockReason == null ? getAllCombos(true) : List.of();
         if (bookedServiceId != null && !activeCombos.isEmpty()) {
             final Long reqSrvId = bookedServiceId;

@@ -36,7 +36,11 @@ html {
     scrollbar-gutter: stable;
 }
 
-body, .app-body, .emr-page, .emr-paper, .emr-paper * {
+body,
+.app-body,
+.emr-page,
+.emr-paper,
+.emr-paper * {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
 }
 
@@ -88,10 +92,21 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
-.emr-kpi-card.kpi-total { --kpi-accent: #0284c7; }
-.emr-kpi-card.kpi-open { --kpi-accent: #f59e0b; }
-.emr-kpi-card.kpi-waiting { --kpi-accent: #8b5cf6; }
-.emr-kpi-card.kpi-signed { --kpi-accent: #10b981; }
+.emr-kpi-card.kpi-total {
+    --kpi-accent: #0284c7;
+}
+
+.emr-kpi-card.kpi-open {
+    --kpi-accent: #f59e0b;
+}
+
+.emr-kpi-card.kpi-waiting {
+    --kpi-accent: #8b5cf6;
+}
+
+.emr-kpi-card.kpi-signed {
+    --kpi-accent: #10b981;
+}
 
 .emr-kpi-num {
     font-size: 32px;
@@ -118,10 +133,25 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     flex-shrink: 0;
 }
 
-.kpi-total .emr-kpi-icon { background: #e0f2fe; color: #0284c7; }
-.kpi-open .emr-kpi-icon { background: #fef3c7; color: #d97706; }
-.kpi-waiting .emr-kpi-icon { background: #f3e8ff; color: #8b5cf6; }
-.kpi-signed .emr-kpi-icon { background: #dcfce7; color: #16a34a; }
+.kpi-total .emr-kpi-icon {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.kpi-open .emr-kpi-icon {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.kpi-waiting .emr-kpi-icon {
+    background: #f3e8ff;
+    color: #8b5cf6;
+}
+
+.kpi-signed .emr-kpi-icon {
+    background: #dcfce7;
+    color: #16a34a;
+}
 
 /* Toolbar Card chuẩn daily-visits.html */
 .emr-toolbar-card {
@@ -219,11 +249,30 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     white-space: nowrap;
 }
 
-.emr-badge-draft { background: #e0f2fe; color: #0284c7; }
-.emr-badge-ready { background: #fef3c7; color: #b45309; }
-.emr-badge-waiting { background: #f3e8ff; color: #7c3aed; }
-.emr-badge-signed { background: #dcfce7; color: #15803d; }
-.emr-badge-amendment { background: #fee2e2; color: #b91c1c; }
+.emr-badge-draft {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.emr-badge-ready {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.emr-badge-waiting {
+    background: #f3e8ff;
+    color: #7c3aed;
+}
+
+.emr-badge-signed {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.emr-badge-amendment {
+    background: #fee2e2;
+    color: #b91c1c;
+}
 
 /* =========================================================================
    3. BỐ CỤC CHI TIẾT 2 CỘT TIÊU CHUẨN (emr/detail.html)
@@ -709,9 +758,11 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
 .emr-canvas-right:not(.is-edit-mode) .emr-hide-when-view-empty {
     display: none !important;
 }
+
 .emr-canvas-right.is-edit-mode .emr-branch-row.emr-hide-when-view-empty {
     display: flex !important;
 }
+
 .emr-canvas-right.is-edit-mode .emr-hide-when-view-empty {
     display: inline-flex !important;
 }
@@ -758,12 +809,14 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     cursor: pointer;
     transition: all 0.15s ease;
 }
+
 .emr-canvas-right.is-edit-mode .emr-check-toggle {
     border: 1px dashed #cbd5e1;
     border-radius: 4px;
     padding: 2px 6px;
     background: #f8fafc;
 }
+
 .emr-canvas-right.is-edit-mode .emr-check-toggle:hover {
     background: #e0f2fe;
     border-color: #0284c7;
@@ -1570,6 +1623,7 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     text-decoration: none !important;
     user-select: none !important;
 }
+
 .emr-btn-sign:hover {
     background: #f8fafc !important;
     border-color: #94a3b8 !important;
@@ -1577,6 +1631,7 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     transform: translateY(-1px) !important;
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08) !important;
 }
+
 .emr-btn-sign:active,
 .emr-btn-sign:focus {
     background: #f1f5f9 !important;
@@ -1586,6 +1641,7 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     box-shadow: none !important;
     outline: none !important;
 }
+
 .emr-btn-sign i {
     color: #0f172a !important;
     font-size: 13px !important;
@@ -1683,37 +1739,45 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     border-right-color: #000000 !important;
     border-bottom-color: #000000 !important;
 }
+
 .is-print-mode .emr-paper .tooth-cell.has-intervention {
     background-color: #ffffff !important;
     color: #000000 !important;
     font-weight: 800 !important;
 }
+
 .is-print-mode .emr-paper .tooth-cell .intervention-dot {
     color: #000000 !important;
 }
+
 .is-print-mode .emr-paper .tooth-cell:hover {
     background-color: #ffffff !important;
 }
+
 .is-print-mode .emr-paper .permanent-chart-grid .tooth-cell:nth-child(8),
 .is-print-mode .emr-paper .permanent-chart-grid .tooth-cell:nth-child(24),
 .is-print-mode .emr-paper .primary-chart-grid .tooth-cell:nth-child(5),
 .is-print-mode .emr-paper .primary-chart-grid .tooth-cell:nth-child(15) {
     border-right: 2px solid #000000 !important;
 }
+
 .is-print-mode .emr-paper .permanent-chart-grid .tooth-cell:nth-child(-n+16),
 .is-print-mode .emr-paper .primary-chart-grid .tooth-cell:nth-child(-n+10) {
     border-bottom: 2px solid #000000 !important;
 }
+
 .is-print-mode .emr-paper .primary-chart-grid::after,
 .is-print-mode .emr-paper .permanent-chart-grid::after {
     background: #000000 !important;
 }
+
 .is-print-mode .emr-paper .tooth-orientation-box,
 .is-print-mode .emr-paper .tooth-cleft-box {
     background: #ffffff !important;
     color: #000000 !important;
     border: 1px solid #000000 !important;
 }
+
 .is-print-mode .emr-paper .tooth-orientation-box .orient-top,
 .is-print-mode .emr-paper .tooth-orientation-box .orient-middle,
 .is-print-mode .emr-paper .tooth-orientation-box .orient-bottom,
@@ -1721,6 +1785,7 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     color: #000000 !important;
     border-color: #000000 !important;
 }
+
 .is-print-mode .emr-paper .tooth-plain-summary {
     color: #000000 !important;
     border-top: 1px dashed #000000 !important;
@@ -1732,11 +1797,13 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     border: 1px solid #000000 !important;
     color: #000000 !important;
 }
+
 .is-print-mode .emr-paper .moh-check-box {
     background: #ffffff !important;
     border: 1px solid #000000 !important;
     color: #000000 !important;
 }
+
 .is-print-mode .emr-paper .quadrant-marker {
     background: #ffffff !important;
     border: 1.5px solid #000000 !important;
@@ -1749,6 +1816,7 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     border: 1.5px solid #000000 !important;
     color: #000000 !important;
 }
+
 .is-print-mode .emr-paper .emr-stamp-badge,
 .is-print-mode .emr-paper .emr-stamp-signer,
 .is-print-mode .emr-paper .emr-stamp-org,
@@ -1775,6 +1843,7 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     box-shadow: none !important;
     outline: none !important;
 }
+
 .is-print-mode .emr-paper .emr-inline-input::placeholder,
 .is-print-mode .emr-paper .emr-inline-textarea::placeholder {
     color: transparent !important;
@@ -1784,11 +1853,13 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
 .is-print-mode .emr-paper .emr-paper-topbar {
     border-bottom: 1.5px solid #000000 !important;
 }
+
 .is-print-mode .emr-paper .emr-paper-topbar .doc-title-badge {
     background: #ffffff !important;
     color: #000000 !important;
     border: 1px solid #000000 !important;
 }
+
 .is-print-mode .emr-paper .emr-paper-topbar .btn {
     background: #ffffff !important;
     color: #000000 !important;
@@ -1798,7 +1869,8 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
 /* B. KHI IN RA GIẤY THẬT QUA TRÌNH DUYỆT (@media print) */
 @page {
     size: A4 portrait;
-    margin: 0; /* Margin 0 triệt tiêu hoàn toàn header (tiêu đề/ngày) và footer (URL/số trang) mặc định của Chrome */
+    margin: 0;
+    /* Margin 0 triệt tiêu hoàn toàn header (tiêu đề/ngày) và footer (URL/số trang) mặc định của Chrome */
 }
 
 @media print {
@@ -1807,7 +1879,8 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
         margin: 0;
     }
 
-    html, body {
+    html,
+    body {
         background: #ffffff !important;
         color: #000000 !important;
         margin: 0 !important;
@@ -1817,9 +1890,9 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     }
 
     /* Ẩn các thành phần giao diện không in */
-    .app-shell > aside,
+    .app-shell>aside,
     .sidebar-backdrop,
-    .app-main > header,
+    .app-main>header,
     .emr-sub-header,
     .emr-sidebar-left,
     .emr-paper-topbar,
@@ -1836,7 +1909,12 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
         display: none !important;
     }
 
-    .app-main, .app-content, .emr-page, .emr-detail-container, .emr-2col-layout, .emr-canvas-right {
+    .app-main,
+    .app-content,
+    .emr-page,
+    .emr-detail-container,
+    .emr-2col-layout,
+    .emr-canvas-right {
         display: block !important;
         width: 100% !important;
         max-width: none !important;
@@ -1854,7 +1932,8 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
         width: 100% !important;
         max-width: 210mm !important;
         margin: 0 auto !important;
-        padding: 12mm 16mm !important; /* Lề in chuẩn trên bề mặt trang A4 */
+        padding: 12mm 16mm !important;
+        /* Lề in chuẩn trên bề mặt trang A4 */
         border: none !important;
         box-shadow: none !important;
         border-radius: 0 !important;
@@ -1875,11 +1954,28 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
     /* Mọi chữ đen 100% */
     .emr-paper,
     .emr-paper *,
-    .emr-paper h1, .emr-paper h2, .emr-paper h3, .emr-paper h4, .emr-paper h5, .emr-paper h6,
-    .emr-paper p, .emr-paper span, .emr-paper strong, .emr-paper div, .emr-paper label,
-    .emr-paper input, .emr-paper textarea, .emr-paper select, .emr-paper a,
-    .emr-paper td, .emr-paper th, .emr-paper li, .emr-paper small,
-    .emr-paper i, .emr-paper .bi, .emr-paper .ba-code {
+    .emr-paper h1,
+    .emr-paper h2,
+    .emr-paper h3,
+    .emr-paper h4,
+    .emr-paper h5,
+    .emr-paper h6,
+    .emr-paper p,
+    .emr-paper span,
+    .emr-paper strong,
+    .emr-paper div,
+    .emr-paper label,
+    .emr-paper input,
+    .emr-paper textarea,
+    .emr-paper select,
+    .emr-paper a,
+    .emr-paper td,
+    .emr-paper th,
+    .emr-paper li,
+    .emr-paper small,
+    .emr-paper i,
+    .emr-paper .bi,
+    .emr-paper .ba-code {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
         text-shadow: none !important;
@@ -1948,34 +2044,41 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
         border-right-color: #000000 !important;
         border-bottom-color: #000000 !important;
     }
+
     .emr-paper .tooth-cell.has-intervention {
         background-color: #ffffff !important;
         color: #000000 !important;
         font-weight: 800 !important;
     }
+
     .emr-paper .tooth-cell .intervention-dot {
         color: #000000 !important;
     }
+
     .emr-paper .permanent-chart-grid .tooth-cell:nth-child(8),
     .emr-paper .permanent-chart-grid .tooth-cell:nth-child(24),
     .emr-paper .primary-chart-grid .tooth-cell:nth-child(5),
     .emr-paper .primary-chart-grid .tooth-cell:nth-child(15) {
         border-right: 2px solid #000000 !important;
     }
+
     .emr-paper .permanent-chart-grid .tooth-cell:nth-child(-n+16),
     .emr-paper .primary-chart-grid .tooth-cell:nth-child(-n+10) {
         border-bottom: 2px solid #000000 !important;
     }
+
     .emr-paper .primary-chart-grid::after,
     .emr-paper .permanent-chart-grid::after {
         background: #000000 !important;
     }
+
     .emr-paper .tooth-orientation-box,
     .emr-paper .tooth-cleft-box {
         background: #ffffff !important;
         color: #000000 !important;
         border: 1px solid #000000 !important;
     }
+
     .emr-paper .tooth-orientation-box .orient-top,
     .emr-paper .tooth-orientation-box .orient-middle,
     .emr-paper .tooth-orientation-box .orient-bottom,
@@ -1983,6 +2086,7 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
         color: #000000 !important;
         border-color: #000000 !important;
     }
+
     .emr-paper .tooth-plain-summary {
         color: #000000 !important;
         border-top: 1px dashed #000000 !important;
@@ -1994,11 +2098,13 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
         border: 1px solid #000000 !important;
         color: #000000 !important;
     }
+
     .emr-paper .moh-check-box {
         background: #ffffff !important;
         border: 1px solid #000000 !important;
         color: #000000 !important;
     }
+
     .emr-paper .quadrant-marker {
         background: #ffffff !important;
         border: 1.5px solid #000000 !important;
@@ -2011,6 +2117,7 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
         border: 1.5px solid #000000 !important;
         color: #000000 !important;
     }
+
     .emr-paper .emr-stamp-badge,
     .emr-paper .emr-stamp-signer,
     .emr-paper .emr-stamp-org,
@@ -2029,13 +2136,17 @@ body, .app-body, .emr-page, .emr-paper, .emr-paper * {
         box-shadow: none !important;
         outline: none !important;
     }
+
     .emr-paper .emr-inline-input::placeholder,
     .emr-paper .emr-inline-textarea::placeholder {
         color: transparent !important;
     }
 
-    .emr-exam-cleft-section, .emr-cleft-grid-table,
-    .dental-chart-section, .permanent-chart-grid, .primary-chart-grid {
+    .emr-exam-cleft-section,
+    .emr-cleft-grid-table,
+    .dental-chart-section,
+    .permanent-chart-grid,
+    .primary-chart-grid {
         break-inside: avoid;
         page-break-inside: avoid;
     }

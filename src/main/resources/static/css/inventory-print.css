@@ -164,7 +164,7 @@
     margin-bottom: 20px;
 }
 
-.items-table th, 
+.items-table th,
 .items-table td {
     border: 1px solid #cbd5e1;
     padding: 8px 8px;
@@ -361,6 +361,7 @@
    9. THIẾT LẬP CHẾ ĐỘ IN ẤN BẰNG @MEDIA PRINT (A4 CHUẨN)
    ========================================================================= */
 @media print {
+
     /* Ẩn triệt để tất cả các thành phần giao diện không thuộc chứng từ */
     .no-print,
     .app-sidebar,
@@ -381,7 +382,8 @@
     }
 
     /* Đặt nền và lề giấy in */
-    html, body {
+    html,
+    body {
         background: #ffffff !important;
         color: #000000 !important;
         margin: 0 !important;
@@ -390,10 +392,10 @@
         font-size: 11pt !important;
     }
 
-    .app-shell, 
-    .app-main, 
-    .app-content, 
-    .inventory-preview-page, 
+    .app-shell,
+    .app-main,
+    .app-content,
+    .inventory-preview-page,
     .print-preview-container {
         margin: 0 !important;
         padding: 0 !important;
@@ -456,7 +458,8 @@
     }
 
     table.items-table thead {
-        display: table-header-group !important; /* Lặp lại header bảng ở trang mới */
+        display: table-header-group !important;
+        /* Lặp lại header bảng ở trang mới */
     }
 
     table.items-table tr {
@@ -464,7 +467,7 @@
         page-break-after: auto !important;
     }
 
-    table.items-table th, 
+    table.items-table th,
     table.items-table td {
         border: 1px solid #000000 !important;
         color: #000000 !important;
@@ -488,14 +491,15 @@
         print-color-adjust: exact !important;
     }
 
-    .summary-wrap, 
+    .summary-wrap,
     .summary-box {
         page-break-inside: avoid !important;
         border: 1px solid #333333 !important;
     }
 
     .sig-grid {
-        page-break-inside: avoid !important; /* Giữ chữ ký và người ký không bị ngắt đôi trang */
+        page-break-inside: avoid !important;
+        /* Giữ chữ ký và người ký không bị ngắt đôi trang */
         display: grid !important;
         grid-template-columns: 1fr 1fr !important;
         gap: 20px !important;

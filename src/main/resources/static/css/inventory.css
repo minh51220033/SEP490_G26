@@ -10,7 +10,9 @@
    - Ẩn triệt để Chat Widget
    ========================================================================= */
 
-* { box-sizing: border-box; }
+* {
+    box-sizing: border-box;
+}
 
 :root {
     --brand-navy-start: #1a2f6e;
@@ -36,7 +38,8 @@
 }
 
 /* 1. KHÓA TRIỆT ĐỂ THANH CUỘN CỦA TRÌNH DUYỆT (100vh LOCK) */
-html, body {
+html,
+body {
     height: 100vh !important;
     max-height: 100vh !important;
     overflow: hidden !important;
@@ -95,13 +98,16 @@ html, body {
 .inventory-app-view::-webkit-scrollbar {
     width: 6px;
 }
+
 .inventory-app-view::-webkit-scrollbar-track {
     background: transparent;
 }
+
 .inventory-app-view::-webkit-scrollbar-thumb {
     background: #cbd5e1;
     border-radius: 4px;
 }
+
 .inventory-app-view::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
@@ -336,6 +342,7 @@ html, body {
     cursor: pointer;
     transition: all 0.18s ease;
 }
+
 .button-danger-outline:hover:not(:disabled) {
     background: #fef2f2;
     border-color: #dc2626;
@@ -385,10 +392,21 @@ html, body {
     border-color: #cbd5e1;
 }
 
-.stat-card-primary { --kpi-accent: #0284c7; }
-.stat-card-warning { --kpi-accent: #f59e0b; }
-.stat-card-danger  { --kpi-accent: #ef4444; }
-.stat-card-info    { --kpi-accent: #2563eb; }
+.stat-card-primary {
+    --kpi-accent: #0284c7;
+}
+
+.stat-card-warning {
+    --kpi-accent: #f59e0b;
+}
+
+.stat-card-danger {
+    --kpi-accent: #ef4444;
+}
+
+.stat-card-info {
+    --kpi-accent: #2563eb;
+}
 
 .stat-card-body {
     display: flex;
@@ -406,10 +424,21 @@ html, body {
     letter-spacing: -0.02em;
 }
 
-.stat-card-primary .stat-value { color: #0284c7; }
-.stat-card-warning .stat-value { color: #d97706; }
-.stat-card-danger .stat-value  { color: #dc2626; }
-.stat-card-info .stat-value    { color: #2563eb; }
+.stat-card-primary .stat-value {
+    color: #0284c7;
+}
+
+.stat-card-warning .stat-value {
+    color: #d97706;
+}
+
+.stat-card-danger .stat-value {
+    color: #dc2626;
+}
+
+.stat-card-info .stat-value {
+    color: #2563eb;
+}
 
 .stat-label {
     font-size: 13px;
@@ -441,10 +470,25 @@ html, body {
     font-size: 21px;
 }
 
-.stat-icon-primary { background: #e0f2fe; color: #0284c7; }
-.stat-icon-warning { background: #fef3c7; color: #d97706; }
-.stat-icon-danger  { background: #fee2e2; color: #dc2626; }
-.stat-icon-info    { background: #eff6ff; color: #2563eb; }
+.stat-icon-primary {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.stat-icon-warning {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.stat-icon-danger {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.stat-icon-info {
+    background: #eff6ff;
+    color: #2563eb;
+}
 
 .stat-card.is-loading .stat-value {
     color: #94a3b8;
@@ -452,8 +496,15 @@ html, body {
 }
 
 @keyframes kpiPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.45; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.45;
+    }
 }
 
 /* 4. THANH TABS BAR (8 TABS QUẢN LÝ KHO - ĐỒNG BỘ SEGMENTED PILLS DAILY-VISITS) */
@@ -506,10 +557,30 @@ html, body {
     flex-shrink: 0;
     border: 1px solid var(--line);
 }
-.notice-info    { background: #eff8ff; color: #175cd3; border-color: #b2ddff; }
-.notice-success { background: #ecfdf3; color: #067647; border-color: #abefc6; }
-.notice-warning { background: #fffaeb; color: #b54708; border-color: #fedf89; }
-.notice-error   { background: #fef3f2; color: #b42318; border-color: #fecdca; }
+
+.notice-info {
+    background: #eff8ff;
+    color: #175cd3;
+    border-color: #b2ddff;
+}
+
+.notice-success {
+    background: #ecfdf3;
+    color: #067647;
+    border-color: #abefc6;
+}
+
+.notice-warning {
+    background: #fffaeb;
+    color: #b54708;
+    border-color: #fedf89;
+}
+
+.notice-error {
+    background: #fef3f2;
+    color: #b42318;
+    border-color: #fecdca;
+}
 
 /* 6. VÙNG HIỂN THỊ NỘI DUNG PANEL & FORM/TABLE */
 .panel {
@@ -557,7 +628,12 @@ html, body {
     white-space: nowrap;
     cursor: pointer;
 }
-.check-filter input { width: 15px; height: 15px; accent-color: var(--btn-primary); }
+
+.check-filter input {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--btn-primary);
+}
 
 .date-filters {
     display: flex;
@@ -565,17 +641,20 @@ html, body {
     gap: 8px;
     flex-wrap: wrap;
 }
+
 .date-filters .field {
     display: flex;
     align-items: center;
     gap: 6px;
 }
+
 .date-filters .field label {
     font-size: 12px;
     font-weight: 600;
     color: #475569;
     white-space: nowrap;
 }
+
 .date-filters .field input {
     padding: 5px 8px;
     font-size: 12px;
@@ -590,7 +669,8 @@ html, body {
     border-bottom: none;
     border-top-left-radius: 12px;
     border-top-right-radius: 12px;
-    overflow: auto; /* Duy nhất vùng này cuộn */
+    overflow: auto;
+    /* Duy nhất vùng này cuộn */
     position: relative;
 }
 
@@ -693,15 +773,46 @@ html, body {
     font-weight: 700;
     white-space: nowrap;
 }
-.status-good    { color: #15803d; background: #dcfce7; border: 1px solid #bbf7d0; }
-.status-warning { color: #b45309; background: #fef3c7; border: 1px solid #fde68a; }
-.status-danger  { color: #b91c1c; background: #fee2e2; border: 1px solid #fecaca; }
-.status-info    { color: #0369a1; background: #e0f2fe; border: 1px solid #bae6fd; }
 
-.stock-low  { color: var(--red); font-weight: 800; }
-.stock-good { color: var(--green); font-weight: 700; }
+.status-good {
+    color: #15803d;
+    background: #dcfce7;
+    border: 1px solid #bbf7d0;
+}
 
-.empty { padding: 28px; text-align: center; color: var(--muted); }
+.status-warning {
+    color: #b45309;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+}
+
+.status-danger {
+    color: #b91c1c;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+}
+
+.status-info {
+    color: #0369a1;
+    background: #e0f2fe;
+    border: 1px solid #bae6fd;
+}
+
+.stock-low {
+    color: var(--red);
+    font-weight: 800;
+}
+
+.stock-good {
+    color: var(--green);
+    font-weight: 700;
+}
+
+.empty {
+    padding: 28px;
+    text-align: center;
+    color: var(--muted);
+}
 
 /* 8. THANH PHÂN TRANG CỐ ĐỊNH CHÂN TRANG (ĐỒNG BỘ DOCTOR/DAILY-VISITS) */
 .table-pagination-footer {
@@ -738,17 +849,20 @@ html, body {
     transition: all 0.16s ease;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
+
 .pagination-btn-group .btn-page:hover:not(.disabled):not(:disabled) {
     background: #f0f9ff;
     border-color: #0284c7;
     color: #0284c7;
 }
+
 .pagination-btn-group .btn-page.active {
     background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
     color: #ffffff;
     border-color: #0284c7;
     box-shadow: 0 2px 5px rgba(2, 132, 199, 0.35);
 }
+
 .pagination-btn-group .btn-page.disabled,
 .pagination-btn-group .btn-page:disabled {
     color: #94a3b8;
@@ -764,8 +878,15 @@ html, body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
 }
-.full-width { grid-column: 1 / -1; }
-.required { color: var(--red); font-weight: 700; }
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.required {
+    color: var(--red);
+    font-weight: 700;
+}
 
 .field label {
     display: block;
@@ -823,7 +944,10 @@ textarea:focus {
     align-items: center;
     justify-content: center;
 }
-.remove-row:hover { background: #fef3f2; }
+
+.remove-row:hover {
+    background: #fef3f2;
+}
 
 .receipt-footer {
     display: flex;
@@ -841,9 +965,24 @@ textarea:focus {
     gap: 8px;
 }
 
-.total-label { color: var(--muted); font-weight: 600; font-size: 12px; }
-.total-label strong { display: block; color: var(--brand-900); font-size: 18px; font-weight: 800; }
-.form-hint { color: var(--muted); font-size: 11.5px; margin: 4px 0 0; }
+.total-label {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.total-label strong {
+    display: block;
+    color: var(--brand-900);
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.form-hint {
+    color: var(--muted);
+    font-size: 11.5px;
+    margin: 4px 0 0;
+}
 
 .receipt-result {
     margin-top: 12px;
@@ -880,6 +1019,7 @@ textarea:focus {
     z-index: 20;
     transition: background 0.15s;
 }
+
 .col-resizer:hover,
 .col-resizer.is-resizing {
     background-color: #0284c7;
@@ -1002,7 +1142,9 @@ textarea:focus {
     box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
 }
 
-.modal-card-wide { max-width: 900px; }
+.modal-card-wide {
+    max-width: 900px;
+}
 
 .modal-header {
     display: flex;
@@ -1026,7 +1168,10 @@ textarea:focus {
     align-items: center;
     justify-content: center;
 }
-.close-btn:hover { background: #dce5f7; }
+
+.close-btn:hover {
+    background: #dce5f7;
+}
 
 .modal-actions {
     display: flex;
@@ -1061,7 +1206,9 @@ textarea:focus {
     color: var(--ink);
 }
 
-[hidden] { display: none !important; }
+[hidden] {
+    display: none !important;
+}
 
 /* 11. INVOICE UPLOAD & DIGITAL SIGNATURE */
 .invoice-upload-box {
@@ -1328,6 +1475,7 @@ textarea:focus {
         opacity: 0;
         transform: translateY(-4px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -1637,10 +1785,12 @@ textarea:focus {
     .receipt-payment-grid {
         grid-template-columns: 1fr;
     }
+
     .receipt-footer {
         flex-direction: column;
         align-items: stretch;
     }
+
     .form-action-group {
         justify-content: flex-end;
     }
