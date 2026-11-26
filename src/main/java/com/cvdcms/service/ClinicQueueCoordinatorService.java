@@ -2144,7 +2144,7 @@ public class ClinicQueueCoordinatorService {
             if (capabilityService != null) {
                 var roomCap = capabilityService.checkDoctorAndRoomCapability(branchId, targetDoctorId, targetRoomId, serviceId);
                 if (!roomCap.allowed()) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, roomCap.reason());
+                    throw new ResponseStatusException(HttpStatus.CONFLICT, roomCap.message());
                 }
             }
         }
