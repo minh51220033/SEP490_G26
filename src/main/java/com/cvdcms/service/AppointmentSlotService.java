@@ -347,6 +347,19 @@ public class AppointmentSlotService {
             int requiredDuration,
             Long excludeAppointmentId
     ) {
+        return lockAndValidateDoctorSlot(branchId, doctorId, date, requestedStart, requiredDuration, excludeAppointmentId, false);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public LocalTime lockAndValidateDoctorSlot(
+            Long branchId,
+            Long doctorId,
+            LocalDate date,
+            LocalTime requestedStart,
+            int requiredDuration,
+            Long excludeAppointmentId,
+            boolean allowSoftOverlap
+    ) {
         if (doctorId == null || date == null || requestedStart == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Thiếu thông tin bác sĩ, ngày hoặc giờ hẹn.");
         }
@@ -354,7 +367,7 @@ public class AppointmentSlotService {
 
         // Không retry deadlock/lock failure bên trong transaction đang mở hoặc đã rollback
         return validateDoctorSlotInternal(
-                branchId, doctorId, date, requestedStart, requiredDuration, excludeAppointmentId, true);
+                branchId, doctorId, date, requestedStart, requiredDuration, excludeAppointmentId, true, allowSoftOverlap);
     }
 
     private LocalTime validateDoctorSlotInternal(
@@ -365,6 +378,20 @@ public class AppointmentSlotService {
             int requiredDuration,
             Long excludeAppointmentId,
             boolean lockRows
+    ) {
+        return validateDoctorSlotInternal(
+                branchId, doctorId, date, requestedStart, requiredDuration, excludeAppointmentId, lockRows, false);
+    }
+
+    private LocalTime validateDoctorSlotInternal(
+            Long branchId,
+            Long doctorId,
+            LocalDate date,
+            LocalTime requestedStart,
+            int requiredDuration,
+            Long excludeAppointmentId,
+            boolean lockRows,
+            boolean allowSoftOverlap
     ) {
         if (lockRows && staffProfiles != null) {
             StaffProfile lockedDoctor = staffProfiles.lockById(doctorId)
@@ -406,6 +433,20 @@ public class AppointmentSlotService {
         );
 
         LocalTime requestedEnd = requestedStart.plusMinutes(requiredDuration);
+        if (allowSoftOverlap) {
+            DoctorAvailabilityResult shiftOnly = computeAvailabilityFromLoadedData(
+                    doctorId, branchId, date, requiredDuration, excludeAppointmentId, nowDt,
+                    schedules, approvedLeaves, List.of(), Map.of()
+            );
+            boolean withinWorkingShift = shiftOnly.availableIntervals().stream()
+                    .anyMatch(iv -> !requestedStart.isBefore(iv.start()) && !requestedEnd.isAfter(iv.end()));
+            if (!withinWorkingShift) {
+                throw new SlotAlreadyTakenException(
+                        "Khung giờ " + requestedStart + " - " + requestedEnd + " nằm ngoài ca làm việc hoặc trùng lịch nghỉ của bác sĩ."
+                );
+            }
+            return requestedStart;
+        }
         boolean fits = availability.availableIntervals().stream()
                 .anyMatch(iv -> !requestedStart.isBefore(iv.start()) && !requestedEnd.isAfter(iv.end()));
         if (!fits) {
@@ -866,6 +907,12 @@ public class AppointmentSlotService {
     public LocalTime resolveFlexibly(Branch branch, LocalDate date, PreferredSession session,
             Long doctorId, int durationMinutes, Long excludeId, LocalTime requested,
             AppointmentActorType actorType) {
+        return resolveFlexibly(branch, date, session, doctorId, durationMinutes, excludeId, requested, actorType, false);
+    }
+
+    public LocalTime resolveFlexibly(Branch branch, LocalDate date, PreferredSession session,
+            Long doctorId, int durationMinutes, Long excludeId, LocalTime requested,
+            AppointmentActorType actorType, boolean allowSoftOverlap) {
         validateDuration(durationMinutes);
         Range range = range(branch, session);
         if (!range.active) {
@@ -907,14 +954,20 @@ public class AppointmentSlotService {
 
         if (branch != null && date != null && session != null) {
             if (doctorId != null && staffSchedules != null) {
-                lockAndValidateDoctorSlot(branch.getBranchId(), doctorId, date, requested, durationMinutes, excludeId);
+                lockAndValidateDoctorSlot(branch.getBranchId(), doctorId, date, requested, durationMinutes, excludeId, allowSoftOverlap);
                 return requested;
             }
             AppointmentPolicyService.Availability availability = policy.availability(branch, date, session, excludeId, actorType);
-            if (availability != null && !availability.available()) {
+            if (!allowSoftOverlap && availability != null && !availability.available()) {
                 throw new SlotAlreadyTakenException(
                         availability.reason() != null ? availability.reason() : "Buổi khám không còn khả dụng."
                 );
+            }
+            if (allowSoftOverlap) {
+                if (availability == null || availability.doctors().isEmpty()) {
+                    throw new SlotAlreadyTakenException("Không còn bác sĩ trực khả dụng trong ca khám.");
+                }
+                return requested;
             }
             List<Appointment> booked = appointments.findOccupyingForSession(branch.getBranchId(), date, session, OCCUPYING)
                     .stream().filter(a -> excludeId == null || !Objects.equals(a.getAppointmentId(), excludeId)).toList();

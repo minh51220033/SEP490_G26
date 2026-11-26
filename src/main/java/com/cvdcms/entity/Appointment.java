@@ -54,6 +54,12 @@ public class Appointment {
     @Column(name = "is_doctor_requested", nullable = false)
     private Boolean isDoctorRequested = false;
 
+    @Column(name = "overlap_warning_acknowledged", nullable = false)
+    private Boolean overlapWarningAcknowledged = false;
+
+    @Column(name = "overlap_warning_note", length = 500)
+    private String overlapWarningNote;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id")
     private Service service;

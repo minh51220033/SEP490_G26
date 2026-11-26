@@ -166,6 +166,13 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
     public void ensureBookable(Branch branch, PatientProfile profile, LocalDate date,
             PreferredSession session, Long doctorId, Long excludeAppointmentId,
             AppointmentActorType actorType) {
+        ensureBookable(branch, profile, date, session, doctorId, excludeAppointmentId, actorType, false);
+    }
+
+    @Override
+    public void ensureBookable(Branch branch, PatientProfile profile, LocalDate date,
+            PreferredSession session, Long doctorId, Long excludeAppointmentId,
+            AppointmentActorType actorType, boolean allowCapacityOverlap) {
         String invalid = invalidSession(branch, date, session, actorType);
         if (invalid != null) throw conflict(invalid);
         if (profile != null && profile.getProfileId() != null) {
@@ -184,6 +191,12 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
         if (doctors.isEmpty()) {
             throw conflict("Không có bác sĩ trực khả dụng trong buổi đã chọn.");
         }
+        if (doctorId != null && doctors.stream().noneMatch(d -> doctorId.equals(d.getStaffId()))) {
+            throw conflict("Bác sĩ không khả dụng trong ngày và buổi đã chọn.");
+        }
+        if (allowCapacityOverlap) {
+            return;
+        }
         List<Appointment> booked = booked(branch.getBranchId(), date, session, excludeAppointmentId);
         AppointmentSessionPolicy policy = policy(branch.getBranchId(), date, session);
         int maxCapacity = Math.min(branchCapacity(policy), doctors.size() * doctorCapacity(policy));
@@ -191,9 +204,6 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
             throw conflict("Buổi khám đã đủ định mức tiếp nhận (" + booked.size() + "/" + maxCapacity + " ca).");
         }
         if (doctorId != null) {
-            if (doctors.isEmpty() || doctors.stream().noneMatch(d -> doctorId.equals(d.getStaffId()))) {
-                throw conflict("Bác sĩ không khả dụng trong ngày và buổi đã chọn.");
-            }
             long doctorBooked = booked.stream().filter(a -> a.getDoctor() != null
                     && doctorId.equals(a.getDoctor().getStaffId())).count();
             if (doctorBooked >= doctorCapacity(policy)) {
