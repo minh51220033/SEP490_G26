@@ -757,7 +757,7 @@ public class DoctorVisitAccess {
                 }
                 var plan = it.getPlan();
                 if (plan != null) {
-                    if (plan.getStatus() == com.cvdcms.entity.enums.TreatmentPlanStatus.APPROVED
+                    if (plan.getStatus() == com.cvdcms.entity.enums.TreatmentPlanStatus.ACCEPTED
                             || plan.getStatus() == com.cvdcms.entity.enums.TreatmentPlanStatus.IN_PROGRESS) {
                         return;
                     }
