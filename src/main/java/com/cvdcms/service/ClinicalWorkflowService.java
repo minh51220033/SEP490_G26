@@ -44,6 +44,10 @@ public interface ClinicalWorkflowService {
 
     Map<String, Object> startComboExecution(Long visitId, Long comboId, Long userId);
 
+    default Map<String, Object> startComboExecution(Long visitId, Long comboId, Long userId, java.util.Set<Long> deferredServiceIds) {
+        return startComboExecution(visitId, comboId, userId);
+    }
+
     /** Lấy danh sách trường/cột mẫu mặc định theo 5 khung thao tác. */
     Map<String, List<WorkflowStepDTO.CustomFieldDTO>> getAllFrameCustomFields();
 

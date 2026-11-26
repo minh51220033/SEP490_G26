@@ -796,7 +796,16 @@
                                     <span class="badge rounded-circle p-2" style="background:#e0f2fe; color:#0284c7;">
                                         <i class="bi bi-tag-fill"></i>
                                     </span>
-                                    <div class="fw-bold text-dark" style="font-size: 13.5px;" th:text="${wf.serviceName}">Cạo vôi răng &amp; Đánh bóng</div>
+                                    <div>
+                                        <div class="fw-bold text-dark" style="font-size: 13.5px;" th:text="${wf.serviceName}">Cạo vôi răng &amp; Đánh bóng</div>
+                                        <div class="d-flex flex-wrap align-items-center gap-1 mt-1 small text-secondary" th:if="${wf.serviceDurationMinutes != null}">
+                                            <span class="df-num"><i class="bi bi-clock me-1"></i>~<span th:text="${wf.serviceDurationMinutes}">30</span> phút</span>
+                                            <span th:if="${wf.allowSameVisit != false and wf.serviceDurationMinutes <= 45}"
+                                                  class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 10.5px;">Làm gộp ≤45p</span>
+                                            <span th:unless="${wf.allowSameVisit != false and wf.serviceDurationMinutes <= 45}"
+                                                  class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 10.5px;">Hẹn buổi riêng</span>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div th:if="${wf.serviceName == null}">
                                     <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 rounded-pill" style="font-size: 12px;">
@@ -972,6 +981,10 @@
                                 <td class="ps-4 align-top py-3">
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                                         <span class="dv-code-pill text-nowrap" th:text="${c.comboCode}">CB-NR-01</span>
+                                        <span th:if="${c.totalDurationMinutes != null and c.totalDurationMinutes > 0}"
+                                              class="badge bg-light text-secondary border df-num" style="font-size: 11px;">
+                                            <i class="bi bi-clock me-1"></i>Tổng ~<span th:text="${c.totalDurationMinutes}">30</span> phút
+                                        </span>
                                     </div>
                                     <div class="fw-bold text-dark" th:text="${c.comboName}">Combo Niềng răng 1</div>
                                     <div class="small text-secondary mt-1" th:text="${c.description}">Mô tả gói</div>
@@ -982,6 +995,8 @@
                                             <span class="badge bg-white text-dark border rounded-pill px-3 py-2 fw-medium">
                                                 <i class="bi bi-check-circle text-success me-1"></i>
                                                 <span th:text="${it.serviceName}">Dịch vụ</span>
+                                                <span class="text-secondary ms-1 df-num" th:if="${it.estimatedDurationMinutes != null and it.estimatedDurationMinutes > 0}"
+                                                      th:text="'~' + ${it.estimatedDurationMinutes} + 'p'"></span>
                                                 <span class="text-primary ms-1" th:if="${it.workflowStepCount != null and it.workflowStepCount > 0}"
                                                       th:text="'(' + ${it.workflowStepCount} + ' bước)'"></span>
                                             </span>
@@ -1073,6 +1088,7 @@
                             <span class="badge bg-success-subtle text-success border border-success-subtle" id="viewStepsStatusBadge">
                                 <i class="bi bi-check-circle-fill"></i> Đang áp dụng
                             </span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-none df-num" id="viewStepsDurationBadge"></span>
                         </div>
                     </div>
                 </div>
@@ -1497,12 +1513,24 @@
             const stepNum = wf.stepCount || (wf.steps ? wf.steps.length : 0);
             const statusBadge = renderStatusBadge(wf.status);
 
+            const durMeta = wf.serviceDurationMinutes != null
+                ? `<div class="d-flex flex-wrap align-items-center gap-1 mt-1 small text-secondary">
+                       <span class="df-num"><i class="bi bi-clock me-1"></i>~${Number(wf.serviceDurationMinutes)} phút</span>
+                       ${(wf.allowSameVisit !== false && Number(wf.serviceDurationMinutes) <= 45)
+                           ? '<span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 10.5px;">Làm gộp ≤45p</span>'
+                           : '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 10.5px;">Hẹn buổi riêng</span>'}
+                   </div>`
+                : '';
+
             const serviceHtml = wf.serviceName 
                 ? `<div class="d-flex align-items-center gap-2">
                        <span class="badge rounded-circle p-2" style="background:#e0f2fe; color:#0284c7;">
                            <i class="bi bi-tag-fill"></i>
                        </span>
-                       <div class="fw-bold text-dark" style="font-size: 13.5px;">${escapeHtml(wf.serviceName)}</div>
+                       <div>
+                           <div class="fw-bold text-dark" style="font-size: 13.5px;">${escapeHtml(wf.serviceName)}</div>
+                           ${durMeta}
+                       </div>
                    </div>`
                 : `<span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1 rounded-pill" style="font-size: 12px;">
                        <i class="bi bi-link-45deg me-1"></i>Chưa liên kết dịch vụ
@@ -1607,6 +1635,16 @@
                 } else {
                     statusBadge.className = "badge bg-warning-subtle text-warning border border-warning-subtle";
                     statusBadge.innerHTML = '<i class="bi bi-pencil"></i> Bản nháp';
+                }
+            }
+
+            const durBadge = document.getElementById("viewStepsDurationBadge");
+            if (durBadge) {
+                if (wf.serviceDurationMinutes != null && Number(wf.serviceDurationMinutes) > 0) {
+                    durBadge.innerHTML = `<i class="bi bi-clock me-1"></i>DV ~${Number(wf.serviceDurationMinutes)} phút`;
+                    durBadge.classList.remove("d-none");
+                } else {
+                    durBadge.classList.add("d-none");
                 }
             }
 
@@ -1817,15 +1855,19 @@
         const pageItems = list.slice(fromIndex, toIndex);
         tbody.innerHTML = pageItems.map(c => {
             const chips = (c.items || []).map((it, idx) => {
+                const durBadge = it.estimatedDurationMinutes > 0 ? `<span class="text-secondary ms-1 df-num">~${it.estimatedDurationMinutes}p</span>` : '';
                 const stepBadge = it.workflowStepCount > 0 ? `<span class="text-primary ms-1">(${it.workflowStepCount} bước)</span>` : '';
                 const qtyBadge = it.defaultQuantity > 1 ? `<span class="text-muted ms-1">x${it.defaultQuantity}</span>` : '';
                 const plus = idx < (c.items.length - 1) ? '<span class="text-muted fw-bold">+</span>' : '';
                 return `<span class="d-inline-flex align-items-center gap-1">
                     <span class="badge bg-white text-dark border rounded-pill px-3 py-2 fw-medium">
-                        <i class="bi bi-check-circle text-success me-1"></i>${escapeHtml(it.serviceName)}${qtyBadge}${stepBadge}
+                        <i class="bi bi-check-circle text-success me-1"></i>${escapeHtml(it.serviceName)}${qtyBadge}${durBadge}${stepBadge}
                     </span>${plus}
                 </span>`;
             }).join('');
+            const totalDurBadge = c.totalDurationMinutes > 0
+                ? `<span class="badge bg-light text-secondary border df-num" style="font-size: 11px;"><i class="bi bi-clock me-1"></i>Tổng ~${c.totalDurationMinutes} phút</span>`
+                : '';
             const statusPill = c.status === 'INACTIVE'
                 ? '<span class="badge rounded-pill bg-secondary-subtle text-secondary">Tạm ngưng</span>'
                 : '';
@@ -1834,6 +1876,7 @@
                     <td class="ps-4 align-top py-3">
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                             <span class="dv-code-pill text-nowrap">${escapeHtml(c.comboCode)}</span>
+                            ${totalDurBadge}
                             ${statusPill}
                         </div>
                         <div class="fw-bold text-dark">${escapeHtml(c.comboName)}</div>

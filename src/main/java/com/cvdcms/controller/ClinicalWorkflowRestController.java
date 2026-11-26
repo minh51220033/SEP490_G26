@@ -169,8 +169,8 @@ public class ClinicalWorkflowRestController {
         doctorVisitAccess.requireActiveClinicalExam(session, visitId);
         boolean patientConfirmed = Boolean.TRUE.equals(body.get("patientConfirmed"))
                 || "true".equalsIgnoreCase(String.valueOf(body.get("patientConfirmed")));
-        doctorVisitAccess.assertComboExecutionAllowed(visitId, comboId, patientConfirmed);
-        return ResponseEntity.ok(workflowService.startComboExecution(visitId, comboId, requireUserId(session)));
+        java.util.Set<Long> deferred = doctorVisitAccess.resolveComboDeferredServiceIds(visitId, comboId, patientConfirmed);
+        return ResponseEntity.ok(workflowService.startComboExecution(visitId, comboId, requireUserId(session), deferred));
     }
 
     /** SCR-43.2, 43.3: START / COMPLETE / PAUSE / RESUME / SKIP / SAVE_DRAFT trên bước quy trình. */

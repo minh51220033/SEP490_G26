@@ -40,6 +40,9 @@ public class WorkflowVisitOverviewDTO {
         private String serviceName;
         private String templateName;
         private Integer stepCount;
+        private Integer estimatedDurationMinutes;
+        private Boolean allowSameVisit;
+        private Boolean isParaclinical;
         /** true nếu dịch vụ đã nằm trong dịch vụ thực hiện của lượt khám (FT16) hoặc Kế hoạch điều trị. */
         private Boolean suggested;
         private Long planItemId;

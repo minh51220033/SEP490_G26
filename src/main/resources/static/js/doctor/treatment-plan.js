@@ -279,6 +279,12 @@ function renderPlanInlineRoadmapHtml(plan, options = {}) {
     const omitHeader = options && options.omitHeader === true;
 
     const courses = groupStagesIntoCourses(plan.stages || [], plan);
+    const waitingCount = Number(window.DESK_WAITING_COUNT || 0);
+    const bookedSrvId = window.BOOKED_SERVICE && window.BOOKED_SERVICE.serviceId
+        ? Number(window.BOOKED_SERVICE.serviceId)
+        : null;
+    let primarySlotClaimed = Boolean(bookedSrvId);
+    let simAddonMinutes = 0;
     let coursesHtml = '';
 
     if (courses.length === 0) {
@@ -391,21 +397,38 @@ function renderPlanInlineRoadmapHtml(plan, options = {}) {
                             `;
                         }
 
-                        const bookedSrvId = window.BOOKED_SERVICE && window.BOOKED_SERVICE.serviceId
-                            ? Number(window.BOOKED_SERVICE.serviceId)
-                            : null;
                         const isBookedItem = Boolean(bookedSrvId && it.serviceId && Number(it.serviceId) === bookedSrvId);
-                        const isApprovedOrActivePlan = Boolean(plan && (plan.status === 'APPROVED' || plan.status === 'IN_PROGRESS'));
-                        const stageHasBookedItem = Boolean(bookedSrvId && Array.isArray(st.items)
-                            && st.items.some(sib => sib && sib.serviceId && Number(sib.serviceId) === bookedSrvId));
-                        const isDeferredHint = Boolean(bookedSrvId && it.serviceId && Number(it.serviceId) !== bookedSrvId
-                            && !isComp && !isInProg && st.status !== 'IN_PROGRESS'
-                            && !isApprovedOrActivePlan && !stageHasBookedItem
-                            && Number(window.DESK_WAITING_COUNT || 0) > 0);
+                        const isParaclinical = Boolean(it.isParaclinical);
+                        const itemMins = Number(it.estimatedDurationMinutes) > 0 ? Number(it.estimatedDurationMinutes) : 30;
+                        const allowAddon = it.allowSameVisit !== false;
+                        let isDeferredHint = false;
+                        if (isComp || isInProg || isBookedItem || isParaclinical) {
+                            isDeferredHint = false;
+                            if (isInProg && !isBookedItem && !isParaclinical) {
+                                if (!primarySlotClaimed) {
+                                    primarySlotClaimed = true;
+                                } else {
+                                    simAddonMinutes += itemMins;
+                                }
+                            }
+                        } else if (!primarySlotClaimed) {
+                            primarySlotClaimed = true;
+                            isDeferredHint = false;
+                        } else if (!allowAddon) {
+                            isDeferredHint = true;
+                        } else if (waitingCount > 0 && (itemMins > 45 || (simAddonMinutes + itemMins) > 60)) {
+                            isDeferredHint = true;
+                        } else {
+                            isDeferredHint = false;
+                            simAddonMinutes += itemMins;
+                        }
+                        const deferredTitle = !allowAddon
+                            ? 'Dịch vụ cấu hình không làm gộp trong ca — hẹn buổi sau'
+                            : `Đang có ${waitingCount} bệnh nhân chờ — dịch vụ làm thêm (~${itemMins} phút) vượt ngưỡng 45p/DV hoặc 60p tổng làm thêm`;
                         const bookedBadgeHtml = isBookedItem
                             ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size: 10.5px;"><i class="bi bi-lock-fill me-1"></i>Đã đặt lịch</span>'
                             : (isDeferredHint
-                                ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 10.5px;" title="Đang có bệnh nhân chờ — dịch vụ tư vấn phát sinh hẹn ca sau"><i class="bi bi-calendar2-week me-1"></i>Hẹn ca sau</span>'
+                                ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 10.5px;" title="${deferredTitle}"><i class="bi bi-calendar2-week me-1"></i>Hẹn ca sau</span>`
                                 : '');
 
                         itemsRows += `

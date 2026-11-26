@@ -663,7 +663,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                                     ? pe.getVersion().getTemplate().getService().getServiceId()
                                     : null;
                     boolean matchesBookedService = bookedServiceId != null && bookedServiceId.equals(peServiceId);
-                    if (!hasPlanLink && !activeInCurrentVisit && !matchesBookedService) {
+                    boolean hasProgress = hasStepProgress(pe);
+                    if (!hasPlanLink && !activeInCurrentVisit && !matchesBookedService && !hasProgress) {
                         continue;
                     }
                     if (pe.getStatus() == WorkflowExecutionStatus.IN_PROGRESS
@@ -784,6 +785,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                                         .serviceName(rep.getService().getServiceName())
                                         .templateName(tpl.getTemplateName())
                                         .stepCount(stepCountByTplId.getOrDefault(tpl.getTemplateId(), 0))
+                                        .estimatedDurationMinutes(resolveServiceDuration(rep.getService()))
+                                        .allowSameVisit(!Boolean.FALSE.equals(rep.getService().getAllowSameVisit()))
+                                        .isParaclinical(Boolean.TRUE.equals(rep.getService().getIsParaclinical()))
                                         .suggested(true)
                                         .planItemId(rep.getPlanItemId())
                                         .planStageId(stage.getStageId())
@@ -810,6 +814,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                         .serviceName(t.getService().getServiceName())
                         .templateName(t.getTemplateName())
                         .stepCount(stepCountByTplId.getOrDefault(t.getTemplateId(), 0))
+                        .estimatedDurationMinutes(resolveServiceDuration(t.getService()))
+                        .allowSameVisit(!Boolean.FALSE.equals(t.getService().getAllowSameVisit()))
+                        .isParaclinical(Boolean.TRUE.equals(t.getService().getIsParaclinical()))
                         .suggested(performedServiceIds.contains(sId))
                         .build());
             }
@@ -1512,6 +1519,20 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         } catch (NumberFormatException ex) {
             return null;
         }
+    }
+
+    private boolean hasStepProgress(WorkflowExecution ex) {
+        if (ex == null || ex.getExecutionId() == null) {
+            return false;
+        }
+        List<WorkflowStepExecution> stepExecs = stepExecutionRepo
+                .findByExecution_ExecutionIdOrderByStep_SequenceOrderAsc(ex.getExecutionId());
+        for (WorkflowStepExecution se : stepExecs) {
+            if (se.getStatus() != WorkflowStepExecutionStatus.PENDING || hasStepSavedContent(se)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean hasStepActivityInVisit(WorkflowExecution ex, Long visitId) {
@@ -2604,6 +2625,19 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         };
     }
 
+    private int resolveServiceDuration(com.cvdcms.entity.Service s) {
+        if (s == null) {
+            return 30;
+        }
+        if (s.getEstimatedDurationMinutes() != null && s.getEstimatedDurationMinutes() > 0) {
+            return s.getEstimatedDurationMinutes();
+        }
+        if (s.getProcedureDurationMinutes() != null && s.getProcedureDurationMinutes() > 0) {
+            return s.getProcedureDurationMinutes();
+        }
+        return 30;
+    }
+
     // Helper mapping
     private WorkflowTemplateResponseDTO mapTemplateToDTO(ClinicalWorkflowTemplate t) {
         WorkflowTemplateResponseDTO.WorkflowTemplateResponseDTOBuilder builder = WorkflowTemplateResponseDTO.builder()
@@ -2618,7 +2652,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         if (t.getService() != null) {
             builder.serviceId(t.getService().getServiceId())
                     .serviceCode(t.getService().getServiceCode())
-                    .serviceName(t.getService().getServiceName());
+                    .serviceName(t.getService().getServiceName())
+                    .serviceDurationMinutes(resolveServiceDuration(t.getService()))
+                    .allowSameVisit(!Boolean.FALSE.equals(t.getService().getAllowSameVisit()));
         }
 
         ClinicalWorkflowVersion version = versionRepo
@@ -2634,6 +2670,12 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     .findByVersion_VersionIdOrderBySequenceOrderAsc(version.getVersionId())
                     .stream().filter(s -> s.getAdhocExecutionId() == null).toList();
             builder.stepCount(steps.size());
+            int totalStepDur = steps.stream()
+                    .mapToInt(s -> (s.getEstimatedDurationMinutes() != null && s.getEstimatedDurationMinutes() > 0)
+                            ? s.getEstimatedDurationMinutes()
+                            : 10)
+                    .sum();
+            builder.totalStepDurationMinutes(totalStepDur);
 
             List<WorkflowStepDTO> stepDTOs = steps.stream().map(s -> WorkflowStepDTO.builder()
                     .stepId(s.getStepId())
@@ -3007,6 +3049,12 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
     @Override
     @Transactional
     public Map<String, Object> startComboExecution(Long visitId, Long comboId, Long userId) {
+        return startComboExecution(visitId, comboId, userId, Set.of());
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> startComboExecution(Long visitId, Long comboId, Long userId, Set<Long> deferredServiceIds) {
         if (serviceComboRepo == null) {
             throw new IllegalStateException("Chức năng Combo dịch vụ chưa sẵn sàng.");
         }
@@ -3024,6 +3072,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
 
         List<WorkflowExecutionDTO> started = new ArrayList<>();
         List<String> skipped = new ArrayList<>();
+        List<String> deferred = new ArrayList<>();
+        List<ServiceComboItem> deferredItems = new ArrayList<>();
+        Set<Long> deferredIds = deferredServiceIds != null ? deferredServiceIds : Set.of();
         List<ServiceComboItem> orderedItems = combo.getItems().stream()
                 .sorted(Comparator.comparingInt(ci -> ci.getSequenceOrder() != null ? ci.getSequenceOrder() : 999))
                 .toList();
@@ -3031,6 +3082,11 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         for (ServiceComboItem item : orderedItems) {
             if (item.getService() == null)
                 continue;
+            if (deferredIds.contains(item.getService().getServiceId())) {
+                deferred.add(item.getService().getServiceName());
+                deferredItems.add(item);
+                continue;
+            }
             WorkflowExecutionDTO dto = createOrGetExecution(
                     visitId, item.getService().getServiceId(), null, null, userId, false, item.getDefaultQuantity());
             if (dto != null) {
@@ -3039,10 +3095,14 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 skipped.add(item.getService().getServiceName());
             }
         }
-        if (started.isEmpty() && !skipped.isEmpty()) {
+        if (started.isEmpty() && !skipped.isEmpty() && deferred.isEmpty()) {
             throw new IllegalStateException(
                     "Các dịch vụ trong Combo chưa có mẫu quy trình hoạt động: " + String.join(", ", skipped));
         }
+
+        TreatmentPlan savedDeferredPlan = deferredItems.isEmpty()
+                ? null
+                : persistDeferredComboItemsToPlan(visit, combo, deferredItems, userId);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("comboId", combo.getComboId());
@@ -3051,13 +3111,139 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         result.put("startedCount", started.size());
         result.put("executions", started);
         result.put("skippedServices", skipped);
+        result.put("deferredServices", deferred);
+        if (savedDeferredPlan != null) {
+            result.put("deferredPlanId", savedDeferredPlan.getPlanId());
+            result.put("deferredPlanCode", savedDeferredPlan.getPlanCode());
+        }
         return result;
+    }
+
+    private TreatmentPlan persistDeferredComboItemsToPlan(Visit visit,
+            ServiceCombo combo,
+            List<ServiceComboItem> deferredItems,
+            Long userId) {
+        if (treatmentPlanRepo == null || visit == null || visit.getPatientProfile() == null
+                || deferredItems == null || deferredItems.isEmpty()) {
+            return null;
+        }
+        PatientProfile patient = visit.getPatientProfile();
+        Branch branch = visit.getBranch() != null ? visit.getBranch() : patient.getPreferredBranch();
+        if (branch == null && branchRepo != null) {
+            branch = branchRepo.findAll().stream().findFirst().orElse(null);
+        }
+        StaffProfile doctor = staffOf(userId);
+        if (doctor == null) {
+            doctor = visit.getPrimaryDoctor();
+        }
+        if (doctor == null && staffProfileRepo != null) {
+            doctor = staffProfileRepo.findAll().stream().findFirst().orElse(null);
+        }
+        if (branch == null || doctor == null) {
+            return null;
+        }
+
+        List<TreatmentPlan> existingPlans = treatmentPlanRepo.findByProfileIdWithDetails(patient.getProfileId());
+        TreatmentPlan plan = existingPlans == null ? null : existingPlans.stream()
+                .filter(p -> p.getStatus() != TreatmentPlanStatus.CANCELLED
+                        && p.getStatus() != TreatmentPlanStatus.COMPLETED)
+                .min(Comparator.comparingInt(p -> switch (p.getStatus()) {
+                    case IN_PROGRESS -> 0;
+                    case ACCEPTED -> 1;
+                    case PROPOSED -> 2;
+                    default -> 3;
+                }))
+                .orElse(null);
+
+        if (plan == null) {
+            plan = new TreatmentPlan();
+            plan.setPlanCode("KHDT" + (System.currentTimeMillis() % 100000000));
+            plan.setPatientProfile(patient);
+            plan.setBranch(branch);
+            plan.setDoctor(doctor);
+            plan.setPlanName("Kế hoạch điều trị: " + combo.getComboName());
+            plan.setStatus(TreatmentPlanStatus.IN_PROGRESS);
+            plan.setStartDate(LocalDate.now());
+            plan.setExpectedEndDate(LocalDate.now().plusDays(14));
+            plan.setNotes("Tự động lưu dịch vụ hẹn buổi sau từ Combo " + combo.getComboCode());
+            plan.setTotalEstimatedCost(java.math.BigDecimal.ZERO);
+            plan.setFinalEstimatedCost(java.math.BigDecimal.ZERO);
+            plan.setTotalPaidAmount(java.math.BigDecimal.ZERO);
+        }
+
+        Set<Long> existingOpenServiceIds = new HashSet<>();
+        if (plan.getStages() != null) {
+            for (TreatmentPlanStage st : plan.getStages()) {
+                if (st.getItems() == null) continue;
+                for (TreatmentPlanItem it : st.getItems()) {
+                    if (it.getService() != null && it.getService().getServiceId() != null
+                            && (it.getStatus() == TreatmentPlanItemStatus.PLANNED
+                                    || it.getStatus() == TreatmentPlanItemStatus.IN_PROGRESS)) {
+                        existingOpenServiceIds.add(it.getService().getServiceId());
+                    }
+                }
+            }
+        }
+
+        List<ServiceComboItem> toInsert = deferredItems.stream()
+                .filter(ci -> ci.getService() != null
+                        && ci.getService().getServiceId() != null
+                        && !existingOpenServiceIds.contains(ci.getService().getServiceId()))
+                .toList();
+
+        if (toInsert.isEmpty()) {
+            return plan.getPlanId() != null ? plan : null;
+        }
+
+        if (plan.getStages() == null) {
+            plan.setStages(new ArrayList<>());
+        }
+        int nextStageOrder = plan.getStages().stream()
+                .mapToInt(s -> s.getStageOrder() != null ? s.getStageOrder() : 0)
+                .max()
+                .orElse(0) + 1;
+
+        TreatmentPlanStage stage = new TreatmentPlanStage();
+        stage.setPlan(plan);
+        stage.setStageOrder(nextStageOrder);
+        stage.setStageName("Giai đoạn " + nextStageOrder + ": Hẹn buổi tiếp theo (" + combo.getComboName() + ")");
+        stage.setDescription("Tự động lưu dịch vụ vượt ngưỡng thời gian trong ca từ Combo " + combo.getComboCode());
+        stage.setStatus(TreatmentPlanStageStatus.PENDING);
+        stage.setExpectedEndDate(LocalDate.now().plusDays(7));
+        stage.setItems(new ArrayList<>());
+
+        java.math.BigDecimal addedCost = java.math.BigDecimal.ZERO;
+        for (ServiceComboItem ci : toInsert) {
+            com.cvdcms.entity.Service srv = ci.getService();
+            int qtyInt = Math.max(1, ci.getDefaultQuantity() != null ? ci.getDefaultQuantity() : 1);
+            java.math.BigDecimal qty = java.math.BigDecimal.valueOf(qtyInt);
+            java.math.BigDecimal price = srv.getBasePrice() != null ? srv.getBasePrice() : java.math.BigDecimal.ZERO;
+
+            TreatmentPlanItem item = new TreatmentPlanItem();
+            item.setStage(stage);
+            item.setPlan(plan);
+            item.setService(srv);
+            item.setStepName(srv.getServiceName());
+            item.setQuantity(qty);
+            item.setEstimatedPrice(price);
+            item.setStatus(TreatmentPlanItemStatus.PLANNED);
+            stage.getItems().add(item);
+            addedCost = addedCost.add(price.multiply(qty));
+        }
+
+        plan.getStages().add(stage);
+        java.math.BigDecimal curTotal = plan.getTotalEstimatedCost() != null ? plan.getTotalEstimatedCost() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal curFinal = plan.getFinalEstimatedCost() != null ? plan.getFinalEstimatedCost() : java.math.BigDecimal.ZERO;
+        plan.setTotalEstimatedCost(curTotal.add(addedCost));
+        plan.setFinalEstimatedCost(curFinal.add(addedCost));
+        return treatmentPlanRepo.save(plan);
     }
 
     private ServiceComboDTO mapComboToDTO(ServiceCombo c,
             Map<Long, ClinicalWorkflowTemplate> activeTplByService,
             Map<Long, Integer> stepCountByTpl) {
         java.math.BigDecimal totalBasePrice = java.math.BigDecimal.ZERO;
+        int totalDurationMinutes = 0;
         List<ServiceComboDTO.ComboItemDTO> itemDTOs = new ArrayList<>();
         List<ServiceComboItem> ordered = c.getItems() == null ? List.of()
                 : c.getItems().stream()
@@ -3068,6 +3254,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             if (s == null)
                 continue;
             int qty = ci.getDefaultQuantity() != null ? ci.getDefaultQuantity() : 1;
+            int srvDur = resolveServiceDuration(s);
+            totalDurationMinutes += srvDur * Math.max(1, qty);
             java.math.BigDecimal price = s.getBasePrice() != null ? s.getBasePrice() : java.math.BigDecimal.ZERO;
             totalBasePrice = totalBasePrice.add(price.multiply(java.math.BigDecimal.valueOf(qty)));
             ClinicalWorkflowTemplate tpl = activeTplByService.get(s.getServiceId());
@@ -3084,6 +3272,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     .workflowTemplateId(tpl != null ? tpl.getTemplateId() : null)
                     .workflowTemplateName(tpl != null ? tpl.getTemplateName() : null)
                     .workflowStepCount(tpl != null ? stepCountByTpl.getOrDefault(tpl.getTemplateId(), 0) : 0)
+                    .estimatedDurationMinutes(srvDur)
+                    .allowSameVisit(!Boolean.FALSE.equals(s.getAllowSameVisit()))
                     .build());
         }
         return ServiceComboDTO.builder()
@@ -3093,6 +3283,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .description(c.getDescription())
                 .status(c.getStatus())
                 .totalBasePrice(totalBasePrice)
+                .totalDurationMinutes(totalDurationMinutes)
                 .serviceCount(itemDTOs.size())
                 .items(itemDTOs)
                 .build();

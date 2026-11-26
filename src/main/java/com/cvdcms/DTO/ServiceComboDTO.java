@@ -20,6 +20,7 @@ public class ServiceComboDTO {
     private String description;
     private String status;
     private BigDecimal totalBasePrice;
+    private Integer totalDurationMinutes;
     private Integer serviceCount;
 
     @Builder.Default
@@ -42,5 +43,7 @@ public class ServiceComboDTO {
         private Long workflowTemplateId;
         private String workflowTemplateName;
         private Integer workflowStepCount;
+        private Integer estimatedDurationMinutes;
+        private Boolean allowSameVisit;
     }
 }

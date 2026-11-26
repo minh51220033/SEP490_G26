@@ -1094,6 +1094,12 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                         BigDecimal itemTotal = estPrice.multiply(qtyVal);
                         stageTotalCost = stageTotalCost.add(itemTotal);
 
+                        int estMins = (svc != null && svc.getEstimatedDurationMinutes() != null && svc.getEstimatedDurationMinutes() > 0)
+                                ? svc.getEstimatedDurationMinutes()
+                                : ((svc != null && svc.getProcedureDurationMinutes() != null && svc.getProcedureDurationMinutes() > 0)
+                                        ? svc.getProcedureDurationMinutes()
+                                        : 30);
+
                         itemDTOs.add(TreatmentPlanItemResponseDTO.builder()
                                 .planItemId(it.getPlanItemId())
                                 .serviceId(svc != null ? svc.getServiceId() : null)
@@ -1110,6 +1116,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                                 .statusBadgeClass(getItemStatusBadgeClass(it.getStatus()))
                                 .statusDisplayName(getItemStatusDisplayName(it.getStatus()))
                                 .completedAt(it.getCompletedAt() != null ? it.getCompletedAt().format(DATE_TIME_FORMATTER) : null)
+                                .estimatedDurationMinutes(estMins)
+                                .allowSameVisit(svc == null || !Boolean.FALSE.equals(svc.getAllowSameVisit()))
+                                .isParaclinical(svc != null && Boolean.TRUE.equals(svc.getIsParaclinical()))
                                 .build());
                     }
                 }

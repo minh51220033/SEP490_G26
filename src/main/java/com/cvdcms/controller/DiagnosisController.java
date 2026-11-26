@@ -606,6 +606,7 @@ public class DiagnosisController {
 
         List<DiagnosisResponseDTO> diagnoses = diagnosisService.getDiagnosesByVisitId(visitId);
         List<Icd10DiseaseDTO> commonDiseases = icd10DiseaseService.getCommonDentalDiseases();
+        //Tìm kiếm lần visit trước
         List<Visit> otherVisits = (isDoctorRestricted && assignedBranch != null)
                 ? visitRepository.findRecentVisitsByStatusesAndBranch(List.of(VisitStatus.values()), assignedBranch.getBranchId())
                 : visitRepository.findAll();
@@ -644,7 +645,7 @@ public class DiagnosisController {
         com.cvdcms.DTO.GeneralExaminationRequestDTO generalExam = diagnosisService.getGeneralExamination(visitId);
         model.addAttribute("generalExam", generalExam);
 
-        // FT16 Attributes
+        //  Attributes
         model.addAttribute("performedServices", performedServices);
         model.addAttribute("activeServices", activeServices);
         String activeServicesJson = "[]";
@@ -658,7 +659,7 @@ public class DiagnosisController {
         model.addAttribute("assistants", assistants);
         model.addAttribute("totalPerformedAmount", totalPerformedAmount);
 
-        // FT18: Đơn thuốc & Dặn dò
+        // : Đơn thuốc & Dặn dò
         List<PrescriptionResponseDTO> prescriptions = prescriptionService.getPrescriptionsByVisit(visitId);
         List<MedicationDTO> activeMedications = prescriptionService.getActiveMedications();
         model.addAttribute("prescriptions", prescriptions);
@@ -685,13 +686,13 @@ public class DiagnosisController {
                 .add(totalPrescriptionAmount);
         model.addAttribute("grandTotalAmount", grandTotalAmount);
 
-        // FT15: Kế hoạch điều trị & Lộ trình (SCR-15.1, SCR-15.2, SCR-15.3)
+        // Kế hoạch điều trị & Lộ trình
         List<TreatmentPlanResponseDTO> treatmentPlans = (visit.getPatientProfile() != null)
                 ? treatmentPlanService.getPlansByPatientId(visit.getPatientProfile().getProfileId())
                 : Collections.emptyList();
         model.addAttribute("treatmentPlans", treatmentPlans);
 
-        // FT17: Kho ảnh chụp lâm sàng Trước / Sau (SCR-17.1, 17.2, 17.3)
+        //  Kho ảnh chụp lâm sàng Trước / Sau
         Long profileId = (visit.getPatientProfile() != null) ? visit.getPatientProfile().getProfileId() : null;
         List<ClinicalPhotoResponseDTO> clinicalPhotos = clinicalPhotoService.getPhotosByProfile(profileId);
         Map<String, Object> photoStats = clinicalPhotoService.getPhotoStatistics(profileId);
@@ -700,14 +701,14 @@ public class DiagnosisController {
         model.addAttribute("photoStages", com.cvdcms.entity.enums.PhotoStage.values());
         model.addAttribute("photoCategories", com.cvdcms.entity.enums.PhotoCategory.values());
 
-        // FT18 (Phần Tái khám): Lịch hẹn tái khám của bệnh nhân (SCR-18.1)
+        // (Phần Tái khám): Lịch hẹn tái khám của bệnh nhân
         List<com.cvdcms.DTO.ReExaminationResponseDTO> reExaminations = (profileId != null)
                 ? reExaminationService.getReExaminationsByPatient(profileId)
                 : Collections.emptyList();
         model.addAttribute("reExaminations", reExaminations);
         model.addAttribute("preferredSessions", com.cvdcms.entity.enums.PreferredSession.values());
 
-        // FT11 / UC-10: Chỉ định cận lâm sàng & Chẩn đoán hình ảnh (SCR-11.2, SCR-11.3)
+        // Chỉ định cận lâm sàng & Chẩn đoán hình ảnh
         List<com.cvdcms.DTO.ParaclinicalOrderItemResponseDTO> paraclinicalOrders = paraclinicalOrderService.getOrdersByVisit(visitId);
         List<com.cvdcms.DTO.ServiceDTO> paraclinicalServices = paraclinicalOrderService.getParaclinicalServices();
         model.addAttribute("paraclinicalOrders", paraclinicalOrders);
@@ -744,7 +745,7 @@ public class DiagnosisController {
         model.addAttribute("galleryXrayPhotos", galleryXrayPhotos);
         model.addAttribute("xrayTabCount", galleryXrayPhotos.size() + clinicalXrayCount);
 
-        // FT15 / FT13: Quản lý Đặt xưởng Labo & Mẫu xét nghiệm gửi ngoài (SCR-15.3, SCR-13.1)
+        //  Quản lý Đặt xưởng Labo & Mẫu xét nghiệm gửi ngoài (SCR-15.3, SCR-13.1)
         List<com.cvdcms.DTO.LaboOrderResponseDTO> laboOrders = laboOrderService.getOrdersByVisit(visitId);
         Map<String, Object> laboStats = laboOrderService.getLaboStatistics(visitId, profileId);
         List<Supplier> laboSuppliers = supplierRepository.findAll();
@@ -752,7 +753,7 @@ public class DiagnosisController {
         model.addAttribute("laboStats", laboStats);
         model.addAttribute("laboSuppliers", laboSuppliers);
 
-        // FT44: Lịch sử chăm sóc bệnh nhân sau điều trị (SCR-44.6 & doctor/fragments/patient-care-tab)
+        // Lịch sử chăm sóc bệnh nhân sau điều trị (SCR-44.6 & doctor/fragments/patient-care-tab)
         List<CustomerCareInteraction> careInteractions = (profileId != null)
                 ? customerCareInteractionRepository.findByProfileIdWithDetails(profileId)
                 : Collections.emptyList();
@@ -807,7 +808,7 @@ public class DiagnosisController {
         model.addAttribute("bookedService", doctorVisitAccess != null ? doctorVisitAccess.resolveBookedServiceSummary(visit) : null);
         model.addAttribute("deskWaitingCount", doctorVisitAccess != null ? doctorVisitAccess.countWaitingPatientsForVisitDoctor(visit) : 0);
 
-        model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14), Kế hoạch (FT15), Dịch vụ thực hiện (FT16), Ảnh lâm sàng (FT17) & Đơn thuốc (FT18)");
+        model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán , Kế hoạch, Dịch vụ thực hiện , Ảnh lâm sàng  & Đơn thuốc ");
         model.addAttribute("activeMenu", "examination");
 
         List<Branch> branches = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();

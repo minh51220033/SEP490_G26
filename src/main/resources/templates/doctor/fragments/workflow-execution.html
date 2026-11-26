@@ -779,7 +779,7 @@
                 pending.forEach(function (s) {
                     var total = s.stepCount || 0;
                     var isBooked = Boolean(bookedId && s.serviceId && Number(s.serviceId) === bookedId);
-                    var isDeferred = Boolean(bookedId && s.serviceId && Number(s.serviceId) !== bookedId && waitingCount > 0);
+                    var isDeferred = Boolean(!isBooked && !s.isParaclinical && (s.allowSameVisit === false || (waitingCount > 0 && Number(s.estimatedDurationMinutes || 30) > 45)));
                     var toothHtml = s.toothNumbers
                         ? '<span class="badge bg-light text-dark border df-num">R-' + esc(s.toothNumbers) + '</span>'
                         : '<span class="text-muted small">Toàn hàm</span>';
@@ -788,7 +788,10 @@
                     if (isBooked) {
                         badges += '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size:11px;"><i class="bi bi-lock-fill me-1"></i>Đã đặt lịch</span>';
                     } else if (isDeferred) {
-                        badges += '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size:11px;" title="Đang có bệnh nhân chờ — dịch vụ phát sinh hẹn ca sau"><i class="bi bi-calendar2-week me-1"></i>Hẹn ca sau</span>';
+                        var deferredHintTitle = s.allowSameVisit === false
+                            ? 'Dịch vụ cấu hình không làm gộp trong ca — hẹn buổi sau'
+                            : 'Đang có bệnh nhân chờ — dịch vụ làm thêm > 45 phút, hẹn buổi sau';
+                        badges += '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size:11px;" title="' + deferredHintTitle + '"><i class="bi bi-calendar2-week me-1"></i>Hẹn ca sau</span>';
                     }
 
                     var subLabel = s.planCode
@@ -1902,7 +1905,16 @@
                         if (data.skippedServices && data.skippedServices.length > 0) {
                             msg += ' Dịch vụ chưa có quy trình bước: ' + data.skippedServices.join(', ') + '.';
                         }
+                        if (data.deferredServices && data.deferredServices.length > 0) {
+                            msg += ' Đã tự lưu vào Kế hoạch điều trị' + (data.deferredPlanCode ? ' [' + data.deferredPlanCode + ']' : '') + ' để hẹn buổi sau: ' + data.deferredServices.join(', ') + '.';
+                        }
                         notify(msg, false);
+                        if (data.deferredPlanId) {
+                            fetch('/api/doctor/treatment-plans/' + encodeURIComponent(data.deferredPlanId))
+                                .then(function (r) { return r.ok ? r.json() : null; })
+                                .then(function (p) { if (p && typeof window.updatePlanInlineView === 'function') window.updatePlanInlineView(p); })
+                                .catch(function () {});
+                        }
                         state.viewMode = 'DETAIL';
                         return reload(firstId);
                     })

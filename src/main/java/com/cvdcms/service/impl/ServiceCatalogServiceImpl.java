@@ -245,6 +245,7 @@ public class ServiceCatalogServiceImpl
         dto.setIsRoomExclusive(service.getIsRoomExclusive());
         dto.setDoctorRequiredInPrep(service.getDoctorRequiredInPrep());
         dto.setDoctorRequiredInTurnover(service.getDoctorRequiredInTurnover());
+        dto.setAllowSameVisit(!Boolean.FALSE.equals(service.getAllowSameVisit()));
         dto.setDescription(sanitizeDescription(service.getDescription()));
         dto.setImageUrl(service.getImageUrl());
         dto.setStatus(service.getStatus());
@@ -317,6 +318,7 @@ public class ServiceCatalogServiceImpl
         service.setIsRoomExclusive(Boolean.TRUE.equals(dto.getIsRoomExclusive()));
         service.setDoctorRequiredInPrep(Boolean.TRUE.equals(dto.getDoctorRequiredInPrep()));
         service.setDoctorRequiredInTurnover(Boolean.TRUE.equals(dto.getDoctorRequiredInTurnover()));
+        service.setAllowSameVisit(dto.getAllowSameVisit() == null || dto.getAllowSameVisit());
         service.setDescription(sanitizeDescription(dto.getDescription()));
         service.setImageUrl(validatedImageUrl);
         service.setStatus(dto.getStatus());
@@ -410,6 +412,9 @@ public class ServiceCatalogServiceImpl
         }
         if (dto.getDoctorRequiredInTurnover() != null) {
             service.setDoctorRequiredInTurnover(dto.getDoctorRequiredInTurnover());
+        }
+        if (dto.getAllowSameVisit() != null) {
+            service.setAllowSameVisit(dto.getAllowSameVisit());
         }
         service.setDescription(sanitizeDescription(dto.getDescription()));
         service.setImageUrl(newImageUrl);
