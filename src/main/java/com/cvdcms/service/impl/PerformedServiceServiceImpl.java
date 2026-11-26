@@ -643,7 +643,6 @@ public class PerformedServiceServiceImpl implements PerformedServiceService {
                         paraclinicalOrderItemRepository.save(lockedItem);
                     }
                 }
-                syncWorkflowExecutionsForPlanItem(planItem, false, null, null);
             }
         }
 
