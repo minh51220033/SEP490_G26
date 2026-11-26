@@ -519,6 +519,56 @@
       color: var(--tv-text-main);
       font-weight: 500;
     }
+
+    /* ================= SERVICE PHASE COUNTDOWN (COMPACT) ================= */
+    .tv-phase-compact {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      min-width: 140px;
+    }
+    .tv-phase-timer-compact {
+      font-family: 'Courier New', monospace;
+      font-size: 20px;
+      font-weight: 900;
+      line-height: 1.1;
+      color: #0f172a;
+      letter-spacing: 0.5px;
+    }
+    .tv-phase-compact.is-overtime .tv-phase-timer-compact {
+      color: #b45309;
+    }
+    .tv-phase-bar-track {
+      width: 100%;
+      height: 4px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+    .tv-phase-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: #16a34a;
+      transition: width 0.4s ease;
+    }
+    .tv-phase-compact.is-overtime .tv-phase-bar-fill {
+      background: #d97706;
+    }
+    .tv-cleaning-strip {
+      margin: 12px 22px 16px 22px;
+      padding: 10px 16px;
+      border-radius: 12px;
+      background: #f0f9ff;
+      border: 1.5px solid #bae6fd;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #0369a1;
+    }
   </style>
 </head>
 <body th:attr="data-branch=${branchId}">
@@ -648,6 +698,7 @@
         </tbody>
       </table>
     </div>
+    <div id="tvCleaningSection" class="tv-cleaning-strip" style="display: none;"></div>
   </main>
 
   <!-- ================= BOTTOM NOTICE TICKER ================= -->

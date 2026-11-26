@@ -833,6 +833,7 @@
 
         <!-- Thông báo kiểm tra lịch trực và khả năng tiếp nhận theo chính sách -->
         <div id="bkAvailabilityNotice" class="cv-drawer__notice" style="display: none;"></div>
+        <div id="bkOverlapWarningPanel" class="mt-2" style="display: none;"></div>
 
         <!-- Thông tin người đặt (chỉ hiển thị cho khách vãng lai chưa đăng nhập) -->
         <div id="bkGuestContactRow" class="cv-form-row-2">
@@ -1893,7 +1894,8 @@
                 const params = new URLSearchParams({
                     branchId: branchId,
                     date: dateVal,
-                    sessionPeriod: sessionVal
+                    sessionPeriod: sessionVal,
+                    includeOverlap: 'true'
                 });
                 if (doctorSelect && doctorSelect.value) params.set('doctorId', doctorSelect.value);
                 if (serviceSelect && serviceSelect.value) params.set('serviceId', serviceSelect.value);
@@ -1907,17 +1909,19 @@
                     list.forEach(slot => {
                         const opt = document.createElement('option');
                         opt.value = slot.time;
-                        opt.textContent = slot.time;
+                        opt.textContent = slot.remaining > 0 ? slot.time : `${slot.time} (Có thể đông/trùng)`;
                         slotSelect.appendChild(opt);
                     });
 
                     if (prevValue && list.some(s => s.time === prevValue)) {
                         slotSelect.value = prevValue;
                     } else {
-                        slotSelect.value = list[0].time;
+                        const firstFree = list.find(s => s.remaining > 0);
+                        slotSelect.value = (firstFree || list[0]).time;
                     }
                     slotSelect.disabled = false;
                     if (submitBtn && !hasSessionConflict) submitBtn.disabled = false;
+                    await checkDrawerOverlap(seq);
                 } else {
                     const emptyOpt = document.createElement('option');
                     emptyOpt.value = '';
@@ -1941,6 +1945,120 @@
                     if (slotCustomSelect) slotCustomSelect.sync();
                 }
             }
+        }
+
+        let drawerOverlapState = { hasWarning: false, confirmOverlap: false };
+
+        if (slotSelect) {
+            slotSelect.addEventListener('change', () => {
+                checkDrawerOverlap(availSequence).catch(() => {});
+            });
+        }
+
+        function escDrawerHtml(str) {
+            return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+        }
+
+        function renderDrawerSuggestions(title, suggestions) {
+            if (!suggestions || !suggestions.length) return '';
+            const btns = suggestions.map((s, idx) => {
+                const start = String(s.startTime).slice(0, 5);
+                const hiddenCls = idx >= 3 ? ' d-none js-bk-extra-chip' : '';
+                return `<button type="button" class="btn btn-sm btn-outline-primary me-1 mb-1 js-bk-suggest-btn${hiddenCls}" data-slot="${escDrawerHtml(start)}">
+                    ${escDrawerHtml(start)} · <small>${escDrawerHtml(s.clinicLabel)}</small>
+                </button>`;
+            }).join('');
+            const more = suggestions.length > 3
+                ? `<div><button type="button" class="btn btn-sm btn-link p-0 js-bk-show-more">Xem thêm giờ khác (${suggestions.length - 3})</button></div>`
+                : '';
+            return `<div class="mt-1 js-bk-suggest-group"><div class="small fw-semibold mb-1">${escDrawerHtml(title)}</div><div>${btns}</div>${more}</div>`;
+        }
+
+        async function checkDrawerOverlap(seq) {
+            const panel = document.getElementById('bkOverlapWarningPanel');
+            if (!panel || !slotSelect || !branchSelect || !dateInput || !sessionSelect) return;
+            const slotVal = slotSelect.value ? slotSelect.value.trim() : '';
+            if (!slotVal || !branchSelect.value || !dateInput.value || !sessionSelect.value) {
+                panel.style.display = 'none';
+                panel.innerHTML = '';
+                drawerOverlapState = { hasWarning: false, confirmOverlap: false };
+                return;
+            }
+            const params = new URLSearchParams({
+                branchId: branchSelect.value,
+                date: dateInput.value,
+                sessionPeriod: sessionSelect.value,
+                expectedTime: slotVal
+            });
+            if (doctorSelect && doctorSelect.value) params.set('doctorId', doctorSelect.value);
+            if (serviceSelect && serviceSelect.value) params.set('serviceId', serviceSelect.value);
+
+            let res;
+            try {
+                const r = await fetch(`/api/public/booking/overlap-check?${params.toString()}`);
+                if (!r.ok) { panel.style.display = 'none'; return; }
+                res = await r.json();
+            } catch (e) {
+                panel.style.display = 'none';
+                return;
+            }
+            if (seq !== availSequence) return;
+            if (!res.clinicOverlap && !res.doctorOverlap) {
+                panel.style.display = 'none';
+                panel.innerHTML = '';
+                drawerOverlapState = { hasWarning: false, confirmOverlap: false };
+                return;
+            }
+            drawerOverlapState = { hasWarning: true, confirmOverlap: false };
+            const parts = [];
+            if (res.clinicOverlap) {
+                parts.push(`<div class="p-2 rounded border mb-2" style="background:#fffbeb;border-color:#f59e0b !important;">
+                    <div class="fw-bold small text-warning-emphasis">Cảnh báo chi nhánh (Clinic Overlap)</div>
+                    <div class="small">${escDrawerHtml(res.clinicWarningMessage)}</div>
+                    ${renderDrawerSuggestions('Gợi ý giờ ít đông:', res.clinicSuggestions)}
+                </div>`);
+            }
+            if (res.doctorOverlap) {
+                parts.push(`<div class="p-2 rounded border mb-2" style="background:#eef2ff;border-color:#6366f1 !important;">
+                    <div class="fw-bold small text-primary-emphasis">Cảnh báo bác sĩ (Doctor Overlap)</div>
+                    <div class="small">${escDrawerHtml(res.doctorWarningMessage)}</div>
+                    ${renderDrawerSuggestions('Gợi ý giờ trống của bác sĩ:', res.doctorSuggestions)}
+                </div>`);
+            }
+            if (res.clinicOverlap && res.doctorOverlap && res.combinedSuggestions && res.combinedSuggestions.length) {
+                parts.push(`<div class="p-2 rounded border mb-2" style="background:#ecfdf5;border-color:#10b981 !important;">
+                    ${renderDrawerSuggestions('Gợi ý không overlap cả hai:', res.combinedSuggestions)}
+                </div>`);
+            }
+            parts.push(`<div class="p-2 rounded border bg-light small">
+                <label class="d-flex align-items-center gap-2 mb-0 fw-semibold">
+                    <input type="checkbox" id="bkConfirmKeepOverlap" class="form-check-input mt-0">
+                    <span>Giữ giờ mong muốn (${escDrawerHtml(slotVal)}) và tiếp tục đặt lịch</span>
+                </label>
+            </div>`);
+            panel.innerHTML = parts.join('');
+            panel.style.display = 'block';
+            const keepBox = document.getElementById('bkConfirmKeepOverlap');
+            if (keepBox) {
+                keepBox.addEventListener('change', () => { drawerOverlapState.confirmOverlap = keepBox.checked; });
+            }
+            panel.querySelectorAll('.js-bk-suggest-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const t = btn.getAttribute('data-slot');
+                    if (t && slotSelect) {
+                        slotSelect.value = t;
+                        if (slotCustomSelect) slotCustomSelect.sync();
+                        checkDrawerOverlap(availSequence).catch(() => {});
+                    }
+                });
+            });
+            panel.querySelectorAll('.js-bk-show-more').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const g = btn.closest('.js-bk-suggest-group');
+                    if (g) g.querySelectorAll('.js-bk-extra-chip').forEach(el => el.classList.remove('d-none'));
+                    btn.remove();
+                });
+            });
         }
 
         // Kiểm tra khả năng tiếp nhận và lịch làm việc của Bác sĩ (Availability)
@@ -1979,7 +2097,8 @@
                 const params = new URLSearchParams({
                     branchId: branchId,
                     date: dateVal,
-                    sessionPeriod: sessionVal
+                    sessionPeriod: sessionVal,
+                    includeOverlap: 'true'
                 });
                 if (bookingContext.isPatientUser && profileSelect && profileSelect.value) {
                     params.set('profileId', profileSelect.value);
@@ -2373,6 +2492,14 @@
                     return;
                 }
 
+                if (isLoggedInPatient && drawerOverlapState.hasWarning && !drawerOverlapState.confirmOverlap) {
+                    if (errorEl) {
+                        errorEl.textContent = 'Khung giờ đang có cảnh báo trùng/đông lịch. Vui lòng tick "Giữ giờ mong muốn" hoặc chọn một khung giờ gợi ý.';
+                        errorEl.classList.add('is-visible');
+                    }
+                    return;
+                }
+
                 // Hiển thị trạng thái loading trên nút submit
                 if (submitBtn) submitBtn.disabled = true;
                 if (submitSpinner) submitSpinner.style.display = 'inline-block';
@@ -2394,7 +2521,8 @@
                         fullName: isLoggedInPatient ? null : name,
                         phoneNumber: isLoggedInPatient ? null : phone,
                         note: noteVal || null,
-                        requestKey: pendingBookingRequestKey
+                        requestKey: pendingBookingRequestKey,
+                        confirmOverlap: drawerOverlapState.confirmOverlap
                     };
 
                     const response = await fetch('/api/public/booking', {
