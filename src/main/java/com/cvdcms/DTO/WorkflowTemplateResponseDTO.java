@@ -20,6 +20,9 @@ public class WorkflowTemplateResponseDTO {
     private Long serviceId;
     private String serviceCode;
     private String serviceName;
+    private Integer serviceDurationMinutes;
+    private Integer totalStepDurationMinutes;
+    private Boolean allowSameVisit;
     private Long clinicId;
     private String status; // DRAFT, ACTIVE, INACTIVE
     private Long versionId;

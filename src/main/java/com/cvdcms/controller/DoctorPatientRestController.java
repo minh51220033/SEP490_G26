@@ -52,6 +52,9 @@ public class DoctorPatientRestController {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.ClinicQueueCoordinatorService queueCoordinator;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.OverdueVisitCleanupService overdueVisitCleanupService;
+
     private String encodeVisit(Long visitId) {
         return urlIdCodec != null && visitId != null ? urlIdCodec.encodeVisit(visitId) : "";
     }
@@ -166,9 +169,17 @@ public class DoctorPatientRestController {
             branchId = assignedBranch.getBranchId();
         }
 
+        // Đóng các ca quá hạn từ ngày trước của bệnh nhân trước khi kiểm tra ca đang chờ/hoạt động
+        LocalDateTime nowClinic = LocalDateTime.now(com.cvdcms.service.ClinicQueueCoordinatorService.CLINIC_ZONE);
+        if (overdueVisitCleanupService != null) {
+            overdueVisitCleanupService.closeOverdueVisitsForPatient(profileId, nowClinic);
+        }
+        LocalDateTime startOfToday = nowClinic.toLocalDate().atStartOfDay();
+
         // 0. Chặn mở/tạo ca bỏ qua hàng chờ nếu bệnh nhân đang ở trạng thái Chờ khám / Chờ kết quả
         Optional<Visit> waitingVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(
-                profileId, List.of(VisitStatus.WAITING, VisitStatus.WAITING_RESULT));
+                profileId, List.of(VisitStatus.WAITING, VisitStatus.WAITING_RESULT))
+                .filter(v -> v.getCheckInAt() == null || !v.getCheckInAt().isBefore(startOfToday));
         if (waitingVisitOpt.isPresent()) {
             Visit wv = waitingVisitOpt.get();
             return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
@@ -178,7 +189,10 @@ public class DoctorPatientRestController {
         }
 
         // 1. Kiểm tra xem bệnh nhân có ca khám nào đang hoạt động tại cơ sở hợp lệ chưa
-        Optional<Visit> activeVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(profileId, ACTIVE_STATUSES);
+        Optional<Visit> activeVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(profileId, ACTIVE_STATUSES)
+                .filter(v -> v.getStatus() == VisitStatus.WAITING_PAYMENT
+                        || v.getCheckInAt() == null
+                        || !v.getCheckInAt().isBefore(startOfToday));
         if (activeVisitOpt.isPresent()) {
             Visit activeVisit = activeVisitOpt.get();
             Long activeBranchId = activeVisit.getBranch() != null ? activeVisit.getBranch().getBranchId() : null;
@@ -275,8 +289,12 @@ public class DoctorPatientRestController {
             dobStr = p.getDob().format(DATE_FORMAT);
         }
 
-        // Tìm ca khám gần nhất hoặc ca đang hoạt động
-        Optional<Visit> activeVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(p.getProfileId(), ACTIVE_STATUSES);
+        // Tìm ca khám gần nhất hoặc ca đang hoạt động (bỏ qua ca lâm sàng đã quá hạn từ ngày trước)
+        LocalDateTime startOfToday = LocalDate.now(com.cvdcms.service.ClinicQueueCoordinatorService.CLINIC_ZONE).atStartOfDay();
+        Optional<Visit> activeVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(p.getProfileId(), ACTIVE_STATUSES)
+                .filter(v -> v.getStatus() == VisitStatus.WAITING_PAYMENT
+                        || v.getCheckInAt() == null
+                        || !v.getCheckInAt().isBefore(startOfToday));
         Optional<Visit> latestVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdOrderByCheckInAtDesc(p.getProfileId());
 
         Long vId = null;
@@ -339,6 +357,7 @@ public class DoctorPatientRestController {
             @RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "currentVisitId", required = false) Long currentVisitId,
             @RequestParam(value = "branchId", required = false) Long branchId,
+            @RequestParam(value = "waitingOnly", required = false, defaultValue = "false") boolean waitingOnly,
             HttpSession session) {
 
         User currentUser = doctorVisitAccess != null
@@ -423,11 +442,16 @@ public class DoctorPatientRestController {
         }
 
         VisitStatus status = null;
+        boolean waitingQueueFilter = waitingOnly;
         if (statusStr != null && !statusStr.trim().isEmpty() && !statusStr.equalsIgnoreCase("ALL")) {
-            try {
-                status = VisitStatus.valueOf(statusStr.trim().toUpperCase());
-            } catch (Exception e) {
-                log.warn("Invalid status param: {}", statusStr);
+            if ("WAITING_QUEUE".equalsIgnoreCase(statusStr.trim())) {
+                waitingQueueFilter = true;
+            } else {
+                try {
+                    status = VisitStatus.valueOf(statusStr.trim().toUpperCase());
+                } catch (Exception e) {
+                    log.warn("Invalid status param: {}", statusStr);
+                }
             }
         }
 
@@ -435,14 +459,20 @@ public class DoctorPatientRestController {
 
         List<Visit> visits = visitRepository.findFilteredVisits(start, end, status, branchId, searchPattern);
 
-        // Fallback: nếu không có ca khám nào và người dùng chưa chọn bộ lọc ngày cụ thể, hiển thị danh sách gần nhất
-        if (visits.isEmpty() && !hasDateFilter && (searchPattern == null || searchPattern.isEmpty()) && (status == null)) {
+        // Fallback: chỉ áp dụng khi không bật chế độ chỉ lấy hàng chờ khám
+        if (!waitingQueueFilter && visits.isEmpty() && !hasDateFilter && (searchPattern == null || searchPattern.isEmpty()) && (status == null)) {
             final Long filterBranchId = branchId;
             visits = visitRepository.findAll().stream()
                     .filter(v -> filterBranchId == null || (v.getBranch() != null && filterBranchId.equals(v.getBranch().getBranchId())))
                     .filter(v -> v.getStatus() != VisitStatus.CANCELLED)
                     .sorted((a, b) -> b.getCheckInAt().compareTo(a.getCheckInAt()))
                     .limit(20)
+                    .collect(Collectors.toList());
+        }
+
+        if (waitingQueueFilter) {
+            visits = visits.stream()
+                    .filter(v -> v.getStatus() == VisitStatus.WAITING || v.getStatus() == VisitStatus.WAITING_RESULT)
                     .collect(Collectors.toList());
         }
 

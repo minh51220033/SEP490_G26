@@ -191,9 +191,20 @@ body {
 }
 
 @keyframes pulse-dot {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
 }
 
 /* ================= 3-COLUMN MAIN GRID ================= */
@@ -294,8 +305,15 @@ body {
 }
 
 @keyframes glow-card {
-  0% { border-color: #0284c7; box-shadow: 0 10px 30px rgba(2, 132, 199, 0.2); }
-  100% { border-color: #38bdf8; box-shadow: 0 14px 40px rgba(56, 189, 248, 0.35); }
+  0% {
+    border-color: #0284c7;
+    box-shadow: 0 10px 30px rgba(2, 132, 199, 0.2);
+  }
+
+  100% {
+    border-color: #38bdf8;
+    box-shadow: 0 14px 40px rgba(56, 189, 248, 0.35);
+  }
 }
 
 .called-card-tag {
@@ -522,6 +540,7 @@ body {
   .tv-grid {
     grid-template-columns: 1fr;
   }
+
   .tv-header {
     flex-direction: column;
     align-items: flex-start;

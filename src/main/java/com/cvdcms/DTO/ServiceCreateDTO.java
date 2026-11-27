@@ -93,6 +93,8 @@ public class ServiceCreateDTO {
 
     private Boolean doctorRequiredInTurnover = false;
 
+    private Boolean allowSameVisit = true;
+
     private String description;
 
     @Size(max = 500, message = "Đường dẫn ảnh tối đa 500 ký tự.")

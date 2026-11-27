@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head(${isEditMode == true ? 'Chỉnh sửa quy trình kỹ thuật - DentalFlow' : 'Thêm quy trình kỹ thuật mới - DentalFlow'})}"></head>
+
+<body class="app-body">
+<div class="app-shell">
+
+    <!-- SIDEBAR DÙNG CHUNG -->
+    <aside th:replace="~{fragments/sidebar :: sidebar('workflows')}"></aside>
+    <div th:replace="~{fragments/sidebar :: sidebarBackdrop}"></div>
+
+    <div class="app-main">
+        <!-- TOPBAR -->
+        <header th:replace="~{fragments/header :: appTopbar(${isEditMode == true ? 'Chỉnh sửa quy trình điều trị' : 'Thêm quy trình điều trị mới'})}"></header>
+
+        <main class="app-content p-3 p-md-4" style="background: #f1f5f9 !important; min-height: calc(100vh - 64px);">
+            <style>
+                .wf-form-shell {
+                    max-width: 1180px;
+                    width: 100%;
+                    margin: 0 auto;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 16px;
+                }
+
+                .wf-back-link {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    color: #0369a1;
+                    font-size: 13.5px;
+                    font-weight: 600;
+                    text-decoration: none;
+                    padding: 6px 12px;
+                    border-radius: 10px;
+                    background: #e0f2fe;
+                    border: 1px solid #bae6fd;
+                    transition: all 0.15s ease;
+                }
+
+                .wf-back-link:hover {
+                    background: #bae6fd;
+                    color: #0c4a6e;
+                }
+
+                .wf-surface-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 16px;
+                    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+                }
+
+                .wf-surface-header {
+                    padding: 14px 20px;
+                    border-bottom: 1px solid #f1f5f9;
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 10px;
+                }
+
+                .wf-surface-title {
+                    font-size: 15.5px;
+                    font-weight: 700;
+                    color: #0f172a;
+                    margin: 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .wf-surface-body {
+                    padding: 20px;
+                }
+
+                .wf-code-input {
+                    font-family: 'JetBrains Mono', monospace;
+                    text-transform: uppercase;
+                    letter-spacing: 0.3px;
+                    font-weight: 600;
+                }
+
+                /* Tonal secondary button - high contrast, never white-on-white */
+                .df-btn-tonal-primary {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                    background: #e0f2fe;
+                    color: #0369a1;
+                    border: 1px solid #bae6fd;
+                    border-radius: 10px;
+                    padding: 7px 14px;
+                    font-size: 13.5px;
+                    font-weight: 700;
+                    white-space: nowrap;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                }
+
+                .df-btn-tonal-primary:hover {
+                    background: #bae6fd;
+                    color: #0c4a6e;
+                    border-color: #7dd3fc;
+                }
+
+                .df-btn-tonal-sm {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 5px;
+                    background: #f0f9ff;
+                    color: #0369a1;
+                    border: 1px solid #bae6fd;
+                    border-radius: 999px;
+                    padding: 3px 11px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                }
+
+                .df-btn-tonal-sm:hover {
+                    background: #e0f2fe;
+                    color: #0c4a6e;
+                }
+
+                .wf-quick-composer {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    padding: 14px 16px;
+                    margin-bottom: 16px;
+                }
+
+                .wf-step-card {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 14px;
+                    padding: 16px 18px;
+                    margin-bottom: 12px;
+                    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+                }
+
+                .wf-step-card:hover {
+                    border-color: #cbd5e1;
+                    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+                }
+
+                .wf-step-card:last-child {
+                    margin-bottom: 0;
+                }
+
+                .wf-step-num-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 5px;
+                    background: #0284c7;
+                    color: #ffffff;
+                    font-size: 12px;
+                    font-weight: 700;
+                    padding: 4px 11px;
+                    border-radius: 999px;
+                    white-space: nowrap;
+                }
+
+                .wf-step-adv-panel {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    padding: 14px;
+                    margin-top: 12px;
+                }
+
+                .wf-cf-item {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 10px;
+                    padding: 10px 12px;
+                }
+
+                .wf-icon-trash-btn {
+                    background: transparent;
+                    border: none;
+                    color: #64748b;
+                    padding: 4px 7px;
+                    border-radius: 8px;
+                    line-height: 1;
+                    cursor: pointer;
+                    transition: color 0.15s ease, background-color 0.15s ease;
+                }
+
+                .wf-icon-trash-btn:hover {
+                    color: #dc2626;
+                    background: #fef2f2;
+                }
+
+                .wf-adv-toggle-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 5px;
+                    background: transparent;
+                    border: 1px solid transparent;
+                    color: #475569;
+                    font-size: 12.5px;
+                    font-weight: 600;
+                    padding: 4px 10px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                }
+
+                .wf-adv-toggle-btn:hover {
+                    background: #f1f5f9;
+                    color: #0f172a;
+                }
+
+                .wf-adv-dot {
+                    width: 7px;
+                    height: 7px;
+                    border-radius: 50%;
+                    background: #0284c7;
+                    display: inline-block;
+                }
+
+                .wf-frame-hint {
+                    font-size: 12px;
+                    color: #64748b;
+                    margin-top: 4px;
+                }
+
+                .wf-action-footer {
+                    background: #ffffff;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 14px;
+                    padding: 14px 20px;
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+                }
+
+                .wf-primary-cta {
+                    background: linear-gradient(135deg, #0284c7, #1d4ed8);
+                    color: #ffffff;
+                    border: none;
+                    border-radius: 10px;
+                    padding: 9px 22px;
+                    font-size: 14px;
+                    font-weight: 700;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.22);
+                    cursor: pointer;
+                    transition: all 0.15s ease;
+                }
+
+                .wf-primary-cta:hover {
+                    filter: brightness(1.06);
+                    box-shadow: 0 6px 16px rgba(2, 132, 199, 0.28);
+                }
+
+                .wf-secondary-btn {
+                    background: #ffffff;
+                    color: #334155;
+                    border: 1px solid #cbd5e1;
+                    border-radius: 10px;
+                    padding: 9px 18px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    text-decoration: none;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    transition: all 0.15s ease;
+                }
+
+                .wf-secondary-btn:hover {
+                    background: #f8fafc;
+                    color: #0f172a;
+                    border-color: #94a3b8;
+                }
+            </style>
+
+            <div class="wf-form-shell">
+                <!-- 1. THANH ĐIỀU HƯỚNG & TIÊU ĐỀ TRANG -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <a th:href="@{/doctor/workflows}" class="wf-back-link">
+                            <i class="bi bi-arrow-left"></i>
+                            <span>Quay lại danh sách</span>
+                        </a>
+                        <div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <h1 class="h4 fw-bold text-dark mb-0"
+                                    th:text="${isEditMode == true ? 'Chỉnh sửa quy trình kỹ thuật' : 'Thêm quy trình kỹ thuật mới'}">
+                                    Cấu hình quy trình kỹ thuật
+                                </h1>
+                                <span th:if="${isEditMode == true and workflow != null}"
+                                      class="badge bg-light text-primary border fw-semibold"
+                                      style="font-family: 'JetBrains Mono', monospace; font-size: 12px;"
+                                      th:text="${workflow.templateCode}">QTKT</span>
+                                <span th:if="${isEditMode == true and workflow != null}"
+                                      class="badge bg-light text-secondary border fw-semibold"
+                                      style="font-size: 12px;"
+                                      th:text="'v' + ${workflow.versionNumber != null ? workflow.versionNumber : 1} + '.0'">v1.0</span>
+                            </div>
+                            <div class="small text-secondary mt-1"
+                                 th:text="${isEditMode == true and workflow != null ? workflow.templateName : 'Thiết lập thông tin chung và trình tự các bước thao tác chuẩn lâm sàng'}">
+                                Thiết lập thông tin chung và trình tự các bước thao tác chuẩn lâm sàng
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <div th:replace="~{fragments/header :: branchSelectInline}"></div>
+                    </div>
+                </div>
+
+                <!-- THÔNG BÁO PHÂN QUYỀN / LỖI / THÀNH CÔNG INLINE -->
+                <div th:if="${canManageWorkflowTemplates != true}"
+                     class="alert alert-warning d-flex align-items-center gap-2 py-2 px-3 mb-0 border"
+                     style="border-radius: 12px; font-size: 13.5px;" role="alert">
+                    <i class="bi bi-shield-exclamation fs-5"></i>
+                    <span>Tài khoản hiện tại chỉ có quyền xem. Chỉ Quản trị viên hoặc Quản lý phòng khám mới được phép lưu thay đổi mẫu quy trình.</span>
+                </div>
+
+                <div id="wfPageErrorBanner" class="alert alert-danger py-2 px-3 small d-none mb-0"
+                     style="border-radius: 12px;" role="alert"></div>
+                <div id="wfPageSuccessBanner" class="alert alert-success py-2 px-3 small d-none mb-0"
+                     style="border-radius: 12px;" role="status"></div>
+
+                <form id="workflowPageForm" novalidate onsubmit="event.preventDefault(); saveWorkflowForm();">
+                    <input type="hidden" id="formTemplateId" th:value="${workflow != null ? workflow.templateId : ''}">
+
+                    <!-- 2. KHỐI THÔNG TIN CHUNG QUY TRÌNH -->
+                    <section class="wf-surface-card mb-3">
+                        <div class="wf-surface-header">
+                            <h2 class="wf-surface-title">
+                                <i class="bi bi-file-earmark-medical text-primary"></i>
+                                <span>Thông tin chung quy trình</span>
+                            </h2>
+                            <span class="small text-secondary">Các trường có dấu <span class="text-danger fw-bold">*</span> là bắt buộc</span>
+                        </div>
+                        <div class="wf-surface-body">
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-5">
+                                    <label class="form-label small fw-bold text-dark mb-1" for="formTemplateName">
+                                        Tên quy trình / dịch vụ <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" id="formTemplateName" class="form-control" required
+                                           placeholder="Ví dụ: Quy trình nhổ răng khôn mọc lệch"
+                                           th:value="${workflow != null ? workflow.templateName : ''}"
+                                           oninput="handleTemplateNameInput()">
+                                    <div id="errTemplateName" class="invalid-feedback">Vui lòng nhập tên quy trình kỹ thuật.</div>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-dark mb-1" for="formTemplateCode">
+                                        Mã quy trình <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" id="formTemplateCode" class="form-control wf-code-input" required
+                                           placeholder="QTKT-NHORANG"
+                                           th:value="${workflow != null ? workflow.templateCode : ''}"
+                                           oninput="handleTemplateCodeInput()">
+                                    <div id="errTemplateCode" class="invalid-feedback">Vui lòng nhập mã quy trình.</div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-dark mb-1" for="formStatus">
+                                        Trạng thái áp dụng
+                                    </label>
+                                    <select id="formStatus" class="form-select">
+                                        <option value="ACTIVE" th:selected="${workflow == null or workflow.status == 'ACTIVE'}">Đang áp dụng</option>
+                                        <option value="DRAFT" th:selected="${workflow != null and workflow.status == 'DRAFT'}">Bản nháp</option>
+                                        <option value="INACTIVE" th:selected="${workflow != null and workflow.status == 'INACTIVE'}">Ngừng áp dụng</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <label class="form-label small fw-bold text-dark mb-1" for="formServiceId">
+                                        Dịch vụ nha khoa liên kết
+                                    </label>
+                                    <select id="formServiceId" class="form-select">
+                                        <option value="">-- Chọn dịch vụ liên kết --</option>
+                                        <option th:each="s : ${activeServices}"
+                                                th:value="${s.serviceId}"
+                                                th:text="${s.serviceName}"
+                                                th:selected="${workflow != null and workflow.serviceId != null and workflow.serviceId == s.serviceId}">
+                                            Dịch vụ mẫu
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold text-dark mb-1" for="formFlowMode">
+                                        Chế độ luồng thực hiện
+                                    </label>
+                                    <select id="formFlowMode" class="form-select">
+                                        <option value="CONTINUOUS" th:selected="${workflow == null or workflow.flowMode == 'CONTINUOUS'}">Liên tục tại ghế</option>
+                                        <option value="INTERRUPTIBLE" th:selected="${workflow != null and workflow.flowMode == 'INTERRUPTIBLE'}">Ngắt quãng (Chờ CLS)</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-bold text-dark mb-1" for="formDescription">
+                                        Mô tả ngắn
+                                    </label>
+                                    <input type="text" id="formDescription" class="form-control"
+                                           placeholder="Ghi chú phạm vi áp dụng hoặc phác đồ..."
+                                           th:value="${workflow != null ? workflow.description : ''}">
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 3. KHỐI DANH SÁCH CÁC BƯỚC TRONG QUY TRÌNH -->
+                    <section class="wf-surface-card mb-3">
+                        <div class="wf-surface-header">
+                            <h2 class="wf-surface-title">
+                                <i class="bi bi-list-ol text-primary"></i>
+                                <span>Các bước trong quy trình</span>
+                                <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle fw-bold"
+                                      id="stepCounterBadge" style="font-size: 12px;">0 bước</span>
+                            </h2>
+                            <span class="small text-secondary">Dùng nút ↑ / ↓ để sắp xếp thứ tự thực hiện tại ghế</span>
+                        </div>
+
+                        <div class="wf-surface-body">
+                            <!-- Thanh ghép bước nhanh từ 5 khung chuẩn -->
+                            <div class="wf-quick-composer">
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold text-dark mb-1" for="quickStepNameInput">
+                                            Tên bước mới
+                                        </label>
+                                        <input type="text" id="quickStepNameInput" class="form-control"
+                                               placeholder="Ví dụ: Gây tê vùng, Chụp X-quang kiểm tra..."
+                                               oninput="clearPageBannerError()"
+                                               onkeydown="if(event.key==='Enter'){event.preventDefault();addQuickStepFromComposer();}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold text-dark mb-1" for="quickStepFrameSelect">
+                                            Chọn khung thao tác có sẵn
+                                        </label>
+                                        <select id="quickStepFrameSelect" class="form-select">
+                                            <option value="CLINICAL_EXAM">Khám lâm sàng (FDI + nhận xét)</option>
+                                            <option value="XRAY">X-quang / Cận lâm sàng</option>
+                                            <option value="ENDODONTICS">Nội nha (Ống tủy &amp; chiều dài)</option>
+                                            <option value="PROCEDURE" selected>Thủ thuật điều trị</option>
+                                            <option value="PROSTHETICS_LABO">Phục hình / Đặt xưởng Labo</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2 d-grid">
+                                        <button type="button" class="df-btn-tonal-primary" onclick="addQuickStepFromComposer()">
+                                            <i class="bi bi-plus-circle"></i>
+                                            <span>Thêm bước</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Danh sách các bước -->
+                            <div id="stepsContainer"></div>
+
+                            <!-- Micro-state khi chưa có bước nào -->
+                            <div id="stepsEmptyState" class="text-center py-4 px-3 rounded-3 border bg-light d-none">
+                                <div class="small text-secondary mb-2">Quy trình chưa có bước thao tác nào. Nhập tên bước ở thanh phía trên để bắt đầu.</div>
+                                <button type="button" class="df-btn-tonal-sm" onclick="addSampleDefaultSteps()">
+                                    <i class="bi bi-magic"></i>
+                                    <span>Chèn 3 bước mẫu cơ bản</span>
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 4. THANH HÀNH ĐỘNG CUỐI TRANG (SECONDARY TRÁI — 1 PRIMARY CTA PHẢI) -->
+                    <div class="wf-action-footer">
+                        <a th:href="@{/doctor/workflows}" class="wf-secondary-btn">
+                            <i class="bi bi-x-lg"></i>
+                            <span>Hủy bỏ</span>
+                        </a>
+
+                        <button type="submit" id="btnSaveWorkflow" class="wf-primary-cta">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <span id="btnSaveWorkflowLabel"
+                                  th:text="${isEditMode == true ? 'Lưu cập nhật quy trình' : 'Lưu quy trình kỹ thuật'}">
+                                Lưu quy trình kỹ thuật
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    const IS_EDIT_MODE = /*[[${isEditMode == true}]]*/ false;
+    const INITIAL_WORKFLOW = /*[[${workflow}]]*/ null;
+    const FRAME_CUSTOM_FIELDS_LIBRARY = /*[[${frameCustomFields}]]*/ {};
+
+    const FRAME_HINTS = {
+        CLINICAL_EXAM: 'Khung gồm: Chọn răng FDI, lý do đến khám, nhận xét lâm sàng.',
+        XRAY: 'Khung gồm: Chọn răng FDI, chỉ định cận lâm sàng & kết luận đọc phim.',
+        ENDODONTICS: 'Khung gồm: Răng FDI, số ống tủy, chiều dài làm việc & ghi chú nội nha.',
+        PROCEDURE: 'Khung gồm: Răng FDI, mô tả kỹ thuật thao tác & vật tư tiêu hao.',
+        PROSTHETICS_LABO: 'Khung gồm: Răng FDI, thông số mẫu răng, màu sắc & phiếu gửi xưởng Labo.'
+    };
+
+    let currentStepCount = 0;
+    let codeManuallyEdited = IS_EDIT_MODE || Boolean(document.getElementById('formTemplateCode')?.value.trim());
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (IS_EDIT_MODE && INITIAL_WORKFLOW && Array.isArray(INITIAL_WORKFLOW.steps) && INITIAL_WORKFLOW.steps.length > 0) {
+            const sortedSteps = [...INITIAL_WORKFLOW.steps].sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0));
+            sortedSteps.forEach(st => addNewStepRow(st));
+        } else if (IS_EDIT_MODE) {
+            addNewStepRow({
+                stepName: 'Khám lâm sàng',
+                estimatedDurationMinutes: 10,
+                stepCode: 'B1',
+                stepType: 'CLINICAL',
+                frameKey: 'CLINICAL_EXAM'
+            });
+        } else {
+            addSampleDefaultSteps();
+            setTimeout(() => document.getElementById('formTemplateName')?.focus(), 80);
+        }
+    });
+
+    function clearPageBannerError() {
+        document.getElementById('wfPageErrorBanner')?.classList.add('d-none');
+    }
+
+    function showPageBannerError(msg) {
+        const el = document.getElementById('wfPageErrorBanner');
+        if (!el) return;
+        el.textContent = msg;
+        el.classList.remove('d-none');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function showPageBannerSuccess(msg) {
+        const el = document.getElementById('wfPageSuccessBanner');
+        if (!el) return;
+        el.textContent = msg;
+        el.classList.remove('d-none');
+    }
+
+    function handleTemplateNameInput() {
+        clearPageBannerError();
+        const nameEl = document.getElementById('formTemplateName');
+        nameEl?.classList.remove('is-invalid');
+        if (!IS_EDIT_MODE && !codeManuallyEdited) {
+            const suggested = suggestCodeFromName(nameEl?.value || '');
+            const codeEl = document.getElementById('formTemplateCode');
+            if (codeEl && suggested) {
+                codeEl.value = suggested;
+                codeEl.classList.remove('is-invalid');
+            }
+        }
+    }
+
+    function handleTemplateCodeInput() {
+        clearPageBannerError();
+        const codeEl = document.getElementById('formTemplateCode');
+        if (!codeEl) return;
+        codeEl.classList.remove('is-invalid');
+        codeManuallyEdited = Boolean(codeEl.value.trim());
+    }
+
+    function suggestCodeFromName(name) {
+        const clean = String(name || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[đĐ]/g, 'D')
+            .toUpperCase()
+            .replace(/[^A-Z0-9\s]/g, ' ')
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 4)
+            .join('-');
+        return clean ? ('QTKT-' + clean).slice(0, 32) : '';
+    }
+
+    function addSampleDefaultSteps() {
+        clearPageBannerError();
+        addNewStepRow({
+            stepName: 'Khám lâm sàng và giải thích',
+            stepDescription: 'Khám khoang miệng, giải thích cho bệnh nhân rõ ràng quy trình kỹ thuật',
+            completionCriteria: 'Bệnh nhân nắm rõ chỉ định và đồng thuận',
+            estimatedDurationMinutes: 5,
+            stepCode: 'B1',
+            stepType: 'CLINICAL',
+            frameKey: 'CLINICAL_EXAM'
+        });
+        addNewStepRow({
+            stepName: 'Tiến hành thao tác kỹ thuật chính',
+            stepDescription: 'Thao tác chuẩn xác theo quy trình chuyên môn Bộ Y Tế',
+            completionCriteria: 'Đảm bảo vô trùng tuyệt đối và đạt chuẩn kỹ thuật',
+            estimatedDurationMinutes: 15,
+            stepCode: 'B2',
+            stepType: 'TREATMENT',
+            frameKey: 'PROCEDURE'
+        });
+        addNewStepRow({
+            stepName: 'Hoàn thiện & Dặn dò sau điều trị',
+            stepDescription: 'Kiểm tra kết quả lâm sàng, sát khuẩn vùng can thiệp và dặn dò chăm sóc',
+            completionCriteria: 'Vùng điều trị sạch sẽ, bệnh nhân ổn định',
+            estimatedDurationMinutes: 5,
+            stepCode: 'B3',
+            stepType: 'FOLLOW_UP',
+            frameKey: 'PROCEDURE'
+        });
+    }
+
+    function addQuickStepFromComposer() {
+        clearPageBannerError();
+        const nameEl = document.getElementById('quickStepNameInput');
+        const frameEl = document.getElementById('quickStepFrameSelect');
+        const name = (nameEl?.value || '').trim();
+        const frameKey = frameEl?.value || 'PROCEDURE';
+
+        if (!name) {
+            showPageBannerError('Vui lòng nhập tên bước mới trước khi thêm.');
+            nameEl?.classList.add('is-invalid');
+            nameEl?.focus();
+            return;
+        }
+        nameEl.classList.remove('is-invalid');
+
+        const inferredType = frameKey === 'XRAY' ? 'PARACLINICAL' : (frameKey === 'CLINICAL_EXAM' ? 'CLINICAL' : 'TREATMENT');
+        const newRow = addNewStepRow({
+            stepName: name,
+            frameKey: frameKey,
+            stepType: inferredType,
+            estimatedDurationMinutes: 10
+        });
+        nameEl.value = '';
+        nameEl.focus();
+        newRow?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hasNonDefaultAdvancedConfig(stepObj) {
+        if (!stepObj || typeof stepObj !== 'object') return false;
+        const hasQueue = Boolean(stepObj.targetQueueType && String(stepObj.targetQueueType).trim());
+        const hasPrice = Number(stepObj.stepPrice || 0) > 0;
+        const isOpt = Boolean(stepObj.isOptional);
+        const needApproval = Boolean(stepObj.requiresClinicalApproval);
+        return hasQueue || hasPrice || isOpt || needApproval;
+    }
+
+    function addNewStepRow(stepObj = {}) {
+        currentStepCount++;
+        const container = document.getElementById('stepsContainer');
+        const rowId = `step-row-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+        const stepNameVal = stepObj.stepName || '';
+        const stepCodeVal = stepObj.stepCode || `B${currentStepCount}`;
+        const stepDurationVal = stepObj.estimatedDurationMinutes || 10;
+        const stepPriceVal = stepObj.stepPrice || 0;
+        const stepDescVal = stepObj.stepDescription || '';
+        const stepCriteriaVal = stepObj.completionCriteria || '';
+        const stepTypeVal = stepObj.stepType || 'CLINICAL';
+        const stepFrameVal = stepObj.frameKey || (stepTypeVal === 'PARACLINICAL' ? 'XRAY' : (stepTypeVal === 'CLINICAL' ? 'CLINICAL_EXAM' : 'PROCEDURE'));
+        const stepQueueVal = stepObj.targetQueueType || '';
+        const stepOptChecked = stepObj.isOptional ? 'checked' : '';
+        const stepApprovalChecked = stepObj.requiresClinicalApproval ? 'checked' : '';
+        const openAdvByDefault = hasNonDefaultAdvancedConfig(stepObj);
+
+        const row = document.createElement('div');
+        row.className = 'wf-step-card step-edit-row';
+        row.id = rowId;
+        row.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="wf-step-num-pill step-num-badge">Bước ${currentStepCount}</span>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Sắp xếp thứ tự bước">
+                        <button type="button" class="btn btn-outline-secondary py-1 px-2" title="Chuyển lên" onclick="moveStepRow('${rowId}', -1)">
+                            <i class="bi bi-arrow-up"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary py-1 px-2" title="Chuyển xuống" onclick="moveStepRow('${rowId}', 1)">
+                            <i class="bi bi-arrow-down"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" id="adv-btn-${rowId}" class="wf-adv-toggle-btn" onclick="toggleStepAdvancedPanel('${rowId}')">
+                        <i class="bi ${openAdvByDefault ? 'bi-chevron-up' : 'bi-sliders'}"></i>
+                        <span>${openAdvByDefault ? 'Thu gọn cấu hình nâng cao' : 'Cấu hình nâng cao (BYT · Hàng đợi)'}</span>
+                        ${openAdvByDefault ? '<span class="wf-adv-dot" title="Đang có cấu hình nâng cao"></span>' : ''}
+                    </button>
+                    <button type="button" class="wf-icon-trash-btn" title="Xóa bước này" onclick="removeStepRow('${rowId}')">
+                        <i class="bi bi-trash3"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- HÀNG 1: TÊN BƯỚC + KHUNG THAO TÁC -->
+            <div class="row g-3 mb-2">
+                <div class="col-md-7">
+                    <label class="form-label small fw-bold text-dark mb-1">
+                        Tên bước <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" class="form-control form-control-sm step-name-input"
+                           value="${escapeHtml(stepNameVal)}"
+                           placeholder="Ví dụ: Khám lâm sàng, Chụp X-quang, Thử mão..."
+                           oninput="clearPageBannerError(); this.classList.remove('is-invalid')">
+                    <div class="invalid-feedback">Vui lòng nhập tên bước.</div>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold text-primary mb-1">Khung thao tác có sẵn</label>
+                    <select class="form-select form-select-sm step-frame-select" onchange="onStepFrameSelectChange(this)">
+                        <option value="CLINICAL_EXAM" ${stepFrameVal === 'CLINICAL_EXAM' ? 'selected' : ''}>Khám lâm sàng (FDI + nhận xét)</option>
+                        <option value="XRAY" ${stepFrameVal === 'XRAY' ? 'selected' : ''}>X-quang / Cận lâm sàng</option>
+                        <option value="ENDODONTICS" ${stepFrameVal === 'ENDODONTICS' ? 'selected' : ''}>Nội nha (Ống tủy &amp; chiều dài)</option>
+                        <option value="PROCEDURE" ${stepFrameVal === 'PROCEDURE' ? 'selected' : ''}>Thủ thuật / Vật tư thực hiện</option>
+                        <option value="PROSTHETICS_LABO" ${stepFrameVal === 'PROSTHETICS_LABO' ? 'selected' : ''}>Phục hình / Đặt xưởng Labo</option>
+                    </select>
+                    <div class="wf-frame-hint">${escapeHtml(FRAME_HINTS[stepFrameVal] || FRAME_HINTS.PROCEDURE)}</div>
+                </div>
+            </div>
+
+            <!-- HÀNG 2: HƯỚNG DẪN THAO TÁC & TIÊU CHÍ HOÀN THÀNH -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold text-dark mb-1">Hướng dẫn thao tác / Mô tả kỹ thuật</label>
+                    <input type="text" class="form-control form-control-sm step-desc-input"
+                           value="${escapeHtml(stepDescVal)}"
+                           placeholder="Dụng cụ, thao tác chuẩn chuyên môn...">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold text-success mb-1">Tiêu chí hoàn thành bước (Nghiệm thu)</label>
+                    <input type="text" class="form-control form-control-sm step-criteria-input"
+                           value="${escapeHtml(stepCriteriaVal)}"
+                           placeholder="VD: Bề mặt men răng trơn bóng, cầm máu tốt...">
+                </div>
+            </div>
+
+            <!-- TRƯỜNG NHẬP LIỆU RIÊNG CỦA BƯỚC -->
+            <div class="border-top pt-2">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-semibold text-dark">
+                        <i class="bi bi-sliders2 text-primary me-1"></i>Trường riêng của bước (tùy chọn)
+                    </span>
+                    <button type="button" class="df-btn-tonal-sm" onclick="addCustomFieldRowToStep('${rowId}')">
+                        <i class="bi bi-plus-lg"></i>
+                        <span>Thêm trường</span>
+                    </button>
+                </div>
+                <div id="cf-list-${rowId}" class="d-flex flex-column gap-2"></div>
+            </div>
+
+            <!-- CẤU HÌNH NÂNG CAO (MẶC ĐỊNH THU GỌN TRỪ KHI CÓ DỮ LIỆU KHÁC MẶC ĐỊNH) -->
+            <div id="adv-${rowId}" class="wf-step-adv-panel ${openAdvByDefault ? '' : 'd-none'}">
+                <div class="row g-2 mb-2">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-dark mb-1">Mã bước</label>
+                        <input type="text" class="form-control form-control-sm step-code-input wf-code-input"
+                               value="${escapeHtml(stepCodeVal)}" placeholder="B${currentStepCount}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-dark mb-1">Loại bước</label>
+                        <select class="form-select form-select-sm step-type-select" onchange="this.dataset.manual='1'; autoSyncFrameFromStepType(this)">
+                            <option value="CLINICAL" ${stepTypeVal === 'CLINICAL' ? 'selected' : ''}>Khám lâm sàng (CLINICAL)</option>
+                            <option value="PARACLINICAL" ${stepTypeVal === 'PARACLINICAL' ? 'selected' : ''}>Cận lâm sàng (PARACLINICAL)</option>
+                            <option value="TREATMENT" ${stepTypeVal === 'TREATMENT' ? 'selected' : ''}>Điều trị (TREATMENT)</option>
+                            <option value="FOLLOW_UP" ${stepTypeVal === 'FOLLOW_UP' ? 'selected' : ''}>Dặn dò (FOLLOW_UP)</option>
+                            <option value="DECISION" ${stepTypeVal === 'DECISION' ? 'selected' : ''}>Quyết định (DECISION)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-dark mb-1">Hàng đợi chuyển tiếp</label>
+                        <select class="form-select form-select-sm step-queue-select">
+                            <option value="" ${!stepQueueVal ? 'selected' : ''}>-- Không chuyển --</option>
+                            <option value="RECEPTION" ${stepQueueVal === 'RECEPTION' ? 'selected' : ''}>Tiếp đón</option>
+                            <option value="EXAM" ${stepQueueVal === 'EXAM' ? 'selected' : ''}>Khám bệnh</option>
+                            <option value="PARACLINICAL" ${stepQueueVal === 'PARACLINICAL' ? 'selected' : ''}>Cận lâm sàng</option>
+                            <option value="RESULT_READING" ${stepQueueVal === 'RESULT_READING' ? 'selected' : ''}>Đọc kết quả</option>
+                            <option value="TREATMENT" ${stepQueueVal === 'TREATMENT' ? 'selected' : ''}>Điều trị</option>
+                            <option value="PAYMENT" ${stepQueueVal === 'PAYMENT' ? 'selected' : ''}>Thanh toán</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-dark mb-1">Thời gian (phút) &amp; Giá (VNĐ)</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" class="form-control step-duration-input" value="${stepDurationVal}" min="1" max="180" title="Thời gian dự kiến (phút)">
+                            <input type="text" inputmode="numeric" class="form-control step-price-input text-end"
+                                   value="${Number(stepPriceVal || 0).toLocaleString('vi-VN')}" placeholder="0 đ"
+                                   oninput="const v=this.value.replace(/[^\\d]/g,''); this.value = v ? Number(v).toLocaleString('vi-VN') : '';">
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-4 pt-1">
+                    <div class="form-check">
+                        <input class="form-check-input step-optional-input" type="checkbox" id="opt-${rowId}" ${stepOptChecked}>
+                        <label class="form-check-label small fw-semibold text-dark" for="opt-${rowId}">Bước tùy chọn (cho phép bỏ qua)</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input step-approval-input" type="checkbox" id="app-${rowId}" ${stepApprovalChecked}>
+                        <label class="form-check-label small fw-semibold text-dark" for="app-${rowId}">Cần bác sĩ phê duyệt chuyên môn</label>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(row);
+        if (stepObj.frameKey) {
+            const fs = row.querySelector('.step-frame-select');
+            if (fs) fs.dataset.manual = '1';
+        }
+        if (Array.isArray(stepObj.customFields)) {
+            stepObj.customFields.forEach(cf => addCustomFieldRowToStep(rowId, cf));
+        }
+        updateStepBadge();
+        return row;
+    }
+
+    function toggleStepAdvancedPanel(rowId) {
+        const el = document.getElementById(`adv-${rowId}`);
+        const btn = document.getElementById(`adv-btn-${rowId}`);
+        if (!el) return;
+        const hidden = el.classList.toggle('d-none');
+        if (btn) {
+            btn.innerHTML = hidden
+                ? '<i class="bi bi-sliders"></i><span>Cấu hình nâng cao (BYT · Hàng đợi)</span>'
+                : '<i class="bi bi-chevron-up"></i><span>Thu gọn cấu hình nâng cao</span>';
+        }
+    }
+
+    function onStepFrameSelectChange(frameSel) {
+        frameSel.dataset.manual = '1';
+        const row = frameSel.closest('.step-edit-row');
+        const fk = frameSel.value;
+        const hint = row?.querySelector('.wf-frame-hint');
+        if (hint) {
+            hint.textContent = FRAME_HINTS[fk] || FRAME_HINTS.PROCEDURE;
+        }
+        const typeSel = row?.querySelector('.step-type-select');
+        if (!typeSel || typeSel.dataset.manual === '1') return;
+        if (fk === 'XRAY') typeSel.value = 'PARACLINICAL';
+        else if (fk === 'CLINICAL_EXAM') typeSel.value = 'CLINICAL';
+        else typeSel.value = 'TREATMENT';
+    }
+
+    function autoSyncFrameFromStepType(selectEl) {
+        const row = selectEl.closest('.step-edit-row');
+        const frameSel = row?.querySelector('.step-frame-select');
+        if (!frameSel || frameSel.dataset.manual === '1') return;
+        const t = selectEl.value;
+        if (t === 'PARACLINICAL') frameSel.value = 'XRAY';
+        else if (t === 'CLINICAL') frameSel.value = 'CLINICAL_EXAM';
+        else frameSel.value = 'PROCEDURE';
+        const hint = row?.querySelector('.wf-frame-hint');
+        if (hint) {
+            hint.textContent = FRAME_HINTS[frameSel.value] || FRAME_HINTS.PROCEDURE;
+        }
+    }
+
+    function addCustomFieldRowToStep(rowId, cf = {}) {
+        const box = document.getElementById(`cf-list-${rowId}`);
+        if (!box) return;
+        const cfId = cf.id || `cf-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const cfType = cf.type || 'text';
+        const cfOptions = Array.isArray(cf.options) ? cf.options.join(', ') : (cf.options || '');
+        const cfPlaceholder = cf.placeholder || '';
+
+        const item = document.createElement('div');
+        item.className = 'cf-edit-item wf-cf-item row g-2 align-items-center mx-0';
+        item.dataset.cfId = cfId;
+        item.innerHTML = `
+            <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm cf-label-input" value="${escapeHtml(cf.label || '')}" placeholder="Tên trường (VD: Độ khít)">
+            </div>
+            <div class="col-md-3">
+                <select class="form-select form-select-sm cf-type-select" onchange="toggleCfConfigInput(this)">
+                    <option value="text" ${cfType === 'text' ? 'selected' : ''}>Ô nhập 1 dòng</option>
+                    <option value="textarea" ${cfType === 'textarea' ? 'selected' : ''}>Đoạn văn dài</option>
+                    <option value="select" ${cfType === 'select' ? 'selected' : ''}>Danh sách chọn</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm cf-options-input ${cfType === 'select' ? '' : 'd-none'}"
+                       value="${escapeHtml(cfOptions)}" placeholder="Lựa chọn cách nhau dấu phẩy (VD: Đạt, Cần chỉnh)">
+                <input type="text" class="form-control form-control-sm cf-placeholder-input ${cfType === 'select' ? 'd-none' : ''}"
+                       value="${escapeHtml(cfPlaceholder)}" placeholder="Gợi ý nhập liệu cho bác sĩ (tùy chọn)">
+            </div>
+            <div class="col-md-1 text-end">
+                <button type="button" class="wf-icon-trash-btn" title="Xóa trường"
+                        onclick="this.closest('.cf-edit-item').remove()">
+                    <i class="bi bi-trash3"></i>
+                </button>
+            </div>
+        `;
+        box.appendChild(item);
+    }
+
+    function toggleCfConfigInput(sel) {
+        const item = sel.closest('.cf-edit-item');
+        if (!item) return;
+        const isSelect = sel.value === 'select';
+        item.querySelector('.cf-options-input')?.classList.toggle('d-none', !isSelect);
+        item.querySelector('.cf-placeholder-input')?.classList.toggle('d-none', isSelect);
+    }
+
+    function moveStepRow(rowId, delta) {
+        const container = document.getElementById('stepsContainer');
+        const row = document.getElementById(rowId);
+        if (!container || !row) return;
+        if (delta < 0 && row.previousElementSibling) {
+            container.insertBefore(row, row.previousElementSibling);
+        } else if (delta > 0 && row.nextElementSibling) {
+            container.insertBefore(row.nextElementSibling, row);
+        }
+        renumberSteps();
+    }
+
+    function removeStepRow(rowId) {
+        const row = document.getElementById(rowId);
+        if (row) {
+            row.remove();
+            renumberSteps();
+        }
+    }
+
+    function renumberSteps() {
+        const rows = document.querySelectorAll('#stepsContainer .step-edit-row');
+        currentStepCount = 0;
+        rows.forEach((r, idx) => {
+            currentStepCount = idx + 1;
+            const badge = r.querySelector('.step-num-badge');
+            if (badge) badge.textContent = `Bước ${currentStepCount}`;
+        });
+        updateStepBadge();
+    }
+
+    function updateStepBadge() {
+        const badge = document.getElementById('stepCounterBadge');
+        if (badge) badge.textContent = `${currentStepCount} bước`;
+        const emptyBox = document.getElementById('stepsEmptyState');
+        if (emptyBox) {
+            emptyBox.classList.toggle('d-none', currentStepCount > 0);
+        }
+    }
+
+    async function extractApiErrorMessage(res, fallback) {
+        try {
+            const data = await res.json();
+            if (data && data.message) return data.message;
+            if (data && data.error) return data.error;
+        } catch (_) {
+            try {
+                const txt = await res.text();
+                if (txt) return txt;
+            } catch (_) {}
+        }
+        return fallback;
+    }
+
+    async function saveWorkflowForm() {
+        clearPageBannerError();
+
+        const templateId = document.getElementById('formTemplateId').value;
+        const nameEl = document.getElementById('formTemplateName');
+        const codeEl = document.getElementById('formTemplateCode');
+        const templateName = (nameEl?.value || '').trim();
+        const templateCode = (codeEl?.value || '').trim().toUpperCase();
+        const serviceId = document.getElementById('formServiceId').value;
+        const status = document.getElementById('formStatus').value;
+        const flowMode = document.getElementById('formFlowMode').value || 'CONTINUOUS';
+        const description = document.getElementById('formDescription').value.trim();
+
+        let hasFieldError = false;
+        if (!templateName) {
+            nameEl?.classList.add('is-invalid');
+            hasFieldError = true;
+        }
+        if (!templateCode) {
+            codeEl?.classList.add('is-invalid');
+            hasFieldError = true;
+        }
+        if (hasFieldError) {
+            showPageBannerError('Vui lòng nhập đầy đủ Tên quy trình và Mã quy trình trước khi lưu.');
+            (!templateName ? nameEl : codeEl)?.focus();
+            return;
+        }
+
+        const stepRows = document.querySelectorAll('#stepsContainer .step-edit-row');
+        const steps = [];
+        let firstEmptyStepInput = null;
+
+        stepRows.forEach((r, idx) => {
+            const stepNameInput = r.querySelector('.step-name-input');
+            const name = (stepNameInput?.value || '').trim();
+            if (!name) {
+                stepNameInput?.classList.add('is-invalid');
+                if (!firstEmptyStepInput) firstEmptyStepInput = stepNameInput;
+                return;
+            }
+            stepNameInput?.classList.remove('is-invalid');
+
+            const stepCode = (r.querySelector('.step-code-input')?.value || '').trim().toUpperCase() || `B${idx + 1}`;
+            const duration = parseInt(r.querySelector('.step-duration-input')?.value) || 10;
+            const desc = (r.querySelector('.step-desc-input')?.value || '').trim();
+            const criteria = (r.querySelector('.step-criteria-input')?.value || '').trim();
+            const price = parseFloat((r.querySelector('.step-price-input')?.value || '0').replace(/[^\d]/g, '')) || 0;
+            const stepType = r.querySelector('.step-type-select')?.value || 'CLINICAL';
+            const frameKey = r.querySelector('.step-frame-select')?.value || 'PROCEDURE';
+            const targetQueueType = r.querySelector('.step-queue-select')?.value || null;
+            const isOptional = Boolean(r.querySelector('.step-optional-input')?.checked);
+            const requiresClinicalApproval = Boolean(r.querySelector('.step-approval-input')?.checked);
+
+            const customFields = [];
+            r.querySelectorAll('.cf-edit-item').forEach(cfEl => {
+                const label = (cfEl.querySelector('.cf-label-input')?.value || '').trim();
+                if (!label) return;
+                const cfType = cfEl.querySelector('.cf-type-select')?.value || 'text';
+                const optsRaw = cfEl.querySelector('.cf-options-input')?.value || '';
+                const placeholder = (cfEl.querySelector('.cf-placeholder-input')?.value || '').trim();
+                const options = cfType === 'select'
+                    ? optsRaw.split(',').map(x => x.trim()).filter(Boolean)
+                    : [];
+                customFields.push({
+                    id: cfEl.dataset.cfId || undefined,
+                    label,
+                    type: cfType,
+                    options,
+                    placeholder: cfType === 'select' ? '' : placeholder
+                });
+            });
+
+            steps.push({
+                sequenceOrder: steps.length + 1,
+                stepCode,
+                stepName: name,
+                stepDescription: desc,
+                completionCriteria: criteria,
+                estimatedDurationMinutes: duration,
+                stepPrice: price,
+                stepType,
+                frameKey,
+                customFields,
+                targetQueueType: targetQueueType || null,
+                isOptional,
+                requiresClinicalApproval
+            });
+        });
+
+        if (firstEmptyStepInput) {
+            showPageBannerError('Vui lòng nhập tên cho tất cả các bước trong quy trình (hoặc xóa bước trống).');
+            firstEmptyStepInput.focus();
+            return;
+        }
+
+        if (steps.length === 0) {
+            showPageBannerError('Vui lòng thêm ít nhất 1 bước thao tác cho quy trình kỹ thuật.');
+            document.getElementById('quickStepNameInput')?.focus();
+            return;
+        }
+
+        const payload = {
+            templateId: templateId ? parseInt(templateId) : null,
+            templateName,
+            templateCode,
+            serviceId: serviceId ? parseInt(serviceId) : null,
+            status,
+            flowMode,
+            description,
+            steps
+        };
+
+        const saveBtn = document.getElementById('btnSaveWorkflow');
+        const saveLabel = document.getElementById('btnSaveWorkflowLabel');
+        const originalText = saveLabel ? saveLabel.textContent : 'Lưu quy trình kỹ thuật';
+        if (saveBtn) saveBtn.disabled = true;
+        if (saveLabel) saveLabel.textContent = 'Đang lưu quy trình...';
+
+        try {
+            const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+            const tokenMeta = document.querySelector('meta[name="_csrf"]');
+            const headerMeta = document.querySelector('meta[name="_csrf_header"]');
+            if (tokenMeta && headerMeta && tokenMeta.content && headerMeta.content) {
+                headers[headerMeta.content] = tokenMeta.content;
+            }
+
+            const res = await fetch('/api/doctor/workflows', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                const errMsg = await extractApiErrorMessage(res, 'Lỗi khi lưu quy trình kỹ thuật.');
+                throw new Error(errMsg);
+            }
+
+            showPageBannerSuccess('Đã lưu quy trình kỹ thuật thành công. Đang quay về danh sách...');
+            setTimeout(() => {
+                window.location.href = '/doctor/workflows';
+            }, 400);
+        } catch (e) {
+            showPageBannerError(e.message || 'Không thể lưu quy trình kỹ thuật.');
+            if (saveBtn) saveBtn.disabled = false;
+            if (saveLabel) saveLabel.textContent = originalText;
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;')
+                          .replace(/</g, '&lt;')
+                          .replace(/>/g, '&gt;')
+                          .replace(/"/g, '&quot;')
+                          .replace(/'/g, '&#39;');
+    }
+</script>
+</body>
+</html>

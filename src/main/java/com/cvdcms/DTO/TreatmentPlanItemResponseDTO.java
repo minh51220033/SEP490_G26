@@ -27,4 +27,7 @@ public class TreatmentPlanItemResponseDTO {
     private String statusBadgeClass;
     private String statusDisplayName;
     private String completedAt;
+    private Integer estimatedDurationMinutes;
+    private Boolean allowSameVisit;
+    private Boolean isParaclinical;
 }

@@ -43,8 +43,10 @@ public class NanoPixIntegrationServiceImpl implements NanoPixIntegrationService 
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "bmp", "dcm", "dicom", "tif", "tiff");
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp", "bmp", "dcm", "dicom", "tif", "tiff");
+    private static final Set<String> ALLOWED_PARACLINICAL_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp", "bmp", "pdf");
     private static final long MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
+    private static final long MAX_EXTERNAL_LAB_FILE_SIZE = 15 * 1024 * 1024; // 15 MB
 
     private static final List<VisitStatus> ACTIVE_VISIT_STATUSES = List.of(
             VisitStatus.WAITING_PARACLINICAL,
@@ -471,7 +473,11 @@ public class NanoPixIntegrationServiceImpl implements NanoPixIntegrationService 
             throw new IllegalArgumentException("Kích thước file ảnh vượt quá giới hạn tối đa cho phép (25 MB).");
         }
 
-        String originalFilename = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
+        String rawFilename = file.getOriginalFilename();
+        if (rawFilename == null || rawFilename.isBlank()) {
+            throw new IllegalArgumentException("Tên file không hợp lệ.");
+        }
+        String originalFilename = StringUtils.cleanPath(rawFilename);
         if (originalFilename.contains("..") || originalFilename.contains("/") || originalFilename.contains("\\")) {
             throw new IllegalArgumentException("Tên file không hợp lệ.");
         }
@@ -503,6 +509,57 @@ public class NanoPixIntegrationServiceImpl implements NanoPixIntegrationService 
             Files.copy(in, targetPath, StandardCopyOption.REPLACE_EXISTING);
         }
 
+        return "/uploads/nanopix/" + safeFileName;
+    }
+
+    @Override
+    public String storeParaclinicalFile(MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File kết quả không được để trống.");
+        }
+        if (file.getSize() > MAX_EXTERNAL_LAB_FILE_SIZE) {
+            throw new IllegalArgumentException("Kích thước file kết quả vượt quá giới hạn tối đa (15 MB).");
+        }
+        String rawFilename = file.getOriginalFilename();
+        if (rawFilename == null || rawFilename.isBlank()) {
+            throw new IllegalArgumentException("Tên file không hợp lệ.");
+        }
+        String originalFilename = StringUtils.cleanPath(rawFilename);
+        if (originalFilename.contains("..") || originalFilename.contains("/") || originalFilename.contains("\\")) {
+            throw new IllegalArgumentException("Tên file không hợp lệ.");
+        }
+        String extension = "";
+        int dotIndex = originalFilename.lastIndexOf('.');
+        if (dotIndex > 0) {
+            extension = originalFilename.substring(dotIndex + 1).toLowerCase();
+        }
+        if (!ALLOWED_PARACLINICAL_EXTENSIONS.contains(extension)) {
+            throw new IllegalArgumentException("Định dạng không được hỗ trợ (" + extension + "). Vui lòng chọn ảnh JPG/PNG/WEBP hoặc PDF.");
+        }
+        validateFileContent(file);
+        if ("pdf".equals(extension)) {
+            byte[] header = new byte[5];
+            try (InputStream in = file.getInputStream()) {
+                int r = in.read(header);
+                if (r < 4 || header[0] != '%' || header[1] != 'P' || header[2] != 'D' || header[3] != 'F') {
+                    throw new IllegalArgumentException("File PDF không hợp lệ.");
+                }
+            }
+        }
+
+        Path targetDir = Paths.get(uploadDir, "nanopix").toAbsolutePath().normalize();
+        if (!Files.exists(targetDir)) {
+            Files.createDirectories(targetDir);
+        }
+        String prefix = "pdf".equals(extension) ? "lab_" : "cls_";
+        String safeFileName = prefix + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8) + "." + extension;
+        Path targetPath = targetDir.resolve(safeFileName).normalize();
+        if (!targetPath.startsWith(targetDir)) {
+            throw new IllegalArgumentException("Đường dẫn lưu trữ tệp không hợp lệ.");
+        }
+        try (InputStream in = file.getInputStream()) {
+            Files.copy(in, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        }
         return "/uploads/nanopix/" + safeFileName;
     }
 

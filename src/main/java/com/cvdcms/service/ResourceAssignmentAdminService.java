@@ -5,14 +5,22 @@ import com.cvdcms.entity.enums.*;
 import com.cvdcms.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +37,22 @@ public class ResourceAssignmentAdminService {
 
     @Autowired(required = false)
     private StaffBranchAssignmentRepository staffBranchAssignmentRepository;
+
+    @Autowired(required = false)
+    private JdbcTemplate jdbcTemplate;
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void cleanupLegacyPendingReviewRecords() {
+        if (jdbcTemplate == null) {
+            return;
+        }
+        try {
+            jdbcTemplate.update("DELETE FROM doctor_room_assignments WHERE status = 'PENDING_REVIEW'");
+            jdbcTemplate.update("DELETE FROM doctor_service_permissions WHERE status = 'PENDING_REVIEW'");
+        } catch (Exception ignored) {
+            // Bỏ qua nếu bảng chưa khởi tạo trong môi trường test độc lập
+        }
+    }
 
     @Transactional(readOnly = true)
     public List<DoctorRoomAssignment> getActiveRoomAssignments(Long branchId, Long staffId) {
@@ -121,9 +145,9 @@ public class ResourceAssignmentAdminService {
             throw new IllegalArgumentException("Nhân sự không thuộc phạm vi phân công ACTIVE của chi nhánh này.");
         }
         if (roomAssignmentRepository.existsByBranchBranchIdAndStaffStaffIdAndRoomRoomIdAndStatusIn(
-                branchId, staffId, roomId, List.of(DoctorAssignmentStatus.PENDING_REVIEW, DoctorAssignmentStatus.ACTIVE))) {
+                branchId, staffId, roomId, List.of(DoctorAssignmentStatus.ACTIVE))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Nhân sự đã được phân công phòng " + room.getRoomCode() + " (đang chờ duyệt hoặc đang hoạt động).");
+                    "Nhân sự đã được phân công phòng " + room.getRoomCode() + ".");
         }
 
         DoctorRoomAssignment assignment = new DoctorRoomAssignment();
@@ -133,16 +157,7 @@ public class ResourceAssignmentAdminService {
         assignment.setIsPrimary(isPrimary);
         assignment.setEffectiveFrom(effectiveFrom != null ? effectiveFrom : LocalDate.now());
         assignment.setEffectiveTo(effectiveTo);
-        assignment.setStatus(status != null ? status : DoctorAssignmentStatus.PENDING_REVIEW);
-        return roomAssignmentRepository.save(assignment);
-    }
-
-    @Transactional
-    public DoctorRoomAssignment approveRoomAssignment(Long assignmentId) {
-        DoctorRoomAssignment assignment = roomAssignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phân công phòng."));
-        requireDoctorStaff(assignment.getStaff());
-        assignment.setStatus(DoctorAssignmentStatus.ACTIVE);
+        assignment.setStatus(status != null ? status : DoctorAssignmentStatus.ACTIVE);
         return roomAssignmentRepository.save(assignment);
     }
 
@@ -174,9 +189,9 @@ public class ResourceAssignmentAdminService {
             throw new IllegalArgumentException("Dịch vụ " + service.getServiceCode() + " đã ngừng hoạt động, không thể cấp quyền.");
         }
         if (servicePermissionRepository.existsByStaffStaffIdAndServiceServiceIdAndStatusIn(
-                staffId, serviceId, List.of(DoctorServicePermissionStatus.PENDING_REVIEW, DoctorServicePermissionStatus.ACTIVE))) {
+                staffId, serviceId, List.of(DoctorServicePermissionStatus.ACTIVE))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Nhân sự đã có quyền thực hiện dịch vụ " + service.getServiceCode() + " (đang chờ duyệt hoặc đang hoạt động).");
+                    "Nhân sự đã có quyền thực hiện dịch vụ " + service.getServiceCode() + ".");
         }
         Branch branch = null;
         if (branchId != null) {
@@ -190,17 +205,8 @@ public class ResourceAssignmentAdminService {
         permission.setBranch(branch);
         permission.setEffectiveFrom(effectiveFrom != null ? effectiveFrom : LocalDate.now());
         permission.setEffectiveTo(effectiveTo);
-        permission.setStatus(status != null ? status : DoctorServicePermissionStatus.PENDING_REVIEW);
+        permission.setStatus(status != null ? status : DoctorServicePermissionStatus.ACTIVE);
         permission.setNote(note);
-        return servicePermissionRepository.save(permission);
-    }
-
-    @Transactional
-    public DoctorServicePermission approveServicePermission(Long permissionId) {
-        DoctorServicePermission permission = servicePermissionRepository.findById(permissionId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phân quyền dịch vụ."));
-        requireDoctorStaff(permission.getStaff());
-        permission.setStatus(DoctorServicePermissionStatus.ACTIVE);
         return servicePermissionRepository.save(permission);
     }
 
@@ -211,6 +217,147 @@ public class ResourceAssignmentAdminService {
         requireDoctorStaff(permission.getStaff());
         permission.setStatus(DoctorServicePermissionStatus.INACTIVE);
         return servicePermissionRepository.save(permission);
+    }
+
+    @Transactional
+    public List<DoctorRoomAssignment> syncDoctorRooms(Long branchId, Long staffId, Collection<Long> roomIds) {
+        Branch branch = branchRepository.findById(branchId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chi nhánh."));
+        StaffProfile staff = staffProfileRepository.findById(staffId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân sự."));
+        requireDoctorStaff(staff);
+        if (staffBranchAssignmentRepository != null
+                && !staffBranchAssignmentRepository.findByStaffStaffIdAndStatus(staffId, AssignmentStatus.ACTIVE).isEmpty()
+                && !staffBranchAssignmentRepository.hasActiveAssignment(staffId, branchId, AssignmentStatus.ACTIVE)) {
+            throw new IllegalArgumentException("Nhân sự không thuộc phạm vi phân công ACTIVE của chi nhánh này.");
+        }
+
+        Set<Long> targetIds = new LinkedHashSet<>();
+        if (roomIds != null) {
+            for (Long id : roomIds) {
+                if (id != null) targetIds.add(id);
+            }
+        }
+
+        List<DoctorRoomAssignment> existing = roomAssignmentRepository
+                .findByBranchBranchIdAndStaffStaffIdOrderByAssignmentIdAsc(branchId, staffId);
+        Map<Long, DoctorRoomAssignment> activeByRoom = new HashMap<>();
+        Map<Long, DoctorRoomAssignment> inactiveByRoom = new HashMap<>();
+
+        for (DoctorRoomAssignment a : existing) {
+            Long rId = a.getRoom().getRoomId();
+            if (a.getStatus() == DoctorAssignmentStatus.ACTIVE) {
+                if (!targetIds.contains(rId)) {
+                    a.setStatus(DoctorAssignmentStatus.INACTIVE);
+                    roomAssignmentRepository.save(a);
+                } else {
+                    activeByRoom.putIfAbsent(rId, a);
+                }
+            } else {
+                inactiveByRoom.putIfAbsent(rId, a);
+            }
+        }
+
+        LocalDate today = LocalDate.now();
+        for (Long rId : targetIds) {
+            if (activeByRoom.containsKey(rId)) {
+                continue;
+            }
+            Room room = roomRepository.findById(rId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phòng khám #" + rId + "."));
+            if (!Objects.equals(room.getBranch().getBranchId(), branchId)) {
+                throw new IllegalArgumentException("Phòng " + room.getRoomCode() + " không thuộc chi nhánh được phân công.");
+            }
+            if (room.getStatus() != RoomStatus.ACTIVE) {
+                throw new IllegalArgumentException("Phòng " + room.getRoomCode() + " hiện không ở trạng thái hoạt động (ACTIVE).");
+            }
+            DoctorRoomAssignment reusable = inactiveByRoom.get(rId);
+            if (reusable != null) {
+                reusable.setStatus(DoctorAssignmentStatus.ACTIVE);
+                reusable.setEffectiveFrom(today);
+                reusable.setEffectiveTo(null);
+                roomAssignmentRepository.save(reusable);
+            } else {
+                DoctorRoomAssignment created = new DoctorRoomAssignment();
+                created.setBranch(branch);
+                created.setStaff(staff);
+                created.setRoom(room);
+                created.setIsPrimary(false);
+                created.setEffectiveFrom(today);
+                created.setStatus(DoctorAssignmentStatus.ACTIVE);
+                roomAssignmentRepository.save(created);
+            }
+        }
+
+        return getActiveRoomAssignments(branchId, staffId);
+    }
+
+    @Transactional
+    public List<DoctorServicePermission> syncDoctorServices(Long staffId, Long branchId, Collection<Long> serviceIds) {
+        StaffProfile staff = staffProfileRepository.findById(staffId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân sự."));
+        requireDoctorStaff(staff);
+        Branch branch = null;
+        if (branchId != null) {
+            branch = branchRepository.findById(branchId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chi nhánh."));
+        }
+
+        Set<Long> targetIds = new LinkedHashSet<>();
+        if (serviceIds != null) {
+            for (Long id : serviceIds) {
+                if (id != null) targetIds.add(id);
+            }
+        }
+
+        List<DoctorServicePermission> existing = servicePermissionRepository
+                .findByStaffStaffIdOrderByPermissionIdAsc(staffId);
+        Map<Long, DoctorServicePermission> activeByService = new HashMap<>();
+        Map<Long, DoctorServicePermission> inactiveByService = new HashMap<>();
+
+        for (DoctorServicePermission p : existing) {
+            Long sId = p.getService().getServiceId();
+            if (p.getStatus() == DoctorServicePermissionStatus.ACTIVE) {
+                if (!targetIds.contains(sId)) {
+                    p.setStatus(DoctorServicePermissionStatus.INACTIVE);
+                    servicePermissionRepository.save(p);
+                } else {
+                    activeByService.putIfAbsent(sId, p);
+                }
+            } else {
+                inactiveByService.putIfAbsent(sId, p);
+            }
+        }
+
+        LocalDate today = LocalDate.now();
+        for (Long sId : targetIds) {
+            if (activeByService.containsKey(sId)) {
+                continue;
+            }
+            com.cvdcms.entity.Service service = serviceRepository.findById(sId)
+                    .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dịch vụ #" + sId + "."));
+            if (service.getStatus() != ServiceStatus.ACTIVE) {
+                throw new IllegalArgumentException("Dịch vụ " + service.getServiceCode() + " đã ngừng hoạt động, không thể cấp quyền.");
+            }
+            DoctorServicePermission reusable = inactiveByService.get(sId);
+            if (reusable != null) {
+                reusable.setStatus(DoctorServicePermissionStatus.ACTIVE);
+                reusable.setEffectiveFrom(today);
+                reusable.setEffectiveTo(null);
+                servicePermissionRepository.save(reusable);
+            } else {
+                DoctorServicePermission created = new DoctorServicePermission();
+                created.setStaff(staff);
+                created.setService(service);
+                created.setBranch(branch);
+                created.setEffectiveFrom(today);
+                created.setStatus(DoctorServicePermissionStatus.ACTIVE);
+                servicePermissionRepository.save(created);
+            }
+        }
+
+        return servicePermissionRepository.findByStaffStaffIdAndStatusOrderByPermissionIdAsc(
+                staffId, DoctorServicePermissionStatus.ACTIVE);
     }
 
     @Transactional

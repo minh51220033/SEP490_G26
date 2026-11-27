@@ -35,4 +35,11 @@ public interface NanoPixIntegrationService {
      * Lưu trữ file ảnh X-quang an toàn vào hệ thống tệp tin phòng khám.
      */
     String storeXrayImage(MultipartFile file) throws IOException;
+
+    /**
+     * Lưu trữ file kết quả cận lâm sàng hoặc xét nghiệm ngoài viện (hỗ trợ ảnh JPG/PNG/WEBP và PDF).
+     */
+    default String storeParaclinicalFile(MultipartFile file) throws IOException {
+        return storeXrayImage(file);
+    }
 }

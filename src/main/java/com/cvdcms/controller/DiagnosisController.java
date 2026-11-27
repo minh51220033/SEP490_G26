@@ -76,6 +76,8 @@ public class DiagnosisController {
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.OverdueVisitCleanupService overdueVisitCleanupService;
 
     public void setDoctorCoverGrantRepository(com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository) {
         this.doctorCoverGrantRepository = doctorCoverGrantRepository;
@@ -234,8 +236,8 @@ public class DiagnosisController {
         model.addAttribute("doctors", performedServiceService.getAvailableDoctors());
         model.addAttribute("branches", branchRepository.findAll());
         model.addAttribute("stats", reExaminationService.getRecallsStatistics());
-        model.addAttribute("pageTitle", "Nhắc hẹn tái khám sau điều trị (SCR-18.2) - DentalFlow");
-        // Tinh gọn & Hợp nhất: Chuyển hướng sang phân hệ Quản lý CSKH & Nhắc hẹn tái khám chuẩn (FT44 - UC-26)
+        model.addAttribute("pageTitle", "Nhắc hẹn tái khám sau điều trị");
+        // Tinh gọn & Hợp nhất: Chuyển hướng sang phân hệ Quản lý CSKH & Nhắc hẹn tái khám chuẩn
         return "redirect:/customer-care";
     }
 
@@ -385,10 +387,16 @@ public class DiagnosisController {
                 ? staffProfileRepository.findByUser_UserId(currentUser.getUserId()).orElse(null)
                 : null;
 
+        LocalDateTime nowClinic = LocalDateTime.now(com.cvdcms.service.ClinicQueueCoordinatorService.CLINIC_ZONE);
+        if (overdueVisitCleanupService != null) {
+            overdueVisitCleanupService.closeOverdueVisitsForPatient(patientId, nowClinic);
+        }
+        LocalDateTime startOfToday = nowClinic.toLocalDate().atStartOfDay();
+
         Optional<Visit> queuedVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(
                 patientId,
                 List.of(VisitStatus.WAITING, VisitStatus.WAITING_RESULT)
-        );
+        ).filter(v -> v.getCheckInAt() == null || !v.getCheckInAt().isBefore(startOfToday));
         if (queuedVisitOpt.isPresent()) {
             redirectAttributes.addFlashAttribute("errorMessage",
                     "Bệnh nhân đang có lượt chờ khám (" + queuedVisitOpt.get().getVisitCode()
@@ -400,7 +408,9 @@ public class DiagnosisController {
             Optional<Visit> activeVisitOpt = visitRepository.findFirstByPatientProfile_ProfileIdAndStatusIn(
                     patientId,
                     List.of(VisitStatus.IN_EXAM, VisitStatus.IN_TREATMENT, VisitStatus.WAITING_PARACLINICAL, VisitStatus.WAITING_PAYMENT)
-            );
+            ).filter(v -> v.getStatus() == VisitStatus.WAITING_PAYMENT
+                    || v.getCheckInAt() == null
+                    || !v.getCheckInAt().isBefore(startOfToday));
             if (activeVisitOpt.isPresent()) {
                 Visit av = activeVisitOpt.get();
                 if (isAdmin || assignedBranch == null || (av.getBranch() != null && av.getBranch().getBranchId().equals(assignedBranch.getBranchId()))) {
@@ -460,15 +470,7 @@ public class DiagnosisController {
         return "redirect:/doctor/examination/" + encodeVisit(newVisit.getVisitId()) + "/diagnoses";
     }
 
-    public String examinationDiagnoses(
-            Long visitId,
-            Long branchIdParam,
-            jakarta.servlet.http.HttpSession session,
-            RedirectAttributes redirectAttributes,
-            Model model
-    ) {
-        return examinationDiagnosesInternal(visitId, branchIdParam, false, null, session, redirectAttributes, model);
-    }
+
 
     @GetMapping({"/doctor/examination/{visitRef}/diagnoses", "/doctor/examination/{visitRef}/treatment"})
     public String examinationDiagnoses(
@@ -604,6 +606,7 @@ public class DiagnosisController {
 
         List<DiagnosisResponseDTO> diagnoses = diagnosisService.getDiagnosesByVisitId(visitId);
         List<Icd10DiseaseDTO> commonDiseases = icd10DiseaseService.getCommonDentalDiseases();
+        //Tìm kiếm lần visit trước
         List<Visit> otherVisits = (isDoctorRestricted && assignedBranch != null)
                 ? visitRepository.findRecentVisitsByStatusesAndBranch(List.of(VisitStatus.values()), assignedBranch.getBranchId())
                 : visitRepository.findAll();
@@ -642,7 +645,7 @@ public class DiagnosisController {
         com.cvdcms.DTO.GeneralExaminationRequestDTO generalExam = diagnosisService.getGeneralExamination(visitId);
         model.addAttribute("generalExam", generalExam);
 
-        // FT16 Attributes
+        //  Attributes
         model.addAttribute("performedServices", performedServices);
         model.addAttribute("activeServices", activeServices);
         String activeServicesJson = "[]";
@@ -656,7 +659,7 @@ public class DiagnosisController {
         model.addAttribute("assistants", assistants);
         model.addAttribute("totalPerformedAmount", totalPerformedAmount);
 
-        // FT18: Đơn thuốc & Dặn dò
+        // : Đơn thuốc & Dặn dò
         List<PrescriptionResponseDTO> prescriptions = prescriptionService.getPrescriptionsByVisit(visitId);
         List<MedicationDTO> activeMedications = prescriptionService.getActiveMedications();
         model.addAttribute("prescriptions", prescriptions);
@@ -683,13 +686,13 @@ public class DiagnosisController {
                 .add(totalPrescriptionAmount);
         model.addAttribute("grandTotalAmount", grandTotalAmount);
 
-        // FT15: Kế hoạch điều trị & Lộ trình (SCR-15.1, SCR-15.2, SCR-15.3)
+        // Kế hoạch điều trị & Lộ trình
         List<TreatmentPlanResponseDTO> treatmentPlans = (visit.getPatientProfile() != null)
                 ? treatmentPlanService.getPlansByPatientId(visit.getPatientProfile().getProfileId())
                 : Collections.emptyList();
         model.addAttribute("treatmentPlans", treatmentPlans);
 
-        // FT17: Kho ảnh chụp lâm sàng Trước / Sau (SCR-17.1, 17.2, 17.3)
+        //  Kho ảnh chụp lâm sàng Trước / Sau
         Long profileId = (visit.getPatientProfile() != null) ? visit.getPatientProfile().getProfileId() : null;
         List<ClinicalPhotoResponseDTO> clinicalPhotos = clinicalPhotoService.getPhotosByProfile(profileId);
         Map<String, Object> photoStats = clinicalPhotoService.getPhotoStatistics(profileId);
@@ -698,14 +701,14 @@ public class DiagnosisController {
         model.addAttribute("photoStages", com.cvdcms.entity.enums.PhotoStage.values());
         model.addAttribute("photoCategories", com.cvdcms.entity.enums.PhotoCategory.values());
 
-        // FT18 (Phần Tái khám): Lịch hẹn tái khám của bệnh nhân (SCR-18.1)
+        // (Phần Tái khám): Lịch hẹn tái khám của bệnh nhân
         List<com.cvdcms.DTO.ReExaminationResponseDTO> reExaminations = (profileId != null)
                 ? reExaminationService.getReExaminationsByPatient(profileId)
                 : Collections.emptyList();
         model.addAttribute("reExaminations", reExaminations);
         model.addAttribute("preferredSessions", com.cvdcms.entity.enums.PreferredSession.values());
 
-        // FT11 / UC-10: Chỉ định cận lâm sàng & Chẩn đoán hình ảnh (SCR-11.2, SCR-11.3)
+        // Chỉ định cận lâm sàng & Chẩn đoán hình ảnh
         List<com.cvdcms.DTO.ParaclinicalOrderItemResponseDTO> paraclinicalOrders = paraclinicalOrderService.getOrdersByVisit(visitId);
         List<com.cvdcms.DTO.ServiceDTO> paraclinicalServices = paraclinicalOrderService.getParaclinicalServices();
         model.addAttribute("paraclinicalOrders", paraclinicalOrders);
@@ -742,7 +745,7 @@ public class DiagnosisController {
         model.addAttribute("galleryXrayPhotos", galleryXrayPhotos);
         model.addAttribute("xrayTabCount", galleryXrayPhotos.size() + clinicalXrayCount);
 
-        // FT15 / FT13: Quản lý Đặt xưởng Labo & Mẫu xét nghiệm gửi ngoài (SCR-15.3, SCR-13.1)
+        //  Quản lý Đặt xưởng Labo & Mẫu xét nghiệm gửi ngoài (SCR-15.3, SCR-13.1)
         List<com.cvdcms.DTO.LaboOrderResponseDTO> laboOrders = laboOrderService.getOrdersByVisit(visitId);
         Map<String, Object> laboStats = laboOrderService.getLaboStatistics(visitId, profileId);
         List<Supplier> laboSuppliers = supplierRepository.findAll();
@@ -750,7 +753,7 @@ public class DiagnosisController {
         model.addAttribute("laboStats", laboStats);
         model.addAttribute("laboSuppliers", laboSuppliers);
 
-        // FT44: Lịch sử chăm sóc bệnh nhân sau điều trị (SCR-44.6 & doctor/fragments/patient-care-tab)
+        // Lịch sử chăm sóc bệnh nhân sau điều trị (SCR-44.6 & doctor/fragments/patient-care-tab)
         List<CustomerCareInteraction> careInteractions = (profileId != null)
                 ? customerCareInteractionRepository.findByProfileIdWithDetails(profileId)
                 : Collections.emptyList();
@@ -805,7 +808,7 @@ public class DiagnosisController {
         model.addAttribute("bookedService", doctorVisitAccess != null ? doctorVisitAccess.resolveBookedServiceSummary(visit) : null);
         model.addAttribute("deskWaitingCount", doctorVisitAccess != null ? doctorVisitAccess.countWaitingPatientsForVisitDoctor(visit) : 0);
 
-        model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán (FT14), Kế hoạch (FT15), Dịch vụ thực hiện (FT16), Ảnh lâm sàng (FT17) & Đơn thuốc (FT18)");
+        model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán , Kế hoạch, Dịch vụ thực hiện , Ảnh lâm sàng  & Đơn thuốc ");
         model.addAttribute("activeMenu", "examination");
 
         List<Branch> branches = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
@@ -859,7 +862,7 @@ public class DiagnosisController {
     }
 
     /**
-     * SCR-15.2: Trang chuyen dung Lap Ke hoach & Lo trinh dieu tri (lien ket da chan doan, chuan Bo Y te)
+     *  Trang chuyen dung Lap Ke hoach & Lo trinh dieu tri (lien ket da chan doan, chuan Bo Y te)
      */
     @GetMapping("/doctor/examination/{visitRef}/treatment-plans/create")
     public String showCreateTreatmentPlanPageByRef(

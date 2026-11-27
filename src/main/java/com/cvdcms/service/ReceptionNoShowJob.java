@@ -20,6 +20,9 @@ public class ReceptionNoShowJob {
     @Autowired(required = false)
     private ClinicQueueCoordinatorService queueCoordinator;
 
+    @Autowired(required = false)
+    private OverdueVisitCleanupService overdueVisitCleanupService;
+
     public ReceptionNoShowJob(ReceptionAppointmentService appointments) {
         this.appointments = appointments;
     }
@@ -27,6 +30,13 @@ public class ReceptionNoShowJob {
     @Scheduled(cron = "0 * * * * *", zone = "Asia/Bangkok")
     public void markEndedSessions() {
         LocalDateTime now = LocalDateTime.now(ReceptionAppointmentRules.ZONE);
+        if (overdueVisitCleanupService != null) {
+            try {
+                overdueVisitCleanupService.closeOverdueVisits(now);
+            } catch (RuntimeException ex) {
+                log.warn("Cannot close overdue active visits", ex);
+            }
+        }
         if (queueCoordinator != null) {
             try {
                 queueCoordinator.promoteEligibleEarlyWaitingTickets(now);

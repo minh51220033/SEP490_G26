@@ -79,9 +79,20 @@
                                     <div>
                                         <strong class="text-dark" th:text="${ord.serviceName}">Chụp X-quang</strong>
                                         <span class="badge bg-secondary-subtle text-secondary small ms-1" th:text="${ord.serviceType}">XRAY</span>
+                                        <span th:if="${ord.isExternalLab == true}" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small ms-1">XN ngoài viện</span>
+                                        <span th:if="${ord.fromPreviousVisit == true}" class="badge bg-info-subtle text-info-emphasis border border-info-subtle small ms-1"
+                                              th:text="'Từ ca ' + ${ord.originVisitCode}">Từ ca trước</span>
+                                        <div class="small text-secondary" th:if="${ord.labPartnerName != null and !#strings.isEmpty(ord.labPartnerName)}"
+                                             th:text="'Đơn vị XN: ' + ${ord.labPartnerName} + (${ord.sampleCode != null ? ' · Mẫu: ' + ord.sampleCode : ''})"></div>
                                         <div class="small text-muted" th:if="${ord.resultSummary != null and !#strings.isEmpty(ord.resultSummary)}" th:text="'KQ: ' + ${ord.resultSummary}"></div>
                                         <div class="mt-1" th:if="${ord.primaryImageUrl != null and !#strings.isEmpty(ord.primaryImageUrl)}">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 small"
+                                            <a th:if="${#strings.endsWith(#strings.toLowerCase(ord.primaryImageUrl), '.pdf')}"
+                                               th:href="${ord.primaryImageUrl}" target="_blank" rel="noopener"
+                                               class="btn btn-sm btn-outline-danger py-0 px-2 small" style="font-size: 11px;">
+                                                <i class="bi bi-file-earmark-pdf me-1"></i>Xem phiếu PDF
+                                            </a>
+                                            <button th:unless="${#strings.endsWith(#strings.toLowerCase(ord.primaryImageUrl), '.pdf')}"
+                                                    type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 small"
                                                     style="font-size: 11px;"
                                                     th:data-url="${ord.primaryImageUrl}"
                                                     th:data-service="${ord.serviceName}"
@@ -123,17 +134,20 @@
                                         <i class="bi bi-eye-fill"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-secondary"
-                                            title="Tải ảnh kết quả / Chụp ảnh"
+                                            title="Tải ảnh / PDF kết quả"
                                             th:if="${isClinicalLocked != true}"
                                             th:data-id="${ord.orderItemId}"
                                             th:data-service="${ord.serviceName}"
-                                            onclick="openUploadParaclinicalImageModal(this.getAttribute('data-id'), this.getAttribute('data-service'))">
+                                            th:data-ext="${ord.isExternalLab == true}"
+                                            th:data-prev="${ord.fromPreviousVisit == true}"
+                                            th:data-partner="${ord.labPartnerName}"
+                                            onclick="openUploadParaclinicalImageModal(this.getAttribute('data-id'), this.getAttribute('data-service'), this.getAttribute('data-ext') === 'true', this.getAttribute('data-prev') === 'true', this.getAttribute('data-partner'))">
                                         <i class="bi bi-camera-fill"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm"
                                             th:classappend="${ord.status == 'COMPLETED'} ? 'btn-outline-success' : 'df-btn-tonal-primary'"
                                             th:title="${ord.status == 'COMPLETED'} ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'"
-                                            th:disabled="${isClinicalLocked == true}"
+                                            th:disabled="${isClinicalLocked == true or ord.fromPreviousVisit == true}"
                                             th:data-id="${ord.orderItemId}"
                                             th:data-status="${ord.status}"
                                             onclick="toggleOrderStatus(this.getAttribute('data-id'), this.getAttribute('data-status'))">
@@ -141,7 +155,7 @@
                                     </button>
                                     <button type="button" class="df-btn-icon-muted ms-1"
                                             title="Xóa chỉ định này"
-                                            th:if="${isClinicalLocked != true}"
+                                            th:if="${isClinicalLocked != true and ord.fromPreviousVisit != true}"
                                             th:data-id="${ord.orderItemId}"
                                             onclick="deleteOrder(this.getAttribute('data-id'))">
                                         <i class="bi bi-trash3"></i>
@@ -183,14 +197,46 @@
                                 Dịch vụ cận lâm sàng <span class="text-danger">*</span>
                             </label>
                             <select class="form-select form-select-sm" id="pcoServiceSelect" required
-                                    onchange="document.getElementById('pcoOrderErrorAlert')?.classList.add('d-none')">
+                                    onchange="handleParaclinicalServiceChange(this)">
                                 <option value="">-- Chọn dịch vụ cận lâm sàng --</option>
                                 <option th:each="srv : ${paraclinicalServices}"
                                         th:value="${srv.serviceId}"
+                                        th:attr="data-service-type=${srv.serviceType}"
                                         th:text="${srv.serviceName + ' (' + #numbers.formatDecimal(srv.basePrice, 0, 'COMMA', 0, 'POINT') + ' đ / ' + srv.unit + ')'}">
                                     Chụp X-quang quanh chóp
                                 </option>
                             </select>
+                        </div>
+
+                        <div class="mb-3 p-2 px-3 rounded-3 bg-light border">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="pcoIsExternalLabCheck"
+                                       onchange="toggleExternalLabFields(this.checked)">
+                                <label class="form-check-label small fw-semibold text-dark" for="pcoIsExternalLabCheck">
+                                    Xét nghiệm máu / CLS thực hiện tại cơ sở ngoài viện
+                                </label>
+                            </div>
+                            <div id="pcoExternalLabFields" class="d-none mt-2 pt-2 border-top">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold mb-1" for="pcoLabPartnerInput">Đơn vị xét nghiệm ngoài</label>
+                                        <input type="text" class="form-control form-control-sm" id="pcoLabPartnerInput"
+                                               placeholder="VD: BV Medlatec, BV Bạch Mai...">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold mb-1" for="pcoSampleTypeInput">Loại mẫu xét nghiệm</label>
+                                        <input type="text" class="form-control form-control-sm" id="pcoSampleTypeInput"
+                                               placeholder="VD: Máu toàn phần / Đông máu">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-semibold mb-1" for="pcoExpectedDateInput">Ngày dự kiến có kết quả</label>
+                                        <input type="date" class="form-control form-control-sm" id="pcoExpectedDateInput">
+                                    </div>
+                                </div>
+                                <div class="form-text text-muted small mt-1">
+                                    <i class="bi bi-info-circle me-1"></i>Phiếu xét nghiệm ngoài viện không khóa ca hôm nay; khi có kết quả bệnh nhân quay lại ở ca mới xếp hàng bình thường.
+                                </div>
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -230,7 +276,7 @@
                             <label class="form-label fw-semibold text-dark small mb-1" for="pcoOrderFileInput">
                                 Đính kèm ảnh / phim kết quả (tùy chọn)
                             </label>
-                            <input type="file" class="form-control form-control-sm" id="pcoOrderFileInput" accept="image/*"
+                            <input type="file" class="form-control form-control-sm" id="pcoOrderFileInput" accept="image/*,.pdf"
                                    onchange="previewOrderAttachImage(this)">
                             <div class="form-text text-muted small">Nếu đã có sẵn phim/ảnh trên máy, chọn để tải lên và đồng bộ ngay vào Kho ảnh.</div>
                             <div class="mt-2 text-center d-none" id="pcoOrderPreviewWrap">
@@ -324,11 +370,19 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold text-dark small mb-1" for="pcoImageFileInput">
-                                Chọn file ảnh kết quả <span class="text-danger">*</span>
+                                Chọn file kết quả (Ảnh hoặc PDF) <span class="text-danger">*</span>
                             </label>
-                            <input type="file" class="form-control form-control-sm" id="pcoImageFileInput" accept="image/*" required
+                            <input type="file" class="form-control form-control-sm" id="pcoImageFileInput" accept="image/*,.pdf"
                                    onchange="previewUploadImage(this); document.getElementById('pcoUploadErrorAlert')?.classList.add('d-none');">
-                            <div class="form-text text-muted small">Hỗ trợ PNG, JPG, JPEG, WEBP hoặc chụp trực tiếp từ thiết bị.</div>
+                            <div class="form-text text-muted small">Hỗ trợ PNG, JPG, JPEG, WEBP và file PDF phiếu xét nghiệm ngoài viện.</div>
+                        </div>
+
+                        <div class="mb-3 d-none" id="pcoUploadExtLabPartnerWrap">
+                            <label class="form-label fw-semibold text-dark small mb-1" for="pcoUploadLabPartnerInput">
+                                Cơ sở / Bệnh viện trả kết quả
+                            </label>
+                            <input type="text" class="form-control form-control-sm" id="pcoUploadLabPartnerInput"
+                                   placeholder="VD: Medlatec, Bệnh viện Đa khoa...">
                         </div>
 
                         <div class="mb-3 text-center d-none" id="uploadPreviewContainer">
@@ -467,6 +521,24 @@
         }
     }
 
+    function toggleExternalLabFields(show) {
+        const box = document.getElementById('pcoExternalLabFields');
+        if (box) box.classList.toggle('d-none', !show);
+    }
+
+    function handleParaclinicalServiceChange(sel) {
+        document.getElementById('pcoOrderErrorAlert')?.classList.add('d-none');
+        if (!sel) return;
+        const opt = sel.options[sel.selectedIndex];
+        const svcType = opt ? (opt.getAttribute('data-service-type') || '') : '';
+        const chk = document.getElementById('pcoIsExternalLabCheck');
+        if (chk) {
+            const isLab = svcType === 'LAB';
+            chk.checked = isLab;
+            toggleExternalLabFields(isLab);
+        }
+    }
+
     function openAddParaclinicalModal() {
         if (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal) {
             alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tạo thêm chỉ định.');
@@ -476,6 +548,7 @@
         if (modalEl) {
             const form = document.getElementById('addParaclinicalForm');
             if (form) form.reset();
+            toggleExternalLabFields(false);
             const createdIdEl = document.getElementById('pcoCreatedOrderItemId');
             if (createdIdEl) {
                 createdIdEl.value = '';
@@ -524,6 +597,10 @@
         const stage = stageSelect ? stageSelect.value : 'BEFORE';
         const category = categorySelect ? categorySelect.value : 'OTHER';
         const notes = notesInput ? notesInput.value.trim() : '';
+        const isExtLab = Boolean(document.getElementById('pcoIsExternalLabCheck')?.checked);
+        const labPartnerName = document.getElementById('pcoLabPartnerInput')?.value?.trim() || null;
+        const sampleType = document.getElementById('pcoSampleTypeInput')?.value?.trim() || null;
+        const expectedResultDate = document.getElementById('pcoExpectedDateInput')?.value || null;
 
         if (!existingOrderItemId && !serviceId) {
             if (errBox) {
@@ -550,7 +627,11 @@
                     body: JSON.stringify({
                         serviceId: parseInt(serviceId, 10),
                         toothNumbers: toothNumbers,
-                        notes: notes
+                        notes: notes,
+                        isExternalLab: isExtLab,
+                        labPartnerName: labPartnerName,
+                        sampleType: sampleType,
+                        expectedResultDate: expectedResultDate
                     })
                 });
 
@@ -770,13 +851,24 @@
             const isSyncing = ord.status === 'IN_PROGRESS';
             const esc = (typeof escapeHtml === 'function') ? escapeHtml : (s => s || '');
             const hasImg = ord.primaryImageUrl && ord.primaryImageUrl.trim().length > 0;
+            const isPdf = hasImg && ord.primaryImageUrl.trim().toLowerCase().endsWith('.pdf');
+            const isExtLab = ord.isExternalLab === true;
+            const fromPrev = ord.fromPreviousVisit === true;
             const refCode = ord.externalRefId || ord.orderCode || '';
+
+            const extBadgesHtml = `
+                ${isExtLab ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small ms-1">XN ngoài viện</span>' : ''}
+                ${fromPrev ? `<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle small ms-1">Từ ca ${esc(ord.originVisitCode || '')}</span>` : ''}
+            `;
+            const labPartnerHtml = ord.labPartnerName
+                ? `<div class="small text-secondary">Đơn vị XN: ${esc(ord.labPartnerName)}${ord.sampleCode ? ' · Mẫu: ' + esc(ord.sampleCode) : ''}</div>`
+                : '';
 
             const resultHtml = (ord.resultSummary && ord.resultSummary.trim().length > 0)
                 ? `<div class="small text-muted">KQ: ${esc(ord.resultSummary)}</div>`
                 : '';
 
-            const thumbHtml = hasImg ? `
+            const thumbHtml = (hasImg && !isPdf) ? `
                 <img src="${esc(ord.primaryImageUrl)}"
                      alt="X-ray"
                      class="rounded border shadow-sm"
@@ -791,7 +883,14 @@
                      title="Nhấn để phóng to & soi phim X-quang">
             ` : '';
 
-            const viewBtnInline = hasImg ? `
+            const viewBtnInline = hasImg ? (isPdf ? `
+                <div class="mt-1">
+                    <a href="${esc(ord.primaryImageUrl)}" target="_blank" rel="noopener"
+                       class="btn btn-sm btn-outline-danger py-0 px-2 small" style="font-size: 11px;">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Xem phiếu PDF
+                    </a>
+                </div>
+            ` : `
                 <div class="mt-1">
                     <button type="button" class="btn btn-sm btn-outline-info py-0 px-2 small"
                             style="font-size: 11px;"
@@ -805,9 +904,14 @@
                         <i class="bi bi-zoom-in me-1"></i>Soi phim X-quang
                     </button>
                 </div>
-            ` : '';
+            `) : '';
 
-            const viewIconBtn = hasImg ? `
+            const viewIconBtn = hasImg ? (isPdf ? `
+                <a href="${esc(ord.primaryImageUrl)}" target="_blank" rel="noopener"
+                   class="btn btn-sm btn-outline-danger me-1" title="Mở file PDF kết quả">
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+                </a>
+            ` : `
                 <button type="button" class="btn btn-sm btn-outline-info me-1"
                         title="Mở trình soi phim X-quang"
                         data-url="${esc(ord.primaryImageUrl)}"
@@ -819,7 +923,7 @@
                         onclick="openDoctorXrayViewerFromEl(this)">
                     <i class="bi bi-eye-fill"></i>
                 </button>
-            ` : '';
+            `) : '';
 
             const actionButtons = isLocked ? `
                 ${viewIconBtn}
@@ -828,10 +932,16 @@
                 <div class="btn-group btn-group-sm align-items-center">
                     ${viewIconBtn}
                     <button type="button" class="btn btn-sm btn-outline-secondary me-1"
-                            title="Tải ảnh kết quả / Chụp ảnh"
-                            onclick="openUploadParaclinicalImageModal(${ord.orderItemId}, '${esc(ord.serviceName)}')">
+                            title="Tải ảnh / PDF kết quả"
+                            data-id="${ord.orderItemId}"
+                            data-service="${esc(ord.serviceName)}"
+                            data-ext="${isExtLab}"
+                            data-prev="${fromPrev}"
+                            data-partner="${esc(ord.labPartnerName || '')}"
+                            onclick="openUploadParaclinicalImageModal(this.getAttribute('data-id'), this.getAttribute('data-service'), this.getAttribute('data-ext') === 'true', this.getAttribute('data-prev') === 'true', this.getAttribute('data-partner'))">
                         <i class="bi bi-camera-fill"></i>
                     </button>
+                    ${fromPrev ? '' : `
                     <button type="button" class="btn btn-sm ${isDone ? 'btn-outline-success' : 'btn-outline-primary'}"
                             title="${isDone ? 'Đã có kết quả' : 'Đánh dấu đã hoàn thành'}"
                             onclick="toggleOrderStatus(${ord.orderItemId}, '${ord.status}')">
@@ -842,6 +952,7 @@
                             onclick="deleteOrder(${ord.orderItemId})">
                         <i class="bi bi-trash3"></i>
                     </button>
+                    `}
                 </div>
             `;
 
@@ -864,6 +975,8 @@
                             <div>
                                 <strong class="text-dark">${esc(ord.serviceName)}</strong>
                                 <span class="badge bg-secondary-subtle text-secondary small ms-1">${esc(ord.serviceType || 'CLS')}</span>
+                                ${extBadgesHtml}
+                                ${labPartnerHtml}
                                 ${resultHtml}
                                 ${viewBtnInline}
                             </div>
@@ -889,19 +1002,25 @@
         tbody.innerHTML = rowsHtml;
     }
 
-    function openUploadParaclinicalImageModal(orderItemId, serviceName) {
+    function openUploadParaclinicalImageModal(orderItemId, serviceName, isExternalLab, fromPreviousVisit, labPartnerName) {
         if (typeof isClinicalLockedVal !== 'undefined' && isClinicalLockedVal) {
             alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tải thêm kết quả.');
             return;
         }
         const form = document.getElementById('uploadParaclinicalForm');
-        if (form) form.reset();
+        if (form) {
+            form.reset();
+            form.dataset.extLab = isExternalLab ? '1' : '0';
+            form.dataset.fromPrev = fromPreviousVisit ? '1' : '0';
+        }
         const idInput = document.getElementById('uploadOrderItemId');
         const nameEl = document.getElementById('uploadModalServiceName');
         const fileInput = document.getElementById('pcoImageFileInput');
         const stageSelect = document.getElementById('pcoUploadStageSelect');
         const categorySelect = document.getElementById('pcoUploadCategorySelect');
         const summaryInput = document.getElementById('pcoUploadSummaryInput');
+        const partnerWrap = document.getElementById('pcoUploadExtLabPartnerWrap');
+        const partnerInput = document.getElementById('pcoUploadLabPartnerInput');
         const prev = document.getElementById('uploadPreviewContainer');
         const errBox = document.getElementById('pcoUploadErrorAlert');
 
@@ -911,6 +1030,8 @@
         if (stageSelect) stageSelect.value = 'BEFORE';
         if (categorySelect) categorySelect.value = 'OTHER';
         if (summaryInput) summaryInput.value = '';
+        if (partnerWrap) partnerWrap.classList.toggle('d-none', !isExternalLab);
+        if (partnerInput) partnerInput.value = labPartnerName || '';
         if (prev) prev.classList.add('d-none');
         if (errBox) errBox.classList.add('d-none');
 
@@ -922,15 +1043,21 @@
     }
 
     function previewUploadImage(input) {
+        const img = document.getElementById('uploadImagePreview');
+        const prev = document.getElementById('uploadPreviewContainer');
         if (input.files && input.files[0]) {
+            const f = input.files[0];
+            if (f.name && f.name.toLowerCase().endsWith('.pdf')) {
+                if (img) img.src = '';
+                if (prev) prev.classList.add('d-none');
+                return;
+            }
             const reader = new FileReader();
             reader.onload = function(e) {
-                const img = document.getElementById('uploadImagePreview');
-                const prev = document.getElementById('uploadPreviewContainer');
                 if (img) img.src = e.target.result;
                 if (prev) prev.classList.remove('d-none');
             };
-            reader.readAsDataURL(input.files[0]);
+            reader.readAsDataURL(f);
         }
     }
 
@@ -939,17 +1066,25 @@
             alert('Hồ sơ bệnh án đã khóa (BR-EMR-02). Không thể tải thêm kết quả.');
             return;
         }
+        const form = document.getElementById('uploadParaclinicalForm');
+        const isExtLab = form && form.dataset.extLab === '1';
+        const fromPrev = form && form.dataset.fromPrev === '1';
         const orderItemId = document.getElementById('uploadOrderItemId')?.value;
         const fileInput = document.getElementById('pcoImageFileInput');
         const stageSelect = document.getElementById('pcoUploadStageSelect');
         const categorySelect = document.getElementById('pcoUploadCategorySelect');
         const summaryInput = document.getElementById('pcoUploadSummaryInput');
+        const partnerInput = document.getElementById('pcoUploadLabPartnerInput');
         const submitBtn = document.getElementById('btnSubmitUploadImage');
         const errBox = document.getElementById('pcoUploadErrorAlert');
 
-        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        const hasFile = Boolean(fileInput && fileInput.files && fileInput.files.length > 0);
+        const hasSummary = Boolean(summaryInput && summaryInput.value.trim().length > 0);
+        if (!hasFile && !(isExtLab && hasSummary)) {
             if (errBox) {
-                errBox.textContent = 'Vui lòng chọn file ảnh kết quả trước khi tải lên.';
+                errBox.textContent = isExtLab
+                    ? 'Vui lòng chọn file ảnh/PDF hoặc nhập tóm tắt chỉ số kết quả xét nghiệm.'
+                    : 'Vui lòng chọn file ảnh kết quả trước khi tải lên.';
                 errBox.classList.remove('d-none');
             }
             fileInput?.focus();
@@ -957,11 +1092,16 @@
         }
         if (errBox) errBox.classList.add('d-none');
 
+        const visitId = (typeof getCurrentVisitId === 'function') ? getCurrentVisitId() : null;
         const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
+        if (hasFile) formData.append('file', fileInput.files[0]);
         formData.append('stage', stageSelect ? stageSelect.value : 'BEFORE');
         formData.append('category', categorySelect ? categorySelect.value : 'OTHER');
-        if (summaryInput && summaryInput.value.trim()) {
+        if (visitId && (isExtLab || fromPrev)) formData.append('activeVisitId', String(visitId));
+        if (partnerInput && partnerInput.value.trim()) {
+            formData.append('labPartnerName', partnerInput.value.trim());
+        }
+        if (hasSummary) {
             formData.append('resultSummary', summaryInput.value.trim());
         }
 
@@ -970,8 +1110,12 @@
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang tải lên...';
         }
 
+        const endpoint = (isExtLab || fromPrev)
+            ? `/api/doctor/paraclinical-orders/${orderItemId}/external-result`
+            : `/api/doctor/paraclinical-orders/${orderItemId}/upload`;
+
         try {
-            const res = await fetch(`/api/doctor/paraclinical-orders/${orderItemId}/upload`, {
+            const res = await fetch(endpoint, {
                 method: 'POST',
                 body: formData
             });

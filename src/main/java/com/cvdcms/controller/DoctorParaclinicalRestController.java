@@ -41,7 +41,7 @@ public class DoctorParaclinicalRestController {
     }
 
     /**
-     * Tải file ảnh kết quả cận lâm sàng (Panorama, CT, X-quang, Xét nghiệm, Ảnh chụp thường)
+     * Tải file ảnh/PDF kết quả cận lâm sàng (Panorama, CT, X-quang, Xét nghiệm ngoài viện, Ảnh chụp thường)
      */
     @PostMapping(value = "/paraclinical-orders/{orderItemId}/upload", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadResultImage(
@@ -50,16 +50,31 @@ public class DoctorParaclinicalRestController {
             @RequestParam(value = "resultSummary", required = false) String resultSummary,
             @RequestParam(value = "stage", required = false) String stageStr,
             @RequestParam(value = "category", required = false) String categoryStr,
+            @RequestParam(value = "activeVisitId", required = false) Long activeVisitId,
+            @RequestParam(value = "labPartnerName", required = false) String labPartnerName,
             jakarta.servlet.http.HttpSession session
     ) {
-        doctorVisitAccess.requireParaclinicalItem(session, orderItemId);
+        if (activeVisitId != null) {
+            doctorVisitAccess.requireActiveClinicalExam(session, activeVisitId);
+        } else {
+            doctorVisitAccess.requireParaclinicalItem(session, orderItemId);
+        }
         try {
             if (file == null || file.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("message", "Vui lòng chọn file ảnh kết quả cần tải lên."));
+                return ResponseEntity.badRequest().body(Map.of("message", "Vui lòng chọn file ảnh hoặc PDF kết quả cần tải lên."));
             }
-            String imageUrl = nanoPixIntegrationService.storeXrayImage(file);
+            String fileUrl = nanoPixIntegrationService.storeParaclinicalFile(file);
+            boolean isPdf = fileUrl.toLowerCase(java.util.Locale.ROOT).endsWith(".pdf");
+            boolean routeToExternalLab = isPdf
+                    || (labPartnerName != null && !labPartnerName.isBlank())
+                    || paraclinicalOrderService.isExternalOrCrossVisitUpload(orderItemId, activeVisitId);
+            if (routeToExternalLab) {
+                ParaclinicalOrderItemResponseDTO updated = paraclinicalOrderService.recordExternalLabResult(
+                        orderItemId, activeVisitId, labPartnerName, resultSummary, fileUrl, file.getOriginalFilename(), isPdf);
+                return ResponseEntity.ok(updated);
+            }
             ParaclinicalOrderCreateDTO dto = ParaclinicalOrderCreateDTO.builder()
-                    .imageUrl(imageUrl)
+                    .imageUrl(fileUrl)
                     .resultSummary(resultSummary != null && !resultSummary.isBlank() ? resultSummary.trim() : "Đã tải ảnh kết quả")
                     .status("COMPLETED")
                     .build();
@@ -71,15 +86,55 @@ public class DoctorParaclinicalRestController {
                 if (resultSummary != null && !resultSummary.isBlank()) {
                     caption = caption + " — " + resultSummary.trim();
                 }
-                clinicalPhotoService.registerPhotoForOrderItem(orderItemId, stage, category, caption, imageUrl);
+                clinicalPhotoService.registerPhotoForOrderItem(orderItemId, stage, category, caption, fileUrl);
             }
             return ResponseEntity.ok(updated);
-        } catch (IllegalStateException e) {
+        } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
-            log.error("Lỗi khi tải ảnh kết quả cận lâm sàng cho orderItemId {}: {}", orderItemId, e.getMessage(), e);
+            log.error("Lỗi khi tải file kết quả cận lâm sàng cho orderItemId {}: {}", orderItemId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Lỗi khi tải ảnh kết quả: " + e.getMessage()));
+                    .body(Map.of("message", "Lỗi khi tải file kết quả: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Ghi nhận / tải lên kết quả xét nghiệm máu ngoài viện (hỗ trợ cả khi phiếu được tạo từ ca khám trước)
+     */
+    @PostMapping(value = "/paraclinical-orders/{orderItemId}/external-result", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadExternalLabResult(
+            @PathVariable("orderItemId") Long orderItemId,
+            @RequestParam(value = "activeVisitId", required = false) Long activeVisitId,
+            @RequestParam(value = "labPartnerName", required = false) String labPartnerName,
+            @RequestParam(value = "resultSummary", required = false) String resultSummary,
+            @RequestParam(value = "file", required = false) org.springframework.web.multipart.MultipartFile file,
+            jakarta.servlet.http.HttpSession session
+    ) {
+        if (activeVisitId != null) {
+            doctorVisitAccess.requireActiveClinicalExam(session, activeVisitId);
+        } else {
+            doctorVisitAccess.requireParaclinicalItem(session, orderItemId);
+        }
+        try {
+            String fileUrl = null;
+            String fileName = null;
+            boolean isPdf = false;
+            if (file != null && !file.isEmpty()) {
+                fileUrl = nanoPixIntegrationService.storeParaclinicalFile(file);
+                fileName = file.getOriginalFilename();
+                isPdf = fileUrl.toLowerCase(java.util.Locale.ROOT).endsWith(".pdf");
+            } else if (resultSummary == null || resultSummary.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Vui lòng tải file kết quả hoặc nhập tóm tắt chỉ số xét nghiệm."));
+            }
+            ParaclinicalOrderItemResponseDTO updated = paraclinicalOrderService.recordExternalLabResult(
+                    orderItemId, activeVisitId, labPartnerName, resultSummary, fileUrl, fileName, isPdf);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Lỗi khi ghi nhận kết quả xét nghiệm ngoài viện cho orderItemId {}: {}", orderItemId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Lỗi khi lưu kết quả xét nghiệm ngoài viện: " + e.getMessage()));
         }
     }
 
@@ -114,9 +169,10 @@ public class DoctorParaclinicalRestController {
     ) {
         doctorVisitAccess.requireActiveClinicalExam(session, visitId);
         try {
-            ParaclinicalOrderItemResponseDTO created = paraclinicalOrderService.createOrder(visitId, dto, null);
+            Long currentDoctorId = doctorVisitAccess.resolveActingDoctorStaffId(session);
+            ParaclinicalOrderItemResponseDTO created = paraclinicalOrderService.createOrder(visitId, dto, currentDoctorId);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
-        } catch (IllegalStateException e) {
+        } catch (IllegalStateException | IllegalArgumentException e) {
             log.warn("Lỗi nghiệp vụ khi tạo chỉ định CLS: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
@@ -141,7 +197,7 @@ public class DoctorParaclinicalRestController {
         try {
             ParaclinicalOrderItemResponseDTO updated = paraclinicalOrderService.updateOrder(orderItemId, dto);
             return ResponseEntity.ok(updated);
-        } catch (IllegalStateException e) {
+        } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -176,7 +232,7 @@ public class DoctorParaclinicalRestController {
 
             ParaclinicalOrderItemResponseDTO updated = paraclinicalOrderService.updateStatus(orderItemId, status, resultSummary);
             return ResponseEntity.ok(updated);
-        } catch (IllegalStateException e) {
+        } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -193,7 +249,7 @@ public class DoctorParaclinicalRestController {
         try {
             paraclinicalOrderService.deleteOrder(orderItemId);
             return ResponseEntity.ok(Map.of("message", "Đã xóa chỉ định thành công."));
-        } catch (IllegalStateException e) {
+        } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

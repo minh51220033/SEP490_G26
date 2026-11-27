@@ -1088,7 +1088,7 @@
                         </div>
                         <div>
                             <div class="d-flex flex-wrap align-items-center gap-2">
-                                <h1 class="dv-page-title mb-0">Danh sách ca khám &amp; Điều phối ghế khám</h1>
+                                <h1 class="dv-page-title mb-0">Danh sách bệnh nhân chờ khám</h1>
                                 <span th:if="${isDoctorAccount and currentDoctorName != ''}"
                                     class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle fw-bold px-3 py-1 align-middle"
                                     style="font-size: 12.5px;">
@@ -1096,8 +1096,7 @@
                                         th:text="${currentDoctorName}">Bác sĩ</span>
                                 </span>
                             </div>
-                            <p class="dv-page-subtitle">Theo dõi hàng chờ tiếp đón, phân bổ ghế khám và tiến độ điều
-                                trị lâm sàng trong ngày</p>
+                            <p class="dv-page-subtitle">Hiển thị danh sách bệnh nhân đang chờ theo thứ tự ưu tiên để bác sĩ bấm Vào khám</p>
                         </div>
                     </div>
 
@@ -1177,64 +1176,7 @@
                 </div>
 
                 <!-- ========================================================================= -->
-                <!-- 2. 4 THẺ KPI THỐNG KÊ CỠ LỚN (Bấm vào thẻ để lọc nhanh)                   -->
-                <!-- ========================================================================= -->
-                <div class="row g-3 mb-4">
-                    <div class="col-xl-3 col-sm-6">
-                        <div class="dv-kpi-card" style="--kpi-accent: #0284c7;" onclick="setPrimaryStatusFilter('ALL')">
-                            <div>
-                                <div class="dv-kpi-num" id="statTotal">0</div>
-                                <div class="dv-kpi-label">Tổng số ca khám</div>
-                                <div class="dv-kpi-sub" id="statPeriodLabel">Toàn bộ danh sách</div>
-                            </div>
-                            <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
-                                <i class="bi bi-people-fill"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-xl-3 col-sm-6">
-                        <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;"
-                            onclick="setPrimaryStatusFilter('WAITING')">
-                            <div>
-                                <div class="dv-kpi-num text-warning" id="statWaiting">0</div>
-                                <div class="dv-kpi-label">Đang chờ khám</div>
-                                <div class="dv-kpi-sub">Cần gọi vào ghế khám</div>
-                            </div>
-                            <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
-                                <i class="bi bi-hourglass-split"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-xl-3 col-sm-6">
-                        <div class="dv-kpi-card" style="--kpi-accent: #6366f1;"
-                            onclick="setPrimaryStatusFilter('EXAMINING')">
-                            <div>
-                                <div class="dv-kpi-num" style="color: #4f46e5;" id="statInProgress">0</div>
-                                <div class="dv-kpi-label">Đang khám &amp; Điều trị</div>
-                                <div class="dv-kpi-sub">Đang thao tác lâm sàng</div>
-                            </div>
-                            <div class="dv-kpi-icon" style="background: #e0e7ff; color: #4f46e5;">
-                                <i class="bi bi-heart-pulse-fill"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-xl-3 col-sm-6">
-                        <div class="dv-kpi-card" style="--kpi-accent: #10b981;"
-                            onclick="setPrimaryStatusFilter('COMPLETED')">
-                            <div>
-                                <div class="dv-kpi-num text-success" id="statCompleted">0</div>
-                                <div class="dv-kpi-label">Đã hoàn thành</div>
-                                <div class="dv-kpi-sub">Đã khóa bệnh án / thu ngân</div>
-                            </div>
-                            <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
-                                <i class="bi bi-check2-circle"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ========================================================================= -->
-                <!-- 3. BỘ LỌC TỐI GIẢN (3-4 FILTER CHÍNH) + NÚT "LỌC NÂNG CAO" CÓ SỐ CHỚP ĐỎ  -->
+                <!-- 2. BỘ LỌC HÀNG CHỜ KHÁM + NÚT "LỌC NÂNG CAO"                             -->
                 <!-- ========================================================================= -->
                 <div class="dv-toolbar-card">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
@@ -1250,31 +1192,17 @@
                             </button>
                         </div>
 
-                        <!-- Filter Chính #2: Mốc thời gian nhanh (4 lựa chọn thông dụng nhất) -->
-                        <div class="dv-quick-segment" aria-label="Bộ lọc thời gian nhanh">
-                            <button type="button" class="dv-seg-btn" data-quick-date="TODAY"
-                                onclick="applyQuickDatePreset('TODAY')">
-                                <i class="bi bi-calendar-check"></i> Hôm nay
-                            </button>
-                            <button type="button" class="dv-seg-btn" data-quick-date="THIS_WEEK"
-                                onclick="applyQuickDatePreset('THIS_WEEK')">
-                                <i class="bi bi-calendar-week"></i> Tuần này
-                            </button>
-                            <button type="button" class="dv-seg-btn" data-quick-date="THIS_MONTH"
-                                onclick="applyQuickDatePreset('THIS_MONTH')">
-                                <i class="bi bi-calendar-month"></i> Tháng này
-                            </button>
-                            <button type="button" class="dv-seg-btn active" data-quick-date="ALL"
-                                onclick="applyQuickDatePreset('ALL')">
-                                <i class="bi bi-infinity"></i> Tất cả ngày
-                            </button>
-                        </div>
-
-                        <!-- Filter Chính #3: Trạng thái chính (4 trạng thái cốt lõi) -->
-                        <div class="dv-quick-segment" aria-label="Bộ lọc trạng thái chính">
+                        <!-- Filter Chính #2: Trạng thái bệnh nhân trong hàng chờ -->
+                        <div class="dv-quick-segment" aria-label="Bộ lọc hàng chờ khám">
                             <button type="button" class="dv-seg-btn active" data-pri-status="ALL"
                                 onclick="setPrimaryStatusFilter('ALL')">
-                                Tất cả <span class="dv-seg-count" id="cntAll">0</span>
+                                Tất cả chờ <span class="dv-seg-count" id="cntAll">0</span>
+                            </button>
+                            <button type="button" class="dv-seg-btn" data-pri-status="CALLED"
+                                onclick="setPrimaryStatusFilter('CALLED')">
+                                <span class="rounded-circle d-inline-block"
+                                    style="width:8px;height:8px;background:#2563eb;"></span>
+                                Đang gọi <span class="dv-seg-count" id="cntCalled">0</span>
                             </button>
                             <button type="button" class="dv-seg-btn" data-pri-status="WAITING"
                                 onclick="setPrimaryStatusFilter('WAITING')">
@@ -1282,17 +1210,11 @@
                                     style="width:8px;height:8px;background:#f59e0b;"></span>
                                 Chờ khám <span class="dv-seg-count" id="cntWaiting">0</span>
                             </button>
-                            <button type="button" class="dv-seg-btn" data-pri-status="EXAMINING"
-                                onclick="setPrimaryStatusFilter('EXAMINING')">
+                            <button type="button" class="dv-seg-btn" data-pri-status="WAITING_RESULT"
+                                onclick="setPrimaryStatusFilter('WAITING_RESULT')">
                                 <span class="rounded-circle d-inline-block"
-                                    style="width:8px;height:8px;background:#3b82f6;"></span>
-                                Đang khám <span class="dv-seg-count" id="cntExamining">0</span>
-                            </button>
-                            <button type="button" class="dv-seg-btn" data-pri-status="COMPLETED"
-                                onclick="setPrimaryStatusFilter('COMPLETED')">
-                                <span class="rounded-circle d-inline-block"
-                                    style="width:8px;height:8px;background:#10b981;"></span>
-                                Hoàn thành <span class="dv-seg-count" id="cntCompleted">0</span>
+                                    style="width:8px;height:8px;background:#d97706;"></span>
+                                Chờ đọc KQ <span class="dv-seg-count" id="cntWaitingResult">0</span>
                             </button>
                         </div>
 
@@ -1308,13 +1230,13 @@
                     </div>
 
                     <!-- ===================================================================== -->
-                    <!-- KHUNG LỌC NÂNG CAO (Giấu các filter phụ + Toán tử lọc linh hoạt)      -->
+                    <!-- KHUNG LỌC NÂNG CAO                                                    -->
                     <!-- ===================================================================== -->
                     <div class="dv-adv-filter-panel" id="advFilterPanel">
                         <div class="d-flex align-items-center justify-content-between mb-3">
                             <div class="fw-bold text-dark d-flex align-items-center gap-2" style="font-size: 15px;">
                                 <i class="bi bi-sliders2-vertical text-primary"></i>
-                                <span>Bộ lọc chuyên sâu &amp; Toán tử so sánh linh hoạt</span>
+                                <span>Bộ lọc hàng chờ nâng cao</span>
                             </div>
                             <button type="button"
                                 class="btn btn-sm btn-link text-danger fw-bold text-decoration-none p-0"
@@ -1324,102 +1246,66 @@
                         </div>
 
                         <div class="row g-3">
-                            <!-- 1. Toán tử lọc Ngày khám -->
+                            <!-- 1. Trạng thái trong hàng chờ -->
                             <div class="col-lg-3 col-md-6">
                                 <label class="dv-adv-label">
-                                    <i class="bi bi-calendar-range text-primary"></i> Toán tử lọc Ngày khám
+                                    <i class="bi bi-activity text-primary"></i> Trạng thái hàng chờ
                                 </label>
-                                <select class="dv-adv-control" id="advDateOperator"
-                                    onchange="onAdvDateOperatorChange()">
-                                    <option value="ALL">-- Không giới hạn ngày --</option>
-                                    <option value="EQ">= Chính xác ngày (Bằng ngày)</option>
-                                    <option value="GT">&gt; Lớn hơn (Sau ngày)</option>
-                                    <option value="LT">&lt; Nhỏ hơn (Trước ngày)</option>
-                                    <option value="BETWEEN">↔ Trong khoảng ngày (Từ - Đến)</option>
-                                    <option value="THIS_WEEK">📅 Trong tuần này</option>
-                                    <option value="THIS_MONTH">🗓️ Trong tháng này</option>
+                                <select class="form-select dv-adv-control" id="advSubStatus"
+                                    onchange="onAdvSubStatusChange(this.value)">
+                                    <option value="ALL">-- Tất cả bệnh nhân chờ --</option>
+                                    <option value="CALLED">Đang gọi vào khám (CALLED)</option>
+                                    <option value="WAITING">Chờ khám mới (WAITING)</option>
+                                    <option value="WAITING_RESULT">Chờ đọc kết quả CLS (WAITING_RESULT)</option>
+                                    <option value="PAUSED">Vắng mặt / Tạm dừng (PAUSED)</option>
                                 </select>
                             </div>
 
-                            <!-- 2. Giá trị Ngày 1 (và Ngày 2 nếu chọn BETWEEN) -->
-                            <div class="col-lg-3 col-md-6" id="advDateValueCol">
-                                <label class="dv-adv-label" id="advDateValueLabel">
-                                    <i class="bi bi-calendar-event text-secondary"></i> Chọn mốc ngày
-                                </label>
-                                <div class="d-flex align-items-center gap-2">
-                                    <input type="date" class="dv-adv-control" id="advDateVal1"
-                                        onchange="applyAdvancedFilters()">
-                                    <span id="advDateDash" style="display: none; font-weight: 800;">→</span>
-                                    <input type="date" class="dv-adv-control" id="advDateVal2" style="display: none;"
-                                        onchange="applyAdvancedFilters()">
-                                </div>
-                            </div>
-
-                            <!-- 3. Toán tử lọc Độ tuổi bệnh nhân (=, >, <) -->
+                            <!-- 2. Toán tử lọc Độ tuổi bệnh nhân (=, >, <) -->
                             <div class="col-lg-3 col-md-6">
                                 <label class="dv-adv-label">
                                     <i class="bi bi-person-bounding-box text-primary"></i> Toán tử Độ tuổi BN
                                 </label>
                                 <div class="d-flex align-items-center gap-2">
-                                    <select class="dv-adv-control" id="advAgeOperator" style="width: 58%;"
+                                    <select class="form-select dv-adv-control" id="advAgeOperator" style="width: 58%;"
                                         onchange="applyAdvancedFilters()">
                                         <option value="ALL">Mọi độ tuổi</option>
                                         <option value="EQ">= Bằng tuổi</option>
                                         <option value="GT">&gt; Lớn hơn</option>
                                         <option value="LT">&lt; Nhỏ hơn</option>
                                     </select>
-                                    <input type="number" class="dv-adv-control" id="advAgeValue" style="width: 42%;"
+                                    <input type="number" class="form-control dv-adv-control" id="advAgeValue" style="width: 42%;"
                                         placeholder="Tuổi..." min="0" max="120" oninput="applyAdvancedFilters()">
                                 </div>
                             </div>
 
-                            <!-- 4. Trạng thái phụ (Đang ĐT, Chờ CLS, Chờ TT, Đã hủy) -->
-                            <div class="col-lg-3 col-md-6">
-                                <label class="dv-adv-label">
-                                    <i class="bi bi-activity text-primary"></i> Trạng thái chi tiết
-                                </label>
-                                <select class="dv-adv-control" id="advSubStatus"
-                                    onchange="onAdvSubStatusChange(this.value)">
-                                    <option value="ALL">-- Tất cả trạng thái --</option>
-                                    <option value="WAITING">Chờ khám (WAITING)</option>
-                                    <option value="EXAMINING">Đang khám / Điều trị</option>
-                                    <option value="IN_EXAM">Đang khám tại ghế (IN_EXAM)</option>
-                                    <option value="IN_TREATMENT">Đang điều trị (IN_TREATMENT)</option>
-                                    <option value="WAITING_PARACLINICAL">Chờ Cận lâm sàng (WAITING_PARACLINICAL)</option>
-                                    <option value="WAITING_RESULT">Chờ đọc kết quả CLS (WAITING_RESULT)</option>
-                                    <option value="WAITING_PAYMENT">Chờ Thanh toán (WAITING_PAYMENT)</option>
-                                    <option value="COMPLETED">Đã hoàn thành (COMPLETED)</option>
-                                    <option value="CANCELLED">Đã hủy (CANCELLED)</option>
-                                </select>
-                            </div>
-
-                            <!-- 5. Bác sĩ phụ trách -->
-                            <div class="col-lg-4 col-md-6">
+                            <!-- 3. Bác sĩ phụ trách -->
+                            <div class="col-lg-2 col-md-4">
                                 <label class="dv-adv-label">
                                     <i class="bi bi-person-badge text-primary"></i> Bác sĩ điều trị
                                 </label>
-                                <select class="dv-adv-control" id="advDoctorSelect" onchange="applyAdvancedFilters()">
+                                <select class="form-select dv-adv-control" id="advDoctorSelect" onchange="applyAdvancedFilters()">
                                     <option value="ALL">-- Tất cả Bác sĩ --</option>
                                 </select>
                             </div>
 
-                            <!-- 6. Ghế khám / Phòng khám -->
-                            <div class="col-lg-4 col-md-6">
+                            <!-- 4. Ghế khám / Phòng khám -->
+                            <div class="col-lg-2 col-md-4">
                                 <label class="dv-adv-label">
-                                    <i class="bi bi-geo-alt text-primary"></i> Ghế khám / Phòng lâm sàng
+                                    <i class="bi bi-geo-alt text-primary"></i> Ghế khám
                                 </label>
-                                <select class="dv-adv-control" id="advChairSelect" onchange="applyAdvancedFilters()">
+                                <select class="form-select dv-adv-control" id="advChairSelect" onchange="applyAdvancedFilters()">
                                     <option value="ALL">-- Tất cả Ghế khám --</option>
                                 </select>
                             </div>
 
-                            <!-- 7. Giới tính -->
-                            <div class="col-lg-4 col-md-6">
+                            <!-- 5. Giới tính -->
+                            <div class="col-lg-2 col-md-4">
                                 <label class="dv-adv-label">
-                                    <i class="bi bi-gender-ambiguous text-primary"></i> Giới tính bệnh nhân
+                                    <i class="bi bi-gender-ambiguous text-primary"></i> Giới tính
                                 </label>
-                                <select class="dv-adv-control" id="advGenderSelect" onchange="applyAdvancedFilters()">
-                                    <option value="ALL">-- Tất cả Giới tính --</option>
+                                <select class="form-select dv-adv-control" id="advGenderSelect" onchange="applyAdvancedFilters()">
+                                    <option value="ALL">-- Tất cả --</option>
                                     <option value="Nam">Nam</option>
                                     <option value="Nữ">Nữ</option>
                                 </select>
@@ -1441,17 +1327,14 @@
                 </div>
 
                 <!-- ========================================================================= -->
-                <!-- 4. KHỐI BẢNG DỮ LIỆU THÔNG MINH (MISA AMIS DATA GRID)                     -->
+                <!-- 3. KHỐI BẢNG DỮ LIỆU BỆNH NHÂN CHỜ KHÁM                                   -->
                 <!-- ========================================================================= -->
                 <div class="dv-grid-card">
                     <!-- Thanh công cụ phía trên bảng -->
                     <div class="dv-grid-topbar">
                         <div class="d-flex align-items-center gap-3 flex-wrap">
                             <div class="fw-bold text-dark" style="font-size: 15px;">
-                                Hiển thị <span class="text-primary fw-bolder" id="visibleCountText">0</span> ca khám
-                                <span class="text-muted mx-1">•</span>
-                                <span class="text-secondary fw-semibold" id="currentDateRangeLabel">Tất cả các
-                                    ngày</span>
+                                Hiển thị <span class="text-primary fw-bolder" id="visibleCountText">0</span> bệnh nhân chờ khám
                             </div>
                         </div>
 
@@ -1576,20 +1459,14 @@
                                 <circle cx="182" cy="48" r="8" fill="#BAE6FD" />
                             </svg>
                         </div>
-                        <h3 class="dv-empty-title">Chưa có dữ liệu</h3>
+                        <h3 class="dv-empty-title">Không có bệnh nhân chờ khám</h3>
                         <p class="dv-empty-desc" id="dvEmptyDesc">
-                            Hiện chưa có ca khám nào khớp với điều kiện lọc hiện tại. Bác sĩ có thể chọn xem
-                            <strong>"Tất cả ngày"</strong> hoặc xóa bộ lọc để xem toàn bộ danh sách bệnh nhân.
+                            Hiện chưa có bệnh nhân nào đang trong hàng chờ khám phù hợp với điều kiện lọc.
                         </p>
                         <div class="d-flex align-items-center justify-content-center gap-3 flex-wrap">
-                            <button type="button" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm"
-                                style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none; font-size: 14.5px;"
-                                onclick="applyQuickDatePreset('ALL')">
-                                <i class="bi bi-calendar2-range me-2"></i>Xem tất cả các ngày
-                            </button>
                             <button type="button" class="btn btn-outline-secondary rounded-pill px-4 py-2 fw-bold"
                                 style="font-size: 14.5px;" onclick="resetAllFilters()">
-                                <i class="bi bi-arrow-counterclockwise me-2"></i>Đặt lại toàn bộ bộ lọc
+                                <i class="bi bi-arrow-counterclockwise me-2"></i>Đặt lại bộ lọc
                             </button>
                         </div>
                     </div>
@@ -2070,31 +1947,7 @@
         }
 
         function syncDateInputsVisibility() {
-            const op = document.getElementById('advDateOperator').value;
-            const col = document.getElementById('advDateValueCol');
-            const v1 = document.getElementById('advDateVal1');
-            const v2 = document.getElementById('advDateVal2');
-            const dash = document.getElementById('advDateDash');
-            const lbl = document.getElementById('advDateValueLabel');
-
-            if (op === 'ALL' || op === 'THIS_WEEK' || op === 'THIS_MONTH') {
-                col.style.opacity = '0.45';
-                v1.disabled = true;
-                v2.style.display = 'none';
-                dash.style.display = 'none';
-            } else if (op === 'BETWEEN') {
-                col.style.opacity = '1';
-                v1.disabled = false;
-                v2.style.display = 'block';
-                dash.style.display = 'inline';
-                lbl.innerHTML = '<i class="bi bi-calendar-range text-primary"></i> Từ ngày → Đến ngày';
-            } else {
-                col.style.opacity = '1';
-                v1.disabled = false;
-                v2.style.display = 'none';
-                dash.style.display = 'none';
-                lbl.innerHTML = '<i class="bi bi-calendar-event text-primary"></i> Chọn mốc ngày so sánh';
-            }
+            // Không còn lọc lịch sử nhiều ngày trên màn hình chờ khám
         }
 
         function setPrimaryStatusFilter(status) {
@@ -2152,14 +2005,16 @@
         }
 
         function applyAdvancedFilters() {
-            filterState.advDateOperator = document.getElementById('advDateOperator').value;
-            filterState.advDateVal1 = document.getElementById('advDateVal1').value;
-            filterState.advDateVal2 = document.getElementById('advDateVal2').value;
-            filterState.advAgeOperator = document.getElementById('advAgeOperator').value;
-            filterState.advAgeValue = document.getElementById('advAgeValue').value;
-            filterState.advDoctor = document.getElementById('advDoctorSelect').value;
-            filterState.advChair = document.getElementById('advChairSelect').value;
-            filterState.advGender = document.getElementById('advGenderSelect').value;
+            const ageOp = document.getElementById('advAgeOperator');
+            const ageVal = document.getElementById('advAgeValue');
+            const docSel = document.getElementById('advDoctorSelect');
+            const chairSel = document.getElementById('advChairSelect');
+            const genderSel = document.getElementById('advGenderSelect');
+            filterState.advAgeOperator = ageOp ? ageOp.value : 'ALL';
+            filterState.advAgeValue = ageVal ? ageVal.value : '';
+            filterState.advDoctor = docSel ? docSel.value : 'ALL';
+            filterState.advChair = chairSel ? chairSel.value : 'ALL';
+            filterState.advGender = genderSel ? genderSel.value : 'ALL';
             applyClientFiltersAndRender();
         }
 
@@ -2178,30 +2033,31 @@
                 advChair: 'ALL',
                 advGender: 'ALL'
             };
-            document.getElementById('dvSearchInput').value = '';
-            document.getElementById('dvClearSearchBtn').style.display = 'none';
-            document.getElementById('advDateOperator').value = 'ALL';
-            document.getElementById('advDateVal1').value = '';
-            document.getElementById('advDateVal2').value = '';
-            document.getElementById('advAgeOperator').value = 'ALL';
-            document.getElementById('advAgeValue').value = '';
-            document.getElementById('advSubStatus').value = 'ALL';
-            document.getElementById('advDoctorSelect').value = 'ALL';
-            document.getElementById('advChairSelect').value = 'ALL';
-            document.getElementById('advGenderSelect').value = 'ALL';
+            const searchInput = document.getElementById('dvSearchInput');
+            const clearBtn = document.getElementById('dvClearSearchBtn');
+            const ageOp = document.getElementById('advAgeOperator');
+            const ageVal = document.getElementById('advAgeValue');
+            const subStatus = document.getElementById('advSubStatus');
+            const docSel = document.getElementById('advDoctorSelect');
+            const chairSel = document.getElementById('advChairSelect');
+            const genderSel = document.getElementById('advGenderSelect');
+            if (searchInput) searchInput.value = '';
+            if (clearBtn) clearBtn.style.display = 'none';
+            if (ageOp) ageOp.value = 'ALL';
+            if (ageVal) ageVal.value = '';
+            if (subStatus) subStatus.value = 'ALL';
+            if (docSel) docSel.value = 'ALL';
+            if (chairSel) chairSel.value = 'ALL';
+            if (genderSel) genderSel.value = 'ALL';
 
-            document.querySelectorAll('[data-quick-date]').forEach(btn => {
-                btn.classList.toggle('active', btn.getAttribute('data-quick-date') === 'ALL');
-            });
             document.querySelectorAll('[data-pri-status]').forEach(btn => {
                 btn.classList.toggle('active', btn.getAttribute('data-pri-status') === 'ALL');
             });
 
-            syncDateInputsVisibility();
             fetchDailyVisits();
         }
 
-        // Tải toàn bộ danh sách từ API để hỗ trợ lọc tức thì với mọi toán tử
+        // Chỉ tải danh sách bệnh nhân đang chờ khám (WAITING / WAITING_RESULT) để bác sĩ vào khám
         async function fetchDailyVisits() {
             const loading = document.getElementById('dvLoadingState');
             const tableContainer = document.getElementById('dvTableContainer');
@@ -2215,11 +2071,14 @@
                 const branchId = getEffectiveBranchId();
                 const branchParam = branchId ? `&branchId=${encodeURIComponent(branchId)}` : '';
                 const [res] = await Promise.all([
-                    fetch(`/api/doctor/patients/daily-visits?date=ALL&status=ALL${branchParam}`),
+                    fetch(`/api/doctor/patients/daily-visits?date=ALL&status=ALL&waitingOnly=true${branchParam}`),
                     fetchDoctorDeskStatus()
                 ]);
-                if (!res.ok) throw new Error('Không thể tải dữ liệu ca khám');
-                rawServerVisits = await res.json();
+                if (!res.ok) throw new Error('Không thể tải dữ liệu bệnh nhân chờ khám');
+                const rows = await res.json();
+                rawServerVisits = Array.isArray(rows)
+                    ? rows.filter(v => v && (v.status === 'WAITING' || v.status === 'WAITING_RESULT'))
+                    : [];
                 populateDynamicFilterOptions(rawServerVisits);
                 applyClientFiltersAndRender();
             } catch (err) {
@@ -2372,19 +2231,15 @@
             // Cập nhật KPI & Số đếm trên các tab trạng thái
             updateKpiAndStatusCounts(dateAndAdvMatched);
 
-            // Áp dụng lọc Trạng thái
+            // Áp dụng lọc Trạng thái chờ
             const stFilter = filterState.advSubStatus || filterState.primaryStatus;
             filteredVisits = dateAndAdvMatched.filter(v => {
                 if (!stFilter || stFilter === 'ALL') return true;
-                if (stFilter === 'EXAMINING') {
-                    return v.status === 'EXAMINING'
-                        || v.status === 'IN_EXAM'
-                        || v.status === 'IN_TREATMENT'
-                        || v.status === 'WAITING_PARACLINICAL'
-                        || v.status === 'WAITING_RESULT';
+                if (stFilter === 'CALLED') {
+                    return v.queueStatus === 'CALLED';
                 }
-                if (stFilter === 'COMPLETED') {
-                    return v.status === 'COMPLETED' || v.status === 'WAITING_PAYMENT';
+                if (stFilter === 'PAUSED') {
+                    return v.queueStatus === 'PAUSED';
                 }
                 return v.status === stFilter;
             });
@@ -2400,29 +2255,24 @@
 
         function updateKpiAndStatusCounts(baseList) {
             let total = baseList.length;
+            let called = 0;
             let waiting = 0;
-            let examining = 0;
-            let completed = 0;
+            let waitingResult = 0;
 
             baseList.forEach(v => {
+                if (v.queueStatus === 'CALLED') called++;
                 if (v.status === 'WAITING') waiting++;
-                else if (v.status === 'EXAMINING'
-                    || v.status === 'IN_EXAM'
-                    || v.status === 'IN_TREATMENT'
-                    || v.status === 'WAITING_PARACLINICAL'
-                    || v.status === 'WAITING_RESULT') examining++;
-                else if (v.status === 'COMPLETED' || v.status === 'WAITING_PAYMENT') completed++;
+                else if (v.status === 'WAITING_RESULT') waitingResult++;
             });
 
-            document.getElementById('statTotal').textContent = total;
-            document.getElementById('statWaiting').textContent = waiting;
-            document.getElementById('statInProgress').textContent = examining;
-            document.getElementById('statCompleted').textContent = completed;
-
-            document.getElementById('cntAll').textContent = total;
-            document.getElementById('cntWaiting').textContent = waiting;
-            document.getElementById('cntExamining').textContent = examining;
-            document.getElementById('cntCompleted').textContent = completed;
+            const elAll = document.getElementById('cntAll');
+            const elCalled = document.getElementById('cntCalled');
+            const elWaiting = document.getElementById('cntWaiting');
+            const elWaitingResult = document.getElementById('cntWaitingResult');
+            if (elAll) elAll.textContent = total;
+            if (elCalled) elCalled.textContent = called;
+            if (elWaiting) elWaiting.textContent = waiting;
+            if (elWaitingResult) elWaitingResult.textContent = waitingResult;
         }
 
         // Tính số lượng bộ lọc đang áp dụng & hiển thị Badge số đỏ nhấp nháy trên nút "Lọc nâng cao"
@@ -2447,8 +2297,14 @@
                 });
             }
             if (filterState.advSubStatus !== 'ALL') {
+                const statusChipLabels = {
+                    'CALLED': 'Đang gọi vào khám',
+                    'WAITING': 'Chờ khám mới',
+                    'WAITING_RESULT': 'Chờ đọc KQ CLS',
+                    'PAUSED': 'Vắng mặt / Tạm dừng'
+                };
                 chips.push({
-                    label: `Trạng thái: ${filterState.advSubStatus}`,
+                    label: `Trạng thái: ${statusChipLabels[filterState.advSubStatus] || filterState.advSubStatus}`,
                     clear: () => setPrimaryStatusFilter('ALL')
                 });
             }

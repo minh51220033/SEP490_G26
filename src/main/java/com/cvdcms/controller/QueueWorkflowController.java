@@ -99,6 +99,16 @@ public class QueueWorkflowController {
         }
         return "redirect:/reception/queue?branchId=" + branchId;
     }
+    @PostMapping("/chairs/{chairId}/turnover-complete")
+    @ResponseBody
+    public org.springframework.http.ResponseEntity<java.util.Map<String, Object>> completeChairTurnover(
+            @PathVariable Long chairId,
+            @RequestParam(required = false) Long appointmentId,
+            HttpSession session) {
+        service.completeChairTurnover(session, chairId, appointmentId);
+        return org.springframework.http.ResponseEntity.ok(java.util.Map.of("success", true));
+    }
+
     @PostMapping("/doctors/{doctorId}/call-next")
     @ResponseBody
     public org.springframework.http.ResponseEntity<java.util.Map<String, Object>> callNext(

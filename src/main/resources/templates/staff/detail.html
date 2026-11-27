@@ -326,22 +326,135 @@
                         </div>
                     </div>
 
-                    <!-- ============ TAB 3: PHÂN CÔNG PHÒNG & DỊCH VỤ (PHASE 1 - CHỈ BÁC SĨ) ============ -->
+                    <!-- ============ TAB 3: PHÒNG & DỊCH VỤ CHUYÊN MÔN (CHỈ BÁC SĨ) ============ -->
                     <div class="tab-pane fade" id="pane-resource-perms" role="tabpanel" aria-labelledby="tab-resource-perms" th:if="${isDoctorStaff}">
-                        <div class="alert alert-light border d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 py-2">
-                            <span class="small"><i class="bi bi-info-circle text-primary me-1"></i>Chỉ các bản ghi đã được Quản trị viên duyệt sang trạng thái <strong>ACTIVE</strong> mới được dùng để phân bổ lịch khám; bản ghi <strong>PENDING_REVIEW</strong> chỉ mang tính gợi ý chờ duyệt.</span>
-                        </div>
+                        <style>
+                            .doc-perm-panel {
+                                background: #ffffff;
+                                border: 1px solid #e2e8f0;
+                                border-radius: 14px;
+                                display: flex;
+                                flex-direction: column;
+                            }
+                            .doc-perm-panel-head {
+                                padding: 14px 16px;
+                                border-bottom: 1px solid #f1f5f9;
+                                display: flex;
+                                flex-wrap: wrap;
+                                justify-content: space-between;
+                                align-items: center;
+                                gap: 8px;
+                            }
+                            .doc-perm-toolbar {
+                                padding: 12px 16px;
+                                background: #f8fafc;
+                                border-bottom: 1px solid #f1f5f9;
+                                display: flex;
+                                flex-wrap: wrap;
+                                align-items: center;
+                                gap: 8px;
+                            }
+                            .doc-perm-list {
+                                padding: 12px 16px;
+                                max-height: 440px;
+                                overflow-y: auto;
+                            }
+                            .doc-perm-group {
+                                margin-bottom: 12px;
+                                border: 1px solid #eef2f7;
+                                border-radius: 10px;
+                                overflow: hidden;
+                                background: #ffffff;
+                            }
+                            .doc-perm-group:last-child {
+                                margin-bottom: 0;
+                            }
+                            .doc-perm-group-head {
+                                background: #f8fafc;
+                                padding: 8px 12px;
+                                border-bottom: 1px solid #f1f5f9;
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                                gap: 8px;
+                                cursor: pointer;
+                                user-select: none;
+                            }
+                            .doc-perm-item {
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                                gap: 10px;
+                                padding: 9px 12px;
+                                border-bottom: 1px solid #f1f5f9;
+                                cursor: pointer;
+                                transition: background-color 0.12s ease;
+                                margin: 0;
+                            }
+                            .doc-perm-item:last-child {
+                                border-bottom: none;
+                            }
+                            .doc-perm-item:hover {
+                                background-color: #f8fafc;
+                            }
+                            .doc-perm-item.is-selected {
+                                background-color: #f0f9ff;
+                            }
+                            .doc-perm-room-card {
+                                border: 1px solid #eef2f7;
+                                border-radius: 10px;
+                                margin-bottom: 8px;
+                                padding: 10px 12px;
+                            }
+                            .doc-perm-room-card:last-child {
+                                margin-bottom: 0;
+                            }
+                            .doc-perm-room-card.is-selected {
+                                border-color: #bae6fd;
+                                background-color: #f0f9ff;
+                            }
+                            .doc-perm-title {
+                                color: #0f172a;
+                                font-weight: 600;
+                                font-size: 0.9rem;
+                            }
+                            .doc-perm-meta {
+                                color: #64748b;
+                                font-size: 0.78rem;
+                            }
+                            .doc-perm-footer {
+                                margin-top: 16px;
+                                padding: 12px 16px;
+                                background: #f8fafc;
+                                border: 1px solid #e2e8f0;
+                                border-radius: 12px;
+                                display: flex;
+                                flex-wrap: wrap;
+                                align-items: center;
+                                justify-content: space-between;
+                                gap: 12px;
+                            }
+                        </style>
+
+                        <p class="small text-muted mb-3">
+                            Tích chọn phòng khám và dịch vụ chuyên môn bác sĩ được phép phụ trách, sau đó bấm <strong>Lưu phân quyền</strong> để áp dụng ngay khi xếp lịch trực và đặt lịch khám.
+                        </p>
+
                         <div id="docResAlert" class="alert d-none py-2 px-3 small mb-3" role="alert"></div>
+
                         <div class="row g-3">
-                            <div class="col-lg-6">
-                                <div class="border rounded-3 p-3 bg-white h-100 d-flex flex-column">
-                                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-                                        <h6 class="fw-bold mb-0"><i class="bi bi-door-open text-primary me-2"></i>Phân công Phòng theo chi nhánh</h6>
-                                        <span class="badge bg-light text-secondary border" id="docRoomCountBadge">0</span>
+                            <!-- KHỐI TRÁI: PHÒNG KHÁM THEO CHI NHÁNH -->
+                            <div class="col-lg-5">
+                                <div class="doc-perm-panel h-100">
+                                    <div class="doc-perm-panel-head">
+                                        <h6 class="fw-bold mb-0 text-dark">
+                                            <i class="bi bi-door-open text-primary me-2"></i>Phân công phòng khám
+                                        </h6>
+                                        <span class="badge bg-light text-secondary border fw-semibold" id="docRoomCountBadge">0 / 0</span>
                                     </div>
-                                    <div class="row g-2 mb-3 align-items-end">
-                                        <div class="col-md-5">
-                                            <label for="docResBranchSelect" class="form-label small text-muted mb-1">Chi nhánh</label>
+                                    <div class="doc-perm-toolbar">
+                                        <div class="flex-grow-1">
+                                            <label for="docResBranchSelect" class="visually-hidden">Chi nhánh</label>
                                             <select id="docResBranchSelect" class="form-select form-select-sm">
                                                 <option th:each="a : ${assignments}"
                                                         th:if="${a.branch != null and a.status.name() == 'ACTIVE'}"
@@ -349,47 +462,54 @@
                                                         th:text="${a.branch.branchName}"></option>
                                             </select>
                                         </div>
-                                        <div class="col-md-4">
-                                            <label for="docResRoomSelect" class="form-label small text-muted mb-1">Phòng khám</label>
-                                            <select id="docResRoomSelect" class="form-select form-select-sm">
-                                                <option value="">-- Đang tải phòng --</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <button type="button" id="btnAddDocRoom" class="btn btn-sm btn-primary w-100 text-nowrap">
-                                                <i class="bi bi-plus-lg me-1"></i>Cấp quyền
-                                            </button>
-                                        </div>
+                                        <button type="button" id="btnToggleAllRooms" class="btn btn-sm btn-outline-secondary text-nowrap">
+                                            Chọn tất cả
+                                        </button>
                                     </div>
-                                    <div id="docRoomAssignmentList" class="small text-muted flex-grow-1">Đang tải danh sách phòng...</div>
+                                    <div id="docRoomChecklist" class="doc-perm-list flex-grow-1 small text-muted">
+                                        Đang tải danh sách phòng...
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-lg-6">
-                                <div class="border rounded-3 p-3 bg-white h-100 d-flex flex-column">
-                                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-                                        <h6 class="fw-bold mb-0"><i class="bi bi-clipboard2-pulse text-primary me-2"></i>Quyền Dịch vụ chuyên môn</h6>
-                                        <span class="badge bg-light text-secondary border" id="docServiceCountBadge">0</span>
+
+                            <!-- KHỐI PHẢI: QUYỀN DỊCH VỤ CHUYÊN MÔN -->
+                            <div class="col-lg-7">
+                                <div class="doc-perm-panel h-100">
+                                    <div class="doc-perm-panel-head">
+                                        <h6 class="fw-bold mb-0 text-dark">
+                                            <i class="bi bi-clipboard2-pulse text-primary me-2"></i>Quyền dịch vụ chuyên môn
+                                        </h6>
+                                        <span class="badge bg-light text-secondary border fw-semibold" id="docServiceCountBadge">0 / 0</span>
                                     </div>
-                                    <div class="row g-2 mb-3 align-items-end">
-                                        <div class="col-md-5">
-                                            <label for="docResServiceSearch" class="form-label small text-muted mb-1">Tìm &amp; chọn dịch vụ</label>
-                                            <input type="text" id="docResServiceSearch" class="form-control form-control-sm mb-1" placeholder="Tìm tên hoặc mã dịch vụ...">
-                                            <select id="docResServiceSelect" class="form-select form-select-sm">
-                                                <option value="">-- Đang tải dịch vụ --</option>
-                                            </select>
+                                    <div class="doc-perm-toolbar flex-nowrap">
+                                        <div class="input-group input-group-sm flex-grow-1" style="width: auto; min-width: 160px;">
+                                            <span class="input-group-text bg-white text-muted"><i class="bi bi-search"></i></span>
+                                            <input type="text" id="docResServiceSearch" class="form-control"
+                                                   placeholder="Tìm theo tên, mã hoặc nhóm dịch vụ...">
                                         </div>
-                                        <div class="col-md-4">
-                                            <label for="docResServiceNote" class="form-label small text-muted mb-1">Ghi chú</label>
-                                            <input type="text" id="docResServiceNote" class="form-control form-control-sm" placeholder="Ghi chú chuyên môn">
-                                        </div>
-                                        <div class="col-md-3">
-                                            <button type="button" id="btnAddDocService" class="btn btn-sm btn-primary w-100 text-nowrap">
-                                                <i class="bi bi-plus-lg me-1"></i>Cấp quyền
-                                            </button>
-                                        </div>
+                                        <button type="button" id="btnToggleAllServices" class="btn btn-sm btn-outline-secondary text-nowrap">
+                                            Chọn tất cả
+                                        </button>
                                     </div>
-                                    <div id="docServicePermList" class="small text-muted flex-grow-1">Đang tải danh sách quyền dịch vụ...</div>
+                                    <div id="docServiceChecklist" class="doc-perm-list flex-grow-1 small text-muted">
+                                        Đang tải danh sách dịch vụ...
+                                    </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- THANH HÀNH ĐỘNG CHUNG: 1 PRIMARY CTA DUY NHẤT -->
+                        <div class="doc-perm-footer">
+                            <div class="small text-muted" id="docPermDirtyHint">
+                                <i class="bi bi-check-circle text-success me-1"></i>Dữ liệu đang đồng bộ với hệ thống.
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" id="btnResetDocPerms" class="btn btn-sm btn-light border d-none">
+                                    Đặt lại
+                                </button>
+                                <button type="button" id="btnSaveDocPerms" class="btn btn-sm btn-primary px-3">
+                                    <i class="bi bi-check2-circle me-1"></i>Lưu phân quyền
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -553,21 +673,44 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // 4. Phase 1: Tải, cấp & thu hồi phân công Phòng / Dịch vụ cho bác sĩ
+    // 4. Checklist đồng bộ Phân công Phòng khám & Quyền Dịch vụ chuyên môn cho bác sĩ
     const csrfMeta = document.querySelector('meta[name="_csrf"]');
     const csrfHeaderMeta = document.querySelector('meta[name="_csrf_header"]');
     const csrfInput = document.querySelector('input[name="_csrf"]');
     const csrfToken = csrfMeta ? csrfMeta.content : (csrfInput ? csrfInput.value : '');
     const csrfHeader = csrfHeaderMeta ? csrfHeaderMeta.content : 'X-CSRF-TOKEN';
+
     const branchSel = document.getElementById('docResBranchSelect');
-    const roomSel = document.getElementById('docResRoomSelect');
-    const svcSel = document.getElementById('docResServiceSelect');
+    const roomChecklistEl = document.getElementById('docRoomChecklist');
+    const roomCountBadge = document.getElementById('docRoomCountBadge');
+    const btnToggleAllRooms = document.getElementById('btnToggleAllRooms');
+
     const svcSearch = document.getElementById('docResServiceSearch');
+    const svcChecklistEl = document.getElementById('docServiceChecklist');
+    const svcCountBadge = document.getElementById('docServiceCountBadge');
+    const btnToggleAllServices = document.getElementById('btnToggleAllServices');
+
     const resAlert = document.getElementById('docResAlert');
+    const dirtyHintEl = document.getElementById('docPermDirtyHint');
+    const btnResetDocPerms = document.getElementById('btnResetDocPerms');
+    const btnSaveDocPerms = document.getElementById('btnSaveDocPerms');
+
+    const ROOM_TYPE_LABELS = {
+        EXAM: 'Phòng khám',
+        TREATMENT: 'Phòng điều trị',
+        XRAY: 'Chẩn đoán hình ảnh',
+        LAB: 'Phòng Labo',
+        OTHER: 'Phòng khác'
+    };
+
+    let allBranchRooms = [];
+    let savedRoomIds = new Set();
+    let selectedRoomIds = new Set();
+    let currentBranchId = branchSel ? branchSel.value : '';
 
     let allActiveServices = [];
-    let grantedRoomIds = new Set();
-    let grantedServiceIds = new Set();
+    let savedServiceIds = new Set();
+    let selectedServiceIds = new Set();
 
     function showResAlert(msg, isError) {
         if (!resAlert) return;
@@ -580,187 +723,344 @@ document.addEventListener('DOMContentLoaded', function () {
         return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
-    function reqRes(url, method, params) {
-        const headers = {};
+    function setsEqual(a, b) {
+        if (a.size !== b.size) return false;
+        for (const v of a) {
+            if (!b.has(v)) return false;
+        }
+        return true;
+    }
+
+    function isRoomsDirty() {
+        return Boolean(currentBranchId) && !setsEqual(savedRoomIds, selectedRoomIds);
+    }
+
+    function isServicesDirty() {
+        return !setsEqual(savedServiceIds, selectedServiceIds);
+    }
+
+    function updateDirtyUI() {
+        const dirty = isRoomsDirty() || isServicesDirty();
+        if (dirtyHintEl) {
+            dirtyHintEl.innerHTML = dirty
+                ? '<i class="bi bi-exclamation-circle text-warning me-1"></i>Bạn có thay đổi chưa lưu — bấm <strong>Lưu phân quyền</strong> để áp dụng.'
+                : '<i class="bi bi-check-circle text-success me-1"></i>Dữ liệu đang đồng bộ với hệ thống.';
+        }
+        if (btnResetDocPerms) {
+            btnResetDocPerms.classList.toggle('d-none', !dirty);
+        }
+    }
+
+    function putJson(url, bodyObj) {
+        const headers = { 'Content-Type': 'application/json' };
         if (csrfToken) headers[csrfHeader] = csrfToken;
-        const opts = { method, headers };
-        if (method === 'POST') {
-            headers['Content-Type'] = 'application/x-www-form-urlencoded';
-            opts.body = new URLSearchParams(params || {});
+        return fetch(url, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify(bodyObj)
+        }).then(r => r.json().catch(() => ({})).then(d => {
+            if (!r.ok) throw new Error(d.message || 'Thao tác lưu thất bại');
+            return d;
+        }));
+    }
+
+    function renderRoomChecklist() {
+        if (!roomChecklistEl) return;
+        const total = allBranchRooms.length;
+        const activeIdSet = new Set(allBranchRooms.map(r => Number(r.roomId)));
+        const selectedCount = [...selectedRoomIds].filter(id => activeIdSet.has(id)).length;
+        if (roomCountBadge) roomCountBadge.textContent = `Đã chọn ${selectedCount} / ${total}`;
+
+        if (btnToggleAllRooms) {
+            const allSelected = total > 0 && selectedCount === total;
+            btnToggleAllRooms.textContent = allSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả';
+            btnToggleAllRooms.disabled = total === 0;
         }
-        return fetch(url, opts)
-            .then(r => r.json().catch(() => ({})).then(d => { if (!r.ok) throw new Error(d.message || 'Thao tác thất bại'); return d; }));
-    }
 
-    function statusBadgeHtml(status) {
-        if (status === 'ACTIVE') return '<span class="badge bg-success-subtle text-success">ACTIVE</span>';
-        if (status === 'PENDING_REVIEW') return '<span class="badge bg-warning-subtle text-warning-emphasis">PENDING_REVIEW</span>';
-        return '<span class="badge bg-secondary-subtle text-secondary">Đã thu hồi</span>';
-    }
-
-    function loadBranchRoomsDropdown() {
-        if (!roomSel || !branchSel || !branchSel.value) {
-            if (roomSel) roomSel.innerHTML = '<option value="">-- Chưa có chi nhánh ACTIVE --</option>';
+        if (!currentBranchId) {
+            roomChecklistEl.innerHTML = '<div class="text-muted py-3 text-center">Bác sĩ chưa có chi nhánh đang hiệu lực.</div>';
+            updateDirtyUI();
             return;
         }
-        roomSel.innerHTML = '<option value="">Đang tải phòng...</option>';
-        fetch(`/admin/api/resources/branches/${branchSel.value}/rooms`)
-            .then(r => r.ok ? r.json() : [])
-            .then(rooms => {
-                const available = rooms.filter(r => !grantedRoomIds.has(r.roomId));
-                if (!available.length) {
-                    roomSel.innerHTML = '<option value="">-- Không còn phòng trống để cấp --</option>';
-                    return;
-                }
-                roomSel.innerHTML = '<option value="">-- Chọn phòng khám --</option>' + available.map(r =>
-                    `<option value="${r.roomId}">${escapeHtml(r.roomCode)} - ${escapeHtml(r.roomName)} (${r.chairCount} ghế · ${escapeHtml(r.status)})</option>`
-                ).join('');
-            })
-            .catch(() => { roomSel.innerHTML = '<option value="">-- Lỗi tải danh sách phòng --</option>'; });
-    }
+        if (!total) {
+            roomChecklistEl.innerHTML = '<div class="text-muted py-3 text-center">Chi nhánh này chưa có phòng khám đang hoạt động.</div>';
+            updateDirtyUI();
+            return;
+        }
 
-    function renderServiceDropdown() {
-        if (!svcSel) return;
-        const q = (svcSearch?.value || '').trim().toLowerCase();
-        const available = allActiveServices.filter(s => {
-            if (grantedServiceIds.has(s.serviceId)) return false;
-            if (!q) return true;
-            return (s.serviceCode || '').toLowerCase().includes(q) || (s.serviceName || '').toLowerCase().includes(q);
+        roomChecklistEl.innerHTML = allBranchRooms.map(r => {
+            const rid = Number(r.roomId);
+            const checked = selectedRoomIds.has(rid);
+            const typeLabel = ROOM_TYPE_LABELS[r.roomType] || r.roomType || 'Phòng khám';
+            return `<label class="doc-perm-item doc-perm-room-card ${checked ? 'is-selected' : ''}">
+                <span class="d-flex align-items-start gap-2">
+                    <input type="checkbox" class="form-check-input mt-1 doc-room-cb" value="${rid}" ${checked ? 'checked' : ''}>
+                    <span>
+                        <span class="doc-perm-title d-block">${escapeHtml(r.roomCode)} - ${escapeHtml(r.roomName)}</span>
+                        <span class="doc-perm-meta">${escapeHtml(typeLabel)} · ${Number(r.chairCount || 0)} ghế hoạt động</span>
+                    </span>
+                </span>
+            </label>`;
+        }).join('');
+
+        roomChecklistEl.querySelectorAll('.doc-room-cb').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const rid = Number(cb.value);
+                if (cb.checked) selectedRoomIds.add(rid);
+                else selectedRoomIds.delete(rid);
+                renderRoomChecklist();
+            });
         });
-        if (!available.length) {
-            svcSel.innerHTML = '<option value="">-- Không tìm thấy dịch vụ phù hợp --</option>';
-            return;
-        }
-        svcSel.innerHTML = '<option value="">-- Chọn dịch vụ --</option>' + available.map(s =>
-            `<option value="${s.serviceId}">${escapeHtml(s.serviceCode)} - ${escapeHtml(s.serviceName)} (${s.durationMinutes}p)</option>`
-        ).join('');
+        updateDirtyUI();
     }
 
-    function loadServicesDropdown() {
-        if (!svcSel) return;
-        fetch('/admin/api/resources/services')
-            .then(r => r.ok ? r.json() : [])
-            .then(list => {
-                allActiveServices = Array.isArray(list) ? list : [];
-                renderServiceDropdown();
-            })
-            .catch(() => { svcSel.innerHTML = '<option value="">-- Lỗi tải dịch vụ --</option>'; });
-    }
-
-    function loadDocRooms() {
-        const box = document.getElementById('docRoomAssignmentList');
-        const badge = document.getElementById('docRoomCountBadge');
-        if (!box || !branchSel || !branchSel.value) {
-            if (box) box.innerHTML = '<div class="text-muted py-2">Nhân viên chưa có chi nhánh ACTIVE.</div>';
-            loadBranchRoomsDropdown();
+    function loadBranchRoomsAndAssignments() {
+        if (!roomChecklistEl) return;
+        currentBranchId = branchSel ? branchSel.value : '';
+        if (!currentBranchId) {
+            allBranchRooms = [];
+            savedRoomIds = new Set();
+            selectedRoomIds = new Set();
+            renderRoomChecklist();
             return;
         }
-        box.innerHTML = '<div class="text-muted py-2">Đang tải danh sách phòng...</div>';
-        fetch(`/admin/api/resources/branches/${branchSel.value}/doctors/${staffId}/rooms`)
-            .then(r => r.ok ? r.json() : [])
-            .then(list => {
-                const activeList = list.filter(a => a.status !== 'INACTIVE');
-                grantedRoomIds = new Set(activeList.map(a => a.roomId));
-                if (badge) badge.textContent = String(activeList.length);
-                loadBranchRoomsDropdown();
-                if (!list.length) { box.innerHTML = '<div class="text-muted py-2">Chưa có phân công phòng nào.</div>'; return; }
-                box.innerHTML = list.map(a => {
-                    const approveBtn = a.status === 'PENDING_REVIEW'
-                        ? `<button type="button" class="btn btn-outline-success btn-sm py-0 px-2 btn-approve-room" data-id="${a.assignmentId}">Duyệt ACTIVE</button>`
-                        : '';
-                    const revokeBtn = a.status !== 'INACTIVE'
-                        ? `<button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 btn-revoke-room" data-id="${a.assignmentId}"><i class="bi bi-x-circle me-1"></i>Thu hồi</button>`
-                        : '';
-                    return `<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 border-bottom">
-                        <span><strong>${escapeHtml(a.roomCode)}</strong> - ${escapeHtml(a.roomName)} ${statusBadgeHtml(a.status)}</span>
-                        <span class="d-flex gap-1">${approveBtn}${revokeBtn}</span>
-                    </div>`;
-                }).join('');
-                box.querySelectorAll('.btn-approve-room').forEach(btn => {
-                    btn.addEventListener('click', () => reqRes(`/admin/api/resources/doctors/room-assignments/${btn.dataset.id}/approve`, 'POST')
-                        .then(() => { showResAlert('Đã duyệt phân công phòng sang ACTIVE.', false); loadDocRooms(); })
-                        .catch(e => showResAlert(e.message, true)));
-                });
-                box.querySelectorAll('.btn-revoke-room').forEach(btn => {
-                    btn.addEventListener('click', () => reqRes(`/admin/api/resources/doctors/room-assignments/${btn.dataset.id}`, 'DELETE')
-                        .then(() => { showResAlert('Đã thu hồi phân công phòng.', false); loadDocRooms(); })
-                        .catch(e => showResAlert(e.message, true)));
-                });
+        roomChecklistEl.innerHTML = '<div class="text-muted py-3 text-center">Đang tải danh sách phòng...</div>';
+        Promise.all([
+            fetch(`/admin/api/resources/branches/${currentBranchId}/rooms`).then(r => r.ok ? r.json() : []),
+            fetch(`/admin/api/resources/branches/${currentBranchId}/doctors/${staffId}/rooms`).then(r => r.ok ? r.json() : [])
+        ]).then(([rooms, assigned]) => {
+            allBranchRooms = Array.isArray(rooms) ? rooms : [];
+            const activeAssigned = (Array.isArray(assigned) ? assigned : [])
+                .filter(a => a.status === 'ACTIVE')
+                .map(a => Number(a.roomId));
+            savedRoomIds = new Set(activeAssigned);
+            selectedRoomIds = new Set(activeAssigned);
+            renderRoomChecklist();
+        }).catch(() => {
+            roomChecklistEl.innerHTML = '<div class="text-danger py-3 text-center">Không thể tải danh sách phòng khám.</div>';
+        });
+    }
+
+    function getFilteredServices() {
+        const q = (svcSearch?.value || '').trim().toLowerCase();
+        if (!q) return allActiveServices;
+        return allActiveServices.filter(s =>
+            (s.serviceCode || '').toLowerCase().includes(q)
+            || (s.serviceName || '').toLowerCase().includes(q)
+            || (s.categoryName || '').toLowerCase().includes(q)
+        );
+    }
+
+    function renderServiceChecklist() {
+        if (!svcChecklistEl) return;
+        const total = allActiveServices.length;
+        const activeIdSet = new Set(allActiveServices.map(s => Number(s.serviceId)));
+        const totalSelected = [...selectedServiceIds].filter(id => activeIdSet.has(id)).length;
+        if (svcCountBadge) svcCountBadge.textContent = `Đã chọn ${totalSelected} / ${total}`;
+
+        const filtered = getFilteredServices();
+        const filteredSelected = filtered.filter(s => selectedServiceIds.has(Number(s.serviceId))).length;
+
+        if (btnToggleAllServices) {
+            const allFilteredSelected = filtered.length > 0 && filteredSelected === filtered.length;
+            const isFiltered = Boolean((svcSearch?.value || '').trim());
+            btnToggleAllServices.textContent = allFilteredSelected
+                ? (isFiltered ? 'Bỏ chọn kết quả lọc' : 'Bỏ chọn tất cả')
+                : (isFiltered ? 'Chọn kết quả lọc' : 'Chọn tất cả');
+            btnToggleAllServices.disabled = filtered.length === 0;
+        }
+
+        if (!total) {
+            svcChecklistEl.innerHTML = '<div class="text-muted py-3 text-center">Hệ thống chưa có dịch vụ đang hoạt động.</div>';
+            updateDirtyUI();
+            return;
+        }
+        if (!filtered.length) {
+            svcChecklistEl.innerHTML = '<div class="text-muted py-3 text-center">Không tìm thấy dịch vụ khớp từ khóa tìm kiếm.</div>';
+            updateDirtyUI();
+            return;
+        }
+
+        const groups = new Map();
+        filtered.forEach(s => {
+            const catName = s.categoryName || 'Nhóm dịch vụ khác';
+            if (!groups.has(catName)) groups.set(catName, []);
+            groups.get(catName).push(s);
+        });
+
+        let html = '';
+        let groupIdx = 0;
+        groups.forEach((items, catName) => {
+            const gIdx = groupIdx++;
+            const selectedInGroup = items.filter(s => selectedServiceIds.has(Number(s.serviceId))).length;
+            const allInGroup = selectedInGroup === items.length;
+            html += `<div class="doc-perm-group">
+                <label class="doc-perm-group-head">
+                    <span class="d-flex align-items-center gap-2">
+                        <input type="checkbox" class="form-check-input m-0 doc-svc-group-cb"
+                               data-group="${gIdx}" ${allInGroup ? 'checked' : ''}>
+                        <span class="fw-semibold text-dark small">${escapeHtml(catName)}</span>
+                    </span>
+                    <span class="doc-perm-meta">${selectedInGroup} / ${items.length}</span>
+                </label>
+                <div>`;
+            items.forEach(s => {
+                const sid = Number(s.serviceId);
+                const checked = selectedServiceIds.has(sid);
+                html += `<label class="doc-perm-item ${checked ? 'is-selected' : ''}">
+                    <span class="d-flex align-items-center gap-2">
+                        <input type="checkbox" class="form-check-input m-0 doc-svc-cb"
+                               data-group="${gIdx}" value="${sid}" ${checked ? 'checked' : ''}>
+                        <span class="doc-perm-title">${escapeHtml(s.serviceName)}</span>
+                    </span>
+                    <span class="doc-perm-meta text-nowrap">${escapeHtml(s.serviceCode)} · ${Number(s.durationMinutes || 0)}p</span>
+                </label>`;
             });
-    }
+            html += '</div></div>';
+        });
 
-    function loadDocServices() {
-        const box = document.getElementById('docServicePermList');
-        const badge = document.getElementById('docServiceCountBadge');
-        if (!box) return;
-        box.innerHTML = '<div class="text-muted py-2">Đang tải danh sách quyền dịch vụ...</div>';
-        fetch(`/admin/api/resources/doctors/${staffId}/services`)
-            .then(r => r.ok ? r.json() : [])
-            .then(list => {
-                const activeList = list.filter(p => p.status !== 'INACTIVE');
-                grantedServiceIds = new Set(activeList.map(p => p.serviceId));
-                if (badge) badge.textContent = String(activeList.length);
-                renderServiceDropdown();
-                if (!list.length) { box.innerHTML = '<div class="text-muted py-2">Chưa có phân quyền dịch vụ nào.</div>'; return; }
-                box.innerHTML = list.map(p => {
-                    const approveBtn = p.status === 'PENDING_REVIEW'
-                        ? `<button type="button" class="btn btn-outline-success btn-sm py-0 px-2 btn-approve-svc" data-id="${p.permissionId}">Duyệt ACTIVE</button>`
-                        : '';
-                    const revokeBtn = p.status !== 'INACTIVE'
-                        ? `<button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 btn-revoke-svc" data-id="${p.permissionId}"><i class="bi bi-x-circle me-1"></i>Thu hồi</button>`
-                        : '';
-                    return `<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 border-bottom">
-                        <span><strong>${escapeHtml(p.serviceCode)}</strong> - ${escapeHtml(p.serviceName)} ${statusBadgeHtml(p.status)}</span>
-                        <span class="d-flex gap-1">${approveBtn}${revokeBtn}</span>
-                    </div>`;
-                }).join('');
-                box.querySelectorAll('.btn-approve-svc').forEach(btn => {
-                    btn.addEventListener('click', () => reqRes(`/admin/api/resources/doctors/service-permissions/${btn.dataset.id}/approve`, 'POST')
-                        .then(() => { showResAlert('Đã duyệt quyền dịch vụ sang ACTIVE.', false); loadDocServices(); })
-                        .catch(e => showResAlert(e.message, true)));
+        svcChecklistEl.innerHTML = html;
+
+        // Đặt trạng thái bán chọn (indeterminate) cho checkbox nhóm
+        let idx = 0;
+        groups.forEach(items => {
+            const gCb = svcChecklistEl.querySelector(`.doc-svc-group-cb[data-group="${idx}"]`);
+            if (gCb) {
+                const selectedInGroup = items.filter(s => selectedServiceIds.has(Number(s.serviceId))).length;
+                gCb.indeterminate = selectedInGroup > 0 && selectedInGroup < items.length;
+                gCb.addEventListener('change', () => {
+                    items.forEach(s => {
+                        const sid = Number(s.serviceId);
+                        if (gCb.checked) selectedServiceIds.add(sid);
+                        else selectedServiceIds.delete(sid);
+                    });
+                    renderServiceChecklist();
                 });
-                box.querySelectorAll('.btn-revoke-svc').forEach(btn => {
-                    btn.addEventListener('click', () => reqRes(`/admin/api/resources/doctors/service-permissions/${btn.dataset.id}`, 'DELETE')
-                        .then(() => { showResAlert('Đã thu hồi quyền dịch vụ.', false); loadDocServices(); })
-                        .catch(e => showResAlert(e.message, true)));
-                });
+            }
+            idx++;
+        });
+
+        svcChecklistEl.querySelectorAll('.doc-svc-cb').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const sid = Number(cb.value);
+                if (cb.checked) selectedServiceIds.add(sid);
+                else selectedServiceIds.delete(sid);
+                renderServiceChecklist();
             });
+        });
+
+        updateDirtyUI();
     }
 
-    if (branchSel) branchSel.addEventListener('change', loadDocRooms);
-    if (svcSearch) svcSearch.addEventListener('input', renderServiceDropdown);
-    document.getElementById('btnAddDocRoom')?.addEventListener('click', () => {
-        if (!branchSel || !branchSel.value || !roomSel || !roomSel.value) {
-            showResAlert('Vui lòng chọn chi nhánh và phòng khám hợp lệ.', true);
-            return;
-        }
-        reqRes(`/admin/api/resources/branches/${branchSel.value}/doctors/${staffId}/rooms`, 'POST', {
-            roomId: roomSel.value,
-            status: 'PENDING_REVIEW'
-        }).then(() => {
-            showResAlert('Đã gửi yêu cầu phân công phòng.', false);
-            loadDocRooms();
-        }).catch(e => showResAlert(e.message, true));
-    });
-    document.getElementById('btnAddDocService')?.addEventListener('click', () => {
-        if (!svcSel || !svcSel.value) {
-            showResAlert('Vui lòng chọn dịch vụ hợp lệ.', true);
-            return;
-        }
-        reqRes(`/admin/api/resources/doctors/${staffId}/services`, 'POST', {
-            serviceId: svcSel.value,
-            note: document.getElementById('docResServiceNote').value,
-            status: 'PENDING_REVIEW'
-        }).then(() => {
-            document.getElementById('docResServiceNote').value = '';
-            showResAlert('Đã gửi yêu cầu phân quyền dịch vụ.', false);
-            loadDocServices();
-        }).catch(e => showResAlert(e.message, true));
-    });
-    if (document.getElementById('docResRoomSelect')) {
-        loadServicesDropdown();
-        loadDocRooms();
-        loadDocServices();
+    function loadServicesAndPermissions() {
+        if (!svcChecklistEl) return;
+        svcChecklistEl.innerHTML = '<div class="text-muted py-3 text-center">Đang tải danh sách dịch vụ...</div>';
+        Promise.all([
+            fetch('/admin/api/resources/services').then(r => r.ok ? r.json() : []),
+            fetch(`/admin/api/resources/doctors/${staffId}/services`).then(r => r.ok ? r.json() : [])
+        ]).then(([services, granted]) => {
+            allActiveServices = Array.isArray(services) ? services : [];
+            const activeGranted = (Array.isArray(granted) ? granted : [])
+                .filter(p => p.status === 'ACTIVE')
+                .map(p => Number(p.serviceId));
+            savedServiceIds = new Set(activeGranted);
+            selectedServiceIds = new Set(activeGranted);
+            renderServiceChecklist();
+        }).catch(() => {
+            svcChecklistEl.innerHTML = '<div class="text-danger py-3 text-center">Không thể tải danh sách dịch vụ chuyên môn.</div>';
+        });
+    }
+
+    if (branchSel) {
+        branchSel.addEventListener('change', () => {
+            if (isRoomsDirty() && !confirm('Bạn chưa lưu thay đổi phòng ở chi nhánh hiện tại. Chuyển chi nhánh sẽ bỏ thay đổi chưa lưu?')) {
+                branchSel.value = currentBranchId;
+                return;
+            }
+            loadBranchRoomsAndAssignments();
+        });
+    }
+
+    if (btnToggleAllRooms) {
+        btnToggleAllRooms.addEventListener('click', () => {
+            const allIds = allBranchRooms.map(r => Number(r.roomId));
+            const allSelected = allIds.length > 0 && allIds.every(id => selectedRoomIds.has(id));
+            if (allSelected) allIds.forEach(id => selectedRoomIds.delete(id));
+            else allIds.forEach(id => selectedRoomIds.add(id));
+            renderRoomChecklist();
+        });
+    }
+
+    if (svcSearch) {
+        svcSearch.addEventListener('input', renderServiceChecklist);
+    }
+
+    if (btnToggleAllServices) {
+        btnToggleAllServices.addEventListener('click', () => {
+            const visibleIds = getFilteredServices().map(s => Number(s.serviceId));
+            const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedServiceIds.has(id));
+            if (allSelected) visibleIds.forEach(id => selectedServiceIds.delete(id));
+            else visibleIds.forEach(id => selectedServiceIds.add(id));
+            renderServiceChecklist();
+        });
+    }
+
+    if (btnResetDocPerms) {
+        btnResetDocPerms.addEventListener('click', () => {
+            selectedRoomIds = new Set(savedRoomIds);
+            selectedServiceIds = new Set(savedServiceIds);
+            renderRoomChecklist();
+            renderServiceChecklist();
+            if (resAlert) resAlert.classList.add('d-none');
+        });
+    }
+
+    if (btnSaveDocPerms) {
+        btnSaveDocPerms.addEventListener('click', () => {
+            const origHtml = btnSaveDocPerms.innerHTML;
+            btnSaveDocPerms.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Đang lưu...';
+            const tasks = [];
+            if (currentBranchId && allBranchRooms.length > 0) {
+                const activeRoomIdSet = new Set(allBranchRooms.map(r => Number(r.roomId)));
+                const roomIdsToSave = [...selectedRoomIds].filter(id => activeRoomIdSet.has(id));
+                tasks.push(
+                    putJson(`/admin/api/resources/branches/${currentBranchId}/doctors/${staffId}/rooms/sync`, {
+                        roomIds: roomIdsToSave
+                    }).then(res => {
+                        const synced = (res.roomIds || roomIdsToSave).map(Number);
+                        savedRoomIds = new Set(synced);
+                        selectedRoomIds = new Set(synced);
+                    })
+                );
+            }
+            const activeSvcIdSet = new Set(allActiveServices.map(s => Number(s.serviceId)));
+            const serviceIdsToSave = [...selectedServiceIds].filter(id => activeSvcIdSet.has(id));
+            tasks.push(
+                putJson(`/admin/api/resources/doctors/${staffId}/services/sync`, {
+                    serviceIds: serviceIdsToSave
+                }).then(res => {
+                    const synced = (res.serviceIds || serviceIdsToSave).map(Number);
+                    savedServiceIds = new Set(synced);
+                    selectedServiceIds = new Set(synced);
+                })
+            );
+
+            Promise.all(tasks)
+                .then(() => {
+                    renderRoomChecklist();
+                    renderServiceChecklist();
+                    showResAlert(`Đã lưu phân quyền thành công (${savedRoomIds.size} phòng · ${savedServiceIds.size} dịch vụ).`, false);
+                })
+                .catch(e => showResAlert(e.message, true))
+                .finally(() => {
+                    btnSaveDocPerms.innerHTML = origHtml;
+                });
+        });
+    }
+
+    if (roomChecklistEl || svcChecklistEl) {
+        loadBranchRoomsAndAssignments();
+        loadServicesAndPermissions();
     }
 });
 </script>

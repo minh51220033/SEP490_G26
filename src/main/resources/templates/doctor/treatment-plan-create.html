@@ -17,7 +17,7 @@
 
             <style>
                 :root {
-                    --df-font-sans: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, sans-serif;
+                    --df-font-sans: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
                     --df-font-mono: 'JetBrains Mono', monospace;
                     --df-primary: #0284c7;
                     --df-primary-dark: #0369a1;
@@ -1148,7 +1148,7 @@
                                                     Combo
                                                 </option>
                                             </select>
-                                            <button type="button" class="btn btn-sm df-btn-tonal-primary rounded-3 px-3 py-1 fw-semibold text-nowrap"
+                                            <button type="button" id="btnApplyPlanCombo" class="btn btn-sm df-btn-tonal-primary rounded-3 px-3 py-1 fw-semibold text-nowrap"
                                                     onclick="applySelectedCombo()">
                                                 <i class="bi bi-lightning-charge me-1"></i>Nạp Combo vào kế hoạch
                                             </button>
@@ -2123,7 +2123,8 @@
         };
 
         initServiceStagesFromCatalog(serviceEntry);
-        const isBookedMatch = Boolean(SERVER_BOOKED_SERVICE && String(SERVER_BOOKED_SERVICE.serviceId) === String(srvId));
+        const alreadyHasBookedRow = PLAN_SERVICES.some(x => x.isBookedLocked && String(x.serviceId) === String(srvId));
+        const isBookedMatch = Boolean(!alreadyHasBookedRow && SERVER_BOOKED_SERVICE && String(SERVER_BOOKED_SERVICE.serviceId) === String(srvId));
         if (isBookedMatch) {
             serviceEntry.isBookedLocked = true;
         } else if (SERVER_BOOKED_SERVICE && SERVER_BOOKED_SERVICE.serviceId && Number(DESK_WAITING_COUNT || 0) > 0) {
@@ -2147,7 +2148,42 @@
         }
     }
 
-    // Tầng 1 Combo VTTech: nạp toàn bộ dịch vụ thành phần & quy trình bước của từng dịch vụ vào phác đồ
+    function getFilteredWorkflowCombos() {
+        const allCombos = Array.isArray(SERVER_WORKFLOW_COMBOS) ? SERVER_WORKFLOW_COMBOS : [];
+        if (!SERVER_BOOKED_SERVICE || !SERVER_BOOKED_SERVICE.serviceId) {
+            return allCombos;
+        }
+        const bookedId = String(SERVER_BOOKED_SERVICE.serviceId);
+        return allCombos.filter(c =>
+            Array.isArray(c.items) && c.items.some(it => it && it.serviceId != null && String(it.serviceId) === bookedId)
+        );
+    }
+
+    function renderPlanComboOptions() {
+        const sel = document.getElementById('planComboSelect');
+        const applyBtn = document.getElementById('btnApplyPlanCombo');
+        if (!sel) return;
+        const combos = getFilteredWorkflowCombos();
+        const hasBooked = Boolean(SERVER_BOOKED_SERVICE && SERVER_BOOKED_SERVICE.serviceId);
+
+        if (combos.length === 0) {
+            sel.innerHTML = hasBooked
+                ? '<option value="">-- Chưa có gói Combo chứa dịch vụ đã đặt lịch --</option>'
+                : '<option value="">-- Chọn gói Combo dịch vụ --</option>';
+            sel.disabled = hasBooked;
+            if (applyBtn) applyBtn.disabled = hasBooked;
+            return;
+        }
+
+        sel.disabled = false;
+        if (applyBtn) applyBtn.disabled = false;
+        sel.innerHTML = [
+            '<option value="">-- Chọn gói Combo dịch vụ --</option>',
+            ...combos.map(c => `<option value="${escapeHtml(c.comboId)}">${escapeHtml(c.comboCode)} · ${escapeHtml(c.comboName)} (${Number(c.serviceCount || 0)} dịch vụ · ${formatMoney(c.totalBasePrice || 0)})</option>`)
+        ].join('');
+    }
+
+    // Tầng 1 Combo VTTech: nạp toàn bộ dịch vụ thành phần & quy trình bước theo đúng thứ tự trong Combo, tránh trùng dịch vụ đã đặt lịch
     function applySelectedCombo() {
         const sel = document.getElementById('planComboSelect');
         if (!sel || !sel.value) {
@@ -2156,30 +2192,62 @@
             return;
         }
         hideInlineBanner();
-        const combo = (SERVER_WORKFLOW_COMBOS || []).find(c => String(c.comboId) === String(sel.value));
+        const combo = getFilteredWorkflowCombos().find(c => String(c.comboId) === String(sel.value));
         if (!combo || !Array.isArray(combo.items) || combo.items.length === 0) {
             showToast('Gói Combo chưa có dịch vụ thành phần hợp lệ.', true);
             return;
         }
-        let addedCount = 0;
-        combo.items.forEach(it => {
-            const sId = it.serviceId != null ? String(it.serviceId) : '';
+
+        const orderedComboItems = [...combo.items].sort((a, b) =>
+            Number(a.sequenceOrder != null ? a.sequenceOrder : 999) - Number(b.sequenceOrder != null ? b.sequenceOrder : 999)
+        );
+        const usedExistingIds = new Set();
+        const comboOrderedEntries = [];
+        let newlyAddedCount = 0;
+
+        orderedComboItems.forEach(it => {
+            const sId = it && it.serviceId != null ? String(it.serviceId) : '';
             if (!sId || !SERVICES_DICT[sId]) return;
-            const defaultScope = isPackageService(sId) ? 'Toàn hàm' : '';
-            addServiceFromPicker(sId, defaultScope, it.defaultQuantity || 1, true);
-            addedCount++;
+
+            const existingBooked = PLAN_SERVICES.find(x =>
+                !usedExistingIds.has(x.id) && x.isBookedLocked && String(x.serviceId) === sId
+            );
+            const existingOther = existingBooked || PLAN_SERVICES.find(x =>
+                !usedExistingIds.has(x.id) && String(x.serviceId) === sId
+            );
+
+            if (existingOther) {
+                usedExistingIds.add(existingOther.id);
+                comboOrderedEntries.push(existingOther);
+            } else {
+                const defaultScope = isPackageService(sId) ? 'Toàn hàm' : '';
+                addServiceFromPicker(sId, defaultScope, it.defaultQuantity || 1, true);
+                const newlyAdded = PLAN_SERVICES[PLAN_SERVICES.length - 1];
+                if (newlyAdded) {
+                    usedExistingIds.add(newlyAdded.id);
+                    comboOrderedEntries.push(newlyAdded);
+                    newlyAddedCount++;
+                }
+            }
         });
-        if (addedCount === 0) {
+
+        if (comboOrderedEntries.length === 0) {
             showToast('Các dịch vụ trong Combo chưa sẵn sàng trong Bảng giá hoạt động.', true);
             return;
         }
+
+        const remainingEntries = PLAN_SERVICES.filter(x => !usedExistingIds.has(x.id));
+        PLAN_SERVICES.length = 0;
+        PLAN_SERVICES.push(...comboOrderedEntries, ...remainingEntries);
+        PLAN_SERVICES.forEach((item, idx) => { item.order = idx + 1; });
+
         const titleEl = document.getElementById('planTitleInput');
         if (titleEl && !titleEl.value.trim()) {
             titleEl.value = 'Kế hoạch: ' + combo.comboName;
         }
         recalculatePlanEndDate();
         renderAll();
-        showToast(`Đã nạp Combo "${combo.comboName}" (${addedCount} dịch vụ kèm quy trình bước).`, false);
+        showToast(`Đã nạp Combo "${combo.comboName}" (${comboOrderedEntries.length} dịch vụ theo đúng thứ tự${newlyAddedCount < comboOrderedEntries.length ? ', giữ nguyên dịch vụ đã chọn trước đó' : ''}).`, false);
         sel.value = '';
     }
 
@@ -3776,6 +3844,7 @@
         if (typeof clearFieldError === 'function') clearFieldError('planNameError');
 
         ensureBookedServiceInPlan();
+        renderPlanComboOptions();
         recalculatePlanEndDate();
         renderAll();
         if (typeof renderInstallmentsTable === 'function') {
@@ -4116,6 +4185,7 @@
 
     document.addEventListener('DOMContentLoaded', async function() {
         renderServiceComboItems('');
+        renderPlanComboOptions();
         renderCommonIcdChips();
         renderServiceSuggestionsBar();
 

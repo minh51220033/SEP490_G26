@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <th:block th:fragment="tableStyle">
         <style>
@@ -22,7 +23,7 @@
             .btn,
             .badge,
             .chip {
-                font-family: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif !important;
+                font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif !important;
             }
 
             /* =========================================================================
@@ -37,21 +38,25 @@
                 border-top: 1px solid #e2e8f0;
                 font-size: 0.85rem;
                 color: #334155;
-                font-family: 'Be Vietnam Pro', 'Inter', sans-serif !important;
+                font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif !important;
             }
+
             .misa-pagination-left {
                 font-size: 0.85rem;
                 color: #475569;
             }
+
             .misa-pagination-left strong {
                 color: #0f172a;
                 font-weight: 700;
             }
+
             .misa-pagination-right {
                 display: flex;
                 align-items: center;
                 gap: 12px;
             }
+
             .misa-page-size-wrapper {
                 display: inline-flex;
                 align-items: center;
@@ -60,6 +65,7 @@
                 color: #475569;
                 white-space: nowrap;
             }
+
             .misa-page-size-select {
                 height: 30px;
                 width: 68px !important;
@@ -71,12 +77,14 @@
                 cursor: pointer;
                 font-weight: 600;
             }
+
             .misa-page-range {
                 font-size: 0.85rem;
                 color: #334155;
                 font-weight: 600;
                 white-space: nowrap;
             }
+
             .misa-nav-btn {
                 width: 28px;
                 height: 28px;
@@ -91,11 +99,13 @@
                 text-decoration: none;
                 transition: all 0.15s ease;
             }
+
             .misa-nav-btn:hover:not(.disabled) {
                 background: #f1f5f9;
                 color: #0284c7;
                 border-color: #cbd5e1;
             }
+
             .misa-nav-btn.disabled {
                 color: #cbd5e1 !important;
                 cursor: not-allowed !important;
@@ -355,7 +365,7 @@
             }
 
             .dv-code-pill {
-                font-family: 'Be Vietnam Pro', 'Inter', system-ui, -apple-system, sans-serif !important;
+                font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif !important;
                 font-size: 12.5px !important;
                 font-weight: 700 !important;
                 padding: 4px 10px !important;
@@ -533,7 +543,7 @@
             // =========================================================================
             // HỆ THỐNG KÉO THẢ ĐỘ RỘNG CỘT ĐỘC LẬP & HOVER THAO TÁC NỔI CHUẨN ENTERPRISE
             // =========================================================================
-            (function() {
+            (function () {
                 function setupUniversalEnterpriseTable() {
                     const tables = document.querySelectorAll('.dv-amis-table, .staff-modern-table');
                     tables.forEach(function (table) {
@@ -548,21 +558,21 @@
                         try {
                             const raw = localStorage.getItem(storageKey);
                             if (raw) savedWidths = JSON.parse(raw);
-                        } catch (e) {}
+                        } catch (e) { }
 
                         // Đảm bảo track luôn ở cuối cùng của thead
                         const trackTh = theadRow.querySelector('.dv-floating-actions-track');
                         if (trackTh) theadRow.appendChild(trackTh);
 
                         // Đảm bảo track luôn ở cuối cùng của mỗi tr trong tbody & kích hoạt hover
-                        table.querySelectorAll('tbody tr.dv-data-row').forEach(function(tr) {
+                        table.querySelectorAll('tbody tr.dv-data-row').forEach(function (tr) {
                             const trackTd = tr.querySelector('.dv-floating-actions-track');
                             if (trackTd) tr.appendChild(trackTd);
 
-                            tr.addEventListener('mouseenter', function() {
+                            tr.addEventListener('mouseenter', function () {
                                 tr.classList.add('is-row-hovered');
                             });
-                            tr.addEventListener('mouseleave', function() {
+                            tr.addEventListener('mouseleave', function () {
                                 tr.classList.remove('is-row-hovered');
                             });
                         });
@@ -575,7 +585,7 @@
                         // Tính toán tổng độ rộng bảng từ các cột
                         function syncTableWidth() {
                             let totalW = 0;
-                            ths.forEach(function(th) {
+                            ths.forEach(function (th) {
                                 if (th.offsetParent !== null && !th.classList.contains('d-none')) {
                                     totalW += th.offsetWidth;
                                 }
@@ -586,7 +596,7 @@
                             table.style.minWidth = finalW + 'px';
                         }
 
-                        ths.forEach(function(th, idx) {
+                        ths.forEach(function (th, idx) {
                             const colKey = th.getAttribute('data-col') || ('col_' + idx);
                             let w = savedWidths[colKey];
                             if (!w) {
@@ -609,7 +619,7 @@
                             }
 
                             // Kéo thả thay đổi độ rộng cột độc lập
-                            resizer.onmousedown = function(e) {
+                            resizer.onmousedown = function (e) {
                                 e.preventDefault();
                                 e.stopPropagation();
 
@@ -619,7 +629,7 @@
 
                                 // Lấy tổng độ rộng của tất cả các cột khác đang hiển thị
                                 let otherColsW = 0;
-                                ths.forEach(function(otherTh) {
+                                ths.forEach(function (otherTh) {
                                     if (otherTh !== th && otherTh.offsetParent !== null && !otherTh.classList.contains('d-none')) {
                                         otherColsW += otherTh.offsetWidth;
                                     }
@@ -652,7 +662,7 @@
                                     savedWidths[colKey] = th.offsetWidth;
                                     try {
                                         localStorage.setItem(storageKey, JSON.stringify(savedWidths));
-                                    } catch (err) {}
+                                    } catch (err) { }
                                 }
 
                                 document.addEventListener('mousemove', onMouseMove);
@@ -675,6 +685,8 @@
         </script>
     </th:block>
 </head>
+
 <body>
 </body>
+
 </html>
