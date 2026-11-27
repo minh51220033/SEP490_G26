@@ -87,6 +87,14 @@ public class AppointmentOverlapService {
             int branchCapacity
     ) {}
 
+    public record AlternativeSessionSuggestion(
+            LocalDate date,
+            PreferredSession session,
+            String sessionLabel,
+            LocalTime startTime,
+            LocalTime endTime
+    ) {}
+
     public record OverlapCheckResult(
             boolean validOperatingWindow,
             String operatingError,
@@ -107,7 +115,8 @@ public class AppointmentOverlapService {
             List<SuggestedTimeSlot> clinicSuggestions,
             List<SuggestedTimeSlot> doctorSuggestions,
             List<SuggestedTimeSlot> combinedSuggestions,
-            String noSuggestionMessage
+            String noSuggestionMessage,
+            List<AlternativeSessionSuggestion> alternativeSessionSuggestions
     ) {
         public boolean hasAnyWarning() {
             return clinicOverlap || doctorOverlap;
@@ -139,7 +148,9 @@ public class AppointmentOverlapService {
 
         AppointmentPolicyService.Availability availability = policy.availability(
                 branch, date, session, excludeAppointmentId, AppointmentActorType.PATIENT);
-        if (availability == null || !availability.available()) {
+        boolean softSessionCapReached = availability != null && !availability.available()
+                && "Buổi khám đã đầy.".equals(availability.reason());
+        if (availability == null || (!availability.available() && !softSessionCapReached)) {
             String reason = availability != null && availability.reason() != null
                     ? availability.reason()
                     : "Khung buổi khám không khả dụng theo lịch hoạt động của chi nhánh.";
@@ -177,12 +188,11 @@ public class AppointmentOverlapService {
             if (doctor == null || doctor.getStatus() != StaffStatus.ACTIVE) {
                 return invalidResult("Bác sĩ đã chọn hiện không khả dụng.", durationMinutes, expectedTime);
             }
-            boolean eligibleInSession = availability.doctors().stream().anyMatch(d -> doctorId.equals(d.id()));
-            if (!eligibleInSession) {
+            doctorNetWindows = loadDoctorNetWindows(branchId, doctorId, date, sessionRange);
+            if (doctorNetWindows.isEmpty()) {
                 return invalidResult("Bác sĩ đã chọn không có ca trực hoặc đang nghỉ phép trong buổi này.",
                         durationMinutes, expectedTime);
             }
-            doctorNetWindows = loadDoctorNetWindows(branchId, doctorId, date, sessionRange);
             if (!fitsAnyWindow(expectedTime, requestedEnd, doctorNetWindows)) {
                 return invalidResult(
                         "Khung giờ " + expectedTime.format(TIME_FMT) + " - " + requestedEnd.format(TIME_FMT)
@@ -269,12 +279,17 @@ public class AppointmentOverlapService {
         }
 
         String noSuggestionMessage = null;
+        List<AlternativeSessionSuggestion> alternativeSessionSuggestions = List.of();
         if ((clinicOverlap || doctorOverlap)
                 && clinicSuggestions.isEmpty()
                 && doctorSuggestions.isEmpty()
                 && combinedSuggestions.isEmpty()) {
-            noSuggestionMessage = "Không tìm được khung giờ trống phù hợp đủ " + durationMinutes
-                    + " phút trong ca này. Bạn vẫn có thể giữ giờ mong muốn hoặc chọn ngày/ca khác.";
+            alternativeSessionSuggestions = findAlternativeSessionSuggestions(
+                    branch, date, session, durationMinutes, doctorId, excludeAppointmentId,
+                    today, nowTime, nowDt, operationalChairs);
+            noSuggestionMessage = alternativeSessionSuggestions.isEmpty()
+                    ? "Buổi khám này có thể đông. Bạn vẫn có thể giữ giờ mong muốn hoặc chọn ngày/ca khác để tránh chờ đợi."
+                    : "Buổi khám này có thể đông. Bạn có thể chọn ca khám khác để tránh chờ đợi hoặc giữ nguyên giờ đã chọn.";
         }
 
         return new OverlapCheckResult(
@@ -297,7 +312,8 @@ public class AppointmentOverlapService {
                 clinicSuggestions,
                 doctorSuggestions,
                 combinedSuggestions,
-                noSuggestionMessage
+                noSuggestionMessage,
+                alternativeSessionSuggestions
         );
     }
 
@@ -420,7 +436,8 @@ public class AppointmentOverlapService {
         List<TimeWindow> windows = new ArrayList<>();
         for (StaffSchedule sched : schedules) {
             boolean onLeave = leaves.stream().anyMatch(l ->
-                    l.getShift() == null || l.getShift().getShiftId().equals(sched.getShift().getShiftId()));
+                    (l.getBranch() == null || Objects.equals(branchId, l.getBranch().getBranchId()))
+                            && (l.getShift() == null || l.getShift().getShiftId().equals(sched.getShift().getShiftId())));
             if (onLeave) {
                 continue;
             }
@@ -440,6 +457,79 @@ public class AppointmentOverlapService {
 
     private boolean fitsAnyWindow(LocalTime start, LocalTime end, List<TimeWindow> windows) {
         return windows.stream().anyMatch(w -> !start.isBefore(w.start()) && !end.isAfter(w.end()));
+    }
+
+    private List<AlternativeSessionSuggestion> findAlternativeSessionSuggestions(
+            Branch branch,
+            LocalDate baseDate,
+            PreferredSession currentSession,
+            int durationMinutes,
+            Long doctorId,
+            Long excludeAppointmentId,
+            LocalDate today,
+            LocalTime nowTime,
+            LocalDateTime nowDt,
+            int operationalChairs) {
+        List<AlternativeSessionSuggestion> result = new ArrayList<>();
+        List<PreferredSession> sessions = List.of(
+                PreferredSession.MORNING, PreferredSession.AFTERNOON, PreferredSession.EVENING);
+        for (int dayOffset = 0; dayOffset <= 3 && result.size() < 3; dayOffset++) {
+            LocalDate candidateDate = baseDate.plusDays(dayOffset);
+            for (PreferredSession candidateSession : sessions) {
+                if (result.size() >= 3) {
+                    break;
+                }
+                if (dayOffset == 0 && candidateSession == currentSession) {
+                    continue;
+                }
+                AppointmentPolicyService.SessionRange range = policy.sessionRange(branch, candidateSession);
+                if (range == null || range.start() == null || range.end() == null || !range.start().isBefore(range.end())) {
+                    continue;
+                }
+                AppointmentPolicyService.Availability avail = policy.availability(
+                        branch, candidateDate, candidateSession, excludeAppointmentId, AppointmentActorType.PATIENT);
+                if (avail.doctors().isEmpty()) {
+                    continue;
+                }
+                List<TimeWindow> docWindows = List.of();
+                if (doctorId != null) {
+                    docWindows = loadDoctorNetWindows(branch.getBranchId(), doctorId, candidateDate, range);
+                    if (docWindows.isEmpty()) {
+                        continue;
+                    }
+                }
+                List<Appointment> sessBooked = appointments.findOccupyingForSession(
+                                branch.getBranchId(), candidateDate, candidateSession, OCCUPYING).stream()
+                        .filter(a -> excludeAppointmentId == null || !Objects.equals(a.getAppointmentId(), excludeAppointmentId))
+                        .toList();
+                List<Appointment> docBooked = doctorId == null ? List.of()
+                        : appointments.findDoctorAppointmentsForDate(doctorId, candidateDate, OCCUPYING).stream()
+                        .filter(a -> excludeAppointmentId == null || !Objects.equals(a.getAppointmentId(), excludeAppointmentId))
+                        .toList();
+                int workingDocs = Math.max(1, avail.doctors().size());
+                int cap = operationalChairs > 0 ? Math.min(workingDocs, operationalChairs) : workingDocs;
+                int threshold = cap <= 1 ? 1 : (int) Math.ceil(cap * 0.75d);
+                List<SuggestedTimeSlot> candidates = buildCandidates(
+                        range, candidateDate, today, nowTime, nowDt, durationMinutes,
+                        range.start(), doctorId, docWindows, sessBooked, docBooked, cap, threshold);
+                SuggestedTimeSlot best = candidates.stream()
+                        .filter(s -> "NO_OVERLAP".equals(s.clinicStatus())
+                                && (doctorId == null || "NO_OVERLAP".equals(s.doctorStatus())))
+                        .findFirst()
+                        .orElse(null);
+                if (best != null) {
+                    String label = switch (candidateSession) {
+                        case MORNING -> "Buổi sáng";
+                        case AFTERNOON -> "Buổi chiều";
+                        case EVENING -> "Buổi tối";
+                        default -> candidateSession.name();
+                    };
+                    result.add(new AlternativeSessionSuggestion(
+                            candidateDate, candidateSession, label, best.startTime(), best.endTime()));
+                }
+            }
+        }
+        return result;
     }
 
     private OverlapCheckResult invalidResult(String error, int durationMinutes, LocalTime requestedStart) {
@@ -463,7 +553,8 @@ public class AppointmentOverlapService {
                 List.of(),
                 List.of(),
                 List.of(),
-                null
+                null,
+                List.of()
         );
     }
 }

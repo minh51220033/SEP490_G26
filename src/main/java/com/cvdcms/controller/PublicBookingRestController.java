@@ -717,18 +717,19 @@ public class PublicBookingRestController {
             return errorResponse(HttpStatus.CONFLICT, "Hồ sơ bệnh nhân đã ngừng hoạt động.");
         }
         try {
+            boolean allowCapacityOverlap = Boolean.TRUE.equals(form.getConfirmOverlap());
             if (transactionManager != null) {
                 TransactionTemplate readTx = new TransactionTemplate(transactionManager);
                 readTx.setReadOnly(true);
                 readTx.executeWithoutResult(status -> appointmentPolicyService.ensureBookable(
                         branch, profile, bookDate, sessionPeriod,
                         doctor != null ? doctor.getStaffId() : null,
-                        null, AppointmentActorType.PATIENT));
+                        null, AppointmentActorType.PATIENT, allowCapacityOverlap));
             } else {
                 appointmentPolicyService.ensureBookable(
                         branch, profile, bookDate, sessionPeriod,
                         doctor != null ? doctor.getStaffId() : null,
-                        null, AppointmentActorType.PATIENT);
+                        null, AppointmentActorType.PATIENT, allowCapacityOverlap);
             }
         } catch (ResponseStatusException ex) {
             return errorResponse(HttpStatus.valueOf(ex.getStatusCode().value()),

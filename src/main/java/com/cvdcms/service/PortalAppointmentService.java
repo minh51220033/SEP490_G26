@@ -539,6 +539,13 @@ public class PortalAppointmentService {
         a.setDurationMinutes(durationMinutes);
         a.setExpectedTime(resolvedTime);
         a.syncExpectedEndTime();
+        if (allowOverlap) {
+            a.setOverlapWarningAcknowledged(true);
+            a.setOverlapWarningNote("Bệnh nhân xác nhận tiếp tục đổi lịch vào khung giờ có cảnh báo đông/trùng.");
+        } else {
+            a.setOverlapWarningAcknowledged(false);
+            a.setOverlapWarningNote(null);
+        }
         lifecycle.transition(a, AppointmentStatus.PENDING, AppointmentLifecycleAction.RESCHEDULE);
         a.setRescheduleCount(a.getRescheduleCount() + 1);
         appointments.saveAndFlush(a);

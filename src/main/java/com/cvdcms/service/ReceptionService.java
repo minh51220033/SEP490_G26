@@ -276,12 +276,14 @@ public class ReceptionService {
         String initialStatus = appointment.getStatus().name();
 
         if (appointment.getStatus() == AppointmentStatus.PENDING) {
-            // Revalidate via policy service
+            // Revalidate via policy service (allowCapacityOverlap=true since appointment already exists at desk)
             if (policyService != null) {
-                Long doctorId = appointment.getDoctor() != null ? appointment.getDoctor().getStaffId() : null;
+                Long doctorId = Boolean.TRUE.equals(appointment.getIsDoctorRequested()) && appointment.getDoctor() != null
+                        ? appointment.getDoctor().getStaffId()
+                        : null;
                 policyService.ensureBookable(branch, patient, appointment.getAppointmentDate(),
                         appointment.getPreferredSession(), doctorId, appointment.getAppointmentId(),
-                        AppointmentActorType.RECEPTIONIST);
+                        AppointmentActorType.RECEPTIONIST, true);
             }
 
             String pendingSnapshot = snapshot(appointment);
@@ -458,6 +460,9 @@ public class ReceptionService {
 
         // Walk-in / Emergency does NOT create or mutate any Appointment
         LocalDateTime nowDateTime = LocalDateTime.now(clock);
+        if (!emergency && branch.getClosingTime() != null && !nowDateTime.toLocalTime().isBefore(branch.getClosingTime())) {
+            throw error(HttpStatus.CONFLICT, "Phòng khám đã hết giờ tiếp nhận khách vãng lai hôm nay.");
+        }
         Visit visit = newVisit(patient, branch, emergency ? VisitType.EMERGENCY : VisitType.WALK_IN,
                 null, initialSymptoms, nowDateTime, emergency, false);
         if (priority || emergency) {
@@ -770,6 +775,13 @@ public class ReceptionService {
             throw error(HttpStatus.CONFLICT, "Lịch hẹn đã thay đổi trong lúc xử lý. Vui lòng tải lại trang.");
         }
         Appointment appt = ctx.appointment();
+        if (!Boolean.TRUE.equals(appt.getIsDoctorRequested())) {
+            return;
+        }
+        if (appt.getResourceStatus() == com.cvdcms.entity.enums.AppointmentResourceStatus.NEEDS_REASSIGNMENT) {
+            throw error(HttpStatus.CONFLICT,
+                    "Lịch hẹn yêu cầu bác sĩ riêng đang cần phân bổ lại (NEEDS_REASSIGNMENT). Vui lòng đổi bác sĩ hoặc cập nhật lịch hẹn trước khi check-in.");
+        }
         if (appt.getDoctor() != null && ctx.lockedDoctor() != null
                 && ctx.lockedDoctor().getStatus() != StaffStatus.ACTIVE) {
             throw error(HttpStatus.CONFLICT,

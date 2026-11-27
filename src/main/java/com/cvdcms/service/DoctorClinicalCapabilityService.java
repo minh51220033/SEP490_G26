@@ -1,5 +1,6 @@
 package com.cvdcms.service;
 
+import com.cvdcms.entity.ClinicEquipment;
 import com.cvdcms.entity.DentalChair;
 import com.cvdcms.entity.DoctorRoomAssignment;
 import com.cvdcms.entity.DoctorServicePermission;
@@ -9,9 +10,12 @@ import com.cvdcms.entity.ServiceResourceRequirement;
 import com.cvdcms.entity.enums.ChairStatus;
 import com.cvdcms.entity.enums.DoctorAssignmentStatus;
 import com.cvdcms.entity.enums.DoctorServicePermissionStatus;
+import com.cvdcms.entity.enums.EquipmentAllocationMode;
+import com.cvdcms.entity.enums.EquipmentStatus;
 import com.cvdcms.entity.enums.RoomStatus;
 import com.cvdcms.entity.enums.RoomType;
 import com.cvdcms.entity.enums.ServiceType;
+import com.cvdcms.repository.ClinicEquipmentRepository;
 import com.cvdcms.repository.DoctorRoomAssignmentRepository;
 import com.cvdcms.repository.DoctorServicePermissionRepository;
 import com.cvdcms.repository.RoomRepository;
@@ -47,6 +51,9 @@ public class DoctorClinicalCapabilityService {
 
     @Autowired(required = false)
     private ServiceRepository serviceRepo;
+
+    @Autowired(required = false)
+    private ClinicEquipmentRepository clinicEquipmentRepo;
 
     public record CapabilityCheckResult(
             boolean allowed,
@@ -213,7 +220,7 @@ public class DoctorClinicalCapabilityService {
             }
         }
 
-        // 2. Kiểm tra phòng hiện tại có đáp ứng yêu cầu phòng chuyên dụng của dịch vụ không
+        // 2. Kiểm tra phòng hiện tại có đáp ứng yêu cầu phòng và thiết bị chuyên dụng của dịch vụ không
         if (serviceId != null && serviceResourceRequirementRepo != null && roomRepo != null) {
             List<ServiceResourceRequirement> reqs = serviceResourceRequirementRepo
                     .findByServiceServiceIdOrderByRequirementIdAsc(serviceId);
@@ -222,19 +229,24 @@ public class DoctorClinicalCapabilityService {
                         .filter(r -> Boolean.TRUE.equals(r.getIsRequired())
                                 && (r.getRoom() != null || r.getRoomType() != null))
                         .toList();
-                if (!roomReqs.isEmpty()) {
+                List<ServiceResourceRequirement> equipReqs = reqs.stream()
+                        .filter(r -> Boolean.TRUE.equals(r.getIsRequired())
+                                && (r.getEquipment() != null || r.getEquipmentType() != null))
+                        .toList();
+                if (!roomReqs.isEmpty() || !equipReqs.isEmpty()) {
                     Room currentRoom = visitRoomId != null ? roomRepo.findById(visitRoomId).orElse(null) : null;
                     if (currentRoom == null) {
                         return new CapabilityCheckResult(
                                 false,
                                 true,
                                 false,
-                                "ROOM_REQUIREMENT_MISMATCH",
+                                !equipReqs.isEmpty() && roomReqs.isEmpty()
+                                        ? "EQUIPMENT_REQUIREMENT_MISMATCH"
+                                        : "ROOM_REQUIREMENT_MISMATCH",
                                 "Dịch vụ này yêu cầu phòng/thiết bị chuyên dụng, nhưng ca khám chưa được phân phòng phù hợp."
                         );
                     }
-                    boolean matchesAnyRoomReq = roomReqs.stream().anyMatch(r -> matchesRoomRequirement(currentRoom, r));
-                    if (!matchesAnyRoomReq) {
+                    if (!roomReqs.isEmpty() && roomReqs.stream().noneMatch(r -> matchesRoomRequirement(currentRoom, r))) {
                         return new CapabilityCheckResult(
                                 false,
                                 true,
@@ -243,6 +255,24 @@ public class DoctorClinicalCapabilityService {
                                 "Phòng khám hiện tại (" + currentRoom.getRoomName()
                                         + ") chưa đáp ứng yêu cầu phòng/thiết bị cho dịch vụ này. Vui lòng chuyển BS / phòng chuyên môn."
                         );
+                    }
+                    if (!equipReqs.isEmpty() && clinicEquipmentRepo != null) {
+                        Long effectiveBranchId = branchId != null ? branchId
+                                : (currentRoom.getBranch() != null ? currentRoom.getBranch().getBranchId() : null);
+                        List<ClinicEquipment> activeEquipments = effectiveBranchId != null
+                                ? clinicEquipmentRepo.findByBranchBranchIdAndStatusOrderByEquipmentCodeAsc(
+                                        effectiveBranchId, EquipmentStatus.ACTIVE)
+                                : List.of();
+                        if (!matchesEquipmentRequirements(currentRoom, equipReqs, activeEquipments)) {
+                            return new CapabilityCheckResult(
+                                    false,
+                                    true,
+                                    false,
+                                    "EQUIPMENT_REQUIREMENT_MISMATCH",
+                                    "Phòng khám hiện tại (" + currentRoom.getRoomName()
+                                            + ") chưa có thiết bị chuyên dụng khả dụng cho dịch vụ này."
+                            );
+                        }
                     }
                 }
             }
@@ -253,7 +283,7 @@ public class DoctorClinicalCapabilityService {
 
     /**
      * Trả về null nếu bác sĩ và dịch vụ đều không có giới hạn phòng nào;
-     * trả về Set (có thể rỗng nếu giao nhau bằng rỗng) khi có ràng buộc phòng cụ thể.
+     * trả về Set (có thể rỗng nếu giao nhau bằng rỗng) khi có ràng buộc phòng/thiết bị cụ thể.
      */
     public Set<Long> resolveRestrictedRoomIds(Long branchId, Long doctorId, Long serviceId) {
         if (branchId == null) {
@@ -279,14 +309,24 @@ public class DoctorClinicalCapabilityService {
 
         Set<Long> serviceRooms = null;
         if (serviceId != null && serviceResourceRequirementRepo != null && roomRepo != null) {
-            List<ServiceResourceRequirement> roomReqs = serviceResourceRequirementRepo
-                    .findByServiceServiceIdOrderByRequirementIdAsc(serviceId).stream()
+            List<ServiceResourceRequirement> allReqs = serviceResourceRequirementRepo
+                    .findByServiceServiceIdOrderByRequirementIdAsc(serviceId);
+            List<ServiceResourceRequirement> roomReqs = allReqs.stream()
                     .filter(r -> Boolean.TRUE.equals(r.getIsRequired()) && (r.getRoom() != null || r.getRoomType() != null))
                     .toList();
-            if (!roomReqs.isEmpty()) {
+            List<ServiceResourceRequirement> equipReqs = allReqs.stream()
+                    .filter(r -> Boolean.TRUE.equals(r.getIsRequired()) && (r.getEquipment() != null || r.getEquipmentType() != null))
+                    .toList();
+            if (!roomReqs.isEmpty() || (!equipReqs.isEmpty() && clinicEquipmentRepo != null)) {
+                List<ClinicEquipment> activeEquipments = (!equipReqs.isEmpty() && clinicEquipmentRepo != null)
+                        ? clinicEquipmentRepo.findByBranchBranchIdAndStatusOrderByEquipmentCodeAsc(branchId, EquipmentStatus.ACTIVE)
+                        : List.of();
                 serviceRooms = new LinkedHashSet<>();
                 for (Room r : roomRepo.findByBranchBranchIdAndStatusOrderByRoomCodeAsc(branchId, RoomStatus.ACTIVE)) {
-                    if (roomReqs.stream().anyMatch(req -> matchesRoomRequirement(r, req))) {
+                    boolean roomOk = roomReqs.isEmpty() || roomReqs.stream().anyMatch(req -> matchesRoomRequirement(r, req));
+                    boolean equipOk = equipReqs.isEmpty() || clinicEquipmentRepo == null
+                            || matchesEquipmentRequirements(r, equipReqs, activeEquipments);
+                    if (roomOk && equipOk) {
                         serviceRooms.add(r.getRoomId());
                     }
                 }
@@ -313,14 +353,54 @@ public class DoctorClinicalCapabilityService {
         if (room == null || serviceId == null || serviceResourceRequirementRepo == null) {
             return true;
         }
-        List<ServiceResourceRequirement> roomReqs = serviceResourceRequirementRepo
-                .findByServiceServiceIdOrderByRequirementIdAsc(serviceId).stream()
+        List<ServiceResourceRequirement> allReqs = serviceResourceRequirementRepo
+                .findByServiceServiceIdOrderByRequirementIdAsc(serviceId);
+        List<ServiceResourceRequirement> roomReqs = allReqs.stream()
                 .filter(r -> Boolean.TRUE.equals(r.getIsRequired()) && (r.getRoom() != null || r.getRoomType() != null))
                 .toList();
-        if (roomReqs.isEmpty()) {
+        List<ServiceResourceRequirement> equipReqs = allReqs.stream()
+                .filter(r -> Boolean.TRUE.equals(r.getIsRequired()) && (r.getEquipment() != null || r.getEquipmentType() != null))
+                .toList();
+        if (!roomReqs.isEmpty() && roomReqs.stream().noneMatch(req -> matchesRoomRequirement(room, req))) {
+            return false;
+        }
+        if (!equipReqs.isEmpty() && clinicEquipmentRepo != null) {
+            Long branchId = room.getBranch() != null ? room.getBranch().getBranchId() : null;
+            if (branchId == null) {
+                return false;
+            }
+            List<ClinicEquipment> activeEquipments = clinicEquipmentRepo
+                    .findByBranchBranchIdAndStatusOrderByEquipmentCodeAsc(branchId, EquipmentStatus.ACTIVE);
+            return matchesEquipmentRequirements(room, equipReqs, activeEquipments);
+        }
+        return true;
+    }
+
+    private boolean matchesEquipmentRequirements(Room room,
+                                                 List<ServiceResourceRequirement> equipReqs,
+                                                 List<ClinicEquipment> activeBranchEquipments) {
+        if (equipReqs == null || equipReqs.isEmpty()) {
             return true;
         }
-        return roomReqs.stream().anyMatch(req -> matchesRoomRequirement(room, req));
+        if (room == null || activeBranchEquipments == null || activeBranchEquipments.isEmpty()) {
+            return false;
+        }
+        return equipReqs.stream().allMatch(req -> activeBranchEquipments.stream().anyMatch(eq -> {
+            if (eq.getStatus() != EquipmentStatus.ACTIVE) {
+                return false;
+            }
+            if (req.getEquipment() != null && !Objects.equals(eq.getEquipmentId(), req.getEquipment().getEquipmentId())) {
+                return false;
+            }
+            if (req.getEquipmentType() != null && eq.getEquipmentType() != req.getEquipmentType()) {
+                return false;
+            }
+            if (eq.getAllocationMode() == EquipmentAllocationMode.BRANCH_SHARED) {
+                return true;
+            }
+            Room eqRoom = eq.getCurrentRoom() != null ? eq.getCurrentRoom() : eq.getFixedRoom();
+            return eqRoom != null && Objects.equals(eqRoom.getRoomId(), room.getRoomId());
+        }));
     }
 
     public boolean isParaclinicalOrLabService(Long serviceId) {

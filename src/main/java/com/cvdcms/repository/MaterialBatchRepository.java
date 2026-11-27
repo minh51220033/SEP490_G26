@@ -69,11 +69,44 @@ public interface MaterialBatchRepository
           AND b.material.materialId = :materialId
           AND b.quantityRemaining > 0
           AND b.expiryDate >= :today
+          AND b.status = com.cvdcms.entity.enums.BatchStatus.ACTIVE
         ORDER BY b.expiryDate ASC, b.batchId ASC
         """)
     List<MaterialBatch> findAvailableBatchesFefoForUpdate(
             @Param("branchId") Long branchId,
             @Param("materialId") Long materialId,
+            @Param("today") LocalDate today
+    );
+
+    @Query("""
+        SELECT b
+        FROM MaterialBatch b
+        JOIN FETCH b.material m
+        WHERE b.branch.branchId = :branchId
+          AND b.material.materialId IN :materialIds
+          AND b.quantityRemaining > 0
+          AND b.expiryDate >= :today
+          AND b.status = com.cvdcms.entity.enums.BatchStatus.ACTIVE
+        ORDER BY b.expiryDate ASC, b.batchId ASC
+        """)
+    List<MaterialBatch> findActiveAvailableBatchesByBranchAndMaterialIds(
+            @Param("branchId") Long branchId,
+            @Param("materialIds") java.util.Collection<Long> materialIds,
+            @Param("today") LocalDate today
+    );
+
+    @Query("""
+        SELECT b.material.materialId, COALESCE(SUM(b.quantityRemaining), 0)
+        FROM MaterialBatch b
+        WHERE b.branch.branchId = :branchId
+          AND b.material.materialId IN :materialIds
+          AND b.quantityRemaining > 0
+          AND (b.expiryDate < :today OR b.status = com.cvdcms.entity.enums.BatchStatus.EXPIRED)
+        GROUP BY b.material.materialId
+        """)
+    List<Object[]> sumExpiredStockByBranchAndMaterialIds(
+            @Param("branchId") Long branchId,
+            @Param("materialIds") java.util.Collection<Long> materialIds,
             @Param("today") LocalDate today
     );
 

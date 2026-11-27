@@ -77,13 +77,25 @@ public class Prescription {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "inventory_deducted")
+    private Boolean inventoryDeducted = false;
+
+    @Column(name = "client_request_id", length = 64, unique = true)
+    private String clientRequestId;
+
     @OneToMany(mappedBy = "prescription", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PrescriptionItem> items = new ArrayList<>();
+
+    public boolean isInventoryDeducted() {
+        return Boolean.TRUE.equals(this.inventoryDeducted);
+    }
 
     @PrePersist
     public void prePersist() {
         if (this.prescriptionCode == null || this.prescriptionCode.isEmpty()) {
-            this.prescriptionCode = "TOA" + System.currentTimeMillis();
+            String datePart = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"));
+            String randPart = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase();
+            this.prescriptionCode = "DT" + datePart + "-" + randPart;
         }
     }
 }

@@ -336,6 +336,7 @@ public class InvoiceServiceImpl implements InvoiceService {
             }
 
             Set<Long> seenPrescItemIds = new HashSet<>();
+            boolean alreadyDeductedOnPrescribe = prescription.isInventoryDeducted();
             List<StockIssueItem> stockIssueItems = new ArrayList<>();
             StockIssue stockIssue = new StockIssue();
             stockIssue.setBranch(branch);
@@ -376,6 +377,31 @@ public class InvoiceServiceImpl implements InvoiceService {
 
                 // Không đoán giá: Thuốc phải có giá bán hợp lệ trong danh mục hoặc đơn thuốc
                 BigDecimal unitPrice = resolveMedicineSalePrice(pItem);
+
+                if (alreadyDeductedOnPrescribe) {
+                    // Kho đã được trừ FEFO ngay lúc bác sĩ xác nhận kê đơn → chỉ lập dòng hóa đơn, KHÔNG trừ kho lần 2
+                    InvoiceItem medItem = new InvoiceItem();
+                    medItem.setInvoice(invoice);
+                    medItem.setItemType(InvoiceItemType.MEDICINE);
+                    medItem.setPrescriptionItem(pItem);
+                    medItem.setMedication(pItem.getMedication());
+                    medItem.setItemName(pItem.getDrugName());
+                    medItem.setUnit(pItem.getUnit());
+                    medItem.setUsageInstruction(pItem.getUsageInstruction());
+                    medItem.setQuantity(requestedQty);
+                    medItem.setUnitPrice(unitPrice);
+                    BigDecimal lineTotal = unitPrice.multiply(requestedQty).setScale(2, RoundingMode.HALF_UP);
+                    medItem.setFinalAmount(lineTotal);
+                    medItem.setVatRate(BigDecimal.ZERO);
+                    medItem.setVatAmount(BigDecimal.ZERO);
+
+                    invoiceItems.add(medItem);
+                    totalMedicineAmount = totalMedicineAmount.add(lineTotal);
+
+                    pItem.setBoughtQuantity(boughtQty.add(requestedQty));
+                    prescriptionItemRepository.save(pItem);
+                    continue;
+                }
 
                 // Tích hợp kho: Kiểm tra tồn kho và xuất kho theo FEFO (Chặn bán nếu chưa liên kết vật tư kho)
                 Medication med = pItem.getMedication();
@@ -1577,6 +1603,7 @@ public class InvoiceServiceImpl implements InvoiceService {
 
         StockIssue stockIssue = new StockIssue();
         stockIssue.setBranch(branch);
+        boolean alreadyDeductedOnPrescribe = prescription.isInventoryDeducted();
         stockIssue.setIssueType(StockIssueType.INTERNAL_USE);
         stockIssue.setIssueDate(LocalDate.now());
         stockIssue.setIssuer(cashier);
@@ -1617,6 +1644,33 @@ public class InvoiceServiceImpl implements InvoiceService {
             }
             if (buyQty.compareTo(remaining) > 0) {
                 throw new IllegalStateException("Số lượng mua (" + buyQty + ") vượt quá số lượng còn lại của đơn bác sĩ kê (" + remaining + ") cho thuốc '" + prescItem.getDrugName() + "'.");
+            }
+
+            if (alreadyDeductedOnPrescribe) {
+                // Kho đã trừ FEFO khi bác sĩ kê đơn → chỉ tạo dòng hóa đơn & cập nhật boughtQuantity, KHÔNG trừ kho lần 2
+                BigDecimal unitPrice = resolveMedicineSalePrice(prescItem);
+                BigDecimal lineTotal = unitPrice.multiply(buyQty).setScale(2, RoundingMode.HALF_UP);
+                InvoiceItem invoiceItem = new InvoiceItem();
+                invoiceItem.setInvoice(invoice);
+                invoiceItem.setItemType(InvoiceItemType.MEDICINE);
+                invoiceItem.setItemName(prescItem.getDrugName());
+                invoiceItem.setUnit(prescItem.getUnit());
+                invoiceItem.setUsageInstruction(prescItem.getUsageInstruction());
+                invoiceItem.setQuantity(buyQty);
+                invoiceItem.setUnitPrice(unitPrice);
+                invoiceItem.setFinalAmount(lineTotal);
+                invoiceItem.setVatRate(BigDecimal.ZERO);
+                invoiceItem.setVatAmount(BigDecimal.ZERO);
+                invoiceItem.setPrescriptionItem(prescItem);
+                invoiceItem.setMedication(prescItem.getMedication());
+
+                invoiceItems.add(invoiceItem);
+                totalMedicineAmount = totalMedicineAmount.add(lineTotal);
+
+                BigDecimal newBought = (prescItem.getBoughtQuantity() != null ? prescItem.getBoughtQuantity() : BigDecimal.ZERO).add(buyQty);
+                prescItem.setBoughtQuantity(newBought);
+                prescriptionItemRepository.save(prescItem);
+                continue;
             }
 
             // 5. Kiểm tra liên kết nguồn tồn kho hợp lệ - KHÔNG âm thầm bỏ qua
@@ -1719,9 +1773,11 @@ public class InvoiceServiceImpl implements InvoiceService {
             throw new IllegalArgumentException("Không có dòng thuốc nào hợp lệ để tạo hóa đơn.");
         }
 
-        // Lưu chứng từ xuất kho
-        stockIssue.setItems(stockIssueItems);
-        stockIssueRepository.save(stockIssue);
+        // Lưu chứng từ xuất kho (chỉ khi hóa đơn trực tiếp trừ kho, tránh lưu phiếu rỗng khi đơn đã trừ kho từ lúc kê)
+        if (!stockIssueItems.isEmpty()) {
+            stockIssue.setItems(stockIssueItems);
+            stockIssueRepository.save(stockIssue);
+        }
 
         // Cập nhật trạng thái đơn thuốc
         boolean allFinished = prescription.getItems().stream()
