@@ -1504,6 +1504,38 @@
         </div>
     </div>
 
+    <!-- MODAL XÁC NHẬN BỆNH NHÂN VẮNG MẶT -->
+    <div class="modal fade" id="absentConfirmModal" tabindex="-1" aria-labelledby="absentConfirmModalLabel" aria-hidden="true" style="z-index: 1065;">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 430px;">
+            <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+                <div class="modal-header bg-white border-bottom px-4 py-3">
+                    <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2 mb-0" style="font-size: 15.5px;" id="absentConfirmModalLabel">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-warning-subtle text-warning-emphasis" style="width: 32px; height: 32px;">
+                            <i class="bi bi-person-x-fill"></i>
+                        </span>
+                        <span>Xác nhận vắng mặt</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <form id="absentConfirmForm" novalidate onsubmit="event.preventDefault(); submitAbsentModal();">
+                    <div class="modal-body p-4" style="background: #f8fafc;">
+                        <div id="absentModalError" class="alert alert-danger py-2 px-3 small d-none mb-3"></div>
+                        <p class="small text-secondary mb-2">
+                            Tạm dừng lượt <strong class="text-dark" id="absentTargetLabel">P-01</strong> và tự gọi người kế tiếp trong hàng đợi.
+                        </p>
+                        <label for="absentReasonInput" class="form-label small fw-semibold text-dark mb-1">Ghi chú (tùy chọn)</label>
+                        <input type="text" id="absentReasonInput" class="form-control form-control-sm" maxlength="220"
+                               value="Bệnh nhân vắng mặt khi gọi số" placeholder="Nhập lý do vắng mặt...">
+                    </div>
+                    <div class="modal-footer bg-white border-top px-4 py-3 justify-content-end gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-2 fw-semibold" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" id="btnSubmitAbsentModal" class="btn btn-sm btn-warning rounded-pill px-4 py-2 fw-bold text-dark">Xác nhận vắng mặt</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
             </main>
         </div>
     </div>
@@ -1696,23 +1728,48 @@
             return false;
         }
 
-        async function openAbsentModal() {
+        let pendingAbsentTicketId = null;
+
+        function openAbsentModal() {
             const absentBtn = document.getElementById('btnMarkAbsent');
             const boundTicketId = absentBtn && absentBtn.dataset.ticketId ? Number(absentBtn.dataset.ticketId) : null;
             const called = currentDeskStatus && currentDeskStatus.calledVisit ? currentDeskStatus.calledVisit : null;
             const targetTicketId = called && called.ticketId ? called.ticketId : boundTicketId;
-            if (!targetTicketId) {
-                alert('Hiện không có bệnh nhân đang gọi.');
-                return;
-            }
+            if (!targetTicketId) return;
+
+            pendingAbsentTicketId = targetTicketId;
             const displayNumber = (called && called.displayNumber) || (absentBtn && absentBtn.dataset.displayNumber) || '';
             const patientName = (called && called.patientName) || (absentBtn && absentBtn.dataset.patientName) || '';
-            const reason = prompt(
-                `Xác nhận bệnh nhân vắng mặt cho lượt ${displayNumber} – ${patientName}.\nNhập ghi chú (tùy chọn):`,
-                'Bệnh nhân vắng mặt khi gọi số'
-            );
-            if (reason === null) return;
-            if (absentBtn) absentBtn.disabled = true;
+            const labelEl = document.getElementById('absentTargetLabel');
+            if (labelEl) {
+                labelEl.textContent = [displayNumber, patientName].filter(Boolean).join(' – ');
+            }
+            const errEl = document.getElementById('absentModalError');
+            if (errEl) {
+                errEl.classList.add('d-none');
+                errEl.textContent = '';
+            }
+            const inputEl = document.getElementById('absentReasonInput');
+            if (inputEl) inputEl.value = 'Bệnh nhân vắng mặt khi gọi số';
+
+            const modalEl = document.getElementById('absentConfirmModal');
+            if (modalEl && modalEl.parentElement !== document.body) document.body.appendChild(modalEl);
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            setTimeout(() => { inputEl?.focus(); inputEl?.select(); }, 200);
+        }
+
+        async function submitAbsentModal() {
+            if (!pendingAbsentTicketId) return;
+            const submitBtn = document.getElementById('btnSubmitAbsentModal');
+            const errEl = document.getElementById('absentModalError');
+            const inputEl = document.getElementById('absentReasonInput');
+            const reason = inputEl ? inputEl.value.trim() : '';
+
+            if (errEl) {
+                errEl.classList.add('d-none');
+                errEl.textContent = '';
+            }
+            if (submitBtn) submitBtn.disabled = true;
             try {
                 const branchId = getEffectiveBranchId();
                 const q = branchId ? `?branchId=${encodeURIComponent(branchId)}` : '';
@@ -1725,17 +1782,27 @@
                 const res = await fetch(`/api/doctor/visits/call-absent${q}`, {
                     method: 'POST',
                     headers,
-                    body: JSON.stringify({ ticketId: targetTicketId, reason: reason })
+                    body: JSON.stringify({ ticketId: pendingAbsentTicketId, reason: reason })
                 });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok || !data.success) {
-                    alert(data.message || 'Không thể ghi nhận vắng mặt.');
+                    if (errEl) {
+                        errEl.textContent = data.message || 'Không thể ghi nhận vắng mặt.';
+                        errEl.classList.remove('d-none');
+                    }
+                    return;
                 }
+                const modalEl = document.getElementById('absentConfirmModal');
+                bootstrap.Modal.getInstance(modalEl)?.hide();
+                pendingAbsentTicketId = null;
                 await fetchDailyVisits();
             } catch (err) {
-                alert('Lỗi kết nối: ' + err.message);
+                if (errEl) {
+                    errEl.textContent = 'Lỗi kết nối: ' + err.message;
+                    errEl.classList.remove('d-none');
+                }
             } finally {
-                if (absentBtn) absentBtn.disabled = false;
+                if (submitBtn) submitBtn.disabled = false;
             }
         }
 

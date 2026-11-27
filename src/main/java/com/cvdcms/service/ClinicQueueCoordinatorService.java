@@ -1947,7 +1947,8 @@ public class ClinicQueueCoordinatorService {
                 continue;
             }
             if (av.getRoomId() != null) {
-                occupiedRoomPatient.putIfAbsent(av.getRoomId(), patientName(av));
+                String docSuffix = av.getPrimaryDoctor() != null ? (" — " + av.getPrimaryDoctor().getFullName()) : "";
+                occupiedRoomPatient.putIfAbsent(av.getRoomId(), patientName(av) + docSuffix);
             }
         }
         for (QueueTicket qt : boardTickets) {
@@ -1955,7 +1956,8 @@ public class ClinicQueueCoordinatorService {
                 continue;
             }
             if (ACTIVE_DESK_STATUSES.contains(qt.getStatus()) && qt.getVisit().getRoomId() != null) {
-                occupiedRoomPatient.putIfAbsent(qt.getVisit().getRoomId(), patientName(qt.getVisit()));
+                String docSuffix = qt.getVisit().getPrimaryDoctor() != null ? (" — " + qt.getVisit().getPrimaryDoctor().getFullName()) : "";
+                occupiedRoomPatient.putIfAbsent(qt.getVisit().getRoomId(), patientName(qt.getVisit()) + docSuffix);
             }
             if (qt.getStatus() == QueueStatus.CALLED && qt.getVisit().getChairId() != null) {
                 calledChairIds.add(qt.getVisit().getChairId());
@@ -2104,8 +2106,8 @@ public class ClinicQueueCoordinatorService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng chọn bác sĩ tiếp nhận.");
         }
         String cleanNote = handoverNote != null ? handoverNote.trim().replaceAll("\\s+", " ") : "";
-        if (cleanNote.length() < 3 || cleanNote.length() > 300) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng nhập ghi chú bàn giao (từ 3 đến 300 ký tự).");
+        if (cleanNote.length() > 300) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ghi chú bàn giao không được vượt quá 300 ký tự.");
         }
 
         Visit snapshot = visits.findById(visitId)

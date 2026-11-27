@@ -801,6 +801,18 @@
                 }
 
                 function buildServiceGroups(pending) {
+                    var planServiceSet = {};
+                    function countPlanKey(raw) {
+                        if (!raw || !raw.planCode) return;
+                        var pCode = String(raw.planCode);
+                        var tKey = raw.toothNumbers ? String(raw.toothNumbers).trim().toLowerCase() : '';
+                        var sPart = raw.serviceId || raw.templateCode || raw.serviceCode || '';
+                        if (!planServiceSet[pCode]) planServiceSet[pCode] = {};
+                        planServiceSet[pCode]['svc:' + sPart + '|tooth:' + tKey] = true;
+                    }
+                    state.executions.forEach(countPlanKey);
+                    pending.forEach(countPlanKey);
+
                     var groups = [];
                     var groupMap = {};
 
@@ -808,28 +820,41 @@
                         var toothRaw = raw.toothNumbers ? String(raw.toothNumbers).trim() : '';
                         var toothKey = toothRaw.toLowerCase();
                         var svcPart = raw.serviceId || raw.templateCode || raw.serviceCode || '';
-                        var key = (raw.planCode || raw.planStageId || raw.planItemId)
-                            ? ('plan:' + (raw.planCode || 'P') + '|svc:' + svcPart + '|tooth:' + toothKey)
-                            : ('standalone|svc:' + svcPart + '|tooth:' + toothKey);
+                        var planCode = raw.planCode ? String(raw.planCode) : null;
+                        var isComboPlan = Boolean(planCode && planServiceSet[planCode] && Object.keys(planServiceSet[planCode]).length >= 2);
+                        var key = isComboPlan
+                            ? ('combo:' + planCode)
+                            : ((planCode || raw.planStageId || raw.planItemId)
+                                ? ('plan:' + (planCode || 'P') + '|svc:' + svcPart + '|tooth:' + toothKey)
+                                : ('standalone|svc:' + svcPart + '|tooth:' + toothKey));
 
                         var g = groupMap[key];
                         if (!g) {
                             g = {
                                 key: key,
-                                code: raw.templateCode || raw.serviceCode || 'QT',
-                                serviceId: raw.serviceId || null,
-                                serviceName: raw.serviceName || raw.templateName || raw.stepName || 'Dịch vụ điều trị',
-                                planCode: raw.planCode || null,
+                                isCombo: isComboPlan,
+                                code: isComboPlan ? planCode : (raw.templateCode || raw.serviceCode || 'QT'),
+                                serviceId: isComboPlan ? null : (raw.serviceId || null),
+                                serviceName: isComboPlan
+                                    ? (raw.planName || ('Combo ' + planCode))
+                                    : (raw.serviceName || raw.templateName || raw.stepName || 'Dịch vụ điều trị'),
+                                planCode: planCode,
                                 planName: raw.planName || null,
                                 toothNumbers: toothRaw || null,
+                                toothList: toothRaw ? [toothRaw] : [],
                                 items: []
                             };
                             groupMap[key] = g;
                             groups.push(g);
+                        } else if (toothRaw && g.toothList.indexOf(toothRaw) === -1) {
+                            g.toothList.push(toothRaw);
+                            g.toothNumbers = g.toothList.join(', ');
                         }
-                        if (!g.toothNumbers && toothRaw) g.toothNumbers = toothRaw;
-                        if (!g.planCode && raw.planCode) g.planCode = raw.planCode;
+                        if (!g.planCode && planCode) g.planCode = planCode;
                         if (!g.planName && raw.planName) g.planName = raw.planName;
+                        if (isComboPlan && g.planName && g.serviceName !== g.planName) {
+                            g.serviceName = g.planName;
+                        }
                         g.items.push({ kind: kind, data: raw });
                     }
 
@@ -852,14 +877,27 @@
                     return groups;
                 }
 
-                function renderStageItemHtml(item, idx, bookedId, waitingCount) {
+                function renderStageItemHtml(item, idx, bookedId, waitingCount, isComboGroup) {
                     var kind = item.kind;
                     var d = item.data;
                     var stageNum = d.planStageOrder != null ? d.planStageOrder : (idx + 1);
-                    var stageTitle = d.planStageName
-                        ? d.planStageName
+                    var rawStageTitle = d.planStageName
+                        ? d.planStageName.replace(/^\[SV\s*#\d+\]\s*/i, '').trim()
                         : (kind === 'PENDING' && d.stepName ? d.stepName : ('Giai đoạn ' + stageNum));
-                    var stagePillLabel = 'GĐ ' + stageNum;
+                    var svcTitle = d.serviceName || d.templateName || '';
+                    var stageTitle = isComboGroup && svcTitle
+                        ? (rawStageTitle && rawStageTitle.toLowerCase().indexOf(svcTitle.toLowerCase()) === -1 && !/^giai đoạn\s*\d+$/i.test(rawStageTitle)
+                            ? (svcTitle + ' — ' + rawStageTitle)
+                            : svcTitle)
+                        : rawStageTitle;
+                    var stagePillLabel = isComboGroup ? (d.serviceCode || d.templateCode || ('DV ' + (idx + 1))) : ('GĐ ' + stageNum);
+                    var toothBadge = (isComboGroup && d.toothNumbers)
+                        ? '<span class="badge bg-light text-dark border df-num ms-1" style="font-size:11px;">R-' + esc(d.toothNumbers) + '</span>'
+                        : '';
+                    var isItemBooked = Boolean(isComboGroup && bookedId && d.serviceId && Number(d.serviceId) === bookedId);
+                    var bookedBadge = isItemBooked
+                        ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size:11px;"><i class="bi bi-lock-fill me-1"></i>Đã đặt lịch</span>'
+                        : '';
 
                     if (kind === 'EXEC') {
                         var done = (d.completedSteps || 0) + (d.skippedSteps || 0);
@@ -902,6 +940,8 @@
                             + '    <div class="d-flex align-items-center flex-wrap gap-1">'
                             + '      <span class="badge bg-light text-primary border font-monospace fw-bold px-2 py-1">' + esc(stagePillLabel) + '</span>'
                             + '      <span class="fw-semibold text-dark" style="font-size: 13.5px;">' + esc(stageTitle) + '</span>'
+                            + toothBadge
+                            + bookedBadge
                             + badges
                             + '    </div>'
                             + (subLine ? '    <div class="df-meta-tertiary mt-1">' + esc(subLine) + '</div>' : '')
@@ -952,6 +992,8 @@
                         + '    <div class="d-flex align-items-center flex-wrap gap-1">'
                         + '      <span class="badge bg-light text-secondary border font-monospace fw-bold px-2 py-1">' + esc(stagePillLabel) + '</span>'
                         + '      <span class="fw-semibold text-dark" style="font-size: 13.5px;">' + esc(stageTitle) + '</span>'
+                        + toothBadge
+                        + bookedBadge
                         + pBadges
                         + '    </div>'
                         + '    <div class="df-meta-tertiary mt-1">Chưa bắt đầu · ' + pTotal + ' bước trong quy trình</div>'
@@ -1063,8 +1105,14 @@
                             aggStatusClass = 'bg-danger-subtle text-danger border-danger-subtle';
                         }
 
-                        var isBooked = Boolean(bookedId && g.serviceId && Number(g.serviceId) === bookedId);
+                        var isBooked = Boolean(bookedId && (
+                            (g.serviceId && Number(g.serviceId) === bookedId) ||
+                            g.items.some(function (it) { return it.data && it.data.serviceId && Number(it.data.serviceId) === bookedId; })
+                        ));
                         var groupBadges = '';
+                        if (g.isCombo) {
+                            groupBadges += '<span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size:11px;">Combo</span>';
+                        }
                         if (isBooked) {
                             groupBadges += '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size:11px;"><i class="bi bi-lock-fill me-1"></i>Đã đặt lịch</span>';
                         }
@@ -1076,8 +1124,11 @@
                             ? '<span class="badge bg-light text-dark border df-num">R-' + esc(g.toothNumbers) + '</span>'
                             : '<span class="text-muted small">Toàn hàm</span>';
 
-                        var subtitle = (g.planCode ? ('Phác đồ: ' + g.planCode) : 'Quy trình ngoài KHDT')
-                            + ' · ' + totalStages + ' giai đoạn (' + completedStages + '/' + totalStages + ' hoàn tất)';
+                        var unitLabel = g.isCombo ? 'dịch vụ' : 'giai đoạn';
+                        var subtitle = g.isCombo
+                            ? ('Combo ' + totalStages + ' dịch vụ · ' + completedStages + '/' + totalStages + ' hoàn tất')
+                            : ((g.planCode ? ('Phác đồ: ' + g.planCode) : 'Quy trình ngoài KHDT')
+                                + ' · ' + totalStages + ' giai đoạn (' + completedStages + '/' + totalStages + ' hoàn tất)');
 
                         html += '<tr class="wf-service-group-row' + (isExpanded ? ' is-expanded' : '') + '" '
                             + 'data-group-key="' + esc(g.key) + '" '
@@ -1095,7 +1146,7 @@
                             + '<td class="text-center df-num">' + toothHtml + '</td>'
                             + '<td class="df-num">'
                             + '  <div class="d-flex align-items-center justify-content-between small mb-1">'
-                            + '    <span class="text-secondary fw-semibold">' + completedStages + '/' + totalStages + ' giai đoạn</span>'
+                            + '    <span class="text-secondary fw-semibold">' + completedStages + '/' + totalStages + ' ' + unitLabel + '</span>'
                             + '    <strong class="text-primary">' + overallPct + '%</strong>'
                             + '  </div>'
                             + '  <div class="progress" style="height: 6px;">'
@@ -1108,7 +1159,7 @@
                         if (isExpanded) {
                             var childrenHtml = '';
                             g.items.forEach(function (item, idx) {
-                                childrenHtml += renderStageItemHtml(item, idx, bookedId, waitingCount);
+                                childrenHtml += renderStageItemHtml(item, idx, bookedId, waitingCount, g.isCombo);
                             });
                             html += '<tr class="wf-stage-drawer-row">'
                                 + '<td colspan="5"><div class="wf-stage-list-wrap">' + childrenHtml + '</div></td>'

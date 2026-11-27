@@ -16,7 +16,7 @@
 
             <main class="app-content p-0"
                 style="padding: 0 !important; gap: 0 !important; background: #ffffff !important;">
-                <link rel="stylesheet" th:href="@{/css/diagnosis.css(v=20261123d)}">
+                <link rel="stylesheet" th:href="@{/css/diagnosis.css(v=20261127c)}">
                 <style>
                     /* GLOBAL MODAL & BACKDROP Z-INDEX FIX: CƯỠNG CHẾ TẤT CẢ MODAL NỔI TRÊN BACKDROP */
                     .modal {
@@ -557,7 +557,7 @@
                                                 class="btn btn-outline-primary rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-2 text-nowrap"
                                                 style="height: 36px; font-size: 13px;"
                                                 onclick="window.DFHandover && window.DFHandover.open(null, null)"
-                                                title="Chuyển bệnh nhân sang bác sĩ chuyên môn khác qua hàng đợi & TV">
+                                                title="Chuyển bệnh nhân sang bác sĩ chuyên môn khác qua hàng đợi &amp; TV">
                                                 <i class="bi bi-arrow-left-right"></i>
                                                 <span>Chuyển BS</span>
                                             </button>
@@ -589,7 +589,7 @@
                             </div>
                             <!-- BANNER BÀN GIAO NỘI BỘ (CHỈ HIỆN KHI CA KHÁM CÓ LỊCH SỬ CHUYỂN BS) -->
                             <div id="visitHandoverBanner" th:unless="${isReadOnlyView == true}"
-                                 class="d-none mt-2 px-3 py-2 rounded-3 bg-white border border-info shadow-sm d-flex align-items-center justify-content-between gap-2 flex-wrap"
+                                 class="df-exam-bound d-none mt-2 px-3 py-2 rounded-3 bg-white border border-info shadow-sm d-flex align-items-center justify-content-between gap-2 flex-wrap"
                                  style="border-left: 4px solid #0284c7 !important; background: linear-gradient(90deg, #f0f9ff 0%, #ffffff 45%) !important;">
                                 <div class="d-flex align-items-start gap-2 small">
                                     <span class="d-inline-flex align-items-center justify-content-center rounded-2 bg-primary-subtle text-primary flex-shrink-0" style="width: 28px; height: 28px;">
@@ -658,8 +658,10 @@
                                         onclick="switchMainTab('tab-workflow-execution', this)">
                                         <i class="bi bi-list-check"></i> Quy trình điều trị
                                         <span
-                                            class="badge bg-light text-secondary border ms-1 df-tab-count df-num d-none"
-                                            id="ft43SubnavCount">0</span>
+                                            class="badge bg-light text-secondary border ms-1 df-tab-count df-num"
+                                            id="ft43SubnavCount"
+                                            th:classappend="${workflowNavCount == null or workflowNavCount == 0} ? 'd-none' : ''"
+                                            th:text="${workflowNavCount != null ? workflowNavCount : 0}">0</span>
                                     </a>
                                     <a href="javascript:void(0)" class="df-subnav-item" data-tab="tab-emr"
                                         onclick="switchMainTab('tab-emr', this)">
@@ -725,6 +727,25 @@
                                 </nav>
                             </div>
                         </div>
+                        <script>
+                            (function () {
+                                var nav = document.getElementById('mainSubnav');
+                                if (!nav) return;
+                                var key = 'cvdcms_subnav_scroll_' + (window.location.pathname.split('/')[3] || 'default');
+                                try {
+                                    var saved = sessionStorage.getItem(key);
+                                    if (saved !== null && !isNaN(Number(saved))) {
+                                        nav.scrollLeft = Number(saved);
+                                    }
+                                } catch (e) {}
+                                nav.addEventListener('click', function (ev) {
+                                    var link = ev.target && ev.target.closest ? ev.target.closest('a.df-subnav-item') : null;
+                                    if (link) {
+                                        try { sessionStorage.setItem(key, String(Math.round(nav.scrollLeft))); } catch (e) {}
+                                    }
+                                });
+                            })();
+                        </script>
                 </div>
 
                 <!-- ========================================================= -->
@@ -884,6 +905,40 @@
 
                     </div>
                 </div>
+                <script>
+                    (function () {
+                        var raw = (window.location.hash || '').replace(/^#/, '').trim();
+                        if (!raw) return;
+                        var map = {
+                            'paraclinical': 'tab-paraclinical', 'can-lam-sang': 'tab-paraclinical', 'xet-nghiem': 'tab-paraclinical',
+                            'diagnoses': 'tab-diagnoses', 'chan-doan': 'tab-diagnoses',
+                            'odontogram': 'tab-odontogram', 'tinh-trang-rang': 'tab-odontogram', 'rang': 'tab-odontogram',
+                            'treatment-plan': 'tab-treatment-plan', 'ke-hoach': 'tab-treatment-plan',
+                            'workflow-execution': 'tab-workflow-execution', 'quy-trinh': 'tab-workflow-execution',
+                            'performed-services': 'tab-performed-services', 'dich-vu': 'tab-performed-services',
+                            'emr': 'tab-emr', 'benh-an': 'tab-emr',
+                            'prescriptions': 'tab-prescriptions', 'don-thuoc': 'tab-prescriptions',
+                            'appointments': 'tab-appointments', 'tai-kham': 'tab-appointments',
+                            'customer-care': 'tab-customer-care', 'cham-soc': 'tab-customer-care',
+                            'labo': 'tab-labo', 'clinical-photos': 'tab-clinical-photos', 'film': 'tab-clinical-photos',
+                            'instructions': 'tab-instructions', 'loi-dan': 'tab-instructions'
+                        };
+                        var tabId = raw.indexOf('tab-') === 0 ? raw : (map[raw] || null);
+                        if (!tabId) return;
+                        var pane = document.getElementById(tabId);
+                        if (!pane) return;
+                        document.querySelectorAll('#mainTabContainer > .df-exam-bound > .df-tab-pane').forEach(function (p) {
+                            p.classList.remove('active');
+                            p.style.display = 'none';
+                        });
+                        pane.classList.add('active');
+                        pane.style.display = 'block';
+                        document.querySelectorAll('#mainSubnav .df-subnav-item').forEach(function (a) {
+                            a.classList.toggle('active', a.getAttribute('data-tab') === tabId);
+                        });
+                        window.__dfInitialHashTabRestored = true;
+                    })();
+                </script>
                 </th:block>
 
             </main>
@@ -1244,7 +1299,7 @@
                 targetTabLink.classList.add('active');
                 // Cuộn ngang êm ái thanh subnav nếu tab con bị che khuất (không làm giật trang)
                 const nav = document.getElementById('mainSubnav');
-                if (nav) {
+                if (nav && !window.__dfInitialHashTabRestored) {
                     const navRect = nav.getBoundingClientRect();
                     const itemRect = targetTabLink.getBoundingClientRect();
                     if (itemRect.left < navRect.left || itemRect.right > navRect.right) {
@@ -1252,6 +1307,7 @@
                         nav.scrollBy({ left: scrollOffset, behavior: 'smooth' });
                     }
                 }
+                window.__dfInitialHashTabRestored = false;
             }
 
             // 2. Ẩn tất cả các panel tab và chỉ hiển thị panel của tab được chọn
@@ -2560,18 +2616,37 @@
                     var hasMoreRight = (nav.scrollWidth - nav.clientWidth - nav.scrollLeft) > 4;
                     container.classList.toggle('has-overflow-right', hasMoreRight);
                 };
+                var scrollKey = 'cvdcms_subnav_scroll_' + (window.location.pathname.split('/')[3] || 'default');
+                try {
+                    var savedLeft = sessionStorage.getItem(scrollKey);
+                    if (savedLeft !== null && !isNaN(Number(savedLeft))) {
+                        nav.scrollLeft = Number(savedLeft);
+                    }
+                } catch (e) {}
+                var persistScroll = function () {
+                    try { sessionStorage.setItem(scrollKey, String(Math.round(nav.scrollLeft))); } catch (e) {}
+                };
                 nav.addEventListener('wheel', function (e) {
                     if (nav.scrollWidth > nav.clientWidth && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) {
                         nav.scrollLeft += e.deltaY;
                         e.preventDefault();
                         updateFade();
+                        persistScroll();
                     }
                 }, { passive: false });
-                nav.addEventListener('scroll', updateFade, { passive: true });
+                nav.addEventListener('scroll', function () {
+                    updateFade();
+                    persistScroll();
+                }, { passive: true });
                 window.addEventListener('resize', updateFade);
                 var activeTab = nav.querySelector('.df-subnav-item.active');
-                if (activeTab && typeof activeTab.scrollIntoView === 'function') {
-                    activeTab.scrollIntoView({ behavior: 'auto', inline: 'nearest', block: 'nearest' });
+                if (activeTab) {
+                    var nRect = nav.getBoundingClientRect();
+                    var tRect = activeTab.getBoundingClientRect();
+                    if (tRect.left < nRect.left || tRect.right > nRect.right) {
+                        activeTab.scrollIntoView({ behavior: 'auto', inline: 'nearest', block: 'nearest' });
+                        persistScroll();
+                    }
                 }
                 updateFade();
             }

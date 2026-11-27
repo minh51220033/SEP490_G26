@@ -3,7 +3,10 @@
    FT14: Chẩn đoán bệnh lý theo ICD-10 (SCR-14.1)
 ===================================================================== */
 
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=block&subset=vietnamese');
+
 :root {
+    --df-font-sans: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
     --df-primary: #0284c7;
     --df-primary-dark: #0369a1;
     --df-primary-soft: #e0f2fe;
@@ -27,6 +30,22 @@
 }
 
 /* Shared Design System Utilities (synced with treatment-plan-create.html) */
+html,
+.app-main {
+    scrollbar-gutter: stable;
+}
+
+.app-content,
+.df-unified-header,
+.df-tab-content-container,
+.df-main-card,
+.df-subnav,
+.df-subnav-item,
+#fdiToothPopover,
+#dfToastContainer {
+    font-family: var(--df-font-sans);
+}
+
 .df-exam-bound {
     max-width: 1400px;
     margin: 0 auto;
@@ -305,7 +324,6 @@
 }
 
 .df-subnav-container.has-overflow-right .df-subnav {
-    padding-right: 28px;
     -webkit-mask-image: linear-gradient(to right, #000000 0%, #000000 calc(100% - 28px), transparent 100%);
     mask-image: linear-gradient(to right, #000000 0%, #000000 calc(100% - 28px), transparent 100%);
 }
@@ -314,21 +332,20 @@
     display: flex;
     flex-wrap: nowrap;
     gap: 6px;
-    padding: 2px 0 4px;
+    padding: 2px 24px 6px 0;
     background: #ffffff;
     overflow-x: auto !important;
     overflow-y: hidden !important;
-    scroll-behavior: smooth;
-    scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 transparent;
+    scroll-behavior: auto;
 }
 
 .df-subnav::-webkit-scrollbar {
-    height: 4px;
+    height: 6px;
 }
 
 .df-subnav::-webkit-scrollbar-track {
-    background: transparent;
+    background: #f1f5f9;
+    border-radius: 999px;
 }
 
 .df-subnav::-webkit-scrollbar-thumb {
@@ -366,7 +383,7 @@
 .df-subnav-item.active {
     color: #0369a1;
     background: #e0f2fe;
-    font-weight: 700;
+    font-weight: 600;
 }
 
 .df-subnav-item .df-tab-count {
@@ -405,7 +422,6 @@
 
 .df-tab-pane.active {
     display: block;
-    animation: dfTabFadeIn 0.15s ease-in-out;
 }
 
 @keyframes dfTabFadeIn {

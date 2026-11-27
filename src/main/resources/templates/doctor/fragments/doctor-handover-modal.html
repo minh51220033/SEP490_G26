@@ -56,21 +56,6 @@
         }
         .df-ho-dot.free { background: #16a34a; }
         .df-ho-dot.busy { background: #d97706; }
-        .df-ho-chip-btn {
-            border: 1px solid #cbd5e1;
-            background: #f8fafc;
-            color: #334155;
-            border-radius: 999px;
-            padding: 3px 10px;
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        .df-ho-chip-btn:hover {
-            background: #e0f2fe;
-            border-color: #7dd3fc;
-            color: #0369a1;
-        }
     </style>
 
     <div class="modal fade" id="doctorHandoverModal" tabindex="-1" aria-labelledby="doctorHandoverModalLabel" aria-hidden="true">
@@ -122,30 +107,29 @@
                             <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
                                 <label class="fw-bold text-dark small mb-0">2. Phòng khám tiếp nhận (tùy chọn)</label>
                                 <div class="d-flex align-items-center gap-3 small text-muted">
-                                    <span><span class="df-ho-dot free me-1"></span>Phòng trống</span>
-                                    <span><span class="df-ho-dot busy me-1"></span>Đang có khách</span>
+                                    <span><span class="df-ho-dot free me-1"></span>Còn ghế trống</span>
+                                    <span><span class="df-ho-dot busy me-1"></span>Hết ghế / Đang bận</span>
                                 </div>
                             </div>
                             <div class="mb-2">
-                                <button type="button" id="hoBtnAutoRoom" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold"
-                                        onclick="window.DFHandover.selectRoom(null)">
-                                    <i class="bi bi-magic me-1"></i>Tự động phân phòng theo bác sĩ khi gọi số
-                                </button>
+                                <div class="form-check form-switch d-inline-flex align-items-center gap-2 ps-0 mb-0">
+                                    <input class="form-check-input ms-0 mt-0" type="checkbox" role="switch" id="hoAutoRoomSwitch" checked
+                                           style="cursor: pointer; width: 2.3em; height: 1.25em;"
+                                           onchange="window.DFHandover.toggleAutoRoom(this.checked)">
+                                    <label class="form-check-label text-dark fw-semibold small mb-0" for="hoAutoRoomSwitch" style="cursor: pointer;">
+                                        Tự động phân phòng theo bác sĩ khi gọi số
+                                    </label>
+                                </div>
                             </div>
                             <div id="hoRoomMap" class="d-flex flex-column gap-2"></div>
                         </div>
 
                         <!-- 3. GHI CHÚ BÀN GIAO & TÙY CHỌN TRẢ VỀ -->
                         <div class="p-3 rounded-3 bg-white border">
-                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+                            <div class="mb-2">
                                 <label for="handoverNoteInput" class="fw-bold text-dark small mb-0">
-                                    3. Ghi chú bàn giao chuyên môn <span class="text-danger">*</span>
+                                    3. Ghi chú bàn giao chuyên môn (tùy chọn)
                                 </label>
-                                <div class="d-flex flex-wrap gap-1">
-                                    <button type="button" class="df-ho-chip-btn" onclick="window.DFHandover.appendSnippet('Đã khám tổng quát, nhờ BS chuyên khoa thực hiện tiếp.')">Khám xong → Chuyên khoa</button>
-                                    <button type="button" class="df-ho-chip-btn" onclick="window.DFHandover.appendSnippet('Đã gây tê & chuẩn bị vùng răng, nhờ BS tiểu phẫu xử lý.')">Đã gây tê → Tiểu phẫu</button>
-                                    <button type="button" class="df-ho-chip-btn" onclick="window.DFHandover.appendSnippet('Đã hoàn tất bước chuyên khoa, chuyển trả lại BS chính hoàn thiện.')">Xong → Trả lại BS chính</button>
-                                </div>
                             </div>
                             <textarea id="handoverNoteInput" class="form-control form-control-sm mb-2" rows="2" maxlength="300"
                                       placeholder="Nhập dặn dò cho bác sĩ tiếp nhận: tình trạng răng, vùng tê, việc cần làm tiếp..."
@@ -245,12 +229,16 @@
                         ? '<div class="text-muted mt-1" style="font-size: 11.5px;"><i class="bi bi-door-open me-1"></i>Phòng: ' + esc(d.assignedRoomNames.join(', ')) + '</div>'
                         : '';
 
+                    const codeTag = d.staffCode
+                        ? '<span class="text-muted fw-normal ms-1" style="font-size: 11.5px;">(' + esc(d.staffCode) + ')</span>'
+                        : '';
+
                     return '<div class="col-md-6">'
                         + '<div class="df-ho-card h-100 ' + (selected ? 'is-selected' : '') + ' ' + (disabled ? 'is-disabled' : '') + '" '
                         + '     onclick="window.DFHandover.selectDoctor(' + Number(d.staffId) + ')">'
                         + '  <div class="d-flex align-items-start justify-content-between gap-2">'
                         + '    <div>'
-                        + '      <div class="fw-bold text-dark" style="font-size: 13.5px;">' + esc(d.fullName) + returnBadge + '</div>'
+                        + '      <div class="fw-bold text-dark" style="font-size: 13.5px;">' + esc(d.fullName) + codeTag + returnBadge + '</div>'
                         + '      <div class="small text-muted">' + esc(d.specialty || d.positionTitle || 'Bác sĩ điều trị') + '</div>'
                         + '    </div>'
                         + statusBadge
@@ -264,12 +252,9 @@
             }
 
             function renderRooms() {
-                const autoBtn = document.getElementById('hoBtnAutoRoom');
-                if (autoBtn) {
-                    const isAuto = state.selectedRoomId === null || state.selectedRoomId === undefined;
-                    autoBtn.classList.toggle('btn-primary', isAuto);
-                    autoBtn.classList.toggle('text-white', isAuto);
-                    autoBtn.classList.toggle('btn-outline-primary', !isAuto);
+                const autoSwitch = document.getElementById('hoAutoRoomSwitch');
+                if (autoSwitch) {
+                    autoSwitch.checked = (state.selectedRoomId === null || state.selectedRoomId === undefined);
                 }
 
                 const container = document.getElementById('hoRoomMap');
@@ -290,23 +275,45 @@
                     byFloor[f].push(r);
                 });
 
+                const currentRoomId = state.options && state.options.currentRoomId ? Number(state.options.currentRoomId) : null;
                 container.innerHTML = Object.keys(byFloor).map(function (floorName) {
                     const pills = byFloor[floorName].map(function (r) {
                         const selected = Number(state.selectedRoomId) === Number(r.roomId);
                         const isDocRoom = docRoomIds.indexOf(Number(r.roomId)) >= 0;
                         const warnReq = state.serviceId && r.matchesServiceRequirement === false;
+                        const hasChairs = Number(r.totalChairCount || 0) > 0;
+                        const freeCount = Number(r.freeChairCount || 0);
+                        const totalCount = Number(r.totalChairCount || 0);
+                        const isBusyRoom = hasChairs ? (freeCount === 0) : Boolean(r.occupied);
+                        const isCurrentRoom = currentRoomId && Number(r.roomId) === currentRoomId;
+
+                        let roomStatusText = '';
+                        if (hasChairs) {
+                            if (freeCount > 0 && r.occupiedByPatient) {
+                                roomStatusText = 'Còn ' + freeCount + '/' + totalCount + ' ghế trống · Ghế khác: ' + esc(r.occupiedByPatient);
+                            } else if (freeCount > 0) {
+                                roomStatusText = esc(r.roomType || 'Phòng khám') + ' · ' + freeCount + '/' + totalCount + ' ghế trống';
+                            } else if (isCurrentRoom && !r.occupiedByPatient) {
+                                roomStatusText = 'Hết ghế · Phòng hiện tại của ca này';
+                            } else {
+                                roomStatusText = 'Hết ghế (0/' + totalCount + ') · ' + esc(r.occupiedByPatient || 'Đang sử dụng');
+                            }
+                        } else if (r.occupied) {
+                            roomStatusText = 'Đang có khách: ' + esc(r.occupiedByPatient || 'Đang sử dụng');
+                        } else {
+                            roomStatusText = esc(r.roomType || 'Phòng khám');
+                        }
+
                         return '<button type="button" class="df-ho-room-pill ' + (selected ? 'is-selected' : '') + ' ' + (warnReq ? 'opacity-50' : '') + '" '
                             + 'onclick="window.DFHandover.selectRoom(' + Number(r.roomId) + ')">'
                             + '  <div class="d-flex align-items-center justify-content-between gap-2">'
                             + '    <span class="fw-bold text-dark" style="font-size: 12.5px;">'
-                            + '      <span class="df-ho-dot ' + (r.occupied ? 'busy' : 'free') + ' me-1"></span>' + esc(r.roomName)
+                            + '      <span class="df-ho-dot ' + (isBusyRoom ? 'busy' : 'free') + ' me-1"></span>' + esc(r.roomName)
                             + '    </span>'
                             + (isDocRoom ? '<span class="badge bg-info-subtle text-info-emphasis" style="font-size: 10px;">Phòng BS</span>' : '')
                             + '  </div>'
                             + '  <div class="text-muted mt-1" style="font-size: 11px;">'
-                            + (r.occupied
-                                ? ('Có khách: ' + esc(r.occupiedByPatient || 'Đang sử dụng'))
-                                : (esc(r.roomType || 'Phòng khám') + (r.totalChairCount > 0 ? (' · ' + r.freeChairCount + '/' + r.totalChairCount + ' ghế trống') : '')))
+                            + roomStatusText
                             + '  </div>'
                             + '</button>';
                     }).join('');
@@ -333,7 +340,7 @@
                         + (h.serviceName ? (' <span class="badge bg-info-subtle text-info-emphasis ms-1">' + esc(h.serviceName) + '</span>') : '')
                         + ' <span class="text-muted fw-normal ms-1">(' + esc(h.timestamp) + ')</span>'
                         + '</div>'
-                        + '<div class="text-secondary mt-1">' + esc(h.note) + '</div>'
+                        + (h.note ? '<div class="text-secondary mt-1">' + esc(h.note) + '</div>' : '')
                         + '</div>';
                 }).join('');
             }
@@ -352,7 +359,7 @@
                         : '';
                     detailEl.innerHTML = '<div><strong class="text-dark">BS ' + esc(latest.fromDoctorName) + '</strong> bàn giao lúc <span class="df-num">' + esc(latest.timestamp) + '</span>'
                         + svcPill + '</div>'
-                        + '<div class="mt-1 text-dark">Lời dặn: <span class="fst-italic">"' + esc(latest.note) + '"</span></div>';
+                        + (latest.note ? '<div class="mt-1 text-dark">Lời dặn: <span class="fst-italic">"' + esc(latest.note) + '"</span></div>' : '');
                 }
                 const returnBtn = document.getElementById('btnQuickReturnHandover');
                 if (returnBtn) {
@@ -466,12 +473,17 @@
                     state.selectedRoomId = roomId ? Number(roomId) : null;
                     renderRooms();
                 },
-                appendSnippet: function (text) {
-                    const noteEl = document.getElementById('handoverNoteInput');
-                    if (!noteEl) return;
-                    noteEl.value = text;
-                    showError(null);
-                    noteEl.focus();
+                toggleAutoRoom: function (isAuto) {
+                    if (isAuto) {
+                        state.selectedRoomId = null;
+                    } else if (!state.selectedRoomId && state.options) {
+                        const docs = state.options.doctors || [];
+                        const selectedDoc = docs.find(function (d) { return Number(d.staffId) === Number(state.selectedDoctorId); });
+                        const docRoomIds = selectedDoc && Array.isArray(selectedDoc.assignedRoomIds) ? selectedDoc.assignedRoomIds : [];
+                        const rooms = state.options.rooms || [];
+                        state.selectedRoomId = docRoomIds.length > 0 ? Number(docRoomIds[0]) : (rooms.length > 0 ? Number(rooms[0].roomId) : null);
+                    }
+                    renderRooms();
                 },
                 submit: function () {
                     if (state.submitting) return;
@@ -486,8 +498,8 @@
                     }
                     const noteEl = document.getElementById('handoverNoteInput');
                     const note = noteEl ? noteEl.value.trim() : '';
-                    if (note.length < 3) {
-                        showError('Vui lòng nhập ghi chú bàn giao (tối thiểu 3 ký tự) cho bác sĩ nhận.');
+                    if (note.length > 300) {
+                        showError('Ghi chú bàn giao không được vượt quá 300 ký tự.');
                         noteEl?.focus();
                         return;
                     }

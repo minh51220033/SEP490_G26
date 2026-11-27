@@ -842,6 +842,7 @@ public class DiagnosisController {
         model.addAttribute("clinicalCheck", clinicalCheck);
         model.addAttribute("bookedService", doctorVisitAccess != null ? doctorVisitAccess.resolveBookedServiceSummary(visit) : null);
         model.addAttribute("deskWaitingCount", doctorVisitAccess != null ? doctorVisitAccess.countWaitingPatientsForVisitDoctor(visit) : 0);
+        model.addAttribute("workflowNavCount", resolveWorkflowNavCount(visitId));
         model.addAttribute("doctorCapabilityIssues", buildDoctorCapabilityIssues(visit, readOnly, defaultActingDoctor, activeServices, treatmentPlans));
 
         model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán , Kế hoạch, Dịch vụ thực hiện , Ảnh lâm sàng  & Đơn thuốc ");
@@ -1140,6 +1141,7 @@ public class DiagnosisController {
             }
         }
         model.addAttribute("galleryXrayPhotos", galleryXrayPhotos);
+        model.addAttribute("workflowNavCount", resolveWorkflowNavCount(visitId));
 
         List<Branch> branches = branchRepository.findByIsActiveTrueOrderByBranchNameAsc();
         if (branches.isEmpty()) {
@@ -1384,6 +1386,38 @@ public class DiagnosisController {
             }
         }
         return result;
+    }
+
+    private int resolveWorkflowNavCount(Long visitId) {
+        if (clinicalWorkflowService == null || visitId == null) {
+            return 0;
+        }
+        try {
+            var overview = clinicalWorkflowService.getVisitOverview(visitId);
+            if (overview == null) {
+                return 0;
+            }
+            var execs = overview.getExecutions() != null ? overview.getExecutions() : List.<com.cvdcms.DTO.WorkflowExecutionDTO>of();
+            java.util.Set<Long> activePlanItemIds = new java.util.HashSet<>();
+            for (var ex : execs) {
+                if (ex != null && ex.getPlanItemId() != null) {
+                    activePlanItemIds.add(ex.getPlanItemId());
+                }
+            }
+            int pendingCount = 0;
+            if (overview.getAvailableServices() != null) {
+                for (var opt : overview.getAvailableServices()) {
+                    if (opt == null) continue;
+                    boolean isPlanItem = opt.getPlanItemId() != null || opt.getPlanStageId() != null;
+                    if (!isPlanItem) continue;
+                    if (opt.getPlanItemId() != null && activePlanItemIds.contains(opt.getPlanItemId())) continue;
+                    pendingCount++;
+                }
+            }
+            return execs.size() + pendingCount;
+        } catch (Exception ex) {
+            return 0;
+        }
     }
 
     private Map<String, String> buildDoctorCapabilityIssues(
