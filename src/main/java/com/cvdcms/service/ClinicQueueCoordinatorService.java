@@ -642,7 +642,7 @@ public class ClinicQueueCoordinatorService {
                 return Optional.empty();
             }
 
-            if (!allocateChairForCallLocked(branchId, lockedVisit, today)) {
+            if (!allocateChairForCallLocked(branchId, lockedVisit, doctorId, today)) {
                 return Optional.empty();
             }
             if (lockedVisit.getRoomId() == null || lockedVisit.getChairId() == null) {
@@ -1167,6 +1167,11 @@ public class ClinicQueueCoordinatorService {
     }
 
     private boolean allocateChairForCallLocked(Long branchId, Visit visit, LocalDate today) {
+        Long visitDocId = visit != null && visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null;
+        return allocateChairForCallLocked(branchId, visit, visitDocId, today);
+    }
+
+    private boolean allocateChairForCallLocked(Long branchId, Visit visit, Long doctorId, LocalDate today) {
         List<DentalChair> branchChairs = chairs.findByBranchBranchIdOrderByChairCodeAsc(branchId);
         if (branchChairs.isEmpty()) {
             return true;
@@ -1186,7 +1191,9 @@ public class ClinicQueueCoordinatorService {
         LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
 
         DentalChair chosen = null;
-        Long visitDocId = visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null;
+        Long visitDocId = doctorId != null
+                ? doctorId
+                : (visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null);
         Long svcIdForRoom = resolvePrimaryServiceIdForVisit(visit);
         Set<Long> restrictedRoomIds = capabilityService != null
                 ? capabilityService.resolveRestrictedRoomIds(branchId, visitDocId, svcIdForRoom)
@@ -1213,8 +1220,9 @@ public class ClinicQueueCoordinatorService {
                         }
                     }
                 }
-            } else if (chosen == null) {
-                DoctorShiftAssignment activeShift = resolveActiveDoctorShift(branchId, visit, today);
+            }
+            if (chosen == null) {
+                DoctorShiftAssignment activeShift = resolveActiveDoctorShift(branchId, visitDocId, today);
                 if (activeShift != null && activeShift.getChair() != null && activeShift.getChair().getChairId() != null) {
                     DentalChair preferredChair = lockedById.getOrDefault(activeShift.getChair().getChairId(), activeShift.getChair());
                     if (isChairFreeForCall(branchId, preferredChair, visit, today, startOfDay, endOfDay)
@@ -1498,12 +1506,18 @@ public class ClinicQueueCoordinatorService {
     }
 
     private DoctorShiftAssignment resolveActiveDoctorShift(Long branchId, Visit visit, LocalDate today) {
-        if (doctorShiftAssignments == null || visit == null || visit.getPrimaryDoctor() == null
-                || visit.getPrimaryDoctor().getStaffId() == null) {
+        Long doctorId = (visit != null && visit.getPrimaryDoctor() != null)
+                ? visit.getPrimaryDoctor().getStaffId()
+                : null;
+        return resolveActiveDoctorShift(branchId, doctorId, today);
+    }
+
+    private DoctorShiftAssignment resolveActiveDoctorShift(Long branchId, Long doctorId, LocalDate today) {
+        if (doctorShiftAssignments == null || doctorId == null) {
             return null;
         }
         List<DoctorShiftAssignment> shiftsToday = doctorShiftAssignments
-                .findActiveByStaffAndDateWithDetails(visit.getPrimaryDoctor().getStaffId(), today)
+                .findActiveByStaffAndDateWithDetails(doctorId, today)
                 .stream()
                 .filter(d -> d.getBranch() != null && Objects.equals(branchId, d.getBranch().getBranchId()))
                 .toList();
