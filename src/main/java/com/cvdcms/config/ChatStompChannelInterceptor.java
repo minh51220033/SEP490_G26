@@ -119,7 +119,8 @@ public class ChatStompChannelInterceptor implements ChannelInterceptor {
 
     public void validateSubscription(Long userId, String destination) {
         if (USER_QUEUE.equals(destination) || "/queue/chat/messages".equals(destination)
-                || CC_USER_QUEUE.equals(destination) || "/queue/customer-care/notifications".equals(destination)) {
+                || CC_USER_QUEUE.equals(destination) || "/queue/customer-care/notifications".equals(destination)
+                || "/user/queue/doctor/notifications".equals(destination) || "/queue/doctor/notifications".equals(destination)) {
             return;
         }
         if (ADMIN_TOPIC.equals(destination) || CC_ADMIN_TOPIC.equals(destination)) {

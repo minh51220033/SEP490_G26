@@ -52,6 +52,9 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private LabExternalOrderRepository labExternalOrderRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.DoctorNotificationService doctorNotificationService;
+
     public void setServiceCommissionService(com.cvdcms.service.ServiceCommissionService serviceCommissionService) {
         this.serviceCommissionService = serviceCommissionService;
     }
@@ -537,6 +540,24 @@ public class ParaclinicalOrderServiceImpl implements ParaclinicalOrderService {
         item.setPerformedAt(now);
         // KHÔNG chuyển VisitStatus sang WAITING_RESULT cho xét nghiệm máu ngoài viện (bệnh nhân quay lại xếp hàng bình thường)
         ParaclinicalOrderItem saved = paraclinicalOrderItemRepository.save(item);
+        if (doctorNotificationService != null && saved.getOrder() != null) {
+            StaffProfile targetDoc = checkVisit.getPrimaryDoctor() != null
+                    ? checkVisit.getPrimaryDoctor()
+                    : saved.getOrder().getDoctor();
+            if (targetDoc != null && targetDoc.getUser() != null && targetDoc.getUser().getUserId() != null) {
+                String patientNm = checkVisit.getPatientProfile() != null ? checkVisit.getPatientProfile().getFullName() : "Bệnh nhân";
+                String svcNm = saved.getService() != null ? saved.getService().getServiceName() : "Xét nghiệm ngoài viện";
+                doctorNotificationService.notifyDoctor(
+                        targetDoc.getUser().getUserId(),
+                        checkVisit.getBranch() != null ? checkVisit.getBranch().getBranchId() : null,
+                        com.cvdcms.entity.enums.NotificationType.LAB_RESULT,
+                        "Có KQ xét nghiệm ngoài viện: " + patientNm,
+                        svcNm + " (" + extOrder.getLabPartnerName() + ") đã cập nhật kết quả.",
+                        "HIGH",
+                        "/records"
+                );
+            }
+        }
         return mapToDTO(saved, checkVisit.getVisitId());
     }
 

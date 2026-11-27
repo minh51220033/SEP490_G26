@@ -70,6 +70,13 @@
             <i class="bi bi-chat-dots" aria-hidden="true"></i><span class="side-link__label">Tin nhắn trực tuyến</span><span id="sidebarChatUnreadBadge" data-chat-unread-badge class="side-link__badge" th:hidden="${chatUnreadCount == null or chatUnreadCount <= 0}" th:text="${chatUnreadCount != null and chatUnreadCount > 99 ? '99+' : (chatUnreadCount ?: 0)}">0</span>
         </a>
 
+        <a th:if="${isAdmin or (roleNames != null and (#lists.contains(roleNames, 'BAC_SI') or #lists.contains(roleNames, 'ROLE_BAC_SI'))) or (permissionCodes != null and (#lists.contains(permissionCodes, 'CLINICAL_DAILY_VISITS') or #lists.contains(permissionCodes, 'CLINICAL_WORKFLOWS') or #lists.contains(permissionCodes, 'MEDICAL_RECORD_VIEW')))}"
+           th:href="@{/doctor/notifications}" class="side-link"
+           th:classappend="${activeMenu == 'doctor-notifications'} ? 'is-active' : ''"
+           title="Trung tâm thông báo chuyển BS, kết quả CLS &amp; hỗ trợ chuyên môn">
+            <i class="bi bi-bell" aria-hidden="true"></i><span class="side-link__label">Thông báo</span><span id="sidebarDoctorNotifBadge" data-doctor-notif-badge class="side-link__badge" hidden>0</span>
+        </a>
+
             <!-- ============ NGHIỆP VỤ (accordion) ============ -->
             <p class="app-sidebar__section">Nghiệp vụ</p>
 

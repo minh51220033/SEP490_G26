@@ -94,6 +94,9 @@ public class ClinicQueueCoordinatorService {
     @Autowired(required = false)
     private DoctorRoomAssignmentRepository doctorRoomAssignmentRepository;
 
+    @Autowired(required = false)
+    private DoctorNotificationService doctorNotificationService;
+
     private Clock clock = Clock.system(CLINIC_ZONE);
 
     public void setClock(Clock clock) {
@@ -2305,6 +2308,22 @@ public class ClinicQueueCoordinatorService {
                 "WAITING",
                 "BS " + fromName + " chuyển bệnh nhân " + patientName(visit) + " sang BS " + toName,
                 now);
+
+        if (doctorNotificationService != null && targetDoctor.getUser() != null && targetDoctor.getUser().getUserId() != null) {
+            String notifTitle = "Nhận ca chuyển BS: " + patientName(visit);
+            String notifMsg = "BS " + fromName + " chuyển lượt khám " + visit.getVisitCode()
+                    + (safeService.isEmpty() ? "" : (" (Dịch vụ: " + safeService + ")"))
+                    + (cleanNote.isEmpty() ? "" : (" · Lời dặn: " + cleanNote));
+            doctorNotificationService.notifyDoctor(
+                    targetDoctor.getUser().getUserId(),
+                    branchId,
+                    com.cvdcms.entity.enums.NotificationType.SYSTEM,
+                    notifTitle,
+                    notifMsg,
+                    "HIGH",
+                    "/doctor/daily-visits"
+            );
+        }
 
         // 3. Tự động gọi lượt tiếp theo cho cả BS A (nếu đang trống) và BS B (nếu B rảnh)
         Optional<QueueTicket> nextForOutgoing = outgoingDoctor != null

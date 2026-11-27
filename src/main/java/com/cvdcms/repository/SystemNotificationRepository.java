@@ -10,12 +10,16 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface SystemNotificationRepository extends JpaRepository<SystemNotification, Long> {
     List<SystemNotification> findByUser_UserIdOrderByCreatedAtDesc(Long userId);
+    List<SystemNotification> findByUser_UserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+    List<SystemNotification> findByUser_UserIdAndNotificationTypeInOrderByCreatedAtDesc(
+            Long userId, Collection<NotificationType> types, Pageable pageable);
     long countByUser_UserIdAndIsReadFalse(Long userId);
 
     List<SystemNotification> findByUser_UserIdAndNotificationTypeOrderByCreatedAtDesc(
@@ -25,6 +29,17 @@ public interface SystemNotificationRepository extends JpaRepository<SystemNotifi
             Long userId, NotificationType notificationType);
 
     Optional<SystemNotification> findByNotificationIdAndUser_UserId(Long notificationId, Long userId);
+
+    @Modifying
+    @Query("""
+        UPDATE SystemNotification n
+        SET n.isRead = true, n.readAt = :readAt
+        WHERE n.user.userId = :userId
+          AND n.isRead = false
+        """)
+    int markAllReadByUserId(
+            @Param("userId") Long userId,
+            @Param("readAt") LocalDateTime readAt);
 
     @Modifying
     @Query("""

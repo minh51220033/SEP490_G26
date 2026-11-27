@@ -54,6 +54,9 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.DoctorNotificationService doctorNotificationService;
+
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss dd/MM/yyyy");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -285,6 +288,24 @@ public class NanopixXrayServiceImpl implements NanopixXrayService {
                         if (visit.getStatus() == VisitStatus.WAITING_PARACLINICAL) {
                             visit.setStatus(VisitStatus.WAITING_RESULT);
                             visitRepository.save(visit);
+                        }
+                        if (doctorNotificationService != null) {
+                            StaffProfile targetDoc = visit.getPrimaryDoctor() != null
+                                    ? visit.getPrimaryDoctor()
+                                    : parentOrder.getDoctor();
+                            if (targetDoc != null && targetDoc.getUser() != null && targetDoc.getUser().getUserId() != null) {
+                                String patientNm = visit.getPatientProfile() != null ? visit.getPatientProfile().getFullName() : "Bệnh nhân";
+                                String svcNm = orderItem.getService() != null ? orderItem.getService().getServiceName() : "Chụp X-Quang";
+                                doctorNotificationService.notifyDoctor(
+                                        targetDoc.getUser().getUserId(),
+                                        visit.getBranch() != null ? visit.getBranch().getBranchId() : null,
+                                        com.cvdcms.entity.enums.NotificationType.LAB_RESULT,
+                                        "Đã có phim X-Quang: " + patientNm,
+                                        svcNm + " (" + parentOrder.getOrderCode() + ") đã có kết quả, sẵn sàng đọc phim.",
+                                        "HIGH",
+                                        "/doctor/daily-visits"
+                                );
+                            }
                         }
                     } else if (parentOrder.getStatus() == ParaclinicalOrderStatus.ORDERED) {
                         parentOrder.setStatus(ParaclinicalOrderStatus.IN_PROGRESS);

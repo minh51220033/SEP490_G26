@@ -208,6 +208,9 @@ public class FeaturePermissionInterceptor implements HandlerInterceptor {
             }
             return List.of("TREATMENT_PLAN_MANAGE");
         }
+        if (uri.startsWith("/doctor/notifications") || uri.startsWith("/api/doctor/notifications")) {
+            return List.of("MEDICAL_RECORD_VIEW", "CLINICAL_DAILY_VISITS", "CLINICAL_WORKFLOWS", "CUSTOMER_CARE_MANAGE");
+        }
         if (uri.startsWith("/doctor/patient-records") || uri.startsWith("/api/doctor/patients")) {
             return List.of("MEDICAL_RECORD_VIEW");
         }
