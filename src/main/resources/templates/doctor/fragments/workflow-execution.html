@@ -1491,41 +1491,61 @@
                     } else {
                         listHtml = orders.map(function (ord) {
                             var img = ord.primaryImageUrl || ord.imageUrl || (ord.attachments && ord.attachments[0] ? ord.attachments[0].fileUrl : '');
+                            var isPdf = Boolean(img && String(img).trim().toLowerCase().endsWith('.pdf'));
                             var isDone = ord.status === 'COMPLETED';
                             var isLinked = boundOrderId && Number(ord.orderId) === boundOrderId;
                             var badgeCls = isDone ? 'bg-success-subtle text-success border-success-subtle' : 'bg-warning-subtle text-warning-emphasis border-warning-subtle';
                             var cardBorderCls = isLinked ? 'border-primary bg-primary-subtle bg-opacity-10' : 'bg-white';
-                            var thumb = img
-                                ? '<img src="' + esc(img) + '" class="wf-film-thumb" alt="Film" onclick="window.FT43.openFilmModal(\'' + esc(img) + '\',\'' + esc(ord.serviceName || 'Phim X-quang') + '\',\'' + esc(ord.resultSummary || '') + '\')">'
-                                : '<div class="wf-film-thumb d-flex flex-column align-items-center justify-content-center text-white-50" style="font-size:11px;"><i class="bi bi-film fs-5 mb-1"></i>Chưa ảnh</div>';
+                            var thumb = '';
+                            if (isPdf) {
+                                thumb = '<a href="' + esc(img) + '" target="_blank" rel="noopener" class="wf-film-thumb d-flex flex-column align-items-center justify-content-center text-white text-decoration-none" style="background: linear-gradient(135deg,#991b1b,#dc2626);" title="Mở phiếu PDF xét nghiệm">'
+                                    + '<i class="bi bi-file-earmark-pdf-fill fs-3 mb-1"></i>'
+                                    + '<span style="font-size:10px;font-weight:700;">XEM PDF</span></a>';
+                            } else if (img) {
+                                thumb = '<img src="' + esc(img) + '" class="wf-film-thumb" alt="Film" onclick="window.FT43.openFilmModal(\'' + esc(img) + '\',\'' + esc(ord.serviceName || 'Phim X-quang') + '\',\'' + esc(ord.resultSummary || '') + '\')">';
+                            } else {
+                                thumb = '<div class="wf-film-thumb d-flex flex-column align-items-center justify-content-center text-white-50" style="font-size:11px;"><i class="bi bi-film fs-5 mb-1"></i>Chưa KQ</div>';
+                            }
+                            var extMetaBadges = '';
+                            if (ord.isExternalLab) {
+                                extMetaBadges += '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size:10.5px;">XN ngoài viện</span>';
+                            }
+                            if (ord.fromPreviousVisit && ord.originVisitCode) {
+                                extMetaBadges += '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size:10.5px;">Từ ca ' + esc(ord.originVisitCode) + '</span>';
+                            }
                             var selectBtn = isEditable && orders.length > 1
                                 ? '<button type="button" class="btn btn-sm ' + (isLinked ? 'btn-primary' : 'btn-outline-secondary') + ' rounded-pill px-2 py-0 fw-semibold" style="font-size:11.5px;" '
                                 + '        onclick="window.FT43.selectXrayOrder(' + Number(ex.executionId) + ',' + Number(step.stepId) + ',' + Number(ord.orderId) + ',' + Number(ord.orderItemId) + ')">'
                                 + '  <i class="bi ' + (isLinked ? 'bi-check-circle-fill' : 'bi-link-45deg') + ' me-1"></i>' + (isLinked ? 'Đang gắn bước này' : 'Gắn bước này')
                                 + '</button>'
                                 : (isLinked ? '<span class="badge bg-primary text-white rounded-pill" style="font-size:11px;">Đang gắn bước</span>' : '');
-                            var quickActions = isEditable && !isDone
-                                ? '<div class="d-flex flex-wrap gap-1 mt-2">'
-                                + selectBtn
-                                + '<label class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0 fw-semibold mb-0" style="font-size:11.5px; cursor:pointer;">'
-                                + '  <i class="bi bi-upload me-1"></i>Tải ảnh KQ'
+                            var uploadBtnHtml = isEditable
+                                ? '<label class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0 fw-semibold mb-0" style="font-size:11.5px; cursor:pointer;" title="Tải ảnh hoặc file PDF kết quả">'
+                                + '  <i class="bi bi-upload me-1"></i>' + (isDone ? 'Bổ sung ảnh/PDF' : 'Tải ảnh/PDF KQ')
                                 + '  <input type="file" accept="image/*,.pdf" class="d-none" onchange="window.FT43.uploadXrayFile(' + Number(ord.orderItemId) + ', this, ' + Number(ex.executionId) + ', ' + Number(step.stepId) + ', ' + Number(ord.orderId) + ')">'
                                 + '</label>'
-                                + '<button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0 fw-semibold" style="font-size:11.5px;" '
+                                : '';
+                            var pdfViewBtn = isPdf
+                                ? '<a href="' + esc(img) + '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-0 fw-semibold" style="font-size:11.5px;"><i class="bi bi-file-earmark-pdf me-1"></i>Mở PDF</a>'
+                                : '';
+                            var markDoneBtn = (isEditable && !isDone)
+                                ? '<button type="button" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0 fw-semibold" style="font-size:11.5px;" '
                                 + '        onclick="window.FT43.markXrayDone(' + Number(ord.orderItemId) + ',' + Number(ex.executionId) + ',' + Number(step.stepId) + ',' + Number(ord.orderId) + ')">'
                                 + '  <i class="bi bi-check2 me-1"></i>Đã có KQ'
                                 + '</button>'
-                                + '</div>'
-                                : (selectBtn ? '<div class="d-flex flex-wrap gap-1 mt-2">' + selectBtn + '</div>' : '');
+                                : '';
+                            var quickActions = (selectBtn || uploadBtnHtml || markDoneBtn || pdfViewBtn)
+                                ? '<div class="d-flex flex-wrap gap-1 mt-2">' + selectBtn + uploadBtnHtml + markDoneBtn + pdfViewBtn + '</div>'
+                                : '';
 
                             return '<div class="d-flex align-items-start gap-3 p-2 rounded-3 border ' + cardBorderCls + ' mb-2">'
                                 + thumb
                                 + '<div class="flex-grow-1" style="min-width:0;">'
                                 + '  <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">'
-                                + '    <strong class="text-dark small">' + esc(ord.serviceName || 'Cận lâm sàng') + '</strong>'
+                                + '    <div><strong class="text-dark small">' + esc(ord.serviceName || 'Cận lâm sàng') + '</strong>' + extMetaBadges + '</div>'
                                 + '    <span class="badge border ' + badgeCls + '" style="font-size:11px;">' + esc(ord.statusLabel || ord.status) + '</span>'
                                 + '  </div>'
-                                + '  <div class="text-muted small df-num">' + esc(ord.orderCode || '') + (ord.toothNumbers ? ' · R' + esc(ord.toothNumbers) : '') + '</div>'
+                                + '  <div class="text-muted small df-num">' + esc(ord.orderCode || '') + (ord.toothNumbers ? ' · ' + esc(ord.toothNumbers) : '') + (ord.labPartnerName ? ' · ' + esc(ord.labPartnerName) : '') + '</div>'
                                 + (ord.resultSummary ? '<div class="small text-dark mt-1">KQ: ' + esc(ord.resultSummary) + '</div>' : '')
                                 + quickActions
                                 + '</div>'
@@ -1536,13 +1556,18 @@
                     var createBar = '';
                     if (isEditable && state.paraclinicalServices.length > 0) {
                         var svcOpts = state.paraclinicalServices.map(function (s) {
-                            return '<option value="' + Number(s.serviceId) + '">' + esc(s.serviceName) + '</option>';
+                            return '<option value="' + Number(s.serviceId) + '" data-service-type="' + esc(s.serviceType || '') + '">' + esc(s.serviceName) + '</option>';
                         }).join('');
                         createBar = '<div class="d-flex flex-wrap align-items-center gap-2 mt-2 pt-2 border-top">'
-                            + '<select id="ft43NewXraySvc-' + step.stepId + '" class="form-select form-select-sm" style="max-width:270px;">' + svcOpts + '</select>'
+                            + '<select id="ft43NewXraySvc-' + step.stepId + '" class="form-select form-select-sm" style="max-width:250px;" '
+                            + '        onchange="var opt=this.options[this.selectedIndex];var c=document.getElementById(\'ft43NewXrayExt-' + step.stepId + '\');if(c&&opt){c.checked=(opt.getAttribute(\'data-service-type\')===\'LAB\');}">' + svcOpts + '</select>'
+                            + '<div class="form-check mb-0">'
+                            + '  <input class="form-check-input" type="checkbox" id="ft43NewXrayExt-' + step.stepId + '">'
+                            + '  <label class="form-check-label small text-dark" for="ft43NewXrayExt-' + step.stepId + '">XN ngoài viện</label>'
+                            + '</div>'
                             + '<button type="button" class="btn btn-sm df-btn-tonal-primary rounded-pill px-3 py-1 fw-semibold text-nowrap" '
                             + '        onclick="window.FT43.createXrayOrder(' + Number(ex.executionId) + ',' + Number(step.stepId) + ')">'
-                            + '  <i class="bi bi-plus-circle me-1"></i>Tạo chỉ định chụp mới'
+                            + '  <i class="bi bi-plus-circle me-1"></i>Tạo chỉ định mới'
                             + '</button>'
                             + '</div>';
                     }
@@ -1969,6 +1994,7 @@
                 function createXrayOrder(execId, stepId) {
                     var sel = document.getElementById('ft43NewXraySvc-' + stepId);
                     if (!sel || !sel.value) return;
+                    var isExt = Boolean(document.getElementById('ft43NewXrayExt-' + stepId)?.checked);
                     var ex = state.executions.find(function (e) { return Number(e.executionId) === Number(execId); });
                     var st = ex ? (ex.steps || []).find(function (s) { return Number(s.stepId) === Number(stepId); }) : null;
                     var draft = ex && st ? ensureDraft(ex, st) : { data: {} };
@@ -1977,7 +2003,11 @@
                     fetch('/api/doctor/visits/' + encodeURIComponent(state.visitId) + '/paraclinical-orders', {
                         method: 'POST',
                         headers: csrfHeaders(true),
-                        body: JSON.stringify({ serviceId: Number(sel.value), toothNumbers: teeth || null })
+                        body: JSON.stringify({
+                            serviceId: Number(sel.value),
+                            toothNumbers: teeth || (isExt ? 'Mẫu máu' : null),
+                            isExternalLab: isExt
+                        })
                     })
                         .then(function (r) {
                             return r.json().then(function (b) {
@@ -1990,7 +2020,7 @@
                             if (createdItem && (createdItem.orderId || createdItem.orderItemId)) {
                                 bindOrderToDraft(execId, stepId, createdItem.orderId, createdItem.orderItemId);
                             }
-                            notify('Đã tạo chỉ định chụp phim mới cho ca khám.', false);
+                            notify(isExt ? 'Đã tạo chỉ định xét nghiệm ngoài viện cho ca khám.' : 'Đã tạo chỉ định chụp phim mới cho ca khám.', false);
                             return reload(execId);
                         })
                         .catch(function (err) { showWorkspaceError(err.message); });
@@ -2002,7 +2032,10 @@
                     if (orderId || orderItemId) bindOrderToDraft(execId, stepId, orderId, orderItemId);
                     var fd = new FormData();
                     fd.append('file', file);
-                    fd.append('resultSummary', 'Đã tải phim X-quang tại quy trình điều trị');
+                    if (state.visitId) fd.append('activeVisitId', String(state.visitId));
+                    fd.append('resultSummary', file.name && file.name.toLowerCase().endsWith('.pdf')
+                        ? 'Đã tải phiếu PDF kết quả xét nghiệm ngoài viện'
+                        : 'Đã tải phim / ảnh kết quả tại quy trình điều trị');
                     fetch('/api/doctor/paraclinical-orders/' + encodeURIComponent(orderItemId) + '/upload', {
                         method: 'POST',
                         headers: csrfHeaders(false),
@@ -2010,12 +2043,12 @@
                     })
                         .then(function (r) {
                             return r.json().then(function (b) {
-                                if (!r.ok) throw new Error(b.message || 'Không thể tải ảnh kết quả.');
+                                if (!r.ok) throw new Error(b.message || 'Không thể tải ảnh / PDF kết quả.');
                                 return b;
                             });
                         })
                         .then(function () {
-                            notify('Đã tải ảnh kết quả cận lâm sàng thành công.', false);
+                            notify('Đã tải ảnh / PDF kết quả cận lâm sàng thành công.', false);
                             return reload(execId || state.selectedExecutionId);
                         })
                         .catch(function (err) { showWorkspaceError(err.message); });
@@ -2272,6 +2305,20 @@
                                 return;
                             }
                             var finalErr = msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, '');
+                            var isCapDenied = /chưa được phân quyền|chưa đáp ứng yêu cầu phòng|chuyển BS/i.test(finalErr);
+                            if (isCapDenied && window.DFHandover && typeof window.dfConfirm === 'function') {
+                                var matchedPending = getPendingWorkflowItems().find(function (p) { return Number(p.serviceId) === Number(serviceId); });
+                                var svcLabel = matchedPending ? (matchedPending.serviceName || matchedPending.stepName || '') : '';
+                                window.dfConfirm(finalErr + '\n\nBạn có muốn chuyển bệnh nhân sang bác sĩ chuyên môn phù hợp ngay không?', {
+                                    title: 'Cần chuyển bác sĩ chuyên môn',
+                                    confirmText: 'Chuyển BS ngay',
+                                    cancelText: 'Đóng',
+                                    variant: 'primary'
+                                }).then(function (ok) {
+                                    if (ok) window.DFHandover.open(serviceId ? Number(serviceId) : null, svcLabel || null);
+                                });
+                                return;
+                            }
                             if (switchTabOnSuccess && typeof window.showToast === 'function') {
                                 window.showToast(finalErr, true);
                             } else {

@@ -343,6 +343,13 @@ function renderPlanInlineRoadmapHtml(plan, options = {}) {
 
                         const isComp = it.status === 'COMPLETED';
                         const isInProg = it.status === 'IN_PROGRESS';
+                        const isBookedItem = Boolean(bookedSrvId && it.serviceId && Number(it.serviceId) === bookedSrvId);
+                        const isParaclinical = Boolean(it.isParaclinical);
+                        const capIssueMsg = (!isComp && !isParaclinical && it.serviceId && window.DOCTOR_CAPABILITY_ISSUES)
+                            ? (window.DOCTOR_CAPABILITY_ISSUES[String(it.serviceId)] || window.DOCTOR_CAPABILITY_ISSUES[Number(it.serviceId)] || null)
+                            : null;
+                        const needsHandover = Boolean(capIssueMsg);
+                        const cleanServiceLabel = escapePlanHtml(it.serviceName || it.stepName || 'Dịch vụ');
 
                         let statusBadgeHtml = '';
                         let actionBtnHtml = '';
@@ -364,45 +371,73 @@ function renderPlanInlineRoadmapHtml(plan, options = {}) {
                                 </button>
                             `;
                         } else {
-                            statusBadgeHtml = isInProg
-                                ? `
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-pill fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 12px;">
-                                        <i class="bi bi-play-circle-fill"></i>
-                                        <span>Đang điều trị</span>
-                                    </span>
-                                `
-                                : `
-                                    <span class="badge bg-light text-secondary border px-2 py-1 rounded-pill fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 12px;">
-                                        <i class="bi bi-clock"></i>
-                                        <span>Chưa làm</span>
+                            if (needsHandover) {
+                                statusBadgeHtml = `
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill fw-semibold d-inline-flex align-items-center gap-1"
+                                          style="font-size: 12px;" title="${escapePlanHtml(capIssueMsg)}">
+                                        <i class="bi bi-shield-lock"></i>
+                                        <span>Chờ BS chuyên môn</span>
                                     </span>
                                 `;
-                            actionBtnHtml = `
-                                <div class="d-inline-flex align-items-center justify-content-center gap-2 text-nowrap">
-                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-circle d-inline-flex align-items-center justify-content-center p-0"
-                                            style="width: 34px; height: 34px;"
-                                            title="${isInProg ? 'Tiếp tục thực hiện theo từng bước' : 'Thực hiện theo từng bước quy trình'}"
-                                            aria-label="${isInProg ? 'Tiếp tục bước' : 'Theo bước'}"
-                                            onclick="startPlanItemWorkflow(${it.planItemId}, ${it.serviceId}, ${st.stageId ? Number(st.stageId) : 'null'})">
-                                        <i class="bi bi-list-check" style="font-size: 15px;"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm df-btn-tonal-primary rounded-circle d-inline-flex align-items-center justify-content-center p-0"
-                                            style="width: 34px; height: 34px;"
-                                            title="Làm nhanh (hoàn tất ngay dịch vụ này)"
-                                            aria-label="Làm nhanh"
-                                            onclick="executePlanItemDirectly(${it.planItemId})">
-                                        <i class="bi bi-lightning-charge-fill" style="font-size: 14px;"></i>
-                                    </button>
-                                </div>
-                            `;
+                                actionBtnHtml = `
+                                    <div class="d-inline-flex align-items-center justify-content-center gap-2 text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 fw-semibold d-inline-flex align-items-center gap-1"
+                                                style="font-size: 12px;"
+                                                title="${escapePlanHtml(capIssueMsg)}"
+                                                data-service-id="${Number(it.serviceId)}"
+                                                data-service-name="${cleanServiceLabel}"
+                                                onclick="window.DFHandover && window.DFHandover.open(Number(this.getAttribute('data-service-id')), this.getAttribute('data-service-name'))">
+                                            <i class="bi bi-arrow-left-right"></i>
+                                            <span>Chuyển BS</span>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle d-inline-flex align-items-center justify-content-center p-0"
+                                                style="width: 32px; height: 32px;"
+                                                title="Xem quy trình bước"
+                                                aria-label="Xem bước"
+                                                onclick="startPlanItemWorkflow(${it.planItemId}, ${it.serviceId}, ${st.stageId ? Number(st.stageId) : 'null'})">
+                                            <i class="bi bi-eye" style="font-size: 14px;"></i>
+                                        </button>
+                                    </div>
+                                `;
+                            } else {
+                                statusBadgeHtml = isInProg
+                                    ? `
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-pill fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 12px;">
+                                            <i class="bi bi-play-circle-fill"></i>
+                                            <span>Đang điều trị</span>
+                                        </span>
+                                    `
+                                    : `
+                                        <span class="badge bg-light text-secondary border px-2 py-1 rounded-pill fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 12px;">
+                                            <i class="bi bi-clock"></i>
+                                            <span>Chưa làm</span>
+                                        </span>
+                                    `;
+                                actionBtnHtml = `
+                                    <div class="d-inline-flex align-items-center justify-content-center gap-2 text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-circle d-inline-flex align-items-center justify-content-center p-0"
+                                                style="width: 34px; height: 34px;"
+                                                title="${isInProg ? 'Tiếp tục thực hiện theo từng bước' : 'Thực hiện theo từng bước quy trình'}"
+                                                aria-label="${isInProg ? 'Tiếp tục bước' : 'Theo bước'}"
+                                                onclick="startPlanItemWorkflow(${it.planItemId}, ${it.serviceId}, ${st.stageId ? Number(st.stageId) : 'null'})">
+                                            <i class="bi bi-list-check" style="font-size: 15px;"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm df-btn-tonal-primary rounded-circle d-inline-flex align-items-center justify-content-center p-0"
+                                                style="width: 34px; height: 34px;"
+                                                title="Làm nhanh (hoàn tất ngay dịch vụ này)"
+                                                aria-label="Làm nhanh"
+                                                onclick="executePlanItemDirectly(${it.planItemId}, false, ${Number(it.serviceId || 0)}, '${cleanServiceLabel.replace(/'/g, "\\'")}')">
+                                            <i class="bi bi-lightning-charge-fill" style="font-size: 14px;"></i>
+                                        </button>
+                                    </div>
+                                `;
+                            }
                         }
 
-                        const isBookedItem = Boolean(bookedSrvId && it.serviceId && Number(it.serviceId) === bookedSrvId);
-                        const isParaclinical = Boolean(it.isParaclinical);
                         const itemMins = Number(it.estimatedDurationMinutes) > 0 ? Number(it.estimatedDurationMinutes) : 30;
                         const allowAddon = it.allowSameVisit !== false;
                         let isDeferredHint = false;
-                        if (isComp || isInProg || isBookedItem || isParaclinical) {
+                        if (isComp || isInProg || isBookedItem || isParaclinical || needsHandover) {
                             isDeferredHint = false;
                             if (isInProg && !isBookedItem && !isParaclinical) {
                                 if (!primarySlotClaimed) {
@@ -425,11 +460,13 @@ function renderPlanInlineRoadmapHtml(plan, options = {}) {
                         const deferredTitle = !allowAddon
                             ? 'Dịch vụ cấu hình không làm gộp trong ca — hẹn buổi sau'
                             : `Đang có ${waitingCount} bệnh nhân chờ — dịch vụ làm thêm (~${itemMins} phút) vượt ngưỡng 45p/DV hoặc 60p tổng làm thêm`;
-                        const bookedBadgeHtml = isBookedItem
-                            ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size: 10.5px;"><i class="bi bi-lock-fill me-1"></i>Đã đặt lịch</span>'
-                            : (isDeferredHint
-                                ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 10.5px;" title="${deferredTitle}"><i class="bi bi-calendar2-week me-1"></i>Hẹn ca sau</span>`
-                                : '');
+                        const bookedBadgeHtml = needsHandover
+                            ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 10.5px;" title="${escapePlanHtml(capIssueMsg)}"><i class="bi bi-shield-lock me-1"></i>Cần BS chuyên môn</span>`
+                            : (isBookedItem
+                                ? '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-1" style="font-size: 10.5px;"><i class="bi bi-lock-fill me-1"></i>Đã đặt lịch</span>'
+                                : (isDeferredHint
+                                    ? `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle ms-1" style="font-size: 10.5px;" title="${deferredTitle}"><i class="bi bi-calendar2-week me-1"></i>Hẹn ca sau</span>`
+                                    : ''));
 
                         itemsRows += `
                             <tr id="item-row-${it.planItemId}">
@@ -699,6 +736,11 @@ function renderDiagnosisProgressTables() {
                     stageItems.forEach((item) => {
                         globalItemIdx++;
                         const isDone = item.status === 'COMPLETED';
+                        const isParaclinicalItem = Boolean(item.isParaclinical);
+                        const itemCapIssue = (!isDone && !isParaclinicalItem && item.serviceId && window.DOCTOR_CAPABILITY_ISSUES)
+                            ? (window.DOCTOR_CAPABILITY_ISSUES[String(item.serviceId)] || window.DOCTOR_CAPABILITY_ISSUES[Number(item.serviceId)] || null)
+                            : null;
+                        const itemSvcName = escapePlanHtml(item.serviceName || item.stepName || 'Dịch vụ');
 
                         let toothBadge = '<span class="text-muted">-</span>';
                         if (item.toothNumbers) {
@@ -721,15 +763,18 @@ function renderDiagnosisProgressTables() {
 
                         const statusBadgeHtml = isDone
                             ? '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 fw-bold"><i class="bi bi-check2-circle me-1"></i>Đã làm</span>'
-                            : '<span class="badge bg-light text-secondary border rounded-pill px-2 py-1 fw-semibold"><i class="bi bi-clock me-1"></i>Chưa làm</span>';
+                            : (itemCapIssue
+                                ? `<button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 11.5px;" title="${escapePlanHtml(itemCapIssue)}" data-service-id="${Number(item.serviceId)}" data-service-name="${itemSvcName}" onclick="window.DFHandover && window.DFHandover.open(Number(this.getAttribute('data-service-id')), this.getAttribute('data-service-name'))"><i class="bi bi-arrow-left-right"></i><span>Chuyển BS</span></button>`
+                                : '<span class="badge bg-light text-secondary border rounded-pill px-2 py-1 fw-semibold"><i class="bi bi-clock me-1"></i>Chưa làm</span>');
 
                         tbodyRowsHtml += `
                             <tr class="${isDone ? 'ps-step-done' : 'ps-step-todo'}">
                                 <td class="text-center text-muted df-num">${globalItemIdx}</td>
                                 <td>
-                                    <i class="bi ${isDone ? 'bi-check-circle-fill text-success' : 'bi-circle text-secondary'} me-1"></i>
+                                    <i class="bi ${isDone ? 'bi-check-circle-fill text-success' : (itemCapIssue ? 'bi-shield-lock text-danger' : 'bi-circle text-secondary')} me-1"></i>
                                     <strong class="ps-step-name">${escapePlanHtml(item.stepName || item.serviceName)}</strong>
                                     ${(item.serviceName && item.stepName && item.stepName !== item.serviceName) ? `<span class="badge bg-light text-primary border ms-1" style="font-size: 10px;">${escapePlanHtml(item.serviceName)}</span>` : ''}
+                                    ${itemCapIssue ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1" style="font-size: 10px;" title="${escapePlanHtml(itemCapIssue)}">Cần BS chuyên môn</span>` : ''}
                                 </td>
                                 <td class="text-center">${toothBadge}</td>
                                 <td class="text-center fw-bold df-num">${qtyDisplay}</td>
@@ -1130,7 +1175,25 @@ function changeStageStatus(stageId, status) {
 /**
  * Bác sĩ nhấn "Làm trong ca này": liên kết trực tiếp bước KHDT vào ca khám hiện tại (FT15 -> FT16)
  */
-function executePlanItemDirectly(planItemId, patientConfirmed = false) {
+function promptHandoverIfCapabilityDenied(msg, serviceId, serviceName) {
+    if (!/chưa được phân quyền|chưa đáp ứng yêu cầu phòng|chuyển BS/i.test(msg || '')) {
+        return false;
+    }
+    if (window.DFHandover && typeof window.dfConfirm === 'function') {
+        window.dfConfirm(msg + '\n\nBạn có muốn chuyển bệnh nhân sang bác sĩ chuyên môn phù hợp ngay không?', {
+            title: 'Cần chuyển bác sĩ chuyên môn',
+            confirmText: 'Chuyển BS ngay',
+            cancelText: 'Đóng',
+            variant: 'primary'
+        }).then(ok => {
+            if (ok) window.DFHandover.open(serviceId ? Number(serviceId) : null, serviceName || null);
+        });
+        return true;
+    }
+    return false;
+}
+
+function executePlanItemDirectly(planItemId, patientConfirmed = false, serviceId = null, serviceName = '') {
     window._executingPlanItems = window._executingPlanItems || new Set();
     if (window._executingPlanItems.has(planItemId)) {
         return;
@@ -1196,11 +1259,14 @@ function executePlanItemDirectly(planItemId, patientConfirmed = false) {
                 cancelText: 'Để buổi sau',
                 variant: 'primary'
             }).then(ok => {
-                if (ok) executePlanItemDirectly(planItemId, true);
+                if (ok) executePlanItemDirectly(planItemId, true, serviceId, serviceName);
             });
             return;
         }
-        showToast(msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, ''), true);
+        const finalMsg = msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, '');
+        if (!promptHandoverIfCapabilityDenied(finalMsg, serviceId, serviceName)) {
+            showToast(finalMsg, true);
+        }
     });
 }
 
@@ -1261,7 +1327,10 @@ function startPlanItemWorkflow(planItemId, serviceId, planStageId, patientConfir
             });
             return;
         }
-        showToast(msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, ''), true);
+        const finalMsg = msg.replace(/^PATIENT_CONFIRM_REQUIRED:\s*/, '');
+        if (!promptHandoverIfCapabilityDenied(finalMsg, serviceId, '')) {
+            showToast(finalMsg, true);
+        }
     });
 }
 window.startPlanItemWorkflow = startPlanItemWorkflow;

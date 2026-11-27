@@ -281,6 +281,10 @@
                             <div class="form-text text-muted small">Nếu đã có sẵn phim/ảnh trên máy, chọn để tải lên và đồng bộ ngay vào Kho ảnh.</div>
                             <div class="mt-2 text-center d-none" id="pcoOrderPreviewWrap">
                                 <img id="pcoOrderImagePreview" src="" alt="Xem trước ảnh" class="img-thumbnail rounded" style="max-height: 140px; object-fit: contain;">
+                                <div id="pcoOrderPdfPreview" class="d-none p-2 px-3 rounded-3 bg-danger-subtle border border-danger-subtle text-danger d-inline-flex align-items-center gap-2 small fw-semibold">
+                                    <i class="bi bi-file-earmark-pdf-fill fs-5"></i>
+                                    <span id="pcoOrderPdfName">ket-qua.pdf</span>
+                                </div>
                             </div>
                         </div>
 
@@ -387,9 +391,13 @@
 
                         <div class="mb-3 text-center d-none" id="uploadPreviewContainer">
                             <img id="uploadImagePreview" src="" alt="Xem trước" class="img-thumbnail rounded shadow-sm" style="max-height: 180px; object-fit: contain;">
+                            <div id="uploadPdfPreview" class="d-none p-2 px-3 rounded-3 bg-danger-subtle border border-danger-subtle text-danger d-inline-flex align-items-center gap-2 small fw-semibold">
+                                <i class="bi bi-file-earmark-pdf-fill fs-4"></i>
+                                <span id="uploadPdfFileName">ket-qua.pdf</span>
+                            </div>
                         </div>
 
-                        <div class="row g-3 mb-3">
+                        <div class="row g-3 mb-3" id="pcoUploadPhotoMetaWrap">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold text-dark small mb-1" for="pcoUploadStageSelect">
                                     Giai đoạn điều trị <span class="text-danger">*</span>
@@ -508,15 +516,33 @@
     function previewOrderAttachImage(input) {
         const prevWrap = document.getElementById('pcoOrderPreviewWrap');
         const prevImg = document.getElementById('pcoOrderImagePreview');
+        const prevPdf = document.getElementById('pcoOrderPdfPreview');
+        const prevPdfName = document.getElementById('pcoOrderPdfName');
         if (input && input.files && input.files[0]) {
+            const f = input.files[0];
+            if (f.name && f.name.toLowerCase().endsWith('.pdf')) {
+                if (prevImg) {
+                    prevImg.src = '';
+                    prevImg.classList.add('d-none');
+                }
+                if (prevPdfName) prevPdfName.textContent = f.name + ' (' + Math.max(1, Math.round(f.size / 1024)) + ' KB)';
+                if (prevPdf) prevPdf.classList.remove('d-none');
+                if (prevWrap) prevWrap.classList.remove('d-none');
+                return;
+            }
+            if (prevPdf) prevPdf.classList.add('d-none');
             const reader = new FileReader();
             reader.onload = function(e) {
-                if (prevImg) prevImg.src = e.target.result;
+                if (prevImg) {
+                    prevImg.src = e.target.result;
+                    prevImg.classList.remove('d-none');
+                }
                 if (prevWrap) prevWrap.classList.remove('d-none');
             };
-            reader.readAsDataURL(input.files[0]);
+            reader.readAsDataURL(f);
         } else {
             if (prevImg) prevImg.src = '';
+            if (prevPdf) prevPdf.classList.add('d-none');
             if (prevWrap) prevWrap.classList.add('d-none');
         }
     }
@@ -671,6 +697,8 @@
                 fd.append('file', fileInput.files[0]);
                 fd.append('stage', stage);
                 fd.append('category', category);
+                if (isExtLab && visitId) fd.append('activeVisitId', String(visitId));
+                if (labPartnerName) fd.append('labPartnerName', labPartnerName);
                 if (notes) fd.append('resultSummary', notes);
                 const upRes = await fetch(`/api/doctor/paraclinical-orders/${existingOrderItemId}/upload`, {
                     method: 'POST',
@@ -868,7 +896,15 @@
                 ? `<div class="small text-muted">KQ: ${esc(ord.resultSummary)}</div>`
                 : '';
 
-            const thumbHtml = (hasImg && !isPdf) ? `
+            const thumbHtml = !hasImg ? '' : (isPdf ? `
+                <a href="${esc(ord.primaryImageUrl)}" target="_blank" rel="noopener"
+                   class="rounded border shadow-sm d-inline-flex flex-column align-items-center justify-content-center text-white text-decoration-none flex-shrink-0"
+                   style="width: 48px; height: 48px; background: linear-gradient(135deg,#991b1b,#dc2626);"
+                   title="Nhấn để mở phiếu PDF xét nghiệm ngoài viện">
+                    <i class="bi bi-file-earmark-pdf-fill fs-5"></i>
+                    <span style="font-size: 9px; font-weight: 700;">PDF</span>
+                </a>
+            ` : `
                 <img src="${esc(ord.primaryImageUrl)}"
                      alt="X-ray"
                      class="rounded border shadow-sm"
@@ -881,7 +917,7 @@
                      data-summary="${esc(ord.resultSummary || '')}"
                      onclick="openDoctorXrayViewerFromEl(this)"
                      title="Nhấn để phóng to & soi phim X-quang">
-            ` : '';
+            `);
 
             const viewBtnInline = hasImg ? (isPdf ? `
                 <div class="mt-1">
@@ -1024,14 +1060,25 @@
         const prev = document.getElementById('uploadPreviewContainer');
         const errBox = document.getElementById('pcoUploadErrorAlert');
 
+        const titleEl = document.getElementById('uploadParaclinicalImageModalLabel');
+        const metaWrap = document.getElementById('pcoUploadPhotoMetaWrap');
+        const prevPdf = document.getElementById('uploadPdfPreview');
+
         if (idInput) idInput.value = orderItemId;
+        if (titleEl) {
+            titleEl.innerHTML = (isExternalLab || fromPreviousVisit)
+                ? '<i class="bi bi-file-earmark-medical text-danger me-2"></i>Tải ảnh / PDF kết quả xét nghiệm ngoài viện'
+                : '<i class="bi bi-camera text-primary me-2"></i>Tải ảnh kết quả cận lâm sàng';
+        }
         if (nameEl) nameEl.textContent = serviceName || 'Chỉ định cận lâm sàng';
         if (fileInput) fileInput.value = '';
         if (stageSelect) stageSelect.value = 'BEFORE';
         if (categorySelect) categorySelect.value = 'OTHER';
         if (summaryInput) summaryInput.value = '';
         if (partnerWrap) partnerWrap.classList.toggle('d-none', !isExternalLab);
+        if (metaWrap) metaWrap.classList.toggle('d-none', Boolean(isExternalLab || fromPreviousVisit));
         if (partnerInput) partnerInput.value = labPartnerName || '';
+        if (prevPdf) prevPdf.classList.add('d-none');
         if (prev) prev.classList.add('d-none');
         if (errBox) errBox.classList.add('d-none');
 
@@ -1045,19 +1092,34 @@
     function previewUploadImage(input) {
         const img = document.getElementById('uploadImagePreview');
         const prev = document.getElementById('uploadPreviewContainer');
+        const prevPdf = document.getElementById('uploadPdfPreview');
+        const prevPdfName = document.getElementById('uploadPdfFileName');
         if (input.files && input.files[0]) {
             const f = input.files[0];
             if (f.name && f.name.toLowerCase().endsWith('.pdf')) {
-                if (img) img.src = '';
-                if (prev) prev.classList.add('d-none');
+                if (img) {
+                    img.src = '';
+                    img.classList.add('d-none');
+                }
+                if (prevPdfName) prevPdfName.textContent = f.name + ' (' + Math.max(1, Math.round(f.size / 1024)) + ' KB)';
+                if (prevPdf) prevPdf.classList.remove('d-none');
+                if (prev) prev.classList.remove('d-none');
                 return;
             }
+            if (prevPdf) prevPdf.classList.add('d-none');
             const reader = new FileReader();
             reader.onload = function(e) {
-                if (img) img.src = e.target.result;
+                if (img) {
+                    img.src = e.target.result;
+                    img.classList.remove('d-none');
+                }
                 if (prev) prev.classList.remove('d-none');
             };
             reader.readAsDataURL(f);
+        } else {
+            if (img) img.src = '';
+            if (prevPdf) prevPdf.classList.add('d-none');
+            if (prev) prev.classList.add('d-none');
         }
     }
 

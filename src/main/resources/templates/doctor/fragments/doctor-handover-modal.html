@@ -75,8 +75,8 @@
 
     <div class="modal fade" id="doctorHandoverModal" tabindex="-1" aria-labelledby="doctorHandoverModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
-                <div class="modal-header py-3 px-4 bg-white border-bottom">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden; max-height: calc(100vh - 2rem);">
+                <div class="modal-header py-3 px-4 bg-white border-bottom flex-shrink-0">
                     <div>
                         <h5 class="modal-title fw-bold mb-0 text-dark d-flex align-items-center gap-2" style="font-size: 16px;" id="doctorHandoverModalLabel">
                             <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary" style="width: 32px; height: 32px;">
@@ -92,8 +92,8 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                 </div>
 
-                <form id="doctorHandoverForm" novalidate onsubmit="event.preventDefault(); window.DFHandover.submit();">
-                    <div class="modal-body p-4" style="background: #f8fafc;">
+                <form id="doctorHandoverForm" class="d-flex flex-column flex-grow-1 overflow-hidden" style="min-height: 0;" novalidate onsubmit="event.preventDefault(); window.DFHandover.submit();">
+                    <div class="modal-body p-4" style="background: #f8fafc; min-height: 0; overflow-y: auto;">
                         <div id="handoverModalError" class="alert alert-danger py-2 px-3 small d-none mb-3" role="alert"></div>
 
                         <!-- Lịch sử chuyển giao nếu có -->
@@ -230,9 +230,11 @@
                 container.innerHTML = doctors.map(function (d) {
                     const selected = Number(state.selectedDoctorId) === Number(d.staffId);
                     const disabled = state.serviceId && !d.eligibleForService;
-                    const statusBadge = d.busy
-                        ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 11px;">Đang khám · ' + Number(d.waitingCount || 0) + ' chờ</span>'
-                        : '<span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 11px;">Đang rảnh' + (d.waitingCount > 0 ? (' · ' + d.waitingCount + ' chờ') : '') + '</span>';
+                    const statusBadge = disabled
+                        ? '<span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 11px;"><i class="bi bi-shield-lock me-1"></i>Không đủ quyền</span>'
+                        : (d.busy
+                            ? '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 11px;">Đang khám · ' + Number(d.waitingCount || 0) + ' chờ</span>'
+                            : '<span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 11px;">Đang rảnh' + (d.waitingCount > 0 ? (' · ' + d.waitingCount + ' chờ') : '') + '</span>');
                     const returnBadge = d.suggestedReturn
                         ? '<span class="badge bg-primary text-white ms-1" style="font-size: 10.5px;">Trả về BS trước</span>'
                         : '';
@@ -345,9 +347,12 @@
                 const latest = data.handoverHistory[0];
                 const detailEl = document.getElementById('visitHandoverBannerDetail');
                 if (detailEl) {
-                    detailEl.innerHTML = '<strong>BS ' + esc(latest.fromDoctorName) + '</strong> bàn giao lúc ' + esc(latest.timestamp)
-                        + (latest.serviceName ? (' · Dịch vụ: <strong>' + esc(latest.serviceName) + '</strong>') : '')
-                        + '<div class="mt-1 text-dark">Lời dặn: "' + esc(latest.note) + '"</div>';
+                    const svcPill = latest.serviceName
+                        ? ' <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">Dịch vụ: ' + esc(latest.serviceName) + '</span>'
+                        : '';
+                    detailEl.innerHTML = '<div><strong class="text-dark">BS ' + esc(latest.fromDoctorName) + '</strong> bàn giao lúc <span class="df-num">' + esc(latest.timestamp) + '</span>'
+                        + svcPill + '</div>'
+                        + '<div class="mt-1 text-dark">Lời dặn: <span class="fst-italic">"' + esc(latest.note) + '"</span></div>';
                 }
                 const returnBtn = document.getElementById('btnQuickReturnHandover');
                 if (returnBtn) {

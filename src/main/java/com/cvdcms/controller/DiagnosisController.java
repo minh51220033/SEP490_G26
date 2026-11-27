@@ -78,6 +78,8 @@ public class DiagnosisController {
     private com.cvdcms.repository.EmrRecordRepository emrRecordRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.cvdcms.service.OverdueVisitCleanupService overdueVisitCleanupService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.cvdcms.service.DoctorClinicalCapabilityService capabilityService;
 
     public void setDoctorCoverGrantRepository(
             com.cvdcms.repository.DoctorCoverGrantRepository doctorCoverGrantRepository) {
@@ -840,6 +842,7 @@ public class DiagnosisController {
         model.addAttribute("clinicalCheck", clinicalCheck);
         model.addAttribute("bookedService", doctorVisitAccess != null ? doctorVisitAccess.resolveBookedServiceSummary(visit) : null);
         model.addAttribute("deskWaitingCount", doctorVisitAccess != null ? doctorVisitAccess.countWaitingPatientsForVisitDoctor(visit) : 0);
+        model.addAttribute("doctorCapabilityIssues", buildDoctorCapabilityIssues(visit, readOnly, defaultActingDoctor, activeServices, treatmentPlans));
 
         model.addAttribute("pageTitle", "Khám & Điều trị - Chẩn đoán , Kế hoạch, Dịch vụ thực hiện , Ảnh lâm sàng  & Đơn thuốc ");
         model.addAttribute("activeMenu", "examination");
@@ -873,14 +876,7 @@ public class DiagnosisController {
                 if (b.getBranchId().equals(selectedBranchId)) {
                     selectedBranch = b;
                     break;
-[27/11/2026 13:54:57] Xuân Hiếu: Đã nói là thằng lễ tân không phân bác sĩ nữa rồi
-[27/11/2026 13:55:17] Xuân Hiếu: Chạy theo mô hình thác nước
-[27/11/2026 13:55:27] Xuân Hiếu: Không phải do lễ tân phân
-[27/11/2026 13:55:58] Lê Thanh Sơn: thế bác sĩ vẫn cho bệnh nhân ra phòng khác đc chứ
-[27/11/2026 13:56:17] Xuân Hiếu: Có thì đó là bác sĩ điều phối
-[27/11/2026 13:56:22] Xuân Hiếu: Xử lý ở trong khám
-[27/11/2026 13:56:39] Xuân Hiếu: Lúc kham bác sĩ không làm được dịch vụ đó
-[27/11/2026 13:56:52] Xuân Hiếu: Thì lệnh đổi cho bác sĩ khác                }
+                }
             }
         }
         if (selectedBranch == null && !branches.isEmpty()) {
@@ -1388,6 +1384,57 @@ public class DiagnosisController {
             }
         }
         return result;
+    }
+
+    private Map<String, String> buildDoctorCapabilityIssues(
+            Visit visit,
+            boolean readOnly,
+            StaffProfile defaultActingDoctor,
+            List<ServiceDTO> activeServices,
+            List<TreatmentPlanResponseDTO> treatmentPlans) {
+        if (readOnly || capabilityService == null || visit == null) {
+            return Collections.emptyMap();
+        }
+        Long doctorId = defaultActingDoctor != null
+                ? defaultActingDoctor.getStaffId()
+                : (visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null);
+        if (doctorId == null) {
+            return Collections.emptyMap();
+        }
+        Long branchId = visit.getBranch() != null ? visit.getBranch().getBranchId() : null;
+        Long roomId = visit.getRoomId();
+        java.util.Set<Long> serviceIds = new java.util.LinkedHashSet<>();
+        if (activeServices != null) {
+            for (ServiceDTO s : activeServices) {
+                if (s != null && s.getServiceId() != null) {
+                    serviceIds.add(s.getServiceId());
+                }
+            }
+        }
+        if (treatmentPlans != null) {
+            for (TreatmentPlanResponseDTO p : treatmentPlans) {
+                if (p == null || p.getStages() == null) continue;
+                for (var st : p.getStages()) {
+                    if (st == null || st.getItems() == null) continue;
+                    for (var it : st.getItems()) {
+                        if (it != null && it.getServiceId() != null) {
+                            serviceIds.add(it.getServiceId());
+                        }
+                    }
+                }
+            }
+        }
+        Map<String, String> issues = new java.util.LinkedHashMap<>();
+        for (Long svcId : serviceIds) {
+            if (capabilityService.isParaclinicalOrLabService(svcId)) {
+                continue;
+            }
+            var check = capabilityService.checkDoctorAndRoomCapability(branchId, doctorId, roomId, svcId);
+            if (!check.allowed() && check.message() != null) {
+                issues.put(String.valueOf(svcId), check.message());
+            }
+        }
+        return issues;
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
