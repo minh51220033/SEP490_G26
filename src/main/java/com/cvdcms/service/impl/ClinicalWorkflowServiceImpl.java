@@ -651,7 +651,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám với ID: " + visitId));
         String lockReason = lockReason(visit);
 
-        List<WorkflowExecution> executions = new ArrayList<>(executionRepo.findByVisit_VisitId(visitId));
+        List<WorkflowExecution> executions = executionRepo.findByVisit_VisitId(visitId).stream()
+                .filter(e -> e.getPlanItem() != null || e.getPlanStage() != null)
+                .collect(Collectors.toCollection(ArrayList::new));
         Set<Long> seenExecIds = executions.stream()
                 .map(WorkflowExecution::getExecutionId)
                 .filter(Objects::nonNull)
@@ -677,7 +679,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     }
                     boolean hasPlanLink = pe.getPlanItem() != null || pe.getPlanStage() != null;
                     boolean activeInCurrentVisit = hasStepActivityInVisit(pe, visitId);
-                    if (!hasPlanLink && !activeInCurrentVisit) {
+                    if (!hasPlanLink) {
                         continue;
                     }
                     if (pe.getStatus() == WorkflowExecutionStatus.IN_PROGRESS

@@ -344,12 +344,11 @@
                                 <th style="width: 135px;" class="text-center">Vị trí răng</th>
                                 <th style="width: 175px;">Tiến độ</th>
                                 <th style="width: 145px;" class="text-center">Trạng thái</th>
-                                <th style="width: 180px;" class="text-center">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody id="ft43ListTableBody">
                             <tr>
-                                <td colspan="6" class="text-center text-muted py-5">
+                                <td colspan="5" class="text-center text-muted py-5">
                                     <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
                                     Đang tải danh sách quy trình của ca khám...
                                 </td>
@@ -994,7 +993,7 @@
                         var planUrl = (document.getElementById('ft43AddServicePlanLink') || {}).href
                             || 'javascript:void(0)';
                         tbody.innerHTML = '<tr>'
-                            + '<td colspan="6" class="text-center py-5">'
+                            + '<td colspan="5" class="text-center py-5">'
                             + '  <div class="text-secondary mb-2" style="font-size: 28px;"><i class="bi bi-inbox"></i></div>'
                             + '  <div class="fw-bold text-dark mb-1">Chưa có dịch vụ nào trong Kế hoạch điều trị của ca này</div>'
                             + '  <div class="small text-muted mb-3">'
@@ -1077,11 +1076,8 @@
                             ? '<span class="badge bg-light text-dark border df-num">R-' + esc(g.toothNumbers) + '</span>'
                             : '<span class="text-muted small">Toàn hàm</span>';
 
-                        var subtitle = (g.planCode ? ('Phác đồ: ' + g.planCode) : 'Kế hoạch điều trị')
+                        var subtitle = (g.planCode ? ('Phác đồ: ' + g.planCode) : 'Quy trình ngoài KHDT')
                             + ' · ' + totalStages + ' giai đoạn (' + completedStages + '/' + totalStages + ' hoàn tất)';
-
-                        var toggleBtnLabel = isExpanded ? 'Thu gọn' : ('Xem giai đoạn (' + totalStages + ')');
-                        var toggleBtnIcon = isExpanded ? 'bi-chevron-up' : 'bi-layers';
 
                         html += '<tr class="wf-service-group-row' + (isExpanded ? ' is-expanded' : '') + '" '
                             + 'data-group-key="' + esc(g.key) + '" '
@@ -1107,13 +1103,6 @@
                             + '  </div>'
                             + '</td>'
                             + '<td class="text-center"><span class="badge rounded-pill px-2 py-1 border fw-semibold ' + aggStatusClass + '">' + esc(aggStatusLabel) + '</span></td>'
-                            + '<td class="text-center" onclick="event.stopPropagation()">'
-                            + '  <button type="button" class="btn df-btn-tonal-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size:12.5px;" '
-                            + '          data-group-key="' + esc(g.key) + '" '
-                            + '          onclick="window.FT43.toggleGroup(this.getAttribute(\'data-group-key\'))">'
-                            + '    <i class="bi ' + toggleBtnIcon + '"></i><span>' + toggleBtnLabel + '</span>'
-                            + '  </button>'
-                            + '</td>'
                             + '</tr>';
 
                         if (isExpanded) {
@@ -1122,7 +1111,7 @@
                                 childrenHtml += renderStageItemHtml(item, idx, bookedId, waitingCount);
                             });
                             html += '<tr class="wf-stage-drawer-row">'
-                                + '<td colspan="6"><div class="wf-stage-list-wrap">' + childrenHtml + '</div></td>'
+                                + '<td colspan="5"><div class="wf-stage-list-wrap">' + childrenHtml + '</div></td>'
                                 + '</tr>';
                         }
                     });
