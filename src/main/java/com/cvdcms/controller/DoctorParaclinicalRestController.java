@@ -169,7 +169,7 @@ public class DoctorParaclinicalRestController {
     ) {
         doctorVisitAccess.requireActiveClinicalExam(session, visitId);
         try {
-            Long currentDoctorId = doctorVisitAccess.resolveActingDoctorStaffId(session);
+            Long currentDoctorId = session != null ? doctorVisitAccess.resolveActingDoctorStaffId(session) : null;
             ParaclinicalOrderItemResponseDTO created = paraclinicalOrderService.createOrder(visitId, dto, currentDoctorId);
             return ResponseEntity.status(HttpStatus.CREATED).body(created);
         } catch (IllegalStateException | IllegalArgumentException e) {

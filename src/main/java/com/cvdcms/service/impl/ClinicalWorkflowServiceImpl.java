@@ -677,13 +677,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                     }
                     boolean hasPlanLink = pe.getPlanItem() != null || pe.getPlanStage() != null;
                     boolean activeInCurrentVisit = hasStepActivityInVisit(pe, visitId);
-                    Long peServiceId = (pe.getVersion() != null && pe.getVersion().getTemplate() != null
-                            && pe.getVersion().getTemplate().getService() != null)
-                                    ? pe.getVersion().getTemplate().getService().getServiceId()
-                                    : null;
-                    boolean matchesBookedService = bookedServiceId != null && bookedServiceId.equals(peServiceId);
-                    boolean hasProgress = hasStepProgress(pe);
-                    if (!hasPlanLink && !activeInCurrentVisit && !matchesBookedService && !hasProgress) {
+                    if (!hasPlanLink && !activeInCurrentVisit) {
                         continue;
                     }
                     if (pe.getStatus() == WorkflowExecutionStatus.IN_PROGRESS
@@ -811,6 +805,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                                         .suggested(true)
                                         .planItemId(rep.getPlanItemId())
                                         .planStageId(stage.getStageId())
+                                        .planStageOrder(stage.getStageOrder())
+                                        .planStageName(stage.getStageName())
                                         .planCode(plan.getPlanCode())
                                         .planName(plan.getPlanName())
                                         .stepName(displayStep)
@@ -825,28 +821,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 }
             }
 
-            // 2. Các dịch vụ độc lập có mẫu quy trình
-            for (ClinicalWorkflowTemplate t : activeTplByServiceId.values()) {
-                Long sId = t.getService().getServiceId();
-                if (startedStandaloneServiceIds.contains(sId)) {
-                    continue;
-                }
-                var capOpt = checkServiceCapability(visit, sId, null);
-                available.add(WorkflowVisitOverviewDTO.ServiceOption.builder()
-                        .serviceId(sId)
-                        .serviceCode(t.getService().getServiceCode())
-                        .serviceName(t.getService().getServiceName())
-                        .templateName(t.getTemplateName())
-                        .stepCount(stepCountByTplId.getOrDefault(t.getTemplateId(), 0))
-                        .estimatedDurationMinutes(resolveServiceDuration(t.getService()))
-                        .allowSameVisit(!Boolean.FALSE.equals(t.getService().getAllowSameVisit()))
-                        .isParaclinical(Boolean.TRUE.equals(t.getService().getIsParaclinical()))
-                        .suggested(performedServiceIds.contains(sId))
-                        .canPerform(capOpt.allowed())
-                        .capabilityReason(capOpt.message())
-                        .requiresHandover(!capOpt.allowed())
-                        .build());
-            }
+            // Thống nhất 1 luồng: tab Quy trình điều trị chỉ nạp các dịch vụ/hạng mục từ Kế hoạch điều trị
             available.sort(Comparator
                     .comparing((WorkflowVisitOverviewDTO.ServiceOption o) -> o.getPlanItemId() == null
                             && o.getPlanStageId() == null)
@@ -2316,6 +2291,20 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             }
 
             if (performedServiceService != null) {
+                com.cvdcms.entity.Service effService = item.getService() != null ? item.getService() : service;
+                String resolvedTeeth = (item.getToothNumbers() != null && !item.getToothNumbers().isBlank())
+                        ? item.getToothNumbers()
+                        : extractTeethFromSteps(allSteps);
+                if ((item.getToothNumbers() == null || item.getToothNumbers().isBlank()) && resolvedTeeth != null) {
+                    item.setToothNumbers(resolvedTeeth);
+                }
+                if (qty.compareTo(java.math.BigDecimal.ONE) <= 0 && isToothBasedService(effService)) {
+                    int teethCount = countSpecificTeeth(resolvedTeeth);
+                    if (teethCount > 1) {
+                        qty = java.math.BigDecimal.valueOf(teethCount);
+                        item.setQuantity(qty);
+                    }
+                }
                 String displayStep = (item.getStepName() != null && !item.getStepName().isBlank())
                         ? item.getStepName()
                         : (service != null ? service.getServiceName() : "Dịch vụ điều trị");
@@ -2323,7 +2312,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                         .visitId(effectiveVisit.getVisitId())
                         .serviceId(item.getService().getServiceId())
                         .stepName(displayStep)
-                        .toothNumbers(item.getToothNumbers())
+                        .toothNumbers(resolvedTeeth)
                         .quantity(qty)
                         .unitPrice(unitPrice)
                         .discountAmount(java.math.BigDecimal.ZERO)
@@ -2334,6 +2323,9 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                                 + execution.getVersion().getTemplate().getTemplateName())
                         .build();
                 performedServiceService.createPerformedService(req);
+                item.setStatus(TreatmentPlanItemStatus.COMPLETED);
+                item.setCompletedAt(now);
+                treatmentPlanItemRepo.save(item);
                 return;
             }
         }
@@ -2447,6 +2439,20 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                         }
 
                         if (performedServiceService != null) {
+                            com.cvdcms.entity.Service effService = item.getService() != null ? item.getService() : service;
+                            String resolvedTeeth = (item.getToothNumbers() != null && !item.getToothNumbers().isBlank())
+                                    ? item.getToothNumbers()
+                                    : extractTeethFromSteps(allSteps);
+                            if ((item.getToothNumbers() == null || item.getToothNumbers().isBlank()) && resolvedTeeth != null) {
+                                item.setToothNumbers(resolvedTeeth);
+                            }
+                            if (qty.compareTo(java.math.BigDecimal.ONE) <= 0 && isToothBasedService(effService)) {
+                                int teethCount = countSpecificTeeth(resolvedTeeth);
+                                if (teethCount > 1) {
+                                    qty = java.math.BigDecimal.valueOf(teethCount);
+                                    item.setQuantity(qty);
+                                }
+                            }
                             String displayStep = item.getStepName() != null && !item.getStepName().isBlank()
                                     ? item.getStepName()
                                     : (item.getService() != null ? item.getService().getServiceName()
@@ -2455,7 +2461,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                                     .visitId(effectiveVisit.getVisitId())
                                     .serviceId(item.getService().getServiceId())
                                     .stepName(displayStep)
-                                    .toothNumbers(item.getToothNumbers())
+                                    .toothNumbers(resolvedTeeth)
                                     .quantity(qty)
                                     .unitPrice(unitPrice)
                                     .discountAmount(java.math.BigDecimal.ZERO)
@@ -2466,6 +2472,10 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                                             + execution.getVersion().getTemplate().getTemplateName())
                                     .build();
                             performedServiceService.createPerformedService(req);
+                            item.setStatus(TreatmentPlanItemStatus.COMPLETED);
+                            item.setCompletedAt(LocalDateTime.now());
+                            treatmentPlanItemRepo.save(item);
+                            recalculateStageAndPlanStatus(item);
                             return;
                         }
                     }
@@ -2486,13 +2496,15 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                         service.getServiceId())) {
                     return;
                 }
-                java.math.BigDecimal qty = resolveStandaloneQuantity(allSteps);
+                String resolvedTeeth = extractTeethFromSteps(allSteps);
+                java.math.BigDecimal qty = resolveStandaloneQuantity(allSteps, service, resolvedTeeth);
                 java.math.BigDecimal basePrice = service.getBasePrice() != null ? service.getBasePrice()
                         : java.math.BigDecimal.ZERO;
                 PerformedServiceRequestDTO req = PerformedServiceRequestDTO.builder()
                         .visitId(effectiveVisit.getVisitId())
                         .serviceId(service.getServiceId())
                         .stepName(service.getServiceName())
+                        .toothNumbers(resolvedTeeth)
                         .quantity(qty)
                         .unitPrice(basePrice)
                         .discountAmount(java.math.BigDecimal.ZERO)
@@ -2592,7 +2604,84 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
         return false;
     }
 
-    private java.math.BigDecimal resolveStandaloneQuantity(List<WorkflowStepExecution> allSteps) {
+    private boolean isToothBasedService(com.cvdcms.entity.Service service) {
+        if (service == null || Boolean.FALSE.equals(service.getRequiresTooth())) {
+            return false;
+        }
+        String u = service.getUnit() != null ? service.getUnit().trim().toLowerCase(Locale.ROOT) : "";
+        return !(u.contains("lần") || u.contains("gói") || u.contains("hàm")
+                || u.contains("liệu trình") || u.contains("ca"));
+    }
+
+    private String extractTeethFromSteps(List<WorkflowStepExecution> allSteps) {
+        if (allSteps == null || allSteps.isEmpty()) {
+            return null;
+        }
+        Set<String> specificTeeth = new LinkedHashSet<>();
+        boolean sawFullJaw = false;
+        for (WorkflowStepExecution se : allSteps) {
+            Map<String, Object> data = parseJson(se.getResultData());
+            Object rawTeeth = data.get("teeth");
+            if (rawTeeth instanceof Collection<?> col) {
+                for (Object item : col) {
+                    if (item == null) continue;
+                    String token = normalizeSingleToothToken(item.toString());
+                    if (token == null) continue;
+                    if ("Toàn hàm".equalsIgnoreCase(token)) {
+                        sawFullJaw = true;
+                    } else {
+                        specificTeeth.add(token);
+                    }
+                }
+            } else if (rawTeeth != null && !rawTeeth.toString().isBlank()) {
+                for (String part : rawTeeth.toString().split("[,;]+")) {
+                    String token = normalizeSingleToothToken(part);
+                    if (token == null) continue;
+                    if ("Toàn hàm".equalsIgnoreCase(token)) {
+                        sawFullJaw = true;
+                    } else {
+                        specificTeeth.add(token);
+                    }
+                }
+            }
+        }
+        if (!specificTeeth.isEmpty()) {
+            return String.join(", ", specificTeeth);
+        }
+        return sawFullJaw ? "Toàn hàm" : null;
+    }
+
+    private String normalizeSingleToothToken(String raw) {
+        if (raw == null) return null;
+        String t = raw.trim();
+        if (t.isEmpty()) return null;
+        if (t.equalsIgnoreCase("toàn hàm") || t.equalsIgnoreCase("toan ham")) {
+            return "Toàn hàm";
+        }
+        if ((t.startsWith("R-") || t.startsWith("r-")) && t.length() > 2) {
+            t = t.substring(2).trim();
+        } else if ((t.startsWith("R") || t.startsWith("r")) && t.length() == 3 && Character.isDigit(t.charAt(1))) {
+            t = t.substring(1);
+        }
+        return t.isEmpty() ? null : t;
+    }
+
+    private int countSpecificTeeth(String teethStr) {
+        if (teethStr == null || teethStr.isBlank()) return 0;
+        Set<String> set = new LinkedHashSet<>();
+        for (String part : teethStr.split("[,;]+")) {
+            String tok = normalizeSingleToothToken(part);
+            if (tok != null && !"Toàn hàm".equalsIgnoreCase(tok)) {
+                set.add(tok);
+            }
+        }
+        return set.size();
+    }
+
+    private java.math.BigDecimal resolveStandaloneQuantity(
+            List<WorkflowStepExecution> allSteps,
+            com.cvdcms.entity.Service service,
+            String resolvedTeeth) {
         if (allSteps != null) {
             for (WorkflowStepExecution se : allSteps) {
                 Map<String, Object> data = parseJson(se.getResultData());
@@ -2600,6 +2689,12 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 if (q != null && q > 1L) {
                     return java.math.BigDecimal.valueOf(q);
                 }
+            }
+        }
+        if (isToothBasedService(service)) {
+            int toothCount = countSpecificTeeth(resolvedTeeth);
+            if (toothCount > 1) {
+                return java.math.BigDecimal.valueOf(toothCount);
             }
         }
         return java.math.BigDecimal.ONE;
@@ -3006,6 +3101,8 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .lockedReason(lockReason)
                 .planItemId(planItem != null ? planItem.getPlanItemId() : null)
                 .planStageId(planStage != null ? planStage.getStageId() : null)
+                .planStageOrder(planStage != null ? planStage.getStageOrder() : null)
+                .planStageName(planStage != null ? planStage.getStageName() : null)
                 .planCode(parentPlan != null ? parentPlan.getPlanCode() : null)
                 .planName(parentPlan != null ? parentPlan.getPlanName() : null)
                 .toothNumbers(toothNumbers)
@@ -3277,8 +3374,12 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
                 .filter(p -> (p.getStatus() == TreatmentPlanStatus.IN_PROGRESS
                         || p.getStatus() == TreatmentPlanStatus.ACCEPTED)
                         && !Boolean.TRUE.equals(p.getIsInstallment())
-                        && !Boolean.TRUE.equals(p.getSentToAccounting()))
-                .min(Comparator.comparingInt(p -> p.getStatus() == TreatmentPlanStatus.IN_PROGRESS ? 0 : 1))
+                        && (p.getTotalPaidAmount() == null || p.getTotalPaidAmount().compareTo(java.math.BigDecimal.ZERO) <= 0)
+                        && ((p.getVisit() != null && Objects.equals(visit.getVisitId(), p.getVisit().getVisitId()))
+                                || !Boolean.TRUE.equals(p.getSentToAccounting())))
+                .min(Comparator
+                        .comparing((TreatmentPlan p) -> !(p.getVisit() != null && Objects.equals(visit.getVisitId(), p.getVisit().getVisitId())))
+                        .thenComparingInt(p -> p.getStatus() == TreatmentPlanStatus.IN_PROGRESS ? 0 : 1))
                 .orElse(null);
 
         if (plan == null) {
@@ -3286,6 +3387,7 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             plan.setPlanCode("KHDT" + (System.currentTimeMillis() % 100000000));
             plan.setPatientProfile(patient);
             plan.setBranch(branch);
+            plan.setVisit(visit);
             plan.setDoctor(doctor);
             String rawPlanName = "Kế hoạch điều trị: " + combo.getComboName();
             plan.setPlanName(rawPlanName.length() > 150 ? rawPlanName.substring(0, 150) : rawPlanName);

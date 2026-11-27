@@ -47,6 +47,8 @@ public class WorkflowVisitOverviewDTO {
         private Boolean suggested;
         private Long planItemId;
         private Long planStageId;
+        private Integer planStageOrder;
+        private String planStageName;
         private String planCode;
         private String planName;
         private String stepName;

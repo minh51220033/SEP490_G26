@@ -42,6 +42,10 @@ public class TreatmentPlan {
     @JoinColumn(name = "branch_id", nullable = false)
     private Branch branch;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "visit_id")
+    private Visit visit;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "doctor_id", nullable = false)
     private StaffProfile doctor;

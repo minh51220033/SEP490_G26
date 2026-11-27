@@ -104,6 +104,8 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private VisitRepository visitRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private AppointmentRepository appointmentRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
     private WorkflowExecutionRepository workflowExecutionRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private WorkflowStepExecutionRepository workflowStepExecutionRepository;
@@ -118,6 +120,163 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
     public List<TreatmentPlanResponseDTO> getPlansByPatientId(Long patientId) {
         List<TreatmentPlan> plans = treatmentPlanRepository.findByProfileIdWithDetails(patientId);
         return plans.stream().map(this::mapToResponseDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public TreatmentPlanResponseDTO ensureVisitDefaultPlanWithBookedService(Long visitId, Long actingDoctorStaffId) {
+        if (visitId == null || visitRepository == null || appointmentRepository == null) {
+            return null;
+        }
+        Visit visit = visitRepository.findById(visitId).orElse(null);
+        if (visit == null || visit.getPatientProfile() == null || visit.getAppointmentId() == null) {
+            return null;
+        }
+        if (visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.WAITING_PAYMENT
+                || visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.COMPLETED
+                || visit.getStatus() == com.cvdcms.entity.enums.VisitStatus.CANCELLED) {
+            return null;
+        }
+        if (emrRecordRepository != null && emrRecordRepository.findByVisit_VisitId(visitId)
+                .map(e -> e.getStatus() == com.cvdcms.entity.enums.EmrStatus.FINALIZED).orElse(false)) {
+            return null;
+        }
+        Appointment appt = appointmentRepository.findById(visit.getAppointmentId()).orElse(null);
+        com.cvdcms.entity.Service bookedSvc = appt != null ? appt.getService() : null;
+        if (bookedSvc == null || bookedSvc.getServiceId() == null
+                || Boolean.TRUE.equals(bookedSvc.getIsParaclinical())
+                || bookedSvc.getServiceType() == com.cvdcms.entity.enums.ServiceType.XRAY
+                || bookedSvc.getServiceType() == com.cvdcms.entity.enums.ServiceType.LAB) {
+            return null;
+        }
+
+        Long profileId = visit.getPatientProfile().getProfileId();
+        List<TreatmentPlan> existingPlans = treatmentPlanRepository.findByProfileIdWithDetails(profileId);
+        TreatmentPlan visitPlan = existingPlans == null ? null : existingPlans.stream()
+                .filter(p -> p.getVisit() != null && Objects.equals(visitId, p.getVisit().getVisitId())
+                        && p.getStatus() != TreatmentPlanStatus.CANCELLED)
+                .findFirst()
+                .orElse(null);
+
+        if (visitPlan != null) {
+            boolean alreadyHasBooked = visitPlan.getStages() != null && visitPlan.getStages().stream()
+                    .filter(st -> st.getItems() != null)
+                    .flatMap(st -> st.getItems().stream())
+                    .anyMatch(it -> it.getStatus() != TreatmentPlanItemStatus.CANCELLED
+                            && it.getService() != null
+                            && Objects.equals(bookedSvc.getServiceId(), it.getService().getServiceId()));
+            if (alreadyHasBooked || visitPlan.getStatus() == TreatmentPlanStatus.COMPLETED
+                    || Boolean.TRUE.equals(visitPlan.getIsInstallment())) {
+                return mapToResponseDTO(visitPlan);
+            }
+            if (visitPlan.getStages() == null) {
+                visitPlan.setStages(new ArrayList<>());
+            }
+            int nextOrder = visitPlan.getStages().stream()
+                    .mapToInt(s -> s.getStageOrder() != null ? s.getStageOrder() : 0)
+                    .max().orElse(0) + 1;
+            LocalDate today = visit.getCheckInAt() != null ? visit.getCheckInAt().toLocalDate() : LocalDate.now();
+            BigDecimal basePrice = bookedSvc.getBasePrice() != null ? bookedSvc.getBasePrice() : BigDecimal.ZERO;
+
+            TreatmentPlanStage stage = new TreatmentPlanStage();
+            stage.setPlan(visitPlan);
+            stage.setStageOrder(nextOrder);
+            stage.setStageName("[SV #" + nextOrder + "] " + bookedSvc.getServiceName());
+            stage.setDescription("Dịch vụ: " + bookedSvc.getServiceName());
+            stage.setExpectedEndDate(today);
+            stage.setStatus(TreatmentPlanStageStatus.PENDING);
+            stage.setItems(new ArrayList<>());
+
+            TreatmentPlanItem item = new TreatmentPlanItem();
+            item.setPlan(visitPlan);
+            item.setStage(stage);
+            item.setService(bookedSvc);
+            item.setStepName(bookedSvc.getServiceName());
+            item.setToothNumbers(resolveDefaultBookedToothScope(bookedSvc));
+            item.setQuantity(BigDecimal.ONE);
+            item.setEstimatedPrice(basePrice);
+            item.setStatus(TreatmentPlanItemStatus.PLANNED);
+            stage.getItems().add(item);
+
+            visitPlan.getStages().add(stage);
+            BigDecimal curTotal = visitPlan.getTotalEstimatedCost() != null ? visitPlan.getTotalEstimatedCost() : BigDecimal.ZERO;
+            BigDecimal curFinal = visitPlan.getFinalEstimatedCost() != null ? visitPlan.getFinalEstimatedCost() : BigDecimal.ZERO;
+            visitPlan.setTotalEstimatedCost(curTotal.add(basePrice));
+            visitPlan.setFinalEstimatedCost(curFinal.add(basePrice));
+            return mapToResponseDTO(treatmentPlanRepository.save(visitPlan));
+        }
+
+        Branch branch = visit.getBranch() != null ? visit.getBranch() : visit.getPatientProfile().getPreferredBranch();
+        if (branch == null) {
+            branch = branchRepository.findAll().stream().findFirst().orElse(null);
+        }
+        StaffProfile doctor = visit.getPrimaryDoctor();
+        if (doctor == null && actingDoctorStaffId != null) {
+            doctor = staffProfileRepository.findById(actingDoctorStaffId).orElse(null);
+        }
+        if (doctor == null) {
+            doctor = staffProfileRepository.findAll().stream().findFirst().orElse(null);
+        }
+        if (branch == null || doctor == null) {
+            return null;
+        }
+
+        LocalDate today = visit.getCheckInAt() != null ? visit.getCheckInAt().toLocalDate() : LocalDate.now();
+        BigDecimal basePrice = bookedSvc.getBasePrice() != null ? bookedSvc.getBasePrice() : BigDecimal.ZERO;
+
+        TreatmentPlan plan = new TreatmentPlan();
+        plan.setPlanCode("KHDT" + (System.currentTimeMillis() % 100000000));
+        plan.setPatientProfile(visit.getPatientProfile());
+        plan.setBranch(branch);
+        plan.setVisit(visit);
+        plan.setDoctor(doctor);
+        plan.setPlanName("Kế hoạch ca khám hôm nay — " + bookedSvc.getServiceName());
+        plan.setStatus(TreatmentPlanStatus.ACCEPTED);
+        plan.setStartDate(today);
+        plan.setExpectedEndDate(today);
+        plan.setTotalEstimatedCost(basePrice);
+        plan.setFinalEstimatedCost(basePrice);
+        plan.setIsInstallment(false);
+        plan.setTotalPaidAmount(BigDecimal.ZERO);
+        plan.setSentToAccounting(true);
+        plan.setSentToAccountingAt(LocalDateTime.now());
+        plan.setStages(new ArrayList<>());
+
+        TreatmentPlanStage stage = new TreatmentPlanStage();
+        stage.setPlan(plan);
+        stage.setStageOrder(1);
+        stage.setStageName("[SV #1] " + bookedSvc.getServiceName());
+        stage.setDescription("Dịch vụ: " + bookedSvc.getServiceName());
+        stage.setExpectedEndDate(today);
+        stage.setStatus(TreatmentPlanStageStatus.PENDING);
+        stage.setItems(new ArrayList<>());
+
+        TreatmentPlanItem item = new TreatmentPlanItem();
+        item.setPlan(plan);
+        item.setStage(stage);
+        item.setService(bookedSvc);
+        item.setStepName(bookedSvc.getServiceName());
+        item.setToothNumbers(resolveDefaultBookedToothScope(bookedSvc));
+        item.setQuantity(BigDecimal.ONE);
+        item.setEstimatedPrice(basePrice);
+        item.setStatus(TreatmentPlanItemStatus.PLANNED);
+        stage.getItems().add(item);
+
+        plan.getStages().add(stage);
+        TreatmentPlan saved = treatmentPlanRepository.save(plan);
+        log.info("Auto-created visit KHDT {} for visitId={} with booked service {}",
+                saved.getPlanCode(), visitId, bookedSvc.getServiceCode());
+        return mapToResponseDTO(saved);
+    }
+
+    private String resolveDefaultBookedToothScope(com.cvdcms.entity.Service svc) {
+        if (svc == null) return null;
+        if (Boolean.FALSE.equals(svc.getRequiresTooth())) return "Toàn hàm";
+        String u = svc.getUnit() != null ? svc.getUnit().toLowerCase(Locale.ROOT) : "";
+        if (u.contains("lần") || u.contains("gói") || u.contains("hàm") || u.contains("liệu trình") || u.contains("ca")) {
+            return "Toàn hàm";
+        }
+        return null;
     }
 
     @Override
@@ -138,14 +297,15 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         PatientProfile patient = patientProfileRepository.findById(request.getPatientId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hồ sơ bệnh nhân."));
 
+        Visit linkedVisit = null;
         if (request.getVisitId() != null && visitRepository != null) {
-            Visit visit = visitRepository.findById(request.getVisitId())
+            linkedVisit = visitRepository.findById(request.getVisitId())
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ca khám phù hợp."));
             com.cvdcms.util.EmrStatePolicy.assertMutableVisitAndEmr(
-                    visit,
+                    linkedVisit,
                     emrRecordRepository,
                     "Ca khám đã khóa/hoàn tất lâm sàng, không thể lập kế hoạch điều trị");
-            if (visit.getPatientProfile() != null && !visit.getPatientProfile().getProfileId().equals(patient.getProfileId())) {
+            if (linkedVisit.getPatientProfile() != null && !linkedVisit.getPatientProfile().getProfileId().equals(patient.getProfileId())) {
                 throw new IllegalArgumentException("Ca khám không khớp với hồ sơ bệnh nhân.");
             }
         }
@@ -174,6 +334,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         plan.setPlanCode("KHDT" + (System.currentTimeMillis() % 100000000));
         plan.setPatientProfile(patient);
         plan.setBranch(branch);
+        plan.setVisit(linkedVisit);
         plan.setDoctor(doctor);
         String rawPlanName = request.getPlanName() != null && !request.getPlanName().trim().isEmpty() 
                 ? request.getPlanName().trim() : "Kế hoạch điều trị nha khoa";
@@ -1065,6 +1226,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
         PatientProfile patient = p.getPatientProfile();
         Branch branch = p.getBranch();
         StaffProfile doctor = p.getDoctor();
+        Visit visit = p.getVisit();
 
         int totalStages = (p.getStages() != null) ? p.getStages().size() : 0;
         int completedStages = 0;
@@ -1184,6 +1346,9 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
                 .phoneNumber(patient != null ? patient.getPhoneNumber() : null)
                 .branchId(branch != null ? branch.getBranchId() : null)
                 .branchName(branch != null ? branch.getBranchName() : null)
+                .visitId(visit != null ? visit.getVisitId() : null)
+                .visitCode(visit != null ? visit.getVisitCode() : null)
+                .visitCheckInDate(visit != null && visit.getCheckInAt() != null ? visit.getCheckInAt().format(DATE_FORMATTER) : null)
                 .doctorId(doctor != null ? doctor.getStaffId() : null)
                 .doctorName(doctor != null ? doctor.getFullName() : null)
                 .planName(p.getPlanName())
