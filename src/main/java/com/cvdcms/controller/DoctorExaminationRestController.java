@@ -128,6 +128,79 @@ public class DoctorExaminationRestController {
     }
 
     /**
+     * Lấy danh sách bác sĩ đủ quyền chuyên môn, trạng thái rảnh/bận và sơ đồ phòng cho Modal Chuyển BS.
+     */
+    @GetMapping("/{visitId}/handover-options")
+    public ResponseEntity<?> getHandoverOptions(
+            @PathVariable Long visitId,
+            @RequestParam(value = "serviceId", required = false) Long serviceId,
+            jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.require(session, visitId);
+        com.cvdcms.entity.User user = doctorVisitAccess.requireAuthenticatedUser(session);
+        return ResponseEntity.ok(queueCoordinator.getHandoverOptions(user, visitId, serviceId));
+    }
+
+    /**
+     * Chuyển ca bệnh sang bác sĩ khác qua Hàng đợi ưu tiên + giải phóng ghế hiện tại + cập nhật TV.
+     */
+    @PostMapping("/{visitId}/handover")
+    public ResponseEntity<Map<String, Object>> handoverToDoctor(
+            @PathVariable Long visitId,
+            @RequestBody Map<String, Object> body,
+            jakarta.servlet.http.HttpSession session) {
+        doctorVisitAccess.requireActiveClinicalExam(session, visitId);
+        com.cvdcms.entity.User user = doctorVisitAccess.requireAuthenticatedUser(session);
+        Long targetDoctorId = parseLongObj(body != null ? body.get("targetDoctorId") : null);
+        Long targetRoomId = parseLongObj(body != null ? body.get("targetRoomId") : null);
+        Long serviceId = parseLongObj(body != null ? body.get("serviceId") : null);
+        String serviceName = body != null && body.get("serviceName") != null ? body.get("serviceName").toString() : null;
+        String note = body != null && body.get("note") != null ? body.get("note").toString() : null;
+        boolean returnToSender = body != null && Boolean.TRUE.equals(body.get("returnToSender"));
+        try {
+            var res = queueCoordinator.handoverVisitToDoctor(
+                    user, visitId, targetDoctorId, targetRoomId, serviceId, serviceName, note, returnToSender);
+            Map<String, Object> out = new HashMap<>();
+            out.put("success", res.success());
+            out.put("visitId", res.visitId());
+            out.put("targetDoctorId", res.targetDoctorId());
+            out.put("targetDoctorName", res.targetDoctorName());
+            out.put("targetRoomId", res.targetRoomId());
+            out.put("targetRoomName", res.targetRoomName());
+            out.put("targetCalledImmediately", res.targetCalledImmediately());
+            out.put("nextOutgoingDisplayNumber", res.nextOutgoingDisplayNumber());
+            out.put("message", res.message());
+            return ResponseEntity.ok(out);
+        } catch (org.springframework.web.server.ResponseStatusException ex) {
+            return ResponseEntity.status(ex.getStatusCode()).body(Map.of(
+                    "success", false,
+                    "message", ex.getReason() != null ? ex.getReason() : "Không thể chuyển bác sĩ."));
+        } catch (Exception ex) {
+            log.error("Lỗi khi chuyển bác sĩ ca khám {}: ", visitId, ex);
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", ex.getMessage() != null ? ex.getMessage() : "Lỗi khi chuyển bác sĩ."));
+        }
+    }
+
+    private Long parseLongObj(Object raw) {
+        if (raw == null) {
+            return null;
+        }
+        if (raw instanceof Number num) {
+            return num.longValue();
+        }
+        String s = raw.toString().trim();
+        if (s.isEmpty()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(s);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    /**
      * Kiểm tra điều kiện hoàn tất ca khám lâm sàng (ICD-10, dịch vụ COMPLETED, etc.)
      */
     @GetMapping("/{visitId}/completion-check")

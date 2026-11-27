@@ -33,6 +33,19 @@ public class ParaclinicalOrderItemResponseDTO {
     private int attachmentsCount;
     private String primaryImageUrl;
     private List<AttachmentDTO> attachments;
+    private Boolean isExternalLab;
+    private Long labOrderId;
+    private String labPartnerName;
+    private String sampleCode;
+    private String sampleType;
+    private String labStatus;
+    private String sentAt;
+    private String expectedResultDate;
+    private String receivedResultAt;
+    private String resultFileUrl;
+    private Long originVisitId;
+    private String originVisitCode;
+    private Boolean fromPreviousVisit;
 
     @Data
     @Builder

@@ -100,6 +100,9 @@ public class Service {
     @Column(name = "is_default_consultation", nullable = false)
     private Boolean isDefaultConsultation = false;
 
+    @Column(name = "allow_same_visit", columnDefinition = "TINYINT(1) DEFAULT 1")
+    private Boolean allowSameVisit = true;
+
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 

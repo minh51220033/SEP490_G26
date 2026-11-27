@@ -55,6 +55,12 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     @Autowired(required = false)
     private com.cvdcms.service.SystemAuditLogService systemAuditLogService;
 
+    @Autowired(required = false)
+    private LeaveRequestRepository leaveRequestRepository;
+
+    @Autowired(required = false)
+    private TreatmentPlanInstallmentRepository installmentRepository;
+
     private final CustomerCareTaskRepository taskRepository;
     private final CustomerCareInteractionRepository interactionRepository;
     private final PatientProfileRepository patientRepository;
@@ -1209,7 +1215,9 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         if (requestedStatus != null) {
             task.setStatus(parseTaskStatus(requestedStatus));
         } else {
-            if (contactResult == ContactResult.NO_ANSWER || contactResult == ContactResult.BUSY) {
+            if (contactResult == ContactResult.NO_ANSWER
+                    || contactResult == ContactResult.BUSY
+                    || contactResult == ContactResult.FAILED) {
                 task.setStatus(CustomerCareTaskStatus.IN_PROGRESS);
                 if (dto.getNextRetryAt() != null) {
                     task.setDueDate(dto.getNextRetryAt().toLocalDate());
@@ -1954,6 +1962,12 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     }
 
     private String resolveCareGroup(CustomerCareTask task) {
+        if (task.getTaskType() == CustomerCareTaskType.DOCTOR_LEAVE_RESCHEDULE) {
+            return "DOCTOR_LEAVE_RESCHEDULE";
+        }
+        if (task.getTaskType() == CustomerCareTaskType.PAYMENT_REMINDER) {
+            return "PAYMENT_REMINDER";
+        }
         String rawNotes = task.getNotes() != null ? task.getNotes() : "";
         String lowerNotes = rawNotes.toLowerCase(Locale.ROOT);
 
@@ -1973,6 +1987,12 @@ public class CustomerCareServiceImpl implements CustomerCareService {
     }
 
     private String resolveCareGroupLabel(String careGroup, CustomerCareTaskType taskType) {
+        if (taskType == CustomerCareTaskType.DOCTOR_LEAVE_RESCHEDULE || "DOCTOR_LEAVE_RESCHEDULE".equals(careGroup)) {
+            return "Bác sĩ nghỉ – Cần liên hệ bệnh nhân";
+        }
+        if (taskType == CustomerCareTaskType.PAYMENT_REMINDER || "PAYMENT_REMINDER".equals(careGroup)) {
+            return "Nhắc thanh toán";
+        }
         if ("INSTALLMENT_REMINDER".equals(careGroup)) return "Nhắc trả góp";
         if ("NO_SERVICE_FOLLOWUP".equals(careGroup)) return "Không làm dịch vụ";
         if ("FEEDBACK_COMPLAINT".equals(careGroup)) return "Phản ánh / Khiếu nại";
@@ -2014,7 +2034,8 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             case "POST_TREATMENT" -> "POST_TREATMENT_FOLLOWUP".equals(careGroup)
                     || "MEDICATION_REMINDER".equals(careGroup);
             case "APPOINTMENT_REMINDER" -> "APPOINTMENT_REMINDER".equals(careGroup);
-            case "INSTALLMENT_REMINDER" -> "INSTALLMENT_REMINDER".equals(careGroup);
+            case "INSTALLMENT_REMINDER", "PAYMENT_REMINDER" -> "PAYMENT_REMINDER".equals(careGroup) || "INSTALLMENT_REMINDER".equals(careGroup);
+            case "DOCTOR_LEAVE", "DOCTOR_LEAVE_RESCHEDULE" -> "DOCTOR_LEAVE_RESCHEDULE".equals(careGroup);
             case "NO_SHOW_RECALL" -> "NO_SHOW_RECALL".equals(careGroup);
             case "NO_SERVICE_FOLLOWUP" -> "NO_SERVICE_FOLLOWUP".equals(careGroup);
             case "FEEDBACK_COMPLAINT" -> "FEEDBACK_COMPLAINT".equals(careGroup)
@@ -2051,6 +2072,8 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         String upper = careGroup.trim().toUpperCase(Locale.ROOT);
         return switch (upper) {
             case "APPOINTMENT_REMINDER", "INSTALLMENT_REMINDER" -> CustomerCareTaskType.APPOINTMENT_REMINDER;
+            case "PAYMENT_REMINDER" -> CustomerCareTaskType.PAYMENT_REMINDER;
+            case "DOCTOR_LEAVE", "DOCTOR_LEAVE_RESCHEDULE" -> CustomerCareTaskType.DOCTOR_LEAVE_RESCHEDULE;
             case "MEDICATION_REMINDER" -> CustomerCareTaskType.MEDICATION_REMINDER;
             case "NO_SHOW_RECALL", "NO_SERVICE_FOLLOWUP" -> CustomerCareTaskType.NO_SHOW_RECALL;
             case "POST_TREATMENT", "POST_TREATMENT_FOLLOWUP", "FEEDBACK_COMPLAINT" -> CustomerCareTaskType.POST_TREATMENT_FOLLOWUP;
@@ -2293,6 +2316,54 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             dto.setNextRetryAt(latest.getNextRetryAt());
         }
 
+        // FT01 — Metadata Bác sĩ nghỉ phép
+        dto.setLeaveRequestId(t.getLeaveRequestId());
+        if (t.getAppointment() != null) {
+            Appointment a = t.getAppointment();
+            dto.setAppointmentExpectedTime(a.getExpectedTime() != null ? a.getExpectedTime().toString() : null);
+            dto.setAppointmentStatus(a.getStatus() != null ? a.getStatus().name() : null);
+            if (dto.getDoctorName() == null && a.getDoctor() != null) {
+                dto.setDoctorId(a.getDoctor().getStaffId());
+                dto.setDoctorName(a.getDoctor().getFullName());
+            }
+        }
+        if (t.getLeaveRequestId() != null && leaveRequestRepository != null) {
+            leaveRequestRepository.findByIdWithDetails(t.getLeaveRequestId()).ifPresent(lr -> {
+                dto.setLeaveStartDate(lr.getStartDate());
+                dto.setLeaveEndDate(lr.getEndDate());
+                if (lr.getStaff() != null) {
+                    dto.setLeaveDoctorName(lr.getStaff().getFullName());
+                }
+                if (lr.getShift() != null) {
+                    dto.setLeaveShiftName(lr.getShift().getShiftName());
+                }
+            });
+        }
+
+        // FT02 — 8 chỉ số công nợ kế hoạch & từng đợt
+        dto.setInstallmentId(t.getInstallmentId());
+        dto.setReminderStage(t.getReminderStage());
+        dto.setLastRemindedAt(t.getLastRemindedAt());
+        if (t.getInstallmentId() != null && installmentRepository != null) {
+            installmentRepository.findById(t.getInstallmentId()).ifPresent(inst -> {
+                dto.setInstallmentOrder(inst.getInstallmentOrder());
+                dto.setInstallmentPhaseName(inst.getPhaseName());
+                dto.setInstallmentExpectedDate(inst.getExpectedDate());
+                dto.setInstallmentExpectedAmount(inst.getExpectedAmount());
+                dto.setInstallmentPaidAmount(inst.getPaidAmount());
+                dto.setInstallmentRemainingAmount(inst.getRemainingAmount());
+                if (inst.getPlan() != null) {
+                    TreatmentPlan plan = inst.getPlan();
+                    dto.setTreatmentPlanId(plan.getPlanId());
+                    dto.setTreatmentPlanCode(plan.getPlanCode());
+                    dto.setTreatmentPlanName(plan.getPlanName());
+                    dto.setPlanTotalCost(plan.getEstimatedCost());
+                    dto.setPlanPaidAmount(plan.getTotalPaidAmount());
+                    dto.setPlanRemainingAmount(plan.getRemainingCost());
+                }
+            });
+        }
+
         if (includeFullInteractions) {
             dto.setInteractions(safeList.stream().map(this::toInteractionDTO).toList());
         }
@@ -2479,6 +2550,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
             case NO_ANSWER -> "Không bắt máy";
             case BUSY -> "Máy bận";
             case SCHEDULED_APPOINTMENT -> "Đã đặt / đổi lịch hẹn";
+            case FAILED -> "Không liên lạc được / Sai số";
         };
     }
 
@@ -2501,7 +2573,7 @@ public class CustomerCareServiceImpl implements CustomerCareService {
         try {
             return ContactResult.valueOf(value.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ex) {
-            bad("Kết quả liên hệ không hợp lệ (chỉ chấp nhận CONNECTED, NO_ANSWER, BUSY, SCHEDULED_APPOINTMENT).");
+            bad("Kết quả liên hệ không hợp lệ (chỉ chấp nhận CONNECTED, NO_ANSWER, BUSY, SCHEDULED_APPOINTMENT, FAILED).");
             return ContactResult.CONNECTED;
         }
     }

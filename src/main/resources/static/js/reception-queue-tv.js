@@ -254,6 +254,7 @@
         function doctorTagClass(assignmentType) {
             if (assignmentType === 'BOOKED_DOCTOR') return 'booked';
             if (assignmentType === 'ASSIGNED_DOCTOR') return 'assigned';
+            if (assignmentType === 'HANDOVER_DOCTOR') return 'handover';
             if (assignmentType === 'WAITING_DOCTOR') return 'waiting-doc';
             return '';
         }
@@ -271,7 +272,127 @@
             return `<span class="tv-status-badge" style="background: #f1f5f9; color: #475569; margin-left: 0;">Đang chờ</span>`;
         }
 
+        function formatMmSs(totalSec) {
+            const s = Math.max(0, Math.floor(totalSec || 0));
+            const m = Math.floor(s / 60);
+            const r = s % 60;
+            return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+        }
+
+        function computeLivePhase(progress, nowMs) {
+            if (!progress || !progress.actualStartTimeEpochMs) return null;
+            const prepSec = Math.max(0, (progress.prepMinutes || 0) * 60);
+            const examSec = Math.max(60, (progress.examMinutes || 30) * 60);
+            const cleanSec = Math.max(0, (progress.cleaningMinutes || 0) * 60);
+            const totalSec = Math.max(1, prepSec + examSec + cleanSec);
+            const elapsedSec = Math.max(0, Math.floor((nowMs - progress.actualStartTimeEpochMs) / 1000));
+
+            let phase = 'EXAM';
+            let phaseLabel = 'Đang khám';
+            let phaseRem = 0;
+            let overtime = false;
+            let overtimeSec = 0;
+
+            if (prepSec > 0 && elapsedSec < prepSec) {
+                phase = 'PREP';
+                phaseLabel = 'Đang chuẩn bị';
+                phaseRem = prepSec - elapsedSec;
+            } else if (elapsedSec < prepSec + examSec) {
+                phase = 'EXAM';
+                phaseLabel = 'Đang khám';
+                phaseRem = (prepSec + examSec) - elapsedSec;
+            } else if (cleanSec > 0 && elapsedSec < totalSec) {
+                phase = 'CLEANING';
+                phaseLabel = 'Đang vệ sinh';
+                phaseRem = totalSec - elapsedSec;
+            } else {
+                phase = 'OVERTIME';
+                phaseLabel = 'Đã vượt thời gian dự kiến';
+                phaseRem = 0;
+                overtime = true;
+                overtimeSec = Math.max(0, elapsedSec - totalSec);
+            }
+
+            const pct = Math.min(100, Math.round((elapsedSec * 100) / totalSec));
+            return {
+                phase,
+                phaseLabel,
+                phaseRem,
+                elapsedSec,
+                totalSec,
+                totalMinutes: Math.round(totalSec / 60),
+                overtime,
+                overtimeSec,
+                pct
+            };
+        }
+
+        function renderPhaseStatusHtml(progress, nowMs) {
+            const live = computeLivePhase(progress, nowMs);
+            if (!live) return renderStatusBadge('IN_SERVICE');
+            const timerText = live.overtime ? `+${formatMmSs(live.overtimeSec)}` : formatMmSs(live.phaseRem);
+            const iconCls = live.phase === 'PREP'
+                ? 'bi-hourglass-split'
+                : (live.phase === 'CLEANING' ? 'bi-stars' : (live.overtime ? 'bi-exclamation-triangle-fill' : 'bi-heart-pulse-fill'));
+            const badgeStyle = live.overtime
+                ? 'background:#fef3c7;color:#b45309;border:1px solid #fcd34d;margin-left:0;'
+                : (live.phase === 'CLEANING'
+                    ? 'background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;margin-left:0;'
+                    : (live.phase === 'PREP'
+                        ? 'background:#ede9fe;color:#5b21b6;border:1px solid #ddd6fe;margin-left:0;'
+                        : 'margin-left:0;'));
+            const badgeCls = (!live.overtime && live.phase === 'EXAM') ? 'tv-status-badge examining' : 'tv-status-badge';
+            return `
+                <div class="tv-phase-compact ${live.overtime ? 'is-overtime' : ''}">
+                    <span class="${badgeCls}" style="${badgeStyle}">
+                        <i class="bi ${iconCls}"></i> ${escapeHtml(live.phaseLabel.toUpperCase())}
+                    </span>
+                    <div class="tv-phase-timer-compact">${escapeHtml(timerText)}</div>
+                    <div class="tv-phase-bar-track"><div class="tv-phase-bar-fill" style="width:${live.pct}%"></div></div>
+                </div>
+            `;
+        }
+
+        let latestQueueList = [];
+        let latestCleaningChairs = [];
+
+        function renderCleaningStrip(cleaningChairs, nowMs) {
+            const el = document.getElementById('tvCleaningSection');
+            if (!el) return;
+            if (!Array.isArray(cleaningChairs) || cleaningChairs.length === 0) {
+                el.style.display = 'none';
+                el.innerHTML = '';
+                return;
+            }
+            const items = cleaningChairs.map(c => {
+                const elapsed = Math.max(0, Math.floor((nowMs - c.startedAtEpochMs) / 1000));
+                const total = Math.max(60, (c.durationMinutes || 5) * 60);
+                const rem = Math.max(0, total - elapsed);
+                const txt = elapsed >= total ? `Vệ sinh quá ${formatMmSs(elapsed - total)}` : `Còn ${formatMmSs(rem)}`;
+                return `<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1">
+                    ${escapeHtml(c.chairName)}${c.roomName ? ' (' + escapeHtml(c.roomName) + ')' : ''} · ${txt}
+                </span>`;
+            }).join('');
+            el.innerHTML = `<i class="bi bi-stars"></i><span>Ghế đang vệ sinh sau khám:</span>${items}`;
+            el.style.display = 'flex';
+        }
+
+        function tickLiveCountdowns() {
+            const nowMs = Date.now() + serverOffsetMs;
+            latestQueueList.forEach(row => {
+                if (row.status === 'IN_SERVICE' && row.phaseProgress) {
+                    const holder = document.querySelector(`[data-phase-ticket="${CSS.escape(String(row.ticketNumber || row.stt))}"]`);
+                    if (holder) {
+                        holder.innerHTML = renderPhaseStatusHtml(row.phaseProgress, nowMs);
+                    }
+                }
+            });
+            renderCleaningStrip(latestCleaningChairs, nowMs);
+        }
+
         function renderUnifiedTable(queueList) {
+            latestQueueList = Array.isArray(queueList) ? queueList : [];
+            const nowMs = Date.now() + serverOffsetMs;
             const calledRows = queueList.filter(r => r.status === 'CALLED');
             const examiningRows = queueList.filter(r => r.status === 'IN_SERVICE');
             const waitingRows = queueList.filter(r => r.status !== 'CALLED' && r.status !== 'IN_SERVICE');
@@ -309,6 +430,10 @@
                 const roomCls = (isActive && roomText !== UNASSIGNED) ? 'fw-bold text-dark' : 'cell-dash';
                 const chairCls = (isActive && chairText !== UNASSIGNED) ? 'fw-bold text-dark' : 'cell-dash';
 
+                const statusCellHtml = (row.status === 'IN_SERVICE' && row.phaseProgress)
+                    ? `<div data-phase-ticket="${escapeHtml(String(row.ticketNumber || row.stt))}">${renderPhaseStatusHtml(row.phaseProgress, nowMs)}</div>`
+                    : renderStatusBadge(row.status);
+
                 return `
                     <tr class="${rowClass}">
                         <td class="cell-center">
@@ -322,7 +447,7 @@
                             <span class="tv-doctor-tag ${tagCls}">${docLabel}</span>
                         </td>
                         <td class="cell-center">
-                            ${renderStatusBadge(row.status)}
+                            ${statusCellHtml}
                         </td>
                         <td class="cell-center ${roomCls}">${escapeHtml(roomText)}</td>
                         <td class="cell-center ${chairCls}">${escapeHtml(chairText)}</td>
@@ -363,6 +488,8 @@
                 if (Array.isArray(data.queueList)) {
                     renderUnifiedTable(data.queueList);
                 }
+                latestCleaningChairs = Array.isArray(data.cleaningChairs) ? data.cleaningChairs : [];
+                renderCleaningStrip(latestCleaningChairs, Date.now() + serverOffsetMs);
 
                 const calledNumbers = Array.isArray(data.called) ? data.called : [];
                 if (isInitialLoad) {
@@ -397,6 +524,7 @@
 
         refresh();
         setInterval(refresh, 2000);
+        setInterval(tickLiveCountdowns, 1000);
         connectStompIfAvailable();
     });
 })(typeof globalThis !== 'undefined' ? globalThis : window);

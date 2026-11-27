@@ -87,6 +87,9 @@ public class DoctorVisitAccess {
     private StaffBranchAssignmentRepository branchAssignments;
 
     @Autowired(required = false)
+    private com.cvdcms.service.DoctorClinicalCapabilityService capabilityService;
+
+    @Autowired(required = false)
     private TreatmentPlanInstallmentRepository treatmentPlanInstallments;
 
     @Autowired(required = false)
@@ -235,6 +238,13 @@ public class DoctorVisitAccess {
 
     public Long resolveUserIdOrThrow(HttpSession session) {
         return requireAuthenticatedUser(session).getUserId();
+    }
+
+    public Long resolveActingDoctorStaffId(HttpSession session) {
+        User user = requireAuthenticatedUser(session);
+        return staff.findByUserUserId(user.getUserId())
+                .map(StaffProfile::getStaffId)
+                .orElse(null);
     }
 
     public boolean isAdmin(User user) {
@@ -696,6 +706,7 @@ public class DoctorVisitAccess {
             var existingPlans = treatmentPlans.findByProfileIdWithDetails(visit.getPatientProfile().getProfileId());
             boolean alreadyCovered = existingPlans != null && existingPlans.stream()
                     .filter(tp -> tp.getStatus() != com.cvdcms.entity.enums.TreatmentPlanStatus.CANCELLED)
+                    .filter(tp -> tp.getVisit() == null || visitId.equals(tp.getVisit().getVisitId()))
                     .flatMap(tp -> tp.getStages() == null ? java.util.stream.Stream.empty() : tp.getStages().stream())
                     .flatMap(st -> st.getItems() == null ? java.util.stream.Stream.empty() : st.getItems().stream())
                     .anyMatch(it -> it.getService() != null && bookedServiceId.equals(it.getService().getServiceId()));
@@ -715,6 +726,171 @@ public class DoctorVisitAccess {
         }
     }
 
+    private static final int MAX_ADDON_SERVICE_MINUTES = 45;
+    private static final int MAX_ADDON_TOTAL_MINUTES = 60;
+    private static final String CONFIRM_PREFIX = "PATIENT_CONFIRM_REQUIRED:";
+
+    private record EngagedService(Long serviceId, int minutes, LocalDateTime at) {}
+
+    private int durationOf(com.cvdcms.entity.Service service) {
+        if (service == null) {
+            return 30;
+        }
+        if (service.getEstimatedDurationMinutes() != null && service.getEstimatedDurationMinutes() > 0) {
+            return service.getEstimatedDurationMinutes();
+        }
+        if (service.getProcedureDurationMinutes() != null && service.getProcedureDurationMinutes() > 0) {
+            return service.getProcedureDurationMinutes();
+        }
+        return 30;
+    }
+
+    private Long serviceIdOfExecution(com.cvdcms.entity.WorkflowExecution ex) {
+        if (ex == null || ex.getVersion() == null || ex.getVersion().getTemplate() == null
+                || ex.getVersion().getTemplate().getService() == null) {
+            return null;
+        }
+        return ex.getVersion().getTemplate().getService().getServiceId();
+    }
+
+    private List<EngagedService> resolveEngagedServices(Long visitId) {
+        java.util.Map<Long, EngagedService> byService = new java.util.LinkedHashMap<>();
+        if (visitId != null && performedServices != null) {
+            var psList = performedServices.findByVisitIdWithDetails(visitId);
+            if (psList != null) {
+                for (var ps : psList) {
+                    if (ps == null || ps.getStatus() == com.cvdcms.entity.enums.PerformedServiceStatus.CANCELLED
+                            || ps.getService() == null || Boolean.TRUE.equals(ps.getService().getIsParaclinical())) {
+                        continue;
+                    }
+                    Long sid = ps.getService().getServiceId();
+                    if (sid == null) {
+                        continue;
+                    }
+                    int mins = durationOf(ps.getService());
+                    LocalDateTime at = ps.getCompletedAt();
+                    EngagedService prev = byService.get(sid);
+                    if (prev == null || (at != null && (prev.at() == null || at.isBefore(prev.at())))) {
+                        byService.put(sid, new EngagedService(sid, mins, at));
+                    }
+                }
+            }
+        }
+        if (visitId != null && workflowExecutions != null) {
+            var execList = workflowExecutions.findByVisit_VisitId(visitId);
+            if (execList != null) {
+                for (var ex : execList) {
+                    if (ex == null || ex.getStatus() == com.cvdcms.entity.enums.WorkflowExecutionStatus.CANCELLED) {
+                        continue;
+                    }
+                    com.cvdcms.entity.Service srv = (ex.getVersion() != null && ex.getVersion().getTemplate() != null)
+                            ? ex.getVersion().getTemplate().getService()
+                            : null;
+                    if (srv == null || srv.getServiceId() == null || Boolean.TRUE.equals(srv.getIsParaclinical())) {
+                        continue;
+                    }
+                    Long sid = srv.getServiceId();
+                    int mins = durationOf(srv);
+                    LocalDateTime at = ex.getStartedAt();
+                    EngagedService prev = byService.get(sid);
+                    if (prev == null || (at != null && (prev.at() == null || at.isBefore(prev.at())))) {
+                        byService.put(sid, new EngagedService(sid, mins, at));
+                    }
+                }
+            }
+        }
+        java.util.List<EngagedService> list = new java.util.ArrayList<>(byService.values());
+        list.sort(java.util.Comparator.comparing(EngagedService::at,
+                java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
+        return list;
+    }
+
+    private int addOnMinutesUsed(List<EngagedService> engaged, Long bookedId) {
+        if (engaged == null || engaged.isEmpty()) {
+            return 0;
+        }
+        int sum = 0;
+        if (bookedId != null) {
+            for (EngagedService e : engaged) {
+                if (!bookedId.equals(e.serviceId())) {
+                    sum += e.minutes();
+                }
+            }
+        } else {
+            for (int i = 1; i < engaged.size(); i++) {
+                sum += engaged.get(i).minutes();
+            }
+        }
+        return sum;
+    }
+
+    private boolean hasOpenExecutionFromPreviousVisit(Visit visit, Long serviceId) {
+        if (visit == null || visit.getPatientProfile() == null || visit.getPatientProfile().getProfileId() == null
+                || serviceId == null || workflowExecutions == null) {
+            return false;
+        }
+        Long currentVisitId = visit.getVisitId();
+        var patientExecs = workflowExecutions.findByPatientProfile_ProfileIdOrderByStartedAtDesc(
+                visit.getPatientProfile().getProfileId());
+        if (patientExecs == null) {
+            return false;
+        }
+        for (var ex : patientExecs) {
+            if (ex == null) {
+                continue;
+            }
+            if (ex.getStatus() != com.cvdcms.entity.enums.WorkflowExecutionStatus.IN_PROGRESS
+                    && ex.getStatus() != com.cvdcms.entity.enums.WorkflowExecutionStatus.PAUSED) {
+                continue;
+            }
+            Long exVisitId = ex.getVisit() != null ? ex.getVisit().getVisitId() : null;
+            if (exVisitId != null && currentVisitId != null && currentVisitId.equals(exVisitId)) {
+                continue;
+            }
+            if (serviceId.equals(serviceIdOfExecution(ex))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String evaluateSameVisitService(com.cvdcms.entity.Service target, int targetMinutes,
+            List<EngagedService> engaged, Long bookedId, int waiting) {
+        if (target == null || Boolean.TRUE.equals(target.getIsParaclinical())) {
+            return null;
+        }
+        Long targetId = target.getServiceId();
+        if (targetId != null && bookedId != null && bookedId.equals(targetId)) {
+            return null;
+        }
+        if (targetId != null && engaged != null && engaged.stream().anyMatch(e -> targetId.equals(e.serviceId()))) {
+            return null;
+        }
+        if (bookedId == null && (engaged == null || engaged.isEmpty())) {
+            return null;
+        }
+        String srvName = target.getServiceName() != null ? target.getServiceName() : "Dịch vụ";
+        if (Boolean.FALSE.equals(target.getAllowSameVisit())) {
+            return "Dịch vụ \"" + srvName + "\" được cấu hình không làm gộp trong cùng ca khám. Vui lòng lưu trong Kế hoạch điều trị để hẹn buổi sau!";
+        }
+        if (waiting > 0) {
+            if (targetMinutes > MAX_ADDON_SERVICE_MINUTES) {
+                return "Đang có " + waiting + " bệnh nhân chờ. Dịch vụ làm thêm \"" + srvName + "\" cần ~"
+                        + targetMinutes + " phút (vượt ngưỡng " + MAX_ADDON_SERVICE_MINUTES
+                        + " phút/dịch vụ). Vui lòng lưu trong Kế hoạch điều trị để hẹn buổi sau!";
+            }
+            int used = addOnMinutesUsed(engaged, bookedId);
+            if (used + targetMinutes > MAX_ADDON_TOTAL_MINUTES) {
+                return "Đang có " + waiting + " bệnh nhân chờ. Tổng thời gian làm thêm trong ca sẽ là "
+                        + (used + targetMinutes) + " phút (vượt ngưỡng " + MAX_ADDON_TOTAL_MINUTES
+                        + " phút). Vui lòng lưu trong Kế hoạch điều trị để hẹn buổi sau!";
+            }
+        }
+        return CONFIRM_PREFIX + " Dịch vụ làm thêm trong ca: \"" + srvName + "\" (~" + targetMinutes + " phút), "
+                + (waiting > 0 ? ("đang có " + waiting + " bệnh nhân chờ") : "hàng đợi đang trống")
+                + ". Vui lòng xác nhận bệnh nhân đồng ý làm luôn trong ca này!";
+    }
+
     public void assertVisitServiceExecutionAllowed(Long visitId, Long targetServiceId, Long planItemId, boolean patientConfirmed) {
         if (visitId == null || visits == null) {
             return;
@@ -731,8 +907,12 @@ public class DoctorVisitAccess {
 
         com.cvdcms.entity.Service targetService = null;
         if (planItemId != null && treatmentPlanItems != null) {
-            if (workflowExecutions != null && workflowExecutions.findFirstByPlanItem_PlanItemId(planItemId).isPresent()) {
-                return;
+            if (workflowExecutions != null) {
+                boolean hasItemExec = workflowExecutions.findByPlanItem_PlanItemId(planItemId).stream()
+                        .anyMatch(ex -> ex.getStatus() != com.cvdcms.entity.enums.WorkflowExecutionStatus.CANCELLED);
+                if (hasItemExec) {
+                    return;
+                }
             }
             var it = treatmentPlanItems.findById(planItemId).orElse(null);
             if (it != null) {
@@ -747,6 +927,16 @@ public class DoctorVisitAccess {
                 }
                 var stage = it.getStage();
                 if (stage != null) {
+                    if (stage.getStageId() != null && workflowExecutions != null) {
+                        final Long resolvedSid = targetServiceId;
+                        boolean stageHasOpenExec = workflowExecutions.findByPlanStage_StageId(stage.getStageId()).stream()
+                                .anyMatch(ex -> (ex.getStatus() == com.cvdcms.entity.enums.WorkflowExecutionStatus.IN_PROGRESS
+                                        || ex.getStatus() == com.cvdcms.entity.enums.WorkflowExecutionStatus.PAUSED)
+                                        && (resolvedSid == null || resolvedSid.equals(serviceIdOfExecution(ex))));
+                        if (stageHasOpenExec) {
+                            return;
+                        }
+                    }
                     if (stage.getStatus() == com.cvdcms.entity.enums.TreatmentPlanStageStatus.IN_PROGRESS) {
                         return;
                     }
@@ -771,57 +961,113 @@ public class DoctorVisitAccess {
         if (targetService == null && targetServiceId != null && serviceRepository != null) {
             targetService = serviceRepository.findById(targetServiceId).orElse(null);
         }
-        if (targetService != null && Boolean.TRUE.equals(targetService.getIsParaclinical())) {
+        if (targetService == null) {
+            return;
+        }
+        if (hasOpenExecutionFromPreviousVisit(visit, targetService.getServiceId())) {
             return;
         }
 
-        int waitingCount = countWaitingPatientsForVisitDoctor(visit);
-
-        if (bookedServiceId != null) {
-            if (targetServiceId != null && bookedServiceId.equals(targetServiceId)) {
+        List<EngagedService> engaged = resolveEngagedServices(visitId);
+        int waiting = countWaitingPatientsForVisitDoctor(visit);
+        String verdict = evaluateSameVisitService(targetService, durationOf(targetService), engaged, bookedServiceId, waiting);
+        if (verdict == null) {
+            return;
+        }
+        if (verdict.startsWith(CONFIRM_PREFIX)) {
+            if (patientConfirmed) {
                 return;
             }
-            if (waitingCount > 0) {
-                throw new IllegalStateException(
-                        "Hiện đang có " + waitingCount + " bệnh nhân chờ trong hàng đợi. Ca khám này chỉ khóa thực hiện dịch vụ đã đặt lịch ("
-                                + booked.get("serviceName") + "); dịch vụ tư vấn phát sinh vui lòng lưu trong Kế hoạch điều trị để hẹn ca khám sau!");
-            }
-            if (!patientConfirmed) {
-                throw new IllegalStateException(
-                        "PATIENT_CONFIRM_REQUIRED: Dịch vụ phát sinh ngoài lịch hẹn (" + booked.get("serviceName")
-                                + "). Hàng đợi hiện đang trống (0 người chờ) — vui lòng xác nhận bệnh nhân đã đồng ý thực hiện luôn trong ca này!");
-            }
-        } else if (waitingCount > 0 && performedServices != null && targetServiceId != null) {
-            var performedList = performedServices.findByVisitIdWithDetails(visitId);
-            java.util.Set<Long> performedIds = new java.util.HashSet<>();
-            if (performedList != null) {
-                for (var ps : performedList) {
-                    if (ps.getStatus() != com.cvdcms.entity.enums.PerformedServiceStatus.CANCELLED
-                            && ps.getService() != null
-                            && !Boolean.TRUE.equals(ps.getService().getIsParaclinical())) {
-                        performedIds.add(ps.getService().getServiceId());
-                    }
-                }
-            }
-            if (!performedIds.isEmpty() && !performedIds.contains(targetServiceId)) {
-                throw new IllegalStateException(
-                        "Hiện đang có " + waitingCount + " bệnh nhân chờ trong hàng đợi. Không thể làm gộp thêm dịch vụ mới phát sinh trong cùng ca khám — vui lòng lưu trong Kế hoạch điều trị để hẹn ca khám sau!");
-            }
+            throw new IllegalStateException(verdict);
         }
+        throw new IllegalStateException(verdict);
     }
 
-    public void assertComboExecutionAllowed(Long visitId, Long comboId, boolean patientConfirmed) {
+    public Set<Long> resolveComboDeferredServiceIds(Long visitId, Long comboId, boolean patientConfirmed) {
         if (visitId == null || comboId == null || serviceComboRepository == null) {
-            return;
+            return Set.of();
         }
         var combo = serviceComboRepository.findByIdWithItems(comboId).orElse(null);
         if (combo == null || combo.getItems() == null || combo.getItems().isEmpty()) {
-            return;
+            return Set.of();
         }
-        for (var item : combo.getItems()) {
-            if (item != null && item.getService() != null) {
-                assertVisitServiceExecutionAllowed(visitId, item.getService().getServiceId(), null, patientConfirmed);
+        Visit visit = visits != null ? visits.findById(visitId).orElse(null) : null;
+        if (visit == null) {
+            return Set.of();
+        }
+        var booked = resolveBookedServiceSummary(visit);
+        Long bookedServiceId = (booked != null && booked.get("serviceId") instanceof Number bNum)
+                ? bNum.longValue()
+                : null;
+        List<EngagedService> engaged = new java.util.ArrayList<>(resolveEngagedServices(visitId));
+        int waiting = countWaitingPatientsForVisitDoctor(visit);
+
+        List<com.cvdcms.entity.ServiceComboItem> ordered = combo.getItems().stream()
+                .filter(i -> i != null && i.getService() != null)
+                .sorted(java.util.Comparator.comparingInt(i -> i.getSequenceOrder() != null ? i.getSequenceOrder() : 999))
+                .toList();
+        if (ordered.isEmpty()) {
+            return Set.of();
+        }
+
+        Set<Long> deferred = new LinkedHashSet<>();
+        List<String> confirmNames = new java.util.ArrayList<>();
+        List<String> deferredNames = new java.util.ArrayList<>();
+        LocalDateTime simBase = LocalDateTime.now();
+        Long branchId = visit.getBranch() != null ? visit.getBranch().getBranchId() : null;
+        Long docId = visit.getPrimaryDoctor() != null ? visit.getPrimaryDoctor().getStaffId() : null;
+        int capableCount = 0;
+
+        for (int idx = 0; idx < ordered.size(); idx++) {
+            var item = ordered.get(idx);
+            var srv = item.getService();
+            if (capabilityService != null
+                    && !capabilityService.isParaclinicalOrLabService(srv.getServiceId())
+                    && !capabilityService.checkDoctorAndRoomCapability(branchId, docId, visit.getRoomId(), srv.getServiceId()).allowed()) {
+                continue;
+            }
+            capableCount++;
+            int qty = item.getDefaultQuantity() != null ? Math.max(1, item.getDefaultQuantity()) : 1;
+            int minutes = durationOf(srv) * qty;
+            String srvName = srv.getServiceName() != null ? srv.getServiceName() : "Dịch vụ";
+            String verdict = hasOpenExecutionFromPreviousVisit(visit, srv.getServiceId())
+                    ? null
+                    : evaluateSameVisitService(srv, minutes, engaged, bookedServiceId, waiting);
+
+            if (verdict == null || verdict.startsWith(CONFIRM_PREFIX)) {
+                if (verdict != null) {
+                    confirmNames.add(srvName + " (~" + minutes + "p)");
+                }
+                Long sid = srv.getServiceId();
+                if (sid != null && !Boolean.TRUE.equals(srv.getIsParaclinical())
+                        && engaged.stream().noneMatch(e -> sid.equals(e.serviceId()))) {
+                    engaged.add(new EngagedService(sid, minutes, simBase.plusSeconds(idx)));
+                }
+            } else {
+                if (srv.getServiceId() != null) {
+                    deferred.add(srv.getServiceId());
+                }
+                deferredNames.add(srvName + " (~" + minutes + "p)");
             }
         }
+
+        if (capableCount > 0 && deferred.size() >= capableCount) {
+            throw new IllegalStateException("Không có dịch vụ nào trong Combo đủ điều kiện làm trong ca này ("
+                    + waiting + " bệnh nhân chờ; ngưỡng " + MAX_ADDON_SERVICE_MINUTES + " phút/dịch vụ, "
+                    + MAX_ADDON_TOTAL_MINUTES + " phút tổng làm thêm). Vui lòng lưu Combo vào Kế hoạch điều trị để hẹn buổi sau!");
+        }
+        if (!confirmNames.isEmpty() && !patientConfirmed) {
+            String deferredPart = deferredNames.isEmpty()
+                    ? ""
+                    : (" Để buổi sau (vượt ngưỡng thời gian): " + String.join(", ", deferredNames) + ".");
+            throw new IllegalStateException(CONFIRM_PREFIX + " Combo có dịch vụ làm thêm trong ca: "
+                    + String.join(", ", confirmNames) + "." + deferredPart
+                    + " Vui lòng xác nhận bệnh nhân đồng ý làm luôn trong ca này!");
+        }
+        return deferred;
+    }
+
+    public void assertComboExecutionAllowed(Long visitId, Long comboId, boolean patientConfirmed) {
+        resolveComboDeferredServiceIds(visitId, comboId, patientConfirmed);
     }
 }

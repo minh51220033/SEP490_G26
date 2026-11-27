@@ -17,4 +17,9 @@ public class ParaclinicalOrderCreateDTO {
     private String status;
     private String resultSummary;
     private String imageUrl;
+    private Boolean isExternalLab;
+    private String labPartnerName;
+    private String sampleCode;
+    private String sampleType;
+    private String expectedResultDate;
 }

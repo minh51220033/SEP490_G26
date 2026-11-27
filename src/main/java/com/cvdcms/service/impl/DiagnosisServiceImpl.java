@@ -7,6 +7,8 @@ import com.cvdcms.DTO.GeneralExaminationRequestDTO;
 import com.cvdcms.entity.*;
 import com.cvdcms.entity.enums.DiagnosisType;
 import com.cvdcms.entity.enums.PerformedServiceStatus;
+import com.cvdcms.entity.enums.PrescriptionStatus;
+import com.cvdcms.entity.enums.ServiceType;
 import com.cvdcms.entity.enums.TreatmentPlanStatus;
 import com.cvdcms.entity.enums.VisitStatus;
 import com.cvdcms.repository.*;
@@ -264,7 +266,10 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                 .map(ps -> ps.getFinalPrice() != null ? ps.getFinalPrice() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
 
-        List<Prescription> prescriptions = prescriptionRepository.findByVisit_VisitIdOrderByCreatedAtDesc(visitId);
+        List<Prescription> prescriptions = prescriptionRepository.findByVisit_VisitIdOrderByCreatedAtDesc(visitId)
+                .stream()
+                .filter(p -> p.getStatus() != PrescriptionStatus.CANCELLED)
+                .toList();
         int prescriptionCount = prescriptions.size();
         boolean hasPrescription = prescriptionCount > 0;
 
@@ -364,12 +369,25 @@ public class DiagnosisServiceImpl implements DiagnosisService {
                     "Ca khám này chưa ghi nhận dịch vụ thực hiện tại ghế hoặc đơn thuốc phát sinh chi phí. Nếu không có viện phí, ca khám sẽ được hoàn tất trực tiếp.");
         }
 
-        // Kiểm tra chỉ định cận lâm sàng còn chờ thực hiện
+        // Kiểm tra chỉ định cận lâm sàng còn chờ thực hiện (tách riêng X-quang tại chỗ và XN máu ngoài viện)
         if (paraclinicalOrderItemRepository != null) {
-            long waitingCount = paraclinicalOrderItemRepository.countByOrder_Visit_VisitIdAndStatus(
-                    visitId, com.cvdcms.entity.enums.ParaclinicalOrderItemStatus.WAITING);
-            if (waitingCount > 0) {
-                warnings.add("Hiện còn " + waitingCount + " chỉ định cận lâm sàng đang ở trạng thái 'Chờ thực hiện'.");
+            List<ParaclinicalOrderItem> visitPcoItems = paraclinicalOrderItemRepository
+                    .findByOrder_Visit_VisitIdOrderByOrder_OrderIdDescOrderItemIdDesc(visitId);
+            long waitingOnsiteCount = visitPcoItems.stream()
+                    .filter(i -> i.getStatus() == com.cvdcms.entity.enums.ParaclinicalOrderItemStatus.WAITING)
+                    .filter(i -> i.getLabExternalOrder() == null
+                            && (i.getService() == null || i.getService().getServiceType() != ServiceType.LAB))
+                    .count();
+            long waitingExtLabCount = visitPcoItems.stream()
+                    .filter(i -> i.getStatus() == com.cvdcms.entity.enums.ParaclinicalOrderItemStatus.WAITING)
+                    .filter(i -> i.getLabExternalOrder() != null
+                            || (i.getService() != null && i.getService().getServiceType() == ServiceType.LAB))
+                    .count();
+            if (waitingOnsiteCount > 0) {
+                warnings.add("Hiện còn " + waitingOnsiteCount + " chỉ định cận lâm sàng tại phòng khám đang ở trạng thái 'Chờ thực hiện'.");
+            }
+            if (waitingExtLabCount > 0) {
+                warnings.add("Có " + waitingExtLabCount + " phiếu xét nghiệm máu ngoài viện đang chờ kết quả buổi sau (không cản trở đóng ca hôm nay).");
             }
         }
 
