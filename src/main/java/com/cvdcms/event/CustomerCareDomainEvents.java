@@ -24,6 +24,9 @@ public final class CustomerCareDomainEvents {
     public record AppointmentNoShowCareEvent(Long appointmentId) {
     }
 
+    public record InstallmentPaymentRecordedCareEvent(Long planId) {
+    }
+
     public record CustomerCareRealtimeBroadcastEvent(
             CustomerCareRealtimeEventDTO payload,
             List<Long> targetUserIds,

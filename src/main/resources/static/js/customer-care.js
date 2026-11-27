@@ -894,6 +894,7 @@
         patientDrawerState.viewLevel = "TASKS";
         patientDrawerState.selectedTaskId = null;
     }
+    window.closePatientHistoryDrawer = closePatientHistoryDrawer;
 
     function renderPatientDrawerContent() {
         const container = $("patientHistoryDrawerTimeline");
@@ -1634,36 +1635,20 @@
                         cells.push(`
                             <td class="cc-col-sticky-taskcode" style="${sizeStyle}">
                                 <span class="font-mono-code">${escapeHtml(t.taskCode)}</span>
-                                <div class="cc-clamp-1" style="font-size:11px;color:#64748b;margin-top:2px;">${escapeHtml(t.branchCode || "")}</div>
                             </td>
                         `);
                     } else if (col.id === "patient") {
                         cells.push(`
                             <td class="patient-cell cc-col-sticky-patient" style="${sizeStyle}left:${patientLeft}px;">
                                 <div class="cc-clamp-1 fw-bold text-dark" style="font-size:13px;" title="${escapeHtml(t.patientName)}">${escapeHtml(t.patientName)}</div>
-                                <div class="cc-clamp-1 text-muted" style="font-size:11.5px;margin-top:2px;" title="Mã BN: ${escapeHtml(t.patientCode)} · SĐT: ${escapeHtml(t.patientPhone || '—')}">
-                                    <span class="font-mono-code" style="font-size:10.5px;padding:1px 4px;">${escapeHtml(t.patientCode)}</span> · ${escapeHtml(t.patientPhone || "—")}
-                                </div>
                             </td>
                         `);
                     } else if (col.id === "careGroup") {
-                        const refs = [];
-                        if (t.visitCode) {
-                            const examUrl = t.examinationDetailUrl || (t.visitId ? `/doctor/examination/${t.visitId}/diagnoses#tab-instructions` : null);
-                            if (examUrl) {
-                                refs.push(`<a class="source-ref" href="${escapeHtml(examUrl)}" target="_blank" rel="noopener" title="Xem hồ sơ khám">Ca: <strong>${escapeHtml(t.visitCode)}</strong></a>`);
-                            } else {
-                                refs.push(`<span class="source-ref">Ca: <strong>${escapeHtml(t.visitCode)}</strong></span>`);
-                            }
-                        }
-                        if (t.prescriptionCode) refs.push(`<span class="source-ref">Thuốc: <strong>${escapeHtml(t.prescriptionCode)}</strong></span>`);
-                        if (t.appointmentCode) refs.push(`<span class="source-ref">Hẹn: <strong>${escapeHtml(t.appointmentCode)}</strong></span>`);
                         cells.push(`
                             <td style="${sizeStyle}">
                                 <div class="d-flex align-items-center gap-1">
                                     <span class="badge ${getCareGroupBadgeClass(t.careGroup)}">${escapeHtml(t.careGroupLabel)}</span>
                                 </div>
-                                ${refs.length ? `<div class="cc-clamp-1" style="font-size:11px;margin-top:3px;" title="${escapeHtml([t.visitCode, t.prescriptionCode, t.appointmentCode].filter(Boolean).join(' · '))}">${refs.join(" ")}</div>` : (t.doctorName ? `<div class="cc-clamp-1" style="font-size:11px;color:#64748b;margin-top:2px;">BS: <strong>${escapeHtml(t.doctorName)}</strong></div>` : "")}
                             </td>
                         `);
                     } else if (col.id === "due") {
@@ -1757,9 +1742,6 @@
                                 <button type="button" class="btn btn-outline-secondary btn-sm cc-act-btn" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân">
                                     <i class="bi bi-clock-history"></i> Lịch sử
                                 </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm cc-act-btn cc-act-icon-btn" data-edit-task="${t.taskId}" title="Sửa / Phân công lại">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
                             `;
                         } else {
                             actBtns = `
@@ -1771,9 +1753,6 @@
                                 </button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm cc-act-btn" data-view-history="${t.profileId}" title="Xem lịch sử chăm sóc bệnh nhân">
                                     <i class="bi bi-clock-history"></i> Lịch sử
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm cc-act-btn cc-act-icon-btn" data-edit-task="${t.taskId}" title="Sửa / Phân công lại">
-                                    <i class="bi bi-pencil"></i>
                                 </button>
                             `;
                         }
@@ -1798,12 +1777,14 @@
         }
     }
 
+    const ADV_FILTER_STORAGE_KEY = "cvdcms_cc_adv_filter_open";
     window.toggleCcAdvFilter = function() {
         const panel = $("advFilterPanel");
         const btn = $("btnToggleAdvFilter");
         if (!panel) return;
-        panel.classList.toggle("show");
-        if (btn) btn.classList.toggle("is-open", panel.classList.contains("show"));
+        const isOpen = panel.classList.toggle("show");
+        if (btn) btn.classList.toggle("is-open", isOpen);
+        try { localStorage.setItem(ADV_FILTER_STORAGE_KEY, isOpen ? "1" : "0"); } catch {}
     };
     window.toggleCAdvFilter = window.toggleCcAdvFilter;
 
@@ -1924,6 +1905,11 @@
                 const tzOffset = suggested.getTimezoneOffset() * 60000;
                 retryInput.value = new Date(suggested - tzOffset).toISOString().slice(0, 16);
             }
+        } else if (resultVal === "FAILED") {
+            retryLabel.textContent = "Thời gian hẹn gọi lại (next_retry_at - tùy chọn)";
+            retryHint.className = "field-hint";
+            retryHint.textContent = "Không liên lạc được / Sai số: công việc giữ trạng thái Đang chăm sóc (IN_PROGRESS), có thể hẹn gọi lại hoặc đổi kênh liên hệ.";
+            nextStatusSelect.value = "IN_PROGRESS";
         } else {
             retryLabel.textContent = "Thời gian hẹn gọi lại (next_retry_at - tùy chọn)";
             retryHint.className = "field-hint";
@@ -1987,6 +1973,94 @@
         `;
     }
 
+    function formatVndMoney(val) {
+        if (val == null || isNaN(Number(val))) return "0 đ";
+        return Number(val).toLocaleString("vi-VN") + " đ";
+    }
+
+    function renderInteractionSpecialContextBox(t) {
+        const box = $("interactionSpecialContextBox");
+        if (!box) return;
+        const type = t.taskType || t.careGroup;
+        if (type === "DOCTOR_LEAVE_RESCHEDULE" || (type === "APPOINTMENT_REMINDER" && t.appointmentId)) {
+            const isLeave = type === "DOCTOR_LEAVE_RESCHEDULE";
+            const leaveRange = (t.leaveStartDate || "") + (t.leaveEndDate && t.leaveEndDate !== t.leaveStartDate ? " đến " + t.leaveEndDate : "");
+            const apptId = t.appointmentId;
+            box.hidden = false;
+            box.innerHTML = `
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                    <strong class="${isLeave ? "text-danger" : "text-primary"}">
+                        <i class="bi ${isLeave ? "bi-calendar-x" : "bi-calendar2-check"} me-1"></i>${isLeave ? "Bác sĩ nghỉ – Cần liên hệ bệnh nhân" : "Nhắc lịch hẹn – Thao tác lịch khám"}
+                    </strong>
+                    <span class="badge bg-warning-subtle text-dark border">${escapeHtml(t.branchName || "")}</span>
+                </div>
+                <div class="row g-2 small">
+                    <div class="col-md-6"><strong>Bác sĩ phụ trách:</strong> ${escapeHtml(t.leaveDoctorName || t.doctorName || "—")}</div>
+                    ${isLeave ? `<div class="col-md-6"><strong>Thời gian BS nghỉ:</strong> ${escapeHtml(leaveRange || "—")}${t.leaveShiftName ? " (" + escapeHtml(t.leaveShiftName) + ")" : ""}</div>` : ""}
+                    <div class="col-md-6"><strong>Lịch khám:</strong> ${escapeHtml(t.appointmentCode || "—")} · ${escapeHtml(t.appointmentDate || "—")} ${escapeHtml(t.appointmentExpectedTime || "")}</div>
+                    <div class="col-md-6"><strong>Trạng thái lịch hẹn:</strong> ${escapeHtml(t.appointmentStatus || "—")}</div>
+                </div>
+                ${apptId ? `
+                <div class="d-flex flex-wrap gap-2 mt-2 pt-2 border-top">
+                    <a class="btn btn-sm btn-primary" href="/reception/appointments?branchId=${encodeURIComponent(t.branchId || "")}&rescheduleId=${encodeURIComponent(apptId)}" target="_blank" rel="noopener">
+                        <i class="bi bi-calendar2-week me-1"></i>Đổi lịch theo quy trình đặt lịch
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="ccQuickCancelLeaveApptBtn">
+                        <i class="bi bi-x-circle me-1"></i>Hủy lịch hẹn này
+                    </button>
+                </div>` : ""}
+            `;
+            const cancelBtn = $("ccQuickCancelLeaveApptBtn");
+            if (cancelBtn && apptId) {
+                cancelBtn.onclick = async () => {
+                    const reason = window.prompt("Nhập lý do hủy lịch hẹn theo yêu cầu của bệnh nhân:");
+                    if (!reason || !reason.trim()) return;
+                    cancelBtn.disabled = true;
+                    try {
+                        await request(`/api/reception/appointments/${apptId}/cancel`, {
+                            method: "POST",
+                            body: JSON.stringify({ cancelReason: reason.trim() })
+                        });
+                        showMessage("Đã hủy lịch hẹn theo quy trình Lễ tân. Vui lòng lưu kết quả liên hệ CSKH.", "success");
+                        $("intContactResult").value = "CONNECTED";
+                        $("intNotes").value = ($("intNotes").value ? $("intNotes").value + "\n" : "") + "Bệnh nhân đồng ý hủy lịch hẹn. Lý do: " + reason.trim();
+                        updateRetryFieldRequirement();
+                    } catch (err) {
+                        showMessage(err.message || "Không thể hủy lịch hẹn.", "error");
+                    } finally {
+                        cancelBtn.disabled = false;
+                    }
+                };
+            }
+            return;
+        }
+        if (type === "PAYMENT_REMINDER") {
+            box.hidden = false;
+            box.innerHTML = `
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                    <strong class="text-primary"><i class="bi bi-cash-coin me-1"></i>Nhắc thanh toán theo đợt trả góp</strong>
+                    <span class="badge bg-info-subtle text-dark border">${escapeHtml(t.treatmentPlanCode || "")} · ${escapeHtml(t.reminderStage || "")}</span>
+                </div>
+                <div class="row g-2 small">
+                    <div class="col-md-6"><strong>1. Bệnh nhân:</strong> ${escapeHtml(t.patientName || "—")}</div>
+                    <div class="col-md-6"><strong>2. Tổng chi phí kế hoạch:</strong> ${formatVndMoney(t.planTotalCost)}</div>
+                    <div class="col-md-6"><strong>3. Đã thanh toán toàn KH:</strong> <span class="text-success fw-semibold">${formatVndMoney(t.planPaidAmount)}</span></div>
+                    <div class="col-md-6"><strong>4. Còn phải thanh toán toàn KH:</strong> <span class="fw-semibold">${formatVndMoney(t.planRemainingAmount)}</span></div>
+                    <div class="col-md-6"><strong>5. Đợt cần nhắc:</strong> Đợt ${escapeHtml(t.installmentOrder ?? "—")} (${escapeHtml(t.installmentPhaseName || "—")})</div>
+                    <div class="col-md-6"><strong>6. Hạn thanh toán:</strong> <strong>${escapeHtml(t.installmentExpectedDate || t.dueDate || "—")}</strong></div>
+                    <div class="col-md-6"><strong>7. Đã thanh toán đợt này:</strong> <span class="text-success">${formatVndMoney(t.installmentPaidAmount)}</span></div>
+                    <div class="col-md-6"><strong>8. Còn thiếu đợt này:</strong> <strong class="text-danger">${formatVndMoney(t.installmentRemainingAmount)}</strong></div>
+                </div>
+                <div class="small text-muted mt-2 pt-2 border-top">
+                    <i class="bi bi-shield-lock me-1"></i>Lễ tân chỉ liên hệ nhắc thanh toán và hẹn ngày thanh toán. Việc ghi nhận khoản thu thực tế do Bộ phận Kế toán thực hiện.
+                </div>
+            `;
+            return;
+        }
+        box.hidden = true;
+        box.innerHTML = "";
+    }
+
     function renderInteractionTaskHeaderAndAlert(t) {
         $("interactionTaskMeta").innerHTML = `
             <div class="detail-meta-item"><span>Mã công việc</span><strong class="code">${escapeHtml(t.taskCode)}</strong></div>
@@ -2000,6 +2074,7 @@
             <div class="detail-meta-item"><span>Nhân viên phụ trách</span><strong>${escapeHtml(t.assignedStaffName || "Chưa gán")}</strong></div>
         `;
 
+        renderInteractionSpecialContextBox(t);
         renderInteractionExaminationBox(t);
 
         const docAlert = $("interactionDoctorAlert");
@@ -2628,17 +2703,14 @@
     }
 
     function renderCalendarCard(t, extraClass = "", dataAttr = "data-cal-task-id") {
-        const timeText = t.nextRetryAt && !isTaskClosed(t) ? String(t.nextRetryAt).replace("T", " ").slice(11, 16) : "";
         return `
             <button type="button" class="cc-cal-card ${getCalCardStatusClass(t)} ${extraClass}" ${dataAttr}="${t.taskId}"
-                    title="${escapeHtml(`${t.taskCode} · ${t.patientName || ""} · ${t.careGroupLabel || ""} (${t.statusLabel || ""})`)}">
+                    title="${escapeHtml(`${t.taskCode} · ${t.patientName || ""} · ${t.careGroupLabel || ""}`)}">
                 <div class="d-flex align-items-center justify-content-between gap-1">
                     <span class="cc-cal-card-code">${escapeHtml(shortTaskCode(t.taskCode))}</span>
-                    <span class="cc-cal-pill ${getCalStatusPillClass(t.status)}">${escapeHtml(t.statusLabel || statusLabelOf(t.status))}</span>
                 </div>
                 <div class="cc-cal-card-patient">${escapeHtml(t.patientName || "—")}</div>
                 <div class="cc-cal-card-meta">${escapeHtml(t.careGroupLabel || "")}</div>
-                <div class="cc-cal-card-meta"><i class="bi bi-person me-1"></i>${escapeHtml(t.assignedStaffName || "Chưa gán")}${timeText ? ` · <i class="bi bi-telephone-forward"></i> ${escapeHtml(timeText)}` : ""}</div>
             </button>
         `;
     }
@@ -2850,11 +2922,28 @@
     // 10. NOTIFICATION CENTER BỀN VỮNG (CHUÔNG THÔNG BÁO + READ STATE)
     // =========================================================================
 
+    function renderCompactTimeline(items, opts = {}) {
+        if (!Array.isArray(items) || !items.length) {
+            return `<div class="text-muted small py-2">${escapeHtml(opts.emptyText || "Chưa có lịch sử tương tác.")}</div>`;
+        }
+        return items.map(item => `
+            <div class="border-start border-2 border-primary ps-3 pb-2 mb-2 small">
+                <div class="d-flex justify-content-between gap-2">
+                    <strong>${escapeHtml(item.contactResultLabel || item.contactResult || "Liên hệ")}</strong>
+                    <span class="text-muted">${escapeHtml(formatDateTime(item.createdAt))}</span>
+                </div>
+                <div class="text-secondary">${escapeHtml(item.notes || "")}</div>
+                <div class="text-muted">${escapeHtml(item.staffName || "Nhân viên")} · ${escapeHtml(item.channelLabel || item.channel || "")}</div>
+            </div>
+        `).join("");
+    }
+
     async function loadNotifications() {
         try {
             const data = await request("/api/customer-care/notifications?limit=30");
             state.notifications = Array.isArray(data?.notifications) ? data.notifications : [];
             state.unreadNotifCount = Number(data?.unreadCount ?? 0);
+            state.tabUnreadCounts = data?.tabUnreadCounts || {};
             renderNotificationCenter();
         } catch {
             // ignore silent notification error
@@ -2885,6 +2974,21 @@
                 badge.hidden = true;
             }
         }
+
+        const tabUnread = state.tabUnreadCounts || {};
+        const acked = state.ackedKpiUnread || {};
+        ["TODAY", "OVERDUE", "ESCALATED", "ALL"].forEach(tabKey => {
+            const el = $(`kpiUnread_${tabKey}`);
+            if (!el) return;
+            const rawCnt = Number(tabUnread[tabKey] || 0);
+            const cnt = acked[tabKey] ? 0 : rawCnt;
+            if (cnt > 0) {
+                el.textContent = cnt > 99 ? "99+" : String(cnt);
+                el.classList.remove("d-none");
+            } else {
+                el.classList.add("d-none");
+            }
+        });
 
         const list = $("ccNotifList");
         if (!list) return;
@@ -3097,6 +3201,12 @@
         document.querySelectorAll("[data-kpi-tab]").forEach(card => {
             const activate = () => {
                 const target = card.dataset.kpiTab;
+                state.ackedKpiUnread = state.ackedKpiUnread || {};
+                if (target) {
+                    state.ackedKpiUnread[target] = true;
+                    const badgeEl = $(`kpiUnread_${target}`);
+                    if (badgeEl) badgeEl.classList.add("d-none");
+                }
                 if ($("filterStatus")) $("filterStatus").value = "";
                 if (target === "ACTIONABLE_OVERDUE") {
                     state.dueFilter = "OVERDUE";
@@ -3255,12 +3365,17 @@
         safeOn("closeDayTasksModalBtn", "click", () => { if ($("ccDayTasksModal")) $("ccDayTasksModal").hidden = true; });
 
         // Notification Center events
-        safeOn("ccNotifBellBtn", "click", (e) => {
+        safeOn("ccNotifBellBtn", "click", async (e) => {
             e.stopPropagation();
             const dd = $("ccNotifDropdown");
             if (!dd) return;
             dd.hidden = !dd.hidden;
-            if (!dd.hidden) loadNotifications();
+            if (!dd.hidden) {
+                await loadNotifications();
+                if (state.unreadNotifCount > 0) {
+                    await markAllNotificationsRead();
+                }
+            }
         });
         safeOn("ccNotifMarkAllBtn", "click", markAllNotificationsRead);
         document.addEventListener("click", (e) => {
@@ -3272,6 +3387,14 @@
         });
 
         safeOn("btnToggleAdvFilter", "click", window.toggleCcAdvFilter);
+        try {
+            if (localStorage.getItem(ADV_FILTER_STORAGE_KEY) === "1") {
+                const p = $("advFilterPanel");
+                const b = $("btnToggleAdvFilter");
+                if (p) p.classList.add("show");
+                if (b) b.classList.add("is-open");
+            }
+        } catch {}
         safeOn("openCreateTaskBtn", "click", () => openTaskFormModal());
         safeOn("refreshBtn", "click", async () => {
             await refreshAllData();
@@ -3338,7 +3461,7 @@
         safeOn("patientHistoryDrawerResultFilter", "change", applyPatientDrawerFilters);
         safeOn("patientHistoryDrawerMoreBtn", "click", () => {
             patientDrawerState.visibleLimit += 10;
-            renderPatientDrawerTimeline();
+            renderPatientDrawerContent();
         });
 
         // General History Dashboard events

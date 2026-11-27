@@ -2,6 +2,7 @@ package com.cvdcms.repository;
 
 import com.cvdcms.entity.CustomerCareTask;
 import com.cvdcms.entity.Prescription;
+import com.cvdcms.entity.TreatmentPlanInstallment;
 import com.cvdcms.entity.Visit;
 import com.cvdcms.entity.enums.CustomerCareTaskStatus;
 import com.cvdcms.entity.enums.CustomerCareTaskType;
@@ -286,4 +287,65 @@ public interface CustomerCareTaskRepository extends JpaRepository<CustomerCareTa
             @Param("activeStatuses") List<CustomerCareTaskStatus> activeStatuses,
             @Param("today") LocalDate today
     );
+
+    boolean existsByLeaveRequestIdAndAppointment_AppointmentIdAndTaskType(
+            Long leaveRequestId,
+            Long appointmentId,
+            CustomerCareTaskType taskType
+    );
+
+    Optional<CustomerCareTask> findFirstByInstallmentIdAndTaskType(
+            Long installmentId,
+            CustomerCareTaskType taskType
+    );
+
+    List<CustomerCareTask> findByTaskTypeAndStatusIn(
+            CustomerCareTaskType taskType,
+            List<CustomerCareTaskStatus> statuses
+    );
+
+    List<CustomerCareTask> findByInstallmentIdInAndTaskType(
+            List<Long> installmentIds,
+            CustomerCareTaskType taskType
+    );
+
+    @Query("""
+        SELECT i FROM TreatmentPlanInstallment i
+        JOIN FETCH i.plan p
+        JOIN FETCH p.patientProfile pat
+        JOIN FETCH p.branch b
+        WHERE p.status <> com.cvdcms.entity.enums.TreatmentPlanStatus.CANCELLED
+          AND i.status <> com.cvdcms.entity.enums.TreatmentPlanInstallmentStatus.PAID
+          AND i.expectedDate IS NOT NULL
+          AND i.expectedDate <= :cutoffDate
+        ORDER BY i.expectedDate ASC, i.installmentOrder ASC
+        """)
+    List<TreatmentPlanInstallment> findDueInstallmentsForCareReminder(@Param("cutoffDate") LocalDate cutoffDate);
+
+    @Query(value = """
+        SELECT DISTINCT u.user_id
+        FROM users u
+        JOIN user_roles ur ON ur.user_id = u.user_id
+        JOIN roles r ON r.role_id = ur.role_id
+        LEFT JOIN staff_profiles sp ON sp.user_id = u.user_id
+        WHERE u.is_active = 1
+          AND UPPER(u.status) = 'ACTIVE'
+          AND UPPER(r.role_name) IN ('LE_TAN', 'RECEPTIONIST')
+          AND (
+              u.branch_id = :branchId
+              OR EXISTS (
+                  SELECT 1
+                  FROM staff_branch_assignments sba
+                  JOIN roles sr ON sr.role_id = sba.role_id
+                  WHERE sp.staff_id IS NOT NULL
+                    AND sba.staff_id = sp.staff_id
+                    AND sba.branch_id = :branchId
+                    AND sba.status = 'ACTIVE'
+                    AND sba.start_date <= CURDATE()
+                    AND (sba.end_date IS NULL OR sba.end_date >= CURDATE())
+                    AND UPPER(sr.role_name) IN ('LE_TAN', 'RECEPTIONIST')
+              )
+          )
+        """, nativeQuery = true)
+    List<Long> findActiveReceptionistUserIdsByBranch(@Param("branchId") Long branchId);
 }

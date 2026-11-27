@@ -39,7 +39,7 @@ public class CustomerCareInteraction {
     private InteractionChannel channel = InteractionChannel.PHONE_CALL;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "contact_result", nullable = false, length = 30)
+    @Column(name = "contact_result", nullable = false, length = 50)
     private ContactResult contactResult;
 
     @Column(name = "notes", nullable = false, columnDefinition = "TEXT")
