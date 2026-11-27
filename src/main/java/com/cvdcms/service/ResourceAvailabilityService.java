@@ -214,8 +214,10 @@ public class ResourceAvailabilityService {
                 continue;
             }
 
+            Long preferredChairId = dsa.getChair() != null ? dsa.getChair().getChairId() : null;
             ChairSelectionResult chairSelection = selectAvailableChair(
                     room,
+                    preferredChairId,
                     window,
                     request.excludeAppointmentId(),
                     isImmediateStart(request, window),
@@ -467,6 +469,7 @@ public class ResourceAvailabilityService {
 
     private ChairSelectionResult selectAvailableChair(
             Room room,
+            Long preferredChairId,
             ServiceTimeWindow window,
             Long excludeAppointmentId,
             boolean immediateStart,
@@ -521,13 +524,21 @@ public class ResourceAvailabilityService {
                     "Phòng không có ghế nha khoa khả dụng (đều MAINTENANCE/INACTIVE hoặc chưa có ghế).");
         }
 
+        List<DentalChair> candidateChairs = preferredChairId != null
+                ? operableChairs.stream().filter(c -> Objects.equals(preferredChairId, c.getChairId())).toList()
+                : operableChairs;
+        if (candidateChairs.isEmpty()) {
+            return new ChairSelectionResult(false, null, "NO_AVAILABLE_CHAIR",
+                    "Ghế cố định được phân công cho bác sĩ trong ca này hiện không khả dụng (bảo trì hoặc ngưng hoạt động).");
+        }
+
         Set<Long> busyChairIds = new HashSet<>();
         for (AppointmentResourceReservation cr : chairReservationsInRoom) {
             busyChairIds.add(cr.getResourceId());
         }
 
         boolean sawOperationalBusyChair = false;
-        for (DentalChair chair : operableChairs) {
+        for (DentalChair chair : candidateChairs) {
             if (busyChairIds.contains(chair.getChairId())) {
                 continue;
             }

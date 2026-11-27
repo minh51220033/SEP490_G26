@@ -121,6 +121,9 @@ public class StaffScheduleService {
             matrix.put(monday.plusDays(i), row);
         }
         for (StaffSchedule s : scheduleRepository.findByBranchAndRange(branchId, monday, monday.plusDays(6))) {
+            if (s.getStatus() == ScheduleStatus.CANCELLED) {
+                continue;
+            }
             Map<Long, List<StaffSchedule>> row = matrix.get(s.getWorkDate());
             if (row != null && row.containsKey(s.getShift().getShiftId())) {
                 row.get(s.getShift().getShiftId()).add(s);

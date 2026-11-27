@@ -513,9 +513,13 @@ public class ResourceBookingTransactionService {
 
             DentalChair selectedChair = null;
             if (window.requiresChair()) {
+                Long fixedChairId = dsa.getChair() != null ? dsa.getChair().getChairId() : null;
+                List<DentalChair> candidateChairs = fixedChairId != null
+                        ? chairsInRoom.stream().filter(c -> Objects.equals(fixedChairId, c.getChairId())).toList()
+                        : chairsInRoom;
                 Set<Long> busyChairIds = new HashSet<>();
                 chairReservations.forEach(cr -> busyChairIds.add(cr.getResourceId()));
-                for (DentalChair chair : chairsInRoom) {
+                for (DentalChair chair : candidateChairs) {
                     if (busyChairIds.contains(chair.getChairId())) {
                         continue;
                     }
@@ -526,7 +530,9 @@ public class ResourceBookingTransactionService {
                     break;
                 }
                 if (selectedChair == null) {
-                    lastRejectReason = "Không còn ghế khả dụng trong phòng " + room.getRoomCode() + ".";
+                    lastRejectReason = fixedChairId != null
+                            ? "Ghế cố định của bác sĩ trong phòng " + room.getRoomCode() + " đã bận hoặc không khả dụng."
+                            : "Không còn ghế khả dụng trong phòng " + room.getRoomCode() + ".";
                     continue;
                 }
             } else if (!roomReservations.isEmpty()) {

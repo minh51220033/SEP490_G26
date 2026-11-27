@@ -97,6 +97,13 @@ public interface DoctorShiftAssignmentRepository extends JpaRepository<DoctorShi
             Long roomId,
             DoctorShiftAssignmentStatus status);
 
+    long countByBranch_BranchIdAndStaff_StaffIdAndRoom_RoomIdAndWorkDateGreaterThanEqualAndStatus(
+            Long branchId,
+            Long staffId,
+            Long roomId,
+            LocalDate fromDate,
+            DoctorShiftAssignmentStatus status);
+
     @Query("""
         SELECT d FROM DoctorShiftAssignment d
         JOIN FETCH d.staff st

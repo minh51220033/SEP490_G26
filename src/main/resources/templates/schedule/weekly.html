@@ -205,12 +205,22 @@
                             </th>
 
                             <td th:each="d : ${displayedDays}" class="schedule-cell"
+                                th:with="roomEntries=${doctorRoomMatrix.get(d)?.get(sh.shiftId)},
+                                         emptyRooms=${emptyRoomsMatrix != null ? emptyRoomsMatrix.get(d)?.get(sh.shiftId) : null},
+                                         supportList=${supportMatrix.get(d)?.get(sh.shiftId)},
+                                         hasRooms=${roomEntries != null and !#maps.isEmpty(roomEntries)},
+                                         hasSupport=${supportList != null and !#lists.isEmpty(supportList)}"
                                 th:classappend="${d == today} ? 'is-today' : (${d.isBefore(today)} ? 'is-past' : '')">
 
+                                <!-- Ô quá khứ hoàn toàn trống -->
+                                <div class="schedule-past-empty" th:if="${d.isBefore(today) and !hasRooms and !hasSupport}">
+                                    <span>&mdash;</span>
+                                </div>
+
                                 <!-- 1. KHỐI BÁC SĨ THEO PHÒNG -->
-                                <div th:if="${viewType != 'SUPPORT'}">
+                                <div th:if="${viewType != 'SUPPORT' and (!d.isBefore(today) or hasRooms)}">
                                     <!-- Từng phòng trong ô (Ngày x Ca) -->
-                                    <div th:each="roomEntry : ${doctorRoomMatrix.get(d)?.get(sh.shiftId)}"
+                                    <div th:each="roomEntry : ${roomEntries}"
                                          th:with="roomObj=${roomByIdMap != null ? roomByIdMap.get(roomEntry.key) : null},
                                                   docList=${roomEntry.value}"
                                          class="schedule-room-card"
@@ -226,39 +236,83 @@
                                                       th:text="${#lists.size(docList.?[#strings.toString(status) == 'ACTIVE']) + ' BS'}">2 BS</span>
                                                 <span class="badge bg-warning-subtle text-warning border border-warning-subtle"
                                                       th:if="${#lists.isEmpty(docList) or #lists.isEmpty(docList.?[#strings.toString(status) == 'ACTIVE'])}">0 BS</span>
-                                                <button type="button" class="btn btn-sm btn-link p-0 text-primary"
+                                                <button type="button" class="btn btn-sm btn-link p-0 text-primary schedule-room-add-icon"
                                                         th:if="${!d.isBefore(today)}"
-                                                        title="Thêm nhiều bác sĩ vào phòng"
+                                                        title="Thêm bác sĩ vào phòng này"
                                                         data-bs-toggle="modal" data-bs-target="#doctorRoomAssignModal"
                                                         th:attr="data-date=${d}, data-shift=${sh.shiftId}, data-room=${roomEntry.key},
                                                                  data-label=${sh.shiftName + ' · ' + #temporals.format(d, 'dd/MM/yyyy')}">
-                                                    <i class="bi bi-person-plus-fill"></i>
+                                                    <i class="bi bi-plus-circle-fill"></i>
                                                 </button>
                                             </div>
                                         </div>
 
                                         <div th:if="${#lists.isEmpty(docList)}" class="small text-muted fst-italic py-1">
-                                            Phòng chưa có bác sĩ trực
+                                            Chưa có bác sĩ trực
                                         </div>
 
                                         <!-- Danh sách nhiều bác sĩ trong cùng phòng -->
                                         <div th:each="dsa : ${docList}"
                                              class="schedule-doc-row"
                                              th:classappend="${#strings.toString(dsa.status) == 'ON_LEAVE'} ? 'schedule-doc-row--leave' : (${#strings.toString(dsa.status) == 'REPLACED'} ? 'schedule-doc-row--replaced' : '')">
-                                            <div class="schedule-doc-meta">
-                                                <span class="badge bg-primary-subtle text-primary"
-                                                      th:if="${#strings.toString(dsa.assignmentRole) == 'PRIMARY'}">Chính</span>
-                                                <span class="badge bg-info-subtle text-info"
-                                                      th:if="${#strings.toString(dsa.assignmentRole) == 'REPLACEMENT'}">Thay</span>
+                                            <div class="schedule-doc-top">
                                                 <span class="schedule-doc-name"
                                                       th:text="${dsa.staff.fullName}"
                                                       th:title="${dsa.staff.staffCode + (dsa.staff.specialty != null ? ' · ' + dsa.staff.specialty : '')}">
                                                     BS A
                                                 </span>
+
+                                                <!-- Hành động trên từng bác sĩ (từ hôm nay trở đi) -->
+                                                <div class="dropdown flex-shrink-0" th:if="${!d.isBefore(today) and (#strings.toString(dsa.status) == 'ACTIVE' or #strings.toString(dsa.status) == 'ON_LEAVE')}">
+                                                    <button class="btn btn-sm btn-link text-secondary p-0 schedule-doc-menu-btn" type="button"
+                                                            data-bs-toggle="dropdown" aria-expanded="false" title="Thao tác bác sĩ">
+                                                        <i class="bi bi-three-dots-vertical"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                                        <li th:if="${#strings.toString(dsa.status) == 'ACTIVE'}">
+                                                            <button type="button" class="dropdown-item small js-open-move-room"
+                                                                    data-bs-toggle="modal" data-bs-target="#moveRoomModal"
+                                                                    th:attr="data-dsa-id=${dsa.shiftAssignmentId},
+                                                                             data-staff-id=${dsa.staff.staffId},
+                                                                             data-staff-name=${dsa.staff.fullName},
+                                                                             data-work-date=${d},
+                                                                             data-room-id=${dsa.room.roomId},
+                                                                             data-room-code=${dsa.room.roomCode}">
+                                                                <i class="bi bi-arrow-left-right me-2 text-primary"></i>Chuyển phòng
+                                                            </button>
+                                                        </li>
+                                                        <li>
+                                                            <button type="button" class="dropdown-item small js-open-replace-doctor"
+                                                                    data-bs-toggle="modal" data-bs-target="#replaceDoctorModal"
+                                                                    th:attr="data-dsa-id=${dsa.shiftAssignmentId}">
+                                                                <i class="bi bi-person-check me-2 text-warning"></i>Thay thế BS
+                                                            </button>
+                                                        </li>
+                                                        <li th:if="${#strings.toString(dsa.status) == 'ACTIVE'}">
+                                                            <form th:action="@{/admin/schedules/doctor-shifts/{id}/remove(id=${dsa.shiftAssignmentId})}"
+                                                                  method="post" class="m-0"
+                                                                  onsubmit="return confirm('Gỡ bác sĩ này khỏi phòng trực (các bác sĩ khác trong phòng vẫn giữ nguyên)?');">
+                                                                <input type="hidden" name="branchId" th:value="${selectedBranchId}">
+                                                                <input type="hidden" name="week" th:value="${monday}">
+                                                                <button type="submit" class="dropdown-item small text-danger">
+                                                                    <i class="bi bi-trash me-2"></i>Gỡ khỏi phòng
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+
+                                            <div class="schedule-doc-badges">
                                                 <span class="badge bg-success-subtle text-success border border-success-subtle"
                                                       th:if="${dsa.chair != null}"
                                                       th:title="${'Ghế cố định: ' + dsa.chair.chairName}"
-                                                      th:text="${dsa.chair.chairCode}">G101-01</span>
+                                                      th:text="${dsa.chair.chairCode}">G01</span>
+                                                <span class="badge bg-light text-secondary border"
+                                                      th:if="${dsa.chair == null and #strings.toString(dsa.status) == 'ACTIVE'}"
+                                                      title="Linh hoạt / Hỗ trợ các ghế trống trong phòng">Linh hoạt</span>
+                                                <span class="badge bg-info-subtle text-info"
+                                                      th:if="${#strings.toString(dsa.assignmentRole) == 'REPLACEMENT'}">Thay</span>
                                                 <span class="badge bg-warning-subtle text-dark"
                                                       th:if="${#strings.toString(dsa.status) == 'ON_LEAVE'}">Nghỉ</span>
                                                 <span class="badge bg-secondary-subtle text-dark"
@@ -267,74 +321,23 @@
                                                       th:if="${dsa.roomPermissionOverridden}"
                                                       title="Admin đã bật ngoại lệ ngoài phân công phòng">Ngoại lệ</span>
                                             </div>
-
-                                            <!-- Hành động trên từng bác sĩ (từ hôm nay trở đi) -->
-                                            <div class="dropdown" th:if="${!d.isBefore(today) and (#strings.toString(dsa.status) == 'ACTIVE' or #strings.toString(dsa.status) == 'ON_LEAVE')}">
-                                                <button class="btn btn-sm btn-link text-secondary p-0" type="button"
-                                                        data-bs-toggle="dropdown" aria-expanded="false" title="Thao tác bác sĩ">
-                                                    <i class="bi bi-three-dots-vertical"></i>
-                                                </button>
-                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                                    <li th:if="${#strings.toString(dsa.status) == 'ACTIVE'}">
-                                                        <button type="button" class="dropdown-item small js-open-move-room"
-                                                                data-bs-toggle="modal" data-bs-target="#moveRoomModal"
-                                                                th:attr="data-dsa-id=${dsa.shiftAssignmentId},
-                                                                         data-staff-name=${dsa.staff.fullName},
-                                                                         data-room-id=${dsa.room.roomId},
-                                                                         data-room-code=${dsa.room.roomCode}">
-                                                            <i class="bi bi-arrow-left-right me-2 text-primary"></i>Chuyển phòng
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <button type="button" class="dropdown-item small js-open-replace-doctor"
-                                                                data-bs-toggle="modal" data-bs-target="#replaceDoctorModal"
-                                                                th:attr="data-dsa-id=${dsa.shiftAssignmentId}">
-                                                            <i class="bi bi-person-check me-2 text-warning"></i>Thay thế BS
-                                                        </button>
-                                                    </li>
-                                                    <li th:if="${#strings.toString(dsa.status) == 'ACTIVE'}">
-                                                        <form th:action="@{/admin/schedules/doctor-shifts/{id}/remove(id=${dsa.shiftAssignmentId})}"
-                                                              method="post" class="m-0"
-                                                              onsubmit="return confirm('Gỡ bác sĩ này khỏi phòng trực (các bác sĩ khác trong phòng vẫn giữ nguyên)?');">
-                                                            <input type="hidden" name="branchId" th:value="${selectedBranchId}">
-                                                            <input type="hidden" name="week" th:value="${monday}">
-                                                            <button type="submit" class="dropdown-item small text-danger">
-                                                                <i class="bi bi-trash me-2"></i>Gỡ khỏi phòng
-                                                            </button>
-                                                        </form>
-                                                    </li>
-                                                </ul>
-                                            </div>
                                         </div>
                                     </div>
 
-                                    <!-- Cảnh báo gọn các phòng chưa có bác sĩ trong ca -->
-                                    <div class="schedule-empty-rooms-bar"
-                                         th:if="${emptyRoomsMatrix != null and !#lists.isEmpty(emptyRoomsMatrix.get(d)?.get(sh.shiftId)) and filterStatus != 'EMPTY_ROOM' and filterRoomId == null}">
-                                        <i class="bi bi-exclamation-circle me-1"></i>
-                                        Chưa có BS:
-                                        <span th:each="er, iter : ${emptyRoomsMatrix.get(d)?.get(sh.shiftId)}">
-                                            <span th:text="${er.roomCode}">P103</span><span th:if="${!iter.last}">, </span>
-                                        </span>
+                                    <!-- Trạng thái phòng trống tinh gọn (chỉ hiện từ hôm nay trở đi, tooltip chi tiết mã phòng) -->
+                                    <div th:if="${!d.isBefore(today) and emptyRooms != null and !#lists.isEmpty(emptyRooms) and filterStatus != 'EMPTY_ROOM' and filterRoomId == null}"
+                                         class="schedule-empty-rooms-pill"
+                                         th:classappend="${hasRooms} ? 'schedule-empty-rooms-pill--partial' : ''"
+                                         th:title="${'Phòng chưa có bác sĩ: ' + #strings.listJoin(emptyRooms.![roomCode], ', ')}">
+                                        <i class="bi" th:classappend="${hasRooms} ? 'bi-info-circle' : 'bi-door-closed'"></i>
+                                        <span th:text="${hasRooms ? ('Còn ' + #lists.size(emptyRooms) + ' phòng trống') : ('Trống ' + #lists.size(emptyRooms) + ' phòng')}">Trống 6 phòng</span>
                                     </div>
-
-                                    <!-- Nút Thêm phòng vào ca -->
-                                    <button type="button" class="schedule-add mb-1"
-                                            th:if="${!d.isBefore(today) and activeRooms != null and !#lists.isEmpty(activeRooms)}"
-                                            data-bs-toggle="modal" data-bs-target="#doctorRoomAssignModal"
-                                            th:attr="data-date=${d}, data-shift=${sh.shiftId}, data-room='',
-                                                     data-label=${sh.shiftName + ' · ' + #temporals.format(d, 'dd/MM/yyyy')}">
-                                        <i class="bi bi-building-add me-1"></i>+ Thêm phòng / BS
-                                    </button>
                                 </div>
 
-                                <!-- 2. NHÂN SỰ HỖ TRỢ CA (GIỮ NGUYÊN CHỨC NĂNG CŨ CHO LỄ TÂN / KẾ TOÁN / KHO) -->
-                                <div class="schedule-support-section" th:if="${viewType != 'DOCTORS'}">
-                                    <div class="schedule-support-heading"
-                                         th:if="${!#lists.isEmpty(supportMatrix.get(d)?.get(sh.shiftId)) or !d.isBefore(today)}">
-                                        Nhân sự hỗ trợ / chưa gắn phòng
-                                    </div>
-                                    <div th:each="s : ${supportMatrix.get(d)?.get(sh.shiftId)}"
+                                <!-- 2. NHÂN SỰ HỖ TRỢ CA (CHỈ HIỆN KHỐI KHI CÓ DỮ LIỆU) -->
+                                <div class="schedule-support-section" th:if="${viewType != 'DOCTORS' and hasSupport}">
+                                    <div class="schedule-support-heading">Hỗ trợ ca</div>
+                                    <div th:each="s : ${supportList}"
                                          class="schedule-chip"
                                          th:classappend="${#strings.toString(s.status) == 'ON_LEAVE' ? 'schedule-chip--leave' : (#strings.startsWith(s.staff.staffCode, 'BS') ? 'schedule-chip--doctor' : 'schedule-chip--staff')}">
                                         <span class="schedule-role-tag"
@@ -365,13 +368,23 @@
                                             </button>
                                         </form>
                                     </div>
+                                </div>
 
+                                <!-- 3. THANH THAO TÁC GỌN 1 HÀNG (CHỈ NGÀY HÔM NAY & TƯƠNG LAI) -->
+                                <div class="schedule-cell-actions" th:if="${!d.isBefore(today)}">
+                                    <button type="button" class="schedule-add schedule-add--primary"
+                                            th:if="${viewType != 'SUPPORT' and activeRooms != null and !#lists.isEmpty(activeRooms)}"
+                                            data-bs-toggle="modal" data-bs-target="#doctorRoomAssignModal"
+                                            th:attr="data-date=${d}, data-shift=${sh.shiftId}, data-room='',
+                                                     data-label=${sh.shiftName + ' · ' + #temporals.format(d, 'dd/MM/yyyy')}">
+                                        <i class="bi bi-plus-lg"></i> Phòng/BS
+                                    </button>
                                     <button type="button" class="schedule-add"
-                                            th:if="${!d.isBefore(today)}"
+                                            th:if="${viewType != 'DOCTORS'}"
                                             data-bs-toggle="modal" data-bs-target="#assignModal"
                                             th:attr="data-date=${d}, data-shift=${sh.shiftId},
                                                      data-label=${sh.shiftName + ' · ' + #temporals.format(d, 'dd/MM/yyyy')}">
-                                        <i class="bi bi-plus-lg"></i> Xếp nhân sự khác
+                                        <i class="bi bi-plus-lg"></i> Hỗ trợ
                                     </button>
                                 </div>
                             </td>
@@ -444,6 +457,8 @@
                                                     <span class="badge bg-success-subtle text-success border border-success-subtle"
                                                           th:if="${dsa.chair != null}"
                                                           th:text="${dsa.chair.chairCode}">G101-01</span>
+                                                    <span class="badge bg-light text-secondary border"
+                                                          th:if="${dsa.chair == null and #strings.toString(dsa.status) == 'ACTIVE'}">Linh hoạt</span>
                                                 </span>
                                                 <span class="badge bg-light text-dark border" th:text="${dsa.status}">ACTIVE</span>
                                             </div>
@@ -504,7 +519,7 @@
                     </div>
                     <label for="docAssignChairSelect" class="form-label small fw-semibold">Gán ghế phụ trách (tùy chọn)</label>
                     <select id="docAssignChairSelect" name="chairId" class="form-select form-select-sm">
-                        <option value="">-- Linh hoạt mọi ghế trong phòng --</option>
+                        <option value="">-- Linh hoạt / Hỗ trợ mọi ghế trong phòng --</option>
                     </select>
                 </div>
 
@@ -528,19 +543,10 @@
                     </div>
                 </div>
 
-                <div class="row g-2">
-                    <div class="col-md-5">
-                        <label for="docAssignRole" class="form-label small fw-semibold">Vai trò ca</label>
-                        <select id="docAssignRole" name="role" class="form-select form-select-sm">
-                            <option value="CO_ATTENDING">Bác sĩ cùng trực</option>
-                            <option value="PRIMARY">Bác sĩ chính (hiển thị)</option>
-                        </select>
-                    </div>
-                    <div class="col-md-7">
-                        <label for="docAssignNote" class="form-label small fw-semibold">Ghi chú</label>
-                        <input id="docAssignNote" name="note" type="text" maxlength="250" class="form-control form-control-sm"
-                               placeholder="Ví dụ: Hỗ trợ ca đông bệnh nhân...">
-                    </div>
+                <div class="mb-1">
+                    <label for="docAssignNote" class="form-label small fw-semibold">Ghi chú ca trực</label>
+                    <input id="docAssignNote" name="note" type="text" maxlength="250" class="form-control form-control-sm"
+                           placeholder="Ví dụ: Phụ trách ghế G01, hỗ trợ ca đông bệnh nhân...">
                 </div>
             </div>
             <div class="modal-footer px-4 py-3 justify-content-end gap-2">
@@ -577,6 +583,9 @@
                         <option th:each="rm : ${activeRooms}" th:value="${rm.roomId}"
                                 th:text="${rm.roomCode + ' - ' + rm.roomName}">P102</option>
                     </select>
+                    <div id="moveTargetRoomHint" class="form-text text-warning small d-none">
+                        Bác sĩ này chưa được cấp quyền thêm phòng khám nào khác tại chi nhánh này.
+                    </div>
                 </div>
                 <div class="form-text small text-muted">
                     Các bác sĩ khác tại phòng hiện tại vẫn được giữ nguyên phân công.
@@ -723,15 +732,18 @@
                 </div>
 
                 <div class="mb-3">
-                    <label for="assignStaff" class="form-label small fw-semibold text-muted">Chọn nhân viên <span class="text-danger">*</span></label>
+                    <label for="assignStaff" class="form-label small fw-semibold text-muted">Chọn nhân sự hỗ trợ <span class="text-danger">*</span></label>
                     <select id="assignStaff" name="staffId" class="form-select" required
-                            th:disabled="${assignableStaff == null or #lists.isEmpty(assignableStaff)}">
-                        <option value="">-- Chọn nhân viên --</option>
-                        <option th:each="a : ${assignableStaff}" th:value="${a.staff.staffId}"
+                            th:disabled="${assignableSupportStaff == null or #lists.isEmpty(assignableSupportStaff)}">
+                        <option value="">-- Chọn nhân sự hỗ trợ --</option>
+                        <option th:each="a : ${assignableSupportStaff}" th:value="${a.staff.staffId}"
                                 th:text="${a.staff.fullName + ' (' + a.staff.staffCode + ') - ' + (a.role.displayName != null ? a.role.displayName : a.role.roleName)}">
                             Nhân viên
                         </option>
                     </select>
+                    <div class="form-text small text-muted">
+                        Chỉ hiển thị nhân sự khối hỗ trợ (Lễ tân, Điều dưỡng, Kế toán, Kho...). Bác sĩ vui lòng xếp qua <strong>+ Thêm phòng / BS</strong>.
+                    </div>
                 </div>
 
                 <div class="mb-2">
@@ -743,7 +755,7 @@
             <div class="modal-footer px-4 py-3 justify-content-end gap-2 bg-white border-top">
                 <button type="button" class="btn btn-secondary-custom btn-vua" data-bs-dismiss="modal">Hủy</button>
                 <button type="submit" class="btn btn-primary btn-vua"
-                        th:disabled="${assignableStaff == null or #lists.isEmpty(assignableStaff)}">
+                        th:disabled="${assignableSupportStaff == null or #lists.isEmpty(assignableSupportStaff)}">
                     <i class="bi bi-check-lg me-1"></i>Xác nhận xếp ca
                 </button>
             </div>
@@ -857,7 +869,7 @@
             if (!roomId) {
                 box.style.display = 'none';
                 listEl.innerHTML = '';
-                selEl.innerHTML = '<option value="">-- Linh hoạt mọi ghế trong phòng --</option>';
+                selEl.innerHTML = '<option value="">-- Linh hoạt / Hỗ trợ mọi ghế trong phòng --</option>';
                 return;
             }
             var chairs = roomChairsMap[String(roomId)] || [];
@@ -872,7 +884,7 @@
                     return '<span class="badge ' + cls + '">' + (c.chairCode || c.chairName) + ' (' + c.status + ')</span>';
                 }).join('');
             }
-            selEl.innerHTML = '<option value="">-- Linh hoạt mọi ghế trong phòng --</option>'
+            selEl.innerHTML = '<option value="">-- Linh hoạt / Hỗ trợ mọi ghế trong phòng --</option>'
                 + activeChairs.map(function (c) {
                     return '<option value="' + c.chairId + '">' + (c.chairName || c.chairCode) + ' (' + c.chairCode + ')</option>';
                 }).join('');
@@ -908,10 +920,39 @@
         document.querySelectorAll('.js-open-move-room').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 var dsaId = this.getAttribute('data-dsa-id');
+                var staffId = String(this.getAttribute('data-staff-id') || '');
+                var currentRoomId = String(this.getAttribute('data-room-id') || '');
+                var workDate = this.getAttribute('data-work-date') || '';
                 document.getElementById('moveRoomForm').action = '/admin/schedules/doctor-shifts/' + dsaId + '/move-room';
                 document.getElementById('moveRoomStaffName').textContent = this.getAttribute('data-staff-name') || '-';
                 document.getElementById('moveRoomCurrent').textContent = this.getAttribute('data-room-code') || '-';
-                document.getElementById('moveTargetRoom').value = '';
+                var targetSel = document.getElementById('moveTargetRoom');
+                var hintEl = document.getElementById('moveTargetRoomHint');
+                targetSel.value = '';
+                var eligibleRooms = 0;
+                Array.from(targetSel.options).forEach(function (opt) {
+                    if (!opt.value) return;
+                    if (String(opt.value) === currentRoomId) {
+                        opt.hidden = true;
+                        opt.disabled = true;
+                        return;
+                    }
+                    var records = roomDoctorsMap[String(opt.value)] || [];
+                    var allowed = records.some(function (rec) {
+                        if (String(rec.staffId) !== staffId) return false;
+                        if (workDate) {
+                            if (rec.effectiveFrom && workDate < rec.effectiveFrom) return false;
+                            if (rec.effectiveTo && workDate > rec.effectiveTo) return false;
+                        }
+                        return true;
+                    });
+                    opt.hidden = !allowed;
+                    opt.disabled = !allowed;
+                    if (allowed) eligibleRooms++;
+                });
+                if (hintEl) {
+                    hintEl.classList.toggle('d-none', eligibleRooms > 0);
+                }
             });
         });
 

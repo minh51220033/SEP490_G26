@@ -39,6 +39,9 @@ public class ResourceAssignmentAdminService {
     private StaffBranchAssignmentRepository staffBranchAssignmentRepository;
 
     @Autowired(required = false)
+    private DoctorShiftAssignmentRepository doctorShiftAssignmentRepository;
+
+    @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
     @EventListener(ApplicationReadyEvent.class)
@@ -166,8 +169,26 @@ public class ResourceAssignmentAdminService {
         DoctorRoomAssignment assignment = roomAssignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phân công phòng."));
         requireDoctorStaff(assignment.getStaff());
+        assertNoUpcomingActiveShiftInRoom(
+                assignment.getBranch() != null ? assignment.getBranch().getBranchId() : null,
+                assignment.getStaff() != null ? assignment.getStaff().getStaffId() : null,
+                assignment.getRoom());
         assignment.setStatus(DoctorAssignmentStatus.INACTIVE);
         return roomAssignmentRepository.save(assignment);
+    }
+
+    private void assertNoUpcomingActiveShiftInRoom(Long branchId, Long staffId, Room room) {
+        if (doctorShiftAssignmentRepository == null || branchId == null || staffId == null || room == null) {
+            return;
+        }
+        long upcoming = doctorShiftAssignmentRepository
+                .countByBranch_BranchIdAndStaff_StaffIdAndRoom_RoomIdAndWorkDateGreaterThanEqualAndStatus(
+                        branchId, staffId, room.getRoomId(), LocalDate.now(), DoctorShiftAssignmentStatus.ACTIVE);
+        if (upcoming > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Không thể thu hồi quyền phòng " + room.getRoomCode() + " vì bác sĩ đang có " + upcoming
+                            + " ca trực sắp tới tại phòng này. Vui lòng gỡ hoặc chuyển phòng trên Bảng phân ca trước.");
+        }
     }
 
     @Transactional
@@ -248,6 +269,7 @@ public class ResourceAssignmentAdminService {
             Long rId = a.getRoom().getRoomId();
             if (a.getStatus() == DoctorAssignmentStatus.ACTIVE) {
                 if (!targetIds.contains(rId)) {
+                    assertNoUpcomingActiveShiftInRoom(branchId, staffId, a.getRoom());
                     a.setStatus(DoctorAssignmentStatus.INACTIVE);
                     roomAssignmentRepository.save(a);
                 } else {
@@ -331,7 +353,12 @@ public class ResourceAssignmentAdminService {
 
         LocalDate today = LocalDate.now();
         for (Long sId : targetIds) {
-            if (activeByService.containsKey(sId)) {
+            DoctorServicePermission alreadyActive = activeByService.get(sId);
+            if (alreadyActive != null) {
+                if (branch == null && alreadyActive.getBranch() != null) {
+                    alreadyActive.setBranch(null);
+                    servicePermissionRepository.save(alreadyActive);
+                }
                 continue;
             }
             com.cvdcms.entity.Service service = serviceRepository.findById(sId)
@@ -341,6 +368,7 @@ public class ResourceAssignmentAdminService {
             }
             DoctorServicePermission reusable = inactiveByService.get(sId);
             if (reusable != null) {
+                reusable.setBranch(branch);
                 reusable.setStatus(DoctorServicePermissionStatus.ACTIVE);
                 reusable.setEffectiveFrom(today);
                 reusable.setEffectiveTo(null);

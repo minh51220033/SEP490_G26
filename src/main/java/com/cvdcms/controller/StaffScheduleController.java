@@ -155,7 +155,12 @@ public class StaffScheduleController {
             Map<LocalDate, Map<Long, List<StaffSchedule>>> matrix = scheduleService.buildWeekMatrix(branchId, monday, shifts);
             model.addAttribute("shifts", shifts);
             model.addAttribute("matrix", matrix);
-            model.addAttribute("assignableStaff", scheduleService.getAssignableStaff(branchId));
+            List<com.cvdcms.entity.StaffBranchAssignment> assignableStaff = scheduleService.getAssignableStaff(branchId);
+            model.addAttribute("assignableStaff", assignableStaff);
+            List<com.cvdcms.entity.StaffBranchAssignment> assignableSupportStaff = assignableStaff.stream()
+                    .filter(a -> a.getRole() == null || !isDoctorRoleName(a.getRole().getRoleName()))
+                    .toList();
+            model.addAttribute("assignableSupportStaff", assignableSupportStaff);
 
             List<LocalDate> weekDays = new ArrayList<>(matrix.keySet());
             model.addAttribute("weekDays", weekDays);
@@ -313,6 +318,9 @@ public class StaffScheduleController {
                     List<StaffSchedule> rawList = matrix.getOrDefault(d, Map.of()).getOrDefault(sh.getShiftId(), List.of());
                     List<StaffSchedule> filtered = new ArrayList<>();
                     for (StaffSchedule sc : rawList) {
+                        if (sc.getStatus() == ScheduleStatus.CANCELLED) {
+                            continue;
+                        }
                         if (roomAssignedScheduleIds.contains(sc.getScheduleId())) {
                             continue;
                         }
@@ -357,6 +365,12 @@ public class StaffScheduleController {
         return "schedule/weekly";
     }
 
+    private static boolean isDoctorRoleName(String roleName) {
+        if (roleName == null) return false;
+        String r = roleName.trim().toUpperCase(Locale.ROOT);
+        return r.contains("BAC_SI") || r.contains("DOCTOR") || r.contains("BÁC SĨ");
+    }
+
     private static boolean matchesStatusFilter(DoctorShiftAssignmentStatus status, String filterStatus) {
         if (filterStatus == null || "ALL".equalsIgnoreCase(filterStatus) || "EMPTY_ROOM".equalsIgnoreCase(filterStatus)) {
             return true;
@@ -376,6 +390,12 @@ public class StaffScheduleController {
         }
         requireAdmin(session);
         try {
+            boolean isDoctorInBranch = scheduleService.getAssignableStaff(branchId).stream()
+                    .anyMatch(a -> a.getStaff() != null && Objects.equals(staffId, a.getStaff().getStaffId())
+                            && a.getRole() != null && isDoctorRoleName(a.getRole().getRoleName()));
+            if (isDoctorInBranch) {
+                throw new IllegalArgumentException("Bác sĩ phải được phân công trực theo phòng qua nút '+ Thêm phòng / BS' (chọn vai trò Bác sĩ chính hoặc Bác sĩ cùng trực).");
+            }
             scheduleService.assign(branchId, staffId, shiftId, workDate, note);
             ra.addFlashAttribute("successMessage", "Đã xếp ca làm việc.");
         } catch (IllegalArgumentException e) {

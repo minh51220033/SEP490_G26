@@ -44,6 +44,80 @@
                 #shiftTable {
                     min-width: 100% !important;
                 }
+                .ws-subtabs-bar {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    margin-bottom: 16px;
+                }
+                .ws-subtabs {
+                    display: inline-flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    gap: 4px;
+                    background: #f1f5f9;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    padding: 4px;
+                }
+                .ws-subtab-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 8px;
+                    border: 1px solid transparent;
+                    border-radius: 9px;
+                    padding: 8px 16px;
+                    font-size: 13.5px;
+                    font-weight: 600;
+                    color: #475569;
+                    background: transparent;
+                    transition: all 0.16s ease;
+                    white-space: nowrap;
+                }
+                .ws-subtab-btn:hover {
+                    color: #0f172a;
+                    background: rgba(255, 255, 255, 0.65);
+                }
+                .ws-subtab-btn.active {
+                    color: #0f172a;
+                    background: #ffffff;
+                    border-color: #e2e8f0;
+                    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+                }
+                .ws-subtab-btn[data-ws-tab="shifts"].active i {
+                    color: #0284c7;
+                }
+                .ws-subtab-btn[data-ws-tab="windows"].active i {
+                    color: #4f46e5;
+                }
+                .ws-subtab-count {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-width: 24px;
+                    padding: 2px 8px;
+                    border-radius: 999px;
+                    font-size: 11.5px;
+                    font-weight: 700;
+                    background: #e2e8f0;
+                    color: #334155;
+                    transition: all 0.16s ease;
+                }
+                .ws-subtab-btn[data-ws-tab="shifts"].active .ws-subtab-count {
+                    background: #e0f2fe;
+                    color: #0369a1;
+                }
+                .ws-subtab-btn[data-ws-tab="windows"].active .ws-subtab-count {
+                    background: #eef2ff;
+                    color: #4f46e5;
+                }
+                .ws-subtab-hint {
+                    font-size: 12.5px;
+                    color: #64748b;
+                    font-weight: 500;
+                }
             </style>
 
             <!-- TOAST MESSAGES -->
@@ -65,13 +139,14 @@
                         <i class="bi bi-clock-history"></i>
                     </div>
                     <div>
-                        <h1 class="dv-page-title mb-0">Cấu hình ca làm việc</h1>
-                        <p class="dv-page-subtitle">Thiết lập khung giờ Sáng / Chiều / Tối và quản lý trạng thái ca cho từng cơ sở phòng khám</p>
+                        <h1 class="dv-page-title mb-0">Cấu hình ca làm &amp; ca khám</h1>
+                        <p class="dv-page-subtitle">Tách biệt ca làm việc nhân sự (chấm công) và khung giờ ca khám mở đặt lịch hẹn cho từng cơ sở</p>
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <div th:replace="~{fragments/header :: branchSelectInline}"></div>
-                    <button class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
+                    <button type="button" id="btnCreateShiftHeader"
+                            class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2"
                             style="background: linear-gradient(135deg, #0284c7, #1d4ed8); border: none;"
                             data-bs-toggle="modal" data-bs-target="#modalCreateShift"
                             th:disabled="${selectedBranchId == null}">
@@ -83,66 +158,95 @@
             <!-- HR TABS (Chuẩn DentalSoft) -->
             <nav th:replace="~{fragments/hr_tabs :: hrTabs('work-shifts')}"></nav>
 
-            <!-- 4 THẺ KPI TỔNG QUAN (Đồng bộ chuẩn Quản lý tài khoản) -->
-            <div class="row g-3 mb-4" th:if="${shifts != null}">
-                <div class="col-xl-3 col-md-6">
-                    <div class="dv-kpi-card" style="--kpi-accent: #6366f1;">
-                        <div>
-                            <div class="dv-kpi-num" style="color: #4f46e5;" th:text="${sessionWindows != null ? #lists.size(sessionWindows) : 0}">0</div>
-                            <div class="dv-kpi-label">Tổng số ca khám</div>
-                            <div class="dv-kpi-sub" th:text="${sessionWindows != null ? sessionWindows.?[isActive == true].size() + ' ca đang mở nhận lịch hẹn' : 'Khung giờ nhận lịch hẹn'}">0 ca đang mở nhận lịch hẹn</div>
-                        </div>
-                        <div class="dv-kpi-icon" style="background: #eef2ff; color: #4f46e5;">
-                            <i class="bi bi-calendar2-week"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <div class="dv-kpi-card" style="--kpi-accent: #0284c7;">
-                        <div>
-                            <div class="dv-kpi-num" th:text="${#lists.size(shifts)}">0</div>
-                            <div class="dv-kpi-label">Tổng số ca làm</div>
-                            <div class="dv-kpi-sub">Khung giờ nhân sự &amp; chấm công</div>
-                        </div>
-                        <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
-                            <i class="bi bi-clock"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <div class="dv-kpi-card" style="--kpi-accent: #10b981;">
-                        <div>
-                            <div class="dv-kpi-num text-success" th:text="${shifts.?[isActive == true].size()}">0</div>
-                            <div class="dv-kpi-label">Ca làm đang hoạt động</div>
-                            <div class="dv-kpi-sub">Áp dụng cho phân ca &amp; chấm công</div>
-                        </div>
-                        <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
-                            <i class="bi bi-check-circle-fill"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;">
-                        <div>
-                            <div class="dv-kpi-num text-warning" th:text="${shifts.?[isActive == false].size()}">0</div>
-                            <div class="dv-kpi-label">Đã tắt / Tạm dừng</div>
-                            <div class="dv-kpi-sub" th:text="${sessionWindows != null ? sessionWindows.?[isActive == false].size() + ' ca khám đang đóng lịch' : 'Ẩn khỏi phân ca mới'}">Ẩn khỏi phân ca mới</div>
-                        </div>
-                        <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
-                            <i class="bi bi-pause-circle-fill"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- BRANCH PROMPT -->
             <div th:if="${selectedBranchId == null}" class="text-center py-5">
                 <i class="bi bi-building text-muted" style="font-size: 3rem;"></i>
                 <p class="text-muted mt-3">Vui lòng chọn chi nhánh để xem và quản lý ca làm việc.</p>
             </div>
 
-            <!-- 1. BẢNG CẤU HÌNH CA KHÁM (KHUNG GIỜ NHẬN LỊCH HẸN) -->
-            <section th:if="${selectedBranchId != null and sessionWindows != null}" class="staff-table-card mb-4">
+            <!-- SUB-TABS TÁCH BIỆT CA LÀM VIỆC & CA KHÁM ĐẶT LỊCH -->
+            <div th:if="${selectedBranchId != null}" class="ws-subtabs-bar">
+                <ul class="nav ws-subtabs" id="workShiftSubTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link ws-subtab-btn active"
+                                id="tabBtnWorkShifts"
+                                data-bs-toggle="tab"
+                                data-bs-target="#tabPaneWorkShifts"
+                                data-ws-tab="shifts"
+                                type="button"
+                                role="tab"
+                                aria-controls="tabPaneWorkShifts"
+                                aria-selected="true">
+                            <i class="bi bi-person-workspace"></i>
+                            <span>Ca làm việc nhân sự</span>
+                            <span class="ws-subtab-count" th:text="${shifts != null ? #lists.size(shifts) : 0}">0</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link ws-subtab-btn"
+                                id="tabBtnSessionWindows"
+                                data-bs-toggle="tab"
+                                data-bs-target="#tabPaneSessionWindows"
+                                data-ws-tab="windows"
+                                type="button"
+                                role="tab"
+                                aria-controls="tabPaneSessionWindows"
+                                aria-selected="false">
+                            <i class="bi bi-calendar2-week"></i>
+                            <span>Ca khám đặt lịch</span>
+                            <span class="ws-subtab-count" th:text="${sessionWindows != null ? #lists.size(sessionWindows) : 0}">0</span>
+                        </button>
+                    </li>
+                </ul>
+                <div class="ws-subtab-hint" id="wsSubtabHint">
+                    Dùng cho phân ca bác sĩ/nhân viên và ghi nhận chấm công.
+                </div>
+            </div>
+
+            <div class="tab-content" th:if="${selectedBranchId != null}" id="workShiftTabContent">
+                <!-- TAB 2: CẤU HÌNH CA KHÁM (KHUNG GIỜ NHẬN LỊCH HẸN) -->
+                <div class="tab-pane fade" id="tabPaneSessionWindows" role="tabpanel" aria-labelledby="tabBtnSessionWindows">
+                    <div class="row g-3 mb-3" th:if="${sessionWindows != null}">
+                        <div class="col-md-4">
+                            <div class="dv-kpi-card" style="--kpi-accent: #6366f1;">
+                                <div>
+                                    <div class="dv-kpi-num" style="color: #4f46e5;" th:text="${#lists.size(sessionWindows)}">0</div>
+                                    <div class="dv-kpi-label">Tổng số ca khám</div>
+                                    <div class="dv-kpi-sub">Khung giờ hiển thị khi bệnh nhân đặt lịch</div>
+                                </div>
+                                <div class="dv-kpi-icon" style="background: #eef2ff; color: #4f46e5;">
+                                    <i class="bi bi-calendar2-week"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="dv-kpi-card" style="--kpi-accent: #10b981;">
+                                <div>
+                                    <div class="dv-kpi-num text-success" th:text="${sessionWindows.?[isActive == true].size()}">0</div>
+                                    <div class="dv-kpi-label">Đang mở nhận lịch</div>
+                                    <div class="dv-kpi-sub">Cho phép đặt hẹn mới trong khung giờ này</div>
+                                </div>
+                                <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;">
+                                <div>
+                                    <div class="dv-kpi-num text-warning" th:text="${sessionWindows.?[isActive == false].size()}">0</div>
+                                    <div class="dv-kpi-label">Đã tắt nhận lịch</div>
+                                    <div class="dv-kpi-sub">Tạm đóng tiếp nhận đặt lịch trực tuyến</div>
+                                </div>
+                                <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                                    <i class="bi bi-pause-circle-fill"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 1. BẢNG CẤU HÌNH CA KHÁM (KHUNG GIỜ NHẬN LỊCH HẸN) -->
+                    <section th:if="${sessionWindows != null}" class="staff-table-card">
                 <div class="dv-grid-topbar">
                     <div class="d-flex align-items-center gap-3 flex-wrap">
                         <div class="fw-bold text-dark" style="font-size: 15px;">
@@ -305,9 +409,51 @@
                     </table>
                 </div>
             </section>
+                </div>
 
-            <!-- 2. BẢNG DỮ LIỆU CA LÀM VIỆC NHÂN SỰ (ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN) -->
-            <section th:if="${selectedBranchId != null}" class="staff-table-card">
+                <!-- TAB 1: CẤU HÌNH CA LÀM VIỆC NHÂN SỰ -->
+                <div class="tab-pane fade show active" id="tabPaneWorkShifts" role="tabpanel" aria-labelledby="tabBtnWorkShifts">
+                    <div class="row g-3 mb-3" th:if="${shifts != null}">
+                        <div class="col-md-4">
+                            <div class="dv-kpi-card" style="--kpi-accent: #0284c7;">
+                                <div>
+                                    <div class="dv-kpi-num" th:text="${#lists.size(shifts)}">0</div>
+                                    <div class="dv-kpi-label">Tổng số ca làm</div>
+                                    <div class="dv-kpi-sub">Khung giờ nhân sự &amp; chấm công</div>
+                                </div>
+                                <div class="dv-kpi-icon" style="background: #e0f2fe; color: #0284c7;">
+                                    <i class="bi bi-clock"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="dv-kpi-card" style="--kpi-accent: #10b981;">
+                                <div>
+                                    <div class="dv-kpi-num text-success" th:text="${shifts.?[isActive == true].size()}">0</div>
+                                    <div class="dv-kpi-label">Ca làm đang hoạt động</div>
+                                    <div class="dv-kpi-sub">Áp dụng cho phân ca &amp; chấm công</div>
+                                </div>
+                                <div class="dv-kpi-icon" style="background: #d1fae5; color: #059669;">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="dv-kpi-card" style="--kpi-accent: #f59e0b;">
+                                <div>
+                                    <div class="dv-kpi-num text-warning" th:text="${shifts.?[isActive == false].size()}">0</div>
+                                    <div class="dv-kpi-label">Đã tắt / Tạm dừng</div>
+                                    <div class="dv-kpi-sub">Ẩn khỏi lựa chọn phân ca mới</div>
+                                </div>
+                                <div class="dv-kpi-icon" style="background: #fef3c7; color: #d97706;">
+                                    <i class="bi bi-pause-circle-fill"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. BẢNG DỮ LIỆU CA LÀM VIỆC NHÂN SỰ (ĐỒNG BỘ CHUẨN QUẢN LÝ TÀI KHOẢN) -->
+                    <section class="staff-table-card">
                 <!-- THANH THÔNG TIN BẢNG (CHUẨN TÀI KHOẢN) -->
                 <div class="dv-grid-topbar">
                     <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -514,6 +660,8 @@
                     </table>
                 </div>
             </section>
+                </div>
+            </div>
             <!-- End table -->
 
         </main>
@@ -670,6 +818,77 @@
         document.getElementById('editWindowEndTime').value = btn.getAttribute('data-endtime') || '';
         new bootstrap.Modal(document.getElementById('modalEditSessionWindow')).show();
     }
+
+    (function () {
+        const STORAGE_KEY = 'workShiftsActiveTab';
+        const btnShifts = document.getElementById('tabBtnWorkShifts');
+        const btnWindows = document.getElementById('tabBtnSessionWindows');
+        const paneShifts = document.getElementById('tabPaneWorkShifts');
+        const paneWindows = document.getElementById('tabPaneSessionWindows');
+        const btnCreateShift = document.getElementById('btnCreateShiftHeader');
+        const tabHint = document.getElementById('wsSubtabHint');
+
+        if (!btnShifts || !btnWindows || !paneShifts || !paneWindows) return;
+
+        function syncTabChrome(tabKey) {
+            const isWindows = tabKey === 'windows';
+            if (btnCreateShift) {
+                btnCreateShift.classList.toggle('d-none', isWindows);
+            }
+            if (tabHint) {
+                tabHint.textContent = isWindows
+                    ? 'Khung giờ mở đặt lịch hẹn cho bệnh nhân (tự đồng bộ từ ca làm).'
+                    : 'Dùng cho phân ca bác sĩ/nhân viên và ghi nhận chấm công.';
+            }
+        }
+
+        function activateTabState(tabKey) {
+            const isWindows = tabKey === 'windows';
+            btnShifts.classList.toggle('active', !isWindows);
+            btnShifts.setAttribute('aria-selected', String(!isWindows));
+            btnWindows.classList.toggle('active', isWindows);
+            btnWindows.setAttribute('aria-selected', String(isWindows));
+
+            paneShifts.classList.toggle('show', !isWindows);
+            paneShifts.classList.toggle('active', !isWindows);
+            paneWindows.classList.toggle('show', isWindows);
+            paneWindows.classList.toggle('active', isWindows);
+
+            syncTabChrome(tabKey);
+            return isWindows ? paneWindows : paneShifts;
+        }
+
+        let savedTab = 'shifts';
+        try {
+            if (sessionStorage.getItem(STORAGE_KEY) === 'windows') {
+                savedTab = 'windows';
+            }
+        } catch (e) {}
+
+        // Khôi phục tab trước DOMContentLoaded để bảng đang hiển thị được đo đúng ngay từ đầu
+        const initialPane = activateTabState(savedTab);
+        initialPane.dataset.wsTableReady = '1';
+
+        [btnShifts, btnWindows].forEach(function (tabBtn) {
+            tabBtn.addEventListener('shown.bs.tab', function (event) {
+                const tabKey = event.target.getAttribute('data-ws-tab') || 'shifts';
+                try {
+                    sessionStorage.setItem(STORAGE_KEY, tabKey);
+                } catch (e) {}
+                syncTabChrome(tabKey);
+
+                const targetSelector = event.target.getAttribute('data-bs-target');
+                const activePane = targetSelector ? document.querySelector(targetSelector) : null;
+                if (activePane && !activePane.dataset.wsTableReady) {
+                    activePane.dataset.wsTableReady = '1';
+                    if (typeof window.setupUniversalEnterpriseTable === 'function') {
+                        window.setupUniversalEnterpriseTable();
+                    }
+                }
+                window.dispatchEvent(new Event('resize'));
+            });
+        });
+    })();
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

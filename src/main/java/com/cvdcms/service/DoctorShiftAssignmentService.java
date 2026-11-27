@@ -233,6 +233,9 @@ public class DoctorShiftAssignmentService {
         User actor = actorUserId != null ? userRepository.findById(actorUserId).orElse(null) : null;
         DoctorShiftAssignmentRole effectiveRole = (role != null && role != DoctorShiftAssignmentRole.REPLACEMENT)
                 ? role : DoctorShiftAssignmentRole.CO_ATTENDING;
+        if (effectiveRole == DoctorShiftAssignmentRole.PRIMARY && sortedStaffIds.size() > 1) {
+            throw new IllegalArgumentException("Mỗi phòng trong một ca chỉ có tối đa 1 Bác sĩ chính. Vui lòng chọn 1 bác sĩ hoặc đổi sang vai trò 'Bác sĩ cùng trực'.");
+        }
 
         List<DoctorShiftAssignment> created = new ArrayList<>();
         for (Long sid : sortedStaffIds) {
@@ -249,6 +252,15 @@ public class DoctorShiftAssignmentService {
                     .anyMatch(d -> d.getStaff() != null && Objects.equals(sid, d.getStaff().getStaffId()));
             if (alreadyInRoom) {
                 throw new IllegalArgumentException("Bác sĩ " + doctor.getFullName() + " đã được phân công vào phòng " + room.getRoomCode() + " trong ca này.");
+            }
+            if (effectiveRole == DoctorShiftAssignmentRole.PRIMARY) {
+                Optional<DoctorShiftAssignment> existingPrimary = existingAtSameRoom.stream()
+                        .filter(d -> d.getAssignmentRole() == DoctorShiftAssignmentRole.PRIMARY)
+                        .findFirst();
+                if (existingPrimary.isPresent()) {
+                    String primaryName = existingPrimary.get().getStaff() != null ? existingPrimary.get().getStaff().getFullName() : "bác sĩ khác";
+                    throw new IllegalArgumentException("Phòng " + room.getRoomCode() + " trong ca này đã có Bác sĩ chính (" + primaryName + "). Vui lòng chọn vai trò 'Bác sĩ cùng trực'.");
+                }
             }
             if (assignedChair != null) {
                 Long targetChairId = assignedChair.getChairId();
@@ -427,8 +439,19 @@ public class DoctorShiftAssignmentService {
         moved.setShift(lockedOld.getShift());
         moved.setRoom(targetRoom);
         moved.setStaff(doctor);
-        moved.setAssignmentRole(lockedOld.getAssignmentRole() == DoctorShiftAssignmentRole.REPLACEMENT
-                ? DoctorShiftAssignmentRole.CO_ATTENDING : lockedOld.getAssignmentRole());
+        DoctorShiftAssignmentRole movedRole = lockedOld.getAssignmentRole() == DoctorShiftAssignmentRole.REPLACEMENT
+                ? DoctorShiftAssignmentRole.CO_ATTENDING : lockedOld.getAssignmentRole();
+        if (movedRole == DoctorShiftAssignmentRole.PRIMARY) {
+            boolean targetHasPrimary = shiftAssignmentRepository
+                    .findByBranch_BranchIdAndWorkDateAndShift_ShiftIdAndRoom_RoomIdAndStatusOrderByShiftAssignmentIdAsc(
+                            branchId, workDate, lockedOld.getShift().getShiftId(), targetRoomId, DoctorShiftAssignmentStatus.ACTIVE)
+                    .stream()
+                    .anyMatch(d -> d.getAssignmentRole() == DoctorShiftAssignmentRole.PRIMARY);
+            if (targetHasPrimary) {
+                movedRole = DoctorShiftAssignmentRole.CO_ATTENDING;
+            }
+        }
+        moved.setAssignmentRole(movedRole);
         moved.setStatus(DoctorShiftAssignmentStatus.ACTIVE);
         moved.setNote(lockedOld.getNote());
         moved.setCreatedBy(actor);
