@@ -104,7 +104,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối DTO null hoặc branchId không hợp lệ")
+    @DisplayName("create - Reject null DTO or invalid branchId")
     void create_nullDtoOrInvalidBranch_throws400() {
         ResponseStatusException ex1 = assertThrows(ResponseStatusException.class,
                 () -> receiptService.create(null, 1L));
@@ -118,7 +118,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Chặn 403 khi tài khoản không có quyền truy cập chi nhánh")
+    @DisplayName("create - Block 403 when user lacks branch access")
     void create_noBranchAccess_throws403() {
         StockReceiptCreateDTO dto = validDto();
         when(accessService.canAccessBranch(99L, 1L)).thenReturn(false);
@@ -129,7 +129,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối khi thiếu nhà cung cấp hoặc danh sách vật tư rỗng")
+    @DisplayName("create - Reject when supplier is missing or item list is empty")
     void create_missingSupplierOrItems_throws400() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
 
@@ -145,7 +145,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối khi thiếu chứng từ hóa đơn hoặc ngày nhập ở tương lai")
+    @DisplayName("create - Reject when invoice attachment is missing or receiptDate is in the future")
     void create_missingAttachmentOrFutureDate_throws400() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
 
@@ -161,7 +161,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối số hóa đơn sai định dạng hoặc ghi chú > 255 ký tự")
+    @DisplayName("create - Reject malformed supplier invoice number or notes > 255 characters")
     void create_invalidInvoiceNoOrLongNotes_throws400() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
 
@@ -177,7 +177,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Trả 404/400 khi chi nhánh hoặc nhà cung cấp không tồn tại hoặc ngừng hoạt động")
+    @DisplayName("create - Return 404/400 when branch or supplier does not exist or is inactive")
     void create_missingOrInactiveBranchOrSupplier_throwsError() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
 
@@ -202,7 +202,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối nhân viên thường chưa liên kết StaffProfile; Admin được tự động tạo StaffProfile")
+    @DisplayName("create - Reject normal staff without StaffProfile; auto-create StaffProfile for Admin")
     void create_missingStaffProfile_rejectedForStaffAndAutoCreatedForAdmin() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
         when(branchRepository.findById(1L)).thenReturn(Optional.of(branch));
@@ -232,7 +232,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối dòng vật tư có hạn sử dụng trước ngày nhập, số lượng <= 0 hoặc đơn giá âm")
+    @DisplayName("create - Reject item with expiry before receipt date, quantity <= 0, or negative price")
     void create_invalidItemValues_throws400() {
         stubHeaderDeps();
 
@@ -253,7 +253,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối vật tư ngừng hoạt động hoặc trùng (materialId, batchNumber) trong cùng phiếu")
+    @DisplayName("create - Reject inactive material or duplicate (materialId, batchNumber) in same voucher")
     void create_inactiveMaterialOrDuplicateBatchInVoucher_throws400() {
         stubHeaderDeps();
 
@@ -277,7 +277,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Cộng dồn vào lô và tồn kho hiện có khi trùng số lô & khớp hạn sử dụng")
+    @DisplayName("create - Accumulate existing batch and inventory when batch number & expiry match")
     void create_existingBatchMatchingExpiry_accumulatesStock() {
         stubHeaderDeps();
         when(materialRepository.findById(100L)).thenReturn(Optional.of(material));
@@ -315,7 +315,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối paidAmount âm, vượt quá tổng phiếu, sai phương thức thanh toán hoặc sai số chứng từ")
+    @DisplayName("create - Reject negative paidAmount, over-total amount, bad payment method, or invalid ref")
     void create_invalidPaymentParams_throws400() {
         stubHeaderDeps();
         when(materialRepository.findById(100L)).thenReturn(Optional.of(material));
@@ -347,7 +347,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("create - Tự động sinh SupplierPayment khi paidAmount > 0 và hỗ trợ ký điện tử ngay khi tạo")
+    @DisplayName("create - Auto-create SupplierPayment when paidAmount > 0 and support e-signature on creation")
     void create_withInitialPaymentAndSignature_createsPaymentAndSigns() throws Exception {
         stubHeaderDeps();
         when(materialRepository.findById(100L)).thenReturn(Optional.of(material));
@@ -382,7 +382,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("search - Kiểm tra quyền, khoảng ngày và tính công nợ còn lại cho từng phiếu")
+    @DisplayName("search - Check branch access, date range, and compute remaining debt per receipt")
     void search_validatesAndComputesDebtCorrectly() {
         Pageable pageable = PageRequest.of(0, 10);
         assertEquals(HttpStatus.BAD_REQUEST,
@@ -420,7 +420,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("getById - Kiểm tra ID, 404, 403 và chi tiết các dòng hàng hóa")
+    @DisplayName("getById - Validate ID, 404/403 access, and map receipt item details")
     void getById_validatesAndReturnsDetail() {
         assertEquals(HttpStatus.BAD_REQUEST,
                 assertThrows(ResponseStatusException.class, () -> receiptService.getById(null, 1L)).getStatusCode());
@@ -462,7 +462,7 @@ class StockReceiptServiceTest {
     }
 
     @Test
-    @DisplayName("signReceipt - Chặn ký đè phiếu đã ký, chặn sai chi nhánh và lưu chữ ký mới thành công")
+    @DisplayName("signReceipt - Block re-signing and cross-branch signing; persist new signature PNG")
     void signReceipt_validatesPermissionsImmutabilityAndSigns() throws Exception {
         assertEquals(HttpStatus.BAD_REQUEST,
                 assertThrows(ResponseStatusException.class, () -> receiptService.signReceipt(0L, "data", 1L)).getStatusCode());

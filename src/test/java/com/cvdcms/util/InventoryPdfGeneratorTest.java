@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class InventoryPdfGeneratorTest {
 
     @Test
-    @DisplayName("generateReceiptPdf - Sinh file PDF chuẩn %PDF-1.4 đầy đủ chữ ký/công nợ và kết thúc bằng %%EOF")
+    @DisplayName("generateReceiptPdf - Generate valid %PDF-1.4 receipt PDF with signature/debt and %%EOF footer")
     void generateReceiptPdf_generatesValidPdfBytes() {
         StockReceiptResponseDTO receipt = new StockReceiptResponseDTO(
                 1L, "PN-2026-001", 1L, 10L, LocalDate.of(2026, 11, 10), new BigDecimal("2500000")
@@ -49,7 +49,7 @@ class InventoryPdfGeneratorTest {
     }
 
     @Test
-    @DisplayName("generateIssuePdf - Sinh PDF hợp lệ cho cả Phiếu xuất nội bộ và Phiếu điều chuyển khi thiếu dữ liệu tùy chọn")
+    @DisplayName("generateIssuePdf - Generate valid PDF for Internal Use and Branch Transfer even with optional fields missing")
     void generateIssuePdf_handlesInternalUseAndTransfer() {
         StockIssueResponseDTO internal = new StockIssueResponseDTO();
         internal.setIssueCode("PX-2026-001");

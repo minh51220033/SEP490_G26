@@ -51,7 +51,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("search - Chuẩn hóa keyword và category rỗng thành null khi tìm kiếm")
+    @DisplayName("search - Normalize blank keyword and category filters to null")
     void search_normalizesBlankFilters() {
         Pageable pageable = PageRequest.of(0, 10);
         when(materialRepository.searchMaterials(null, null, Boolean.TRUE, pageable))
@@ -64,7 +64,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("search - Trim keyword và category hợp lệ")
+    @DisplayName("search - Trim valid keyword and category filters")
     void search_trimsNonBlankFilters() {
         Pageable pageable = PageRequest.of(0, 10);
         when(materialRepository.searchMaterials("3M", "Trám răng", null, pageable))
@@ -77,7 +77,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("listActive - Trả về danh sách vật tư đang hoạt động")
+    @DisplayName("listActive - Return active materials list")
     void listActive_returnsRepositoryList() {
         when(materialRepository.findByIsActiveTrueOrderByMaterialNameAsc()).thenReturn(List.of(sampleMaterial));
 
@@ -88,7 +88,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("getCategories - Gộp số liệu từ DB và bổ sung đủ nhóm mặc định")
+    @DisplayName("getCategories - Merge DB counts and populate default categories")
     void getCategories_mergesDbCountsAndDefaults() {
         Object[] tramRangRow = new Object[]{"Trám răng", 5L, 4L};
         Object[] customRow = new Object[]{"Vật tư Labo", 2L, 1L};
@@ -110,7 +110,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("renameCategory - Đổi tên nhóm vật tư không phân biệt hoa thường và trả về số lượng cập nhật")
+    @DisplayName("renameCategory - Rename category case-insensitively and return updated count")
     void renameCategory_updatesMatchingMaterials() {
         Material m2 = new Material();
         m2.setMaterialId(11L);
@@ -130,7 +130,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("renameCategory - Báo lỗi khi tên nhóm cũ hoặc mới bị trống")
+    @DisplayName("renameCategory - Throw exception when old or new category name is blank")
     void renameCategory_blankName_throwsException() {
         assertThrows(IllegalArgumentException.class, () -> materialService.renameCategory(" ", "Mới"));
         assertThrows(IllegalArgumentException.class, () -> materialService.renameCategory("Cũ", "  "));
@@ -138,7 +138,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("getById - Từ chối ID null/<=0 và không tìm thấy vật tư")
+    @DisplayName("getById - Reject null/<=0 ID or material not found")
     void getById_invalidOrMissing_throwsException() {
         assertThrows(IllegalArgumentException.class, () -> materialService.getById(null));
         assertThrows(IllegalArgumentException.class, () -> materialService.getById(0L));
@@ -150,7 +150,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối DTO null, mã trống hoặc mã trùng lặp")
+    @DisplayName("create - Reject null DTO, blank code, or duplicate material code")
     void create_invalidOrDuplicate_throwsException() {
         assertThrows(IllegalArgumentException.class, () -> materialService.create(null));
 
@@ -167,7 +167,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối tên/nhóm/đơn vị trống hoặc ngưỡng tồn tối thiểu âm")
+    @DisplayName("create - Reject blank name/category/unit or negative minimum stock threshold")
     void create_missingFieldsOrNegativeThreshold_throwsException() {
         MaterialCreateDTO dto = validCreateDto();
         dto.setMinStockThreshold(new BigDecimal("-1.000"));
@@ -184,7 +184,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("create - Chuẩn hóa mã in hoa, gộp khoảng trắng và mặc định ngưỡng tồn 10.000 khi null")
+    @DisplayName("create - Uppercase code, normalize whitespace, and default min threshold to 10.000 when null")
     void create_validDto_normalizesAndSaves() {
         MaterialCreateDTO dto = new MaterialCreateDTO();
         dto.setMaterialCode("  vt-new-02 ");
@@ -207,7 +207,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("update - Cho phép sửa nhóm vật tư và ngưỡng tồn của mặt hàng đồng bộ thuốc khi giữ nguyên mã/tên/ĐVT")
+    @DisplayName("update - Allow updating category and min threshold of medication-linked item when keeping code/name/unit")
     void update_linkedMedication_allowsCategoryAndThresholdOnly() {
         Medication med = new Medication();
         med.setMedicationId(7L);
@@ -234,7 +234,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("update - Chặn đổi mã, tên hoặc đơn vị mặt hàng đồng bộ từ danh mục thuốc")
+    @DisplayName("update - Reject changing code, name, or unit of medication-synced material")
     void update_linkedMedicationChangingCodeOrUnit_rejected() {
         Medication med = new Medication();
         med.setMedicationId(7L);
@@ -258,7 +258,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("update - Từ chối khi DTO null hoặc mã vật tư trùng với mặt hàng khác")
+    @DisplayName("update - Reject null DTO or material code duplicate with another item")
     void update_nullOrDuplicateCode_throwsException() {
         assertThrows(IllegalArgumentException.class, () -> materialService.update(10L, null));
 
@@ -277,7 +277,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("deactivate - Ngừng sử dụng vật tư đang hoạt động và chặn nếu đã ngừng")
+    @DisplayName("deactivate - Deactivate active material and block when already inactive")
     void deactivate_togglesOrRejectsAlreadyInactive() {
         when(materialRepository.findById(10L)).thenReturn(Optional.of(sampleMaterial));
         when(materialRepository.save(any(Material.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -289,7 +289,7 @@ class MaterialServiceTest {
     }
 
     @Test
-    @DisplayName("activate - Chặn kích hoạt nếu đang hoạt động hoặc thuốc gốc đã ngừng sử dụng")
+    @DisplayName("activate - Block activation if already active or linked source medication is inactive")
     void activate_checksCurrentStatusAndLinkedMedicationStatus() {
         when(materialRepository.findById(10L)).thenReturn(Optional.of(sampleMaterial));
 

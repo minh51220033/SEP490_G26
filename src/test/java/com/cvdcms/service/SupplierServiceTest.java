@@ -46,7 +46,7 @@ class SupplierServiceTest {
     }
 
     @Test
-    @DisplayName("search - Chuẩn hóa keyword rỗng thành null và trim keyword có giá trị")
+    @DisplayName("search - Normalize blank keyword to null and trim non-blank keyword")
     void search_normalizesKeyword() {
         Pageable pageable = PageRequest.of(0, 10);
         when(supplierRepository.searchSuppliers(null, Boolean.TRUE, pageable))
@@ -64,7 +64,7 @@ class SupplierServiceTest {
     }
 
     @Test
-    @DisplayName("getById - Từ chối ID không hợp lệ hoặc không tìm thấy nhà cung cấp")
+    @DisplayName("getById - Reject invalid ID or supplier not found")
     void getById_invalidOrNotFound_throwsException() {
         assertThrows(IllegalArgumentException.class, () -> supplierService.getById(null));
         assertThrows(IllegalArgumentException.class, () -> supplierService.getById(0L));
@@ -77,7 +77,7 @@ class SupplierServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối DTO null, mã/tên trống hoặc mã nhà cung cấp đã tồn tại")
+    @DisplayName("create - Reject null DTO, blank code/name, or duplicate supplier code")
     void create_invalidOrDuplicateCode_throwsException() {
         assertThrows(IllegalArgumentException.class, () -> supplierService.create(null));
 
@@ -102,7 +102,7 @@ class SupplierServiceTest {
     }
 
     @Test
-    @DisplayName("create - Chuẩn hóa mã in hoa, tên gọn khoảng trắng và các trường tùy chọn rỗng thành null")
+    @DisplayName("create - Uppercase code, collapse whitespace in name, and normalize blank optional fields to null")
     void create_validDto_normalizesFieldsAndSetsActive() {
         SupplierCreateDTO dto = new SupplierCreateDTO();
         dto.setSupplierCode("  ncc-dentsply ");
@@ -125,7 +125,7 @@ class SupplierServiceTest {
     }
 
     @Test
-    @DisplayName("update - Từ chối DTO null hoặc trùng mã với nhà cung cấp khác")
+    @DisplayName("update - Reject null DTO or supplier code duplicate with another supplier")
     void update_nullOrDuplicateCode_throwsException() {
         assertThrows(IllegalArgumentException.class, () -> supplierService.update(10L, null));
 
@@ -141,7 +141,7 @@ class SupplierServiceTest {
     }
 
     @Test
-    @DisplayName("update - Cập nhật thông tin thành công mà không làm thay đổi trạng thái isActive")
+    @DisplayName("update - Update supplier details while preserving isActive status")
     void update_validDto_preservesIsActive() {
         sampleSupplier.setIsActive(false);
         SupplierUpdateDTO dto = new SupplierUpdateDTO();
@@ -165,7 +165,7 @@ class SupplierServiceTest {
     }
 
     @Test
-    @DisplayName("deactivate & activate - Chuyển đổi trạng thái hoạt động và chặn chuyển trùng trạng thái")
+    @DisplayName("deactivate & activate - Toggle active status and block duplicate state transitions")
     void deactivateAndActivate_validAndDuplicateTransitions() {
         when(supplierRepository.findById(10L)).thenReturn(Optional.of(sampleSupplier));
         when(supplierRepository.save(any(Supplier.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -186,7 +186,7 @@ class SupplierServiceTest {
     }
 
     @Test
-    @DisplayName("create & update - Từ chối mã số thuế trùng lặp với nhà cung cấp khác")
+    @DisplayName("create & update - Reject tax code already used by another supplier")
     void createAndUpdate_duplicateTaxCode_throwsException() {
         SupplierCreateDTO createDto = new SupplierCreateDTO();
         createDto.setSupplierCode("NCC-NEW");
