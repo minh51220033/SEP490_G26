@@ -138,7 +138,7 @@ public class TreatmentPlanServiceImpl implements TreatmentPlanService {
             return null;
         }
         if (emrRecordRepository != null && emrRecordRepository.findByVisit_VisitId(visitId)
-                .map(e -> e.getStatus() == com.cvdcms.entity.enums.EmrStatus.FINALIZED).orElse(false)) {
+                .map(e -> com.cvdcms.util.EmrStatePolicy.isEmrLockedStatus(e.getStatus())).orElse(false)) {
             return null;
         }
         Appointment appt = appointmentRepository.findById(visit.getAppointmentId()).orElse(null);
