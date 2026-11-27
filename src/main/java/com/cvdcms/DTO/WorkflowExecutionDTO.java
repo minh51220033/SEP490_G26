@@ -45,6 +45,8 @@ public class WorkflowExecutionDTO {
     // Liên kết Kế hoạch điều trị & ca nhiều buổi
     private Long planItemId;
     private Long planStageId;
+    private Integer planStageOrder;
+    private String planStageName;
     private String planCode;
     private String planName;
     private String toothNumbers;

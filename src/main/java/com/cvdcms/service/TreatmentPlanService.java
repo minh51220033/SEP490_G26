@@ -9,6 +9,10 @@ public interface TreatmentPlanService {
 
     List<TreatmentPlanResponseDTO> getPlansByPatientId(Long patientId);
 
+    default TreatmentPlanResponseDTO ensureVisitDefaultPlanWithBookedService(Long visitId, Long actingDoctorStaffId) {
+        return null;
+    }
+
     TreatmentPlanResponseDTO getPlanById(Long planId);
 
     TreatmentPlanResponseDTO createPlan(TreatmentPlanRequestDTO request);

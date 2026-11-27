@@ -950,10 +950,19 @@
                                     <span class="tp-code-pill df-num" th:text="${plan.planCode}">KHDT1001</span>
                                 </td>
                                 <td data-col-id="planName">
-                                    <div class="fw-bold text-primary"
-                                         style="font-size: 13.5px; line-height: 1.45;"
-                                         th:text="${plan.planName}">
-                                        Phác đồ Cấy ghép Implant
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="fw-bold text-primary"
+                                              style="font-size: 13.5px; line-height: 1.45;"
+                                              th:text="${plan.planName}">
+                                            Phác đồ Cấy ghép Implant
+                                        </span>
+                                        <span th:if="${visit != null and plan.visitId != null and plan.visitId == visit.visitId}"
+                                              class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold"
+                                              style="font-size: 11px;">Ca hôm nay</span>
+                                        <span th:if="${visit == null or plan.visitId == null or plan.visitId != visit.visitId}"
+                                              class="badge bg-light text-secondary border fw-medium"
+                                              style="font-size: 11px;"
+                                              th:text="${plan.visitCode != null ? 'Ca ' + plan.visitCode : 'Ca trước'}">Ca trước</span>
                                     </div>
                                 </td>
                                 <td data-col-id="period">

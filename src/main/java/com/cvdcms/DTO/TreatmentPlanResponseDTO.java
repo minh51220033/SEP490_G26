@@ -22,6 +22,9 @@ public class TreatmentPlanResponseDTO {
     private String phoneNumber;
     private Long branchId;
     private String branchName;
+    private Long visitId;
+    private String visitCode;
+    private String visitCheckInDate;
     private Long doctorId;
     private String doctorName;
     private String planName;

@@ -706,6 +706,7 @@ public class DoctorVisitAccess {
             var existingPlans = treatmentPlans.findByProfileIdWithDetails(visit.getPatientProfile().getProfileId());
             boolean alreadyCovered = existingPlans != null && existingPlans.stream()
                     .filter(tp -> tp.getStatus() != com.cvdcms.entity.enums.TreatmentPlanStatus.CANCELLED)
+                    .filter(tp -> tp.getVisit() == null || visitId.equals(tp.getVisit().getVisitId()))
                     .flatMap(tp -> tp.getStages() == null ? java.util.stream.Stream.empty() : tp.getStages().stream())
                     .flatMap(st -> st.getItems() == null ? java.util.stream.Stream.empty() : st.getItems().stream())
                     .anyMatch(it -> it.getService() != null && bookedServiceId.equals(it.getService().getServiceId()));

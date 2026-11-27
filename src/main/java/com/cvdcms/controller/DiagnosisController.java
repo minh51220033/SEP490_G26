@@ -687,6 +687,15 @@ public class DiagnosisController {
         model.addAttribute("grandTotalAmount", grandTotalAmount);
 
         // Kế hoạch điều trị & Lộ trình
+        if (!readOnly && treatmentPlanService != null) {
+            try {
+                treatmentPlanService.ensureVisitDefaultPlanWithBookedService(
+                        visitId,
+                        defaultActingDoctor != null ? defaultActingDoctor.getStaffId() : null);
+            } catch (Exception ex) {
+                log.warn("Không thể tự đồng bộ dịch vụ đặt lịch vào KHDT cho visitId={}: {}", visitId, ex.getMessage());
+            }
+        }
         List<TreatmentPlanResponseDTO> treatmentPlans = (visit.getPatientProfile() != null)
                 ? treatmentPlanService.getPlansByPatientId(visit.getPatientProfile().getProfileId())
                 : Collections.emptyList();
@@ -1023,6 +1032,15 @@ public class DiagnosisController {
         model.addAttribute("isReadOnlyView", false);
 
         Long profileId = (visit.getPatientProfile() != null) ? visit.getPatientProfile().getProfileId() : null;
+        if (treatmentPlanService != null) {
+            try {
+                treatmentPlanService.ensureVisitDefaultPlanWithBookedService(
+                        visitId,
+                        defaultActingDoctor != null ? defaultActingDoctor.getStaffId() : null);
+            } catch (Exception ex) {
+                log.warn("Không thể tự đồng bộ dịch vụ đặt lịch vào KHDT cho visitId={}: {}", visitId, ex.getMessage());
+            }
+        }
         List<TreatmentPlanResponseDTO> treatmentPlans = (profileId != null)
                 ? treatmentPlanService.getPlansByPatientId(profileId)
                 : Collections.emptyList();
