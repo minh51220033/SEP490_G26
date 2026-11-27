@@ -246,7 +246,67 @@ public class CustomerCareNotificationService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("unreadCount", unreadCount);
         result.put("notifications", items);
+        result.put("tabUnreadCounts", computeTabUnreadCounts(list, taskMap));
         return result;
+    }
+
+    private Map<String, Long> computeTabUnreadCounts(List<SystemNotification> list, Map<Long, CustomerCareTask> taskMap) {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        counts.put("TODAY", 0L);
+        counts.put("OVERDUE", 0L);
+        counts.put("ESCALATED", 0L);
+        counts.put("ALL", 0L);
+        counts.put("DOCTOR_LEAVE", 0L);
+        counts.put("PAYMENT_REMINDER", 0L);
+
+        if (list == null || list.isEmpty()) {
+            return counts;
+        }
+        Set<Long> seenTaskIds = new HashSet<>();
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        for (SystemNotification n : list) {
+            if (Boolean.TRUE.equals(n.getIsRead()) || n.getTaskId() == null) continue;
+            if (!seenTaskIds.add(n.getTaskId())) continue;
+            CustomerCareTask t = taskMap.get(n.getTaskId());
+            if (t == null || t.getStatus() == CustomerCareTaskStatus.COMPLETED || t.getStatus() == CustomerCareTaskStatus.CANCELLED) {
+                continue;
+            }
+            counts.put("ALL", counts.get("ALL") + 1L);
+            if (t.getStatus() == CustomerCareTaskStatus.ESCALATED_TO_DOCTOR) {
+                counts.put("ESCALATED", counts.get("ESCALATED") + 1L);
+            } else if (t.getDueDate() != null && t.getDueDate().isBefore(today)) {
+                counts.put("OVERDUE", counts.get("OVERDUE") + 1L);
+            } else if (t.getDueDate() != null && t.getDueDate().isEqual(today)) {
+                counts.put("TODAY", counts.get("TODAY") + 1L);
+            }
+            if (t.getTaskType() == com.cvdcms.entity.enums.CustomerCareTaskType.DOCTOR_LEAVE_RESCHEDULE) {
+                counts.put("DOCTOR_LEAVE", counts.get("DOCTOR_LEAVE") + 1L);
+            } else if (t.getTaskType() == com.cvdcms.entity.enums.CustomerCareTaskType.PAYMENT_REMINDER) {
+                counts.put("PAYMENT_REMINDER", counts.get("PAYMENT_REMINDER") + 1L);
+            }
+        }
+        return counts;
+    }
+
+    public void notifyInstallmentStageUpdated(CustomerCareTask task, String stage, String customMessage) {
+        if (task == null || task.getBranch() == null) return;
+        Long branchId = task.getBranch().getBranchId();
+        String title = ("OVERDUE".equals(stage) ? "[Quá hạn] " : "[Nhắc thanh toán] ") + task.getTaskCode();
+        String priority = "OVERDUE".equals(stage) ? "HIGH" : "NORMAL";
+        Set<Long> recipientIds = resolveBranchCareStaffUserIds(branchId, task.getAssignedStaff(), null, false);
+        List<Long> notifiedUsers = persistNotifications(recipientIds, title, customMessage, task.getTaskId(), branchId, priority);
+        CustomerCareRealtimeEventDTO payload = CustomerCareRealtimeEventDTO.builder()
+                .eventType("CUSTOMER_CARE_TASK_UPDATED")
+                .taskId(task.getTaskId())
+                .taskCode(task.getTaskCode())
+                .branchId(branchId)
+                .status(task.getStatus() != null ? task.getStatus().name() : "PENDING")
+                .occurredAt(LocalDateTime.now())
+                .assignedStaffId(task.getAssignedStaff() != null ? task.getAssignedStaff().getStaffId() : null)
+                .title(title)
+                .summary(customMessage)
+                .build();
+        eventPublisher.publishEvent(new CustomerCareRealtimeBroadcastEvent(payload, notifiedUsers, true));
     }
 
     @Transactional
@@ -317,12 +377,13 @@ public class CustomerCareNotificationService {
 
     private Set<Long> resolveBranchCareStaffUserIds(Long branchId, StaffProfile assignedStaff, Long excludeUserId, boolean excludeActor) {
         Set<Long> ids = new LinkedHashSet<>();
-        if (assignedStaff != null && assignedStaff.getUser() != null
-                && Boolean.TRUE.equals(assignedStaff.getUser().getIsActive())) {
+        if (assignedStaff != null && assignedStaff.getUser() != null && assignedStaff.getUser().getUserId() != null) {
             Long uid = assignedStaff.getUser().getUserId();
-            if (!excludeActor || !Objects.equals(uid, excludeUserId)) {
-                ids.add(uid);
-            }
+            userRepository.findById(uid).ifPresent(u -> {
+                if (Boolean.TRUE.equals(u.getIsActive()) && (!excludeActor || !Objects.equals(uid, excludeUserId))) {
+                    ids.add(uid);
+                }
+            });
         }
 
         List<User> branchUsers = userRepository.findActiveReceptionistsAndAdminsByBranch(branchId);
@@ -336,6 +397,18 @@ public class CustomerCareNotificationService {
                     ids.add(u.getUserId());
                 }
             }
+        }
+        try {
+            List<Long> assignedReceptionists = taskRepository.findActiveReceptionistUserIdsByBranch(branchId);
+            if (assignedReceptionists != null) {
+                for (Long uid : assignedReceptionists) {
+                    if (uid == null) continue;
+                    if (excludeActor && Objects.equals(uid, excludeUserId)) continue;
+                    ids.add(uid);
+                }
+            }
+        } catch (Exception ex) {
+            log.debug("Không thể truy vấn Lễ tân theo StaffBranchAssignment cho branchId={}: {}", branchId, ex.getMessage());
         }
         return ids;
     }

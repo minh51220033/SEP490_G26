@@ -39,6 +39,8 @@ public class CustomerCareAutomationService {
     private final BranchRepository branchRepository;
     private final StaffProfileRepository staffRepository;
     private final CustomerCareNotificationService notificationService;
+    private final LeaveRequestRepository leaveRequestRepository;
+    private final TreatmentPlanInstallmentRepository installmentRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -84,6 +86,30 @@ public class CustomerCareAutomationService {
         }
     }
 
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onClinicQueueDomainEvent(com.cvdcms.event.ClinicQueueDomainEvent event) {
+        if (event == null || !"LEAVE_APPROVED".equals(event.status())) return;
+        try {
+            processDoctorLeaveForBranch(event.branchId(), event.doctorId());
+        } catch (Exception ex) {
+            log.error("[CSKH-AUTO] Lỗi xử lý sự kiện LEAVE_APPROVED (branchId={}, doctorId={}): {}",
+                    event.branchId(), event.doctorId(), ex.getMessage(), ex);
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onInstallmentPaymentRecorded(InstallmentPaymentRecordedCareEvent event) {
+        if (event == null || event.planId() == null) return;
+        try {
+            reconcileInstallmentsForPlan(event.planId());
+        } catch (Exception ex) {
+            log.error("[CSKH-AUTO] Lỗi đồng bộ CSKH sau thanh toán trả góp cho planId={}: {}",
+                    event.planId(), ex.getMessage(), ex);
+        }
+    }
+
     @Scheduled(fixedDelay = 300000, initialDelay = 60000)
     @Transactional
     public void catchUpMissedTasks() {
@@ -112,6 +138,16 @@ public class CustomerCareAutomationService {
             } catch (Exception ex) {
                 log.warn("[CSKH-SCHEDULER] Lỗi rà soát bù tại cơ sở #{}: {}", branchId, ex.getMessage());
             }
+        }
+        try {
+            totalCreated += reconcileAllDoctorLeaves();
+        } catch (Exception ex) {
+            log.warn("[CSKH-SCHEDULER] Lỗi rà soát bác sĩ nghỉ phép: {}", ex.getMessage());
+        }
+        try {
+            totalCreated += reconcileDueInstallments();
+        } catch (Exception ex) {
+            log.warn("[CSKH-SCHEDULER] Lỗi rà soát nhắc thanh toán trả góp: {}", ex.getMessage());
         }
         if (totalCreated > 0) {
             log.info("[CSKH-SCHEDULER] Đã rà soát và tạo bù {} công việc CSKH mới.", totalCreated);
@@ -251,6 +287,319 @@ public class CustomerCareAutomationService {
         log.info("[CSKH-AUTO] Tạo công việc NO_SHOW_RECALL {} từ lịch hẹn {}", saved.getTaskCode(), a.getAppointmentCode());
         notificationService.notifyTaskCreated(saved, null, "Hệ thống tự động", true);
         return true;
+    }
+
+    // =========================================================================
+    // FT01 — BÁC SĨ NGHỈ PHÉP (TẠO TASK & ĐỐI SOÁT THU HỒI)
+    // =========================================================================
+
+    @Transactional
+    public int processDoctorLeaveForBranch(Long branchId, Long doctorId) {
+        if (leaveRequestRepository == null || branchId == null || doctorId == null) {
+            return 0;
+        }
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        List<LeaveRequest> leaves = leaveRequestRepository.findByStaffStaffIdOrderBySubmittedAtDesc(doctorId);
+        int created = 0;
+        for (LeaveRequest leave : leaves) {
+            if (leave.getStatus() != LeaveStatus.APPROVED) continue;
+            if (leave.getBranch() == null || !branchId.equals(leave.getBranch().getBranchId())) continue;
+            if (leave.getEndDate() == null || leave.getEndDate().isBefore(today)) continue;
+            created += createDoctorLeaveTasksIfMissing(leave);
+        }
+        return created;
+    }
+
+    @Transactional
+    public int reconcileAllDoctorLeaves() {
+        if (leaveRequestRepository == null) return 0;
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        int created = 0;
+        List<LeaveRequest> approvedLeaves = leaveRequestRepository.filterAdmin(
+                null, LeaveStatus.APPROVED, null, null, null, null);
+        if (approvedLeaves != null) {
+            for (LeaveRequest leave : approvedLeaves) {
+                if (leave.getEndDate() != null && !leave.getEndDate().isBefore(today)) {
+                    created += createDoctorLeaveTasksIfMissing(leave);
+                }
+            }
+        }
+        reconcileStaleDoctorLeaveTasks();
+        return created;
+    }
+
+    public int createDoctorLeaveTasksIfMissing(LeaveRequest leave) {
+        if (leave == null || leave.getStatus() != LeaveStatus.APPROVED
+                || leave.getStaff() == null || leave.getBranch() == null
+                || leave.getStartDate() == null || leave.getEndDate() == null) {
+            return 0;
+        }
+        Long branchId = leave.getBranch().getBranchId();
+        List<Appointment> branchAppts = appointmentRepository.findByBranchWithDetails(branchId);
+        if (branchAppts == null || branchAppts.isEmpty()) return 0;
+
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        int created = 0;
+        for (Appointment appt : branchAppts) {
+            if (!isAppointmentAffectedByLeave(appt, leave)) continue;
+            if (taskRepository.existsByLeaveRequestIdAndAppointment_AppointmentIdAndTaskType(
+                    leave.getLeaveId(), appt.getAppointmentId(), CustomerCareTaskType.DOCTOR_LEAVE_RESCHEDULE)) {
+                continue;
+            }
+            CustomerCareTask task = new CustomerCareTask();
+            task.setTaskCode(generateUniqueTaskCode());
+            task.setBranch(leave.getBranch());
+            task.setPatientProfile(appt.getPatientProfile());
+            task.setTaskType(CustomerCareTaskType.DOCTOR_LEAVE_RESCHEDULE);
+            task.setAppointment(appt);
+            task.setLeaveRequestId(leave.getLeaveId());
+            task.setAssignedStaff(resolveDefaultBranchCareStaff(branchId));
+            LocalDate due = appt.getAppointmentDate().isBefore(today) ? today : today;
+            if (appt.getAppointmentDate().isAfter(today)) {
+                due = today; // Cần liên hệ ngay khi BS được duyệt nghỉ
+            }
+            task.setDueDate(due);
+            task.setStatus(CustomerCareTaskStatus.PENDING);
+            String doctorName = leave.getStaff().getFullName() != null ? leave.getStaff().getFullName() : "Bác sĩ";
+            String shiftInfo = leave.getShift() != null && leave.getShift().getShiftName() != null
+                    ? " (ca " + leave.getShift().getShiftName() + ")" : " (cả ngày)";
+            task.setNotes("Bác sĩ " + doctorName + " nghỉ phép từ " + leave.getStartDate()
+                    + " đến " + leave.getEndDate() + shiftInfo
+                    + " — Cần liên hệ đổi/hủy lịch khám mã " + appt.getAppointmentCode()
+                    + " ngày " + appt.getAppointmentDate()
+                    + (appt.getExpectedTime() != null ? " lúc " + appt.getExpectedTime() : "") + ".");
+
+            try {
+                CustomerCareTask saved = taskRepository.save(task);
+                log.info("[CSKH-FT01] Tạo task DOCTOR_LEAVE_RESCHEDULE {} cho leaveId={}, appt={}",
+                        saved.getTaskCode(), leave.getLeaveId(), appt.getAppointmentCode());
+                notificationService.notifyTaskCreated(saved, null, "Hệ thống (BS nghỉ)", true);
+                created++;
+            } catch (org.springframework.dao.DataIntegrityViolationException dup) {
+                log.debug("[CSKH-FT01] Bỏ qua trùng task cho leaveId={}, apptId={}", leave.getLeaveId(), appt.getAppointmentId());
+            }
+        }
+        return created;
+    }
+
+    public boolean isAppointmentAffectedByLeave(Appointment appt, LeaveRequest leave) {
+        if (appt == null || leave == null || appt.getPatientProfile() == null
+                || appt.getBranch() == null || appt.getDoctor() == null) {
+            return false;
+        }
+        if (appt.getStatus() != AppointmentStatus.PENDING && appt.getStatus() != AppointmentStatus.CONFIRMED) {
+            return false;
+        }
+        if (!appt.getBranch().getBranchId().equals(leave.getBranch().getBranchId())) {
+            return false;
+        }
+        if (!appt.getDoctor().getStaffId().equals(leave.getStaff().getStaffId())) {
+            return false;
+        }
+        LocalDate apptDate = appt.getAppointmentDate();
+        if (apptDate == null || apptDate.isBefore(leave.getStartDate()) || apptDate.isAfter(leave.getEndDate())) {
+            return false;
+        }
+        WorkShift shift = leave.getShift();
+        if (shift == null || shift.getStartTime() == null || shift.getEndTime() == null) {
+            return true;
+        }
+        if (appt.getExpectedTime() != null) {
+            java.time.LocalTime apptStart = appt.getExpectedTime();
+            java.time.LocalTime apptEnd = appt.getExpectedEndTime() != null
+                    ? appt.getExpectedEndTime()
+                    : apptStart.plusMinutes(appt.getDurationMinutes() != null ? appt.getDurationMinutes() : 30);
+            return apptStart.isBefore(shift.getEndTime()) && apptEnd.isAfter(shift.getStartTime());
+        }
+        PreferredSession session = appt.getPreferredSession();
+        if (session == null || session == PreferredSession.ANY) {
+            return true;
+        }
+        java.time.LocalTime noon = java.time.LocalTime.of(12, 0);
+        java.time.LocalTime evening = java.time.LocalTime.of(17, 30);
+        return switch (session) {
+            case MORNING -> shift.getStartTime().isBefore(noon);
+            case AFTERNOON -> shift.getStartTime().isBefore(evening) && shift.getEndTime().isAfter(noon);
+            case EVENING -> shift.getEndTime().isAfter(evening);
+            case ANY -> true;
+        };
+    }
+
+    private void reconcileStaleDoctorLeaveTasks() {
+        List<CustomerCareTaskStatus> openStatuses = List.of(
+                CustomerCareTaskStatus.PENDING,
+                CustomerCareTaskStatus.IN_PROGRESS,
+                CustomerCareTaskStatus.ESCALATED_TO_DOCTOR
+        );
+        List<CustomerCareTask> openLeaveTasks = taskRepository.findByTaskTypeAndStatusIn(
+                CustomerCareTaskType.DOCTOR_LEAVE_RESCHEDULE, openStatuses);
+        for (CustomerCareTask task : openLeaveTasks) {
+            if (task.getLeaveRequestId() == null || task.getAppointment() == null) continue;
+            LeaveRequest leave = leaveRequestRepository.findByIdWithDetails(task.getLeaveRequestId()).orElse(null);
+            Appointment appt = appointmentRepository.findById(task.getAppointment().getAppointmentId()).orElse(null);
+            boolean stillAffected = leave != null
+                    && leave.getStatus() == LeaveStatus.APPROVED
+                    && appt != null
+                    && isAppointmentAffectedByLeave(appt, leave);
+            if (!stillAffected) {
+                task.setStatus(CustomerCareTaskStatus.CANCELLED);
+                String reason = (leave == null || leave.getStatus() != LeaveStatus.APPROVED)
+                        ? "[Hệ thống] Đơn nghỉ phép của bác sĩ không còn hiệu lực — giữ nguyên lịch sử tương tác."
+                        : "[Hệ thống] Lịch hẹn đã được đổi/hủy hoặc không còn nằm trong phạm vi ca nghỉ.";
+                task.setNotes(task.getNotes() != null && !task.getNotes().isBlank()
+                        ? task.getNotes() + "\n" + reason : reason);
+                taskRepository.save(task);
+            }
+        }
+    }
+
+    // =========================================================================
+    // FT02 — NHẮC THANH TOÁN THEO TỪNG ĐỢT (T-3, T-0, OVERDUE)
+    // =========================================================================
+
+    @Transactional
+    public int reconcileDueInstallments() {
+        if (installmentRepository == null) return 0;
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        LocalDate cutoff = today.plusDays(3);
+        int affected = 0;
+
+        List<TreatmentPlanInstallment> dueInstallments = taskRepository.findDueInstallmentsForCareReminder(cutoff);
+        if (dueInstallments != null) {
+            for (TreatmentPlanInstallment inst : dueInstallments) {
+                if (syncSingleInstallmentTask(inst, today)) {
+                    affected++;
+                }
+            }
+        }
+        closePaidOrCancelledInstallmentTasks(today);
+        return affected;
+    }
+
+    @Transactional
+    public void reconcileInstallmentsForPlan(Long planId) {
+        if (installmentRepository == null || planId == null) return;
+        LocalDate today = LocalDate.now(CLINIC_ZONE);
+        List<TreatmentPlanInstallment> list = installmentRepository.findByPlan_PlanIdOrderByInstallmentOrderAsc(planId);
+        if (list == null) return;
+        for (TreatmentPlanInstallment inst : list) {
+            syncSingleInstallmentTask(inst, today);
+        }
+    }
+
+    private boolean syncSingleInstallmentTask(TreatmentPlanInstallment inst, LocalDate today) {
+        if (inst == null || inst.getInstallmentId() == null || inst.getPlan() == null) return false;
+        TreatmentPlan plan = inst.getPlan();
+        if (plan.getPatientProfile() == null || plan.getBranch() == null) return false;
+
+        java.math.BigDecimal expected = inst.getExpectedAmount() != null ? inst.getExpectedAmount() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal paid = inst.getPaidAmount() != null ? inst.getPaidAmount() : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal missing = expected.subtract(paid);
+        boolean isPaidOrCancelled = plan.getStatus() == TreatmentPlanStatus.CANCELLED
+                || inst.getStatus() == TreatmentPlanInstallmentStatus.PAID
+                || missing.compareTo(java.math.BigDecimal.ZERO) <= 0;
+
+        Optional<CustomerCareTask> existingOpt = taskRepository.findFirstByInstallmentIdAndTaskType(
+                inst.getInstallmentId(), CustomerCareTaskType.PAYMENT_REMINDER);
+
+        if (isPaidOrCancelled) {
+            if (existingOpt.isPresent()) {
+                CustomerCareTask existing = existingOpt.get();
+                if (existing.getStatus() != CustomerCareTaskStatus.COMPLETED
+                        && existing.getStatus() != CustomerCareTaskStatus.CANCELLED) {
+                    existing.setStatus(plan.getStatus() == TreatmentPlanStatus.CANCELLED
+                            ? CustomerCareTaskStatus.CANCELLED
+                            : CustomerCareTaskStatus.COMPLETED);
+                    String sysMsg = plan.getStatus() == TreatmentPlanStatus.CANCELLED
+                            ? "[Hệ thống] Kế hoạch điều trị đã hủy."
+                            : "[Hệ thống] Đợt thanh toán đã được Kế toán thu đủ.";
+                    existing.setNotes(existing.getNotes() != null && !existing.getNotes().isBlank()
+                            ? existing.getNotes() + "\n" + sysMsg : sysMsg);
+                    taskRepository.save(existing);
+                    notificationService.notifyTaskUpdated(existing, null, "Hệ thống (Thanh toán)");
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        if (inst.getExpectedDate() == null || inst.getExpectedDate().isAfter(today.plusDays(3))) {
+            return false;
+        }
+
+        String stage = resolveInstallmentReminderStage(inst.getExpectedDate(), today);
+        String formattedMissing = String.format("%,.0f", missing);
+        String summaryMsg = "Nhắc thanh toán đợt " + inst.getInstallmentOrder()
+                + " (" + inst.getPhaseName() + ") - KHDT " + plan.getPlanCode()
+                + " | Hạn: " + inst.getExpectedDate()
+                + " | Còn thiếu đợt này: " + formattedMissing + " đ.";
+
+        if (existingOpt.isPresent()) {
+            CustomerCareTask existing = existingOpt.get();
+            if (existing.getStatus() == CustomerCareTaskStatus.COMPLETED
+                    || existing.getStatus() == CustomerCareTaskStatus.CANCELLED) {
+                return false;
+            }
+            if (stage.equals(existing.getReminderStage())) {
+                return false; // Idempotent: không nhắc lặp cùng stage
+            }
+            existing.setReminderStage(stage);
+            existing.setLastRemindedAt(java.time.LocalDateTime.now(CLINIC_ZONE));
+            existing.setDueDate(inst.getExpectedDate());
+            existing.setNotes(summaryMsg);
+            CustomerCareTask updated = taskRepository.save(existing);
+            notificationService.notifyInstallmentStageUpdated(updated, stage, summaryMsg);
+            return true;
+        }
+
+        CustomerCareTask t = new CustomerCareTask();
+        t.setTaskCode(generateUniqueTaskCode());
+        t.setBranch(plan.getBranch());
+        t.setPatientProfile(plan.getPatientProfile());
+        t.setTaskType(CustomerCareTaskType.PAYMENT_REMINDER);
+        t.setInstallmentId(inst.getInstallmentId());
+        t.setAssignedStaff(resolveDefaultBranchCareStaff(plan.getBranch().getBranchId()));
+        t.setDueDate(inst.getExpectedDate());
+        t.setStatus(CustomerCareTaskStatus.PENDING);
+        t.setReminderStage(stage);
+        t.setLastRemindedAt(java.time.LocalDateTime.now(CLINIC_ZONE));
+        t.setNotes(summaryMsg);
+
+        try {
+            CustomerCareTask saved = taskRepository.save(t);
+            log.info("[CSKH-FT02] Tạo task PAYMENT_REMINDER {} ({}) cho installmentId={}",
+                    saved.getTaskCode(), stage, inst.getInstallmentId());
+            notificationService.notifyTaskCreated(saved, null, "Hệ thống (Nhắc thanh toán)", true);
+            return true;
+        } catch (org.springframework.dao.DataIntegrityViolationException dup) {
+            log.debug("[CSKH-FT02] Bỏ qua trùng task cho installmentId={}", inst.getInstallmentId());
+            return false;
+        }
+    }
+
+    private void closePaidOrCancelledInstallmentTasks(LocalDate today) {
+        List<CustomerCareTaskStatus> openStatuses = List.of(
+                CustomerCareTaskStatus.PENDING,
+                CustomerCareTaskStatus.IN_PROGRESS,
+                CustomerCareTaskStatus.ESCALATED_TO_DOCTOR
+        );
+        List<CustomerCareTask> openPaymentTasks = taskRepository.findByTaskTypeAndStatusIn(
+                CustomerCareTaskType.PAYMENT_REMINDER, openStatuses);
+        for (CustomerCareTask task : openPaymentTasks) {
+            if (task.getInstallmentId() == null) continue;
+            installmentRepository.findById(task.getInstallmentId())
+                    .ifPresent(inst -> syncSingleInstallmentTask(inst, today));
+        }
+    }
+
+    public static String resolveInstallmentReminderStage(LocalDate expectedDate, LocalDate today) {
+        if (today.isAfter(expectedDate)) {
+            return "OVERDUE";
+        }
+        if (today.isEqual(expectedDate)) {
+            return "T_ZERO";
+        }
+        return "T_MINUS_3";
     }
 
     private StaffProfile resolveDefaultBranchCareStaff(Long branchId) {

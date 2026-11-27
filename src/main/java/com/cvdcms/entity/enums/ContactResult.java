@@ -4,5 +4,6 @@ public enum ContactResult {
     CONNECTED,
     NO_ANSWER,
     BUSY,
-    SCHEDULED_APPOINTMENT
+    SCHEDULED_APPOINTMENT,
+    FAILED
 }

@@ -107,6 +107,32 @@ public class CustomerCareTaskDTO {
     private LocalDateTime lastContactAt;
     private LocalDateTime nextRetryAt;
 
+    // FT01 — Bác sĩ nghỉ phép
+    private Long leaveRequestId;
+    private String leaveDoctorName;
+    private LocalDate leaveStartDate;
+    private LocalDate leaveEndDate;
+    private String leaveShiftName;
+    private String appointmentExpectedTime;
+    private String appointmentStatus;
+
+    // FT02 — Nhắc thanh toán từng đợt (8 chỉ số)
+    private Long treatmentPlanId;
+    private String treatmentPlanCode;
+    private String treatmentPlanName;
+    private java.math.BigDecimal planTotalCost;
+    private java.math.BigDecimal planPaidAmount;
+    private java.math.BigDecimal planRemainingAmount;
+    private Long installmentId;
+    private Integer installmentOrder;
+    private String installmentPhaseName;
+    private LocalDate installmentExpectedDate;
+    private java.math.BigDecimal installmentExpectedAmount;
+    private java.math.BigDecimal installmentPaidAmount;
+    private java.math.BigDecimal installmentRemainingAmount;
+    private String reminderStage;
+    private LocalDateTime lastRemindedAt;
+
     // Danh sách lịch sử tương tác chi tiết của công việc này
     private List<CustomerCareInteractionDTO> interactions = new ArrayList<>();
 }
