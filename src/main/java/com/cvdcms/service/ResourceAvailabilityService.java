@@ -302,7 +302,7 @@ public class ResourceAvailabilityService {
     }
 
     private boolean isDoctorOnApprovedLeave(Long staffId, Long branchId, LocalDate date, Long shiftId) {
-        List<LeaveRequest> leaves = leaveRequestRepository.findApprovedOn(staffId, date, LeaveStatus.APPROVED);
+        List<LeaveRequest> leaves = leaveRequestRepository.findApprovedForStaffOnDate(staffId, date, LeaveStatus.APPROVED);
         for (LeaveRequest lr : leaves) {
             boolean branchOk = lr.getBranch() == null || Objects.equals(branchId, lr.getBranch().getBranchId());
             boolean shiftOk = lr.getShift() == null || Objects.equals(shiftId, lr.getShift().getShiftId());

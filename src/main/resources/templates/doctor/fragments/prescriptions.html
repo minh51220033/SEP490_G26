@@ -63,14 +63,14 @@
             </div>
         </div>
 
-        <!-- Ghi chú nghiệp vụ kê đơn (Tách biệt chuyên môn & tài chính) -->
+        <!-- Ghi chú nghiệp vụ kê đơn đồng bộ kho thuốc -->
         <div class="px-4 pt-3">
             <div class="df-soft-panel py-2 px-3 mb-0 df-subtitle-secondary d-flex align-items-center gap-2">
                 <i class="bi bi-info-circle-fill text-primary flex-shrink-0"></i>
                 <div>
-                    <strong class="text-dark">Lưu ý:</strong> Giá thuốc hiển thị là <em>Giá thuốc dự kiến / Tạm tính</em>.
-                    <strong class="text-primary">Thanh toán tiền thuốc nếu bệnh nhân chọn mua tại phòng khám.</strong>
-                    Kê đơn không tự tạo hóa đơn, công nợ, giao dịch thanh toán hoặc xuất kho.
+                    <strong class="text-dark">Đồng bộ kho thuốc theo chi nhánh:</strong>
+                    Tồn kho hiển thị chỉ tính các lô <strong>còn hạn sử dụng &amp; đang hoạt động</strong> tại chi nhánh hiện tại.
+                    Khi xác nhận lưu đơn, hệ thống tự động <strong>xuất kho theo FEFO (hết hạn sớm xuất trước)</strong> và ghi nhận phiếu xuất truy vết.
                 </div>
             </div>
         </div>
@@ -146,8 +146,11 @@
                              th:data-amount="${pr.totalAmount != null ? pr.totalAmount : 0}"
                              th:text="${pr.totalAmount != null ? #numbers.formatDecimal(pr.totalAmount, 0, 'COMMA', 0, 'POINT') + ' đ' : '0 đ'}">0 đ</div>
                         <small class="text-muted d-block df-num" th:text="${pr.items != null ? pr.items.size() : 0} + ' loại thuốc'"></small>
-                        <span class="badge bg-light text-secondary border mt-1" style="font-size: 10px;">
-                            <i class="bi bi-send-check text-primary me-1"></i>Chuyển Kế toán (Tự chọn mua)
+                        <span class="badge mt-1" style="font-size: 10px;"
+                              th:classappend="${pr.status == 'CANCELLED' ? 'bg-danger-subtle text-danger border border-danger-subtle' : (pr.inventoryDeducted == true ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-light text-secondary border')}">
+                            <i class="bi me-1" th:classappend="${pr.status == 'CANCELLED' ? 'bi-x-circle-fill' : (pr.inventoryDeducted == true ? 'bi-box-seam-fill' : 'bi-send-check text-primary')}"></i>
+                            <span th:text="${pr.statusDisplay != null ? pr.statusDisplay : 'Chờ tiếp nhận'}">Đã xuất kho theo đơn</span>
+                            <span th:if="${pr.stockIssueCode != null}" th:text="' (' + ${pr.stockIssueCode} + ')'"></span>
                         </span>
                     </td>
                     <td>
@@ -159,14 +162,28 @@
                         <span class="text-muted small" th:unless="${pr.followupDate != null}">Không hẹn</span>
                     </td>
                     <td class="text-center">
-                        <div class="d-flex align-items-center justify-content-center gap-2">
+                        <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
                             <button type="button" class="btn btn-sm btn-outline-secondary"
                                     title="Xem &amp; In đơn thuốc"
                                     th:data-id="${pr.prescriptionId}"
                                     onclick="openPrintPrescriptionModal(this.getAttribute('data-id'))">
                                 <i class="bi bi-printer-fill text-primary"></i> In
                             </button>
-                            <button th:if="${!isClinicalLocked}" type="button" class="df-btn-icon-muted"
+                            <button th:if="${!isClinicalLocked and pr.status != 'CANCELLED' and pr.status != 'CLINIC_PURCHASE_COMPLETED' and pr.status != 'DISPENSED'}"
+                                    type="button" class="btn btn-sm btn-outline-primary"
+                                    title="Sửa đơn thuốc &amp; điều chỉnh kho"
+                                    th:data-id="${pr.prescriptionId}"
+                                    onclick="openEditPrescriptionModal(this.getAttribute('data-id'))">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            <button th:if="${!isClinicalLocked and pr.status != 'CANCELLED' and pr.status != 'CLINIC_PURCHASE_COMPLETED' and pr.status != 'DISPENSED'}"
+                                    type="button" class="btn btn-sm btn-outline-warning text-dark"
+                                    title="Hủy đơn thuốc &amp; hoàn kho"
+                                    th:data-id="${pr.prescriptionId}"
+                                    onclick="cancelPrescription(this.getAttribute('data-id'))">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                            <button th:if="${!isClinicalLocked and pr.status != 'CLINIC_PURCHASE_COMPLETED' and pr.status != 'DISPENSED'}" type="button" class="df-btn-icon-muted"
                                     title="Xóa đơn thuốc này"
                                     th:data-id="${pr.prescriptionId}"
                                     onclick="deletePrescription(this.getAttribute('data-id'))">

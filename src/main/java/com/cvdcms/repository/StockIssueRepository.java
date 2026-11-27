@@ -29,6 +29,7 @@ public interface StockIssueRepository extends JpaRepository<StockIssue, Long> {
                        OR LOWER(si.issueCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(COALESCE(si.issueReason, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(COALESCE(si.notes, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                       OR LOWER(COALESCE(si.prescriptionCode, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(iss.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')))
                   AND (:fromDate IS NULL OR si.issueDate >= :fromDate)
                   AND (:toDate IS NULL OR si.issueDate <= :toDate)
@@ -45,6 +46,7 @@ public interface StockIssueRepository extends JpaRepository<StockIssue, Long> {
                        OR LOWER(si.issueCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(COALESCE(si.issueReason, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(COALESCE(si.notes, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                       OR LOWER(COALESCE(si.prescriptionCode, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
                        OR LOWER(iss.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')))
                   AND (:fromDate IS NULL OR si.issueDate >= :fromDate)
                   AND (:toDate IS NULL OR si.issueDate <= :toDate)
@@ -116,4 +118,15 @@ public interface StockIssueRepository extends JpaRepository<StockIssue, Long> {
         WHERE si.issueId = :issueId
         """)
     Optional<StockIssue> findByIdWithDetails(@Param("issueId") Long issueId);
+
+    @Query("""
+        SELECT DISTINCT si
+        FROM StockIssue si
+        LEFT JOIN FETCH si.items i
+        LEFT JOIN FETCH i.material m
+        LEFT JOIN FETCH i.batch mb
+        WHERE si.prescription.prescriptionId = :prescriptionId
+        ORDER BY si.issueId ASC
+        """)
+    java.util.List<StockIssue> findByPrescriptionIdWithItemsOrderByIssueIdAsc(@Param("prescriptionId") Long prescriptionId);
 }

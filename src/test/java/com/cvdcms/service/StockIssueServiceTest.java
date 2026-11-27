@@ -102,7 +102,7 @@ class StockIssueServiceTest {
     }
 
     @Test
-    @DisplayName("create - Từ chối DTO null, branchId không hợp lệ, danh sách vật tư trống hoặc loại phiếu không hợp lệ")
+    @DisplayName("create - Reject null DTO, invalid branchId, empty item list, or unknown issue type")
     void create_basicHeaderValidation_throws400() {
         assertEquals(HttpStatus.BAD_REQUEST,
                 assertThrows(ResponseStatusException.class, () -> issueService.create(null, 1L)).getStatusCode());
@@ -130,7 +130,7 @@ class StockIssueServiceTest {
     }
 
     @Test
-    @DisplayName("create - Loại OTHER bắt buộc nhập issueReason <= 255 ký tự")
+    @DisplayName("create - OTHER issue type requires non-blank issueReason <= 255 characters")
     void create_otherTypeValidation_requiresReason() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
 
@@ -148,7 +148,7 @@ class StockIssueServiceTest {
     }
 
     @Test
-    @DisplayName("create - TRANSFER kiểm tra chi nhánh đích bắt buộc, khác chi nhánh nguồn và đang hoạt động")
+    @DisplayName("create - TRANSFER validates required destination branch, different from source, and active")
     void create_transferDestinationValidation_throwsError() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
         when(branchRepository.findById(1L)).thenReturn(Optional.of(branch1));
@@ -178,7 +178,7 @@ class StockIssueServiceTest {
     }
 
     @Test
-    @DisplayName("create - Tự động phân bổ FEFO qua nhiều lô theo thứ tự hạn dùng gần nhất và chuyển lô hết hàng sang OUT_OF_STOCK")
+    @DisplayName("create - Auto-allocate FEFO across multiple batches by earliest expiry and mark depleted batch OUT_OF_STOCK")
     void create_autoFefoMultipleBatches_deductsInExpiryOrder() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
         when(branchRepository.findById(1L)).thenReturn(Optional.of(branch1));
@@ -214,7 +214,7 @@ class StockIssueServiceTest {
     }
 
     @Test
-    @DisplayName("create - Chặn chọn lô đã hết hạn khi INTERNAL_USE/OTHER/TRANSFER, nhưng cho phép khi DISCARD_EXPIRED")
+    @DisplayName("create - Block expired batch selection for INTERNAL_USE/OTHER/TRANSFER, allow for DISCARD_EXPIRED")
     void create_expiredBatchRule_blockedForUseAndAllowedForDiscard() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
         when(branchRepository.findById(1L)).thenReturn(Optional.of(branch1));
@@ -253,7 +253,7 @@ class StockIssueServiceTest {
     }
 
     @Test
-    @DisplayName("create - DISCARD_EXPIRED tự động lấy từ lô hết hạn và báo lỗi nếu tổng lô hết hạn không đủ")
+    @DisplayName("create - DISCARD_EXPIRED auto-draws from expired batches and rejects insufficient expired stock")
     void create_autoDiscardExpired_validatesExpiredStock() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
         when(branchRepository.findById(1L)).thenReturn(Optional.of(branch1));
@@ -280,7 +280,7 @@ class StockIssueServiceTest {
     }
 
     @Test
-    @DisplayName("create - Chặn chọn trùng vật tư tự động FEFO hoặc trộn FEFO + đích danh trong cùng 1 phiếu")
+    @DisplayName("create - Reject duplicate auto-FEFO materials or mixing FEFO and explicit batch in same issue")
     void create_duplicateMaterialRowsValidation_throws400() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
         when(branchRepository.findById(1L)).thenReturn(Optional.of(branch1));
@@ -311,7 +311,7 @@ class StockIssueServiceTest {
     }
 
     @Test
-    @DisplayName("create - Chặn lô thuộc chi nhánh khác hoặc vượt tồn khả dụng của lô")
+    @DisplayName("create - Reject batch from another branch or quantity exceeding batch stock")
     void create_batchWrongBranchOrInsufficientBatchQty_throws400() {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
         when(branchRepository.findById(1L)).thenReturn(Optional.of(branch1));
@@ -343,7 +343,7 @@ class StockIssueServiceTest {
     }
 
     @Test
-    @DisplayName("create - Ký điện tử ngay lúc lập phiếu xuất kho lưu PNG và thông tin người ký")
+    @DisplayName("create - Save PNG e-signature and signer info immediately on issue creation")
     void create_withSignature_savesSignatureUrl() throws Exception {
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
         when(branchRepository.findById(1L)).thenReturn(Optional.of(branch1));
@@ -370,7 +370,7 @@ class StockIssueServiceTest {
     }
 
     @Test
-    @DisplayName("searchIssues & searchTransfers - Kiểm tra quyền, khoảng ngày và ánh xạ DTO")
+    @DisplayName("searchIssues & searchTransfers - Check permissions, date range, and map DTOs")
     void searchIssuesAndTransfers_validatesAndMaps() {
         Pageable pageable = PageRequest.of(0, 10);
         when(accessService.canAccessBranch(1L, 1L)).thenReturn(true);
@@ -414,7 +414,7 @@ class StockIssueServiceTest {
     }
 
     @Test
-    @DisplayName("getById & signIssue - Chi nhánh nguồn hoặc đích đều được xem/ký điều chuyển; chặn ký đè")
+    @DisplayName("getById & signIssue - Allow source or destination branch to view/sign transfer; block re-signing")
     void getByIdAndSignIssue_checksSourceOrDestinationAccessAndImmutability() throws Exception {
         assertEquals(HttpStatus.BAD_REQUEST,
                 assertThrows(ResponseStatusException.class, () -> issueService.getById(0L, 1L)).getStatusCode());

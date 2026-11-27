@@ -1607,9 +1607,20 @@
             $("issueHistoryTable").innerHTML = rows.length ? rows.map(si => {
                 const isDiscard = si.issueType === "DISCARD_EXPIRED";
                 const isOther = si.issueType === "OTHER";
-                const typeLabel = isDiscard ? "Xuất hủy hết hạn" : (isOther ? "Mục đích khác" : "Xuất sử dụng nội bộ");
-                const typeCls = isDiscard ? "status-danger" : (isOther ? "status-warning" : "status-info");
-                const noteOrReasonHtml = (isOther && si.issueReason) ? `<div><strong>Lý do:</strong> ${escapeHtml(si.issueReason)}</div>${si.notes ? `<div class="text-muted small">${escapeHtml(si.notes)}</div>` : ""}` : escapeHtml(si.notes || "—");
+                const isPrescOut = si.issueType === "PRESCRIPTION_OUT";
+                const isPrescReturn = si.issueType === "PRESCRIPTION_RETURN";
+                const typeLabel = isDiscard ? "Xuất hủy hết hạn"
+                    : (isPrescOut ? "Xuất theo đơn thuốc"
+                    : (isPrescReturn ? "Hoàn kho đơn thuốc"
+                    : (isOther ? "Mục đích khác" : "Xuất sử dụng nội bộ")));
+                const typeCls = isDiscard ? "status-danger"
+                    : (isPrescOut ? "status-primary"
+                    : (isPrescReturn ? "status-success"
+                    : (isOther ? "status-warning" : "status-info")));
+                const prescTag = si.prescriptionCode ? `<div class="small text-primary fw-semibold">Đơn thuốc: ${escapeHtml(si.prescriptionCode)}</div>` : "";
+                const noteOrReasonHtml = ((isOther || isPrescOut || isPrescReturn) && si.issueReason)
+                    ? `${prescTag}<div><strong>Lý do:</strong> ${escapeHtml(si.issueReason)}</div>${si.notes ? `<div class="text-muted small">${escapeHtml(si.notes)}</div>` : ""}`
+                    : `${prescTag}${escapeHtml(si.notes || "—")}`;
                 return `<tr>
                     <td class="code">${escapeHtml(si.issueCode)}</td>
                     <td>${escapeHtml(si.issueDate)}</td>
@@ -1731,7 +1742,8 @@
                 <div class="detail-meta-grid">
                     <div class="detail-meta-item"><span>Mã phiếu</span><strong>${escapeHtml(si.issueCode)}</strong></div>
                     <div class="detail-meta-item"><span>Ngày lập</span><strong>${escapeHtml(si.issueDate)}</strong></div>
-                    <div class="detail-meta-item"><span>Loại giao dịch</span><strong>${escapeHtml(si.issueType === "TRANSFER" ? "Điều chuyển liên chi nhánh" : (si.issueType === "DISCARD_EXPIRED" ? "Xuất hủy vật tư hết hạn" : (si.issueType === "OTHER" ? "Mục đích khác" : "Xuất sử dụng nội bộ")))}</strong></div>
+                    <div class="detail-meta-item"><span>Loại giao dịch</span><strong>${escapeHtml(si.issueType === "TRANSFER" ? "Điều chuyển liên chi nhánh" : (si.issueType === "DISCARD_EXPIRED" ? "Xuất hủy vật tư hết hạn" : (si.issueType === "PRESCRIPTION_OUT" ? "Xuất theo đơn thuốc (FEFO)" : (si.issueType === "PRESCRIPTION_RETURN" ? "Hoàn kho do sửa/hủy đơn thuốc" : (si.issueType === "OTHER" ? "Mục đích khác" : "Xuất sử dụng nội bộ")))))}</strong></div>
+                    ${si.prescriptionCode ? `<div class="detail-meta-item"><span>Mã đơn thuốc</span><strong>${escapeHtml(si.prescriptionCode)}</strong></div>` : ""}
                     ${si.issueReason ? `<div class="detail-meta-item"><span>Lý do xuất kho</span><strong>${escapeHtml(si.issueReason)}</strong></div>` : ""}
                     <div class="detail-meta-item"><span>Chi nhánh xuất</span><strong>${escapeHtml(si.branchName)}</strong></div>
                     ${isTransfer ? `<div class="detail-meta-item"><span>Chi nhánh nhận</span><strong>${escapeHtml(si.destinationBranchName || "—")}</strong></div>` : ""}

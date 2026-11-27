@@ -1108,16 +1108,17 @@
                             <h5 class="modal-title fs-6 fw-bold d-flex align-items-center gap-2 mb-0"
                                 id="addPrescriptionModalLabel">
                                 <i class="bi bi-capsule text-primary"></i>
-                                <span>Kê đơn thuốc (SCR-18.3 &amp; SCR-18.4)</span>
+                                <span id="prescModalTitleText">Kê đơn thuốc (SCR-18.3 &amp; SCR-18.4)</span>
                             </h5>
-                            <small class="df-meta-tertiary">Phòng khám chưa bật liên thông — đơn chỉ lưu và in tại
-                                chỗ</small>
+                            <small class="df-meta-tertiary">Liên kết trực tiếp kho thuốc chi nhánh — tự động kiểm tra tồn còn hạn &amp; xuất kho FEFO khi lưu đơn</small>
                         </div>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <form id="prescriptionForm" onsubmit="submitPrescription(event)">
                         <div class="modal-body p-4">
                             <input type="hidden" id="prescVisitId" th:value="${visit.visitId}">
+                            <input type="hidden" id="prescEditId" value="">
+                            <div id="prescStockErrorBanner" class="alert alert-danger d-none py-2 px-3 mb-3 small" role="alert"></div>
 
                             <!-- 1. DÙNG MẪU CÓ SẴN (image10.png) -->
                             <div class="df-preset-container mb-3">
@@ -1202,29 +1203,37 @@
 
                             <!-- 5. BẢNG THUỐC KÊ -->
                             <div class="mb-3">
-                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                                     <label class="form-label fw-bold small text-secondary mb-0">
                                         <i class="bi bi-list-check me-1"></i> Thuốc kê <span
                                             class="text-danger">*</span>
                                     </label>
-                                    <button type="button" class="btn btn-sm btn-outline-primary fw-semibold"
-                                        onclick="addDrugRow()">
-                                        <i class="bi bi-plus-lg"></i> Thêm dòng
-                                    </button>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="input-group input-group-sm" style="width: 260px;">
+                                            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                                            <input type="text" class="form-control" id="prescMedSearchInput"
+                                                placeholder="Tìm nhanh thuốc trong kho..."
+                                                oninput="filterPrescriptionCatalogOptions(this.value)">
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary fw-semibold"
+                                            onclick="addDrugRow()">
+                                            <i class="bi bi-plus-lg"></i> Thêm dòng
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="table-responsive border rounded-3 bg-white">
                                     <table class="df-drug-table mb-0">
                                         <thead>
                                             <tr>
-                                                <th style="width: 40px;" class="text-center">TT</th>
-                                                <th style="min-width: 230px;">Thuốc (Gõ tên thuốc hoặc hoạt chất)</th>
-                                                <th style="width: 95px;">Mã thuốc</th>
-                                                <th style="width: 75px;" class="text-center">ĐVT</th>
-                                                <th style="width: 70px;" class="text-center">SL</th>
-                                                <th style="width: 105px;" class="text-end">Đơn giá (đ)</th>
+                                                <th style="width: 36px;" class="text-center">TT</th>
+                                                <th style="min-width: 230px;">Thuốc (Danh mục liên kết kho)</th>
+                                                <th style="min-width: 155px;">Tồn khả dụng / HSD</th>
+                                                <th style="width: 72px;" class="text-center">ĐVT</th>
+                                                <th style="width: 78px;" class="text-center">SL</th>
+                                                <th style="width: 100px;" class="text-end">Đơn giá (đ)</th>
                                                 <th style="width: 105px;" class="text-end">Thành tiền</th>
                                                 <th>Cách dùng</th>
-                                                <th style="width: 45px;" class="text-center">Xóa</th>
+                                                <th style="width: 42px;" class="text-center">Xóa</th>
                                             </tr>
                                         </thead>
                                         <tbody id="prescDrugsTableBody">
@@ -1246,11 +1255,9 @@
                                 <div
                                     class="df-soft-panel py-2 px-3 mt-2 mb-0 d-flex align-items-center justify-content-between df-meta-tertiary">
                                     <div>
-                                        <i class="bi bi-send-check-fill text-primary me-1"></i>
-                                        <strong class="text-dark">Đã đồng bộ sang Kế toán:</strong> Thông tin đơn thuốc
-                                        &amp; <strong class="text-dark">Giá thuốc dự kiến (Tạm tính)</strong> sẽ tự động
-                                        gửi sang bộ phận Kế toán xử lý (Bệnh nhân có thể chọn mua tại phòng khám hoặc tự
-                                        mua ngoài).
+                                        <i class="bi bi-box-seam-fill text-primary me-1"></i>
+                                        <strong class="text-dark">Đồng bộ kho thuốc FEFO:</strong> Tồn kho hiển thị chỉ tính các lô còn hạn &amp; khả dụng tại chi nhánh hiện tại.
+                                        Xác nhận đơn sẽ tự động trừ kho theo lô hết hạn sớm nhất (FEFO) và đồng bộ giá tạm tính sang Kế toán.
                                     </div>
                                 </div>
                             </div>
@@ -3277,20 +3284,202 @@
             const printEl = document.getElementById('printPrescriptionModal');
             if (printEl) printModalInstance = new bootstrap.Modal(printEl);
 
-            // Fetch danh mục thuốc nha khoa (tránh gọi trùng lặp nếu script được nạp lại)
-            if (!window._medicationsCatalogLoaded) {
-                window._medicationsCatalogLoaded = true;
-                fetch('/api/doctor/medications/catalog')
-                    .then(res => res.json())
-                    .then(data => {
-                        availableMedications = Array.isArray(data) ? data : [];
-                    })
-                    .catch(err => {
-                        window._medicationsCatalogLoaded = false;
-                        console.error("Error loading medications catalog:", err);
-                    });
-            }
+            // Fetch danh mục thuốc nha khoa kèm tồn kho chi nhánh hiện tại
+            loadMedicationsCatalogWithStock();
         });
+
+        let currentPrescriptionClientRequestId = null;
+        let isSubmittingPrescription = false;
+        let editingPrescriptionOriginalQtyByMed = {};
+
+        function generatePrescriptionClientRequestId() {
+            if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+                return 'PR-' + window.crypto.randomUUID();
+            }
+            return 'PR-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10);
+        }
+
+        async function loadMedicationsCatalogWithStock() {
+            const visitId = document.getElementById('prescVisitId')?.value || '';
+            const url = visitId ? `/api/doctor/medications/catalog?visitId=${encodeURIComponent(visitId)}` : '/api/doctor/medications/catalog';
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('Không tải được danh mục thuốc kho');
+                const data = await res.json();
+                availableMedications = Array.isArray(data) ? data : [];
+                window._medicationsCatalogLoaded = true;
+            } catch (err) {
+                console.error("Error loading medications catalog:", err);
+            }
+            return availableMedications;
+        }
+
+        function formatExpiryDateVi(isoDate) {
+            if (!isoDate) return '';
+            const parts = String(isoDate).split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return isoDate;
+        }
+
+        function formatStockNumber(val) {
+            const n = Number(val || 0);
+            if (!isFinite(n)) return '0';
+            return Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2)));
+        }
+
+        function getMedicationById(medId) {
+            if (!medId || !Array.isArray(availableMedications)) return null;
+            return availableMedications.find(m => String(m.medicationId) === String(medId)) || null;
+        }
+
+        function buildMedicationOptionsHtml(selectedMedId, selectedDrugName, keywordFilter = '') {
+            const kw = (keywordFilter || '').trim().toLowerCase();
+            let medOptions = '<option value="">-- Chọn thuốc trong danh mục kho --</option>';
+            if (Array.isArray(availableMedications)) {
+                availableMedications.forEach(m => {
+                    const isSel = (selectedMedId && String(m.medicationId) === String(selectedMedId))
+                        || (!selectedMedId && selectedDrugName && m.drugName && m.drugName.toLowerCase() === selectedDrugName.toLowerCase());
+                    if (kw && !isSel) {
+                        const haystack = `${m.drugName || ''} ${m.drugCode || ''} ${m.activeIngredient || ''}`.toLowerCase();
+                        if (!haystack.includes(kw)) return;
+                    }
+                    const salePrice = m.salePrice != null ? m.salePrice : 0;
+                    const avail = Number(m.availableStock || 0);
+                    const unit = m.unit || 'Viên';
+                    const statusLabel = m.stockStatus === 'EXPIRED_ONLY'
+                        ? 'Chỉ còn lô hết hạn'
+                        : (avail <= 0 ? 'Hết hàng' : `Tồn: ${formatStockNumber(avail)} ${unit}`);
+                    medOptions += `<option value="${m.medicationId}" data-code="${_safeEscapeHtml(m.drugCode || '')}" data-name="${_safeEscapeHtml(m.drugName || '')}" data-unit="${_safeEscapeHtml(unit)}" data-price="${salePrice}" data-usage="${_safeEscapeHtml(m.usageInstruction || '')}" data-stock="${avail}" data-status="${_safeEscapeHtml(m.stockStatus || 'OUT_OF_STOCK')}" data-expiry="${_safeEscapeHtml(m.nearestExpiryDate || '')}" data-batch="${_safeEscapeHtml(m.nearestBatchNumber || '')}" ${isSel ? 'selected' : ''}>${_safeEscapeHtml(m.drugName)} (${_safeEscapeHtml(m.drugCode)}) — ${statusLabel}</option>`;
+                });
+            }
+            return medOptions;
+        }
+
+        function filterPrescriptionCatalogOptions(keyword) {
+            document.querySelectorAll('#prescDrugsTableBody tr').forEach(tr => {
+                const selectEl = tr.querySelector('.drug-select');
+                if (!selectEl) return;
+                const currentVal = selectEl.value;
+                selectEl.innerHTML = buildMedicationOptionsHtml(currentVal, '', keyword);
+            });
+        }
+
+        function renderStockBadgeHtml(med, extraAvailableForEdit = 0) {
+            if (!med) {
+                return '<span class="badge bg-light text-secondary border small">Chưa chọn thuốc kho</span>';
+            }
+            const baseAvail = Number(med.availableStock || 0);
+            const effAvail = baseAvail + Number(extraAvailableForEdit || 0);
+            const unit = med.unit || 'Viên';
+            const status = med.stockStatus || (effAvail > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK');
+
+            let badgeHtml = '';
+            if (effAvail <= 0 && status === 'EXPIRED_ONLY') {
+                badgeHtml = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle">0 ${_safeEscapeHtml(unit)} · Chỉ còn lô hết hạn</span>`;
+            } else if (effAvail <= 0) {
+                badgeHtml = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle">0 ${_safeEscapeHtml(unit)} · Hết hàng</span>`;
+            } else if (status === 'LOW_STOCK') {
+                badgeHtml = `<span class="badge bg-warning-subtle text-dark border border-warning">Tồn: ${formatStockNumber(effAvail)} ${_safeEscapeHtml(unit)} · Sắp hết</span>`;
+            } else {
+                badgeHtml = `<span class="badge bg-success-subtle text-success border border-success-subtle">Tồn: ${formatStockNumber(effAvail)} ${_safeEscapeHtml(unit)} · Còn hàng</span>`;
+            }
+
+            let expiryHtml = '';
+            if (effAvail > 0 && med.nearestExpiryDate) {
+                const batchTxt = med.nearestBatchNumber ? `Lô ${_safeEscapeHtml(med.nearestBatchNumber)} · ` : '';
+                expiryHtml = `<div class="text-muted mt-1" style="font-size: 11px;">${batchTxt}HSD: ${formatExpiryDateVi(med.nearestExpiryDate)}</div>`;
+            } else if (med.activeIngredient) {
+                expiryHtml = `<div class="text-muted mt-1" style="font-size: 11px;">${_safeEscapeHtml(med.activeIngredient)}</div>`;
+            }
+            return badgeHtml + expiryHtml;
+        }
+
+        function validatePrescriptionStockUI() {
+            const banner = document.getElementById('prescStockErrorBanner');
+            const rows = document.querySelectorAll('#prescDrugsTableBody tr');
+            const totalRequestedByMed = {};
+            const errors = [];
+
+            rows.forEach(tr => {
+                const selectEl = tr.querySelector('.drug-select');
+                const qtyEl = tr.querySelector('.drug-qty');
+                const warnEl = tr.querySelector('.drug-stock-warn');
+                if (warnEl) {
+                    warnEl.textContent = '';
+                    warnEl.classList.add('d-none');
+                }
+                if (qtyEl) qtyEl.classList.remove('is-invalid');
+
+                const medId = selectEl && selectEl.value ? selectEl.value : '';
+                const qty = parseFloat(qtyEl?.value);
+                if (!medId) {
+                    const customName = tr.querySelector('.drug-custom-name')?.value?.trim();
+                    if (customName) {
+                        if (warnEl) {
+                            warnEl.textContent = 'Vui lòng chọn thuốc từ danh mục kho';
+                            warnEl.classList.remove('d-none');
+                        }
+                        errors.push(`Thuốc "${customName}" chưa được chọn từ danh mục liên kết kho.`);
+                    }
+                    return;
+                }
+                if (isNaN(qty) || qty <= 0) {
+                    if (qtyEl) qtyEl.classList.add('is-invalid');
+                    if (warnEl) {
+                        warnEl.textContent = 'SL phải > 0';
+                        warnEl.classList.remove('d-none');
+                    }
+                    errors.push('Số lượng kê phải lớn hơn 0.');
+                    return;
+                }
+                totalRequestedByMed[medId] = (totalRequestedByMed[medId] || 0) + qty;
+            });
+
+            rows.forEach(tr => {
+                const selectEl = tr.querySelector('.drug-select');
+                const qtyEl = tr.querySelector('.drug-qty');
+                const warnEl = tr.querySelector('.drug-stock-warn');
+                const medId = selectEl && selectEl.value ? selectEl.value : '';
+                if (!medId) return;
+
+                const med = getMedicationById(medId);
+                if (!med) return;
+
+                const editAllowance = Number(editingPrescriptionOriginalQtyByMed[medId] || 0);
+                const avail = Number(med.availableStock || 0) + editAllowance;
+                const reqTotal = totalRequestedByMed[medId] || 0;
+                const unit = med.unit || 'Viên';
+
+                if (avail <= 0) {
+                    const reason = med.stockStatus === 'EXPIRED_ONLY' ? 'chỉ còn lô hết hạn (tồn khả dụng: 0)' : 'đã hết hàng (tồn khả dụng: 0)';
+                    if (qtyEl) qtyEl.classList.add('is-invalid');
+                    if (warnEl) {
+                        warnEl.textContent = med.stockStatus === 'EXPIRED_ONLY' ? 'Chỉ còn lô hết hạn' : 'Hết hàng khả dụng';
+                        warnEl.classList.remove('d-none');
+                    }
+                    errors.push(`Thuốc "${med.drugName}" ${reason}, không thể kê.`);
+                } else if (reqTotal > avail) {
+                    if (qtyEl) qtyEl.classList.add('is-invalid');
+                    if (warnEl) {
+                        warnEl.textContent = `Vượt tồn (${formatStockNumber(avail)} ${unit})`;
+                        warnEl.classList.remove('d-none');
+                    }
+                    errors.push(`Thuốc "${med.drugName}" vượt tồn kho khả dụng (Tồn: ${formatStockNumber(avail)} ${unit}, Kê: ${formatStockNumber(reqTotal)} ${unit}).`);
+                }
+            });
+
+            const uniqueErrors = [...new Set(errors)];
+            if (banner) {
+                if (uniqueErrors.length > 0) {
+                    banner.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + uniqueErrors.map(_safeEscapeHtml).join('<br>');
+                    banner.classList.remove('d-none');
+                } else {
+                    banner.innerHTML = '';
+                    banner.classList.add('d-none');
+                }
+            }
+            return uniqueErrors;
+        }
 
         const PRESCRIPTION_PRESETS = {
             'GIAM_DAU': {
@@ -3366,7 +3555,7 @@
             return 5000;
         }
 
-        function openAddPrescriptionModal() {
+        async function openAddPrescriptionModal() {
             try {
                 const prescEl = document.getElementById('addPrescriptionModal');
                 if (!prescEl) {
@@ -3381,6 +3570,22 @@
                 const formEl = document.getElementById('prescriptionForm');
                 if (formEl) formEl.reset();
 
+                const editIdEl = document.getElementById('prescEditId');
+                if (editIdEl) editIdEl.value = '';
+                const titleEl = document.getElementById('prescModalTitleText');
+                if (titleEl) titleEl.innerText = 'Kê đơn thuốc (SCR-18.3 & SCR-18.4)';
+                const submitBtn = document.getElementById('submitPrescBtn');
+                if (submitBtn) submitBtn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Lưu đơn thuốc';
+                const searchEl = document.getElementById('prescMedSearchInput');
+                if (searchEl) searchEl.value = '';
+                const banner = document.getElementById('prescStockErrorBanner');
+                if (banner) { banner.innerHTML = ''; banner.classList.add('d-none'); }
+
+                editingPrescriptionOriginalQtyByMed = {};
+                currentPrescriptionClientRequestId = generatePrescriptionClientRequestId();
+
+                await loadMedicationsCatalogWithStock();
+
                 const now = new Date();
                 const yyyy = now.getFullYear();
                 const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -3394,7 +3599,9 @@
                 if (timeInp) timeInp.value = `${hh}:${min}`;
 
                 const tbody = document.getElementById('prescDrugsTableBody');
-                if (tbody && tbody.children.length === 0) {
+                if (tbody) {
+                    tbody.innerHTML = '';
+                    drugRowIndex = 0;
                     addDrugRow();
                 }
 
@@ -3407,6 +3614,62 @@
                 if (prescEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
                     bootstrap.Modal.getOrCreateInstance(prescEl).show();
                 }
+            }
+        }
+
+        async function openEditPrescriptionModal(prescriptionId) {
+            try {
+                await loadMedicationsCatalogWithStock();
+                const res = await fetch(`/api/doctor/prescriptions/${prescriptionId}`);
+                if (!res.ok) throw new Error('Không tải được chi tiết đơn thuốc');
+                const pr = await res.json();
+
+                const prescEl = document.getElementById('addPrescriptionModal');
+                if (prescEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    prescModalInstance = bootstrap.Modal.getOrCreateInstance(prescEl);
+                }
+
+                const formEl = document.getElementById('prescriptionForm');
+                if (formEl) formEl.reset();
+
+                const editIdEl = document.getElementById('prescEditId');
+                if (editIdEl) editIdEl.value = String(pr.prescriptionId);
+                const titleEl = document.getElementById('prescModalTitleText');
+                if (titleEl) titleEl.innerText = `Sửa đơn thuốc ${pr.prescriptionCode || ''}`;
+                const submitBtn = document.getElementById('submitPrescBtn');
+                if (submitBtn) submitBtn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Cập nhật đơn & đồng bộ kho';
+                const searchEl = document.getElementById('prescMedSearchInput');
+                if (searchEl) searchEl.value = '';
+                const banner = document.getElementById('prescStockErrorBanner');
+                if (banner) { banner.innerHTML = ''; banner.classList.add('d-none'); }
+
+                document.getElementById('prescAdviceNotes').value = pr.adviceNotes || '';
+                editingPrescriptionOriginalQtyByMed = {};
+                if (Array.isArray(pr.items)) {
+                    pr.items.forEach(it => {
+                        if (it.medicationId) {
+                            const key = String(it.medicationId);
+                            editingPrescriptionOriginalQtyByMed[key] = (editingPrescriptionOriginalQtyByMed[key] || 0) + Number(it.quantity || 0);
+                        }
+                    });
+                }
+
+                const tbody = document.getElementById('prescDrugsTableBody');
+                if (tbody) {
+                    tbody.innerHTML = '';
+                    drugRowIndex = 0;
+                    if (Array.isArray(pr.items) && pr.items.length > 0) {
+                        pr.items.forEach(it => {
+                            addDrugRow(it.drugName || '', it.dosage || '', it.quantity || 1, it.unit || 'Viên', it.usageInstruction || '', it.unitPrice || 0, it.medicationId || null);
+                        });
+                    } else {
+                        addDrugRow();
+                    }
+                }
+                validatePrescriptionStockUI();
+                if (prescModalInstance) prescModalInstance.show();
+            } catch (err) {
+                showToast(err.message || 'Không thể mở form sửa đơn thuốc', true);
             }
         }
 
@@ -3427,57 +3690,55 @@
             });
 
             updatePrescModalTotal();
+            validatePrescriptionStockUI();
             showToast(`Đã áp dụng mẫu đơn: ${preset.title}`);
         }
 
-        function addDrugRow(drugName = '', dosage = '', quantity = 1, unit = 'Viên', usage = '', price = 0) {
+        function addDrugRow(drugName = '', dosage = '', quantity = 1, unit = 'Viên', usage = '', price = 0, medicationId = null) {
             drugRowIndex++;
+            const currentIdx = drugRowIndex;
             const tbody = document.getElementById('prescDrugsTableBody');
             if (!tbody) return;
             const tr = document.createElement('tr');
-            tr.id = `drug-row-${drugRowIndex}`;
+            tr.id = `drug-row-${currentIdx}`;
 
-            if ((!price || price <= 0) && drugName) {
+            const kw = document.getElementById('prescMedSearchInput')?.value || '';
+            const medOptions = buildMedicationOptionsHtml(medicationId, drugName, kw);
+
+            let matchedMed = medicationId ? getMedicationById(medicationId) : null;
+            if (!matchedMed && drugName && Array.isArray(availableMedications)) {
+                matchedMed = availableMedications.find(m => m.drugName && m.drugName.toLowerCase() === drugName.toLowerCase()) || null;
+            }
+            if (matchedMed) {
+                price = Number(matchedMed.salePrice || 0);
+                unit = matchedMed.unit || unit || 'Viên';
+            } else if ((!price || price <= 0) && drugName) {
                 price = estimateDrugPrice(drugName);
-            } else if (!price || price <= 0) {
-                price = 5000;
             }
-
-            let medOptions = '<option value="">-- Chọn thuốc trong kho hoặc tự nhập --</option>';
-            let matchedCatalogPrice = null;
-            if (Array.isArray(availableMedications)) {
-                availableMedications.forEach(m => {
-                    const isSel = (drugName && m.drugName && m.drugName.toLowerCase() === drugName.toLowerCase()) ? 'selected' : '';
-                    const salePrice = m.salePrice != null ? m.salePrice : 0;
-                    if (isSel) matchedCatalogPrice = salePrice;
-                    medOptions += `<option value="${m.medicationId}" data-code="${_safeEscapeHtml(m.drugCode || '')}" data-name="${_safeEscapeHtml(m.drugName || '')}" data-unit="${_safeEscapeHtml(m.unit || 'Viên')}" data-price="${salePrice}" data-usage="${_safeEscapeHtml(m.usageInstruction || '')}" ${isSel}>${_safeEscapeHtml(m.drugName)} (${_safeEscapeHtml(m.drugCode)})</option>`;
-                });
-            }
-
-            if (matchedCatalogPrice !== null) {
-                price = Number(matchedCatalogPrice) || 0;
-            }
-            const lineTotal = (quantity || 1) * price;
+            const lineTotal = (quantity || 1) * (price || 0);
+            const editAllowance = matchedMed ? Number(editingPrescriptionOriginalQtyByMed[String(matchedMed.medicationId)] || 0) : 0;
 
             tr.innerHTML = `
             <td class="text-center fw-bold text-muted drug-tt">${tbody.children.length + 1}</td>
             <td>
-                <select class="form-select form-select-sm mb-1 drug-select" onchange="onDrugSelectChange(this, ${drugRowIndex})">
+                <select class="form-select form-select-sm mb-1 drug-select" onchange="onDrugSelectChange(this, ${currentIdx})">
                     ${medOptions}
                 </select>
-                <input type="text" class="form-control form-control-sm drug-custom-name" oninput="onDrugCustomNameInput(this, ${drugRowIndex})" placeholder="Hoặc gõ tên thuốc / hoạt chất khác..." value="${_safeEscapeHtml(drugName || '')}">
+                <input type="text" class="form-control form-control-sm drug-custom-name bg-light" readonly placeholder="Tên thuốc đã chọn từ danh mục kho..." value="${_safeEscapeHtml(matchedMed ? matchedMed.drugName : (drugName || ''))}">
+                <input type="hidden" class="drug-code" value="${_safeEscapeHtml(matchedMed ? (matchedMed.drugCode || '') : '')}">
+            </td>
+            <td class="drug-stock-cell">
+                ${renderStockBadgeHtml(matchedMed, editAllowance)}
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm bg-light drug-code" placeholder="Mã..." readonly>
+                <input type="text" class="form-control form-control-sm text-center drug-unit bg-light" readonly value="${_safeEscapeHtml(unit || 'Viên')}">
             </td>
             <td>
-                <input type="text" class="form-control form-control-sm text-center drug-unit" value="${_safeEscapeHtml(unit || 'Viên')}">
+                <input type="number" class="form-control form-control-sm text-center fw-bold drug-qty" value="${quantity || 1}" min="0.5" step="0.5" oninput="calcPrescDrugRowTotal(${currentIdx})">
+                <div class="text-danger fw-semibold d-none drug-stock-warn" style="font-size: 11px; margin-top: 2px;"></div>
             </td>
             <td>
-                <input type="number" class="form-control form-control-sm text-center fw-bold drug-qty" value="${quantity || 1}" min="0.5" step="0.5" oninput="calcPrescDrugRowTotal(${drugRowIndex})">
-            </td>
-            <td>
-                <input type="number" class="form-control form-control-sm text-end drug-price" value="${price}" min="0" step="500" oninput="calcPrescDrugRowTotal(${drugRowIndex})">
+                <input type="number" class="form-control form-control-sm text-end drug-price bg-light" readonly value="${price || 0}" min="0" step="500" oninput="calcPrescDrugRowTotal(${currentIdx})">
             </td>
             <td class="text-end fw-semibold text-primary drug-subtotal">
                 ${new Intl.NumberFormat('vi-VN').format(lineTotal)} đ
@@ -3494,13 +3755,13 @@
 
             tbody.appendChild(tr);
 
-            // Kích hoạt onchange nếu đã có tên thuốc
-            if (drugName) {
+            if (matchedMed || drugName) {
                 const selectEl = tr.querySelector('.drug-select');
-                onDrugSelectChange(selectEl, drugRowIndex);
+                onDrugSelectChange(selectEl, currentIdx);
             }
 
             updatePrescModalTotal();
+            validatePrescriptionStockUI();
         }
 
         function calcPrescDrugRowTotal(rowIdx) {
@@ -3514,6 +3775,7 @@
                 subtotalEl.innerText = new Intl.NumberFormat('vi-VN').format(subtotal) + ' đ';
             }
             updatePrescModalTotal();
+            validatePrescriptionStockUI();
         }
 
         function updatePrescModalTotal() {
@@ -3531,27 +3793,7 @@
         }
 
         function onDrugCustomNameInput(inputEl, rowIdx) {
-            const tr = document.getElementById(`drug-row-${rowIdx}`);
-            if (!tr) return;
-            const selectEl = tr.querySelector('.drug-select');
-            const codeInput = tr.querySelector('.drug-code');
-            const priceInput = tr.querySelector('.drug-price');
-
-            if (selectEl && selectEl.value) {
-                selectEl.value = '';
-            }
-            if (codeInput) {
-                codeInput.value = '';
-            }
-            if (priceInput) {
-                priceInput.readOnly = false;
-                priceInput.classList.remove('bg-light');
-                if (parseFloat(priceInput.value) === 5000 || !priceInput.value || parseFloat(priceInput.value) === 0) {
-                    const est = estimateDrugPrice(inputEl.value.trim());
-                    priceInput.value = est;
-                    calcPrescDrugRowTotal(rowIdx);
-                }
-            }
+            validatePrescriptionStockUI();
         }
 
         function removeDrugRow(btn) {
@@ -3559,6 +3801,7 @@
             if (tr) tr.remove();
             renumberDrugRows();
             updatePrescModalTotal();
+            validatePrescriptionStockUI();
         }
 
         function renumberDrugRows() {
@@ -3575,16 +3818,16 @@
 
             const codeInput = tr.querySelector('.drug-code');
             const priceInput = tr.querySelector('.drug-price');
+            const stockCell = tr.querySelector('.drug-stock-cell');
             const opt = selectEl.options[selectEl.selectedIndex];
             if (!opt || !opt.value) {
                 if (codeInput) codeInput.value = '';
-                if (priceInput) {
-                    priceInput.readOnly = false;
-                    priceInput.classList.remove('bg-light');
-                }
+                if (stockCell) stockCell.innerHTML = renderStockBadgeHtml(null, 0);
+                validatePrescriptionStockUI();
                 return;
             }
 
+            const med = getMedicationById(opt.value);
             const name = opt.getAttribute('data-name');
             const code = opt.getAttribute('data-code');
             const unit = opt.getAttribute('data-unit');
@@ -3599,6 +3842,10 @@
             if (codeInput) codeInput.value = code || '';
             if (unitInput) unitInput.value = unit || 'Viên';
             if (usageInput && !usageInput.value) usageInput.value = usage || '';
+            if (stockCell) {
+                const editAllowance = Number(editingPrescriptionOriginalQtyByMed[String(opt.value)] || 0);
+                stockCell.innerHTML = renderStockBadgeHtml(med, editAllowance);
+            }
             if (priceInput) {
                 const parsedCatalogPrice = (catalogPrice !== null && catalogPrice !== '') ? parseFloat(catalogPrice) : 0;
                 priceInput.value = !isNaN(parsedCatalogPrice) ? Math.round(parsedCatalogPrice) : 0;
@@ -3610,7 +3857,18 @@
 
         function submitPrescription(e) {
             e.preventDefault();
+            if (isSubmittingPrescription) {
+                return;
+            }
 
+            const stockErrors = validatePrescriptionStockUI();
+            if (stockErrors.length > 0) {
+                showToast(stockErrors[0], true);
+                return;
+            }
+
+            const editId = document.getElementById('prescEditId')?.value?.trim() || '';
+            const isEditMode = editId !== '';
             const visitId = document.getElementById('prescVisitId').value;
             const doctorId = document.getElementById('prescDoctorSelect').value;
             const prescTitle = document.getElementById('prescTitle').value.trim();
@@ -3638,11 +3896,10 @@
                 const customName = customNameInput ? customNameInput.value.trim() : '';
                 const medId = selectEl && selectEl.value ? parseInt(selectEl.value) : null;
                 const unit = r.querySelector('.drug-unit').value.trim() || 'Viên';
-                const qty = parseFloat(r.querySelector('.drug-qty').value) || 1;
-                const price = parseFloat(r.querySelector('.drug-price')?.value) || 0;
+                const qty = parseFloat(r.querySelector('.drug-qty').value);
                 const usage = r.querySelector('.drug-usage').value.trim() || 'Uống theo chỉ dẫn';
 
-                if (customName) {
+                if (medId && qty > 0) {
                     items.push({
                         medicationId: medId,
                         drugName: customName,
@@ -3650,14 +3907,14 @@
                         durationDays: 5,
                         quantity: qty,
                         unit: unit,
-                        unitPrice: medId ? null : price,
+                        unitPrice: null,
                         usageInstruction: usage
                     });
                 }
             });
 
             if (items.length === 0) {
-                showToast('Vui lòng nhập ít nhất 1 loại thuốc trong đơn!', true);
+                showToast('Vui lòng chọn ít nhất 1 loại thuốc hợp lệ từ danh mục kho!', true);
                 return;
             }
 
@@ -3670,6 +3927,7 @@
                 followupDays: followupDays,
                 patientWeight: patientWeight,
                 guardianInfo: guardianInfo,
+                clientRequestId: isEditMode ? null : currentPrescriptionClientRequestId,
                 items: items
             };
 
@@ -3678,14 +3936,17 @@
                 if (isRetry) {
                     payload.confirmAllergyWarning = true;
                 }
+                isSubmittingPrescription = true;
                 if (submitBtn) {
                     submitBtn.disabled = true;
-                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu &amp; trừ kho...';
                 }
 
                 try {
-                    const res = await fetch('/api/doctor/prescriptions', {
-                        method: 'POST',
+                    const url = isEditMode ? `/api/doctor/prescriptions/${editId}` : '/api/doctor/prescriptions';
+                    const method = isEditMode ? 'PUT' : 'POST';
+                    const res = await fetch(url, {
+                        method: method,
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
@@ -3698,19 +3959,32 @@
                                 return;
                             }
                         }
+                        const banner = document.getElementById('prescStockErrorBanner');
+                        if (banner) {
+                            banner.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + _safeEscapeHtml(msg);
+                            banner.classList.remove('d-none');
+                        }
                         throw new Error(msg);
                     }
-                    showToast('Đã kê đơn thuốc thành công!');
+                    showToast(isEditMode ? 'Đã cập nhật đơn thuốc và đồng bộ tồn kho!' : 'Đã kê đơn thuốc và xuất kho FEFO thành công!');
+                    if (isEditMode) {
+                        const oldRow = document.getElementById(`pr-row-${editId}`);
+                        if (oldRow) oldRow.remove();
+                    }
                     addPrescriptionRowToTable(result.data);
+                    await loadMedicationsCatalogWithStock();
                     if (prescModalInstance) {
                         prescModalInstance.hide();
                     }
                 } catch (err) {
                     showToast(err.message, true);
                 } finally {
+                    isSubmittingPrescription = false;
                     if (submitBtn) {
                         submitBtn.disabled = false;
-                        submitBtn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Lưu đơn thuốc';
+                        submitBtn.innerHTML = isEditMode
+                            ? '<i class="bi bi-check-circle-fill me-1"></i> Cập nhật đơn & đồng bộ kho'
+                            : '<i class="bi bi-check-circle-fill me-1"></i> Lưu đơn thuốc';
                     }
                 }
             };
@@ -3732,33 +4006,51 @@
                     const itemPriceText = (it.finalPrice !== null && it.finalPrice !== undefined)
                         ? ` • ${new Intl.NumberFormat('vi-VN').format(it.finalPrice)}đ`
                         : '';
-                    drugBadges += `<span class="badge bg-light text-dark border small me-1 mb-1">${it.drugName} (${it.quantity} ${it.unit}${itemPriceText})</span>`;
+                    drugBadges += `<span class="badge bg-light text-dark border small me-1 mb-1">${_safeEscapeHtml(it.drugName)} (${it.quantity} ${_safeEscapeHtml(it.unit)}${itemPriceText})</span>`;
                 });
             }
 
             const followupBadge = pr.followupDate
-                ? `<span class="badge bg-warning-subtle text-dark border border-warning">${pr.followupDate}</span>`
+                ? `<span class="badge bg-warning-subtle text-dark border border-warning">${_safeEscapeHtml(pr.followupDate)}</span>`
                 : `<span class="text-muted small">Không hẹn</span>`;
 
             const adviceDisplay = pr.adviceNotes
-                ? `<div class="small text-muted fst-italic mt-1"><i class="bi bi-chat-left-dots"></i> ${pr.adviceNotes}</div>`
+                ? `<div class="small text-muted fst-italic mt-1"><i class="bi bi-chat-left-dots"></i> ${_safeEscapeHtml(pr.adviceNotes)}</div>`
                 : '';
 
             const formattedTotal = (pr.totalAmount !== null && pr.totalAmount !== undefined)
                 ? new Intl.NumberFormat('vi-VN').format(pr.totalAmount) + ' đ'
                 : '0 đ';
             const itemCount = (pr.items && pr.items.length) ? pr.items.length : 0;
+            const isCancelled = pr.status === 'CANCELLED';
+            const isDeducted = pr.inventoryDeducted === true;
+            const badgeCls = isCancelled
+                ? 'bg-danger-subtle text-danger border border-danger-subtle'
+                : (isDeducted ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-light text-secondary border');
+            const badgeIcon = isCancelled ? 'bi-x-circle-fill' : (isDeducted ? 'bi-box-seam-fill' : 'bi-send-check text-primary');
+            const issueSuffix = pr.stockIssueCode ? ` (${_safeEscapeHtml(pr.stockIssueCode)})` : '';
+            const actionButtons = isCancelled ? '' : `
+                    <button type="button" class="btn btn-sm btn-outline-primary"
+                            title="Sửa đơn thuốc &amp; điều chỉnh kho"
+                            onclick="openEditPrescriptionModal(${pr.prescriptionId})">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-warning text-dark"
+                            title="Hủy đơn thuốc &amp; hoàn kho"
+                            onclick="cancelPrescription(${pr.prescriptionId})">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>`;
 
             tr.innerHTML = `
-            <td><span class="badge bg-light text-dark border fw-bold">${pr.prescriptionCode}</span></td>
-            <td><span class="small text-muted">${pr.createdAt}</span></td>
+            <td><span class="badge bg-light text-dark border fw-bold">${_safeEscapeHtml(pr.prescriptionCode)}</span></td>
+            <td><span class="small text-muted">${_safeEscapeHtml(pr.createdAt || '')}</span></td>
             <td>
-                <div class="fw-semibold text-dark">${pr.doctorName}</div>
-                <small class="text-muted">${pr.doctorTitle || 'Bác sĩ điều trị'}</small>
+                <div class="fw-semibold text-dark">${_safeEscapeHtml(pr.doctorName || '')}</div>
+                <small class="text-muted">${_safeEscapeHtml(pr.doctorTitle || 'Bác sĩ điều trị')}</small>
             </td>
             <td>
                 <div class="small fw-semibold text-primary mb-1">
-                    <i class="bi bi-clipboard2-pulse"></i> ${pr.diagnosisText}
+                    <i class="bi bi-clipboard2-pulse"></i> ${_safeEscapeHtml(pr.diagnosisText || '')}
                 </div>
                 <div class="d-flex flex-wrap gap-1">${drugBadges}</div>
                 ${adviceDisplay}
@@ -3766,18 +4058,19 @@
             <td class="text-end">
                 <div class="fw-bold text-success fs-6 presc-row-amount df-num" data-amount="${pr.totalAmount || 0}">${formattedTotal}</div>
                 <small class="text-muted d-block df-num">${itemCount} loại thuốc</small>
-                <span class="badge bg-light text-secondary border mt-1" style="font-size: 10px;">
-                    <i class="bi bi-send-check text-primary me-1"></i>Chuyển Kế toán (Tự chọn mua)
+                <span class="badge ${badgeCls} mt-1" style="font-size: 10px;">
+                    <i class="bi ${badgeIcon} me-1"></i>${_safeEscapeHtml(pr.statusDisplay || 'Đã xuất kho theo đơn')}${issueSuffix}
                 </span>
             </td>
             <td class="df-num">${followupBadge}</td>
             <td class="text-center">
-                <div class="d-flex align-items-center justify-content-center gap-2">
+                <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
                     <button type="button" class="btn btn-sm btn-outline-secondary"
                             title="Xem & In đơn thuốc"
                             onclick="openPrintPrescriptionModal(${pr.prescriptionId})">
                         <i class="bi bi-printer-fill text-primary"></i> In
                     </button>
+                    ${actionButtons}
                     <button type="button" class="df-btn-icon-muted"
                             title="Xóa đơn thuốc này"
                             onclick="deletePrescription(${pr.prescriptionId})">
@@ -3791,8 +4084,34 @@
             updatePrescriptionCount();
         }
 
+        async function cancelPrescription(prescriptionId) {
+            const reason = prompt('Nhập lý do hủy đơn thuốc (hệ thống sẽ tự động hoàn kho nếu đơn chưa cấp phát/thanh toán):', 'Bác sĩ điều chỉnh chỉ định');
+            if (reason === null) return;
+
+            try {
+                const res = await fetch(`/api/doctor/prescriptions/${prescriptionId}/cancel`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason: reason })
+                });
+                const result = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error(result.message || 'Không thể hủy đơn thuốc');
+                }
+                showToast('Đã hủy đơn thuốc và hoàn kho thành công!');
+                const oldRow = document.getElementById(`pr-row-${prescriptionId}`);
+                if (oldRow) oldRow.remove();
+                if (result.data) {
+                    addPrescriptionRowToTable(result.data);
+                }
+                await loadMedicationsCatalogWithStock();
+            } catch (err) {
+                showToast(err.message, true);
+            }
+        }
+
         function deletePrescription(prescriptionId) {
-            if (!confirm('Bạn có chắc chắn muốn xóa đơn thuốc này?')) {
+            if (!confirm('Bạn có chắc chắn muốn xóa đơn thuốc này? (Nếu đã trừ kho và chưa thanh toán, hệ thống sẽ tự hoàn kho)')) {
                 return;
             }
 
@@ -3805,11 +4124,12 @@
                     }
                     return res.json();
                 })
-                .then(result => {
-                    showToast('Đã xóa đơn thuốc thành công!');
+                .then(async result => {
+                    showToast('Đã xóa đơn thuốc và đồng bộ hoàn kho thành công!');
                     const row = document.getElementById(`pr-row-${prescriptionId}`);
                     if (row) row.remove();
                     updatePrescriptionCount();
+                    await loadMedicationsCatalogWithStock();
                 })
                 .catch(err => {
                     showToast(err.message, true);

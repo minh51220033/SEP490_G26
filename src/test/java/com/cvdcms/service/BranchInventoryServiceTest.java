@@ -38,7 +38,7 @@ class BranchInventoryServiceTest {
     }
 
     @Test
-    @DisplayName("search - Báo lỗi khi branchId null hoặc <= 0")
+    @DisplayName("search - Reject when branchId is null or <= 0")
     void search_invalidBranchId_throwsException() {
         Pageable pageable = PageRequest.of(0, 10);
 
@@ -52,7 +52,7 @@ class BranchInventoryServiceTest {
     }
 
     @Test
-    @DisplayName("search - Báo lỗi khi pageable null")
+    @DisplayName("search - Reject when pageable is null")
     void search_nullPageable_throwsException() {
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> inventoryService.search(1L, "comp", false, null));
@@ -61,7 +61,7 @@ class BranchInventoryServiceTest {
     }
 
     @Test
-    @DisplayName("search - Chuẩn hóa keyword rỗng/khoảng trắng thành null trước khi truy vấn")
+    @DisplayName("search - Normalize blank/whitespace keyword to null before querying")
     void search_blankKeyword_normalizedToNull() {
         Pageable pageable = PageRequest.of(0, 10);
         when(inventoryRepository.searchByBranch(1L, null, Boolean.TRUE, pageable))
@@ -75,7 +75,7 @@ class BranchInventoryServiceTest {
     }
 
     @Test
-    @DisplayName("search - Trim keyword và ánh xạ đầy đủ BranchInventory sang InventoryItemDTO")
+    @DisplayName("search - Trim keyword and map full BranchInventory fields to InventoryItemDTO")
     void search_validParams_mapsEntityToDto() {
         Pageable pageable = PageRequest.of(0, 10);
         Branch branch = new Branch();

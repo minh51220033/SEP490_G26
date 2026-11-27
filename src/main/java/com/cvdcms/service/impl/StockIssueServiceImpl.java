@@ -591,6 +591,10 @@ public class StockIssueServiceImpl implements StockIssueService {
         dto.setSignedByUserId(si.getSignedByUserId());
         dto.setSignedByName(si.getSignedByName());
         dto.setSignedAt(si.getSignedAt());
+        dto.setPrescriptionId(si.getPrescription() != null ? si.getPrescription().getPrescriptionId() : null);
+        dto.setPrescriptionCode(si.getPrescriptionCode() != null
+                ? si.getPrescriptionCode()
+                : (si.getPrescription() != null ? si.getPrescription().getPrescriptionCode() : null));
 
         BigDecimal totalQty = BigDecimal.ZERO;
         BigDecimal totalVal = BigDecimal.ZERO;

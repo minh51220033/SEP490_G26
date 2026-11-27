@@ -10,11 +10,19 @@ public interface PrescriptionService {
 
     List<MedicationDTO> getActiveMedications();
 
+    List<MedicationDTO> getActiveMedicationsForBranch(Long branchId);
+
+    Long resolveBranchIdForVisit(Long visitId);
+
     List<PrescriptionResponseDTO> getPrescriptionsByVisit(Long visitId);
 
     PrescriptionResponseDTO getPrescriptionById(Long prescriptionId);
 
     PrescriptionResponseDTO createPrescription(PrescriptionRequestDTO request);
+
+    PrescriptionResponseDTO updatePrescription(Long prescriptionId, PrescriptionRequestDTO request);
+
+    PrescriptionResponseDTO cancelPrescription(Long prescriptionId, String reason);
 
     void deletePrescription(Long prescriptionId);
 }

@@ -95,7 +95,11 @@ public class MedicationServiceImpl implements MedicationService {
         applyMedicationToMaterial(saved, material);
         material.setCategory(MEDICATION_MATERIAL_CATEGORY);
         material.setMinStockThreshold(DEFAULT_MIN_STOCK);
-        materialRepository.saveAndFlush(material);
+        material = materialRepository.saveAndFlush(material);
+
+        // Đồng bộ 2 chiều medications.material_id <-> materials.medication_id
+        saved.setMaterial(material);
+        saved = medicationRepository.saveAndFlush(saved);
 
         log.info("Đã tạo thuốc mới {} - {} và đồng bộ mặt hàng kho (material_id={})",
                 saved.getDrugCode(), saved.getDrugName(), material.getMaterialId());
@@ -132,12 +136,25 @@ public class MedicationServiceImpl implements MedicationService {
         mapFromDTO(dto, entity);
         Medication saved = medicationRepository.save(entity);
 
-        linked.ifPresent(material -> {
-            applyMedicationToMaterial(saved, material);
-            materialRepository.save(material);
-        });
-        log.info("Đã cập nhật thuốc ID={}: {} - {} (đồng bộ kho: {})",
-                id, saved.getDrugCode(), saved.getDrugName(), linked.isPresent());
+        Material syncedMaterial;
+        if (linked.isPresent()) {
+            syncedMaterial = linked.get();
+            applyMedicationToMaterial(saved, syncedMaterial);
+            syncedMaterial = materialRepository.save(syncedMaterial);
+        } else {
+            syncedMaterial = new Material();
+            syncedMaterial.setMedication(saved);
+            applyMedicationToMaterial(saved, syncedMaterial);
+            syncedMaterial.setCategory(MEDICATION_MATERIAL_CATEGORY);
+            syncedMaterial.setMinStockThreshold(DEFAULT_MIN_STOCK);
+            syncedMaterial = materialRepository.saveAndFlush(syncedMaterial);
+        }
+        if (saved.getMaterial() == null || !syncedMaterial.getMaterialId().equals(saved.getMaterial().getMaterialId())) {
+            saved.setMaterial(syncedMaterial);
+            saved = medicationRepository.save(saved);
+        }
+        log.info("Đã cập nhật thuốc ID={}: {} - {} (đồng bộ kho: material_id={})",
+                id, saved.getDrugCode(), saved.getDrugName(), syncedMaterial.getMaterialId());
         return toDTO(saved);
     }
 
@@ -168,6 +185,9 @@ public class MedicationServiceImpl implements MedicationService {
         }
 
         Optional<Material> linked = materialRepository.findByMedication_MedicationId(id);
+        if (linked.isEmpty() && entity.getMaterial() != null) {
+            linked = Optional.of(entity.getMaterial());
+        }
         if (linked.isPresent()) {
             Material material = linked.get();
             Long materialId = material.getMaterialId();
@@ -181,6 +201,8 @@ public class MedicationServiceImpl implements MedicationService {
                         "Không thể xóa: thuốc '" + entity.getDrugName() + "' đã phát sinh giao dịch trong kho vật tư. Hãy chuyển sang Ngừng sử dụng thay thế.");
             }
             // Mặt hàng kho chưa từng giao dịch → xóa cùng thuốc để không để lại bản ghi mồ côi.
+            entity.setMaterial(null);
+            medicationRepository.saveAndFlush(entity);
             materialRepository.delete(material);
             materialRepository.flush();
         }
@@ -251,6 +273,10 @@ public class MedicationServiceImpl implements MedicationService {
     }
 
     private MedicationDTO toDTO(Medication e) {
+        Long matId = e.getMaterial() != null
+                ? e.getMaterial().getMaterialId()
+                : materialRepository.findByMedication_MedicationId(e.getMedicationId())
+                        .map(Material::getMaterialId).orElse(null);
         return MedicationDTO.builder()
                 .medicationId(e.getMedicationId())
                 .drugCode(e.getDrugCode())
@@ -260,7 +286,7 @@ public class MedicationServiceImpl implements MedicationService {
                 .usageInstruction(e.getUsageInstruction())
                 .isActive(e.getIsActive())
                 .salePrice(e.getSalePrice())
-                .materialId(e.getMaterial() != null ? e.getMaterial().getMaterialId() : null)
+                .materialId(matId)
                 .build();
     }
 }

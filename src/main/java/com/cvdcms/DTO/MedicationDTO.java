@@ -19,4 +19,10 @@ public class MedicationDTO {
     private Boolean isActive;
     private java.math.BigDecimal salePrice;
     private Long materialId;
+    private java.math.BigDecimal availableStock;
+    private java.math.BigDecimal expiredStock;
+    private java.math.BigDecimal minStockThreshold;
+    private java.time.LocalDate nearestExpiryDate;
+    private String nearestBatchNumber;
+    private String stockStatus;
 }

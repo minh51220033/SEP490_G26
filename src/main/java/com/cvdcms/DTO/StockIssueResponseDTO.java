@@ -29,6 +29,8 @@ public class StockIssueResponseDTO {
     private Long signedByUserId;
     private String signedByName;
     private LocalDateTime signedAt;
+    private Long prescriptionId;
+    private String prescriptionCode;
     private int itemCount;
     private BigDecimal totalQuantity = BigDecimal.ZERO;
     private BigDecimal totalEstimatedValue = BigDecimal.ZERO;

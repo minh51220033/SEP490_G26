@@ -33,7 +33,7 @@ class InventoryFileStorageUtilTest {
     }
 
     @Test
-    @DisplayName("validateRequiredInvoiceUrl - Chặn rỗng, path traversal, sai prefix và sai định dạng")
+    @DisplayName("validateRequiredInvoiceUrl - Reject blank, path traversal, invalid prefix, and invalid format")
     void validateRequiredInvoiceUrl_rejectsInvalidUrls() {
         assertEquals(HttpStatus.BAD_REQUEST,
                 assertThrows(ResponseStatusException.class,
@@ -59,14 +59,14 @@ class InventoryFileStorageUtilTest {
     }
 
     @Test
-    @DisplayName("validateRequiredInvoiceUrl - Chấp nhận đường dẫn hóa đơn hợp lệ và trim khoảng trắng")
+    @DisplayName("validateRequiredInvoiceUrl - Accept valid invoice path and trim whitespace")
     void validateRequiredInvoiceUrl_acceptsValidUrl() {
         String valid = InventoryFileStorageUtil.validateRequiredInvoiceUrl("  /uploads/invoices/inv_123.pdf  ");
         assertEquals("/uploads/invoices/inv_123.pdf", valid);
     }
 
     @Test
-    @DisplayName("saveInvoiceFile - Chặn file rỗng, quá 5MB, sai phần mở rộng, sai MIME hoặc giả mạo magic bytes")
+    @DisplayName("saveInvoiceFile - Reject empty file, >5MB size, bad extension, bad MIME, or spoofed magic bytes")
     void saveInvoiceFile_rejectsInvalidFiles() {
         MockMultipartFile empty = new MockMultipartFile("file", "inv.png", "image/png", new byte[0]);
         assertEquals(HttpStatus.BAD_REQUEST,
@@ -91,7 +91,7 @@ class InventoryFileStorageUtilTest {
     }
 
     @Test
-    @DisplayName("saveInvoiceFile - Lưu thành công file PDF hợp lệ vào uploads/invoices/")
+    @DisplayName("saveInvoiceFile - Save valid PDF file to uploads/invoices/")
     void saveInvoiceFile_savesValidPdf() {
         byte[] pdfBytes = "%PDF-1.4\n%test\n%%EOF".getBytes(StandardCharsets.US_ASCII);
         MockMultipartFile pdfFile = new MockMultipartFile("file", "hoa_don.pdf", "application/pdf", pdfBytes);
@@ -106,7 +106,7 @@ class InventoryFileStorageUtilTest {
     }
 
     @Test
-    @DisplayName("saveSignatureDataUrl - Chặn rỗng, Base64 lỗi, không phải PNG, kích thước nhỏ và canvas trắng")
+    @DisplayName("saveSignatureDataUrl - Reject blank, malformed Base64, non-PNG, tiny size, and blank canvas")
     void saveSignatureDataUrl_rejectsInvalidOrBlankSignatures() throws Exception {
         assertEquals(HttpStatus.BAD_REQUEST,
                 assertThrows(ResponseStatusException.class,
@@ -137,7 +137,7 @@ class InventoryFileStorageUtilTest {
     }
 
     @Test
-    @DisplayName("saveSignatureDataUrl - Lưu thành công chữ ký PNG có nét vẽ vào uploads/signatures/")
+    @DisplayName("saveSignatureDataUrl - Save drawn PNG signature to uploads/signatures/")
     void saveSignatureDataUrl_savesValidDrawnSignature() throws Exception {
         BufferedImage drawnImg = new BufferedImage(120, 50, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = drawnImg.createGraphics();

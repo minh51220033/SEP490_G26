@@ -68,13 +68,22 @@ public class StockIssue {
     @Column(name = "signed_at")
     private LocalDateTime signedAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "prescription_id")
+    private Prescription prescription;
+
+    @Column(name = "prescription_code", length = 30)
+    private String prescriptionCode;
+
     @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StockIssueItem> items = new ArrayList<>();
 
     @PrePersist
     public void prePersist() {
         if (this.issueCode == null || this.issueCode.isEmpty()) {
-            this.issueCode = "PX" + System.currentTimeMillis();
+            String datePart = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyMMdd"));
+            String randPart = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+            this.issueCode = "PX" + datePart + "-" + randPart;
         }
     }
 }

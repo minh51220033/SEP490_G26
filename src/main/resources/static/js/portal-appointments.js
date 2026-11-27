@@ -529,8 +529,21 @@
             }
 
             if (!result.available) {
-                message.innerHTML = `<i class="bi bi-exclamation-octagon-fill fs-5 me-2 text-danger"></i><span>${escapeHtml(result.reason || 'Buổi này phòng khám đã kín chỗ.')}</span>`;
-                message.className = 'appointment-availability is-error d-flex align-items-center';
+                const isSoftFullSession = result.reason && result.reason.includes('đầy');
+                if (!isSoftFullSession) {
+                    message.innerHTML = `<i class="bi bi-exclamation-octagon-fill fs-5 me-2 text-danger"></i><span>${escapeHtml(result.reason || 'Buổi khám hiện không khả dụng.')}</span>`;
+                    message.className = 'appointment-availability is-error d-flex align-items-center';
+                    return;
+                }
+                if (Array.isArray(result.doctors)) {
+                    result.doctors.forEach(d => doctor.appendChild(option(d.id, `${d.name}${d.specialty ? ' · ' + d.specialty : ''}`)));
+                }
+                doctor.disabled = false;
+                available = true;
+                button.disabled = false;
+                message.innerHTML = `<i class="bi bi-exclamation-triangle-fill fs-5 me-2 text-warning"></i><span>Buổi khám này hiện có thể đông khách. Bạn vẫn có thể chọn giờ mong muốn hoặc đổi sang ca khám khác trống hơn.</span>`;
+                message.className = 'appointment-availability is-warning d-flex align-items-center';
+                await loadSlots(token);
                 return;
             }
 
@@ -646,12 +659,29 @@
 
             currentOverlapState = { hasWarning: true, confirmOverlap: false };
             const suggestions = collectFriendlySuggestions(res);
-            const chipsHtml = suggestions.length
-                ? suggestions.map((start, idx) => {
+            const altSessions = Array.isArray(res.alternativeSessionSuggestions) ? res.alternativeSessionSuggestions : [];
+            const isFullSessionBusy = suggestions.length === 0;
+            const warningBodyText = isFullSessionBusy
+                ? 'Buổi khám này có thể đông. Bạn có thể chọn ca khám khác để tránh chờ đợi hoặc giữ nguyên giờ đã chọn.'
+                : 'Thời gian bạn chọn có thể đông khách. Bạn vẫn muốn đặt lịch vào khung giờ này chứ?';
+
+            let chipsHtml = '';
+            if (suggestions.length) {
+                chipsHtml = suggestions.map((start, idx) => {
                     const hiddenCls = idx >= 3 ? ' d-none js-extra-suggest-chip' : '';
                     return `<button type="button" class="btn btn-outline-primary fw-semibold px-3 py-2 js-overlap-suggest-btn${hiddenCls}" data-slot="${escapeHtml(start)}">${escapeHtml(start)}</button>`;
-                }).join('')
-                : '<span class="small text-muted">Hiện chưa có khung giờ trống khác phù hợp trong buổi này.</span>';
+                }).join('');
+            } else if (altSessions.length) {
+                chipsHtml = altSessions.map(alt => {
+                    const startShort = String(alt.startTime || '').slice(0, 5);
+                    const dParts = String(alt.date || '').split('-');
+                    const dateFmt = dParts.length === 3 ? `${dParts[2]}/${dParts[1]}` : String(alt.date || '');
+                    const chipLabel = `${alt.sessionLabel || alt.session} (${dateFmt}) · ${startShort}`;
+                    return `<button type="button" class="btn btn-outline-primary fw-semibold px-3 py-2 js-alt-session-btn" data-date="${escapeHtml(alt.date)}" data-session="${escapeHtml(alt.session)}" data-slot="${escapeHtml(startShort)}">${escapeHtml(chipLabel)}</button>`;
+                }).join('');
+            } else {
+                chipsHtml = '<span class="small text-muted">Hiện chưa có khung giờ trống khác phù hợp trong buổi này.</span>';
+            }
             const moreBtnHtml = suggestions.length > 3
                 ? `<button type="button" class="btn btn-sm btn-link text-decoration-none px-1 js-show-more-slots">Xem thêm</button>`
                 : '';
@@ -659,13 +689,13 @@
             panel.innerHTML = `
                 <div class="p-3 rounded-3 border mb-3" style="background:#fffbeb;border-color:#fcd34d !important;">
                     <div class="fw-bold text-dark mb-1"><i class="bi bi-exclamation-circle-fill text-warning me-2"></i>Lưu ý về thời gian đặt lịch</div>
-                    <p class="small text-dark mb-3">Thời gian bạn chọn có thể đông khách. Bạn vẫn muốn đặt lịch vào khung giờ này chứ?</p>
+                    <p class="small text-dark mb-3">${escapeHtml(warningBodyText)}</p>
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <button type="button" id="btnKeepOverlapSlot" class="btn btn-sm btn-outline-warning text-dark fw-semibold px-3">
                             Vẫn chọn giờ này
                         </button>
                         <button type="button" id="btnPickOtherSlot" class="btn btn-sm btn-primary fw-semibold px-3">
-                            Chọn giờ khác
+                            ${isFullSessionBusy && altSessions.length ? 'Đổi ca tốt hơn' : 'Chọn giờ khác'}
                         </button>
                         <span id="keepOverlapStatus" class="small text-success fw-semibold ms-1" hidden>
                             <i class="bi bi-check-circle-fill me-1"></i>Đã xác nhận giữ giờ ${escapeHtml(slotVal)}
@@ -673,8 +703,8 @@
                     </div>
                 </div>
                 <div id="overlapSuggestSection" class="p-3 rounded-3 border bg-light">
-                    <div class="fw-bold text-dark mb-1">Gợi ý thời gian hợp lý</div>
-                    <p class="small text-muted mb-2">Bạn có thể cân nhắc những giờ sau để hạn chế phải chờ.</p>
+                    <div class="fw-bold text-dark mb-1">${isFullSessionBusy && altSessions.length ? 'Gợi ý ca khám ít đông hơn' : 'Gợi ý thời gian hợp lý'}</div>
+                    <p class="small text-muted mb-2">${isFullSessionBusy && altSessions.length ? 'Bạn có thể chuyển nhanh sang một trong các ca khám trống dưới đây.' : 'Bạn có thể cân nhắc những giờ sau để hạn chế phải chờ.'}</p>
                     <div class="d-flex flex-wrap align-items-center gap-2 js-suggest-group">
                         ${chipsHtml}
                         ${moreBtnHtml}
@@ -707,7 +737,7 @@
                     if (keepStatus) keepStatus.hidden = true;
                     if (suggestBox) {
                         suggestBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                        const firstChip = suggestBox.querySelector('.js-overlap-suggest-btn');
+                        const firstChip = suggestBox.querySelector('.js-overlap-suggest-btn, .js-alt-session-btn');
                         if (firstChip) firstChip.focus();
                     }
                 });
@@ -721,6 +751,21 @@
                         }
                         $('slotTime').value = targetSlot;
                         checkOverlapForSelectedSlot(sequence).catch(() => {});
+                    }
+                });
+            });
+            panel.querySelectorAll('.js-alt-session-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const targetDate = btn.getAttribute('data-date');
+                    const targetSession = btn.getAttribute('data-session');
+                    const targetSlot = btn.getAttribute('data-slot');
+                    if (targetDate && $('appointmentDate')) $('appointmentDate').value = targetDate;
+                    if (targetSession && $('preferredSession')) $('preferredSession').value = targetSession;
+                    originalOverlapSlot = null;
+                    await checkAvailability();
+                    if (targetSlot && $('slotTime')) {
+                        $('slotTime').value = targetSlot;
+                        await checkOverlapForSelectedSlot(sequence).catch(() => {});
                     }
                 });
             });

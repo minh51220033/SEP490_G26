@@ -756,7 +756,7 @@ public class ResourceBookingTransactionService {
     }
 
     private boolean isDoctorOnApprovedLeave(Long staffId, Long branchId, LocalDate date, Long shiftId) {
-        for (LeaveRequest lr : leaveRequestRepository.findApprovedOn(staffId, date, LeaveStatus.APPROVED)) {
+        for (LeaveRequest lr : leaveRequestRepository.findApprovedForStaffOnDate(staffId, date, LeaveStatus.APPROVED)) {
             boolean branchOk = lr.getBranch() == null || Objects.equals(branchId, lr.getBranch().getBranchId());
             boolean shiftOk = lr.getShift() == null || Objects.equals(shiftId, lr.getShift().getShiftId());
             if (branchOk && shiftOk) {

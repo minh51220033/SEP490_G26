@@ -47,6 +47,8 @@ public class PrescriptionResponseDTO {
     private String choiceNote;
     private String handledByName;
     private String handledAt;
+    private Boolean inventoryDeducted;
+    private String stockIssueCode;
 
     @Builder.Default
     private List<PrescriptionItemResponseDTO> items = new ArrayList<>();
