@@ -245,68 +245,69 @@ public class AppointmentPolicyServiceImpl implements AppointmentPolicyService {
             }
         }
 
-        List<Appointment> sessionMatches = uniqueCandidates.values().stream()
+        List<Appointment> dayMatches = uniqueCandidates.values().stream()
                 .filter(a -> excludeAppointmentId == null || !Objects.equals(a.getAppointmentId(), excludeAppointmentId))
-                .filter(a -> session == PreferredSession.ANY
-                        || a.getPreferredSession() == session
-                        || a.getPreferredSession() == PreferredSession.ANY)
                 .toList();
-        if (sessionMatches.isEmpty()) {
+        if (dayMatches.isEmpty()) {
             return new PatientSessionConflict(false, null, null, null, null);
         }
 
-        Map<Long, Visit> visitByAppt = Collections.emptyMap();
-        List<Long> checkedInIds = sessionMatches.stream()
+        Map<Long, Visit> activeOrCompletedVisitByAppt = Collections.emptyMap();
+        Set<Long> apptsWithOnlyCancelledVisits = Collections.emptySet();
+        List<Long> checkedInIds = dayMatches.stream()
                 .filter(a -> a.getStatus() == AppointmentStatus.CHECKED_IN && a.getAppointmentId() != null)
                 .map(Appointment::getAppointmentId)
                 .toList();
         if (!checkedInIds.isEmpty() && visitRepository != null) {
             List<Visit> linked = visitRepository.findByAppointmentIdIn(checkedInIds);
             if (linked != null && !linked.isEmpty()) {
-                visitByAppt = new HashMap<>();
+                activeOrCompletedVisitByAppt = new HashMap<>();
+                Set<Long> allLinkedIds = new HashSet<>();
                 for (Visit v : linked) {
-                    if (v != null && v.getAppointmentId() != null && v.getStatus() != VisitStatus.CANCELLED) {
-                        visitByAppt.putIfAbsent(v.getAppointmentId(), v);
+                    if (v != null && v.getAppointmentId() != null) {
+                        allLinkedIds.add(v.getAppointmentId());
+                        if (v.getStatus() != VisitStatus.CANCELLED) {
+                            activeOrCompletedVisitByAppt.putIfAbsent(v.getAppointmentId(), v);
+                        }
                     }
                 }
+                apptsWithOnlyCancelledVisits = new HashSet<>(allLinkedIds);
+                apptsWithOnlyCancelledVisits.removeAll(activeOrCompletedVisitByAppt.keySet());
             }
         }
 
-        for (Appointment existing : sessionMatches) {
+        for (Appointment existing : dayMatches) {
             if (existing.getStatus() == AppointmentStatus.CHECKED_IN && visitRepository != null) {
-                Visit linkedVisit = visitByAppt.get(existing.getAppointmentId());
-                if (linkedVisit != null && isClinicalExamFinished(linkedVisit)) {
-                    // Bệnh nhân đã hoàn thành khám lâm sàng (WAITING_PAYMENT với actual_end_time / COMPLETED / CANCELLED)
-                    // -> Được phép đặt thêm lịch khám tiếp trong cùng buổi nếu còn sức chứa.
+                if (apptsWithOnlyCancelledVisits.contains(existing.getAppointmentId())) {
+                    continue;
+                }
+                Visit linkedVisit = activeOrCompletedVisitByAppt.get(existing.getAppointmentId());
+                if (linkedVisit != null && isAppointmentTrulyCompleted(linkedVisit)) {
+                    // Bệnh nhân đã thực sự hoàn thành ca khám (VisitStatus.COMPLETED / CANCELLED)
+                    // -> Mở quyền đặt lịch khám tiếp trong cùng ngày.
                     continue;
                 }
             }
             String existingBranchName = existing.getBranch() != null ? existing.getBranch().getBranchName() : "cơ sở khác";
-            String sessionText = switch (session) {
-                case MORNING -> "buổi sáng";
-                case AFTERNOON -> "buổi chiều";
-                case EVENING -> "buổi tối";
-                default -> "buổi khám này";
-            };
             String dateText = date.equals(LocalDate.now(clock))
                     ? "hôm nay (" + date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")) + ")"
                     : "ngày " + date.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
             String codeSuffix = existing.getAppointmentCode() != null ? " (Mã " + existing.getAppointmentCode() + ")" : "";
-            String msg = "Người khám này đã có lịch hẹn trong " + sessionText + " " + dateText
+            String msg = "Người khám này đã có lịch hẹn chưa hoàn thành trong " + dateText
                     + " tại " + existingBranchName + codeSuffix
-                    + ". Vui lòng kiểm tra lịch hẹn hiện tại trước khi đặt lịch mới.";
+                    + ". Vui lòng hoàn thành hoặc hủy lịch hẹn hiện tại trước khi đặt lịch mới.";
             return new PatientSessionConflict(true, existing.getAppointmentId(), existing.getAppointmentCode(), existingBranchName, msg);
         }
         return new PatientSessionConflict(false, null, null, null, null);
     }
 
-    private static boolean isClinicalExamFinished(Visit visit) {
+    private static boolean isAppointmentTrulyCompleted(Visit visit) {
         if (visit == null || visit.getStatus() == null) {
             return false;
         }
         return switch (visit.getStatus()) {
-            case COMPLETED, CANCELLED, WAITING_PAYMENT -> true;
-            case WAITING, IN_EXAM, WAITING_PARACLINICAL, WAITING_RESULT, IN_TREATMENT -> false;
+            case COMPLETED, CANCELLED -> true;
+            case WAITING, IN_EXAM, WAITING_PARACLINICAL, WAITING_RESULT, IN_TREATMENT, WAITING_PAYMENT -> false;
         };
     }
 

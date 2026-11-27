@@ -310,8 +310,8 @@ public class QueueWorkflowService {
             String rawChair = cId != null ? chairLookup.getOrDefault(cId, "Ghế " + cId) : "";
 
             boolean isCallingOrExam = (t.getStatus() == QueueStatus.CALLED || t.getStatus() == QueueStatus.IN_SERVICE);
-            String displayRoom = (isCallingOrExam && !rawRoom.isEmpty()) ? rawRoom : "Chưa phân công";
-            String displayChair = (isCallingOrExam && !rawChair.isEmpty()) ? rawChair : "Chưa phân công";
+            String displayRoom = !rawRoom.isEmpty() ? rawRoom : "Chưa phân công";
+            String displayChair = !rawChair.isEmpty() ? rawChair : "Chưa phân công";
             String rawPatientName = (t.getVisit() != null && t.getVisit().getPatientProfile() != null
                     && t.getVisit().getPatientProfile().getFullName() != null
                     && !t.getVisit().getPatientProfile().getFullName().isBlank())

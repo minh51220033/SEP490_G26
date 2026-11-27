@@ -17,30 +17,54 @@
         return identity ? `${identity}_${number.callTime || 0}` : null;
     }
 
+    function isAssignedValue(val) {
+        const s = String(val || '').trim();
+        return Boolean(s && s !== UNASSIGNED && s !== '—' && s !== '-');
+    }
+
     function hasValidRoomAndChair(number) {
         if (!number) return false;
-        const room = (number.room || '').trim();
-        const chair = (number.chair || '').trim();
-        return Boolean(room && chair && room !== UNASSIGNED && chair !== UNASSIGNED);
+        return isAssignedValue(number.room) && isAssignedValue(number.chair);
+    }
+
+    function formatSpokenTicket(rawNo) {
+        const cleaned = String(rawNo || '').trim().toUpperCase();
+        if (!cleaned) return 'số mới';
+        if (cleaned.startsWith('P-')) {
+            return `ưu tiên số ${cleaned.slice(2)}`;
+        }
+        return `số ${cleaned}`;
     }
 
     function buildAnnouncementText(number) {
-        if (!hasValidRoomAndChair(number)) return null;
-        const ticketNo = String(number.number || '').trim();
-        const patientName = String(number.patientFullName || '').trim();
-        const room = String(number.room).trim();
-        const chair = String(number.chair).trim();
-        if (patientName && patientName !== '—') {
-            return `Xin mời bệnh nhân số ${ticketNo}, ${patientName}, vào ${room}, ${chair}. Xin mời!`;
+        if (!number) return null;
+        const ticketPhrase = formatSpokenTicket(number.number);
+        const hasRoom = isAssignedValue(number.room);
+        const hasChair = isAssignedValue(number.chair);
+        const room = hasRoom ? String(number.room).trim() : '';
+        const chair = hasChair ? String(number.chair).trim() : '';
+
+        if (hasRoom && hasChair) {
+            return `Xin mời bệnh nhân ${ticketPhrase} vào ${room}, ${chair}.`;
         }
-        return `Xin mời bệnh nhân số ${ticketNo}, vào ${room}, ${chair}. Xin mời!`;
+        if (hasRoom) {
+            return `Xin mời bệnh nhân ${ticketPhrase} vào ${room}.`;
+        }
+        if (hasChair) {
+            return `Xin mời bệnh nhân ${ticketPhrase} đến ${chair}.`;
+        }
+        return `Xin mời bệnh nhân ${ticketPhrase} đến khu vực tiếp đón để được hướng dẫn.`;
     }
 
     function pickVietnameseVoice(voices) {
         if (!Array.isArray(voices) || voices.length === 0) return null;
-        return voices.find(v => String(v.lang || '').toLowerCase() === 'vi-vn')
-            || voices.find(v => String(v.lang || '').toLowerCase().startsWith('vi'))
-            || null;
+        const viVoices = voices.filter(v => {
+            const lang = String(v.lang || '').toLowerCase().replace('_', '-');
+            return lang === 'vi-vn' || lang.startsWith('vi-');
+        });
+        if (viVoices.length === 0) return null;
+        const preferred = viVoices.find(v => /hoaimy|namminh|google|linh|an/i.test(String(v.name || '')));
+        return preferred || viVoices.find(v => String(v.lang || '').toLowerCase().replace('_', '-') === 'vi-vn') || viVoices[0];
     }
 
     function createCallDeduplicator(storage, storageKey) {
@@ -86,7 +110,7 @@
                 if (!Array.isArray(calledNumbers)) return [];
                 const fresh = calledNumbers
                     .map(n => ({ number: n, key: callEventKey(n) }))
-                    .filter(item => item.key && !seen.has(item.key) && hasValidRoomAndChair(item.number));
+                    .filter(item => item.key && !seen.has(item.key));
                 fresh.sort((a, b) => (a.number.callTime || 0) - (b.number.callTime || 0));
                 if (fresh.length > 0) {
                     fresh.forEach(item => seen.add(item.key));
@@ -178,8 +202,50 @@
             });
         }
 
-        if ('speechSynthesis' in window && typeof window.speechSynthesis.getVoices === 'function') {
-            window.speechSynthesis.getVoices();
+        const voiceWarningEl = document.getElementById('tvVoiceWarning');
+        const testVoiceBtn = document.getElementById('testVoiceBtn');
+        let cachedViVoice = null;
+        let speechWatchdog = null;
+        let currentAudioEl = null;
+
+        function refreshVietnameseVoice() {
+            if (!('speechSynthesis' in window) || typeof window.speechSynthesis.getVoices !== 'function') {
+                cachedViVoice = null;
+                return null;
+            }
+            cachedViVoice = pickVietnameseVoice(window.speechSynthesis.getVoices());
+            updateVoiceWarningUi();
+            return cachedViVoice;
+        }
+
+        function updateVoiceWarningUi() {
+            if (testVoiceBtn) {
+                testVoiceBtn.style.display = speechEnabled ? 'inline-flex' : 'none';
+            }
+            if (!voiceWarningEl) return;
+            if (!speechEnabled) {
+                voiceWarningEl.textContent = 'Nhấn "Âm thanh đang tắt" để bật đọc số tiếng Việt';
+                voiceWarningEl.style.display = 'inline-flex';
+                return;
+            }
+            voiceWarningEl.style.display = 'none';
+        }
+
+        if ('speechSynthesis' in window) {
+            refreshVietnameseVoice();
+            if (typeof window.speechSynthesis.addEventListener === 'function') {
+                window.speechSynthesis.addEventListener('voiceschanged', refreshVietnameseVoice);
+            } else {
+                window.speechSynthesis.onvoiceschanged = refreshVietnameseVoice;
+            }
+        }
+        updateVoiceWarningUi();
+
+        if (testVoiceBtn) {
+            testVoiceBtn.addEventListener('click', () => {
+                if (!speechEnabled) return;
+                speak('Xin mời bệnh nhân số 03 vào Phòng Khám Tổng quát 1, Ghế Khám Tổng Quát 01.', true);
+            });
         }
 
         if (soundToggle) {
@@ -191,63 +257,126 @@
                         audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
                         audioContext.resume();
                     } catch (_) {}
+                    refreshVietnameseVoice();
                     soundToggle.classList.add('is-active');
                     if (soundIcon) soundIcon.className = 'bi bi-volume-up-fill';
-                    if (soundText) soundText.textContent = 'Đang bật âm';
-                    speak('Hệ thống âm thanh gọi số phòng khám đã kích hoạt.');
+                    if (soundText) soundText.textContent = 'Âm thanh đang bật';
+                    updateVoiceWarningUi();
+                    speak('Xin mời bệnh nhân số 03 vào Phòng Khám Tổng quát 1, Ghế Khám Tổng Quát 01.', false);
                 } else {
                     soundToggle.classList.remove('is-active');
                     if (soundIcon) soundIcon.className = 'bi bi-volume-mute-fill';
-                    if (soundText) soundText.textContent = 'Bật âm thanh';
+                    if (soundText) soundText.textContent = 'Âm thanh đang tắt';
                     speechQueue.length = 0;
+                    if (speechWatchdog) {
+                        clearTimeout(speechWatchdog);
+                        speechWatchdog = null;
+                    }
+                    if (currentAudioEl) {
+                        try { currentAudioEl.pause(); currentAudioEl.currentTime = 0; } catch (_) {}
+                        currentAudioEl = null;
+                    }
                     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
                     speaking = false;
+                    updateVoiceWarningUi();
                 }
             });
         }
 
-        function speak(text) {
-            if (!text || !speechEnabled || !('speechSynthesis' in window)) return;
-            speechQueue.push(text);
+        function playChime() {
+            if (!audioContext || audioContext.state !== 'running') return;
+            const start = audioContext.currentTime;
+            [523.25, 659.25].forEach((frequency, index) => {
+                const oscillator = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                oscillator.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.0001, start + index * 0.22);
+                gain.gain.exponentialRampToValueAtTime(0.18, start + index * 0.22 + 0.025);
+                gain.gain.exponentialRampToValueAtTime(0.0001, start + index * 0.22 + 0.18);
+                oscillator.connect(gain).connect(audioContext.destination);
+                oscillator.start(start + index * 0.22);
+                oscillator.stop(start + index * 0.22 + 0.19);
+            });
+        }
+
+        function speak(text, urgent) {
+            if (!text || !speechEnabled) return;
+            const item = { text: String(text), urgent: Boolean(urgent) };
+            if (item.urgent) {
+                const firstNormalIdx = speechQueue.findIndex(q => !q.urgent);
+                if (firstNormalIdx === -1) speechQueue.push(item);
+                else speechQueue.splice(firstNormalIdx, 0, item);
+            } else {
+                speechQueue.push(item);
+            }
             playNext();
+        }
+
+        function finishCurrentUtterance() {
+            if (speechWatchdog) {
+                clearTimeout(speechWatchdog);
+                speechWatchdog = null;
+            }
+            currentAudioEl = null;
+            speaking = false;
+            playNext();
+        }
+
+        function playBackendVietnameseAudio(text) {
+            try {
+                const ttsUrl = `/reception/queue/tv/tts?text=${encodeURIComponent(text)}`;
+                const audio = new Audio(ttsUrl);
+                currentAudioEl = audio;
+                audio.volume = 1.0;
+                audio.playbackRate = 0.95;
+                audio.onended = finishCurrentUtterance;
+                audio.onerror = finishCurrentUtterance;
+                speechWatchdog = setTimeout(finishCurrentUtterance, 15000);
+                const p = audio.play();
+                if (p && typeof p.catch === 'function') {
+                    p.catch(() => finishCurrentUtterance());
+                }
+            } catch (_) {
+                finishCurrentUtterance();
+            }
         }
 
         function playNext() {
             if (speaking || !speechEnabled || !speechQueue.length) return;
             speaking = true;
-            const text = speechQueue.shift();
+            const item = speechQueue.shift();
             try {
-                if (audioContext && audioContext.state === 'running') {
-                    const start = audioContext.currentTime;
-                    [523.25, 659.25].forEach((frequency, index) => {
-                        const oscillator = audioContext.createOscillator();
-                        const gain = audioContext.createGain();
-                        oscillator.frequency.value = frequency;
-                        gain.gain.setValueAtTime(0.0001, start + index * 0.22);
-                        gain.gain.exponentialRampToValueAtTime(0.15, start + index * 0.22 + 0.025);
-                        gain.gain.exponentialRampToValueAtTime(0.0001, start + index * 0.22 + 0.18);
-                        oscillator.connect(gain).connect(audioContext.destination);
-                        oscillator.start(start + index * 0.22);
-                        oscillator.stop(start + index * 0.22 + 0.19);
-                    });
+                playChime();
+                const viVoice = refreshVietnameseVoice();
+                if (!('speechSynthesis' in window) || !viVoice) {
+                    // Use backend Vietnamese MP3 TTS fallback so every browser speaks clear Vietnamese
+                    setTimeout(() => {
+                        if (speechEnabled && speaking) {
+                            playBackendVietnameseAudio(item.text);
+                        } else {
+                            finishCurrentUtterance();
+                        }
+                    }, 480);
+                    return;
                 }
-                const utterance = new SpeechSynthesisUtterance(text);
+                const utterance = new SpeechSynthesisUtterance(item.text);
                 utterance.lang = 'vi-VN';
-                const viVoice = pickVietnameseVoice(window.speechSynthesis.getVoices());
-                if (viVoice) utterance.voice = viVoice;
-                utterance.rate = 0.94;
-                utterance.pitch = 1.02;
-                utterance.onend = utterance.onerror = () => {
-                    speaking = false;
-                    playNext();
-                };
+                utterance.voice = viVoice;
+                utterance.rate = 0.90;
+                utterance.volume = 1.0;
+                utterance.pitch = 1.0;
+                utterance.onend = finishCurrentUtterance;
+                utterance.onerror = finishCurrentUtterance;
+                speechWatchdog = setTimeout(finishCurrentUtterance, 15000);
                 setTimeout(() => {
-                    if (speechEnabled) window.speechSynthesis.speak(utterance);
-                    else speaking = false;
+                    if (speechEnabled && speaking) {
+                        window.speechSynthesis.speak(utterance);
+                    } else {
+                        finishCurrentUtterance();
+                    }
                 }, 480);
             } catch (_) {
-                speaking = false;
-                playNext();
+                finishCurrentUtterance();
             }
         }
 
@@ -425,10 +554,10 @@
                 const docLabel = escapeHtml(row.doctorStatusLabel || 'Chưa chỉ định');
                 const tagCls = doctorTagClass(row.doctorAssignmentType);
                 const isActive = row.isCallingOrExam === true || row.status === 'CALLED' || row.status === 'IN_SERVICE';
-                const roomText = isActive ? (row.roomName || UNASSIGNED) : UNASSIGNED;
-                const chairText = isActive ? (row.chairName || UNASSIGNED) : UNASSIGNED;
-                const roomCls = (isActive && roomText !== UNASSIGNED) ? 'fw-bold text-dark' : 'cell-dash';
-                const chairCls = (isActive && chairText !== UNASSIGNED) ? 'fw-bold text-dark' : 'cell-dash';
+                const roomText = (row.roomName && row.roomName !== UNASSIGNED) ? row.roomName : UNASSIGNED;
+                const chairText = (row.chairName && row.chairName !== UNASSIGNED) ? row.chairName : UNASSIGNED;
+                const roomCls = roomText !== UNASSIGNED ? 'fw-bold text-dark' : 'cell-dash';
+                const chairCls = chairText !== UNASSIGNED ? 'fw-bold text-dark' : 'cell-dash';
 
                 const statusCellHtml = (row.status === 'IN_SERVICE' && row.phaseProgress)
                     ? `<div data-phase-ticket="${escapeHtml(String(row.ticketNumber || row.stt))}">${renderPhaseStatusHtml(row.phaseProgress, nowMs)}</div>`
@@ -460,7 +589,8 @@
             const freshCalls = deduplicator.collectNewValidCalls(calledNumbers);
             freshCalls.forEach(({ number }) => {
                 const phrase = buildAnnouncementText(number);
-                if (phrase) speak(phrase);
+                const urgent = Boolean(number.isEmergency || String(number.number || '').toUpperCase().startsWith('P-'));
+                if (phrase) speak(phrase, urgent);
             });
         }
 

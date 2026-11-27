@@ -69,6 +69,9 @@ public class ResourceBookingTransactionService {
     @Autowired(required = false)
     private VisitRepository visitRepository;
 
+    @Autowired(required = false)
+    private AppointmentPolicyService appointmentPolicyService;
+
     public ResourceBookingTransactionService(
             PlatformTransactionManager transactionManager,
             PatientProfileRepository patientProfileRepository,
@@ -252,6 +255,17 @@ public class ResourceBookingTransactionService {
                 Appointment existing = existingByCode.get();
                 assertIdempotentPayloadMatches(existing, effectiveProfileId, request);
                 return buildIdempotentReplayResult(existing, preWindow);
+            }
+        }
+
+        // Kiểm tra quy tắc tối đa 1 lịch chưa hoàn thành/ngày xuyên chi nhánh DƯỚI KHÓA PatientProfile
+        if (appointmentPolicyService != null) {
+            AppointmentPolicyService.PatientSessionConflict dup = appointmentPolicyService.findSameSessionConflict(
+                    effectiveProfileId, request.appointmentDate(),
+                    request.preferredSession() != null ? request.preferredSession() : PreferredSession.ANY,
+                    null);
+            if (dup != null && dup.hasConflict()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, dup.message());
             }
         }
 
@@ -923,6 +937,16 @@ public class ResourceBookingTransactionService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy chi nhánh."));
         if (!Boolean.TRUE.equals(branch.getIsActive())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Chi nhánh đang ngưng hoạt động.");
+        }
+        if (appointmentPolicyService != null) {
+            PreferredSession targetSession = request.newSession() != null
+                    ? request.newSession()
+                    : (preAppt.getPreferredSession() != null ? preAppt.getPreferredSession() : PreferredSession.ANY);
+            AppointmentPolicyService.PatientSessionConflict dup = appointmentPolicyService.findSameSessionConflict(
+                    profileId, newDate, targetSession, request.appointmentId());
+            if (dup != null && dup.hasConflict()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, dup.message());
+            }
         }
         if (candidateDoctorIds.isEmpty() || candidateRoomIds.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,

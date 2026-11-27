@@ -345,12 +345,9 @@ public class PortalAppointmentService {
         }
         if (assignedDoctor == null && resolvedTime != null) {
             if (allowOverlap) {
-                try {
-                    assignedDoctor = slots.autoAssignDoctorForSlot(
-                            branch, request.date(), request.session(), resolvedTime, durationMinutes, null);
-                } catch (RuntimeException ignored) {
-                    // Keep assignedDoctor = null when all doctors overlap and patient confirmed overlap
-                }
+                assignedDoctor = slots.tryAutoAssignDoctorForSlot(
+                        branch, request.date(), request.session(), resolvedTime, durationMinutes, null)
+                        .orElse(null);
             } else {
                 StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
                         branch, request.date(), request.session(), resolvedTime, durationMinutes, null);
@@ -515,11 +512,9 @@ public class PortalAppointmentService {
         }
         if (assignedDoctor == null && resolvedTime != null) {
             if (allowOverlap) {
-                try {
-                    assignedDoctor = slots.autoAssignDoctorForSlot(
-                            branch, request.date(), request.session(), resolvedTime, durationMinutes, appointmentId);
-                } catch (RuntimeException ignored) {
-                }
+                assignedDoctor = slots.tryAutoAssignDoctorForSlot(
+                        branch, request.date(), request.session(), resolvedTime, durationMinutes, appointmentId)
+                        .orElse(null);
             } else {
                 StaffProfile autoAssigned = slots.autoAssignDoctorForSlot(
                         branch, request.date(), request.session(), resolvedTime, durationMinutes, appointmentId);

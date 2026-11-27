@@ -256,7 +256,7 @@
                     </div>
                     <div class="small text-muted">
                         ${a.requestedDoctorName
-                            ? `<i class="bi bi-person-fill text-primary me-1"></i>BS. ${escapeHtml(a.requestedDoctorName)}`
+                            ? `<i class="bi bi-person-fill text-primary me-1"></i>${escapeHtml(/^\s*BS\.?\s*/i.test(a.requestedDoctorName) ? a.requestedDoctorName : 'BS. ' + a.requestedDoctorName)}`
                             : `<i class="bi bi-shuffle text-secondary me-1"></i>Lễ tân điều phối`}
                     </div>
                 `;
@@ -440,6 +440,7 @@
                 $('slotDurationNote').textContent = `Thời lượng dự kiến: ${duration} phút`;
             }
             select.disabled = true;
+            if ($('submitAppointment')) $('submitAppointment').disabled = true;
             select.replaceChildren(option('', 'Đang kiểm tra giờ khám…'));
             const params = new URLSearchParams({
                 branchId: $('branchId').value,
@@ -515,15 +516,16 @@
             }
             message.innerHTML = '<div class="spinner-border spinner-border-sm text-primary me-2"></div><span>Đang kiểm tra khả năng tiếp nhận…</span>';
             const exclude = editing ? `&excludeAppointmentId=${encodeURIComponent(id)}` : '';
-            const profParam = (!editing && $('profileId').value) ? `&profileId=${encodeURIComponent($('profileId').value)}` : '';
+            const activeProfileId = editing ? (current?.patientProfileId || $('profileId').value) : $('profileId').value;
+            const profParam = activeProfileId ? `&profileId=${encodeURIComponent(activeProfileId)}` : '';
             const result = await request(`/availability?branchId=${encodeURIComponent(branchId)}&date=${encodeURIComponent(date)}&sessionPeriod=${encodeURIComponent(session)}${exclude}${profParam}`);
             if (token !== sequence) return;
 
             if (result.patientHasSameSessionConflict) {
                 hasSessionConflict = true;
-                message.innerHTML = `<i class="bi bi-exclamation-octagon-fill fs-5 me-2 text-danger"></i><span>${escapeHtml(result.conflictMessage || 'Hồ sơ này đã có lịch hẹn trong cùng buổi.')} <a href="/portal/appointments" class="btn btn-sm btn-outline-danger ms-2 fw-semibold">Xem lịch hiện tại</a></span>`;
+                message.innerHTML = `<i class="bi bi-exclamation-octagon-fill fs-5 me-2 text-danger"></i><span>${escapeHtml(result.conflictMessage || 'Hồ sơ này đã có lịch hẹn chưa hoàn thành trong cùng ngày.')} <a href="/portal/appointments" class="btn btn-sm btn-outline-danger ms-2 fw-semibold">Xem lịch hiện tại</a></span>`;
                 message.className = 'appointment-availability is-error d-flex align-items-center';
-                $('slotTime').replaceChildren(option('', 'Không thể đặt thêm lịch cùng buổi'));
+                $('slotTime').replaceChildren(option('', 'Không thể đặt thêm lịch trong cùng ngày'));
                 $('slotTime').disabled = true;
                 return;
             }
@@ -923,7 +925,7 @@
                     const wins = await res.json();
                     const matched = Array.isArray(wins) ? wins.find(w => w.session === a.session) : null;
                     if (matched) {
-                        if (matched.label && matched.startTime && matched.endTime) {
+                        if (matched.label && matched.startTime && matched.endTime && !matched.label.includes('(')) {
                             dynamicSessionLabel = `${matched.label} (${matched.startTime.slice(0, 5)} – ${matched.endTime.slice(0, 5)})`;
                         } else if (matched.label) {
                             dynamicSessionLabel = matched.label;
@@ -935,7 +937,7 @@
 
         const facts = $('appointmentFacts');
         const items = [
-            ['Mã lịch hẹn', a.code + (a.code.startsWith('TK') ? ' (Lịch tái khám chỉ định FT18)' : '')],
+            ['Mã lịch hẹn', a.code + (a.code.startsWith('TK') ? ' (Lịch tái khám)' : '')],
             ['Người đi khám', a.patientName],
             ['Cơ sở khám', a.branchName],
             ['Ngày khám', dateLabel(a.date)],

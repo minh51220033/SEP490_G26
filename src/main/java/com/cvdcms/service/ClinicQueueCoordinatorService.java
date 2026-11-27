@@ -247,6 +247,15 @@ public class ClinicQueueCoordinatorService {
 
     private enum BookedArrivalClass { ON_TIME, EARLY_WAITING, LATE_BOOKING }
 
+    private boolean isFlexibleBookedVisit(Visit visit) {
+        if (visit == null || visit.getAppointmentId() == null || appointmentRepository == null) {
+            return false;
+        }
+        return appointmentRepository.findById(visit.getAppointmentId())
+                .map(appt -> appt.getExpectedTime() == null)
+                .orElse(false);
+    }
+
     private BookedArrivalClass classifyBookedArrival(Visit visit) {
         if (Boolean.TRUE.equals(visit.getIsBookedAndOnTime())) {
             return BookedArrivalClass.ON_TIME;
@@ -464,7 +473,8 @@ public class ClinicQueueCoordinatorService {
                 && (visit.getAppointmentId() != null || visit.getVisitType() == VisitType.APPOINTMENT);
         boolean bookedVisit = visit.getAppointmentId() != null || visit.getVisitType() == VisitType.APPOINTMENT;
         BookedArrivalClass arrivalClass = bookedVisit && !bookedOnTime ? classifyBookedArrival(visit) : BookedArrivalClass.ON_TIME;
-        boolean earlyWaiting = bookedVisit && !bookedOnTime && arrivalClass == BookedArrivalClass.EARLY_WAITING;
+        boolean flexibleBooked = bookedVisit && !bookedOnTime && isFlexibleBookedVisit(visit);
+        boolean earlyWaiting = bookedVisit && !bookedOnTime && !flexibleBooked && arrivalClass == BookedArrivalClass.EARLY_WAITING;
         boolean walkIn = !bookedVisit;
         boolean walkInPriority = walkIn && !emergency
                 && visit.getNotes() != null && visit.getNotes().contains("[ƯU TIÊN]");
@@ -480,6 +490,8 @@ public class ClinicQueueCoordinatorService {
             priorityReason = "ON_TIME: Bệnh nhân đặt lịch hẹn check-in đúng giờ";
         } else if (walkInPriority) {
             priorityReason = "WALK_IN_PRIORITY: Bệnh nhân vãng lai thuộc diện ưu tiên";
+        } else if (flexibleBooked) {
+            priorityReason = "Lịch hẹn linh hoạt trong buổi";
         } else if (earlyWaiting) {
             priorityReason = "EARLY_WAITING: Bệnh nhân đặt lịch đến sớm chờ tới giờ hẹn";
         } else if (bookedVisit) {
@@ -511,7 +523,7 @@ public class ClinicQueueCoordinatorService {
         ticket.setPriorityScore(emergency ? 100
                 : (bookedOnTime || returningParaclinical ? 75
                 : (walkInPriority ? 60
-                : (walkIn || earlyWaiting ? 50 : 25))));
+                : (walkIn || earlyWaiting || flexibleBooked ? 50 : 25))));
         ticket.setPriorityReason(trimTo255(priorityReason));
         ticket.setIssuedAt(now);
         ticket.setPausedAt(null);
@@ -857,7 +869,10 @@ public class ClinicQueueCoordinatorService {
                         : "Không có bệnh nhân đang chờ";
             }
         } else {
-            bannerText = "Chưa có lượt đang gọi (" + waitingList.size() + " lượt chờ)";
+            boolean eligibleNow = isDoctorEligibleToCallToday(branchId, doctor, today);
+            bannerText = eligibleNow
+                    ? "Chưa có lượt đang gọi (" + waitingList.size() + " lượt chờ)"
+                    : "Chưa tới ca trực hoặc ca đã kết thúc (" + waitingList.size() + " lượt chờ)";
         }
 
         List<EmergencyAlertDTO> emergencyAlerts = findActiveEmergencyAlerts(branchId, doctorId, today, doctorTickets);
@@ -869,7 +884,7 @@ public class ClinicQueueCoordinatorService {
                 inServiceSummary,
                 calledSummary,
                 waitingList.size(),
-                reopenedActiveVisit == null && (calledSummary != null || inServiceSummary != null || !waitingList.isEmpty()),
+                reopenedActiveVisit == null && (calledSummary != null || inServiceSummary != null),
                 calledSummary != null && inServiceSummary == null && reopenedActiveVisit == null,
                 bannerText,
                 emergencyAlerts);
