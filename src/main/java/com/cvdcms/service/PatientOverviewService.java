@@ -232,6 +232,7 @@ public class PatientOverviewService {
         return appointmentRepository.findByProfileIdWithDetails(profileId);
     }
 
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public Map<String, Object> getPatientCareHistory(Long profileId, Long branchId, Long userId) {
         try {
             Map<String, Object> careMap = new LinkedHashMap<>(customerCareService.getPatientCareHistory(profileId, branchId, userId));

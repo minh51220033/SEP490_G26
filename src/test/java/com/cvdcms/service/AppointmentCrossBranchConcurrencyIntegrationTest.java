@@ -143,19 +143,20 @@ class AppointmentCrossBranchConcurrencyIntegrationTest {
                         docBranch2.getStaffId(), null, "Đặt thêm sáng CN2", UUID.randomUUID().toString(), LocalTime.of(9, 30))));
         assertTrue(dupCrossBranch.getReason().contains("đã có lịch hẹn"));
 
-        // 4. Hồ sơ A đặt buổi CHIỀU cùng ngày -> Cho phép
-        var pmBranch1 = portalService.book(session, new PortalAppointmentService.BookingRequest(
-                profileA.getProfileId(), branch1.getBranchId(), futureDate, PreferredSession.AFTERNOON,
-                docBranch1.getStaffId(), null, "Khám chiều", UUID.randomUUID().toString(), LocalTime.of(15, 30)));
-        assertNotNull(pmBranch1.id());
+        // 4. Hồ sơ A đặt buổi CHIỀU cùng ngày khi lịch sáng chưa hoàn thành -> Bị từ chối 409 CONFLICT (quy tắc cả ngày)
+        ResponseStatusException dupDifferentSession = assertThrows(ResponseStatusException.class, () ->
+                portalService.book(session, new PortalAppointmentService.BookingRequest(
+                        profileA.getProfileId(), branch1.getBranchId(), futureDate, PreferredSession.AFTERNOON,
+                        docBranch1.getStaffId(), null, "Khám chiều", UUID.randomUUID().toString(), LocalTime.of(15, 30))));
+        assertTrue(dupDifferentSession.getReason().contains("chưa hoàn thành"));
 
-        // 5. Hồ sơ B (cùng tài khoản gia đình!) đặt buổi sáng tại CN1 -> Cho phép
+        // 5. Hồ sơ B (cùng tài khoản gia đình!) đặt buổi sáng tại CN1 -> Cho phép (không khóa nhầm hồ sơ khác)
         var profBMorning = portalService.book(session, new PortalAppointmentService.BookingRequest(
                 profileB.getProfileId(), branch1.getBranchId(), futureDate, PreferredSession.MORNING,
                 docBranch1.getStaffId(), null, "Khám cho người thân", UUID.randomUUID().toString(), LocalTime.of(9, 0)));
         assertEquals(profileB.getProfileId(), profBMorning.profileId());
 
-        // 6. Chuyển lịch sáng CN1 của A sang CHECKED_IN với Visit đang IN_EXAM -> vẫn CHẶN đặt thêm sáng
+        // 6. Chuyển lịch sáng CN1 của A sang CHECKED_IN với Visit đang WAITING (CALLED), IN_EXAM, WAITING_PAYMENT -> đều CHẶN
         Appointment apptA = appointments.findById(amBranch1.id()).orElseThrow();
         apptA.setStatus(AppointmentStatus.CONFIRMED);
         appointments.saveAndFlush(apptA);
@@ -168,31 +169,90 @@ class AppointmentCrossBranchConcurrencyIntegrationTest {
         activeVisit.setBranch(branch1);
         activeVisit.setAppointmentId(apptA.getAppointmentId());
         activeVisit.setVisitType(VisitType.APPOINTMENT);
-        activeVisit.setStatus(VisitStatus.IN_EXAM);
+        activeVisit.setStatus(VisitStatus.WAITING);
         visits.saveAndFlush(activeVisit);
 
+        assertThrows(ResponseStatusException.class, () ->
+                portalService.book(session, new PortalAppointmentService.BookingRequest(
+                        profileA.getProfileId(), branch2.getBranchId(), futureDate, PreferredSession.AFTERNOON,
+                        null, null, "Đặt khi đang WAITING/CALLED", UUID.randomUUID().toString(), LocalTime.of(15, 0))));
+
+        activeVisit.setStatus(VisitStatus.IN_EXAM);
+        visits.saveAndFlush(activeVisit);
         assertThrows(ResponseStatusException.class, () ->
                 portalService.book(session, new PortalAppointmentService.BookingRequest(
                         profileA.getProfileId(), branch2.getBranchId(), futureDate, PreferredSession.MORNING,
                         null, null, "Đặt khi đang IN_EXAM", UUID.randomUUID().toString(), LocalTime.of(10, 30))));
 
-        // 7. Khi Visit chuyển WAITING_PAYMENT (đã hoàn thành khám lâm sàng, có actual_end_time) -> CHO PHÉP đặt thêm cùng buổi
         activeVisit.setStatus(VisitStatus.WAITING_PAYMENT);
         activeVisit.setActualEndTime(futureDate.atTime(9, 20));
         visits.saveAndFlush(activeVisit);
+        assertThrows(ResponseStatusException.class, () ->
+                portalService.book(session, new PortalAppointmentService.BookingRequest(
+                        profileA.getProfileId(), branch2.getBranchId(), futureDate, PreferredSession.MORNING,
+                        null, null, "Đặt khi đang WAITING_PAYMENT chưa thanh toán xong", UUID.randomUUID().toString(), LocalTime.of(10, 30))));
 
-        var secondMorningAfterClinicalDone = portalService.book(session, new PortalAppointmentService.BookingRequest(
+        // 7. Khi Visit thực sự COMPLETED -> CHO PHÉP đặt lịch thứ 2 tại CN2 trong cùng ngày
+        activeVisit.setStatus(VisitStatus.COMPLETED);
+        visits.saveAndFlush(activeVisit);
+        apptA.setStatus(AppointmentStatus.COMPLETED);
+        appointments.saveAndFlush(apptA);
+
+        var secondBooking = portalService.book(session, new PortalAppointmentService.BookingRequest(
                 profileA.getProfileId(), branch2.getBranchId(), futureDate, PreferredSession.MORNING,
-                null, null, "Đặt tiếp sau khi xong lâm sàng", UUID.randomUUID().toString(), LocalTime.of(10, 30)));
-        assertNotNull(secondMorningAfterClinicalDone.id());
+                null, null, "Lượt 2 sau khi hoàn thành lượt 1", UUID.randomUUID().toString(), LocalTime.of(10, 30)));
+        assertNotNull(secondBooking.id());
 
-        // 8. Hủy lịch vừa đặt -> đặt lại chính buổi sáng ở CN2 vẫn thành công bình thường
-        portalService.cancel(session, secondMorningAfterClinicalDone.id(),
+        // 8. Lịch thứ 2 chưa hoàn thành -> đặt lịch thứ 3 phải bị CHẶN
+        assertThrows(ResponseStatusException.class, () ->
+                portalService.book(session, new PortalAppointmentService.BookingRequest(
+                        profileA.getProfileId(), branch1.getBranchId(), futureDate, PreferredSession.AFTERNOON,
+                        null, null, "Lượt 3 khi lượt 2 chưa xong", UUID.randomUUID().toString(), LocalTime.of(14, 0))));
+
+        // 9. Hoàn thành lịch thứ 2 -> CHO PHÉP đặt lịch thứ 3 trong cùng ngày
+        Appointment appt2 = appointments.findById(secondBooking.id()).orElseThrow();
+        appt2.setStatus(AppointmentStatus.COMPLETED);
+        appointments.saveAndFlush(appt2);
+
+        var thirdBooking = portalService.book(session, new PortalAppointmentService.BookingRequest(
+                profileA.getProfileId(), branch1.getBranchId(), futureDate, PreferredSession.AFTERNOON,
+                null, null, "Lượt 3 sau khi hoàn thành lượt 2", UUID.randomUUID().toString(), LocalTime.of(14, 0)));
+        assertNotNull(thirdBooking.id());
+
+        // 10. Hủy lịch thứ 3 (CANCELLED) -> giải phóng quyền đặt lịch -> đặt lại thành công
+        portalService.cancel(session, thirdBooking.id(),
                 new PortalAppointmentService.CancelRequest("Đổi kế hoạch"));
         var rebookedAfterCancel = portalService.book(session, new PortalAppointmentService.BookingRequest(
                 profileA.getProfileId(), branch2.getBranchId(), futureDate, PreferredSession.MORNING,
                 null, null, "Đặt lại sau khi hủy", UUID.randomUUID().toString(), LocalTime.of(11, 0)));
         assertNotNull(rebookedAfterCancel.id());
+
+        // 11. NO_SHOW -> giải phóng quyền đặt lịch -> đặt tiếp thành công
+        Appointment apptNoShow = appointments.findById(rebookedAfterCancel.id()).orElseThrow();
+        apptNoShow.setStatus(AppointmentStatus.NO_SHOW);
+        appointments.saveAndFlush(apptNoShow);
+        var rebookedAfterNoShow = portalService.book(session, new PortalAppointmentService.BookingRequest(
+                profileA.getProfileId(), branch1.getBranchId(), futureDate, PreferredSession.AFTERNOON,
+                null, null, "Đặt lại sau NO_SHOW", UUID.randomUUID().toString(), LocalTime.of(15, 0)));
+        assertNotNull(rebookedAfterNoShow.id());
+
+        // 12. Đổi lịch (reschedule): đổi chính lịch đó sang buổi khác vẫn cho phép (excludeAppointmentId),
+        //     nhưng đổi một lịch khác sang chi nhánh B vào ngày đã có lịch chưa hoàn thành -> CHẶN
+        var rescheduled = portalService.reschedule(session, rebookedAfterNoShow.id(),
+                new PortalAppointmentService.RescheduleRequest(
+                        futureDate, PreferredSession.MORNING, null, "Đổi sang buổi sáng", LocalTime.of(11, 0)));
+        assertEquals(PreferredSession.MORNING, rescheduled.session());
+        assertThrows(ResponseStatusException.class, () ->
+                policyService.ensureBookable(branch2, profileA, futureDate, PreferredSession.AFTERNOON,
+                        null, 999999L, AppointmentActorType.RECEPTIONIST));
+
+        // 13. Chuyển tiếp ngày (23:59 ngày D sang 00:00 ngày D+1 theo múi giờ Việt Nam):
+        //     Lịch chưa hoàn thành ở futureDate KHÔNG chặn đặt lịch ở futureDate.plusDays(1)
+        LocalDate nextDay = futureDate.plusDays(1);
+        var conflictNextDay = policyService.findSameSessionConflict(
+                profileA.getProfileId(), nextDay, PreferredSession.MORNING, null);
+        assertFalse(conflictNextDay.hasConflict(),
+                "Lịch chưa hoàn thành ngày D (23:59) không được chặn ngày D+1 (00:00) theo múi giờ VN");
     }
 
     @Test

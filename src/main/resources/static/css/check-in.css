@@ -599,3 +599,12 @@
     font-size: 13px;
     color: #64748b;
 }
+
+/* Solid modal background & crisp backdrop to prevent underlying table bleed-through */
+.modal-content {
+    background-color: #ffffff !important;
+    opacity: 1 !important;
+}
+.modal-backdrop.show {
+    opacity: 0.55 !important;
+}

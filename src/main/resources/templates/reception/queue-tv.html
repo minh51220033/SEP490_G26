@@ -580,10 +580,15 @@
           <span>Quay lại</span>
         </a>
 
-        <button id="soundToggle" class="tv-btn tv-sound-btn" type="button" title="Bật hoặc tắt âm thanh đọc số">
+        <button id="soundToggle" class="tv-btn tv-sound-btn" type="button" aria-pressed="false" title="Bật hoặc tắt âm thanh đọc số tiếng Việt">
           <i id="soundIcon" class="bi bi-volume-mute-fill"></i>
-          <span id="soundText">Bật âm thanh</span>
+          <span id="soundText">Âm thanh đang tắt</span>
         </button>
+        <button id="testVoiceBtn" class="tv-btn" type="button" style="display:none;" title="Đọc thử thông báo gọi bệnh nhân tiếng Việt">
+          <i class="bi bi-megaphone-fill text-primary"></i>
+          <span>Đọc thử</span>
+        </button>
+        <span id="tvVoiceWarning" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1" style="display:none; font-size:12px;"></span>
 
         <button id="fullscreenToggle" class="tv-btn" type="button" title="Bật toàn màn hình">
           <i class="bi bi-arrows-fullscreen"></i>

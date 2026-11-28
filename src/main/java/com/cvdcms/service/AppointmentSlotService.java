@@ -764,7 +764,7 @@ public class AppointmentSlotService {
      * Tự động phân bổ bác sĩ khả dụng ít tải nhất cho khung giờ [requestedStart, requestedStart + duration)
      * khi người dùng chọn "Không yêu cầu bác sĩ đích danh" (phương án B).
      */
-    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Transactional(isolation = Isolation.READ_COMMITTED, noRollbackFor = SlotAlreadyTakenException.class)
     public StaffProfile autoAssignDoctorForSlot(
             Branch branch,
             LocalDate date,
@@ -773,14 +773,29 @@ public class AppointmentSlotService {
             int requiredDuration,
             Long excludeAppointmentId
     ) {
+        return tryAutoAssignDoctorForSlot(branch, date, session, requestedStart, requiredDuration, excludeAppointmentId)
+                .orElseThrow(() -> new SlotAlreadyTakenException(
+                        "Không còn bác sĩ nào trống lịch trong khung giờ " + requestedStart + " - " + requestedStart.plusMinutes(requiredDuration) + "."
+                ));
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED, noRollbackFor = SlotAlreadyTakenException.class)
+    public java.util.Optional<StaffProfile> tryAutoAssignDoctorForSlot(
+            Branch branch,
+            LocalDate date,
+            PreferredSession session,
+            LocalTime requestedStart,
+            int requiredDuration,
+            Long excludeAppointmentId
+    ) {
         if (branch == null || date == null || requestedStart == null || staffSchedules == null || staffProfiles == null) {
-            return null;
+            return java.util.Optional.empty();
         }
         validateDynamicDuration(requiredDuration);
         AppointmentPolicyService.Availability branchAvailability = policy.availability(
                 branch, date, session, excludeAppointmentId, AppointmentActorType.PATIENT);
         if (branchAvailability == null || !branchAvailability.available() || branchAvailability.doctors().isEmpty()) {
-            throw new SlotAlreadyTakenException("Không còn bác sĩ khả dụng trong ca khám đã chọn.");
+            return java.util.Optional.empty();
         }
 
         // Batch load lịch hẹn của buổi để đếm tải cân bằng, tránh N+1 query
@@ -813,15 +828,13 @@ public class AppointmentSlotService {
                 // Pre-check không khóa để bỏ qua ứng viên không đủ giờ/trùng lịch trước khi lấy FOR UPDATE
                 validateDoctorSlotInternal(branch.getBranchId(), candidate.id(), date, requestedStart, requiredDuration, excludeAppointmentId, false);
                 lockAndValidateDoctorSlot(branch.getBranchId(), candidate.id(), date, requestedStart, requiredDuration, excludeAppointmentId);
-                return staffProfiles.findById(candidate.id()).orElse(null);
+                return staffProfiles.findById(candidate.id());
             } catch (SlotAlreadyTakenException ignored) {
                 // Ứng viên vừa bận hoặc không cover đủ khung giờ -> thử bác sĩ tiếp theo
             }
         }
 
-        throw new SlotAlreadyTakenException(
-                "Không còn bác sĩ nào trống lịch trong khung giờ " + requestedStart + " - " + requestedStart.plusMinutes(requiredDuration) + "."
-        );
+        return java.util.Optional.empty();
     }
 
     @Transactional(readOnly = true)
