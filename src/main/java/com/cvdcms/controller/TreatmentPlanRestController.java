@@ -287,6 +287,7 @@ public class TreatmentPlanRestController {
             @RequestParam Long visitId,
             @RequestParam(required = false) Long doctorId,
             @RequestParam(required = false) Long assistantId,
+            @RequestParam(required = false) String toothNumbers,
             @RequestParam(defaultValue = "false") boolean patientConfirmed) {
         if (doctorVisitAccess != null && isHttpRequestActive()) {
             jakarta.servlet.http.HttpSession session = currentHttpSession();
@@ -383,6 +384,36 @@ public class TreatmentPlanRestController {
                 throw new IllegalStateException("Ca khám chưa được phân công bác sĩ chính. Vui lòng phân công bác sĩ tại màn Điều phối trước khi thực hiện thủ thuật.");
             }
 
+            String effectiveTeeth = (toothNumbers != null && !toothNumbers.isBlank())
+                    ? toothNumbers.trim()
+                    : (item.getToothNumbers() != null ? item.getToothNumbers().trim() : null);
+            boolean requiresTooth = item.getService() != null && Boolean.TRUE.equals(item.getService().getRequiresTooth());
+            if (requiresTooth && (effectiveTeeth == null || effectiveTeeth.isBlank())) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Dịch vụ \"" + item.getService().getServiceName()
+                                + "\" yêu cầu chọn vị trí răng FDI trước khi thực hiện. Vui lòng cập nhật số răng trên KHDT hoặc thực hiện qua Quy trình điều trị."
+                ));
+            }
+
+            BigDecimal qty = item.getQuantity() != null ? item.getQuantity() : BigDecimal.ONE;
+            if (toothNumbers != null && !toothNumbers.isBlank()) {
+                item.setToothNumbers(effectiveTeeth);
+                if (requiresTooth) {
+                    long toothCount = java.util.regex.Pattern.compile("\\b[1-8][1-8]\\b")
+                            .matcher(effectiveTeeth)
+                            .results()
+                            .map(java.util.regex.MatchResult::group)
+                            .distinct()
+                            .count();
+                    if (toothCount > 0) {
+                        qty = BigDecimal.valueOf(toothCount);
+                        item.setQuantity(qty);
+                    }
+                }
+                treatmentPlanItemRepository.save(item);
+            }
+
             boolean isInstallmentPlan = item.getPlan() != null && Boolean.TRUE.equals(item.getPlan().getIsInstallment());
             BigDecimal unitPrice = isInstallmentPlan
                     ? BigDecimal.ZERO
@@ -391,7 +422,6 @@ public class TreatmentPlanRestController {
                         : (item.getService() != null && item.getService().getBasePrice() != null
                             ? item.getService().getBasePrice()
                             : BigDecimal.ZERO));
-            BigDecimal qty = item.getQuantity() != null ? item.getQuantity() : BigDecimal.ONE;
             BigDecimal finalPrice = isInstallmentPlan ? BigDecimal.ZERO : unitPrice.multiply(qty);
 
             String stepDisplayName = item.getStepName() != null && !item.getStepName().isBlank()
@@ -406,7 +436,7 @@ public class TreatmentPlanRestController {
                     .visitId(visitId)
                     .serviceId(item.getService().getServiceId())
                     .stepName(stepDisplayName)
-                    .toothNumbers(item.getToothNumbers())
+                    .toothNumbers(effectiveTeeth)
                     .quantity(qty)
                     .unitPrice(unitPrice)
                     .discountAmount(BigDecimal.ZERO)

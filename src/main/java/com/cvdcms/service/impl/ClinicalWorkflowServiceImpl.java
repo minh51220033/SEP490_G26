@@ -2323,19 +2323,18 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             Long userId,
             boolean finished,
             LocalDateTime now) {
-        try {
-            TreatmentPlanStage stage = execution.getPlanStage() != null
-                    ? execution.getPlanStage()
-                    : (execution.getPlanItem() != null ? execution.getPlanItem().getStage() : null);
-            com.cvdcms.entity.Service service = execution.getVersion().getTemplate().getService();
-            boolean targetIsAdhoc = target != null && target.getStep() != null
-                    && target.getStep().getAdhocExecutionId() != null;
-            List<WorkflowStepExecution> templateStepExecs = allSteps == null ? List.of()
-                    : allSteps.stream()
-                            .filter(s -> s.getStep() != null && s.getStep().getAdhocExecutionId() == null)
-                            .toList();
-            boolean anyTemplateStepCompleted = templateStepExecs.stream()
-                    .anyMatch(s -> s.getStatus() == WorkflowStepExecutionStatus.COMPLETED);
+        TreatmentPlanStage stage = execution.getPlanStage() != null
+                ? execution.getPlanStage()
+                : (execution.getPlanItem() != null ? execution.getPlanItem().getStage() : null);
+        com.cvdcms.entity.Service service = execution.getVersion().getTemplate().getService();
+        boolean targetIsAdhoc = target != null && target.getStep() != null
+                && target.getStep().getAdhocExecutionId() != null;
+        List<WorkflowStepExecution> templateStepExecs = allSteps == null ? List.of()
+                : allSteps.stream()
+                        .filter(s -> s.getStep() != null && s.getStep().getAdhocExecutionId() == null)
+                        .toList();
+        boolean anyTemplateStepCompleted = templateStepExecs.stream()
+                .anyMatch(s -> s.getStatus() == WorkflowStepExecutionStatus.COMPLETED);
 
             if (stage != null && service != null && treatmentPlanItemRepo != null) {
                 Long sId = service.getServiceId();
@@ -2413,10 +2412,6 @@ public class ClinicalWorkflowServiceImpl implements ClinicalWorkflowService {
             } else if (execution.getPlanItem() != null) {
                 syncLinkedPlanOnProgress(execution.getPlanItem());
             }
-        } catch (Exception ex) {
-            log.warn("Lỗi đồng bộ bước quy trình với KHDT cho execution {}: {}",
-                    execution.getExecutionId(), ex.getMessage());
-        }
     }
 
     /**
